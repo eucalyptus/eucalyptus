@@ -30,8 +30,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VolumeAttachm
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VolumeAttachmentProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -155,8 +155,8 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
         return VOLUME_ATTACHMENT_MAX_CREATE_RETRY_SECS;
       }
 
-      private ValidationFailedException throwNotAttachedMessage(String volumeId, String instanceId) throws ValidationFailedException {
-        throw new ValidationFailedException("Volume " + volumeId + " not yet attached to instance " + instanceId);
+      private RetryAfterConditionCheckFailedException throwNotAttachedMessage(String volumeId, String instanceId) throws RetryAfterConditionCheckFailedException {
+        throw new RetryAfterConditionCheckFailedException("Volume " + volumeId + " not yet attached to instance " + instanceId);
       }
     },
     POPULATE_FIELDS {
@@ -221,7 +221,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends ResourceAction {
           }
         }
         if (detached == true) return action;
-        throw new ValidationFailedException("Volume " + action.properties.getVolumeId() + " is not yet detached from instance " + action.properties.getInstanceId());
+        throw new RetryAfterConditionCheckFailedException("Volume " + action.properties.getVolumeId() + " is not yet detached from instance " + action.properties.getInstanceId());
       }
 
       @Override

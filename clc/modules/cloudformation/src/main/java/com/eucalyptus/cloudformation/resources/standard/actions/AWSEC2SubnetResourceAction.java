@@ -32,8 +32,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2Subn
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -167,7 +167,7 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
         try {
           AsyncRequests.<DeleteSubnetType,DeleteSubnetResponseType> sendSync(configuration, deleteSubnetType);
         } catch (Exception ex) {
-          throw new ValidationFailedException(AsyncExceptions.asWebServiceErrorMessage(ex,"Error deleting subnet"));
+          throw new RetryAfterConditionCheckFailedException(AsyncExceptions.asWebServiceErrorMessage(ex,"Error deleting subnet"));
         }
         return action;
       }

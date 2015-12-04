@@ -34,8 +34,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.PrivateIpAddressSpecification;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -171,10 +171,10 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
         DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType );
         if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() ==0) {
-          throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet available");
+          throw new RetryAfterConditionCheckFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet available");
         }
         if (!"available".equals(describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getStatus())) {
-          throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
+          throw new RetryAfterConditionCheckFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
         }
         return action;
       }
@@ -240,7 +240,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends ResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.info.getPhysicalResourceId() == null) return action;
         if (checkDeleted(action, configuration)) return action;
-        throw new ValidationFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
+        throw new RetryAfterConditionCheckFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
       }
 
       @Override

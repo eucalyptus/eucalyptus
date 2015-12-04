@@ -34,8 +34,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Securit
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -291,7 +291,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
           return action;
         } catch (Exception ex) {
           Throwable cause = Throwables.getRootCause(ex);
-          throw new ValidationFailedException(ex.getMessage());
+          throw new RetryAfterConditionCheckFailedException(ex.getMessage());
         }
       }
 

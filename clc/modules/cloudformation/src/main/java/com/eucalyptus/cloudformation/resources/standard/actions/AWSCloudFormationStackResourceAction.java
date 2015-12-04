@@ -44,8 +44,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFo
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -156,7 +156,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
           throw new ResourceFailureException("Failed to create stack " + action.info.getPhysicalResourceId() + "."  + statusReason);
         }
         if (status.equals(StackEntity.Status.CREATE_IN_PROGRESS.toString())) {
-          throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being created.");
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being created.");
         }
         return action;
       }
@@ -257,7 +257,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
           throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
         }
         if (status.equals(StackEntity.Status.DELETE_IN_PROGRESS.toString())) {
-          throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being deleted.");
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being deleted.");
         }
         // TODO: consider this logic
         if (status.endsWith("IN_PROGRESS")) {
@@ -269,7 +269,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
         if (status.equals(StackEntity.Status.DELETE_FAILED.toString())) {
           throw new ResourceFailureException("Deleting stack " + action.info.getPhysicalResourceId() + " failed");
         }
-        throw new ValidationFailedException("Stack " + action.info.getPhysicalResourceId() + " current status is " + status + ", maybe not yet started deleting?");
+        throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " current status is " + status + ", maybe not yet started deleting?");
       }
 
       @Override

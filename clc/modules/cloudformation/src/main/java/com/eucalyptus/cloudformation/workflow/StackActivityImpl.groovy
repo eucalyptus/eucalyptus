@@ -628,7 +628,7 @@ public class StackActivityImpl implements StackActivity {
     if (monitorWorkflows != null) {
       for (StackWorkflowEntity workflow : monitorWorkflows) {
         if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
-          throw new ValidationFailedException("A monitoring workflow for " + stackId + " has not yet been canceled");
+          throw new RetryAfterConditionCheckFailedException("A monitoring workflow for " + stackId + " has not yet been canceled");
         }
       }
     }
@@ -636,7 +636,7 @@ public class StackActivityImpl implements StackActivity {
     if (createWorkflows != null) {
       for (StackWorkflowEntity workflow : createWorkflows) {
         if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
-          throw new ValidationFailedException("A create workflow for " + stackId + " has not yet been canceled");
+          throw new RetryAfterConditionCheckFailedException("A create workflow for " + stackId + " has not yet been canceled");
         }
       }
     }

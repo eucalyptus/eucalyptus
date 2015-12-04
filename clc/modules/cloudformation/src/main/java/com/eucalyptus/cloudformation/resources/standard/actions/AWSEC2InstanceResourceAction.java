@@ -38,8 +38,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Network
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -233,7 +233,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
           DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet().size() == 0) {
-            throw new ValidationFailedException("Instance " + action.info.getPhysicalResourceId( ) + " does not yet exist");
+            throw new RetryAfterConditionCheckFailedException("Instance " + action.info.getPhysicalResourceId( ) + " does not yet exist");
           }
           RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
           if ("running".equals(runningInstancesItemType.getStateName())) {
@@ -245,7 +245,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
             return action;
           }
-          throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet running, currently " + runningInstancesItemType.getStateName()));
+          throw new RetryAfterConditionCheckFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet running, currently " + runningInstancesItemType.getStateName()));
         }
       }
 
@@ -324,7 +324,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             try {
               describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
             } catch ( Exception e ) {
-              throw new ValidationFailedException("Error describing volumes: " + asWebServiceErrorMessage( e, e.getMessage( ) ) );
+              throw new RetryAfterConditionCheckFailedException("Error describing volumes: " + asWebServiceErrorMessage( e, e.getMessage( ) ) );
             }
             Map<String, String> volumeStatusMap = Maps.newHashMap();
             for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
@@ -336,7 +336,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
             }
             for (String volumeId : volumeIds) {
               if (!"attached".equals(volumeStatusMap.get(volumeId))) {
-                throw new ValidationFailedException("One or more volumes is not yet attached to the instance");
+                throw new RetryAfterConditionCheckFailedException("One or more volumes is not yet attached to the instance");
               }
             }
           }
@@ -470,7 +470,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
           if ("terminated".equals(
             describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()))
             return action;
-          throw new ValidationFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet terminated, currently " + describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()));
+          throw new RetryAfterConditionCheckFailedException(("Instance " + action.info.getPhysicalResourceId() + " is not yet terminated, currently " + describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName()));
         }
       }
 

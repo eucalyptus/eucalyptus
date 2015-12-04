@@ -38,8 +38,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSCloudFormationWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -201,7 +201,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
           action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
           return action;
         } else {
-          throw new ValidationFailedException("Not enough success signals yet");
+          throw new RetryAfterConditionCheckFailedException("Not enough success signals yet");
         }
       }
     };

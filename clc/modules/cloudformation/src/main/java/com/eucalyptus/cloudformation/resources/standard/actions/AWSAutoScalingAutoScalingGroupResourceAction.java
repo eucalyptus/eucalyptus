@@ -53,8 +53,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoSca
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -242,7 +242,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
             return action; // Group has zero instances
           }
         }
-        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " still has instances");
+        throw new RetryAfterConditionCheckFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " still has instances");
       }
 
       @Override
@@ -268,7 +268,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
         if (groupDoesNotExist(configuration, action)) return action;
-        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " is not yet deleted");
+        throw new RetryAfterConditionCheckFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " is not yet deleted");
       }
 
       @Override

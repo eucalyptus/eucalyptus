@@ -35,8 +35,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -141,10 +141,10 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
           throw new ValidationErrorException("Error describing volume " + action.info.getPhysicalResourceId() + ":" + asWebServiceErrorMessage( e, e.getMessage() ) );
         }
         if (describeVolumesResponseType.getVolumeSet().size()==0) {
-          throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
+          throw new RetryAfterConditionCheckFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
         }
         if (!"available".equals(describeVolumesResponseType.getVolumeSet().get(0).getStatus())) {
-          throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
+          throw new RetryAfterConditionCheckFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet available");
         }
         return action;
       }
@@ -221,12 +221,12 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
         describeSnapshotsType.getFilterSet( ).add( Filter.filter( "snapshot-id", snapshotId ) );
         DescribeSnapshotsResponseType describeSnapshotsResponseType = AsyncRequests.sendSync(configuration, describeSnapshotsType);
         if (describeSnapshotsResponseType.getSnapshotSet() == null || describeSnapshotsResponseType.getSnapshotSet().isEmpty()) {
-          throw new ValidationFailedException("Snapshot " + snapshotId + " not yet complete");
+          throw new RetryAfterConditionCheckFailedException("Snapshot " + snapshotId + " not yet complete");
         }
         if ("error".equals(describeSnapshotsResponseType.getSnapshotSet().get(0).getStatus())) {
           throw new ResourceFailureException("Error creating snapshot " + snapshotId + ", while deleting volume " + action.info.getPhysicalResourceId());
         } else if (!"completed".equals(describeSnapshotsResponseType.getSnapshotSet().get(0).getStatus())) {
-          throw new ValidationFailedException("Snapshot " + snapshotId + " not yet complete");
+          throw new RetryAfterConditionCheckFailedException("Snapshot " + snapshotId + " not yet complete");
         }
         return action;
       }
@@ -285,7 +285,7 @@ public class AWSEC2VolumeResourceAction extends ResourceAction {
         AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (volumeDeleted(action, configuration)) return action;
-        throw new ValidationFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet deleted");
+        throw new RetryAfterConditionCheckFailedException("Volume " + action.info.getPhysicalResourceId() + " not yet deleted");
       }
 
       @Override
