@@ -57,18 +57,6 @@ public abstract class ResourceAction {
     return getDefaultPhysicalResourceId(Integer.MAX_VALUE);
   }
 
-  protected Map<String, Step> createSteps = Maps.newLinkedHashMap();
-
-  public final Step getCreateStep(String stepId) {
-    return createSteps.get(stepId);
-  }
-
-  protected Map<String, Step> deleteSteps = Maps.newLinkedHashMap();
-
-  public final Step getDeleteStep(String stepId) {
-    return deleteSteps.get(stepId);
-  }
-
   public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 
   public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);

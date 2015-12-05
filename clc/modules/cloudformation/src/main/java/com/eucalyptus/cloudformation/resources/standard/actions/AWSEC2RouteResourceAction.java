@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,11 +28,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2RouteResource
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2RouteProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -50,28 +46,22 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 
-import java.util.List;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
  */
-public class AWSEC2RouteResourceAction extends ResourceAction {
+public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
 
   private AWSEC2RouteProperties properties = new AWSEC2RouteProperties();
   private AWSEC2RouteResourceInfo info = new AWSEC2RouteResourceInfo();
 
   public AWSEC2RouteResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
+
   private enum CreateSteps implements Step {
     CREATE_ROUTE {
       @Override
@@ -214,17 +204,7 @@ public class AWSEC2RouteResourceAction extends ResourceAction {
     return !s1.equals(s2);
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 

@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,11 +28,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2VPCGatewayAtt
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2VPCGatewayAttachmentProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttachInternetGatewayResponseType;
@@ -57,29 +53,22 @@ import com.eucalyptus.compute.common.VpnGatewayIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 
 /**
  * Created by ethomas on 2/3/14.
  */
-public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
+public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceAction {
 
   private AWSEC2VPCGatewayAttachmentProperties properties = new AWSEC2VPCGatewayAttachmentProperties();
   private AWSEC2VPCGatewayAttachmentResourceInfo info = new AWSEC2VPCGatewayAttachmentResourceInfo();
 
   public AWSEC2VPCGatewayAttachmentResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+   super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
+
   private enum CreateSteps implements Step {
     CREATE_ATTACHMENT {
       @Override
@@ -202,17 +191,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends ResourceAction {
     vpnGatewayIdSetItem.setVpnGatewayId(vpnGatewayId);
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 

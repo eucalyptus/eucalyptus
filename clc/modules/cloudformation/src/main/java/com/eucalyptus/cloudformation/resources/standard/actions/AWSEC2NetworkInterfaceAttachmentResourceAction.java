@@ -1,23 +1,23 @@
-// Can't do this one until we allow more than one network interface on an instance
+////Can't do this one until we allow more than one network interface on an instance
 ///*************************************************************************
-// * Copyright 2009-2013 Eucalyptus Systems, Inc.
-// *
-// * This program is free software: you can redistribute it and/or modify
-// * it under the terms of the GNU General Public License as published by
-// * the Free Software Foundation; version 3 of the License.
-// *
-// * This program is distributed in the hope that it will be useful,
-// * but WITHOUT ANY WARRANTY; without even the implied warranty of
-// * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// * GNU General Public License for more details.
-// *
-// * You should have received a copy of the GNU General Public License
-// * along with this program.  If not, see http://www.gnu.org/licenses/.
-// *
-// * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
-// * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
-// * additional information or have any questions.
-// ************************************************************************/
+//* Copyright 2009-2013 Eucalyptus Systems, Inc.
+//*
+//* This program is free software: you can redistribute it and/or modify
+//* it under the terms of the GNU General Public License as published by
+//* the Free Software Foundation; version 3 of the License.
+//*
+//* This program is distributed in the hope that it will be useful,
+//* but WITHOUT ANY WARRANTY; without even the implied warranty of
+//* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//* GNU General Public License for more details.
+//*
+//* You should have received a copy of the GNU General Public License
+//* along with this program.  If not, see http://www.gnu.org/licenses/.
+//*
+//* Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+//* CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+//* additional information or have any questions.
+//************************************************************************/
 //package com.eucalyptus.cloudformation.resources.standard.actions;
 //
 //
@@ -31,13 +31,11 @@
 //import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2NetworkInterfaceAttachmentProperties;
 //import com.eucalyptus.cloudformation.template.JsonHelper;
 //import com.eucalyptus.cloudformation.util.MessageHelper;
+//import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 //import com.eucalyptus.cloudformation.workflow.StackActivity;
-//import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
-//import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryCreatePromise;
-//import com.eucalyptus.cloudformation.workflow.steps.MultiStepWithRetryDeletePromise;
 //import com.eucalyptus.cloudformation.workflow.steps.StandardResourceRetryPolicy;
 //import com.eucalyptus.cloudformation.workflow.steps.Step;
-//import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+//import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 //import com.eucalyptus.component.ServiceConfiguration;
 //import com.eucalyptus.component.Topology;
 //import com.eucalyptus.compute.common.AttachNetworkInterfaceResponseType;
@@ -61,13 +59,14 @@
 //import com.google.common.collect.Lists;
 //import com.netflix.glisten.WorkflowOperations;
 //
+//import javax.annotation.Nullable;
 //import java.util.ArrayList;
 //import java.util.List;
 //
 ///**
-// * Created by ethomas on 2/3/14.
-// */
-//public class AWSEC2NetworkInterfaceAttachmentResourceAction extends ResourceAction {
+//* Created by ethomas on 2/3/14.
+//*/
+//public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedResourceAction {
 //
 //  private AWSEC2NetworkInterfaceAttachmentProperties properties = new AWSEC2NetworkInterfaceAttachmentProperties();
 //  private AWSEC2NetworkInterfaceAttachmentResourceInfo info = new AWSEC2NetworkInterfaceAttachmentResourceInfo();
@@ -79,14 +78,9 @@
 //  public static volatile Integer NETWORK_INTERFACE_DETACHMENT_MAX_DELETE_RETRY_SECS = 300;
 //
 //  public AWSEC2NetworkInterfaceAttachmentResourceAction() {
-//    for (CreateSteps createStep: CreateSteps.values()) {
-//      createSteps.put(createStep.name(), createStep);
-//    }
-//    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-//      deleteSteps.put(deleteStep.name(), deleteStep);
-//    }
-//
+//    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
 //  }
+//
 //  private enum CreateSteps implements Step {
 //    CREATE_NETWORK_INTERFACE_ATTACHMENT {
 //      @Override
@@ -124,11 +118,6 @@
 //        action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
 //        return action;
 //      }
-//
-//      @Override
-//      public RetryPolicy getRetryPolicy() {
-//        return null;
-//      }
 //    },
 //    WAIT_UNTIL_ATTACHED {
 //      @Override
@@ -150,12 +139,12 @@
 //      }
 //
 //      @Override
-//      public RetryPolicy getRetryPolicy() {
-//        return new StandardResourceRetryPolicy(NETWORK_INTERFACE_ATTACHMENT_MAX_CREATE_RETRY_SECS).getPolicy();
+//      public Integer getTimeout() {
+//        return NETWORK_INTERFACE_ATTACHMENT_MAX_CREATE_RETRY_SECS;
 //      }
 //
-//      public void throwNotAttachedMessage(String networkInterfaceId, String instanceId) throws ValidationFailedException {
-//        throw new ValidationFailedException("Network interface  " + networkInterfaceId + " not yet attached to instance " + instanceId);
+//      public void throwNotAttachedMessage(String networkInterfaceId, String instanceId) throws RetryAfterConditionCheckFailedException {
+//        throw new RetryAfterConditionCheckFailedException("Network interface  " + networkInterfaceId + " not yet attached to instance " + instanceId);
 //      }
 //    },
 //    SET_ATTRIBUTES {
@@ -173,12 +162,14 @@
 //        }
 //        return action;
 //      }
+//    };
 //
-//      @Override
-//      public RetryPolicy getRetryPolicy() {
-//        return null;
-//      }
+//    @Nullable
+//    @Override
+//    public Integer getTimeout() {
+//      return null;
 //    }
+//
 //  }
 //
 //  private enum DeleteSteps implements Step {
@@ -194,10 +185,6 @@
 //        return action;
 //      }
 //
-//      @Override
-//      public RetryPolicy getRetryPolicy() {
-//        return null;
-//      }
 //    },
 //    WAIT_UNTIL_DETACHED {
 //      @Override
@@ -220,12 +207,12 @@
 //        if ("detached".equals(describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getAttachment().getStatus())) {
 //          return action; // detached
 //        }
-//        throw new ValidationFailedException("Network interface " + action.properties.getNetworkInterfaceId() + " is not yet detached from instance " + action.properties.getInstanceId());
+//        throw new RetryAfterConditionCheckFailedException("Network interface " + action.properties.getNetworkInterfaceId() + " is not yet detached from instance " + action.properties.getInstanceId());
 //      }
 //
 //      @Override
-//      public RetryPolicy getRetryPolicy() {
-//        return new StandardResourceRetryPolicy(NETWORK_INTERFACE_DETACHMENT_MAX_DELETE_RETRY_SECS).getPolicy();
+//      public Integer getTimeout() {
+//        return NETWORK_INTERFACE_DETACHMENT_MAX_DELETE_RETRY_SECS;
 //      }
 //    };
 //    private static boolean notCreatedOrNoInstanceOrNoNetworkInterface(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
@@ -244,7 +231,14 @@
 //        return true; // network interface can't be attached if it doesnt exist
 //      }
 //      return false;
+//    };
+//
+//    @Nullable
+//    @Override
+//    public Integer getTimeout() {
+//      return null;
 //    }
+//
 //  }
 //
 //
@@ -276,18 +270,6 @@
 //    item.add(networkInterfaceIdSetItemType);
 //    networkInterfaceIdSetType.setItem(item);
 //    return networkInterfaceIdSetType;
-//  }
-//
-//  @Override
-//  public Promise<String> getCreatePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-//    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-//    return new MultiStepWithRetryCreatePromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-//  }
-//
-//  @Override
-//  public Promise<String> getDeletePromise(WorkflowOperations<StackActivity> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-//    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-//    return new MultiStepWithRetryDeletePromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
 //  }
 //
 //}

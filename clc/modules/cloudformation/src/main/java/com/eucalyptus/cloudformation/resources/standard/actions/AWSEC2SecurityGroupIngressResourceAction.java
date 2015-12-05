@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,11 +28,8 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2SecurityGroup
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2SecurityGroupIngressProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
@@ -51,31 +47,24 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 
 
 /**
  * Created by ethomas on 2/3/14.
  */
-public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
+public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceAction {
   private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupIngressResourceAction.class);
   private AWSEC2SecurityGroupIngressProperties properties = new AWSEC2SecurityGroupIngressProperties();
   private AWSEC2SecurityGroupIngressResourceInfo info = new AWSEC2SecurityGroupIngressResourceInfo();
 
   public AWSEC2SecurityGroupIngressResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
+
   private enum CreateSteps implements Step {
     CREATE_INGRESS_RULE {
       @Override
@@ -282,17 +271,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends ResourceAction {
     }
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 

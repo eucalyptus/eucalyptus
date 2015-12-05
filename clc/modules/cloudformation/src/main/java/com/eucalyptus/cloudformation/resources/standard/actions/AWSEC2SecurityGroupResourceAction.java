@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
@@ -35,11 +34,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
@@ -68,18 +64,17 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
-public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
+public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
   public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 300;
 
@@ -88,13 +83,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
 
   public AWSEC2SecurityGroupResourceAction() {
-    for (Step createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (Step deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
 
   @Override
@@ -310,17 +299,7 @@ public class AWSEC2SecurityGroupResourceAction extends ResourceAction {
     return ipPermissionType;
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 

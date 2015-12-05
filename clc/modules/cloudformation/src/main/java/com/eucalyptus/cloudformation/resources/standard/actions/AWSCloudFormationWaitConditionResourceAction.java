@@ -41,39 +41,32 @@ import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * Created by ethomas on 2/3/14.
  */
-public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction {
+public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResourceAction {
   private static final Logger LOG = Logger.getLogger(AWSCloudFormationWaitConditionResourceAction.class);
   private AWSCloudFormationWaitConditionProperties properties = new AWSCloudFormationWaitConditionProperties();
   private AWSCloudFormationWaitConditionResourceInfo info = new AWSCloudFormationWaitConditionResourceInfo();
 
   public AWSCloudFormationWaitConditionResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
 
   @Override
@@ -232,11 +225,6 @@ public class AWSCloudFormationWaitConditionResourceAction extends ResourceAction
     return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
   }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 }
 
 

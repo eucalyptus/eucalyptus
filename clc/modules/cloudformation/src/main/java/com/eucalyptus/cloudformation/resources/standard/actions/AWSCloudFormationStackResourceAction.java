@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.CreateStackResponseType;
 import com.eucalyptus.cloudformation.CreateStackType;
@@ -45,39 +44,29 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
-import java.util.List;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Created by ethomas on 2/3/14.
  */
-public class AWSCloudFormationStackResourceAction extends ResourceAction {
+public class AWSCloudFormationStackResourceAction extends StepBasedResourceAction {
   private static final Logger LOG = Logger.getLogger(AWSCloudFormationStackResourceAction.class);
   private AWSCloudFormationStackProperties properties = new AWSCloudFormationStackProperties();
   private AWSCloudFormationStackResourceInfo info = new AWSCloudFormationStackResourceInfo();
 
   public AWSCloudFormationStackResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
 
   private enum CreateSteps implements Step {
@@ -307,17 +296,7 @@ public class AWSCloudFormationStackResourceAction extends ResourceAction {
     info = (AWSCloudFormationStackResourceInfo) resourceInfo;
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 
