@@ -46,6 +46,7 @@ import com.eucalyptus.cloudformation.template.AWSParameterTypeValidationHelper
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
+import com.eucalyptus.cloudformation.template.ParameterType
 import com.eucalyptus.cloudformation.template.TemplateParser
 import com.eucalyptus.cloudformation.workflow.steps.Step
 import com.eucalyptus.component.annotation.ComponentPart
@@ -667,7 +668,7 @@ public class StackActivityImpl implements StackActivity {
   public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId) {
     try {
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-      Map<String, TemplateParser.ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
+      Map<String, ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
       for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
         AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
       }

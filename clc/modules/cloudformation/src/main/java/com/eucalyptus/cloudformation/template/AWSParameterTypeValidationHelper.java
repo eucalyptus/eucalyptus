@@ -25,7 +25,14 @@ import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
+import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.DescribeImagesResponseType;
+import com.eucalyptus.compute.common.DescribeImagesType;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
 import com.eucalyptus.compute.common.DescribeKeyPairsResponseType;
 import com.eucalyptus.compute.common.DescribeKeyPairsType;
@@ -33,193 +40,283 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeVolumesResponseType;
+import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
+import com.eucalyptus.compute.common.ImageDetails;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_AvailabilityZone_Name;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Image_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Instance_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_KeyPair_KeyName;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_SecurityGroup_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_SecurityGroup_GroupName;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Subnet_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Volume_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_VPC_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_AvailabilityZone_Name;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Image_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Instance_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_KeyPair_KeyName;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_SecurityGroup_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_SecurityGroup_GroupName;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Subnet_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_VPC_Id;
+import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Volume_Id;
 import java.util.List;
 
 public class AWSParameterTypeValidationHelper {
-  public static List<String> getKeyPairKeyNames(String effectiveUserId) throws AccessDeniedException {
-    List<String> retVal = Lists.newArrayList();
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    try {
-      DescribeKeyPairsType describeKeyPairsType = MessageHelper.createMessage(DescribeKeyPairsType.class, effectiveUserId);
-      DescribeKeyPairsResponseType describeKeyPairsResponseType = AsyncRequests.sendSync(configuration, describeKeyPairsType);
-      if (describeKeyPairsResponseType != null && describeKeyPairsResponseType.getKeySet() != null) {
-        for (DescribeKeyPairsResponseItemType describeKeyPairsResponseItemType:describeKeyPairsResponseType.getKeySet()) {
-          retVal.add(describeKeyPairsResponseItemType.getKeyName());
+
+  public enum ValidParameterFamilyValues {
+    AVAILABILITY_ZONE_NAMES (AWS_EC2_AvailabilityZone_Name, List_AWS_EC2_AvailabilityZone_Name) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeAvailabilityZonesType describeAvailabilityZonesType = MessageHelper.createMessage(DescribeAvailabilityZonesType.class, effectiveUserId);
+          DescribeAvailabilityZonesResponseType describeAvailabilityZonesResponseType = AsyncRequests.sendSync(configuration, describeAvailabilityZonesType);
+          if (describeAvailabilityZonesResponseType != null && describeAvailabilityZonesResponseType.getAvailabilityZoneInfo() != null) {
+            for (ClusterInfoType clusterInfoType:describeAvailabilityZonesResponseType.getAvailabilityZoneInfo()) {
+              retVal.add(clusterInfoType.getZoneName());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access availability zones.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
         }
+        return retVal;
       }
-    } catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      throw new AccessDeniedException("Unable to access keypairs.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+    },
+    KEY_PAIR_NAMES (AWS_EC2_KeyPair_KeyName, List_AWS_EC2_KeyPair_KeyName) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeKeyPairsType describeKeyPairsType = MessageHelper.createMessage(DescribeKeyPairsType.class, effectiveUserId);
+          DescribeKeyPairsResponseType describeKeyPairsResponseType = AsyncRequests.sendSync(configuration, describeKeyPairsType);
+          if (describeKeyPairsResponseType != null && describeKeyPairsResponseType.getKeySet() != null) {
+            for (DescribeKeyPairsResponseItemType describeKeyPairsResponseItemType:describeKeyPairsResponseType.getKeySet()) {
+              retVal.add(describeKeyPairsResponseItemType.getKeyName());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access keypairs.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    IMAGE_IDS (AWS_EC2_Image_Id, List_AWS_EC2_Image_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeImagesType describeImagesType = MessageHelper.createMessage(DescribeImagesType.class, effectiveUserId);
+          DescribeImagesResponseType describeImagesResponseType = AsyncRequests.sendSync(configuration, describeImagesType);
+          if (describeImagesResponseType != null && describeImagesResponseType.getImagesSet() != null) {
+            for (ImageDetails imageDetails: describeImagesResponseType.getImagesSet()) {
+              retVal.add(imageDetails.getImageId());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access image ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    INSTANCE_IDS (AWS_EC2_Instance_Id, List_AWS_EC2_Instance_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, effectiveUserId);
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
+          if (describeInstancesResponseType != null && describeInstancesResponseType.getReservationSet() != null) {
+            for (ReservationInfoType reservationInfoType: describeInstancesResponseType.getReservationSet()) {
+              if (reservationInfoType != null && reservationInfoType.getInstancesSet() != null) {
+                for (RunningInstancesItemType runningInstancesItemType: reservationInfoType.getInstancesSet()) {
+                  retVal.add(runningInstancesItemType.getInstanceId());
+                }
+              }
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access instance ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    SUBNET_IDS (AWS_EC2_Subnet_Id, List_AWS_EC2_Subnet_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, effectiveUserId);
+          DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync(configuration, describeSubnetsType);
+          if (describeSubnetsResponseType != null && describeSubnetsResponseType.getSubnetSet() != null && describeSubnetsResponseType.getSubnetSet().getItem() != null) {
+            for (SubnetType subnetType:describeSubnetsResponseType.getSubnetSet().getItem()) {
+              retVal.add(subnetType.getSubnetId());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access subnet ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    VOLUME_IDS (AWS_EC2_Volume_Id, List_AWS_EC2_Volume_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, effectiveUserId);
+          DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.sendSync(configuration, describeVolumesType);
+          if (describeVolumesResponseType != null && describeVolumesResponseType.getVolumeSet() != null && describeVolumesResponseType.getVolumeSet() != null) {
+            for (Volume volume: describeVolumesResponseType.getVolumeSet()) {
+              retVal.add(volume.getVolumeId());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access volume ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    VPC_IDS (AWS_EC2_VPC_Id, List_AWS_EC2_VPC_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, effectiveUserId);
+          DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
+          if (describeVpcsResponseType != null && describeVpcsResponseType.getVpcSet() != null && describeVpcsResponseType.getVpcSet().getItem() != null) {
+            for (VpcType vpcType:describeVpcsResponseType.getVpcSet().getItem()) {
+              retVal.add(vpcType.getVpcId());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access VPC ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    SECURITY_GROUP_IDS (AWS_EC2_SecurityGroup_Id, List_AWS_EC2_SecurityGroup_Id) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
+          if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null) {
+            for (SecurityGroupItemType securityGroupItemType:describeSecurityGroupsResponseType.getSecurityGroupInfo()) {
+              retVal.add(securityGroupItemType.getGroupId());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access security groups.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    },
+    SECURITY_GROUP_NAMES (AWS_EC2_SecurityGroup_GroupName, List_AWS_EC2_SecurityGroup_GroupName) {
+      @Override
+      public List<String> getValidValues(String effectiveUserId) throws AccessDeniedException {
+        List<String> retVal = Lists.newArrayList();
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        try {
+          DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
+          DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
+          if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null) {
+            for (SecurityGroupItemType securityGroupItemType:describeSecurityGroupsResponseType.getSecurityGroupInfo()) {
+              retVal.add(securityGroupItemType.getGroupName());
+            }
+          }
+        } catch (Exception e) {
+          Throwable rootCause = Throwables.getRootCause(e);
+          throw new AccessDeniedException("Unable to access security groups.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
+        }
+        return retVal;
+      }
+    };
+    private final ParameterType singularType;
+    private final ParameterType listType;
+    ValidParameterFamilyValues(ParameterType singularType, ParameterType listType) {
+      this.singularType = singularType;
+      this.listType = listType;
     }
-    return retVal;
+    public boolean matchesSingularType(ParameterType parameterType) {
+      return singularType == parameterType;
+    }
+    public boolean matchesListType(ParameterType parameterType) {
+      return listType == parameterType;
+    }
+    public abstract List<String> getValidValues(String effectiveUserId) throws AccessDeniedException;
   }
 
-  public static List<String> getSubnetIds(String effectiveUserId) throws AccessDeniedException {
-    List<String> retVal = Lists.newArrayList();
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    try {
-      DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, effectiveUserId);
-      DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.<DescribeSubnetsType, DescribeSubnetsResponseType>sendSync(configuration, describeSubnetsType);
-      if (describeSubnetsResponseType != null && describeSubnetsResponseType.getSubnetSet() != null && describeSubnetsResponseType.getSubnetSet().getItem() != null) {
-        for (SubnetType subnetType:describeSubnetsResponseType.getSubnetSet().getItem()) {
-          retVal.add(subnetType.getSubnetId());
+  private static boolean matchAndValidateTypeFamily(StackEntity.Parameter parameter,
+                                                    ParameterType parameterType, String effectiveUserId,
+                                                    ValidParameterFamilyValues validParameterFamilyValues) throws Exception {
+    boolean matchesSingular = validParameterFamilyValues.matchesSingularType(parameterType);
+    boolean matchesList = validParameterFamilyValues.matchesListType(parameterType);
+    boolean matches = matchesSingular || matchesList;
+    if (matches) {
+      List<String> validValues = validParameterFamilyValues.getValidValues(effectiveUserId);
+      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
+      List<String> valuesToCheck = Lists.newArrayList();
+      if (matchesSingular) {
+        if (!jsonNode.isValueNode())
+          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+        valuesToCheck.add(jsonNode.asText());
+      } else {
+        if (!jsonNode.isArray())
+          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+        for (int i = 0; i < jsonNode.size(); i++) {
+          JsonNode elementNode = jsonNode.get(i);
+          if (!elementNode.isValueNode())
+            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
+          valuesToCheck.add(elementNode.asText());
         }
       }
-    } catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      throw new AccessDeniedException("Unable to access subnet ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
-    }
-    return retVal;
-  }
-
-  public static List<String> getVPCIds(String effectiveUserId) throws AccessDeniedException {
-    List<String> retVal = Lists.newArrayList();
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    try {
-      DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, effectiveUserId);
-      DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.<DescribeVpcsType, DescribeVpcsResponseType>sendSync(configuration, describeVpcsType);
-      if (describeVpcsResponseType != null && describeVpcsResponseType.getVpcSet() != null && describeVpcsResponseType.getVpcSet().getItem() != null) {
-        for (VpcType vpcType:describeVpcsResponseType.getVpcSet().getItem()) {
-          retVal.add(vpcType.getVpcId());
+      for (String valueToCheck : valuesToCheck) {
+        if (!validValues.contains(valueToCheck)) {
+          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck + " for parameter name " + parameter.getKey() + " is not an allowed value for the parameter type.");
         }
       }
-    } catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      throw new AccessDeniedException("Unable to access VPC ids.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
     }
-    return retVal;
+    return matches;
   }
 
 
-  public static List<String> getSecurityGroupIds(String effectiveUserId) throws AccessDeniedException {
-    List<String> retVal = Lists.newArrayList();
-    ServiceConfiguration configuration = Topology.lookup(Compute.class);
-    try {
-      DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
-      DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
-      if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null) {
-        for (SecurityGroupItemType securityGroupItemType:describeSecurityGroupsResponseType.getSecurityGroupInfo()) {
-          retVal.add(securityGroupItemType.getGroupId());
-        }
-      }
-    } catch (Exception e) {
-      Throwable rootCause = Throwables.getRootCause(e);
-      throw new AccessDeniedException("Unable to access security groups.  " + (rootCause.getMessage() == null ? "" : rootCause.getMessage()));
-    }
-    return retVal;
-  }
-
-
-  public static void validateParameter(StackEntity.Parameter parameter, TemplateParser.ParameterType parameterType, String effectiveUserId) throws Exception {
+  public static void validateParameter(StackEntity.Parameter parameter, ParameterType parameterType, String effectiveUserId) throws Exception {
     if (parameterType == null) throw new ValidationErrorException("Can not find parameter type for parameter " + parameter.getKey());
-    if (parameterType == TemplateParser.ParameterType.AWS_EC2_KeyPair_KeyName ||
-      parameterType == TemplateParser.ParameterType.List_AWS_EC2_KeyPair_KeyName) {
-      List<String> keyPairNames = AWSParameterTypeValidationHelper.getKeyPairKeyNames(effectiveUserId);
-      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
-      List<String> valuesToCheck = Lists.newArrayList();
-      if (parameterType == TemplateParser.ParameterType.AWS_EC2_KeyPair_KeyName) {
-        if (!jsonNode.isValueNode())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        valuesToCheck.add(jsonNode.asText());
-      } else {
-        if (!jsonNode.isArray())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        for (int i = 0; i < jsonNode.size(); i++) {
-          JsonNode elementNode = jsonNode.get(i);
-          if (!elementNode.isValueNode())
-            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-          valuesToCheck.add(elementNode.asText());
-        }
+    for (ValidParameterFamilyValues validParameterFamilyValues:ValidParameterFamilyValues.values()) {
+      if (matchAndValidateTypeFamily(parameter, parameterType, effectiveUserId, validParameterFamilyValues)) {
+        break; // found the one to check against.
       }
-      for (String valueToCheck: valuesToCheck) {
-        if (!keyPairNames.contains(valueToCheck)) {
-          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
-        }
-      }
-    } else if (parameterType == TemplateParser.ParameterType.AWS_EC2_SecurityGroup_Id ||
-      parameterType == TemplateParser.ParameterType.List_AWS_EC2_SecurityGroup_Id) {
-      List<String> securityGroupIds = AWSParameterTypeValidationHelper.getSecurityGroupIds(effectiveUserId);
-      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
-      List<String> valuesToCheck = Lists.newArrayList();
-      if (parameterType == TemplateParser.ParameterType.AWS_EC2_SecurityGroup_Id) {
-        if (!jsonNode.isValueNode())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        valuesToCheck.add(jsonNode.asText());
-      } else {
-        if (!jsonNode.isArray())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        for (int i = 0; i < jsonNode.size(); i++) {
-          JsonNode elementNode = jsonNode.get(i);
-          if (!elementNode.isValueNode())
-            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-          valuesToCheck.add(elementNode.asText());
-        }
-      }
-      for (String valueToCheck: valuesToCheck) {
-        if (!securityGroupIds.contains(valueToCheck)) {
-          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
-        }
-      }
-    } else if (parameterType == TemplateParser.ParameterType.AWS_EC2_Subnet_Id ||
-      parameterType == TemplateParser.ParameterType.List_AWS_EC2_Subnet_Id) {
-      List<String> subnetIds = AWSParameterTypeValidationHelper.getSubnetIds(effectiveUserId);
-      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
-      List<String> valuesToCheck = Lists.newArrayList();
-      if (parameterType == TemplateParser.ParameterType.AWS_EC2_Subnet_Id) {
-        if (!jsonNode.isValueNode())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        valuesToCheck.add(jsonNode.asText());
-      } else {
-        if (!jsonNode.isArray())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        for (int i = 0; i < jsonNode.size(); i++) {
-          JsonNode elementNode = jsonNode.get(i);
-          if (!elementNode.isValueNode())
-            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-          valuesToCheck.add(elementNode.asText());
-        }
-      }
-      for (String valueToCheck : valuesToCheck) {
-        if (!subnetIds.contains(valueToCheck)) {
-          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
-        }
-      }
-    } else if (parameterType == TemplateParser.ParameterType.AWS_EC2_VPC_Id ||
-      parameterType == TemplateParser.ParameterType.List_AWS_EC2_VPC_Id) {
-      List<String> vpcIds = AWSParameterTypeValidationHelper.getVPCIds(effectiveUserId);
-      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(parameter.getJsonValue());
-      List<String> valuesToCheck = Lists.newArrayList();
-      if (parameterType == TemplateParser.ParameterType.AWS_EC2_VPC_Id) {
-        if (!jsonNode.isValueNode())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        valuesToCheck.add(jsonNode.asText());
-      } else {
-        if (!jsonNode.isArray())
-          throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-        for (int i = 0; i < jsonNode.size(); i++) {
-          JsonNode elementNode = jsonNode.get(i);
-          if (!elementNode.isValueNode())
-            throw new ValidationErrorException("Invalid value for Parameter " + parameter.getKey());
-          valuesToCheck.add(elementNode.asText());
-        }
-      }
-      for (String valueToCheck : valuesToCheck) {
-        if (!vpcIds.contains(valueToCheck)) {
-          throw new ValidationErrorException("Parameter validation failed: parameter value " + valueToCheck +" for parameter name " + parameter.getKey() + " does not exist." );
-        }
-      }
-    } else { // we don't care
-      ;
     }
   }
 }

@@ -63,46 +63,6 @@ import java.util.regex.PatternSyntaxException;
 public class TemplateParser {
   private static final String NO_ECHO_PARAMETER_VALUE = "****";
 
-  public enum ParameterType {
-    String("String"),
-    Number("Number"),
-    CommaDelimitedList("CommaDelimitedList"),
-    AWS_EC2_KeyPair_KeyName("AWS::EC2::KeyPair::KeyName"),
-    AWS_EC2_SecurityGroup_Id("AWS::EC2::SecurityGroup::Id"),
-    AWS_EC2_Subnet_Id("AWS::EC2::Subnet::Id"),
-    AWS_EC2_VPC_Id("AWS::EC2::VPC::Id"),
-    List_String("List<String>"),
-    List_Number("List<Number>"),
-    List_AWS_EC2_KeyPair_KeyName("List<AWS::EC2::KeyPair::KeyName>"),
-    List_AWS_EC2_SecurityGroup_Id("List<AWS::EC2::SecurityGroup::Id>"),
-    List_AWS_EC2_Subnet_Id("List<AWS::EC2::Subnet::Id>"),
-    List_AWS_EC2_VPC_Id("List<AWS::EC2::VPC::Id>");
-
-    private final String displayValue;
-    ParameterType(String displayValue) {
-      this.displayValue = displayValue;
-    }
-
-    public static ParameterType displayValueOf(String typeStr) {
-      for (ParameterType parameterType: values()) {
-        if (parameterType.displayValue.equals(typeStr)) return parameterType;
-      }
-      throw new IllegalArgumentException("No such ParameterType " + typeStr);
-    }
-
-    public static String[] displayValues() {
-      String[] displayValues = new String[values().length];
-      int ctr = 0;
-
-      for (ParameterType parameterType: values()) {
-        displayValues[ctr++] = parameterType.displayValue;
-      }
-      return displayValues;
-    }
-
-
-  }
-
   private static final Logger LOG = Logger.getLogger(TemplateParser.class);
   public TemplateParser() {
   }
@@ -457,9 +417,14 @@ public class TemplateParser {
       switch (actualParameterType) {
         // intentionally grouping case statements here
         case String:
+        case AWS_EC2_AvailabilityZone_Name:
+        case AWS_EC2_Image_Id:
+        case AWS_EC2_Instance_Id:
         case AWS_EC2_KeyPair_KeyName:
         case AWS_EC2_SecurityGroup_Id:
+        case AWS_EC2_SecurityGroup_GroupName:
         case AWS_EC2_Subnet_Id:
+        case AWS_EC2_Volume_Id:
         case AWS_EC2_VPC_Id:
           parsedIndividualType = ParameterType.String;
           isList = false;
@@ -473,9 +438,14 @@ public class TemplateParser {
           isList = true;
           break;
         case List_String:
+        case List_AWS_EC2_AvailabilityZone_Name:
+        case List_AWS_EC2_Image_Id:
+        case List_AWS_EC2_Instance_Id:
         case List_AWS_EC2_KeyPair_KeyName:
         case List_AWS_EC2_SecurityGroup_Id:
+        case List_AWS_EC2_SecurityGroup_GroupName:
         case List_AWS_EC2_Subnet_Id:
+        case List_AWS_EC2_Volume_Id:
         case List_AWS_EC2_VPC_Id:
           parsedIndividualType = ParameterType.String;
           isList = true;
