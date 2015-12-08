@@ -58,6 +58,7 @@
   <mapping class="com.eucalyptus.cloudformation.Parameter" abstract="true">
     <value name="ParameterKey" field="parameterKey" usage="optional"/>
     <value name="ParameterValue" field="parameterValue" usage="optional"/>
+    <value name="UsePreviousValue" field="usePreviousValue" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudformation.Parameters" abstract="true">
     <collection field="member">
@@ -264,6 +265,7 @@
     <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="OnFailure" field="onFailure" usage="optional"/>
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
@@ -412,7 +414,9 @@
   <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.UpdateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
     <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyDuringUpdateBody" field="stackPolicyDuringUpdateBody" usage="optional"/>
@@ -420,6 +424,7 @@
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
+    <value name="UsePreviousTemplate" field="usePreviousTemplate" usage="optional"/>
   </mapping>
   <mapping name="UpdateStackResponse" class="com.eucalyptus.cloudformation.UpdateStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>

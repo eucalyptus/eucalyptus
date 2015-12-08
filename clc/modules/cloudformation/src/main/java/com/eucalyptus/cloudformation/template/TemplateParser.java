@@ -246,6 +246,7 @@ public class TemplateParser {
 
 
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
+    // The reason all of this json wrapping is going around is because evaluating a pseudoparameter needs to result in a json node (as it could be an array or string)
     Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
     ObjectMapper mapper = new ObjectMapper();
     pseudoParameterMap.put(AWS_ACCOUNT_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));

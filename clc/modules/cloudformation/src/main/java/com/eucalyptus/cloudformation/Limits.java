@@ -53,6 +53,9 @@ public class Limits {
   public volatile static long REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES = 51200;
   @ConfigurableField(initial = "460800", description = "The maximum number of bytes in a template referenced via a URL", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class)
   public volatile static long REQUEST_TEMPLATE_URL_MAX_CONTENT_LENGTH_BYTES = 460800;
+  @ConfigurableField(initial = "16384", description = "The maximum number of bytes in a stack policyL", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class)
+  public volatile static long REQUEST_STACK_POLICY_MAX_CONTENT_LENGTH_BYTES = 16384;
+
   public final static long TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES = 1024;
 
 }

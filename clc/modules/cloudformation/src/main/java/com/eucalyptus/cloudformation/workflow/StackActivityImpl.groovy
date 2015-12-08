@@ -49,6 +49,7 @@ import com.eucalyptus.cloudformation.template.JsonHelper
 import com.eucalyptus.cloudformation.template.ParameterType
 import com.eucalyptus.cloudformation.template.TemplateParser
 import com.eucalyptus.cloudformation.workflow.steps.Step
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
@@ -341,7 +342,10 @@ public class StackActivityImpl implements StackActivity {
       resourceInfo.setEffectiveUserId(effectiveUserId);
       resourceAction.setResourceInfo(resourceInfo);
       ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      Step createStep = resourceAction.getCreateStep(stepId);
+      if (!(resourceAction instanceof StepBasedResourceAction)) {
+        throw new ClassCastException("Calling performCreateStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
+      }
+      Step createStep = ((StepBasedResourceAction) resourceAction).getCreateStep(stepId);
       resourceAction = createStep.perform(resourceAction);
       resourceInfo = resourceAction.getResourceInfo();
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
@@ -415,7 +419,10 @@ public class StackActivityImpl implements StackActivity {
       }
       if (!errorWithProperties) {
         // if we have errors with properties we had them on create too, so we didn't start (really)
-        Step deleteStep = resourceAction.getDeleteStep(stepId);
+        if (!(resourceAction instanceof StepBasedResourceAction)) {
+          throw new ClassCastException("Calling performCreateStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
+        }
+        Step deleteStep = ((StepBasedResourceAction) resourceAction).getDeleteStep(stepId);
         resourceAction = deleteStep.perform(resourceAction);
         resourceInfo = resourceAction.getResourceInfo();
         stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);
@@ -629,7 +636,7 @@ public class StackActivityImpl implements StackActivity {
     if (monitorWorkflows != null) {
       for (StackWorkflowEntity workflow : monitorWorkflows) {
         if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
-          throw new ValidationFailedException("A monitoring workflow for " + stackId + " has not yet been canceled");
+          throw new RetryAfterConditionCheckFailedException("A monitoring workflow for " + stackId + " has not yet been canceled");
         }
       }
     }
@@ -637,7 +644,7 @@ public class StackActivityImpl implements StackActivity {
     if (createWorkflows != null) {
       for (StackWorkflowEntity workflow : createWorkflows) {
         if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
-          throw new ValidationFailedException("A create workflow for " + stackId + " has not yet been canceled");
+          throw new RetryAfterConditionCheckFailedException("A create workflow for " + stackId + " has not yet been canceled");
         }
       }
     }

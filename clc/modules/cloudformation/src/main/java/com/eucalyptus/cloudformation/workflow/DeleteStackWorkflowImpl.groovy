@@ -42,7 +42,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
     try {
       // cancel existing creae/monitor workflows...
-      ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([ValidationFailedException.class])
+      ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([RetryAfterConditionCheckFailedException.class])
       Promise<String> cancelWorkflowsPromise = activities.cancelCreateAndMonitorWorkflows(stackId);
       waitFor(cancelWorkflowsPromise) {
         waitFor(

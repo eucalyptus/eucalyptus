@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
@@ -53,12 +52,9 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoSca
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.ValidationFailedException;
-import com.eucalyptus.cloudformation.workflow.steps.CreateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.DeleteMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
+import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -68,7 +64,6 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +72,7 @@ import java.util.List;
  * Created by ethomas on 2/3/14.
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
-public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction {
+public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResourceAction {
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an autoscaling group to have zero instances during delete")
   public static volatile Integer AUTOSCALING_GROUP_ZERO_INSTANCES_MAX_DELETE_RETRY_SECS = 300;
@@ -89,13 +84,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
   private AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
 
   public AWSAutoScalingAutoScalingGroupResourceAction() {
-    for (CreateSteps createStep: CreateSteps.values()) {
-      createSteps.put(createStep.name(), createStep);
-    }
-    for (DeleteSteps deleteStep: DeleteSteps.values()) {
-      deleteSteps.put(deleteStep.name(), deleteStep);
-    }
-
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
   }
 
   private enum CreateSteps implements Step {
@@ -242,7 +231,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
             return action; // Group has zero instances
           }
         }
-        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " still has instances");
+        throw new RetryAfterConditionCheckFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " still has instances");
       }
 
       @Override
@@ -268,7 +257,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
         AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
         if (groupDoesNotExist(configuration, action)) return action;
-        throw new ValidationFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " is not yet deleted");
+        throw new RetryAfterConditionCheckFailedException("Autoscaling group " + action.info.getPhysicalResourceId() + " is not yet deleted");
       }
 
       @Override
@@ -326,17 +315,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends ResourceAction
       || describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().isEmpty();
   }
 
-  @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(CreateSteps.values()), StepTransform.INSTANCE);
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
-  @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.transform(Lists.newArrayList(DeleteSteps.values()), StepTransform.INSTANCE);
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
-  }
 
 }
 
