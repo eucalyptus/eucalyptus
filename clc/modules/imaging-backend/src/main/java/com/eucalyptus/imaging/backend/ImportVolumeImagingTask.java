@@ -171,9 +171,9 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
   }
   
   @Override
-  public void cleanUp(){
+  public boolean cleanUp(){
     if (getCleanUpDone())
-      return;
+      return true;
     final ImportVolumeTaskDetails volumeDetails =
         this.getTask().getImportVolume();
     if(volumeDetails.getVolume()!=null &&
@@ -197,6 +197,7 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
             volumeDetails.getVolume().getId(), this.getDisplayName()));
       }
     }
+    return true;
   }
   
   @TypeMapper
