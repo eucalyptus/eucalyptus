@@ -519,7 +519,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private LoadBalancerHealthCheckConfig healthConfig = null;
 	
 	@Embeddable
-	private static class LoadBalancerHealthCheckConfig {
+	public static class LoadBalancerHealthCheckConfig {
 		@Parent
 		private LoadBalancer loadBalancer = null;
 		

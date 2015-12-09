@@ -102,7 +102,15 @@ public class Classes {
       }
     };
   }
-  
+
+  enum ClassNameToName implements Function<Object, String> {
+    INSTANCE;
+    @Override
+    public String apply( final Object arg0 ) {
+      return WhateverAsClass.INSTANCE.apply( arg0 ).getName( );
+    }
+  }
+
   enum ClassNameToSimpleName implements Function<Object, String> {
     INSTANCE;
     @Override
@@ -118,7 +126,11 @@ public class Classes {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getCanonicalName( );
     }
   }
-  
+
+  public static Function<Object, String> nameFunction( ) {
+    return ClassNameToName.INSTANCE;
+  }
+
   public static Function<Object, String> simpleNameFunction( ) {
     return ClassNameToSimpleName.INSTANCE;
   }

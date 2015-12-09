@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,8 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
   @Column( name = "metadata_destination_cidr", nullable = false, updatable = false )
   private String destinationCidr;
 
-  @Column( name = "metadata_internet_gateway_id", nullable = true, updatable = false )
+  @ManyToOne
+  @JoinColumn( name = "metadata_internet_gateway_id", nullable = true, updatable = false )
   private InternetGateway internetGateway;
 
   protected Route( ) {

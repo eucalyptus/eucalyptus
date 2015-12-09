@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -78,11 +79,12 @@ import javax.annotation.Nullable;
 import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.Persistence;
 import javax.persistence.PersistenceContext;
 
 import org.apache.log4j.Logger;
-import org.hibernate.ejb.Ejb3Configuration;
-import org.hibernate.ejb.EntityManagerFactoryImpl;
+import org.hibernate.cfg.Configuration;
+import org.hibernate.jpa.internal.EntityManagerFactoryImpl;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
@@ -96,6 +98,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.entities.impl.EucalyptusPersistenceProvider;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.scripting.Groovyness;
@@ -107,7 +110,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 
 @SuppressWarnings( "unchecked" )
@@ -115,12 +117,12 @@ public class PersistenceContexts {
   private static Logger LOG = Logger.getLogger( PersistenceContexts.class );
   private static Long MAX_FAIL_SECONDS = 60L;                                                           //TODO:GRZE:@Configurable
   private static final int MAX_EMF_RETRIES = 20;
-  private static AtomicStampedReference<Long> failCount = new AtomicStampedReference<Long>( 0L, 0 );
-  private static final ArrayListMultimap<String, Class> entities = ArrayListMultimap.create( );
-  private static final ArrayListMultimap<String, Class> remotableEntities = ArrayListMultimap.create( );
+  private static AtomicStampedReference<Long> failCount = new AtomicStampedReference<>( 0L, 0 );
+  private static final ArrayListMultimap<String, Class<?>> entities = ArrayListMultimap.create( );
+  private static final ArrayListMultimap<String, Class<?>> remotableEntities = ArrayListMultimap.create( );
   private static final List<Class> sharedEntities = Lists.newArrayList( );
-  private static Map<String, EntityManagerFactoryImpl> emf = new ConcurrentSkipListMap<String, EntityManagerFactoryImpl>( );
-  private static Multimap<String, Exception> illegalAccesses = ArrayListMultimap.create( );
+  private static Map<String, EntityManagerFactoryImpl> emf = new ConcurrentSkipListMap<>( );
+  private static Map<String, PersistenceContextConfiguration> pcc = new ConcurrentHashMap<>( );
 
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PersistenceInit )
@@ -264,7 +266,7 @@ public class PersistenceContexts {
       throw BootstrapException.throwFatal( "Duplicate entity definition in shared entities: " + entity.getCanonicalName( )
           + ". See error logs for details." );
     } else if ( entities.get( ctx.name( ) ) != null && entities.get( ctx.name( ) ).contains( entity ) ) {
-      List<Class> context = entities.get( ctx.name( ) );
+      List<Class<?>> context = entities.get( ctx.name( ) );
       Class old = context.get( context.indexOf( entity ) );
       LOG.error( "Duplicate entity definition detected: " + entity.getCanonicalName( ) );
       LOG.error( "=> OLD: " + old.getProtectionDomain( ).getCodeSource( ).getLocation( ) );
@@ -278,11 +280,15 @@ public class PersistenceContexts {
     }
   }
 
-  public static EntityManagerFactoryImpl registerPersistenceContext( final String persistenceContext, final Ejb3Configuration config ) {
+  public static EntityManagerFactoryImpl registerPersistenceContext( final PersistenceContextConfiguration config ) {
+    final String persistenceContext = config.getName( );
     if ( !emf.containsKey( persistenceContext ) ) {
       try {
         LOG.trace( "-> Setting up persistence context for: " + persistenceContext );
-        EntityManagerFactoryImpl entityManagerFactory = (EntityManagerFactoryImpl) config.buildEntityManagerFactory( );
+        pcc.put( persistenceContext, config );
+        final EucalyptusPersistenceProvider provider = new EucalyptusPersistenceProvider( );
+        EntityManagerFactoryImpl entityManagerFactory = (EntityManagerFactoryImpl)
+            provider.createEntityManagerFactory( persistenceContext, config.getProperties( ) );
         LOG.trace( LogUtil.subheader( LogUtil.dumpObject( config ) ) );
         emf.put( persistenceContext, entityManagerFactory );
         LOG.info( "-> Setup done for persistence context: " + persistenceContext );
@@ -291,6 +297,14 @@ public class PersistenceContexts {
       }
     }
     return emf.get( persistenceContext );
+  }
+
+  public static Configuration getConfiguration( final PersistenceContextConfiguration config ) {
+    final EucalyptusPersistenceProvider provider = new EucalyptusPersistenceProvider( );
+    if ( !pcc.containsKey( config.getName( ) ) ) {
+      pcc.put( config.getName( ), config );
+    }
+    return provider.getConfiguration( config.getName( ), config.getProperties( ) );
   }
 
   public static void flush( String ctx ) {
@@ -347,8 +361,8 @@ public class PersistenceContexts {
     }
   }
 
-  public static List<Class> listEntities( String persistenceContext ) {
-    final List<Class> ctxEntities = Lists.newArrayList( );
+  public static List<Class<?>> listEntities( String persistenceContext ) {
+    final List<Class<?>> ctxEntities = Lists.newArrayList( );
     if ( entities.containsKey( persistenceContext ) ) {
       ctxEntities.addAll( Lists.newArrayList( entities.get( persistenceContext ) ) );
     }
@@ -369,6 +383,10 @@ public class PersistenceContexts {
       }
     }
     return ados;
+  }
+
+  public static PersistenceContextConfiguration getConfiguration( String persistenceContext ) {
+    return pcc.get( persistenceContext );
   }
 
   private static void touchDatabase( ) {

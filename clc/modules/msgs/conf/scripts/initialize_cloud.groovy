@@ -60,12 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-
-import com.eucalyptus.entities.AuxiliaryDatabaseObject
-import org.hibernate.mapping.SimpleAuxiliaryDatabaseObject
-
 import org.apache.log4j.Logger
-import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.Databases
@@ -80,6 +75,7 @@ import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.component.id.Database
+import com.eucalyptus.entities.PersistenceContextConfiguration
 import com.eucalyptus.entities.PersistenceContextDiscovery
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper
@@ -101,7 +97,7 @@ if( BootstrapArgs.isInitializeSystem( ) ) {
 try {
   Databases.initialize( );
   try {
-    props = [
+    Map<String,String> props = [
           "hibernate.show_sql": "false",
           "hibernate.format_sql": "false",
           "hibernate.connection.autocommit": "true",
@@ -117,26 +113,21 @@ try {
           "hibernate.transaction.flush_before_completion":"false",
           "hibernate.cache.use_second_level_cache": "false",
           "hibernate.cache.use_query_cache": "false",
+          "hibernate.discriminator.ignore_explicit_for_joined": "true", // HHH-6911
     ]
     for ( String ctx : PersistenceContexts.list( ) ) {
-      Properties p = new Properties( );
-      p.putAll( props );
       final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
       final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
-      String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
-      p.setProperty( "hibernate.connection.url", ctxUrl );
-      p.setProperty( 'hibernate.cache.region_prefix', ctx + '_cache' );
-      if ( schemaName != null ) p.setProperty( 'hibernate.default_schema', schemaName )
-      Ejb3Configuration config = new Ejb3Configuration( );
-      config.setProperties( p );
-      for ( Class c : PersistenceContexts.listEntities( ctx ) ) {
-        config.addAnnotatedClass( c );
-      }
-      PersistenceContexts.listAuxiliaryDatabaseObjects( ctx ).each{ AuxiliaryDatabaseObject ado ->
-        config.addAuxiliaryDatabaseObject(
-            new SimpleAuxiliaryDatabaseObject( ado.create( ) , ado.drop( ), ado.dialect( ) as HashSet ) )
-      }
-      PersistenceContexts.registerPersistenceContext( ctx, config );
+      final String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
+      props.put( "hibernate.connection.url", ctxUrl );
+      if ( schemaName != null ) props.put( 'hibernate.default_schema', schemaName )
+      final PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+          ctx,
+          PersistenceContexts.listEntities( ctx ),
+          PersistenceContexts.listAuxiliaryDatabaseObjects( ctx ),
+          props
+      );
+      PersistenceContexts.registerPersistenceContext( config );
     }
     if( BootstrapArgs.isInitializeSystem( ) ) {
       ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class );

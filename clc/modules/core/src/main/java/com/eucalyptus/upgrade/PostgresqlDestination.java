@@ -63,18 +63,18 @@
 package com.eucalyptus.upgrade;
 
 import java.util.Map;
-import java.util.Properties;
 import org.apache.log4j.Logger;
-import org.hibernate.ejb.Ejb3Configuration;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Database;
+import com.eucalyptus.entities.PersistenceContextConfiguration;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.bootstrap.DatabaseBootstrapper;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 public class PostgresqlDestination implements DatabaseDestination {
   private static Logger LOG = Logger.getLogger( PostgresqlDestination.class );
@@ -111,16 +111,18 @@ public class PostgresqlDestination implements DatabaseDestination {
           .build();
 
       for ( final String ctx : PersistenceContexts.list( ) ) {
-        final Properties p = new Properties( );
+        final Map<String,String> p = Maps.newHashMap( );
         p.putAll( props );
         final String ctxUrl = String.format("jdbc:%s",ServiceUris.remote(dbComp,ctx));
         p.put( "hibernate.connection.url", ctxUrl );
-        final Ejb3Configuration config = new Ejb3Configuration( );
-        config.setProperties( p );
-        for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
-          config.addAnnotatedClass( c );
-        }
-        PersistenceContexts.registerPersistenceContext( ctx, config );
+
+        PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+            ctx,
+            PersistenceContexts.listEntities( ctx ),
+            p
+        );
+
+        PersistenceContexts.registerPersistenceContext( config );
       } 
     } catch ( final Exception e ) {
       LOG.fatal( e, e );

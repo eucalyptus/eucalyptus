@@ -23,10 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.Future;
-
-import org.hibernate.ejb.Ejb3Configuration;
 
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.CHAPUserInfo;
@@ -46,11 +43,14 @@ import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 import com.eucalyptus.blockstorage.san.common.entities.SANInfo;
 import com.eucalyptus.blockstorage.san.common.entities.SANVolumeInfo;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceContextConfiguration;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
@@ -58,7 +58,7 @@ public class BlockStorageUnitTestSupport {
   private static Map<String, List<String>> userMap = new HashMap<>();
 
   public static void setupBlockStoragePersistenceContext() {
-    Properties props = new Properties();
+    Map<String,String> props = Maps.newHashMap( );
     props.put("hibernate.archive.autodetection", "jar, class, hbm");
     props.put("hibernate.ejb.interceptor.session_scoped", "com.eucalyptus.entities.DelegatingInterceptor");
     props.put("hibernate.show_sql", "false");
@@ -73,15 +73,18 @@ public class BlockStorageUnitTestSupport {
     props.put("hibernate.dialect", "org.hibernate.dialect.DerbyDialect");
     props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
 
-    Ejb3Configuration config =
-        (new Ejb3Configuration()).configure(props).addAnnotatedClass(BlockStorageGlobalConfiguration.class).addAnnotatedClass(CHAPUserInfo.class)
-            .addAnnotatedClass(DASInfo.class).addAnnotatedClass(DirectStorageInfo.class).addAnnotatedClass(ISCSIMetaInfo.class)
-            .addAnnotatedClass(ISCSIVolumeInfo.class).addAnnotatedClass(SnapshotInfo.class).addAnnotatedClass(SnapshotPart.class)
-            .addAnnotatedClass(SnapshotTransferConfiguration.class).addAnnotatedClass(SnapshotUploadInfo.class).addAnnotatedClass(StorageInfo.class)
-            .addAnnotatedClass(VolumeExportRecord.class).addAnnotatedClass(VolumeInfo.class).addAnnotatedClass(VolumeToken.class)
-            .addAnnotatedClass(SANVolumeInfo.class).addAnnotatedClass(SANInfo.class);
+    PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+        "eucalyptus_storage",
+        ImmutableList.<Class<?>>builder( ).add( BlockStorageGlobalConfiguration.class ).add( CHAPUserInfo.class )
+            .add( DASInfo.class ).add( DirectStorageInfo.class ).add( ISCSIMetaInfo.class )
+            .add( ISCSIVolumeInfo.class ).add( SnapshotInfo.class ).add( SnapshotPart.class )
+            .add( SnapshotTransferConfiguration.class ).add( SnapshotUploadInfo.class ).add( StorageInfo.class )
+            .add( VolumeExportRecord.class ).add( VolumeInfo.class ).add( VolumeToken.class )
+            .add( SANVolumeInfo.class ).add( SANInfo.class ).build( ),
+        props
+    );
 
-    PersistenceContexts.registerPersistenceContext("eucalyptus_storage", config);
+    PersistenceContexts.registerPersistenceContext( config );
   }
 
   public static void tearDownBlockStoragePersistenceContext() {
