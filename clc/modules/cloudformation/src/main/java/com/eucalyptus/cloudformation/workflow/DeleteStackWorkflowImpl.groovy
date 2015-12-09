@@ -51,10 +51,10 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
           }
         ) {
           new CommonDeleteRollbackPromises(workflowOperations,
-            StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
+            Status.DELETE_IN_PROGRESS.toString(),
             "User Initiated",
-            StackResourceEntity.Status.DELETE_FAILED.toString(),
-            StackResourceEntity.Status.DELETE_COMPLETE.toString(),
+            Status.DELETE_FAILED.toString(),
+            Status.DELETE_COMPLETE.toString(),
             true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
         }
       }

@@ -38,6 +38,7 @@ import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
+import com.eucalyptus.cloudformation.entity.Status;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.FunctionEvaluation;
 import com.eucalyptus.cloudformation.template.JsonHelper;
@@ -213,7 +214,7 @@ public class CloudFormationService {
             stackEntity.setAccountId(accountId);
             stackEntity.setTemplateBody(templateText);
             stackEntity.setStackPolicy(stackPolicyText);
-            stackEntity.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS);
+            stackEntity.setStackStatus(Status.CREATE_IN_PROGRESS);
             stackEntity.setStackStatusReason("User initiated");
             stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
             stackEntity.setCreationTimestamp(new Date());
@@ -249,7 +250,7 @@ public class CloudFormationService {
               StackResourceEntity stackResourceEntity = new StackResourceEntity();
               stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
               stackResourceEntity.setDescription(""); // TODO: maybe on resource info?
-              stackResourceEntity.setResourceStatus(StackResourceEntity.Status.NOT_STARTED);
+              stackResourceEntity.setResourceStatus(Status.NOT_STARTED);
               stackResourceEntity.setStackId(stackId);
               stackResourceEntity.setStackName(stackName);
               stackResourceEntity.setRecordDeleted(Boolean.FALSE);
@@ -802,11 +803,11 @@ public class CloudFormationService {
       final User user = ctx.getUser();
       final String accountId = user.getAccountNumber();
       final ResourceList stackStatusFilter = request.getStackStatusFilter();
-      final List<StackEntity.Status> statusFilterList = Lists.newArrayList();
+      final List<Status> statusFilterList = Lists.newArrayList();
       if (stackStatusFilter != null && stackStatusFilter.getMember() != null) {
         for (String statusFilterStr: stackStatusFilter.getMember()) {
           try {
-            statusFilterList.add(StackEntity.Status.valueOf(statusFilterStr));
+            statusFilterList.add(Status.valueOf(statusFilterStr));
           } catch (Exception ex) {
             throw new ValidationErrorException("Invalid value for StackStatus " + statusFilterStr);
           }
@@ -1047,8 +1048,8 @@ public class CloudFormationService {
       }
 
       // Finally make sure the stack state is ok
-      if (stackEntity.getStackStatus() != StackEntity.Status.CREATE_COMPLETE && stackEntity.getStackStatus() != StackEntity.Status.UPDATE_COMPLETE &&
-        stackEntity.getStackStatus() != StackEntity.Status.UPDATE_ROLLBACK_COMPLETE) {
+      if (stackEntity.getStackStatus() != Status.CREATE_COMPLETE && stackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
+        stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
         throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
       }
       UpdateStackResult updateStackResult = new UpdateStackResult();

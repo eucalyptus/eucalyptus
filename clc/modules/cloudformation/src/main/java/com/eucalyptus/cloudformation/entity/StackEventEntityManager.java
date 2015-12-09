@@ -66,7 +66,7 @@ public class StackEventEntityManager {
     stackEventEntity.setLogicalResourceId(stackEvent.getLogicalResourceId());
     stackEventEntity.setPhysicalResourceId(stackEvent.getPhysicalResourceId());
     stackEventEntity.setResourceProperties(stackEvent.getResourceProperties());
-    stackEventEntity.setResourceStatus(StackResourceEntity.Status.valueOf(stackEvent.getResourceStatus()));
+    stackEventEntity.setResourceStatus(Status.valueOf(stackEvent.getResourceStatus()));
     stackEventEntity.setResourceStatusReason(stackEvent.getResourceStatusReason());
     stackEventEntity.setResourceType(stackEvent.getResourceType());
     stackEventEntity.setStackId(stackEvent.getStackId());

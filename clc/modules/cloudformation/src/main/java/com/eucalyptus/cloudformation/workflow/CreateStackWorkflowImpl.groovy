@@ -55,7 +55,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         activities.createGlobalStackEvent(
           stackId,
           accountId,
-          StackResourceEntity.Status.CREATE_IN_PROGRESS.toString(),
+          Status.CREATE_IN_PROGRESS.toString(),
           "User Initiated"
         );
 
@@ -95,7 +95,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             waitFor(allResourcePromises) {
               waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
                 activities.createGlobalStackEvent(stackId, accountId,
-                  StackResourceEntity.Status.CREATE_COMPLETE.toString(),
+                  Status.CREATE_COMPLETE.toString(),
                   "Complete!");
               }
             }
@@ -112,7 +112,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             activities.createGlobalStackEvent(
               stackId,
               accountId,
-              StackResourceEntity.Status.CREATE_FAILED.toString(),
+              Status.CREATE_FAILED.toString(),
               errorMessage
             );
           }

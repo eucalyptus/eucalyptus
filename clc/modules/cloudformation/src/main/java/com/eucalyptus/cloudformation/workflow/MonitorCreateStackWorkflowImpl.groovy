@@ -24,8 +24,8 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
-import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
+import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.component.annotation.ComponentPart
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
@@ -92,11 +92,11 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
       Promise<String> cancelOutstandingResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled");
       Promise<String> setStackStatusPromise = waitFor(cancelOutstandingResources) {
         activities.setStackStatus(stackId, accountId,
-          StackEntity.Status.CREATE_FAILED.toString(), statusReason)
+          Status.CREATE_FAILED.toString(), statusReason)
       };
       return waitFor(setStackStatusPromise) {
         Promise<String> createGlobalStackEventPromise = activities.createGlobalStackEvent(stackId,
-          accountId, StackResourceEntity.Status.CREATE_FAILED.toString(), statusReason);
+          accountId, Status.CREATE_FAILED.toString(), statusReason);
         waitFor(createGlobalStackEventPromise) {
           performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
         }
@@ -113,18 +113,18 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
       return promiseFor("");
     } else if ("DELETE".equals(onFailure)) {
       return new CommonDeleteRollbackPromises(workflowOperations,
-        StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
+        Status.DELETE_IN_PROGRESS.toString(),
         "Create stack failed.  Delete requested by user.",
-        StackResourceEntity.Status.DELETE_FAILED.toString(),
-        StackResourceEntity.Status.DELETE_COMPLETE.toString(),
+        Status.DELETE_FAILED.toString(),
+        Status.DELETE_COMPLETE.toString(),
         true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
 
     } else if ("ROLLBACK".equals(onFailure)) {
       return new CommonDeleteRollbackPromises(workflowOperations,
-        StackResourceEntity.Status.ROLLBACK_IN_PROGRESS.toString(),
+        Status.ROLLBACK_IN_PROGRESS.toString(),
         "Create stack failed.  Rollback requested by user.",
-        StackResourceEntity.Status.ROLLBACK_FAILED.toString(),
-        StackResourceEntity.Status.ROLLBACK_COMPLETE.toString(),
+        Status.ROLLBACK_FAILED.toString(),
+        Status.ROLLBACK_COMPLETE.toString(),
         false).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
     } else {
       throw new InternalFailureException("Invalid onFailure value " + onFailure);

@@ -101,23 +101,6 @@ public class StackResourceEntity extends AbstractPersistent {
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
 
-  public enum Status {
-    NOT_STARTED,
-    CREATE_IN_PROGRESS,
-    CREATE_FAILED,
-    CREATE_COMPLETE,
-    DELETE_IN_PROGRESS,
-    DELETE_FAILED,
-    DELETE_SKIPPED,
-    DELETE_COMPLETE,
-    ROLLBACK_IN_PROGRESS,
-    ROLLBACK_FAILED,
-    ROLLBACK_COMPLETE,
-    UPDATE_IN_PROGRESS,
-    UPDATE_FAILED,
-    UPDATE_COMPLETE
-  }
-
   public StackResourceEntity() {
   }
 

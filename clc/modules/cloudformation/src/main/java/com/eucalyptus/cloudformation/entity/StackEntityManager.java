@@ -79,7 +79,7 @@ public class StackEntityManager {
     return returnValue;
   }
 
-  public static List<StackEntity> listStacks(String accountId, List<StackEntity.Status> statusValues) {
+  public static List<StackEntity> listStacks(String accountId, List<Status> statusValues) {
     List<StackEntity> returnValue;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
@@ -88,7 +88,7 @@ public class StackEntityManager {
       if (statusValues != null && !statusValues.isEmpty()) {
         Criterion[] orClauses = new Criterion[statusValues.size()];
         int ctr = 0;
-        for (StackEntity.Status statusValue: statusValues) {
+        for (Status statusValue: statusValues) {
           orClauses[ctr++] = Restrictions.eq("stackStatus", statusValue);
         }
         criteria.add(Restrictions.or(orClauses));
