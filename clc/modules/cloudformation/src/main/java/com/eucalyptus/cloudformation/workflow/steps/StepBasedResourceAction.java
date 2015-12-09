@@ -29,7 +29,7 @@ public abstract class StepBasedResourceAction extends ResourceAction {
 
   public StepBasedResourceAction(Map<String, Step> addedCreateSteps, Map<String, Step> addedDeleteSteps) {
     createSteps.putAll(addedCreateSteps);
-    deleteSteps.putAll(addedCreateSteps);
+    deleteSteps.putAll(addedDeleteSteps);
   }
 
   public static final Map<String, Step> fromEnum(Class<? extends Step> stepClass) {
