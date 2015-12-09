@@ -26,6 +26,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
+import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
@@ -96,7 +97,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
               waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
                 activities.createGlobalStackEvent(stackId, accountId,
                   Status.CREATE_COMPLETE.toString(),
-                  "Complete!");
+                  "");
               }
             }
           }
