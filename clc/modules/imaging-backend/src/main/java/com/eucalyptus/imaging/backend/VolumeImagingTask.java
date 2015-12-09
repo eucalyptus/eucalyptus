@@ -57,7 +57,7 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@DiscriminatorValue( value = "metadata_imaging_task" )
+@DiscriminatorValue( value = "metadata_volume_imaging_task" )
 public class VolumeImagingTask extends ImagingTask {
   private static Logger LOG  = Logger.getLogger( VolumeImagingTask.class );
 
