@@ -92,6 +92,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
           objectNode.put( "bucket", bucketName );
           objectNode.put( "key", keyName );
           action.info.setEucaParts( JsonHelper.getStringFromJsonNode( objectNode ) );
+          s3c.refreshEndpoint( true );
           String url = s3c.generatePresignedUrl( bucketName, keyName, action.in12Hours(), HttpMethod.PUT ).toString();
           action.info.setPhysicalResourceId( url );
         }
