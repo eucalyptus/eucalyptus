@@ -31,9 +31,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.ServerCertificateMetadataType;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -44,6 +47,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.resources.client.CloudFormationClient;
+import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.resources.client.EuareClient;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -123,7 +127,13 @@ public class ImagingServiceLaunchers {
       if ("NULL".equals(ImagingServiceProperties.IMAGE))
         throw new EucalyptusCloudException("You need to set 'services.imaging.worker.image'"
             + "before enabling the service");
-
+      UserPrincipal imagingUser = Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT );
+      // create default VPC if needed
+      if (Networking.getInstance().supports( NetworkingFeature.Vpc )) {
+        if (!Ec2Client.getInstance().hasDefaultVPC(imagingUser.getUserId())) {
+            Ec2Client.getInstance().createDefaultVPC(imagingUser.getAccountNumber());
+        }
+      }
       // generate certificate
       ServerCertificateMetadataType metadata = createAndUploadCertificate();
       // use CF for stack creation
@@ -156,7 +166,7 @@ public class ImagingServiceLaunchers {
           DNSProperties.getDomain())));
       LOG.debug("Creating CF stack for the imaging worker");
       CloudFormationClient.getInstance().createStack(
-          Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
+          imagingUser.getUserId( ),
           ImagingServiceProperties.IMAGING_WORKER_STACK_NAME, template, params);
       LOG.debug("Done creating CF stack for the imaging worker");
     } catch (final Exception ex) {

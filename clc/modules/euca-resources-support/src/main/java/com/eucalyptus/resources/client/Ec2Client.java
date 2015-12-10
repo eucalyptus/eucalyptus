@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.eucalyptus.compute.common.*;
+import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 
 import org.apache.log4j.Logger;
 
@@ -1091,6 +1092,67 @@ public class Ec2Client {
     }
   }
 
+  private class ComputeDescribeDefaultVpcsTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    private ArrayList<VpcType> result;
+
+    private DescribeVpcsType describeDefaultVPC() {
+      final DescribeVpcsType req = new DescribeVpcsType();
+      req.getFilterSet().add( Filter.filter( "isDefault", Collections.singleton(Boolean.TRUE.toString()) ) );
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(describeDefaultVPC(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final DescribeVpcsResponseType resp = (DescribeVpcsResponseType) response;
+      result = resp.getVpcSet( ).getItem();
+    }
+
+    public List<VpcType> getDefaultVpcs() {
+      return this.result;
+    }
+  }
+
+  private class ComputeCreateDefaultVpcsTask extends EucalyptusClientTask<ComputeMessage, Compute> {
+    private VpcType result;
+    private String accountNumber;
+
+    public ComputeCreateDefaultVpcsTask(String accountNumber) {
+      this.accountNumber = accountNumber;
+    }
+
+    private CreateVpcType createDefaultVPC() {
+      final CreateVpcType req = new CreateVpcType();
+      req.setCidrBlock(accountNumber);
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(createDefaultVPC(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final CreateVpcResponseType resp = (CreateVpcResponseType) response;
+      result = resp.getVpc();
+    }
+
+    public VpcType getVpc() { return result; }
+  }
+  
   public List<String> runInstances(final String userId, final String imageId,
       final ArrayList<String> groupNames, final String userData,
       final String instanceType, final String availabilityZone,
@@ -1598,6 +1660,41 @@ public class Ec2Client {
         throw new EucalyptusActivityException(
             task.getErrorMessage() != null ? task.getErrorMessage()
                 : "failed to describe security groups");
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public boolean hasDefaultVPC(final String userId) throws EucalyptusActivityException {
+    final ComputeDescribeDefaultVpcsTask task = new ComputeDescribeDefaultVpcsTask();
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try {
+      if (result.get()) {
+        if (!task.getDefaultVpcs().isEmpty() && task.getDefaultVpcs().size() == 1)
+          return true;
+        else
+          return false;
+      } else
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to describe default VPC");
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public VpcType createDefaultVPC(final String accountNumber) throws EucalyptusActivityException {
+    final ComputeCreateDefaultVpcsTask task = new ComputeCreateDefaultVpcsTask(accountNumber);
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(null));
+    try {
+      if (result.get()) {
+        return task.getVpc();
+      } else
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to create default VPC");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
