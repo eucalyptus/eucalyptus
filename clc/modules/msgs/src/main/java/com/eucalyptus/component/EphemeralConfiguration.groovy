@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,8 +62,6 @@
 
 package com.eucalyptus.component
 
-import java.net.URI
-import javax.persistence.Transient
 import com.eucalyptus.config.ComponentConfiguration
 
 class EphemeralConfiguration extends ComponentConfiguration {
@@ -72,7 +70,7 @@ class EphemeralConfiguration extends ComponentConfiguration {
   ComponentId c;
   
   public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
-    super( partition, name, uri.getHost( ), uri.getPort( ), uri.getPath( ) );
+    super( partition, name, uri.getHost( ), getPortFromUri( uri ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
@@ -175,4 +173,10 @@ class EphemeralConfiguration extends ComponentConfiguration {
 
   public void setSourceHostName( String aliasHostName ) {}
 
+  private static Integer getPortFromUri( final URI uri ) {
+    final int port = uri.getPort( );
+    return port == -1 ?
+        uri.toURL( ).getDefaultPort( ) :
+        port;
+  }
 }
