@@ -21,6 +21,7 @@ package com.eucalyptus.compute.common.internal.vpc;
 
 import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -35,18 +36,24 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.upgrade.Upgrades;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
 /**
@@ -335,6 +342,37 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   protected void postLoad( ) {
     if ( isAttached( ) ) {
       getAttachment( ).setInstance( instance );
+    }
+  }
+
+  @Upgrades.EntityUpgrade( entities = NetworkInterface.class,  since = Upgrades.Version.v4_2_2, value = Eucalyptus.class)
+  public enum NetworkInterfaceEntityUpgrade422 implements Predicate<Class> {
+    INSTANCE;
+
+    private static Logger logger = Logger.getLogger( NetworkInterfaceEntityUpgrade422.class );
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public boolean apply( final Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+        final List<NetworkInterface> entities = (List<NetworkInterface>)
+            Entities.createCriteria( NetworkInterface.class )
+                .add( Restrictions.eq( "attachment.deviceIndex", 0 ) )
+                .add( Restrictions.isNotNull( "attachment.instanceId" ) )
+                .add( Restrictions.isEmpty( "networkGroups" ) )
+                .list( );
+        for ( final NetworkInterface entity : entities ) {
+          final Set<NetworkGroup> groups = entity.getAttachment( ).getInstance( ).getNetworkGroups( );
+          if ( !groups.isEmpty( ) ) {
+            logger.info(
+                "Updating security groups for network interface " + entity.getDisplayName( ) +
+                " with groups for " + entity.getAttachment( ).getInstanceId( ) );
+            entity.setNetworkGroups( Sets.newHashSet( groups ) );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
     }
   }
 }

@@ -898,7 +898,8 @@ class VmInstanceLifecycleHelpers {
               final String identifier = ResourceIdentifiers.generateString( 'eni' )
               final String mac = NetworkInterfaceHelper.mac( identifier )
               final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
-              final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
+              final Set<String> networkIds =
+                  getSecurityGroupIds( instanceNetworkInterface ) ?: ( allocation.networkGroups*.groupId as Set<String> )
               resources = [
                   new VpcNetworkInterfaceResource(
                       ownerId: token.instanceId,
