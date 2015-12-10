@@ -158,7 +158,7 @@ static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIR
 static boolean config_cpu_passthrough = 0;  //!< Set to TRUE if host CPU should be passed through to the instance
 static char xslt_path[EUCA_MAX_PATH] = "";  //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
-
+static char VERSION = 1; // XML version. Please up it if new element/attribute is added
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -491,6 +491,7 @@ int gen_instance_xml(const ncInstance * instance)
     char bitness[4] = "";
     char root_uuid[64] = "";
     char devstr[SMALL_CHAR_BUFFER_SIZE] = "";
+    char ver_s[4]="";
     xmlNodePtr disk = NULL;
     xmlDocPtr doc = NULL;
     xmlNodePtr instanceNode = NULL;
@@ -514,6 +515,8 @@ int gen_instance_xml(const ncInstance * instance)
     {
         doc = xmlNewDoc(BAD_CAST "1.0");
         instanceNode = xmlNewNode(NULL, BAD_CAST "instance");
+        sprintf(ver_s, "%d", VERSION);
+        _ATTRIBUTE(instanceNode, "xml-version", ver_s);
         xmlDocSetRootElement(doc, instanceNode);
 
         // hypervisor-related specs
@@ -565,6 +568,7 @@ int gen_instance_xml(const ncInstance * instance)
         _ELEMENT(instanceNode, "consoleLogPath", instance->consoleFilePath);
         _ELEMENT(instanceNode, "userData", instance->userData);
         _ELEMENT(instanceNode, "launchIndex", instance->launchIndex);
+        _ELEMENT(instanceNode, "hasFloppy", _BOOL(instance->hasFloppy));
 
         _ELEMENT(instanceNode, "cpuPassthrough", _BOOL(config_cpu_passthrough));
         snprintf(cores_s, sizeof(cores_s), "%d", instance->params.cores);
@@ -839,9 +843,15 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     char vbrxpath[128] = "";
     char volxpath[128] = "";
     char **res_array = NULL;
+    char ver_s[4] = "";
+    int xml_ver = 0;
     virtualBootRecord *vbr = NULL;
 
     euca_strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
+    if (get_xpath_content_at(xml_path, "/instance/@xml-version", 0, ver_s, sizeof(ver_s)) != NULL) {
+        if (strlen(ver_s) > 0)
+            xml_ver = atoi(ver_s);
+    }
 
     XGET_STR("/instance/hypervisor/@type", instance->hypervisorType);
     XGET_ENUM("/instance/hypervisor/@capability", instance->hypervisorCapability, hypervisorCapabilityType_from_string);
@@ -865,7 +875,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_STR("/instance/disks/floppyPath", instance->floppyFilePath);
     XGET_STR("/instance/userData", instance->userData);
     XGET_STR("/instance/launchIndex", instance->launchIndex);
-
+    if (xml_ver > 0) {
+        XGET_BOOL("/instance/hasFloppy", instance->hasFloppy);
+    } else {
+        instance->hasFloppy = FALSE;
+    }
     {                                  // pull out groupNames
         char **res_array = NULL;
 

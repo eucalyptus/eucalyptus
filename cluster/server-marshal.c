@@ -1497,8 +1497,6 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
         }
     } else {
         adb_ccInstanceType_set_migrationStateName(dst, env, "none");
-//      adb_ccInstanceType_set_migrationDestination_nil(dst, env);
-//      adb_ccInstanceType_set_migrationSource_nil(dst, env);
     }
 
     adb_ccInstanceType_set_blkbytes(dst, env, src->blkbytes);
