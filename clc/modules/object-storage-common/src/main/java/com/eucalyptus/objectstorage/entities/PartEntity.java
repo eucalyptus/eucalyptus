@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -34,10 +35,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.ForeignKey;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
@@ -56,8 +54,9 @@ import com.eucalyptus.storage.msgs.s3.Part;
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "parts")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "parts", indexes = {
+    @Index(name = "IDX_part_uuid", columnList = "part_uuid")
+})
 public class PartEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
   @Column(name = "object_key")
   private String objectKey;
@@ -68,7 +67,6 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
   @JoinColumn(name = "bucket_fk")
   private Bucket bucket;
 
-  @Index(name = "IDX_part_uuid")
   @Column(name = "part_uuid", unique = true, nullable = false)
   private String partUuid; // The a uuid for this specific object content & request
 

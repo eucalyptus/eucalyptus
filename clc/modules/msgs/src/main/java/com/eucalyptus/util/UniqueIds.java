@@ -71,8 +71,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
@@ -95,7 +93,6 @@ public class UniqueIds implements Serializable {
   @Entity
   @PersistenceContext( name = "eucalyptus_config" )
   @Table( name = "config_unique_ids_sets" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   public static class PersistedCounter extends AbstractPersistent {
     enum Transaction implements Function<Long, String> {
       NEXT_INDEX {

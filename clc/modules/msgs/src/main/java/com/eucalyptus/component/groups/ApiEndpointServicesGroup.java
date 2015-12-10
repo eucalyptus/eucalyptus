@@ -73,9 +73,6 @@ import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.system.Ats;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -104,7 +101,6 @@ public class ApiEndpointServicesGroup extends ServiceGroup {
   }
   
   @Entity
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   @PersistenceContext( name = "eucalyptus_config" )
   @ComponentPart( ApiEndpointServicesGroup.class )
   @DiscriminatorValue( "ApiEndpointGroup" )

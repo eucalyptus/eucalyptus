@@ -37,9 +37,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -61,7 +58,6 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_autoscale_group" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerAutoScalingGroup.class );
 	@Transient
@@ -79,11 +75,9 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 
   @ManyToOne
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-	private LoadBalancer loadbalancer = null;
+  private LoadBalancer loadbalancer = null;
   
 	@OneToMany(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "autoscaling_group")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servos = null;
 
 	@Column(name="metadata_group_name", nullable=false)

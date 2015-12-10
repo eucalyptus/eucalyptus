@@ -67,9 +67,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -80,7 +77,6 @@ import com.google.common.base.Functions;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "snapshot_transfer_configuration")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class SnapshotTransferConfiguration extends AbstractPersistent {
 
   private static final String DEFAULT_SINGLETON_ID = "singleton";

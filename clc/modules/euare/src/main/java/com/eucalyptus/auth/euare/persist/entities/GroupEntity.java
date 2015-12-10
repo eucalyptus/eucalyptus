@@ -71,6 +71,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
@@ -82,10 +83,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
-
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AuxiliaryDatabaseObject;
@@ -112,8 +109,10 @@ import groovy.sql.Sql;
     ),
 })
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_group" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_group", indexes = {
+    @Index( name = "auth_group_name_idx", columnList = "auth_group_name" ),
+    @Index( name = "auth_group_owning_account_idx", columnList = "auth_group_owning_account" )
+} )
 public class GroupEntity extends AbstractPersistent implements Serializable {
 
   @Transient
@@ -125,7 +124,6 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
 
   // Group name, not unique since different accounts can have the same group name
   @Column( name = "auth_group_name" )
-  @Index( name = "auth_group_name_idx" )
   String name;
   
   // Group path (prefix to organize group name space, see AWS spec)
@@ -142,19 +140,15 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   // Users in the group
   @ManyToMany( fetch = FetchType.LAZY )
   @JoinTable( name = "auth_group_has_users", joinColumns = { @JoinColumn( name = "auth_group_id" ) }, inverseJoinColumns = @JoinColumn( name = "auth_user_id" ) )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<UserEntity> users;
 
   // Policies for the group
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "group" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<PolicyEntity> policies;
   
   // The owning account
   @ManyToOne( fetch = FetchType.LAZY )
-  @Index( name = "auth_group_owning_account_idx" )
   @JoinColumn( name = "auth_group_owning_account" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   AccountEntity account;
   
   public GroupEntity( ) {

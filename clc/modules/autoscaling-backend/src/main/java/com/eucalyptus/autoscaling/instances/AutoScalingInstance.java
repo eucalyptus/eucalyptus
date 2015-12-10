@@ -38,9 +38,6 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -53,7 +50,6 @@ import com.google.common.base.Objects;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_auto_scaling_instances" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AutoScalingInstance extends AbstractOwnedPersistent implements AutoScalingInstanceMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -66,7 +62,6 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AutoScalingGroup autoScalingGroup;
 
   @Column( name = "metadata_auto_scaling_group_name", nullable = false, updatable = false )

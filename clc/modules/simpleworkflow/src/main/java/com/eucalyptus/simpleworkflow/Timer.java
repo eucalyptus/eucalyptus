@@ -32,8 +32,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadata;
@@ -45,13 +43,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_timer" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Timer extends AbstractOwnedPersistent implements SimpleWorkflowMetadata.ActivityTaskMetadata {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne
   @JoinColumn( name = "workflow_execution_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowExecution workflowExecution;
 
   @Column( name = "domain", length = 256, nullable = false, updatable = false )

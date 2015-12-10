@@ -29,8 +29,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 
@@ -40,13 +38,11 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_dhcp_options" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class DhcpOption extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_dhcp_option_set_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private DhcpOptionSet dhcpOptionSet;
 
   @Column( name = "metadata_key", nullable = false )
@@ -57,7 +53,6 @@ public class DhcpOption extends AbstractPersistent {
   @Column( name = "metadata_value" )
   @JoinColumn( name = "metadata_dhcp_option_id" )
   @OrderColumn( name = "metadata_value_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> values;
 
   protected DhcpOption() {

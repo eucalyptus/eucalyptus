@@ -37,9 +37,6 @@ import net.sf.json.JSONObject;
 import net.sf.json.groovy.JsonSlurper;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -56,7 +53,6 @@ import com.google.common.collect.ImmutableList;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "metadata_volume_imaging_task" )
 public class VolumeImagingTask extends ImagingTask {
   private static Logger LOG  = Logger.getLogger( VolumeImagingTask.class );
@@ -75,7 +71,6 @@ public class VolumeImagingTask extends ImagingTask {
 
   @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "metadata_import_instance_download_manifest_url" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
   private List<ImportToDownloadManifestUrl> downloadManifestUrl;
   
   protected VolumeImagingTask( ) {

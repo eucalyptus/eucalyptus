@@ -35,8 +35,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.CollectionUtils;
@@ -55,7 +53,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_activity_task" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ActivityTask extends AbstractOwnedPersistent implements ActivityTaskMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -66,7 +63,6 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
 
   @ManyToOne
   @JoinColumn( name = "workflow_execution_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowExecution workflowExecution;
 
   @Column( name = "state", nullable = false )

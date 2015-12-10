@@ -79,8 +79,6 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 
@@ -167,7 +165,6 @@ public class VmRuntimeState {
   private Reason              reason;
   @ElementCollection
   @CollectionTable( name = "metadata_instances_state_reasons" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>         reasonDetails       = Sets.newHashSet( );
   @Lob
   @Type( type = "org.hibernate.type.StringClobType" )

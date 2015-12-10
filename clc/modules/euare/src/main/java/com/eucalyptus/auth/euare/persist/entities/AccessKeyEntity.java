@@ -69,6 +69,7 @@ import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -76,9 +77,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Crypto;
@@ -91,8 +89,9 @@ import groovy.sql.Sql;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_access_key" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_access_key", indexes = {
+    @Index( name = "auth_access_key_owning_user_idx", columnList = "auth_access_key_owning_user" )
+} )
 public class AccessKeyEntity extends AbstractPersistent implements Serializable {
   
   @Transient
@@ -115,7 +114,6 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
-  @Index( name = "auth_access_key_owning_user_idx" )
   @JoinColumn( name = "auth_access_key_owning_user" )
   UserEntity user;
   
@@ -135,15 +133,6 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
     }
   }
   
-  /**
-   * NOTE: should not be needed, replaced by {@link #newInstanceWithAccessKeyId()}
-   */
-//  public static AccessKeyEntity newInstanceWithId( final String id ) {
-//    AccessKeyEntity k = new AccessKeyEntity( );
-//    k.setId( id );
-//    return k;
-//  }
-
   public static AccessKeyEntity newInstanceWithAccessKeyId( final String accessKeyId ) {
     AccessKeyEntity k = new AccessKeyEntity( );
     k.accessKey = accessKeyId;

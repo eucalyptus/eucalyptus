@@ -75,8 +75,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -87,7 +85,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_device_mappings" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_device_mapping_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "basic" )

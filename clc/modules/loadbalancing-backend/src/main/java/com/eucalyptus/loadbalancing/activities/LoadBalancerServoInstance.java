@@ -34,9 +34,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -68,7 +65,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_servo_instance" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerServoInstance extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerServoInstance.class );
 	@Transient

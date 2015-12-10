@@ -22,8 +22,6 @@ package com.eucalyptus.dns.service.config;
 import java.io.Serializable;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -33,7 +31,6 @@ import com.eucalyptus.config.ComponentConfiguration;
  */
 @Entity
 @PersistenceContext( name="eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( Dns.class )
 public class DnsConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;

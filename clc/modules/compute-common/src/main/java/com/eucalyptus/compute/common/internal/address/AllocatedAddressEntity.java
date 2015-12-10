@@ -29,14 +29,11 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Index;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -54,7 +51,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -69,13 +65,11 @@ import org.apache.log4j.Logger;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_addresses" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_addresses", indexes = {
-    @Index( name = "metadata_addresses_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_addresses_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_addresses_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_addresses", indexes = {
+    @Index( name = "metadata_addresses_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_addresses_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_addresses_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AllocatedAddressEntity extends UserMetadata<AddressState> implements AddressI, CloudMetadata.AddressMetadata {
 
   private static final long serialVersionUID        = 1L;

@@ -21,14 +21,12 @@ package com.eucalyptus.auth.euare.persist.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
@@ -43,12 +41,10 @@ import com.eucalyptus.auth.type.RestrictedType;
  */
 @Entity
 @PersistenceContext(name = "eucalyptus_auth")
-@Table(name = "auth_server_cert")
-@org.hibernate.annotations.Table( appliesTo = "auth_server_cert", indexes = {
-    @Index( name = "auth_server_cert_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "auth_server_cert_display_name_idx", columnNames = "metadata_display_name" ),
-} )
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "auth_server_cert", indexes = {
+    @Index( name = "auth_server_cert_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "auth_server_cert_display_name_idx", columnList = "metadata_display_name" ),
+})
 @PolicyVendor( "iam" )
 @PolicyResourceType( "server-certificate" )
 public class ServerCertificateEntity extends AbstractOwnedPersistent implements RestrictedType {

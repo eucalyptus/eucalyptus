@@ -29,8 +29,6 @@ import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
@@ -44,7 +42,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_domain" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Domain extends UserMetadata<Domain.Status> implements DomainMetadata {
   private static final long serialVersionUID = 1L;
 

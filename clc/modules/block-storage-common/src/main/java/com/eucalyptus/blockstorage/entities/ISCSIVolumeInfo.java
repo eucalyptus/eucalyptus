@@ -72,8 +72,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.Storage;
@@ -86,7 +84,6 @@ import com.google.common.base.Predicate;
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "ISCSIVolumeInfo")
 @Entity
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ISCSIVolumeInfo extends LVMVolumeInfo {
   @Column(name = "storename")
   private String storeName;

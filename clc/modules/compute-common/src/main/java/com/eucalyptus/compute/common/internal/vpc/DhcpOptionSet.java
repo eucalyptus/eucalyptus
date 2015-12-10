@@ -27,12 +27,10 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Strings;
@@ -43,12 +41,10 @@ import com.google.common.collect.Sets;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_dhcp_option_sets" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_dhcp_option_sets", indexes = {
-    @Index( name = "metadata_dhcp_option_sets_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_dhcp_option_sets_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_dhcp_option_sets", indexes = {
+    @Index( name = "metadata_dhcp_option_sets_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_dhcp_option_sets_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class DhcpOptionSet extends AbstractOwnedPersistent implements DhcpOptionSetMetadata {
 
   private static final long serialVersionUID = 1L;
@@ -57,7 +53,6 @@ public class DhcpOptionSet extends AbstractOwnedPersistent implements DhcpOption
   private Boolean defaultOptions;
 
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "dhcpOptionSet" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<DhcpOption> dhcpOptions = new HashSet<>( );
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "dhcpOptionSet" )

@@ -66,15 +66,11 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ramdisk" )
 public class RamdiskImageInfo extends PutGetImageInfo {
   

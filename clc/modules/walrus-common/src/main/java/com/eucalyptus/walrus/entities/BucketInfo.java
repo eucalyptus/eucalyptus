@@ -75,8 +75,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 
@@ -90,7 +88,6 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_walrus")
 @Table(name = "Buckets")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class BucketInfo extends AbstractPersistent {
   // Hold the real owner ID. At this point, it is the account ID.
   @Column(name = "owner_id")
@@ -140,7 +137,6 @@ public class BucketInfo extends AbstractPersistent {
 
   @OneToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "bucket_has_grants", joinColumns = {@JoinColumn(name = "bucket_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
   public String getOwnerId() {

@@ -68,9 +68,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 
 /*
@@ -80,7 +77,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "scheduled_jobs", uniqueConstraints = @UniqueConstraint(columnNames = {"job_class_name", "job_schedule"},
     name = "sched_jobs_composite_key"))
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ScheduledJob extends AbstractPersistent {
 
   @Column(name = "job_class_name")

@@ -78,9 +78,6 @@ import javax.persistence.Transient;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
@@ -114,7 +111,6 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "osg_config")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "ObjectStorage", description = "Object Storage Gateway configuration.", deferred = true, singleton = true)
 public class ObjectStorageGlobalConfiguration extends AbstractPersistent implements CacheableConfiguration<ObjectStorageGlobalConfiguration> {
   @Transient

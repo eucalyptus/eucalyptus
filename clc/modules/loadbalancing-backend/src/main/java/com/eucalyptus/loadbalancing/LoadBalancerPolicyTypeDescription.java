@@ -32,9 +32,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform;
@@ -45,7 +42,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_policy_type_description" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyTypeDescription.class );
 	
@@ -63,7 +59,6 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	
 	@ElementCollection
 	@CollectionTable( name = "metadata_policy_attr_type_description" )
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private List<LoadBalancerPolicyAttributeTypeDescription> policyAttributeTypeDescriptions = null;
 	
 	public LoadBalancerPolicyTypeDescription(){ }

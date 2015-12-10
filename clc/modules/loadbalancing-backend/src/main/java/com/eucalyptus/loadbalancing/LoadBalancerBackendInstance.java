@@ -40,9 +40,6 @@ import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
@@ -81,7 +78,6 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_backend_instance" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBackendInstance.STATE> {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendInstance.class );
 	@Transient

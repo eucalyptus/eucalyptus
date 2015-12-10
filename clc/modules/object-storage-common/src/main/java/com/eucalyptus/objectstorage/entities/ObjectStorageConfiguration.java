@@ -69,16 +69,12 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Transient;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.objectstorage.ObjectStorage;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_config")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ComponentPart(ObjectStorage.class)
 public class ObjectStorageConfiguration extends ComponentConfiguration implements Serializable {
   @Transient

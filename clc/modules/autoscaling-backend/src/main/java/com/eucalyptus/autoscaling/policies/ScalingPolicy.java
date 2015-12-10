@@ -32,9 +32,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -46,13 +43,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_scaling_policies" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ScalingPolicy extends AbstractOwnedPersistent implements ScalingPolicyMetadata {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_group_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AutoScalingGroup group;
 
   @Column( name = "metadata_auto_scaling_group_name", nullable = false  )

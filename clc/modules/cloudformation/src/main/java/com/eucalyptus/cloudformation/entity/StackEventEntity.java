@@ -20,8 +20,6 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -41,7 +39,6 @@ import java.util.Date;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_events" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEventEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;

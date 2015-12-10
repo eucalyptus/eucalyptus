@@ -86,6 +86,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
@@ -95,10 +96,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
-
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -115,13 +112,11 @@ import com.google.common.collect.Sets;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_images" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_images", indexes = {
-    @Index( name = "metadata_image_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_image_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_image_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_images", indexes = {
+    @Index( name = "metadata_image_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_image_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_image_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
@@ -160,17 +155,14 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   @ElementCollection
   @CollectionTable( name = "metadata_images_permissions" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                permissions      = new HashSet<String>( );
   
   @ElementCollection
   @CollectionTable( name = "metadata_images_pcodes" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>                productCodes     = new HashSet<String>( );
   
   @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH }, orphanRemoval = true )
   @JoinColumn( name = "metadata_image_dev_map_fk" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<DeviceMapping>         deviceMappings   = new ArrayList<DeviceMapping>( );
   
   @Column( name = "metadata_image_size_bytes", nullable = false )

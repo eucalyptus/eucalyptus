@@ -39,9 +39,6 @@ import javax.persistence.Transient;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -76,7 +73,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerListener extends AbstractPersistent
 {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerListener.class );
@@ -237,7 +233,6 @@ public class LoadBalancerListener extends AbstractPersistent
 	
   @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
   @JoinTable( name = "metadata_policy_has_listeners", joinColumns = { @JoinColumn( name = "metadata_listener_fk" ) }, inverseJoinColumns = @JoinColumn( name = "metadata_policy_fk" ) )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<LoadBalancerPolicyDescription> policies = null;
 	
 	public int getInstancePort(){

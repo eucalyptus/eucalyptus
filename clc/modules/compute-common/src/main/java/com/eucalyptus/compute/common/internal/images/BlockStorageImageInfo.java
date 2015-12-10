@@ -75,9 +75,6 @@ import javax.persistence.PersistenceContext;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -89,7 +86,6 @@ import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "blockstorage" )
 public class BlockStorageImageInfo extends ImageInfo implements BootableImageInfo {
   @Column( name = "metadata_image_snapshot_id" )

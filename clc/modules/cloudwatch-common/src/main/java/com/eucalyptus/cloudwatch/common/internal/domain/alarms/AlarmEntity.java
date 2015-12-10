@@ -50,8 +50,6 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
@@ -63,7 +61,6 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
 @Table(name="alarms")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AlarmEntity extends AbstractPersistentWithDimensions implements CloudWatchMetadata.AlarmMetadata {
 
   private static final Logger LOG = Logger.getLogger(AlarmEntity.class);

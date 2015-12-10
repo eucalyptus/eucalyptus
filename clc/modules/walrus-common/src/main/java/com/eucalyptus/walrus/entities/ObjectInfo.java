@@ -76,8 +76,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.commons.lang.StringUtils;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 
@@ -92,7 +90,6 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_walrus")
 @Table(name = "Objects")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class ObjectInfo extends AbstractPersistent {
   @Column(name = "owner_id")
   private String ownerId;
@@ -120,7 +117,6 @@ public class ObjectInfo extends AbstractPersistent {
 
   @OneToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "object_has_grants", joinColumns = {@JoinColumn(name = "object_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
   @Column(name = "etag")
@@ -137,7 +133,6 @@ public class ObjectInfo extends AbstractPersistent {
 
   @OneToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "object_has_metadata", joinColumns = {@JoinColumn(name = "object_id")}, inverseJoinColumns = @JoinColumn(name = "metadata_id"))
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   @Column(name = "metadata")
   private List<MetaDataInfo> metaData = new ArrayList<MetaDataInfo>();
 

@@ -67,8 +67,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Transient;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -81,7 +79,6 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( NodeController.class )
 @ConfigurableClass( root = "node",
                     alias = "basic",

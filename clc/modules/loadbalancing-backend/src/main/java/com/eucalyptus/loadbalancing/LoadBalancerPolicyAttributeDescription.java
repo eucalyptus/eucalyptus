@@ -31,8 +31,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractPersistent;
@@ -48,7 +46,6 @@ import com.google.common.base.Function;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_policy_attr_description" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
   private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyAttributeDescription.class );
   
@@ -57,7 +54,6 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
  
   @ManyToOne
   @JoinColumn( name = "metadata_policy_desc_fk", nullable=false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   LoadBalancerPolicyDescription policyDescription = null;
   
   @Column( name = "attribute_name", nullable=true)

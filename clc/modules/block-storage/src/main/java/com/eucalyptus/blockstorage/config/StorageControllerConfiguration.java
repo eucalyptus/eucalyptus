@@ -79,9 +79,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -110,7 +107,6 @@ import com.google.common.collect.Sets;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_config")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ComponentPart(Storage.class)
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic cluster controller configuration.", singleton = false, deferred = true)
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {

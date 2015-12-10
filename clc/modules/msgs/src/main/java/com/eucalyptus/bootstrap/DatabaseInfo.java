@@ -31,8 +31,6 @@ import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -52,7 +50,6 @@ import com.eucalyptus.scripting.Groovyness;
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_database" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "services.database", description = "Parameters controlling database information.", singleton = true)
 public class DatabaseInfo extends AbstractPersistent {
   private static final Logger  LOG   = Logger.getLogger( DatabaseInfo.class );

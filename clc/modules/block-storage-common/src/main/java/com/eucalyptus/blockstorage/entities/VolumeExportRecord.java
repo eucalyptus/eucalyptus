@@ -64,32 +64,29 @@ package com.eucalyptus.blockstorage.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
-
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
-@Table(name = "volume_exports")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "volume_exports", indexes = {
+    @Index( name = "volume_exports_volume_token_idx", columnList = "token" ),
+    @Index( name = "volume_exports_volume_idx", columnList = "volume"  )
+})
 public class VolumeExportRecord extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne
   @JoinColumn(name = "token", nullable = false)
-  @Index( name = "volume_exports_volume_token_idx" )
   private VolumeToken token;
 
   @ManyToOne
   @JoinColumn(name = "volume", nullable = false)
-  @Index( name = "volume_exports_volume_idx" )
   private VolumeInfo volume;
 
   @Column(name = "host_ip", updatable = false, nullable = false)

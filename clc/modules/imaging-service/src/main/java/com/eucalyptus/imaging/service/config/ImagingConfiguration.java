@@ -28,9 +28,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
@@ -48,7 +45,6 @@ import com.google.common.base.Predicate;
  */
 @Entity
 @PersistenceContext( name="eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( Imaging.class )
 public class ImagingConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;

@@ -29,8 +29,6 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.internal.util.PersistentReference;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
@@ -50,13 +48,11 @@ import groovy.sql.Sql;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_private_addresses" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstance> implements RestrictedType {
   private static final long serialVersionUID = 1L;
 
   @OneToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_instance_fk" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance                       instance;
 
   @Column( name = "metadata_address_scope" )

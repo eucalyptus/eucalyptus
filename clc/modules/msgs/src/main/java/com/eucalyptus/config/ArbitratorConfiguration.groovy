@@ -68,8 +68,6 @@ import javax.persistence.PersistenceContext
 import javax.persistence.PostLoad;
 import javax.persistence.Table
 import javax.persistence.Transient
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier
@@ -79,7 +77,6 @@ import com.eucalyptus.empyrean.Arbitrator;
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_arbitrator" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(Arbitrator.class)
 @ConfigurableClass( root = "arbitrator", alias = "basic", description = "Basic arbitrator configuration.", singleton = false, deferred = true )
 public class ArbitratorConfiguration extends ComponentConfiguration implements Serializable {

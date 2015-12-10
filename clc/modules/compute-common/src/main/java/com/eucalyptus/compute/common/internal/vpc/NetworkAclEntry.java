@@ -27,8 +27,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -37,7 +35,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_acl_entries" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkAclEntry extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
@@ -48,7 +45,6 @@ public class NetworkAclEntry extends AbstractPersistent {
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_network_acl_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkAcl networkAcl;
 
   @Column( name = "metadata_rule_number", nullable = false, updatable = false )

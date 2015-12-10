@@ -69,8 +69,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -83,7 +81,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "bootstrap.webservices",
                     description = "Parameters controlling the web services endpoint." )
 public class StackConfiguration extends AbstractPersistent {

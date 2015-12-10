@@ -30,8 +30,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
@@ -47,7 +45,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_activity_type" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ActivityType extends UserMetadata<ActivityType.Status> implements ActivityTypeMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -82,7 +79,6 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
 
   @ManyToOne
   @JoinColumn( name = "domain_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Domain domain;
 
   @Column( name = "activity_version", length = 64, nullable = false, updatable = false )

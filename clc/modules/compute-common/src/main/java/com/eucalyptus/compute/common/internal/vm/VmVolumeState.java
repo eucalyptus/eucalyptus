@@ -74,8 +74,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.entities.Entities;
@@ -93,7 +91,6 @@ public class VmVolumeState {
   @Parent
   private VmInstance                    vmInstance;
   @OneToMany( mappedBy = "vmInstance", orphanRemoval = true, cascade = CascadeType.ALL )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private final Set<VmStandardVolumeAttachment> attachments = Sets.newHashSet( );
   
   VmVolumeState( ) {

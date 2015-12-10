@@ -74,9 +74,6 @@ import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -89,7 +86,6 @@ import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "machine" )
 public class MachineImageInfo extends PutGetImageInfo implements BootableImageInfo {
   /**

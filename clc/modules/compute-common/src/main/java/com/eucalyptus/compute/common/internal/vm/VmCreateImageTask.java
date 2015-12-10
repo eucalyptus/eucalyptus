@@ -70,8 +70,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
@@ -126,7 +124,6 @@ public class VmCreateImageTask {
   
   @ElementCollection
   @CollectionTable( name = "metadata_instances_createimage_snapshots" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmCreateImageSnapshot> snapshots = Sets.newHashSet( );
   
   @Column( name = "metadata_vm_createimage_no_reboot")

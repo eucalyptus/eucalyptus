@@ -71,9 +71,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -86,7 +83,6 @@ import com.google.common.base.Strings;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "ceph_rbd_info")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "cephrbd", description = "Configuration for Ceph as an EBS backend", singleton = false, deferred = true)
 public class CephRbdInfo extends AbstractPersistent {
 

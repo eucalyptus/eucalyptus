@@ -31,8 +31,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.Parameters;
 
@@ -42,7 +40,6 @@ import com.eucalyptus.util.Parameters;
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_reserved_name" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ReservedNameEntity extends AbstractPersistent implements Serializable {
   private static final long serialVersionUID = 1L;
 

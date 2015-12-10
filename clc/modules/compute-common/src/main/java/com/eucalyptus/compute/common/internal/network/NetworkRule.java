@@ -77,6 +77,7 @@ import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -84,9 +85,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.component.id.Eucalyptus;
@@ -118,8 +116,9 @@ import groovy.sql.Sql;
     ),
 })
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_rule" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "metadata_network_rule", indexes = {
+    @Index( name = "metadata_network_group_rule_fk_idx", columnList = "metadata_network_group_rule_fk" )
+} )
 public class NetworkRule extends AbstractPersistent {
 
   public static final Pattern PROTOCOL_PATTERN = Pattern.compile( "icmp|tcp|udp|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]|-1" );
@@ -176,7 +175,6 @@ public class NetworkRule extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne( optional = false )
-  @Index( name = "metadata_network_group_rule_fk_idx" )
   @JoinColumn( name = "metadata_network_group_rule_fk", updatable = false, nullable = false )
   private NetworkGroup      group;
   @Column( name = "metadata_network_rule_egress", updatable = false )
@@ -193,12 +191,10 @@ public class NetworkRule extends AbstractPersistent {
   
   @ElementCollection
   @CollectionTable( name = "metadata_network_rule_ip_ranges" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>       ipRanges         = Sets.newHashSet( );
   
   @ElementCollection
   @CollectionTable( name = "metadata_network_group_rule_peers" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkPeer>  networkPeers     = Sets.newHashSet( );
 
   protected NetworkRule( ) {}

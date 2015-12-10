@@ -39,8 +39,6 @@ import net.sf.json.JSONSerializer;
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -60,7 +58,6 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Table( name = "metadata_imaging_tasks" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn( name = "metadata_imaging_tasks_discriminator",
                       discriminatorType = DiscriminatorType.STRING )

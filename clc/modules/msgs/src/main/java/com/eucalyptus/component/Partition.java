@@ -80,8 +80,6 @@ import javax.persistence.PostUpdate;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -95,7 +93,6 @@ import com.eucalyptus.system.SubDirectory;
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_partition" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Partition extends AbstractPersistent implements Comparable<Partition> {
   private static Logger LOG = Logger.getLogger( Partition.class );
   @Column( name = "config_partition_name", unique = true )

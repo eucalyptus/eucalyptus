@@ -68,8 +68,6 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -78,7 +76,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "CHAPUserInfo")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class CHAPUserInfo extends AbstractPersistent {
   private String scName;
 

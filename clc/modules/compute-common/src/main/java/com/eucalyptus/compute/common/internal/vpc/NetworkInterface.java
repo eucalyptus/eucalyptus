@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
@@ -37,9 +38,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
@@ -61,13 +59,11 @@ import com.google.common.collect.Sets;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_interfaces" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_network_interfaces", indexes = {
-    @Index( name = "metadata_network_interfaces_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_network_interfaces_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_network_interfaces_display_name_idx", columnNames = "metadata_display_name" ),
-} )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "metadata_network_interfaces", indexes = {
+    @Index( name = "metadata_network_interfaces_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_network_interfaces_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_network_interfaces_display_name_idx", columnList = "metadata_display_name" ),
+}  )
 public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata {
 
   private static final long serialVersionUID = 1L;
@@ -136,19 +132,16 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_vpc_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc vpc;
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_subnet_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Subnet subnet;
 
   // Due to an issue with mappedBy on VmNetworkConfig we define the instance
   // reference here rather than on the embedded attachment where it belongs
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_instance_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance instance;
 
   @NotFound( action = NotFoundAction.IGNORE )
@@ -156,7 +149,6 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
       joinColumns =        @JoinColumn( name = "networkinterface_id" ),
       inverseJoinColumns = @JoinColumn( name = "networkgroup_id" ) )
   @ManyToMany
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkGroup> networkGroups = Sets.newHashSet();
 
   @Column( name = "metadata_zone", nullable = false, updatable = false )

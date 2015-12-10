@@ -71,9 +71,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.Grant;
@@ -82,7 +79,6 @@ import com.eucalyptus.storage.msgs.s3.Grantee;
 @Entity
 @PersistenceContext(name = "eucalyptus_walrus")
 @Table(name = "Grants")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class GrantInfo extends AbstractPersistent {
   @Column(name = "user_id")
   private String userId; // Actually refer to the owner account ID

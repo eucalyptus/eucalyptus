@@ -72,8 +72,6 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.compute.common.internal.util.PersistentReference;
@@ -91,7 +89,6 @@ import groovy.sql.Sql;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_indices" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex, VmInstance> {
   @Column( name = "metadata_network_index" )
   private final Long                       index;
@@ -99,7 +96,6 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   private final String                     bogusId;
   @ManyToOne
   @JoinColumn( name = "metadata_network_index_extant_network_fk" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork                    extantNetwork;
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToOne( mappedBy = "networkIndex", fetch = FetchType.LAZY, optional = true )

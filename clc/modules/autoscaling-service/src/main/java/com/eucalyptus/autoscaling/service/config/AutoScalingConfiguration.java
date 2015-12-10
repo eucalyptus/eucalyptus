@@ -22,8 +22,6 @@ package com.eucalyptus.autoscaling.service.config;
 import java.io.Serializable;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.autoscaling.common.AutoScaling;
@@ -33,7 +31,6 @@ import com.eucalyptus.autoscaling.common.AutoScaling;
  */
 @Entity
 @PersistenceContext( name="eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( AutoScaling.class )
 public class AutoScalingConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;

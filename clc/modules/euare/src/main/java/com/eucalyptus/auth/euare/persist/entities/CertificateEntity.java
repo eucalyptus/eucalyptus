@@ -70,6 +70,7 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -77,9 +78,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Type;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.euare.common.identity.Certificate;
@@ -97,8 +95,10 @@ import com.google.common.base.Predicate;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_cert" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_cert", indexes = {
+    @Index( name = "auth_certificate_hash_id_idx", columnList = "auth_certificate_hash_id" ),
+    @Index( name = "auth_certificate_owning_user_idx", columnList = "auth_certificate_owning_user" )
+} )
 public class CertificateEntity extends AbstractPersistent implements Serializable {
 
   private static final long serialVersionUID = 1L;
@@ -117,7 +117,6 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
 
   // The certificate identifier derived from the certificate content.
   @Column( name = "auth_certificate_hash_id" )
-  @Index( name = "auth_certificate_hash_id_idx" )
   private String certificateHashId;
 
   // The certificate
@@ -132,7 +131,6 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   
   // The owning user
   @ManyToOne( fetch = FetchType.LAZY )
-  @Index( name = "auth_certificate_owning_user_idx" )
   @JoinColumn( name = "auth_certificate_owning_user" )
   private UserEntity user;
   

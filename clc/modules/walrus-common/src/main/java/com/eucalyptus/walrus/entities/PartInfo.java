@@ -75,8 +75,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 
@@ -88,7 +86,6 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_walrus")
 @Table(name = "Parts")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class PartInfo extends AbstractPersistent {
   @Column(name = "owner_id")
   private String ownerId;
@@ -116,7 +113,6 @@ public class PartInfo extends AbstractPersistent {
 
   @OneToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "part_has_metadata", joinColumns = {@JoinColumn(name = "part_id")}, inverseJoinColumns = @JoinColumn(name = "metadata_id"))
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   @Column(name = "metadata")
   private List<MetaDataInfo> metaData = new ArrayList<MetaDataInfo>();
 
@@ -155,7 +151,6 @@ public class PartInfo extends AbstractPersistent {
 
   @OneToMany(cascade = CascadeType.ALL)
   @JoinTable(name = "part_has_grants", joinColumns = {@JoinColumn(name = "part_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
   public String getOwnerId() {

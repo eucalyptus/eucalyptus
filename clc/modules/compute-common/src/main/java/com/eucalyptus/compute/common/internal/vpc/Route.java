@@ -27,8 +27,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 /**
@@ -37,7 +35,6 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_routes" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Route extends AbstractStatefulPersistent<Route.State> {
   private static final long serialVersionUID = 1L;
 
@@ -53,7 +50,6 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_route_table_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RouteTable routeTable;
 
   @Column( name = "metadata_origin", nullable = false, updatable = false )
