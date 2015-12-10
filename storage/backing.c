@@ -797,15 +797,32 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             goto out;
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
+            instance->hasFloppy = TRUE;
         }
-    } else if (instance->credential && strlen(instance->credential)) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (instance->credential && strlen(instance->credential)) {
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance->instancePath, instance->credential)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
             goto out;
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
+            instance->hasFloppy = TRUE;
         }
+    } else if(instance->hasFloppy && is_migration_dest) {
+        LOGDEBUG("[%s] creating blank instance credential floppy\n", instance->instanceId);
+        char dest_path[1024] = "";
+        int fd = 0;
+        snprintf(dest_path, 1024, "%s/floppy", instance->instancePath);
+        if ((fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700)) < 0) {
+           LOGERROR("[%s] failed to create fake floppy\n", instance->instanceId);
+           goto out;
+        } else {
+           lseek(fd, 1024*2048-1, SEEK_SET);
+           write(fd, "\n", 1);
+        }
+        close(fd);
+    } else {
+        instance->hasFloppy = FALSE;
     }
 
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
