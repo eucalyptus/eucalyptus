@@ -83,6 +83,7 @@ import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.compute.ClusterComputeServiceUnavailableException;
 import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException;
@@ -259,7 +260,7 @@ public class VmControl {
       final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
       if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
       final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
-      if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
+      if ( e2 != null ) throw new ClusterComputeServiceUnavailableException( "InsufficientInstanceCapacity", e2.getMessage( ) );
       final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
       if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
       final InvalidMetadataException e4 = Exceptions.findCause( ex, InvalidMetadataException.class );
