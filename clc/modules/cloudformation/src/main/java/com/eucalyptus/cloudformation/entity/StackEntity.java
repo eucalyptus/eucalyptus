@@ -97,6 +97,11 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
   @Type(type="org.hibernate.type.StringClobType")
   String notificationARNsJson;
 
+  @Column(name = "working_outputs_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String workingOutputsJson;
+
   @Column(name = "outputs_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
@@ -378,6 +383,14 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
 
   public void setNotificationARNsJson(String notificationARNsJson) {
     this.notificationARNsJson = notificationARNsJson;
+  }
+
+  public String getWorkingOutputsJson() {
+    return workingOutputsJson;
+  }
+
+  public void setWorkingOutputsJson(String workingOutputsJson) {
+    this.workingOutputsJson = workingOutputsJson;
   }
 
   public String getOutputsJson() {

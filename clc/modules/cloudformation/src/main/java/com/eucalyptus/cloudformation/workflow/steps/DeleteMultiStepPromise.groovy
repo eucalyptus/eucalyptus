@@ -36,7 +36,7 @@ class DeleteMultiStepPromise extends MultiStepPromise {
   DeleteMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
-      final ResourceAction resourceAction
+      final StepBasedResourceAction resourceAction
   ) {
     super( workflowOperations, stepIds, resourceAction )
   }

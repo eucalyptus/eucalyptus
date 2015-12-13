@@ -54,7 +54,7 @@ public class Template {
   private ArrayList<StackEntity.Parameter> parameters = Lists.newArrayList();
   private Map<String, Boolean> conditionMap = Maps.newLinkedHashMap();
   private DependencyManager resourceDependencyManager = new DependencyManager();
-  private ArrayList<StackEntity.Output> outputs = Lists.newArrayList();
+  private ArrayList<StackEntity.Output> workingOutputs = Lists.newArrayList();
 
   public Template() {
   }
@@ -155,11 +155,11 @@ public class Template {
     return resourceDependencyManager;
   }
 
-  public ArrayList<StackEntity.Output> getOutputs() {
-    return outputs;
+  public ArrayList<StackEntity.Output> getWorkingOutputs() {
+    return workingOutputs;
   }
 
-  public void setOutputs(ArrayList<StackEntity.Output> outputs) {
-    this.outputs = outputs;
+  public void setWorkingOutputs(ArrayList<StackEntity.Output> workingOutputs) {
+    this.workingOutputs = workingOutputs;
   }
 }

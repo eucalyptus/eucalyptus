@@ -42,11 +42,11 @@ abstract class MultiStepPromise {
   private final WorkflowOperations<StackActivityClient> workflowOperations;
   private final WorkflowUtils workflowUtils;
   private final List<String> stepIds;
-  protected final ResourceAction resourceAction;
+  protected final StepBasedResourceAction resourceAction;
 
   MultiStepPromise( WorkflowOperations<StackActivityClient> workflowOperations,
                     Collection<String> stepIds,
-                    ResourceAction resourceAction
+                    StepBasedResourceAction resourceAction
   ) {
     this.workflowOperations = workflowOperations;
     this.workflowUtils = new WorkflowUtils( workflowOperations );

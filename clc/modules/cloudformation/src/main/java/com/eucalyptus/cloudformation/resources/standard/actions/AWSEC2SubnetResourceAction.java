@@ -70,7 +70,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
   private AWSEC2SubnetResourceInfo info = new AWSEC2SubnetResourceInfo();
 
   public AWSEC2SubnetResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

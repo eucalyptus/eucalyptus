@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -29,8 +30,11 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.StackActivityClient;
+import com.eucalyptus.cloudformation.workflow.UpdateType;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.AlarmNames;
 import com.eucalyptus.cloudwatch.common.msgs.DeleteAlarmsResponseType;
@@ -47,9 +51,11 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -60,7 +66,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
   private AWSCloudWatchAlarmResourceInfo info = new AWSCloudWatchAlarmResourceInfo();
 
   public AWSCloudWatchAlarmResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null, createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
   }
 
   private enum CreateSteps implements Step {
@@ -169,6 +175,70 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ALARM {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudWatchAlarmResourceAction oldAction = (AWSCloudWatchAlarmResourceAction) oldResourceAction;
+        AWSCloudWatchAlarmResourceAction newAction = (AWSCloudWatchAlarmResourceAction) newResourceAction;
+        // just update the alarm values.
+        ServiceConfiguration configuration = Topology.lookup(CloudWatch.class);
+        PutMetricAlarmType putMetricAlarmType = MessageHelper.createMessage(PutMetricAlarmType.class, oldAction.info.getEffectiveUserId());
+        putMetricAlarmType.setActionsEnabled(newAction.properties.getActionsEnabled() == null ? Boolean.TRUE : newAction.properties.getActionsEnabled());
+        if (newAction.properties.getAlarmActions() != null) {
+          ResourceList alarmActions = new ResourceList();
+          ArrayList<String> alarmActionsMember = Lists.newArrayList(newAction.properties.getAlarmActions());
+          alarmActions.setMember(alarmActionsMember);
+          putMetricAlarmType.setAlarmActions(alarmActions);
+        }
+        putMetricAlarmType.setAlarmDescription(newAction.properties.getAlarmDescription());
+        putMetricAlarmType.setAlarmName(newAction.properties.getAlarmName());
+        putMetricAlarmType.setComparisonOperator(newAction.properties.getComparisonOperator());
+        if (newAction.properties.getDimensions() != null) {
+          Dimensions dimensions = new Dimensions();
+          ArrayList<Dimension> dimensionsMember = Lists.newArrayList();
+          for (CloudWatchMetricDimension cloudWatchMetricDimension: newAction.properties.getDimensions()) {
+            Dimension dimension = new Dimension();
+            dimension.setName(cloudWatchMetricDimension.getName());
+            dimension.setValue(cloudWatchMetricDimension.getValue());
+            dimensionsMember.add(dimension);
+          }
+          dimensions.setMember(dimensionsMember);
+          putMetricAlarmType.setDimensions(dimensions);
+        }
+        putMetricAlarmType.setEvaluationPeriods(newAction.properties.getEvaluationPeriods());
+        if (newAction.properties.getInsufficientDataActions() != null) {
+          ResourceList insufficientDataActions = new ResourceList();
+          ArrayList<String> insufficientDataActionsMember = Lists.newArrayList(newAction.properties.getInsufficientDataActions());
+          insufficientDataActions.setMember(insufficientDataActionsMember);
+          putMetricAlarmType.setInsufficientDataActions(insufficientDataActions);
+        }
+        putMetricAlarmType.setMetricName(newAction.properties.getMetricName());
+        putMetricAlarmType.setNamespace(newAction.properties.getNamespace());
+        if (newAction.properties.getOkActions() != null) {
+          ResourceList okActions = new ResourceList();
+          ArrayList<String> okActionsMember = Lists.newArrayList(newAction.properties.getOkActions());
+          okActions.setMember(okActionsMember);
+          putMetricAlarmType.setOkActions(okActions);
+        }
+        putMetricAlarmType.setPeriod(newAction.properties.getPeriod());
+        putMetricAlarmType.setStatistic(newAction.properties.getStatistic());
+        putMetricAlarmType.setThreshold(newAction.properties.getThreshold());
+        putMetricAlarmType.setUnit(newAction.properties.getUnit());
+        AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
+        oldAction.info.setPropertiesJson(newAction.info.getPropertiesJson()); // TODO: consider what happens in the multistep case
+        return oldAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -190,7 +260,72 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
     info = (AWSCloudWatchAlarmResourceInfo) resourceInfo;
   }
 
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSCloudWatchAlarmResourceAction otherAction = (AWSCloudWatchAlarmResourceAction) resourceAction;
+    if (Objects.equals(properties.getActionsEnabled(), otherAction.properties.getActionsEnabled())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getAlarmActions(), otherAction.properties.getAlarmActions())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getAlarmDescription(), otherAction.properties.getAlarmDescription())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getAlarmName(), otherAction.properties.getAlarmName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (Objects.equals(properties.getComparisonOperator(), otherAction.properties.getComparisonOperator())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getDimensions(), otherAction.properties.getDimensions())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getEvaluationPeriods(), otherAction.properties.getEvaluationPeriods())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getInsufficientDataActions(), otherAction.properties.getInsufficientDataActions())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getMetricName(), otherAction.properties.getMetricName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getNamespace(), otherAction.properties.getNamespace())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getOkActions(), otherAction.properties.getOkActions())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getPeriod(), otherAction.properties.getPeriod())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getStatistic(), otherAction.properties.getStatistic())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getThreshold(), otherAction.properties.getThreshold())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (Objects.equals(properties.getUnit(), otherAction.properties.getUnit())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
+  }
 
+  @Override
+  public Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    return null;
+  }
+
+  @Override
+  public Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    return null;
+  }
+
+  @Override
+  public Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+    return null;
+  }
 
 
 }

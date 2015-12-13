@@ -29,17 +29,15 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 /**
  * Created by ethomas on 12/18/13.
  */
-@Entity
-@PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_resources" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackResourceEntity extends AbstractPersistent {
+@MappedSuperclass
+public abstract class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
   @Column(name = "description", length =  4000)

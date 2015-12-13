@@ -43,7 +43,7 @@ import javax.annotation.Nullable;
 public class StackResourceEntityManager {
   public static void addStackResource(StackResourceEntity stackResourceEntity) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
+            Entities.transactionFor( stackResourceEntity.getClass() ) ) {
       Entities.persist(stackResourceEntity);
       db.commit( );
     }
@@ -67,45 +67,47 @@ public class StackResourceEntityManager {
     return stackResourceEntity;
   }
 
+  public static void copyStackResourceEntityData(StackResourceEntity sourceEntity, StackResourceEntity destEntity) {
+    destEntity.setRecordDeleted(sourceEntity.getRecordDeleted());
+    destEntity.setDescription(sourceEntity.getDescription());
+    destEntity.setLogicalResourceId(sourceEntity.getLogicalResourceId());
+    destEntity.setPhysicalResourceId(sourceEntity.getPhysicalResourceId());
+    destEntity.setResourceStatus(sourceEntity.getResourceStatus());
+    destEntity.setResourceStatusReason(sourceEntity.getResourceStatusReason());
+    destEntity.setResourceType(sourceEntity.getResourceType());
+    destEntity.setStackId(sourceEntity.getStackId());
+    destEntity.setStackName(sourceEntity.getStackName());
+    destEntity.setAccountId(sourceEntity.getAccountId());
+    destEntity.setMetadataJson(sourceEntity.getMetadataJson());
+    destEntity.setReady(sourceEntity.getReady());
+    destEntity.setPropertiesJson(sourceEntity.getPropertiesJson());
+    destEntity.setUpdatePolicyJson(sourceEntity.getUpdatePolicyJson());
+    destEntity.setDeletionPolicy(sourceEntity.getDeletionPolicy());
+    destEntity.setAllowedByCondition(sourceEntity.getAllowedByCondition());
+    destEntity.setReferenceValueJson(sourceEntity.getReferenceValueJson());
+    destEntity.setResourceAttributesJson(sourceEntity.getResourceAttributesJson());
+  }
+
   public static void updateStackResource(StackResourceEntity stackResourceEntity) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+            Entities.transactionFor( stackResourceEntity.getClass() ) ) {
+      Criteria criteria = Entities.createCriteria(stackResourceEntity.getClass())
         .add(Restrictions.eq("naturalId" , stackResourceEntity.getNaturalId()));
       StackResourceEntity dbEntity = (StackResourceEntity) criteria.uniqueResult();
       if (dbEntity == null) {
         Entities.persist(stackResourceEntity);
       } else {
-        dbEntity.setRecordDeleted(stackResourceEntity.getRecordDeleted());
-        dbEntity.setDescription(stackResourceEntity.getDescription());
-        dbEntity.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
-        dbEntity.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
-        dbEntity.setResourceStatus(stackResourceEntity.getResourceStatus());
-        dbEntity.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
-        dbEntity.setResourceType(stackResourceEntity.getResourceType());
-        dbEntity.setStackId(stackResourceEntity.getStackId());
-        dbEntity.setStackName(stackResourceEntity.getStackName());
-        dbEntity.setAccountId(stackResourceEntity.getAccountId());
-        dbEntity.setMetadataJson(stackResourceEntity.getMetadataJson());
-        dbEntity.setReady(stackResourceEntity.getReady());
-        dbEntity.setPropertiesJson(stackResourceEntity.getPropertiesJson());
-        dbEntity.setUpdatePolicyJson(stackResourceEntity.getUpdatePolicyJson());
-        dbEntity.setDeletionPolicy(stackResourceEntity.getDeletionPolicy());
-        dbEntity.setAllowedByCondition(stackResourceEntity.getAllowedByCondition());
-        dbEntity.setReferenceValueJson(stackResourceEntity.getReferenceValueJson());
-        dbEntity.setResourceAttributesJson(stackResourceEntity.getResourceAttributesJson());
-        // TODO: why doesn't the below work?
-        // Entities.mergeDirect(stackResourceEntity);
+        copyStackResourceEntityData(stackResourceEntity, dbEntity);
       }
       db.commit( );
     }
   }
 
-  public static StackResourceEntity getStackResource(String stackId, String accountId, String logicalResourceId) {
+  public static StackResourceEntity getStackResourceInUse(String stackId, String accountId, String logicalResourceId) {
     StackResourceEntity stackResourceEntity = null;
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityInUse.class)
         .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackId" , stackId))
         .add(Restrictions.eq("logicalResourceId" , logicalResourceId))
@@ -119,11 +121,47 @@ public class StackResourceEntityManager {
     return stackResourceEntity;
   }
 
-  public static StackResourceEntity getStackResourceByPhysicalResourceId(String stackId, String accountId, String physicalResourceId) {
+  public static StackResourceEntity getStackResourceForUpdate(String stackId, String accountId, String logicalResourceId) {
     StackResourceEntity stackResourceEntity = null;
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+            Entities.transactionFor( StackResourceEntityForUpdate.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityForUpdate.class)
+        .add(Restrictions.eq("accountId" , accountId))
+        .add(Restrictions.eq("stackId" , stackId))
+        .add(Restrictions.eq("logicalResourceId" , logicalResourceId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackResourceEntity> stackResourceEntityList = criteria.list();
+      if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
+        stackResourceEntity = stackResourceEntityList.get(0);
+      }
+      db.commit( );
+    }
+    return stackResourceEntity;
+  }
+
+  public static StackResourceEntity getStackResourceForCleanup(String stackId, String accountId, String logicalResourceId) {
+    StackResourceEntity stackResourceEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntityForCleanup.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityForCleanup.class)
+        .add(Restrictions.eq("accountId" , accountId))
+        .add(Restrictions.eq("stackId" , stackId))
+        .add(Restrictions.eq("logicalResourceId" , logicalResourceId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackResourceEntity> stackResourceEntityList = criteria.list();
+      if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
+        stackResourceEntity = stackResourceEntityList.get(0);
+      }
+      db.commit( );
+    }
+    return stackResourceEntity;
+  }
+
+  public static StackResourceEntity getStackResourceInUseByPhysicalResourceId(String stackId, String accountId, String physicalResourceId) {
+    StackResourceEntity stackResourceEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityInUse.class)
         .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackId" , stackId))
         .add(Restrictions.eq("physicalResourceId" , physicalResourceId))
@@ -140,34 +178,68 @@ public class StackResourceEntityManager {
   public static List<StackResourceEntity> getStackResources(String stackId, String accountId) {
     List<StackResourceEntity> stackResourceEntityList = Lists.newArrayList();
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityInUse.class)
         .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackId" , stackId))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       stackResourceEntityList = criteria.list();
-      db.commit( );
     }
     return stackResourceEntityList;
   }
 
-  public static void deleteStackResources(String stackId, String accountId) {
+  public static void deleteStackResourcesInUse(String stackId, String accountId) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-        .add(Restrictions.eq( "accountId" , accountId))
-        .add(Restrictions.eq( "stackId" , stackId))
-        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-      for (StackResourceEntity stackResourceEntity: (List<StackResourceEntity>) criteria.list()) {
-        stackResourceEntity.setRecordDeleted(Boolean.TRUE);
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
+        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+          .add(Restrictions.eq("accountId", accountId))
+          .add(Restrictions.eq("stackId", stackId))
+          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
+          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
+        }
       }
       db.commit( );
     }
   }
 
+  public static void deleteStackResourcesForCleanup(String stackId, String accountId) {
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
+        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+          .add(Restrictions.eq("accountId", accountId))
+          .add(Restrictions.eq("stackId", stackId))
+          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
+          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
+        }
+      }
+      db.commit( );
+    }
+  }
+
+  public static void deleteStackResourcesForUpdate(String stackId, String accountId) {
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
+      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
+        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+          .add(Restrictions.eq("accountId", accountId))
+          .add(Restrictions.eq("stackId", stackId))
+          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
+          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
+        }
+      }
+      db.commit( );
+    }
+  }
+
+
   public static ResourceInfo getResourceInfo(String stackId, String accountId, String logicalResourceId)
     throws CloudFormationException {
-    return getResourceInfo(getStackResource(stackId, accountId, logicalResourceId));
+    return getResourceInfo(getStackResourceInUse(stackId, accountId, logicalResourceId));
   }
 
   public static ResourceInfo getResourceInfo(StackResourceEntity stackResourceEntity)
@@ -193,10 +265,10 @@ public class StackResourceEntityManager {
     StackResourceEntity matchingStackResourceEntity = null;
     String stackId = null;
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntity.class ) ) {
+            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
       // There is some weirdness in this request.  The stack name represents either the stack name of the
       // non-deleted stack or the stack id of the deleted or non-deleted stack.
-      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+      Criteria criteria = Entities.createCriteria(StackResourceEntityInUse.class)
         .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.or(
           Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
@@ -225,7 +297,6 @@ public class StackResourceEntityManager {
       if (matchingStackResourceEntity == null) {
         throw new ValidationErrorException("Resource " + logicalResourceId + " does not exist for stack " + stackId);
       }
-      db.commit( );
     }
     return matchingStackResourceEntity;
   }
@@ -243,10 +314,10 @@ public class StackResourceEntityManager {
     if ( stackNameOrId == null && physicalResourceId == null ) {
       throw new IllegalArgumentException( "stackNameOrId or physicalResourceId required" );
     }
-    try ( final TransactionResource db = Entities.transactionFor( StackResourceEntity.class ) ) {
+    try ( final TransactionResource db = Entities.transactionFor( StackResourceEntityInUse.class ) ) {
       // There is some weirdness in this request.  The stack name represents either the stack name of the
       // non-deleted stack or the stack id of the deleted or non-deleted stack.
-      final Criteria criteria = Entities.createCriteria( StackResourceEntity.class ).add( accountId != null ?
+      final Criteria criteria = Entities.createCriteria( StackResourceEntityInUse.class ).add( accountId != null ?
           Restrictions.eq("accountId", accountId) :
           Restrictions.conjunction( ) );
 

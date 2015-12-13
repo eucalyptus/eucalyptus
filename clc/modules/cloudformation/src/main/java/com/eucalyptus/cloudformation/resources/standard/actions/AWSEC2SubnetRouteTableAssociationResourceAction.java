@@ -58,7 +58,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
   private AWSEC2SubnetRouteTableAssociationResourceInfo info = new AWSEC2SubnetRouteTableAssociationResourceInfo();
 
   public AWSEC2SubnetRouteTableAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

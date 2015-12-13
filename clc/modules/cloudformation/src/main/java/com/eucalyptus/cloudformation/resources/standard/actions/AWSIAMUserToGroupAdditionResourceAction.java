@@ -64,7 +64,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
   private AWSIAMUserToGroupAdditionResourceInfo info = new AWSIAMUserToGroupAdditionResourceInfo();
 
   public AWSIAMUserToGroupAdditionResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

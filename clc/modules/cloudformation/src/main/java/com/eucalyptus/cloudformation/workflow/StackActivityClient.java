@@ -37,46 +37,105 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 )
 @Activities(version="1.0")
 public interface StackActivityClient {
-  @Activity( name = "StackActivity.initCreateResource" )
+  @Activity(name = "StackActivity.initCreateResource")
   Promise<String> initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
-  @Activity( name = "StackActivity.validateAWSParameterTypes" )
+
+  @Activity(name = "StackActivity.validateAWSParameterTypes")
   Promise<String> validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.performCreateStep" )
+
+  @Activity(name = "StackActivity.performCreateStep")
   Promise<Boolean> performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.performDeleteStep" )
+
+  @Activity(name = "StackActivity.performDeleteStep")
   Promise<Boolean> performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.determineCreateResourceFailures" )
+
+  @Activity(name = "StackActivity.performUpdateCleanupStep")
+  Promise<Boolean> performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.determineCreateResourceFailures")
   Promise<String> determineCreateResourceFailures(String stackId, String accountId);
-  @Activity( name = "StackActivity.determineDeleteResourceFailures" )
+
+  @Activity(name = "StackActivity.determineDeleteResourceFailures")
   Promise<String> determineDeleteResourceFailures(String stackId, String accountId);
-  @Activity( name = "StackActivity.initDeleteResource" )
+
+  @Activity(name = "StackActivity.initDeleteResource")
   Promise<String> initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.createGlobalStackEvent" )
+
+  @Activity(name = "StackActivity.createGlobalStackEvent")
   Promise<String> createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
-  @Activity( name = "StackActivity.finalizeCreateStack" )
+
+  @Activity(name = "StackActivity.finalizeCreateStack")
   Promise<String> finalizeCreateStack(String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.deleteAllStackRecords" )
+
+  @Activity(name = "StackActivity.deleteAllStackRecords")
   Promise<String> deleteAllStackRecords(String stackId, String accountId);
-  @Activity( name = "StackActivity.getResourceType" )
+
+  @Activity(name = "StackActivity.getResourceType")
   Promise<String> getResourceType(String stackId, String accountId, String resourceId);
-  @Activity( name = "StackActivity.finalizeCreateResource" )
+
+  @Activity(name = "StackActivity.finalizeCreateResource")
   Promise<String> finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.finalizeDeleteResource" )
+
+  @Activity(name = "StackActivity.finalizeDeleteResource")
   Promise<String> finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.failDeleteResource" )
+
+  @Activity(name = "StackActivity.failDeleteResource")
   Promise<String> failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
-  @Activity( name = "StackActivity.getWorkflowExecutionCloseStatus" )
-  Promise<String> getWorkflowExecutionCloseStatus( String stackId );
-  @Activity( name = "StackActivity.getStackStatus" )
+
+  @Activity(name = "StackActivity.getCreateWorkflowExecutionCloseStatus")
+  Promise<String> getCreateWorkflowExecutionCloseStatus(String stackId);
+
+  @Activity(name = "StackActivity.getUpdateWorkflowExecutionCloseStatus")
+  Promise<String> getUpdateWorkflowExecutionCloseStatus(String stackId);
+
+  @Activity(name = "StackActivity.getStackStatus")
   Promise<String> getStackStatus(String stackId, String accountId);
-  @Activity( name = "StackActivity.setStackStatus" )
+
+  @Activity(name = "StackActivity.setStackStatus")
   Promise<String> setStackStatus(String stackId, String accountId, String status, String statusReason);
-  @Activity( name = "StackActivity.cancelCreateAndMonitorWorkflows" )
+
+  @Activity(name = "StackActivity.cancelCreateAndMonitorWorkflows")
   Promise<String> cancelCreateAndMonitorWorkflows(String stackId);
-  @Activity( name = "StackActivity.verifyCreateAndMonitorWorkflowsClosed" )
+
+  @Activity(name = "StackActivity.verifyCreateAndMonitorWorkflowsClosed")
   Promise<String> verifyCreateAndMonitorWorkflowsClosed(String stackId);
-  @Activity( name = "StackActivity.getAWSCloudFormationWaitConditionTimeout" )
+
+  @Activity(name = "StackActivity.getAWSCloudFormationWaitConditionTimeout")
   Promise<Integer> getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId);
-  @Activity( name = "StackActivity.cancelOutstandingCreateResources" )
+
+  @Activity(name = "StackActivity.cancelOutstandingCreateResources")
   Promise<String> cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage);
+
+  @Activity(name = "StackActivity.cancelOutstandingUpdateResources")
+  Promise<String> cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage);
+
+  @Activity(name = "StackActivity.initUpdateResource")
+  Promise<String> initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
+
+  @Activity(name = "StackActivity.finalizeUpdateResource")
+  Promise<String> finalizeUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.performUpdateNoInterruptionStep")
+  Promise<Boolean> performUpdateNoInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.performUpdateSomeInterruptionStep")
+  Promise<Boolean> performUpdateSomeInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.performUpdateWithReplacementStep")
+  Promise<Boolean> performUpdateWithReplacementStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.finalizeUpdateCleanupStack")
+  Promise<String> finalizeUpdateCleanupStack(String stackId, String accountId, String statusMessage);
+
+  @Activity(name = "StackActivity.initUpdateCleanupResource")
+  Promise<String> initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.failUpdateCleanupResource")
+  Promise<String> failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
+
+  @Activity(name = "StackActivity.finalizeUpdateCleanupResource")
+  Promise<String> finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.removeUpdateCleanupResourceFromStack")
+  Promise<String> removeUpdateCleanupResourceFromStack(String resourceId, String stackId, String accountId);
 }

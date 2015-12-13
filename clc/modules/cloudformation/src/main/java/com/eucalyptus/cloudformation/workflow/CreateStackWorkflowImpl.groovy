@@ -130,20 +130,6 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
-    waitFor(getResourceTypePromise) { String resourceType ->
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
-      waitFor(initPromise) { String result ->
-        if ("SKIP".equals(result)) {
-          return promiseFor("");
-        } else {
-          Promise<String> createPromise = resourceAction.getCreatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
-          waitFor(createPromise) {
-            activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId);
-          }
-        }
-      }
-    }
+    return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
   }
 }

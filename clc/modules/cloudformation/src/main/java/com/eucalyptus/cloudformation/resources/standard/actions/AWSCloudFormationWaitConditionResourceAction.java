@@ -66,7 +66,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   private AWSCloudFormationWaitConditionResourceInfo info = new AWSCloudFormationWaitConditionResourceInfo();
 
   public AWSCloudFormationWaitConditionResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   @Override

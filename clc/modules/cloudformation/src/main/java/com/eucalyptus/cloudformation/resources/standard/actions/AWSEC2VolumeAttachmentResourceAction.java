@@ -70,7 +70,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
 
 
   public AWSEC2VolumeAttachmentResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

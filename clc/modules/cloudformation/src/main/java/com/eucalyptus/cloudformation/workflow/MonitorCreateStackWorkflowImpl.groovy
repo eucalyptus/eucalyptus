@@ -50,7 +50,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
     try {
       Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 30 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
-          activities.getWorkflowExecutionCloseStatus( stackId )
+          activities.getCreateWorkflowExecutionCloseStatus( stackId )
         }
       }
       waitFor( closeStatusPromise ) { String closedStatus ->
@@ -69,7 +69,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
 
   private Promise<String> determineRollbackAction(String closedStatus, String stackStatus, String stackId, String accountId,
    String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
-  if ("CREATE_COMPLETE".equals(stackStatus)) {
+    if ("CREATE_COMPLETE".equals(stackStatus)) {
       return promiseFor(""); // just done...
     } else if ("CREATE_IN_PROGRESS".equals(stackStatus)) {
       // Once here, stack creation has failed.  Only in some cases do we know why.

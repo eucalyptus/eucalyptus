@@ -116,7 +116,6 @@ public class StackEventEntityManager {
           returnValue.add(stackEventEntityToStackEvent(stackEventEntity));
         }
       }
-      db.commit( );
     }
     return returnValue;
   }
@@ -133,7 +132,6 @@ public class StackEventEntityManager {
       if (entityList != null) {
         returnValue.addAll(entityList);
       }
-      db.commit( );
     }
     return returnValue;
   }

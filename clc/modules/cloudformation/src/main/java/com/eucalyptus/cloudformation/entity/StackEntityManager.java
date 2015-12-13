@@ -74,7 +74,6 @@ public class StackEntityManager {
         criteria.add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       }
       returnValue = criteria.list();
-      db.commit( );
     }
     return returnValue;
   }
@@ -94,7 +93,6 @@ public class StackEntityManager {
         criteria.add(Restrictions.or(orClauses));
       }
       returnValue = criteria.list();
-      db.commit( );
     }
     return returnValue;
   }
@@ -110,7 +108,6 @@ public class StackEntityManager {
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);
       }
-      db.commit( );
     }
     return stackEntity;
   }
@@ -128,7 +125,6 @@ public class StackEntityManager {
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);
       }
-      db.commit( );
     }
     return stackEntity;
   }
@@ -148,7 +144,6 @@ public class StackEntityManager {
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);
       }
-      db.commit( );
     }
     return stackEntity;
   }
@@ -191,6 +186,7 @@ public class StackEntityManager {
         dbEntity.setTemplateBody(stackEntity.getTemplateBody());
         dbEntity.setMappingJson(stackEntity.getMappingJson());
         dbEntity.setNotificationARNsJson(stackEntity.getNotificationARNsJson());
+        dbEntity.setWorkingOutputsJson(stackEntity.getWorkingOutputsJson());
         dbEntity.setOutputsJson(stackEntity.getOutputsJson());
         dbEntity.setParametersJson(stackEntity.getParametersJson());
         dbEntity.setStackId(stackEntity.getStackId());

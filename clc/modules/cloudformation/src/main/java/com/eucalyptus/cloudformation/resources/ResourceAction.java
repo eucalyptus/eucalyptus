@@ -21,20 +21,21 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.workflow.StackActivity;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.Step;
-import com.google.common.collect.Maps;
+import com.eucalyptus.cloudformation.workflow.UpdateType;
 import com.netflix.glisten.WorkflowOperations;
-
-import java.util.Map;
 
 public abstract class ResourceAction {
   public abstract ResourceProperties getResourceProperties();
+
   public abstract void setResourceProperties(ResourceProperties resourceProperties);
+
   public abstract ResourceInfo getResourceInfo();
+
   public abstract void setResourceInfo(ResourceInfo resourceInfo);
+
   protected StackEntity stackEntity;
 
   public StackEntity getStackEntity() {
@@ -61,8 +62,15 @@ public abstract class ResourceAction {
 
   public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 
+  public abstract Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+
   public void refreshAttributes() throws Exception {
     return; // Most resources will not support this action
   }
-
+  public UpdateType getUpdateType(ResourceAction resourceAction) throws Exception {
+    return UpdateType.NONE; // TODO: make this method abstract once all resources implement their update logic.
+  }
+  public abstract Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
 }

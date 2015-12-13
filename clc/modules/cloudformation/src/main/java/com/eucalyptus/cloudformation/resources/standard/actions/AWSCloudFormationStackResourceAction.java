@@ -66,7 +66,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   private AWSCloudFormationStackResourceInfo info = new AWSCloudFormationStackResourceInfo();
 
   public AWSCloudFormationStackResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {
