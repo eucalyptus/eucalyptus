@@ -865,6 +865,7 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     }
 
     // NOTE: serviceTag seen in the WSDL is unused in NC, used by CC
+    adb_instanceType_set_hasFloopy(instance, env, outInst->hasFloppy);
 }
 
 //!
@@ -954,7 +955,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         euca_strncpy(outInst->volumes[i].devName, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
         euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
     }
-
+    outInst->hasFloppy = adb_instanceType_get_hasFloopy(instance, env);
     return (outInst);
 }
 

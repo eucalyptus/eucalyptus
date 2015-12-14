@@ -319,6 +319,7 @@ int main(int argc, char **argv)
     int epoch_updates = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
+    int check_peer_attempts = 100;
     time_t epoch_timer = 0, loop_start = 0;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
@@ -399,10 +400,34 @@ int main(int argc, char **argv)
     while (rc) {
         rc = eucanetd_read_config();
         if (rc) {
-            LOGWARN("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
+            LOGDEBUG("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
             sleep(1);
+        } else {
+            // At this point we have read a valid global network information
+            // Sanity check before entering eucanetd main loop
+            if (check_peer_attempts > 0) {
+                eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
+                if (PEER_IS_NONE(eucanetdPeer)) {
+                    // PEER_NONE should be only valid for VPCMIDO
+                    if (strcmp(config->netMode, NETMODE_VPCMIDO)) {
+                        LOGTRACE("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.\n", config->netMode);
+                        rc = 1;
+                        check_peer_attempts--;
+                        sleep(1);
+                    }
+                } else if (!PEER_IS_VALID(eucanetdPeer)) {
+                    LOGTRACE("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
+                    rc = 1;
+                    check_peer_attempts--;
+                    sleep(1);
+                }
+            } else {
+                LOGWARN("Unable to detect service peer during pre-flight checks.\n");
+            }
+            eucanetdPeer = PEER_INVALID;
         }
     }
+    LOGINFO("eucanetd pre-flight checks complete.\n");
 
     // got all config, enter main loop
     while (gIsRunning) {
@@ -414,7 +439,7 @@ int main(int argc, char **argv)
         // fetch all latest networking information from various sources
         rc = eucanetd_fetch_latest_network(&update_globalnet);
         if (rc) {
-            LOGWARN("one or more fetches for latest network information was unsucessful\n");
+            LOGWARN("one or more fetches for latest network information was unsuccessful\n");
         }
         // first time we run, force an update and flush has necessary
         if (firstrun) {
@@ -438,16 +463,6 @@ int main(int argc, char **argv)
 
         if (eucanetdPeer == PEER_INVALID) {
             eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
-            if (PEER_IS_NONE(eucanetdPeer)) {
-                // PEER_NONE should be only valid for VPCMIDO
-                if (strcmp(config->netMode, NETMODE_VPCMIDO)) {
-                    LOGDEBUG("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.", config->netMode);
-                    update_globalnet = FALSE;
-                    update_globalnet_failed = TRUE;
-                    sleep(1);
-                    continue;
-                }
-            }
             if (!PEER_IS_VALID(eucanetdPeer)) {
                 LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
                 update_globalnet = FALSE;
@@ -462,6 +477,7 @@ int main(int argc, char **argv)
                 exit(1);
             }
         }
+
         // Do we need to run the network upgrade stuff?
         if (pDriverHandler->upgrade) {
             if (pDriverHandler->upgrade(globalnetworkinfo) == 0) {

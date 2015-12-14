@@ -46,10 +46,13 @@ import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.DiskImage;
 import com.eucalyptus.compute.common.DiskImageDescription;
 import com.eucalyptus.compute.common.DiskImageVolumeDescription;
+import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification;
 import com.eucalyptus.compute.common.ImportInstanceTaskDetails;
 import com.eucalyptus.compute.common.ImportInstanceType;
 import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.Snapshot;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
@@ -212,6 +215,15 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
     final ImportInstanceTaskDetails importTask = this.getTask().getImportInstance();
     return importTask.getVolumes();
   }
+
+  public String getInstanceId() {
+    try{
+      final ImportInstanceTaskDetails importTask = this.getTask().getImportInstance();
+      return importTask.getInstanceId();
+    }catch(final Exception ex){
+      return null;
+    }
+  }
   
   public List<String> getSnapshotIds(){
     return this.snapshotIdsCopy;
@@ -239,35 +251,116 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   }
   
   @Override
-  public void cleanUp(){
+  public boolean cleanUp(){
     if (getCleanUpDone())
-      return;
-    boolean cleanedAllVolumes = true;
+      return true;
+ 
+    final String instanceId = this.getInstanceId();
+    if(instanceId!=null && instanceId.length()>0) {
+      try{
+        final List<RunningInstancesItemType> instances = 
+            Ec2Client.getInstance().describeInstances(this.getOwnerUserId(), Lists.newArrayList(instanceId));
+        final Set<String> statesToTerminate = Sets.newHashSet("running", "pending");
+        for (final RunningInstancesItemType instance: instances) {
+          if(instanceId.equals(instance.getInstanceId()) && statesToTerminate.contains(instance.getStateName())){
+            Ec2Client.getInstance().terminateInstances(this.getOwnerUserId(), Lists.newArrayList(instanceId));
+            LOG.info(String.format("Instance %s is terminated because import task was cancelled or failed", instanceId));     
+          }
+        }
+      }catch(final Exception ex) {
+        ;
+      }
+    }
+    
+    boolean cleanedImage = true;
+    if(this.imageId != null) {
+      try{
+        final List<ImageDetails> images = Ec2Client.getInstance().describeImages(this.getOwnerUserId(), Lists.newArrayList(this.imageId));
+        for(final ImageDetails image : images) {
+          if (this.imageId.equals(image.getImageId()) && "available".equals(image.getImageState()))
+              cleanedImage = false;
+        }
+      }catch(final Exception ex) {
+        ;
+      }
+      if(!cleanedImage) {
+        try{
+          Ec2Client.getInstance().deregisterImage(this.getOwnerUserId(), this.imageId);
+          LOG.info(String.format("Image %s is deregistered because import task was cancelled or failed", this.imageId));
+        }catch(final Exception ex) {
+          LOG.error("Failed to deregister image '" + this.imageId +"' after cancelled/failed import task");
+        } 
+        cleanedImage = true;
+      }
+    }
+    if(!cleanedImage)
+      return false;
+    
+    boolean cleanedSnapshots = false;
+    final List<String> snapshotIds = this.getSnapshotIds();
+    if(snapshotIds != null && snapshotIds.size()>0) {
+      int numCompletedSnapshots = 0;
+      try{
+        final List<Snapshot> snapshots =
+            Ec2Client.getInstance().describeSnapshots(this.getOwnerUserId(), snapshotIds);
+        if(snapshots == null || snapshots.size()<=0)
+          cleanedSnapshots = true;
+        else{
+          for(final Snapshot snapshot : snapshots) {
+            if(! "pending".equals(snapshot.getStatus())) {
+              numCompletedSnapshots++;
+            }
+          }
+        }
+      }catch(final Exception ex) {
+        cleanedSnapshots = true;
+      }
+      // wait until in-progress snapshots are complete before attempting to delete them
+      if(!cleanedSnapshots && numCompletedSnapshots >= snapshotIds.size()) {
+        for(final String snapshotId : snapshotIds ) {
+          try{
+            Ec2Client.getInstance().deleteSnapshot(this.getOwnerUserId(), snapshotId);
+            LOG.info(String.format("Snapshot %s is deleted because import task was cancelled or failed", snapshotId));
+          }catch(final Exception ex) {
+            LOG.error("Failed to delete snapshot '" +snapshotId + "' after cancelled/failed import task");
+          }
+        }
+        cleanedSnapshots = true;
+      }
+    }else{
+      cleanedSnapshots = true;
+    }
+    
+    if(!cleanedSnapshots)
+      return false;
+    
     final ImportInstanceTaskDetails instanceDetails = 
         this.getTask().getImportInstance();
-    if(instanceDetails.getVolumes()==null)
-      return;
-    for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
-      if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
-        String volumeId = volumeDetail.getVolume().getId();
-        try{
-          Volumes.setSystemManagedFlag(null, volumeId, false);
-          final List<Volume> eucaVolumes =
-            Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
-          if (eucaVolumes.size() != 0) {
-            Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
+    if(instanceDetails.getVolumes()!=null) {
+      for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
+        if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
+          String volumeId = volumeDetail.getVolume().getId();
+          try{
+            /// TODO: IMAGING TASK SHOULD NOT TOUCH VOLUMES DIRECTLY!!
+            Volumes.setSystemManagedFlag(null, volumeId, false);
+            final List<Volume> eucaVolumes =
+                Ec2Client.getInstance().describeVolumes(this.getOwnerUserId(), Lists.newArrayList(volumeId));
+            if (eucaVolumes!=null && eucaVolumes.size() != 0) {
+              Ec2Client.getInstance().deleteVolume(this.getOwnerUserId(), volumeId);
+              LOG.info(String.format("Volume %s is deleted because import task was cancelled or failed", volumeId));
+            }
+          } catch(final NoSuchElementException ex) {
+            ;
+          } catch(final Exception ex) {
+            LOG.warn(String.format("Failed to delete volume %s for cancelled/failed import task %s", 
+                volumeId, this.getDisplayName()));
           }
-        } catch(final NoSuchElementException ex) {
-          LOG.debug("Can't find volume with ID " + volumeId + ". Probably it was already deleted");
-        } catch(final Exception ex) {
-          LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
-              volumeDetail.getVolume().getId(), this.getDisplayName()));
-          cleanedAllVolumes = false;
         }
       }
     }
-    if (cleanedAllVolumes)
-      setCleanUpDone(true);
+    
+    setCleanUpDone(true);
+    return true;
   }
   
   @TypeMapper

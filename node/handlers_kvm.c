@@ -564,7 +564,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             LOGERROR("[%s] cannot open '%s' read-only\n", instanceId, console_file);
         }
     } else {
-        LOGERROR("[%s] cannot stat console_output file '%s'\n", instanceId, console_file);
+        LOGWARN("[%s] cannot stat console_output file '%s'\n", instanceId, console_file);
     }
 
     // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
@@ -578,6 +578,10 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             strncat(console_output, console_main, readsize);
         }
 
+        if (strlen(console_output) == 0) {
+            LOGDEBUG("There is no console output. Setting it to ' '\n");
+            snprintf(console_output, 2, " \n");
+        }
         *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
         ret = EUCA_OK;
     }

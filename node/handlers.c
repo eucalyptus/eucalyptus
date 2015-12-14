@@ -900,6 +900,7 @@ virConnectPtr lock_hypervisor_conn()
     pthread_t thread = { 0 };
     long long thread_par = 0L;
     boolean bail = FALSE;
+    boolean try_again = FALSE;
     struct timespec ts = { 0 };
     virConnectPtr tmp_conn = NULL;
 
@@ -930,7 +931,7 @@ virConnectPtr lock_hypervisor_conn()
             bail = TRUE;
         } else if (rc == 0) {
             LOGERROR("timed out waiting for hypervisor checker pid=%d\n", cpid);
-            bail = TRUE;
+            try_again = TRUE;
         } else if (WEXITSTATUS(status) != 0) {
             LOGERROR("child process failed to connect to hypervisor\n");
             bail = TRUE;
@@ -939,6 +940,30 @@ virConnectPtr lock_hypervisor_conn()
         killwait(cpid);
     }
 
+    if (try_again) {
+        if ((cpid = fork()) < 0) {         // fork error
+            LOGERROR("failed to fork to check hypervisor connection\n");
+            bail = TRUE;                   // we are in big trouble if we cannot fork
+        } else if (cpid == 0) {            // child process - checks on the connection
+            if ((tmp_conn = virConnectOpen(nc_state.uri)) == NULL)
+                exit(1);
+            virConnectClose(tmp_conn);
+            exit(0);
+        } else {                           // parent process - waits for the child, kills it if necessary
+            if ((rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC)) < 0) {
+                LOGERROR("failed to wait for forked process (attempt 2): %s\n", strerror(errno));
+                bail = TRUE;
+            } else if (rc == 0) {
+                LOGERROR("timed out waiting for hypervisor (attempt 2) checker pid=%d\n", cpid);
+                bail = TRUE;
+            } else if (WEXITSTATUS(status) != 0) {
+                LOGERROR("child process failed to connect to hypervisor (attempt 2)\n");
+                bail = TRUE;
+            }
+            // terminate the child, if any
+            killwait(cpid);
+        }
+    }
     if (bail) {
         sem_v(hyp_sem);
         return NULL;                   // better fail the operation than block the whole NC

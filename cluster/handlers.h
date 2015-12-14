@@ -274,6 +274,7 @@ typedef struct instance_t {
 
     long long blkbytes;
     long long netbytes;
+    boolean hasFloppy;
 } ccInstance;
 
 typedef struct resource_t {

@@ -2999,6 +2999,7 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
 
     dst->blkbytes = src->blkbytes;
     dst->netbytes = src->netbytes;
+    dst->hasFloppy = src->hasFloppy;
 
     return (0);
 }
@@ -3057,6 +3058,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
 
     dst->blkbytes = src->blkbytes;
     dst->netbytes = src->netbytes;
+    dst->hasFloppy = src->hasFloppy;
 
     return (0);
 }
@@ -7285,11 +7287,12 @@ void print_ccInstance(char *tag, ccInstance * in)
 
     LOGDEBUG("%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s "
              "vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
-             "bundleTaskStateName=%s, bundleTaskProgress=%0.4f volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s guestStateName=%s\n",
+             "bundleTaskStateName=%s, bundleTaskProgress=%0.4f volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s guestStateName=%s "
+             "hasFloopy=%s\n",
              tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp,
              in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk,
              in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->bundleTaskProgress,
-             in->volumesSize, volbuf, groupbuf, migration_state_names[in->migration_state], in->guestStateName);
+             in->volumesSize, volbuf, groupbuf, migration_state_names[in->migration_state], in->guestStateName, in->hasFloppy ? "true":"false");
 
     EUCA_FREE(volbuf);
     EUCA_FREE(groupbuf);
