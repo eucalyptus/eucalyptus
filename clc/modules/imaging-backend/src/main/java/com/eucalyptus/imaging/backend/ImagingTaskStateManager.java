@@ -320,11 +320,11 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         final Date cancellingExpired = cancellingTimer.get(task.getDisplayName());
         if(cancellingExpired.before(new Date())){
           try{
-            task.cleanUp();
+            if(task.cleanUp())
+              ImagingTasks.transitState(task, ImportTaskState.CANCELLING, ImportTaskState.CANCELLED, null);     
           }catch(final Exception ex){
             LOG.warn("Failed to cleanup resources for "+task.getDisplayName());
           }
-          ImagingTasks.transitState(task, ImportTaskState.CANCELLING, ImportTaskState.CANCELLED, null);
         }
       }catch(final Exception ex){
         LOG.error("Could not process cancelling task "+task.getDisplayName());

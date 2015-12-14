@@ -130,7 +130,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
     return this.stateReason;
   }
   
-  public void cleanUp() {
+  public boolean cleanUp() {
     throw new UnsupportedOperationException();
   }
   
