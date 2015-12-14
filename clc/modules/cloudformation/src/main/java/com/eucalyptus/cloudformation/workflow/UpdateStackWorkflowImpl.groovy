@@ -93,7 +93,7 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
             }
             AndPromise allResourcePromises = new AndPromise(updatedResourcePromiseMap.values());
             waitFor(allResourcePromises) {
-              waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
+              waitFor(activities.finalizeUpdateStack(stackId, accountId, effectiveUserId)) {
                 activities.createGlobalStackEvent(stackId, accountId,
                   Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString(),
                   "");

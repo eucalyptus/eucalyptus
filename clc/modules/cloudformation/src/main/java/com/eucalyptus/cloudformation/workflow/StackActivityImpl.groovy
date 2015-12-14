@@ -275,28 +275,7 @@ public class StackActivityImpl implements StackActivity {
   public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId) {
     LOG.info("Finalizing create stack");
     try {
-      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-      Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-      for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
-        resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
-      }
-      List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getWorkingOutputsJson());
-
-      for (StackEntity.Output output : outputs) {
-        output.setReady(true);
-        if (!output.isAllowedByCondition()) continue; // don't evaluate outputs that won't show up anyway.
-        JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, effectiveUserId);
-        if (outputValue == null || !outputValue.isValueNode()) {
-          throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
-        }
-        output.setStringValue(outputValue.asText());
-        output.setJsonValue(JsonHelper.getStringFromJsonNode(outputValue));
-      }
-      stackEntity.setWorkingOutputsJson(StackEntityHelper.outputsToJson(outputs));
-      // now finalize the outputs
-      stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
-      stackEntity.setStackStatus(Status.CREATE_COMPLETE);
-      StackEntityManager.updateStack(stackEntity);
+      setOutputs(stackId, accountId, effectiveUserId, Status.CREATE_COMPLETE)
     } catch (Exception e) {
       LOG.error(e, e);
       throw e;
@@ -304,6 +283,46 @@ public class StackActivityImpl implements StackActivity {
     LOG.info("Done finalizing create stack");
     return ""; // promiseFor() doesn't work on void return types
   }
+
+  private void setOutputs(String stackId, String accountId, String effectiveUserId, Status status) {
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
+      resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
+    }
+    List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getWorkingOutputsJson());
+
+    for (StackEntity.Output output : outputs) {
+      output.setReady(true);
+      if (!output.isAllowedByCondition()) continue; // don't evaluate outputs that won't show up anyway.
+      JsonNode outputValue = FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap, effectiveUserId);
+      if (outputValue == null || !outputValue.isValueNode()) {
+        throw new ValidationErrorException("Cannot create outputs: All outputs must be strings.")
+      }
+      output.setStringValue(outputValue.asText());
+      output.setJsonValue(JsonHelper.getStringFromJsonNode(outputValue));
+    }
+    stackEntity.setWorkingOutputsJson(StackEntityHelper.outputsToJson(outputs));
+    // now finalize the outputs
+    stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
+    stackEntity.setStackStatus(status);
+    StackEntityManager.updateStack(stackEntity);
+  }
+
+  @Override
+  public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId) {
+    LOG.info("Finalizing update stack");
+    try {
+      setOutputs(stackId, accountId, effectiveUserId, Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)
+    } catch (Exception e) {
+      LOG.error(e, e);
+      throw e;
+    }
+    LOG.info("Done finalizing update stack");
+    return ""; // promiseFor() doesn't work on void return types
+  }
+
+
 
   @Override
   public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
@@ -774,6 +793,7 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity.setResourceStatusReason(null);
       StackResourceEntityManager.updateStackResource(oldStackResourceEntity);
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      StackEventEntityManager.addStackEvent(stackResourceEntity);
     } else if (updateType == UpdateType.NEEDS_REPLACEMENT) {
       // put the old one in the cleanup pile
       StackResourceEntity cleanupEntity = new StackResourceEntityForCleanup();
@@ -852,7 +872,7 @@ public class StackActivityImpl implements StackActivity {
       LOG.debug(ex, ex);
       return false;
     } catch (Exception ex) {
-      LOG.info("Error creating resource " + resourceId);
+      LOG.info("Error updating resource " + resourceId);
       LOG.error(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
@@ -904,7 +924,7 @@ public class StackActivityImpl implements StackActivity {
       LOG.debug(ex, ex);
       return false;
     } catch (Exception ex) {
-      LOG.info("Error creating resource " + resourceId);
+      LOG.info("Error updating resource " + resourceId);
       LOG.error(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
@@ -962,7 +982,7 @@ public class StackActivityImpl implements StackActivity {
       LOG.debug(ex, ex);
       return false;
     } catch (Exception ex) {
-      LOG.info("Error creating resource " + resourceId);
+      LOG.info("Error updating resource " + resourceId);
       LOG.error(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);

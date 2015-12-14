@@ -67,6 +67,9 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.finalizeCreateStack")
   Promise<String> finalizeCreateStack(String stackId, String accountId, String effectiveUserId);
 
+  @Activity(name = "StackActivity.finalizeUpdateStack")
+  Promise<String> finalizeUpdateStack(String stackId, String accountId, String effectiveUserId);
+
   @Activity(name = "StackActivity.deleteAllStackRecords")
   Promise<String> deleteAllStackRecords(String stackId, String accountId);
 
