@@ -62,7 +62,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
 
   public AWSEC2EIPResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

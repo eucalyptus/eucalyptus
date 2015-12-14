@@ -20,9 +20,9 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
@@ -96,6 +96,11 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String notificationARNsJson;
+
+  @Column(name = "working_outputs_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String workingOutputsJson;
 
   @Column(name = "outputs_json" )
   @Lob
@@ -274,25 +279,6 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
     }
   }
 
-  public enum Status {
-    CREATE_IN_PROGRESS,
-    CREATE_FAILED,
-    CREATE_COMPLETE,
-    ROLLBACK_IN_PROGRESS,
-    ROLLBACK_FAILED,
-    ROLLBACK_COMPLETE,
-    DELETE_IN_PROGRESS,
-    DELETE_FAILED,
-    DELETE_COMPLETE,
-    UPDATE_IN_PROGRESS,
-    UPDATE_COMPLETE_CLEANUP_IN_PROGRESS,
-    UPDATE_COMPLETE,
-    UPDATE_ROLLBACK_IN_PROGRESS,
-    UPDATE_ROLLBACK_FAILED,
-    UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS,
-    UPDATE_ROLLBACK_COMPLETE
-  }
-
   public StackEntity() {  }
 
   public Date getCreateOperationTimestamp() {
@@ -397,6 +383,14 @@ public class StackEntity extends AbstractPersistent implements CloudFormationMet
 
   public void setNotificationARNsJson(String notificationARNsJson) {
     this.notificationARNsJson = notificationARNsJson;
+  }
+
+  public String getWorkingOutputsJson() {
+    return workingOutputsJson;
+  }
+
+  public void setWorkingOutputsJson(String workingOutputsJson) {
+    this.workingOutputsJson = workingOutputsJson;
   }
 
   public String getOutputsJson() {

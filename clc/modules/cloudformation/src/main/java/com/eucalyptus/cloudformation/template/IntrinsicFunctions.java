@@ -23,10 +23,8 @@ package com.eucalyptus.cloudformation.template;
 import com.eucalyptus.cloudformation.AccessDeniedException;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.CloudFormationService;
-import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -44,7 +42,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.bouncycastle.util.encoders.Base64;
 
-import java.beans.Introspector;
 import java.util.List;
 import java.util.Map;
 

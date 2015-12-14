@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
-import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
@@ -36,7 +35,7 @@ class DeleteMultiStepPromise extends MultiStepPromise {
   DeleteMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
-      final ResourceAction resourceAction
+      final StepBasedResourceAction resourceAction
   ) {
     super( workflowOperations, stepIds, resourceAction )
   }

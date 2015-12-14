@@ -19,9 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.workflow.steps;
 
-import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
+
+import javax.annotation.Nullable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ethomas on 9/28/14.

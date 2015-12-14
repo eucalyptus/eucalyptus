@@ -19,10 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.bootstrap;
 
-import java.util.Collections;
-import java.util.List;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.SystemAccountProvider;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  *

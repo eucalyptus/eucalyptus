@@ -72,7 +72,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
   private AWSIAMPolicyResourceInfo info = new AWSIAMPolicyResourceInfo();
 
   public AWSIAMPolicyResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

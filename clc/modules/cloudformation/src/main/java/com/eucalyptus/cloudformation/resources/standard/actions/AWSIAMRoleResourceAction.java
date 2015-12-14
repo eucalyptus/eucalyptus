@@ -58,7 +58,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
   private AWSIAMRoleResourceInfo info = new AWSIAMRoleResourceInfo();
 
   public AWSIAMRoleResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

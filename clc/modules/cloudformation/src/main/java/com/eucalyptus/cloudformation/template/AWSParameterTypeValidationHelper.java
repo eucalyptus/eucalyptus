@@ -64,29 +64,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
-
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_AvailabilityZone_Name;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Image_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Instance_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_KeyPair_KeyName;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_SecurityGroup_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_SecurityGroup_GroupName;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Subnet_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_Volume_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.AWS_EC2_VPC_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_AvailabilityZone_Name;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Image_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Instance_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_KeyPair_KeyName;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_SecurityGroup_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_SecurityGroup_GroupName;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Subnet_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_VPC_Id;
-import static com.eucalyptus.cloudformation.template.ParameterType.List_AWS_EC2_Volume_Id;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import static com.eucalyptus.cloudformation.template.ParameterType.*;
 
 public class AWSParameterTypeValidationHelper {
 

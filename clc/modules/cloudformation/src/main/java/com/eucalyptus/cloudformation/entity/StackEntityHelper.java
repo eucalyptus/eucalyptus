@@ -30,10 +30,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 
@@ -207,7 +207,7 @@ public class StackEntityHelper {
     template.setParameters(jsonToParameters(stackEntity.getParametersJson()));
     template.setConditionMap(jsonToConditionMap(stackEntity.getConditionMapJson()));
     template.setResourceDependencyManager(jsonToResourceDependencyManager(stackEntity.getResourceDependencyManagerJson()));
-    template.setOutputs(jsonToOutputs(stackEntity.getOutputsJson()));
+    template.setWorkingOutputs(jsonToOutputs(stackEntity.getWorkingOutputsJson()));
   }
 
   public static void populateStackEntityWithTemplate(StackEntity stackEntity, Template template) throws CloudFormationException {
@@ -218,6 +218,6 @@ public class StackEntityHelper {
     stackEntity.setParametersJson(parametersToJson(template.getParameters()));
     stackEntity.setConditionMapJson(conditionMapToJson(template.getConditionMap()));
     stackEntity.setResourceDependencyManagerJson(resourceDependencyManagerToJson(template.getResourceDependencyManager()));
-    stackEntity.setOutputsJson(outputsToJson(template.getOutputs()));
+    stackEntity.setWorkingOutputsJson(outputsToJson(template.getWorkingOutputs()));
   }
 }

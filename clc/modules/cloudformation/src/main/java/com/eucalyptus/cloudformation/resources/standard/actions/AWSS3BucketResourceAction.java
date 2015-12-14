@@ -84,7 +84,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
   private AWSS3BucketResourceInfo info = new AWSS3BucketResourceInfo();
 
   public AWSS3BucketResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

@@ -19,14 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.EnumSet;
-
-import org.jboss.netty.channel.ChannelPipeline;
-
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.server.QueryPipeline;
+import org.jboss.netty.channel.ChannelPipeline;
+
+import java.util.EnumSet;
+
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 
 
 @ComponentPart(CloudFormation.class)

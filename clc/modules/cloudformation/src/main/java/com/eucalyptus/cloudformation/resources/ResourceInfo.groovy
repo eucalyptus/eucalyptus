@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources
 
 import com.eucalyptus.cloudformation.CloudFormationException
-import com.google.common.collect.Lists
 
 /**
  * Created by ethomas on 12/18/13.

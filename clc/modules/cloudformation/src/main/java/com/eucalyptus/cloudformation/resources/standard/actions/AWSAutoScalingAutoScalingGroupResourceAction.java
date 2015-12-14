@@ -84,7 +84,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
   private AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
 
   public AWSAutoScalingAutoScalingGroupResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

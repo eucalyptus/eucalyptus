@@ -55,7 +55,7 @@ public class AWSAutoScalingScalingPolicyResourceAction extends StepBasedResource
   private AWSAutoScalingScalingPolicyResourceInfo info = new AWSAutoScalingScalingPolicyResourceInfo();
 
   public AWSAutoScalingScalingPolicyResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

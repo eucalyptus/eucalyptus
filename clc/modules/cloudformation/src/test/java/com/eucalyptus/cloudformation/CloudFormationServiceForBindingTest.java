@@ -20,12 +20,12 @@
 
 package com.eucalyptus.cloudformation;
 
+import org.apache.log4j.Logger;
+import org.junit.Ignore;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-
-import org.apache.log4j.Logger;
-import org.junit.Ignore;
 
 @Ignore("Not a JUnit test")
 public class CloudFormationServiceForBindingTest {

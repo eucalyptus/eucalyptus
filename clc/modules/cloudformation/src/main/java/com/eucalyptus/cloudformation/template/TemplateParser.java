@@ -1114,7 +1114,7 @@ public class TemplateParser {
 
   private void parseOutputs(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     Map<String, Boolean> conditionMap = template.getConditionMap();
-    ArrayList<StackEntity.Output> outputs = template.getOutputs();
+    ArrayList<StackEntity.Output> outputs = template.getWorkingOutputs();
     JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
     if (outputsJsonNode != null) {
       List<String> unresolvedResourceDependencies = Lists.newArrayList();
@@ -1182,7 +1182,7 @@ public class TemplateParser {
       if (outputs.size() > Limits.MAX_OUTPUTS_PER_TEMPLATE) {
         throw new ValidationErrorException("Stack exceeds the maximum allowed number of outputs.("+Limits.MAX_OUTPUTS_PER_TEMPLATE+")");
       }
-      template.setOutputs(outputs);
+      template.setWorkingOutputs(outputs);
     }
   }
 
