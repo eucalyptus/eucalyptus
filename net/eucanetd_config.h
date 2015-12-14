@@ -183,6 +183,7 @@ typedef struct eucanetdConfig_t {
     char midopubgwip[HOSTNAME_LEN];
 
     atomic_file global_network_info_file;
+    char lastAppliedVersion[32];
 
     // these are flags that can be set by values in eucalyptus.conf
     int polling_frequency;

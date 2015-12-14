@@ -80,6 +80,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -284,7 +285,7 @@ static int eucanetd_read_config(void);
 static int eucanetd_initialize_logs(void);
 static int eucanetd_fetch_latest_network(boolean * update_globalnet);
 static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet);
-static int eucanetd_read_latest_network(void);
+static int eucanetd_read_latest_network(boolean * update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo * pGni);
 
 /*----------------------------------------------------------------------------*\
@@ -454,7 +455,7 @@ int main(int argc, char **argv)
         update_globalnet_failed = FALSE;
 
         // whether or not updates have occurred due to remote content being updated, read local networking info
-        rc = eucanetd_read_latest_network();
+        rc = eucanetd_read_latest_network(&update_globalnet);
         if (rc) {
             LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
@@ -574,7 +575,16 @@ int main(int argc, char **argv)
             if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
             } else {
+                char versionFile[EUCA_MAX_PATH];
+                // update was requested and was successful
                 epoch_updates++;
+                
+                snprintf(versionFile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.version", config->eucahome);
+                if (!strlen(globalnetworkinfo->version) || (str2file(globalnetworkinfo->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
+                    LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
+                } else {
+                    snprintf(config->lastAppliedVersion, 32, "%s", globalnetworkinfo->version);
+                }
             }
         }
         epoch_checks++;
@@ -596,11 +606,14 @@ int main(int argc, char **argv)
 
         epoch_timer += config->polling_frequency;        
         
+        
         /*
-        if (counter  >= 3) {
+        if (counter  >= 10) {
+            exit(0);
             gIsRunning=FALSE;
         }
         */
+        
     }
 
     LOGINFO("EUCANETD going down.\n");
@@ -1406,7 +1419,7 @@ static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
 //!
 //! @note
 //!
-static int eucanetd_read_latest_network(void)
+static int eucanetd_read_latest_network(boolean *update_globalnet)
 {
     int i = 0;
     int rc = 0;
@@ -1430,6 +1443,17 @@ static int eucanetd_read_latest_network(void)
     } else {
       gni_print(globalnetworkinfo);
       gni_hostnames_print(host_info);
+
+      // regardless, if the last sucessfully applied version matches the current GNI version, skip the update
+      if ( ( strlen(globalnetworkinfo->version) && strlen(config->lastAppliedVersion) ) ) {
+          if (!strcmp(globalnetworkinfo->version, config->lastAppliedVersion) ) {
+              LOGDEBUG("global network version (%s) matches last successfully applied version (%s), skipping update\n", globalnetworkinfo->version, config->lastAppliedVersion);
+              *update_globalnet = FALSE;
+          } else {
+              LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", globalnetworkinfo->version, config->lastAppliedVersion);
+          }
+      }
+
       if (!strcmp(config->netMode, NETMODE_VPCMIDO)) {
 	// skip for VPCMIDO
 	ret = 0;
