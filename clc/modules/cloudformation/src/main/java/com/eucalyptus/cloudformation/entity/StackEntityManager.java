@@ -20,6 +20,11 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.AlreadyExistsException;
+import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.InternalFailureException;
+import com.eucalyptus.cloudformation.UpdateStackType;
+import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import org.apache.log4j.Logger;
@@ -35,6 +40,49 @@ import java.util.List;
  * Created by ethomas on 12/18/13.
  */
 public class StackEntityManager {
+
+  public synchronized static StackEntity checkValidUpdateStatusAndUpdateStack(String stackId, String accountId, Template newTemplate, String newTemplateText, UpdateStackType request) throws CloudFormationException {
+    StackEntity stackEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEntity> entityList = criteria.list();
+      if (entityList == null || entityList.isEmpty()) {
+        throw new ValidationErrorException("Stack does not exist");
+      } else if (entityList.size() > 1) {
+        throw new InternalFailureException("More than one stack exists with this id " + stackId+ " , currently");
+      }
+      stackEntity = entityList.get(0);
+      // Finally make sure the stack state is ok
+      if (stackEntity.getStackStatus() != Status.CREATE_COMPLETE && stackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
+        stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
+        throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
+      }
+      // Change the appropriate fields in the old stack
+      StackEntityHelper.populateStackEntityWithTemplate(stackEntity, newTemplate);
+      stackEntity.setTemplateBody(newTemplateText);
+      stackEntity.setStackStatus(Status.UPDATE_IN_PROGRESS);
+      stackEntity.setStackStatusReason("User initiated");
+      stackEntity.setLastUpdateOperationTimestamp(new Date());
+      if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
+        stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(request.getCapabilities().getMember()));
+      } else {
+        stackEntity.setCapabilitiesJson(null);
+      }
+      if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
+        stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
+      } else {
+        stackEntity.setNotificationARNsJson(null);
+      }
+      Entities.persist(stackEntity);
+      // do something
+      db.commit( );
+    }
+    return stackEntity;
+  }
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
   public static StackEntity addStack(StackEntity stackEntity) throws AlreadyExistsException {

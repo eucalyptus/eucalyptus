@@ -968,13 +968,13 @@ public class CloudFormationService {
 
       checkStackPermission( ctx, stackName, accountId );
       // get the original stack (needed for many things)
-      final StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(
+      final StackEntity oldStackEntity = StackEntityManager.getAnyStackByNameOrId(
         stackName,
         accountId ); // no administrator check here because update requires user on original account stack.
-      if (stackEntity == null) {
+      if (oldStackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      final String stackId = stackEntity.getStackId();
+      final String stackId = oldStackEntity.getStackId();
       final PseudoParameterValues newPseudoParameterValues = new PseudoParameterValues();
       newPseudoParameterValues.setAccountId(accountId);
       newPseudoParameterValues.setStackName(stackName);
@@ -989,16 +989,16 @@ public class CloudFormationService {
       newPseudoParameterValues.setRegion(getRegion());
 
       final String newTemplateText = (usePreviousTemplate ?
-        stackEntity.getTemplateBody() :
+        oldStackEntity.getTemplateBody() :
         (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user));
 
-      final List<Parameter> oldParameters = convertToParameters(StackEntityHelper.jsonToParameters(stackEntity.getParametersJson()));
+      final List<Parameter> oldParameters = convertToParameters(StackEntityHelper.jsonToParameters(oldStackEntity.getParametersJson()));
       validateAndUpdateParameters(oldParameters, newParameters);
 
       // check that nothing has changed (within resources)
-      final String oldTemplateText = stackEntity.getTemplateBody();
-      List<String> oldCapabilities = StackEntityHelper.jsonToCapabilities(stackEntity.getCapabilitiesJson());
-      PseudoParameterValues oldPseudoParameterValues = getPseudoParameterValues(stackEntity);
+      final String oldTemplateText = oldStackEntity.getTemplateBody();
+      List<String> oldCapabilities = StackEntityHelper.jsonToCapabilities(oldStackEntity.getCapabilitiesJson());
+      PseudoParameterValues oldPseudoParameterValues = getPseudoParameterValues(oldStackEntity);
 
       final Template oldTemplate = new TemplateParser().parse(oldTemplateText, oldParameters, oldCapabilities, oldPseudoParameterValues, userId);
       final Template newTemplate = new TemplateParser().parse(newTemplateText, newParameters, newCapabilities, newPseudoParameterValues, userId);
@@ -1021,7 +1021,7 @@ public class CloudFormationService {
       // Things that can trigger update.
       // 1) Changes to Notification ARN.  Experimentation shows order doesn't matter but multiplicity does.  Use Multisets
       Multiset<String> oldNotificationArnsMS = HashMultiset.create();
-      List<String> oldNotificationArns = StackEntityHelper.jsonToNotificationARNs(stackEntity.getNotificationARNsJson());
+      List<String> oldNotificationArns = StackEntityHelper.jsonToNotificationARNs(oldStackEntity.getNotificationARNsJson());
       if (oldNotificationArns != null) {
         oldNotificationArnsMS.addAll(oldNotificationArns);
       }
@@ -1033,7 +1033,7 @@ public class CloudFormationService {
         requiresUpdate = true;
       }
       // 2) Changes to Stack Policy (TODO: do something better than this).  Field equivalence appears to not be considered a change.
-      else if (stackPolicyIsDifferent(stackEntity.getStackPolicy(), stackPolicyText)) {
+      else if (stackPolicyIsDifferent(oldStackEntity.getStackPolicy(), stackPolicyText)) {
         requiresUpdate = true;
       }
       // 3) Differences in the field names (i.e. new or old fields)
@@ -1065,42 +1065,25 @@ public class CloudFormationService {
         throw new ValidationErrorException("No updates are to be performed.");
       }
 
-      // Finally make sure the stack state is ok
-      if (stackEntity.getStackStatus() != Status.CREATE_COMPLETE && stackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
-        stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
-        throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
-      }
+
       // Record the old stack & update info in the db.
       StackUpdateInfoEntity stackUpdateInfoEntity = new StackUpdateInfoEntity();
       stackUpdateInfoEntity.setAccountId(accountId);
-      stackUpdateInfoEntity.setOldCapabilitiesJson(stackEntity.getCapabilitiesJson());
-      stackUpdateInfoEntity.setOldNotificationARNsJson(stackEntity.getNotificationARNsJson());
-      stackUpdateInfoEntity.setOldParametersJson(stackEntity.getParametersJson());
-      stackUpdateInfoEntity.setOldTemplateBody(stackEntity.getTemplateBody());
+      stackUpdateInfoEntity.setOldCapabilitiesJson(oldStackEntity.getCapabilitiesJson());
+      stackUpdateInfoEntity.setOldNotificationARNsJson(oldStackEntity.getNotificationARNsJson());
+      stackUpdateInfoEntity.setOldParametersJson(oldStackEntity.getParametersJson());
+      stackUpdateInfoEntity.setOldTemplateBody(oldStackEntity.getTemplateBody());
       stackUpdateInfoEntity.setNewStackPolicy(stackPolicyText);
       stackUpdateInfoEntity.setStackId(stackId);
       stackUpdateInfoEntity.setStackName(stackName);
       stackUpdateInfoEntity.setTempStackPolicy(stackPolicyDuringUpdateText);
       stackUpdateInfoEntity.setRecordDeleted(Boolean.FALSE);
+
+      // don't add the record until we check the stack status though and update it.
+      final StackEntity newStackEntity = StackEntityManager.checkValidUpdateStatusAndUpdateStack(stackId, accountId, newTemplate, newTemplateText, request);
+
       StackUpdateInfoEntityManager.addStackUpdateInfo(stackUpdateInfoEntity);
 
-      // Change the appropriate fields in the old stack
-      StackEntityHelper.populateStackEntityWithTemplate(stackEntity, newTemplate);
-      stackEntity.setTemplateBody(newTemplateText);
-      stackEntity.setStackStatus(Status.UPDATE_IN_PROGRESS);
-      stackEntity.setStackStatusReason("User initiated");
-      stackEntity.setLastUpdateOperationTimestamp(new Date());
-      if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(newCapabilities));
-      } else {
-        stackEntity.setCapabilitiesJson(null);
-      }
-      if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
-        stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
-      } else {
-        stackEntity.setNotificationARNsJson(null);
-      }
-      StackEntityManager.updateStack(stackEntity);
       // Create the new stack resources
       for (ResourceInfo resourceInfo: newTemplate.getResourceInfoMap().values()) {
         StackResourceEntity stackResourceEntity = new StackResourceEntityForUpdate();
@@ -1132,7 +1115,7 @@ public class CloudFormationService {
         .getNewWorkflowClient(UpdateStackWorkflow.class, updateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 
       UpdateStackWorkflow updateStackWorkflow = new UpdateStackWorkflowClient(updateStackWorkflowClient);
-      updateStackWorkflow.updateStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId);
+      updateStackWorkflow.updateStack(newStackEntity.getStackId(), newStackEntity.getAccountId(), newStackEntity.getResourceDependencyManagerJson(), userId);
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
         CloudFormationProperties.SWF_DOMAIN,
@@ -1145,9 +1128,9 @@ public class CloudFormationService {
         .getNewWorkflowClient(MonitorUpdateStackWorkflow.class, monitorUpdateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 
       MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = new MonitorUpdateStackWorkflowClient(monitorUpdateStackWorkflowClient);
-      monitorUpdateStackWorkflow.monitorUpdateStack(stackEntity.getStackId(),  stackEntity.getAccountId(),
+      monitorUpdateStackWorkflow.monitorUpdateStack(newStackEntity.getStackId(),  newStackEntity.getAccountId(),
         StackEntityHelper.resourceDependencyManagerToJson(oldTemplate.getResourceDependencyManager()),
-        stackEntity.getResourceDependencyManagerJson(),
+        newStackEntity.getResourceDependencyManagerJson(),
         userId);
 
 
