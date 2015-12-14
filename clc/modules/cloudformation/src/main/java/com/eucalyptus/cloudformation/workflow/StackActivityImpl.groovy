@@ -695,7 +695,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
-    LOG.info("Updating resource " + resourceId);
+    LOG.info("Determining if resource " + resourceId + " needs update");
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity oldStackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
 
@@ -735,20 +735,20 @@ public class StackActivityImpl implements StackActivity {
       return "CREATE";
     }
     boolean nothingOutsidePropertiesChanged = true;
-    if (Objects.equals(oldStackResourceEntity.getDeletionPolicy(), stackResourceEntity.getDeletionPolicy())) {
+    if (!Objects.equals(oldStackResourceEntity.getDeletionPolicy(), stackResourceEntity.getDeletionPolicy())) {
       nothingOutsidePropertiesChanged = false;
     }
-    if (Objects.equals(oldStackResourceEntity.getDescription(), stackResourceEntity.getDescription())) {
+    if (!Objects.equals(oldStackResourceEntity.getDescription(), stackResourceEntity.getDescription())) {
       nothingOutsidePropertiesChanged = false;
     }
     JsonNode oldMetadata = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getPropertiesJson());
     JsonNode metadata = JsonHelper.getJsonNodeFromString(stackResourceEntity.getPropertiesJson());
-    if (Objects.equals(oldMetadata, metadata)) {
+    if (!Objects.equals(oldMetadata, metadata)) {
       nothingOutsidePropertiesChanged = false;
     }
     JsonNode oldUpdatePolicy = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getUpdatePolicyJson());
     JsonNode updatePolicy = JsonHelper.getJsonNodeFromString(stackResourceEntity.getUpdatePolicyJson());
-    if (Objects.equals(oldUpdatePolicy, updatePolicy)) {
+    if (!Objects.equals(oldUpdatePolicy, updatePolicy)) {
       nothingOutsidePropertiesChanged = false;
     }
     JsonNode oldProperties = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getPropertiesJson());
@@ -1012,7 +1012,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.info("Deleting resource " + resourceId);
+    LOG.info("Determining if resource " + resourceId + " needs deleting during cleanup");
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     // check that it is in the cleanup pile
