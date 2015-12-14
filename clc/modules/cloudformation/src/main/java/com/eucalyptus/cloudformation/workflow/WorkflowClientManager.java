@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.workflow;
 
-import static com.eucalyptus.cloudformation.config.CloudFormationProperties.*;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
@@ -29,6 +28,8 @@ import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationAWSCredentialsProvider;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.simpleworkflow.common.client.WorkflowClient;
+
+import static com.eucalyptus.cloudformation.config.CloudFormationProperties.*;
 
 /**
  *

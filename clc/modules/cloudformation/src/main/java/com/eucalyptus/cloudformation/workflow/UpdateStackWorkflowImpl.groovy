@@ -129,15 +129,15 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
+    Promise<String> getResourceTypePromise = activities.getResourceTypeForUpdate(stackId, accountId, resourceId);
     waitFor(getResourceTypePromise) { String resourceType ->
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
+      final ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
       Promise<String> initPromise = activities.initUpdateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result) || "NONE".equals(result)) {
           return promiseFor("");
         } else if ("CREATE".equals(result)) {
-          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, accountId, effectiveUserId, reverseDependentResourcesJson);
+          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
         } else {
           Promise<String> updatePromise;
           if ("NO_PROPERTIES".equals(result)) {

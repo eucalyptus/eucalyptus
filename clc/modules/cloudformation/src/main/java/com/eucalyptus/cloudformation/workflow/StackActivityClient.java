@@ -73,6 +73,10 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.getResourceType")
   Promise<String> getResourceType(String stackId, String accountId, String resourceId);
 
+  @Activity(name = "StackActivity.getResourceTypeForUpdate")
+  Promise<String> getResourceTypeForUpdate(String stackId, String accountId, String resourceId);
+
+
   @Activity(name = "StackActivity.finalizeCreateResource")
   Promise<String> finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
 
@@ -136,6 +140,6 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.finalizeUpdateCleanupResource")
   Promise<String> finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
 
-  @Activity(name = "StackActivity.removeUpdateCleanupResourceFromStack")
-  Promise<String> removeUpdateCleanupResourceFromStack(String resourceId, String stackId, String accountId);
+  @Activity(name = "StackActivity.removeUpdateCleanupResourceIfAppropriateFromStack")
+  Promise<String> removeUpdateCleanupResourceIfAppropriateFromStack(String resourceId, String stackId, String accountId);
 }

@@ -22,7 +22,6 @@ package com.eucalyptus.cloudformation.workflow;
 
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 
 @ActivityRegistrationOptions(
   defaultTaskScheduleToStartTimeoutSeconds = 900,
@@ -44,6 +43,7 @@ public interface StackActivity {
   public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId);
   public String deleteAllStackRecords(String stackId, String accountId);
   public String getResourceType(String stackId, String accountId, String resourceId);
+  public String getResourceTypeForUpdate(String stackId, String accountId, String resourceId);
   public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
@@ -65,5 +65,5 @@ public interface StackActivity {
   public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
   public String failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
   public String finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String removeUpdateCleanupResourceFromStack(String resourceId, String stackId, String accountId);
+  public String removeUpdateCleanupResourceIfAppropriateFromStack(String resourceId, String stackId, String accountId);
 }

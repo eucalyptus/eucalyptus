@@ -34,8 +34,8 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.Subqueries;
 
-import java.util.List;
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Created by ethomas on 12/19/13.
@@ -191,14 +191,12 @@ public class StackResourceEntityManager {
   public static void deleteStackResourcesInUse(String stackId, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntityInUse.class ) ) {
-      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
-        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-          .add(Restrictions.eq("accountId", accountId))
-          .add(Restrictions.eq("stackId", stackId))
-          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
-          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-        }
+      Criteria criteria = Entities.createCriteria(StackResourceEntityInUse.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      for (StackResourceEntity stackResourceEntity : (List<StackResourceEntityInUse>) criteria.list()) {
+        stackResourceEntity.setRecordDeleted(Boolean.TRUE);
       }
       db.commit( );
     }
@@ -206,15 +204,13 @@ public class StackResourceEntityManager {
 
   public static void deleteStackResourcesForCleanup(String stackId, String accountId) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
-      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
-        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-          .add(Restrictions.eq("accountId", accountId))
-          .add(Restrictions.eq("stackId", stackId))
-          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
-          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-        }
+            Entities.transactionFor( StackResourceEntityForCleanup.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityForCleanup.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      for (StackResourceEntity stackResourceEntity : (List<StackResourceEntityForCleanup>) criteria.list()) {
+        stackResourceEntity.setRecordDeleted(Boolean.TRUE);
       }
       db.commit( );
     }
@@ -222,15 +218,13 @@ public class StackResourceEntityManager {
 
   public static void deleteStackResourcesForUpdate(String stackId, String accountId) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackResourceEntityInUse.class ) ) {
-      for (Class stackResourceEntityClass: Lists.newArrayList(StackResourceEntityInUse.class, StackResourceEntityForCleanup.class, StackResourceEntityForUpdate.class)) {
-        Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-          .add(Restrictions.eq("accountId", accountId))
-          .add(Restrictions.eq("stackId", stackId))
-          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-        for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
-          stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-        }
+            Entities.transactionFor( StackResourceEntityForUpdate.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntityForUpdate.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      for (StackResourceEntity stackResourceEntity : (List<StackResourceEntityForUpdate>) criteria.list()) {
+        stackResourceEntity.setRecordDeleted(Boolean.TRUE);
       }
       db.commit( );
     }
@@ -331,7 +325,7 @@ public class StackResourceEntityManager {
       if ( physicalResourceId != null ) { // stack specified via physical resource identifier
         criteria.add( Subqueries.propertyIn(
             "stackId",
-            DetachedCriteria.forClass( StackResourceEntity.class, "subres" )
+            DetachedCriteria.forClass( StackResourceEntityInUse.class, "subres" )
                 .add( Restrictions.eq( "subres.physicalResourceId", physicalResourceId ) )
                 .add( Restrictions.eq( "subres.recordDeleted", Boolean.FALSE ) )
                 .setProjection( Projections.property( "subres.stackId" ) )
@@ -345,7 +339,7 @@ public class StackResourceEntityManager {
       criteria.add(Restrictions.ne("resourceStatus", Status.NOT_STARTED)); // placeholder, AWS doesn't return these
 
       //noinspection unchecked
-      return (List<StackResourceEntity>) criteria.list( );
+      return Lists.<StackResourceEntity>newArrayList((List<StackResourceEntityInUse>) criteria.list());
     }
   }
 

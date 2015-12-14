@@ -20,9 +20,9 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;

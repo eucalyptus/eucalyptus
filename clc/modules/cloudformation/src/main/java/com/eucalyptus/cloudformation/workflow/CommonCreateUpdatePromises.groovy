@@ -17,16 +17,15 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow;
+package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.cloudformation.resources.ResourceAction;
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
-import com.netflix.glisten.WorkflowOperations;
-import groovy.lang.Delegate;
-import groovy.transform.CompileStatic;
-import groovy.transform.TypeCheckingMode;
-import org.apache.log4j.Logger;
+import com.amazonaws.services.simpleworkflow.flow.core.Promise
+import com.eucalyptus.cloudformation.resources.ResourceAction
+import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.netflix.glisten.WorkflowOperations
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
+import org.apache.log4j.Logger
 
 /**
  * Created by ethomas on 12/11/15.

@@ -19,12 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation;
 
-import static com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
-import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.context.Contexts;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+
+import static com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
+import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 
 /**
  *

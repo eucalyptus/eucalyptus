@@ -19,13 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.cloudformation.CloudFormationErrorResponse;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import org.apache.log4j.Logger;
 
 
 public class CloudFormationErrorHandler extends ErrorHandlerSupport {

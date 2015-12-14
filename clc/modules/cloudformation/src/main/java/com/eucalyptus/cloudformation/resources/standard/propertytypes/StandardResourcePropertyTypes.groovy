@@ -28,7 +28,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
 // Note: all of these items must properly override equals & hashcode for equality for update to detect differences
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class AutoScalingBlockDeviceMapping {
   @Property
@@ -42,7 +42,7 @@ public class AutoScalingBlockDeviceMapping {
   String virtualName;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class AutoScalingEBSBlockDevice {
   @Property
@@ -57,7 +57,7 @@ public class AutoScalingEBSBlockDevice {
   String volumeType;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class AutoScalingNotificationConfiguration {
   @Property
@@ -68,7 +68,7 @@ public class AutoScalingNotificationConfiguration {
   List<String> notificationTypes = Lists.newArrayList();
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class AutoScalingTag {
   @Property
@@ -81,7 +81,7 @@ public class AutoScalingTag {
   @Required
   Boolean propagateAtLaunch;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class CloudWatchMetricDimension {
   @Property
@@ -92,7 +92,7 @@ public class CloudWatchMetricDimension {
   String value;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2BlockDeviceMapping {
   @Property
@@ -106,7 +106,7 @@ public class EC2BlockDeviceMapping {
   String virtualName;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2EBSBlockDevice {
   @Property
@@ -120,14 +120,14 @@ public class EC2EBSBlockDevice {
   @Property
   String volumeType;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 public class EC2ICMP {
   @Property
   Integer code;
   @Property
   Integer type;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2MountPoint {
   @Required
@@ -137,7 +137,7 @@ public class EC2MountPoint {
   @Property
   String volumeId;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2NetworkInterface {
   @Property
@@ -162,7 +162,7 @@ public class EC2NetworkInterface {
   @Property
   String subnetId;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2NetworkInterfacePrivateIPSpecification {
   @Required
@@ -173,7 +173,7 @@ public class EC2NetworkInterfacePrivateIPSpecification {
   Boolean primary;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 public class EC2PortRange {
   @Property
   Integer from;
@@ -181,7 +181,7 @@ public class EC2PortRange {
   Integer to;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2SecurityGroupRule {
   @Property
@@ -203,7 +203,7 @@ public class EC2SecurityGroupRule {
   Integer toPort;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EC2Tag {
   @Property
@@ -211,7 +211,7 @@ public class EC2Tag {
   @Property
   String value;
 }
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class EmbeddedIAMPolicy {
   @Required
@@ -222,14 +222,14 @@ public class EmbeddedIAMPolicy {
   JsonNode policyDocument;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class LoginProfile {
   @Property
   String password;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingAccessLoggingPolicy {
   @Property
@@ -243,7 +243,7 @@ public class ElasticLoadBalancingAccessLoggingPolicy {
   String s3BucketPrefix;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingAppCookieStickinessPolicy {
   @Required
@@ -254,7 +254,7 @@ public class ElasticLoadBalancingAppCookieStickinessPolicy {
   String policyName;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingConnectionDrainingPolicy {
   @Required
@@ -264,7 +264,7 @@ public class ElasticLoadBalancingConnectionDrainingPolicy {
   Integer timeout;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingHealthCheckType {
   @Property
@@ -279,7 +279,7 @@ public class ElasticLoadBalancingHealthCheckType {
   Integer unhealthyThreshold;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingLBCookieStickinessPolicyType {
   @Property
@@ -289,7 +289,7 @@ public class ElasticLoadBalancingLBCookieStickinessPolicyType {
   String policyName;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingListener {
   @Required
@@ -309,7 +309,7 @@ public class ElasticLoadBalancingListener {
   String sslCertificateId;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingPolicyType {
   List<ElasticLoadBalancingPolicyTypeAttribute> attributes = Lists.newArrayList();
@@ -326,7 +326,7 @@ public class ElasticLoadBalancingPolicyType {
 }
 
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingPolicyTypeAttribute {
   @Required
@@ -337,7 +337,7 @@ public class ElasticLoadBalancingPolicyTypeAttribute {
   String value;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3CorsConfiguration {
   @Required
@@ -345,7 +345,7 @@ public class S3CorsConfiguration {
   List<S3CorsConfigurationRule> corsRule = Lists.newArrayList();
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3CorsConfigurationRule {
   @Property
@@ -364,7 +364,7 @@ public class S3CorsConfigurationRule {
   Integer maxAge;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3LifecycleRule {
   @Property
@@ -382,7 +382,7 @@ public class S3LifecycleRule {
   S3LifecycleRuleTransition transition;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3LifecycleConfiguration {
   @Required
@@ -390,7 +390,7 @@ public class S3LifecycleConfiguration {
   List<S3LifecycleRule> rules = Lists.newArrayList();
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3LoggingConfiguration {
   @Property
@@ -399,7 +399,7 @@ public class S3LoggingConfiguration {
   String logFilePrefix;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3NotificationConfiguration{
   @Required
@@ -407,7 +407,7 @@ public class S3NotificationConfiguration{
   List<S3NotificationTopicConfiguration> topicConfigurations = Lists.newArrayList();
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class CloudFormationResourceTag {
   @Required
@@ -419,7 +419,7 @@ public class CloudFormationResourceTag {
 
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class PrivateIpAddressSpecification {
   @Required
@@ -430,7 +430,7 @@ public class PrivateIpAddressSpecification {
   Boolean primary;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3VersioningConfiguration {
   @Required
@@ -438,7 +438,7 @@ public class S3VersioningConfiguration {
   String status;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3WebsiteConfiguration {
   @Property
@@ -451,7 +451,7 @@ public class S3WebsiteConfiguration {
   List<S3WebsiteConfigurationRoutingRule> routingRules = Lists.newArrayList();
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3WebsiteConfigurationRoutingRule {
   @Required
@@ -461,7 +461,7 @@ public class S3WebsiteConfigurationRoutingRule {
   S3WebsiteConfigurationRoutingRulesRoutingRuleCondition routingRuleCondition;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3WebsiteConfigurationRoutingRulesRedirectRule {
   @Property
@@ -476,7 +476,7 @@ public class S3WebsiteConfigurationRoutingRulesRedirectRule {
   String replaceKeyWith;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3WebsiteConfigurationRoutingRulesRoutingRuleCondition {
   @Property
@@ -485,7 +485,7 @@ public class S3WebsiteConfigurationRoutingRulesRoutingRuleCondition {
   String keyPrefixEquals;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3WebsiteConfigurationRedirectAllRequestsTo {
   @Required
@@ -495,7 +495,7 @@ public class S3WebsiteConfigurationRedirectAllRequestsTo {
   String protocol;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3LifecycleRuleTransition {
   @Required
@@ -507,7 +507,7 @@ public class S3LifecycleRuleTransition {
   Integer transitionInDays;
 }
 
-@EqualsAndHashCode(includeFields=true)
+@EqualsAndHashCode
 @ToString(includeNames=true)
 public class S3NotificationTopicConfiguration {
   @Required

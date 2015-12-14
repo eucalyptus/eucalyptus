@@ -67,6 +67,7 @@ import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowDescript
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.ComponentIds;
@@ -102,7 +103,7 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 
-
+import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -117,7 +118,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import javax.net.ssl.SSLHandshakeException;
 
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationService {
@@ -948,8 +948,6 @@ public class CloudFormationService {
       final String stackPolicyDuringUpdateUrl = request.getStackPolicyDuringUpdateURL();
       final String stackPolicyDuringUpdateText = validateAndGetStackPolicyDuringUpdate(user, stackPolicyDuringUpdateBody, stackPolicyDuringUpdateUrl);
 
-      if (stackName == null) throw new ValidationErrorException("Stack name is null");
-
       final String templateBody = request.getTemplateBody();
       if (templateBody != null) {
         if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
@@ -1072,7 +1070,6 @@ public class CloudFormationService {
         stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
         throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
       }
-
       // Record the old stack & update info in the db.
       StackUpdateInfoEntity stackUpdateInfoEntity = new StackUpdateInfoEntity();
       stackUpdateInfoEntity.setAccountId(accountId);
@@ -1130,7 +1127,7 @@ public class CloudFormationService {
       }
       StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
       WorkflowClientFactory updateStackWorkflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-      WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
+      WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new UpdateStackWorkflowDescriptionTemplate();
       InterfaceBasedWorkflowClient<UpdateStackWorkflow> updateStackWorkflowClient = updateStackWorkflowClientFactory
         .getNewWorkflowClient(UpdateStackWorkflow.class, updateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 

@@ -16,13 +16,13 @@ public class StackUpdateInfoEntityManager {
   public static StackUpdateInfoEntity addStackUpdateInfo(StackUpdateInfoEntity stackUpdateInfoEntity) throws AlreadyExistsException {
     try ( TransactionResource db =
             Entities.transactionFor(StackUpdateInfoEntity.class) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+      Criteria criteria = Entities.createCriteria(StackUpdateInfoEntity.class)
         .add(Restrictions.eq("stackName", stackUpdateInfoEntity.getStackName()))
         .add(Restrictions.eq("accountId", stackUpdateInfoEntity.getAccountId()))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-      List<StackEntity> EntityList = criteria.list();
+      List<StackUpdateInfoEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
-        throw new AlreadyExistsException("Stack already exists");
+        throw new AlreadyExistsException("Stack update info already exists");
       }
       Entities.persist(stackUpdateInfoEntity);
       // do something

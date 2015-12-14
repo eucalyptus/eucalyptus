@@ -56,7 +56,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   @Override
   void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId) {
     try {
-      Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 30 ) {
+      Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 10 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
           activities.getUpdateWorkflowExecutionCloseStatus( stackId )
         }
@@ -78,7 +78,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   private Promise<String> determineRollbackOrCleanupAction(String closedStatus, String stackStatus, String stackId, String accountId,
                                                            String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId) {
     if (Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(stackStatus)) {
-      return performCleanup(stackId, accountId, effectiveUserId); // just done...
+      return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId); // just done...
     } else if (Status.UPDATE_IN_PROGRESS.equals(stackStatus)) {
       // Once here, stack creation has failed.  Only in some cases do we know why.
       String statusReason = "";
@@ -156,7 +156,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
           }
         }
         String errorMessage = resourceFailure ? "One or more resources could not be deleted." : "";
-        return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage )) {
+        return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage)) {
           activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage);
         }
       }
@@ -164,7 +164,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
       CreateStackWorkflowImpl.LOG.error(t);
       CreateStackWorkflowImpl.LOG.debug(t, t);
       final String errorMessage = "One or more resources could not be deleted.";
-      return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage )) {
+      return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage)) {
         activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage);
       }
     }.getResult()
@@ -176,6 +176,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
                                    String stackId,
                                    String accountId,
                                    String effectiveUserId) {
+    // the resource will still also be in the current resource table.
     Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
@@ -188,12 +189,12 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
             waitFor(resourceAction.getUpdateCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId)) {
               return activities.finalizeUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId);
             }
-          }.withCatch { Throwable t->
+          }.withCatch { Throwable t ->
             Throwable rootCause = Throwables.getRootCause(t);
             return activities.failUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage());
           }.getResult();
           return waitFor(updateCleanupPromise) {
-            activities.removeUpdateCleanupResourceFromStack(resourceId, stackId, accountId);
+            activities.removeUpdateCleanupResourceIfAppropriateFromStack(resourceId, stackId, accountId);
           }
         }
       }

@@ -19,10 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.regex.Pattern;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.protocol.OperationParameter;
@@ -33,6 +29,11 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.regex.Pattern;
 
 /**
  *

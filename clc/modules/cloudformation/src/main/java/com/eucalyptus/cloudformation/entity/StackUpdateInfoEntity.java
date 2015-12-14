@@ -1,6 +1,5 @@
 package com.eucalyptus.cloudformation.entity;
 
-import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;

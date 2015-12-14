@@ -24,7 +24,6 @@ import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.Lists
 import com.netflix.glisten.WorkflowTags
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 

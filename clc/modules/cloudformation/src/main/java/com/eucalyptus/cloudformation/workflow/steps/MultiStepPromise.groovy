@@ -20,9 +20,8 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException
+import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic

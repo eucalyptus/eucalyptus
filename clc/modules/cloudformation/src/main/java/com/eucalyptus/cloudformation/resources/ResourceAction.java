@@ -21,7 +21,6 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.UpdateType;

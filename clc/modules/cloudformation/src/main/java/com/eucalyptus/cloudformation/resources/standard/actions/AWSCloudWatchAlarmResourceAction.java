@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -30,7 +29,6 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.UpdateType;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
@@ -51,7 +49,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import com.netflix.glisten.WorkflowOperations;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -192,7 +189,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
           putMetricAlarmType.setAlarmActions(alarmActions);
         }
         putMetricAlarmType.setAlarmDescription(newAction.properties.getAlarmDescription());
-        putMetricAlarmType.setAlarmName(newAction.properties.getAlarmName());
+        putMetricAlarmType.setAlarmName(oldAction.info.getPhysicalResourceId()); // alarm name is physical resource id
         putMetricAlarmType.setComparisonOperator(newAction.properties.getComparisonOperator());
         if (newAction.properties.getDimensions() != null) {
           Dimensions dimensions = new Dimensions();
@@ -264,69 +261,53 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
   public UpdateType getUpdateType(ResourceAction resourceAction) {
     UpdateType updateType = UpdateType.NONE;
     AWSCloudWatchAlarmResourceAction otherAction = (AWSCloudWatchAlarmResourceAction) resourceAction;
-    if (Objects.equals(properties.getActionsEnabled(), otherAction.properties.getActionsEnabled())) {
+    if (!Objects.equals(properties.getActionsEnabled(), otherAction.properties.getActionsEnabled())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getAlarmActions(), otherAction.properties.getAlarmActions())) {
+    if (!Objects.equals(properties.getAlarmActions(), otherAction.properties.getAlarmActions())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getAlarmDescription(), otherAction.properties.getAlarmDescription())) {
+    if (!Objects.equals(properties.getAlarmDescription(), otherAction.properties.getAlarmDescription())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getAlarmName(), otherAction.properties.getAlarmName())) {
+    if (!Objects.equals(properties.getAlarmName(), otherAction.properties.getAlarmName())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
     }
-    if (Objects.equals(properties.getComparisonOperator(), otherAction.properties.getComparisonOperator())) {
+    if (!Objects.equals(properties.getComparisonOperator(), otherAction.properties.getComparisonOperator())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getDimensions(), otherAction.properties.getDimensions())) {
+    if (!Objects.equals(properties.getDimensions(), otherAction.properties.getDimensions())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getEvaluationPeriods(), otherAction.properties.getEvaluationPeriods())) {
+    if (!Objects.equals(properties.getEvaluationPeriods(), otherAction.properties.getEvaluationPeriods())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getInsufficientDataActions(), otherAction.properties.getInsufficientDataActions())) {
+    if (!Objects.equals(properties.getInsufficientDataActions(), otherAction.properties.getInsufficientDataActions())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getMetricName(), otherAction.properties.getMetricName())) {
+    if (!Objects.equals(properties.getMetricName(), otherAction.properties.getMetricName())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getNamespace(), otherAction.properties.getNamespace())) {
+    if (!Objects.equals(properties.getNamespace(), otherAction.properties.getNamespace())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getOkActions(), otherAction.properties.getOkActions())) {
+    if (!Objects.equals(properties.getOkActions(), otherAction.properties.getOkActions())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getPeriod(), otherAction.properties.getPeriod())) {
+    if (!Objects.equals(properties.getPeriod(), otherAction.properties.getPeriod())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getStatistic(), otherAction.properties.getStatistic())) {
+    if (!Objects.equals(properties.getStatistic(), otherAction.properties.getStatistic())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getThreshold(), otherAction.properties.getThreshold())) {
+    if (!Objects.equals(properties.getThreshold(), otherAction.properties.getThreshold())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
-    if (Objects.equals(properties.getUnit(), otherAction.properties.getUnit())) {
+    if (!Objects.equals(properties.getUnit(), otherAction.properties.getUnit())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
     return updateType;
   }
-
-  @Override
-  public Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    return null;
-  }
-
-  @Override
-  public Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    return null;
-  }
-
-  @Override
-  public Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    return null;
-  }
-
 
 }
 

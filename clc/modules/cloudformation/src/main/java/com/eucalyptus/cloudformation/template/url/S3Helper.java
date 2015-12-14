@@ -22,7 +22,6 @@ package com.eucalyptus.cloudformation.template.url;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.google.common.net.InetAddresses;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.StringTokenizer;

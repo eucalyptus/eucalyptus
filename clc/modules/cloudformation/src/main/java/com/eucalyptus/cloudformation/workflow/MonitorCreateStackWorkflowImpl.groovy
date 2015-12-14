@@ -24,7 +24,6 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
-import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.component.annotation.ComponentPart
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils

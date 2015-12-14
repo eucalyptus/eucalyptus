@@ -21,12 +21,7 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.util.Map;
 
 public interface IntrinsicFunction {
   MatchResult evaluateMatch(JsonNode jsonNode);

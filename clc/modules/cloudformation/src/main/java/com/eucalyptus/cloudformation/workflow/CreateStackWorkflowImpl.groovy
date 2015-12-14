@@ -25,10 +25,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
-import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.Status
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.databind.ObjectMapper

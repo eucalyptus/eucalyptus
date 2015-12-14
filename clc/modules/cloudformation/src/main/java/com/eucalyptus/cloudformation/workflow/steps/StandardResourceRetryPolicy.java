@@ -22,7 +22,6 @@ package com.eucalyptus.cloudformation.workflow.steps;
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy;
 import com.amazonaws.services.simpleworkflow.flow.interceptors.RetryPolicy;
 import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.collect.Lists;
 
 import java.util.Collection;

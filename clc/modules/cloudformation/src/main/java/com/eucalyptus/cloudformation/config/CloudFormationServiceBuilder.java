@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
-import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
@@ -32,6 +31,7 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
+import org.apache.log4j.Logger;
 
 /**
  *

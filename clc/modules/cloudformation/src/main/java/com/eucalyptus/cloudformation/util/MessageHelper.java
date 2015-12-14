@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.util;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InternalFailureException;
-import com.eucalyptus.util.Exceptions;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 

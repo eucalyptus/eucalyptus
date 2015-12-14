@@ -36,7 +36,6 @@ import java.util.concurrent.TimeUnit
 @CompileStatic(TypeCheckingMode.SKIP)
 @PackageScope
 abstract class MultiUpdateStepPromise {
-
   @Delegate
   private final WorkflowOperations<StackActivityClient> workflowOperations;
   private final WorkflowUtils workflowUtils;
