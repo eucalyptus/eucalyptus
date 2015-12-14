@@ -780,6 +780,7 @@ public class StackActivityImpl implements StackActivity {
     oldResourceAction.setStackEntity(stackEntity); // NOTE: stack entity has been changed with new values but nothing (yet) is used from it
     oldResourceInfo.setEffectiveUserId(effectiveUserId);
     oldResourceAction.setResourceInfo(resourceInfo);
+    ResourcePropertyResolver.populateResourceProperties(oldResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(oldResourceInfo.getPropertiesJson()));
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
@@ -1067,13 +1068,13 @@ public class StackActivityImpl implements StackActivity {
     // remove the cleanup one regardless
     if (stackResourceEntityCleanup != null) {
       stackResourceEntityCleanup.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      StackResourceEntityManager.updateStackResource(stackResourceEntityCleanup);
     }
     // remove the original one if it is the same resource (i.e. same physical resource id, i.e. with replacement)
     if (stackResourceEntity != null && stackResourceEntityCleanup != null
       && Objects.equals(stackResourceEntity.getPhysicalResourceId(), stackResourceEntityCleanup.getPhysicalResourceId())) {
       stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntityCleanup);
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
     }
   }
 
