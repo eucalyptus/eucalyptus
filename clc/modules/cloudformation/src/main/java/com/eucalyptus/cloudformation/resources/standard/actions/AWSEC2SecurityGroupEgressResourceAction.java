@@ -60,7 +60,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
   private AWSEC2SecurityGroupEgressResourceInfo info = new AWSEC2SecurityGroupEgressResourceInfo();
 
   public AWSEC2SecurityGroupEgressResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

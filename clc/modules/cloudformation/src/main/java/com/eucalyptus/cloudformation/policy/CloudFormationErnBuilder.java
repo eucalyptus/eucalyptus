@@ -19,13 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.policy;
 
-import java.util.Collections;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.ServiceErnBuilder;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import net.sf.json.JSONException;
+
+import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  *

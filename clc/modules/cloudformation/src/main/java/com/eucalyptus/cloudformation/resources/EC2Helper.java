@@ -50,7 +50,7 @@ public class EC2Helper {
     if (instanceId != null) {
       String stackId = stackEntity.getStackId();
       String accountId = stackEntity.getAccountId();
-      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId);
+      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceInUseByPhysicalResourceId(stackId, accountId, instanceId);
       if (instanceStackResourceEntity != null) {
         ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
         ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());

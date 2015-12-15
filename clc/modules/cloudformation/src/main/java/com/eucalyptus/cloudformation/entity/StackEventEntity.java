@@ -60,7 +60,7 @@ public class StackEventEntity extends AbstractPersistent {
   String resourceProperties;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
-  StackResourceEntity.Status resourceStatus;
+  Status resourceStatus;
   @Column(name = "resource_status_reason" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
@@ -121,11 +121,11 @@ public class StackEventEntity extends AbstractPersistent {
     this.resourceProperties = resourceProperties;
   }
 
-  public StackResourceEntity.Status getResourceStatus() {
+  public Status getResourceStatus() {
     return resourceStatus;
   }
 
-  public void setResourceStatus(StackResourceEntity.Status resourceStatus) {
+  public void setResourceStatus(Status resourceStatus) {
     this.resourceStatus = resourceStatus;
   }
 

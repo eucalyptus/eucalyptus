@@ -26,17 +26,13 @@ import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
-import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InternetGatewayResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.util.Strings;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**

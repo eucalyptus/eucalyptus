@@ -19,14 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
-import java.io.Serializable;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import java.io.Serializable;
 
 /**
  *

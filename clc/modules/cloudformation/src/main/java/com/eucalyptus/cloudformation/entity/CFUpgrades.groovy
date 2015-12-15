@@ -29,15 +29,14 @@ import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow
 import com.eucalyptus.upgrade.Upgrades
 import com.google.common.base.Predicate
-
-import javax.annotation.Nullable
-
-import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade
-import static com.eucalyptus.upgrade.Upgrades.PreUpgrade
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 
+import javax.annotation.Nullable
 import java.util.concurrent.Callable
+
+import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade
+import static com.eucalyptus.upgrade.Upgrades.PreUpgrade
 
 /**
  * Created by ethomas on 11/19/14.

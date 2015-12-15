@@ -25,30 +25,23 @@ import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.annotations.Property;
 import com.eucalyptus.cloudformation.resources.annotations.Required;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2EBSBlockDevice;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPoint;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterface;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterfacePrivateIPSpecification;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import groovy.transform.ToString;
 import org.apache.log4j.Logger;
 
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.*;
-import java.util.ArrayList;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 public class ResourcePropertyResolver {

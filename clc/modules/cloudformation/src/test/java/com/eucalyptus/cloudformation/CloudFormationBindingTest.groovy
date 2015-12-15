@@ -19,15 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation
 
-import static org.junit.Assert.*
+import com.eucalyptus.binding.Binding
+import com.eucalyptus.binding.BindingException
+import com.eucalyptus.cloudformation.ws.CloudFormationQueryBinding
+import com.eucalyptus.ws.protocol.QueryBindingTestSupport
+import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
 
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.cloudformation.ws.CloudFormationQueryBinding;
-import com.eucalyptus.ws.protocol.QueryBindingTestSupport
-
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import static org.junit.Assert.assertEquals;
 
 /**
  * 

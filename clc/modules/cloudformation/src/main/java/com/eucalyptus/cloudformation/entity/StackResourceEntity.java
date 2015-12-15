@@ -20,26 +20,19 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import javax.persistence.MappedSuperclass;
 
 /**
  * Created by ethomas on 12/18/13.
  */
-@Entity
-@PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_resources" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackResourceEntity extends AbstractPersistent {
+@MappedSuperclass
+public abstract class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
   @Column(name = "description", length =  4000)
@@ -100,23 +93,6 @@ public class StackResourceEntity extends AbstractPersistent {
   String stackName;
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
-
-  public enum Status {
-    NOT_STARTED,
-    CREATE_IN_PROGRESS,
-    CREATE_FAILED,
-    CREATE_COMPLETE,
-    DELETE_IN_PROGRESS,
-    DELETE_FAILED,
-    DELETE_SKIPPED,
-    DELETE_COMPLETE,
-    ROLLBACK_IN_PROGRESS,
-    ROLLBACK_FAILED,
-    ROLLBACK_COMPLETE,
-    UPDATE_IN_PROGRESS,
-    UPDATE_FAILED,
-    UPDATE_COMPLETE
-  }
 
   public StackResourceEntity() {
   }

@@ -28,6 +28,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -35,10 +36,36 @@ import java.util.List;
  */
 public class StackEventEntityManager {
 
-  public static void addStackEvent(StackEvent stackEvent, String accountId) {
+  public static void addStackEvent(StackResourceEntity stackResourceEntity) {
+    Date timestamp = new Date();
+    String eventId = stackResourceEntity.getLogicalResourceId() + "-" + stackResourceEntity.getResourceStatus() + "-" + timestamp.getTime();
+    addStackEvent(stackResourceEntity.getAccountId(), eventId, stackResourceEntity.getLogicalResourceId(),
+      stackResourceEntity.getPhysicalResourceId(), stackResourceEntity.getPropertiesJson(),
+      stackResourceEntity.getResourceStatus(), stackResourceEntity.getResourceStatusReason(),
+      stackResourceEntity.getResourceType(), stackResourceEntity.getStackId(), stackResourceEntity.getStackName(),
+      timestamp);
+  }
+
+  public static void addStackEvent(String accountId, String eventId, String logicalResourceId,
+                                   String physicalResourceId, String resourceProperties, Status resourceStatus,
+                                   String resourceStatusReason, String resourceType, String stackId, String stackName,
+                                   Date timestamp) {
+    StackEventEntity stackEventEntity = new StackEventEntity();
+    stackEventEntity.setRecordDeleted(Boolean.FALSE);
+    stackEventEntity.setAccountId(accountId);
+    stackEventEntity.setEventId(eventId);
+    stackEventEntity.setLogicalResourceId(logicalResourceId);
+    stackEventEntity.setPhysicalResourceId(physicalResourceId);
+    stackEventEntity.setResourceProperties(resourceProperties);
+    stackEventEntity.setResourceStatus(resourceStatus);
+    stackEventEntity.setResourceStatusReason(resourceStatusReason);
+    stackEventEntity.setResourceType(resourceType);
+    stackEventEntity.setStackId(stackId);
+    stackEventEntity.setStackName(stackName);
+    stackEventEntity.setTimestamp(timestamp);
     try ( TransactionResource db =
             Entities.transactionFor(StackEventEntity.class) ) {
-      Entities.persist(stackEventToStackEventEntity(stackEvent, accountId));
+      Entities.persist(stackEventEntity);
       db.commit( );
     }
   }
@@ -56,23 +83,6 @@ public class StackEventEntityManager {
       }
       db.commit( );
     }
-  }
-
-  public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent, String accountId) {
-    StackEventEntity stackEventEntity = new StackEventEntity();
-    stackEventEntity.setRecordDeleted(Boolean.FALSE);
-    stackEventEntity.setAccountId(accountId);
-    stackEventEntity.setEventId(stackEvent.getEventId());
-    stackEventEntity.setLogicalResourceId(stackEvent.getLogicalResourceId());
-    stackEventEntity.setPhysicalResourceId(stackEvent.getPhysicalResourceId());
-    stackEventEntity.setResourceProperties(stackEvent.getResourceProperties());
-    stackEventEntity.setResourceStatus(StackResourceEntity.Status.valueOf(stackEvent.getResourceStatus()));
-    stackEventEntity.setResourceStatusReason(stackEvent.getResourceStatusReason());
-    stackEventEntity.setResourceType(stackEvent.getResourceType());
-    stackEventEntity.setStackId(stackEvent.getStackId());
-    stackEventEntity.setStackName(stackEvent.getStackName());
-    stackEventEntity.setTimestamp(stackEvent.getTimestamp());
-    return stackEventEntity;
   }
 
   public static StackEvent stackEventEntityToStackEvent(StackEventEntity stackEventEntity) {
@@ -106,7 +116,6 @@ public class StackEventEntityManager {
           returnValue.add(stackEventEntityToStackEvent(stackEventEntity));
         }
       }
-      db.commit( );
     }
     return returnValue;
   }
@@ -123,7 +132,6 @@ public class StackEventEntityManager {
       if (entityList != null) {
         returnValue.addAll(entityList);
       }
-      db.commit( );
     }
     return returnValue;
   }

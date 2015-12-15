@@ -60,7 +60,7 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
   private AWSEC2InternetGatewayResourceInfo info = new AWSEC2InternetGatewayResourceInfo();
 
   public AWSEC2InternetGatewayResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

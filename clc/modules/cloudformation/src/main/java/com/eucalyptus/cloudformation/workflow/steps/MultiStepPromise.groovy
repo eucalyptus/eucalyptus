@@ -20,9 +20,8 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException
+import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
@@ -42,11 +41,11 @@ abstract class MultiStepPromise {
   private final WorkflowOperations<StackActivityClient> workflowOperations;
   private final WorkflowUtils workflowUtils;
   private final List<String> stepIds;
-  protected final ResourceAction resourceAction;
+  protected final StepBasedResourceAction resourceAction;
 
   MultiStepPromise( WorkflowOperations<StackActivityClient> workflowOperations,
                     Collection<String> stepIds,
-                    ResourceAction resourceAction
+                    StepBasedResourceAction resourceAction
   ) {
     this.workflowOperations = workflowOperations;
     this.workflowUtils = new WorkflowUtils( workflowOperations );

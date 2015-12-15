@@ -54,7 +54,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
   private AWSEC2VPCDHCPOptionsAssociationResourceInfo info = new AWSEC2VPCDHCPOptionsAssociationResourceInfo();
 
   public AWSEC2VPCDHCPOptionsAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
   }
 
   private enum CreateSteps implements Step {

@@ -23,7 +23,7 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
 import com.eucalyptus.cloudformation.CloudFormation
-import com.eucalyptus.cloudformation.entity.StackResourceEntity
+import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.component.annotation.ComponentPart
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
@@ -51,10 +51,10 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
           }
         ) {
           new CommonDeleteRollbackPromises(workflowOperations,
-            StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
+            Status.DELETE_IN_PROGRESS.toString(),
             "User Initiated",
-            StackResourceEntity.Status.DELETE_FAILED.toString(),
-            StackResourceEntity.Status.DELETE_COMPLETE.toString(),
+            Status.DELETE_FAILED.toString(),
+            Status.DELETE_COMPLETE.toString(),
             true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
         }
       }

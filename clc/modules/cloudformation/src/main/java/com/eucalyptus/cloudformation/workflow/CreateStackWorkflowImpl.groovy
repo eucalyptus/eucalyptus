@@ -25,9 +25,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
-import com.eucalyptus.cloudformation.entity.StackResourceEntity
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -55,7 +53,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         activities.createGlobalStackEvent(
           stackId,
           accountId,
-          StackResourceEntity.Status.CREATE_IN_PROGRESS.toString(),
+          Status.CREATE_IN_PROGRESS.toString(),
           "User Initiated"
         );
 
@@ -95,8 +93,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             waitFor(allResourcePromises) {
               waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
                 activities.createGlobalStackEvent(stackId, accountId,
-                  StackResourceEntity.Status.CREATE_COMPLETE.toString(),
-                  "Complete!");
+                  Status.CREATE_COMPLETE.toString(),
+                  "");
               }
             }
           }
@@ -112,7 +110,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             activities.createGlobalStackEvent(
               stackId,
               accountId,
-              StackResourceEntity.Status.CREATE_FAILED.toString(),
+              Status.CREATE_FAILED.toString(),
               errorMessage
             );
           }
@@ -129,20 +127,6 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
-    waitFor(getResourceTypePromise) { String resourceType ->
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
-      waitFor(initPromise) { String result ->
-        if ("SKIP".equals(result)) {
-          return promiseFor("");
-        } else {
-          Promise<String> createPromise = resourceAction.getCreatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
-          waitFor(createPromise) {
-            activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId);
-          }
-        }
-      }
-    }
+    return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
   }
 }
