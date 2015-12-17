@@ -76,4 +76,22 @@ public class FUtils {
       }
     };
   }
+
+  /**
+   * Function that calls the callback and returns the parameter.
+   *
+   * @param callback The Callback to call
+   * @param <T> The Callback type
+   * @return A function wrapping the callback
+   */
+  public static <T> Function<T,T> function( @Nonnull final Callback<T> callback ) {
+    return new Function<T,T>( ) {
+      @Nullable
+      @Override
+      public T apply( @Nullable final T t ) {
+        callback.fire( t );
+        return t;
+      }
+    };
+  }
 }

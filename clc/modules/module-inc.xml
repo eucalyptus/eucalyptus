@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 <project name="eucalyptus-module-import" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<!--================================== euca defines ==================================-->
+	<property file="${basedir}/../../local.module.properties" />
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
 	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
@@ -88,7 +89,9 @@
 	</propertyset>
 	<!--================================== module-dir defines ==================================-->
 	<property name="build.dir" value="${basedir}/build" />
-	<property name="build.test.dir" value="${basedir}/build-test" />
+	<property name="build.classes.dir" value="${build.dir}/classes" />
+	<property name="build.test.dir" value="${build.dir}/test-classes" />
+	<property name="build.src.dir" value="${build.dir}/src" />
 	<property name="src.dir" value="${basedir}/src/main/java" />
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
@@ -103,6 +106,12 @@
 	<property name="jar.build.excludes" value=""/>
 	<property name="jar.resource.includes" value="**/*"/>
 	<property name="jar.resource.excludes" value="**/*.in"/>
+	<property name="javac.source" value="1.7"/>
+	<property name="javac.target" value="${javac.source}"/>
+	<property name="javac.debug" value="true"/>
+	<property name="javac.includeantruntime" value="false"/>
+	<property name="groovyc.fork" value="false"/>
+	<property name="groovyc.includeantruntime" value="true"/>
 	<!--================================== other properties  ===================================-->
 	<property name="euca.junit.jvmargs" value=""/>
 	<!--================================== dependencies  ===================================-->
@@ -116,7 +125,7 @@
 		</fileset>
 	</path>
 	<path id="srcpath">
-		<fileset dir="${build.dir}">
+		<fileset dir="${build.classes.dir}">
 			<include name="**/*" />
 		</fileset>
 	</path>
@@ -156,8 +165,9 @@
 	</macrodef>
 	<!--================================== init target ==================================-->
 	<target name="build-mkdirs">
-		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.classes.dir}" />
 		<mkdir dir="${build.test.dir}" />
+		<mkdir dir="${build.src.dir}/main/java" />
 		<mkdir dir="${conf.dir}" />
 		<mkdir dir="${rsrc.dir}" />
 		<mkdir dir="${test.dir}" />
@@ -169,7 +179,7 @@
 			<fileset dir="${modules.dir}" includes="**/build.xml"/>
 		</ivy:buildlist>
 		<pathconvert property="buildlist-build-path">
-			<mapper type="regexp" from="(.*)\.xml" to="\1"/>
+			<mapper type="regexp" from="(.*)\.xml" to="\1/classes"/>
 			<path refid="buildlist-build-xml-path"/>
 		</pathconvert>
 		<echo message="**** MODULECLASSPATH: ${buildlist-build-path}" level="verbose" />
@@ -186,7 +196,7 @@
 				<include name="**/*.jar" />
 			</fileset>
 			<dirset dir="${modules.dir}">
-				<include name="**/build-test" />
+				<include name="**/build/test-classes" />
 			</dirset>
 			<path refid="classpath"/>
 	 	</path>
@@ -207,7 +217,7 @@
 		</uptodate>
 	</target>
 	<target name="should-build-java">
-		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
@@ -216,10 +226,10 @@
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
-		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" deprecation="false" failonerror="true" debug="true" sourcepathref="srcpath" source="1.7" target="1.7" encoding="utf-8" listfiles="true"  includeantruntime="false"/>
+		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}"/>
 	</target>
 	<target name="should-build-groovy">
-		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 		</uptodate>
@@ -229,16 +239,18 @@
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
-			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
+		<groovyc srcdir="${src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
+			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
+				<compilerarg value="-Js=${build.src.dir}/main/java"/>
+			</javac>
 		</groovyc>
 	</target>
 	<target name="builder-test" depends="classpaths,build-groovy">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${test.dir}" classpathref="test-classpath" destdir="${build.test.dir}" verbose="true" listfiles="true">
-			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
+		<groovyc srcdir="${test.dir}" classpathref="test-classpath" includeantruntime="false" fork="true" destdir="${build.test.dir}" verbose="true" listfiles="true">
+			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
 
@@ -273,7 +285,7 @@
 	<target name="jar">
 		<mkdir dir="${target.dir}" />
 		<uptodate property="jar.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${build.dir}" includes="**/*" />
+			<srcfiles dir="${build.classes.dir}" includes="**/*" excludes="**/*.java"/>
 			<srcfiles dir="${rsrc.dir}" includes="**/*" />
 		</uptodate>
 		<antcall target="do-jar" />
@@ -282,7 +294,7 @@
 		<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar" />
 		<delete file="${jar.file}" />
 		<jar destfile="${jar.file}">
-			<fileset dir="${build.dir}">
+			<fileset dir="${build.classes.dir}">
 				<include name="${jar.build.includes}" />
 				<exclude name="${jar.build.excludes}" />
 			</fileset>
@@ -311,7 +323,6 @@
 	<target name="clean">
 		<antcall target="clean-module" />
 		<delete dir="${build.dir}" />
-		<delete dir="${build.test.dir}" />
 		<delete file="${jar.file}" />
 	</target>
 	<target name="distclean">

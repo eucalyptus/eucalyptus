@@ -4,3 +4,5 @@
 /clc.iws
 /settings.gradle
 /build
+local.properties
+local.module.properties
