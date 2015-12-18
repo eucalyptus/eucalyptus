@@ -27,6 +27,9 @@ public class CloudWatchConfigProperties {
   @ConfigurableField(initial = "false", description = "Set this to true to stop cloud watch alarm evaluation and new alarm/metric data entry")
   public static volatile Boolean DISABLE_CLOUDWATCH_SERVICE = false;
 
+  @ConfigurableField(initial = "1000", description = "Size of the reporting data set that stores cloud watch queues performance info (debug only prop)")
+  public static volatile int CLOUDWATCH_MONITORING_HISTORY_SIZE = 1000;
+
   public static Boolean isDisabledCloudWatchService() {
     return DISABLE_CLOUDWATCH_SERVICE;
   }

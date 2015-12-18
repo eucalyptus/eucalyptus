@@ -19,11 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.service.queue.listmetrics;
 
+import com.eucalyptus.cloudwatch.common.QueueThruput;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.SimpleMetricEntity;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import org.apache.log4j.Logger;
 
 import java.util.LinkedHashSet;
@@ -91,24 +93,23 @@ public class ListMetricQueue {
       try {
         List<ListMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
-        LOG.debug("ListMetricQueue:Timing:dataBatch.size()="+dataBatch.size());
+        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_SIZE, dataBatch.size( ));
         long t2 = System.currentTimeMillis();
         dataBatch = prune(dataBatch);
         long t3 = System.currentTimeMillis();
-        LOG.debug("ListMetricQueue:Timing:dataBatch.pruneDuplicates:time="+(t3-t2));
+        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_PRUNE, t3-t2);
         List<ListMetric> listMetrics = convertToListMetrics(dataBatch);
         long t4 = System.currentTimeMillis();
-        LOG.debug("ListMetricQueue:Timing:convertToListMetrics()="+(t4-t3));
+        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_CONVERT, t4-t3);
         ListMetricManager.addMetricBatch(listMetrics);
         long t5 = System.currentTimeMillis();
-        LOG.debug("ListMetricQueue:Timing:ListMetricManager.addMetricBatch:time="+(t5-t4));
+        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_MERTIC_ADD_BATCH, t5-t4);
       } catch (Throwable ex) {
         LOG.debug("ListMetricQueue:error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
-        long after = System.currentTimeMillis();
-        LOG.debug("ListMetricQueue:Timing:time="+(after-before));
+        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_TIMING, System.currentTimeMillis()-before);
       }
     }
   };
