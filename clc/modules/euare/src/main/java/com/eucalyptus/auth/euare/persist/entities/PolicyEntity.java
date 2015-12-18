@@ -70,6 +70,7 @@ import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -112,6 +113,10 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_policy_owning_role" )
   RoleEntity role;
+
+  // The role owning this assume role policy
+  @OneToOne( fetch = FetchType.LAZY, mappedBy = "assumeRolePolicy" )
+  RoleEntity assumeRole;
 
   public PolicyEntity( ) {
   }

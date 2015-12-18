@@ -28,7 +28,9 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.euare.principal.EuareRole;
@@ -55,7 +57,7 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( InstanceProfileEntity.class, "instanceProfileId", this.delegate.getInstanceProfileId(), new Tx<InstanceProfileEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( InstanceProfileEntity.class, InstanceProfileEntity_.instanceProfileId, this.delegate.getInstanceProfileId(), new Tx<InstanceProfileEntity>( ) {
         @Override
         public void fire( InstanceProfileEntity t ) {
           sb.append( t.toString( ) );
@@ -134,10 +136,10 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
   public void setRole( @Nullable final EuareRole role ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       final InstanceProfileEntity instanceProfileEntity =
-          DatabaseAuthUtils.getUnique( InstanceProfileEntity.class, "instanceProfileId", getInstanceProfileId() );
+          DatabaseAuthUtils.getUnique( InstanceProfileEntity.class, InstanceProfileEntity_.instanceProfileId, getInstanceProfileId() );
       final RoleEntity roleEntity = role == null ?
           null :
-          DatabaseAuthUtils.getUnique( RoleEntity.class, "roleId", role.getRoleId() );
+          DatabaseAuthUtils.getUnique( RoleEntity.class, RoleEntity_.roleId, role.getRoleId() );
       instanceProfileEntity.setRole( roleEntity );
       db.commit( );
     } catch ( Exception e ) {
@@ -154,7 +156,7 @@ public class DatabaseInstanceProfileProxy implements EuareInstanceProfile {
   private void dbCallback( final String description,
                            final Callback<InstanceProfileEntity> updateCallback ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( InstanceProfileEntity.class, "instanceProfileId", getInstanceProfileId(), new Tx<InstanceProfileEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( InstanceProfileEntity.class, InstanceProfileEntity_.instanceProfileId, getInstanceProfileId(), new Tx<InstanceProfileEntity>( ) {
         @Override
         public void fire( final InstanceProfileEntity instanceProfileEntity ) {
           updateCallback.fire( instanceProfileEntity );

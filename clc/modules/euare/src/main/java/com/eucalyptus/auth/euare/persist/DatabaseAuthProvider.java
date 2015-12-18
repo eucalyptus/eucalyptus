@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,19 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
+import com.eucalyptus.auth.euare.common.identity.Policy;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity_;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -92,13 +104,14 @@ import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.Entities.EntityCriteriaSubqueryCallback;
+import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.entities.TransactionResource;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import org.hibernate.persister.collection.CollectionPropertyNames;
 
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 
 /**
  * The authorization provider based on database storage. This class includes all the APIs to
@@ -119,7 +132,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.EMPTY_USER_ID );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", userId );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, userId );
       db.commit( );
       return new DatabaseUserProxy( user );
     } catch ( Exception e ) {
@@ -134,7 +147,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.EMPTY_ROLE_ID );
     }
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
-      final RoleEntity role = DatabaseAuthUtils.getUnique( RoleEntity.class, "roleId", roleId );
+      final RoleEntity role = DatabaseAuthUtils.getUnique( RoleEntity.class, RoleEntity_.roleId, roleId );
       return new DatabaseRoleProxy( role );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find role by ID " + roleId );
@@ -208,7 +221,7 @@ public class DatabaseAuthProvider implements AccountProvider {
 
   @Override
   @SuppressWarnings( "unchecked" )
-  public void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
+  public void deleteAccount( final String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException {
     if ( accountName == null ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
@@ -219,47 +232,121 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      if ( recursive ) {
-        List<UserEntity> users = ( List<UserEntity> ) Entities
-            .createCriteria( UserEntity.class ).setFetchMode( "info", FetchMode.JOIN )
-            .createCriteria( "groups" ).add( Restrictions.eq( "userGroup", true ) )
-            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
-        for ( UserEntity u : users ) {
-          Entities.delete( u );
-        }
-
-        List<InstanceProfileEntity> profiles = ( List<InstanceProfileEntity> ) Entities
-            .createCriteria( InstanceProfileEntity.class )
-            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
-        for ( InstanceProfileEntity p : profiles ) {
-          Entities.delete( p );
-        }
-
-        List<RoleEntity> roles = ( List<RoleEntity> ) Entities
-            .createCriteria( RoleEntity.class ).setFetchMode( "policies", FetchMode.JOIN )
-            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
-        for ( RoleEntity r : roles ) {
-          Entities.delete( r );
-        }
-
-        List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-            .createCriteria( GroupEntity.class ).setFetchMode( "policies", FetchMode.JOIN )
-            .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
-        for ( GroupEntity g : groups ) {
-          Entities.delete( g );
-        }
-      }
-      AccountEntity account = ( AccountEntity ) Entities
-          .createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-          .uniqueResult( );
-      if ( account == null ) {
+      final Optional<AccountEntity> account = Entities.criteriaQuery( AccountEntity.class )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
+      if ( !account.isPresent( ) ) {
         throw new NoSuchElementException( "Can not find account " + accountName );
       }
-      Entities.delete( account );
+      if ( recursive ) {
+        Entities.delete( PolicyEntity.class )
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
+                subquery
+                    .join( PolicyEntity_.group )
+                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+              }
+            } ).delete( );
+
+        Entities.delete( PolicyEntity.class )
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
+                subquery
+                    .join( PolicyEntity_.role )
+                    .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+              }
+            } ).delete( );
+
+        Entities.delete( AccessKeyEntity.class )
+            .whereIn( AccessKeyEntity_.id, AccessKeyEntity.class, AccessKeyEntity_.id, new EntityCriteriaSubqueryCallback<AccessKeyEntity, String>( ) {
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<AccessKeyEntity, String> subquery ) {
+                subquery
+                    .join( AccessKeyEntity_.user )
+                    .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+              }
+            } ).delete( );
+
+        Entities.delete( CertificateEntity.class )
+            .whereIn( CertificateEntity_.id, CertificateEntity.class, CertificateEntity_.id, new EntityCriteriaSubqueryCallback<CertificateEntity, String>( ) {
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<CertificateEntity, String> subquery ) {
+                subquery
+                    .join( CertificateEntity_.user )
+                    .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+              }
+            } ).delete( );
+
+        // This deletes the entries from the user/group join table first, meaning that no users
+        // are then deleted as users can no longer be joined. We then delete all users that are
+        // not in any group as any valid user is in at least the special user group (GroupEntity#userGroup)
+        Entities.delete( UserEntity.class )
+            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, new EntityCriteriaSubqueryCallback<UserEntity, String>( ) {
+          @Override
+          public void restrict( final Entities.EntityCriteriaSubquery<UserEntity, String> subquery ) {
+            subquery
+                .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+          }
+        } ).delete( );
+        Entities.delete( UserEntity.class )
+            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, new EntityCriteriaSubqueryCallback<UserEntity, String>( ) {
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<UserEntity, String> subquery ) {
+                subquery
+                    .joinLeft( UserEntity_.groups ).where( Entities.restriction( GroupEntity.class ).isNull( GroupEntity_.id ) );
+              }
+            } ).delete( );
+
+        Entities.delete( ServerCertificateEntity.class )
+            .where(
+                Entities.restriction( ServerCertificateEntity.class )
+                    .equal( ServerCertificateEntity_.ownerAccountNumber, account.get( ).getAccountNumber( ) ).build( ) )
+            .delete( );
+
+        Entities.delete( InstanceProfileEntity.class )
+            .whereIn( InstanceProfileEntity_.id, InstanceProfileEntity.class, InstanceProfileEntity_.id, new EntityCriteriaSubqueryCallback<InstanceProfileEntity, String>( ) {
+          @Override
+          public void restrict( final Entities.EntityCriteriaSubquery<InstanceProfileEntity, String> subquery ) {
+            subquery
+                .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+          }
+        } ).delete( );
+
+        // Delete roles and the assume role policies that they referenced
+        Entities.delete( RoleEntity.class )
+            .whereIn( RoleEntity_.id, RoleEntity.class, RoleEntity_.id, new EntityCriteriaSubqueryCallback<RoleEntity,String>(){
+          @Override
+          public void restrict( final Entities.EntityCriteriaSubquery<RoleEntity, String> subquery ) {
+            subquery.join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+          }
+        } ).delete( );
+        Entities.delete( PolicyEntity.class )
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
+              @Override
+              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
+                subquery
+                    .where( Entities.restriction( PolicyEntity.class )
+                        .isNull( PolicyEntity_.role )
+                        .isNull( PolicyEntity_.group )
+                    )
+                    .joinLeft( PolicyEntity_.assumeRole ).where( Entities.restriction( RoleEntity.class ).isNull( RoleEntity_.id ) );;
+              }
+            } ).delete( );
+
+        Entities.delete( GroupEntity.class )
+            .whereIn( GroupEntity_.id, GroupEntity.class, GroupEntity_.id, new EntityCriteriaSubqueryCallback<GroupEntity,String>(){
+          @Override
+          public void restrict( final Entities.EntityCriteriaSubquery<GroupEntity, String> subquery ) {
+            subquery.join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
+          }
+        } ).delete( );
+      }
+      Entities.delete( account.get( ) );
       db.commit( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to delete account " + accountName );
@@ -270,8 +357,10 @@ public class DatabaseAuthProvider implements AccountProvider {
   @Override
   public List<AccountIdentifiers> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
     final List<AccountIdentifiers> results = Lists.newArrayList( );
+    final EntityRestriction<AccountEntity> accountNameLikeRestriction =
+        Entities.restriction( AccountEntity.class ).like( AccountEntity_.name, accountNameLike ).build( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      for ( final AccountEntity account : Entities.query( new AccountEntity( accountNameLike ) ) ) {
+      for ( final AccountEntity account : Entities.criteriaQuery( accountNameLikeRestriction ).list( ) ) {
         results.add( new AccountIdentifiersImpl(
             account.getAccountNumber( ),
             account.getName( ),
@@ -289,7 +378,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   public List<EuareUser> listAllUsers( ) throws AuthException {
     List<EuareUser> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      List<UserEntity> users = Entities.query( new UserEntity( ) );
+      List<UserEntity> users = Entities.criteriaQuery( UserEntity.class ).readonly( ).list( );
       db.commit( );
       for ( UserEntity u : users ) {
         results.add( new DatabaseUserProxy( u ) );
@@ -305,7 +394,7 @@ public class DatabaseAuthProvider implements AccountProvider {
   public List<EuareAccount> listAllAccounts( ) throws AuthException {
     List<EuareAccount> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      for ( AccountEntity account : Entities.query( new AccountEntity( ), true ) ) {
+      for ( AccountEntity account : Entities.criteriaQuery( AccountEntity.class ).readonly( ).list( ) ) {
         results.add( new DatabaseAccountProxy( account ) );
       }
       return results;
@@ -321,7 +410,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Certificate identifier required" );
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateHashId", certificateId );
+      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateHashId, certificateId );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
     } catch ( Exception e ) {
@@ -336,7 +425,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Certificate identifier required" );
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateId, certificateId );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
     } catch ( Exception e ) {
@@ -351,16 +440,14 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      AccountEntity result = ( AccountEntity ) Entities.createCriteria( AccountEntity.class )
-          .setCacheable( true )
-          .add( Restrictions.eq( "name", accountName ) )
-          .setReadOnly( true )
-          .uniqueResult( );
-      if ( result == null ) {
+      final Optional<AccountEntity> result = Entities.criteriaQuery( AccountEntity.class )
+          .whereEqual( AccountEntity_.name, accountName )
+          .readonly( )
+          .uniqueResultOption( );
+      if ( !result.isPresent( ) ) {
         throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
       }
-      return new DatabaseAccountProxy( result );
+      return new DatabaseAccountProxy( result.get( ) );
     } catch ( AuthException e ) {
       Debugging.logError( LOG, e, "No matching account " + accountName );
       throw e;
@@ -376,7 +463,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_ID );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "accountNumber", accountId );
+      AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.accountNumber, accountId );
       db.commit( );
       return new DatabaseAccountProxy( account );
     } catch ( Exception e ) {
@@ -391,12 +478,12 @@ public class DatabaseAuthProvider implements AccountProvider {
           throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
       }
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        AccountEntity example = new AccountEntity();
-        example.setCanonicalId(canonicalId);
-        List<AccountEntity> results = Entities.query(example);
-        if (results != null && results.size() > 0) {
-          AccountEntity found = results.get(0);
-          return new DatabaseAccountProxy(found);
+        final Optional<AccountEntity> result = Entities.criteriaQuery( AccountEntity.class )
+            .whereEqual( AccountEntity_.canonicalId, canonicalId )
+            .readonly( )
+            .uniqueResultOption( );
+        if ( result.isPresent( ) ) {
+          return new DatabaseAccountProxy( result.get( ) );
         } else {
           throw new AuthException( AuthException.NO_SUCH_USER );
         }
@@ -412,7 +499,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Empty access key ID" );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
-      AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, keyId );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
     } catch ( Exception e ) {
@@ -425,11 +512,10 @@ public class DatabaseAuthProvider implements AccountProvider {
         if (email == null || "".equals(email)) {
             throw new AuthException("Empty email address to search");
         }
-        final EntityTransaction tx = Entities.get(UserEntity.class);
-        try {
+        try ( final TransactionResource tx = Entities.transactionFor( UserEntity.class ) ) {
             final UserEntity match = (UserEntity) Entities.createCriteria(UserEntity.class)
             .setCacheable(true)
-            .createAlias("info", "i")
+            .createAlias("info", "i") //TODO:STEVE: case insensitive compare
             .add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email).ignoreCase())
             .setFetchMode("info", FetchMode.JOIN)
             .setReadOnly( true )
@@ -462,9 +548,6 @@ public class DatabaseAuthProvider implements AccountProvider {
         catch ( Exception e ) {
             Debugging.logError( LOG, e, "Failed to find user by email address " + email );
             throw new AuthException( AuthException.NO_SUCH_USER, e );
-        }
-        finally {
-          tx.rollback();
         }
     }
 }

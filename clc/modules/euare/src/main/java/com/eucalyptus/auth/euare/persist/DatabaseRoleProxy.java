@@ -25,7 +25,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
@@ -33,9 +32,12 @@ import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.policy.PolicyParser;
@@ -93,7 +95,7 @@ public class DatabaseRoleProxy implements EuareRole {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( RoleEntity.class, "roleId", this.delegate.getRoleId(), new Tx<RoleEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, this.delegate.getRoleId(), new Tx<RoleEntity>( ) {
         @Override
         public void fire( RoleEntity t ) {
           sb.append( t.toString( ) );
@@ -270,11 +272,10 @@ public class DatabaseRoleProxy implements EuareRole {
     final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
-      List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities
-          .createCriteria( InstanceProfileEntity.class )
-          .createCriteria( "role" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
-          .createCriteria( "account" ).add( Restrictions.eq( "accountNumber", this.delegate.getAccount( ).getAccountNumber( ) ) )
-          .setCacheable( true )
+      List<InstanceProfileEntity> instanceProfiles = Entities
+          .criteriaQuery( InstanceProfileEntity.class )
+          .join( InstanceProfileEntity_.role ).whereEqual( RoleEntity_.name, this.delegate.getName( ) )
+          .join( RoleEntity_.account ).whereEqual( AccountEntity_.accountNumber, this.delegate.getAccount( ).getAccountNumber( ) )
           .list( );
       for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {
         results.add( new DatabaseInstanceProfileProxy( instanceProfile  ) );
@@ -298,7 +299,7 @@ public class DatabaseRoleProxy implements EuareRole {
   private void dbCallback( final String description,
                            final Callback<RoleEntity> updateCallback ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( RoleEntity.class, "roleId", getRoleId(), new Tx<RoleEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId(), new Tx<RoleEntity>( ) {
         @Override
         public void fire( final RoleEntity roleEntity ) {
           updateCallback.fire( roleEntity );
@@ -311,7 +312,7 @@ public class DatabaseRoleProxy implements EuareRole {
   }
 
   private RoleEntity getRoleEntity( ) throws Exception {
-    return DatabaseAuthUtils.getUnique( RoleEntity.class, "roleId", getRoleId() );
+    return DatabaseAuthUtils.getUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId() );
   }
 
   private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {

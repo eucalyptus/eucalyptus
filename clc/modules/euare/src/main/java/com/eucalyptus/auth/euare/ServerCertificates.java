@@ -106,8 +106,9 @@ public class ServerCertificates {
         
         ServerCertificateEntity found = null;
         try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-          found = 
-              Entities.uniqueResult(ServerCertificateEntity.named( AccountFullName.getInstance( acctId ), certName));
+          found = Entities.criteriaQuery(
+              ServerCertificateEntity.named( AccountFullName.getInstance( acctId ), certName )
+          ).uniqueResult( );
           db.rollback();
         } catch(final NoSuchElementException ex){
           ;
@@ -144,7 +145,9 @@ public class ServerCertificates {
       final String certName, final String newCertName, final String newCertPath)
       throws NoSuchElementException, AuthException {
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      final ServerCertificateEntity found = Entities.uniqueResult(ServerCertificateEntity.named(user, certName));
+      final ServerCertificateEntity found = Entities.criteriaQuery(
+          ServerCertificateEntity.named( user, certName )
+      ).uniqueResult( );
       try {
         if (newCertName != null && newCertName.length() > 0
             && !certName.equals(newCertName))
