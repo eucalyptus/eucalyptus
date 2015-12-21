@@ -34,6 +34,16 @@ extern "C" {
 #define ARGUMENTS_VERSION "4.3.0"
 #endif
 
+#ifndef EUCALYPTUS_ENV_VAR_NAME
+//! environment variable for eucalyptus root path set at startup
+#define EUCALYPTUS_ENV_VAR_NAME                  "EUCALYPTUS"   //!< Eucalyptus environment variable name
+#endif
+
+#ifndef EUCALYPTUS_USER_ENV_VAR_NAME
+//! environment variable for eucalyptus user set at startup
+#define EUCALYPTUS_USER_ENV_VAR_NAME             "EUCA_USER"    //!< Eucalyptus unix user environment variable name
+#endif
+
 /** @brief Where the command line options are stored */
 struct eucalyptus_opts
 {

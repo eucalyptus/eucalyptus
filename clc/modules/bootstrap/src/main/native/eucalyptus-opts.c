@@ -53,7 +53,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus-cloud.pid')",
   "      --db-home=DIRECTORY       Set path to database home directory  \n                                  (default=`')",
   "\nLogging Configuration:",
-  "  -l, --log-level=FILENAME      Control the log level for console output.  \n                                  (default=`INFO')",
+  "  -l, --log-level=LEVEL      Control the log level for console output.  \n                                  (default=`INFO')",
   "  -L, --log-appender=APPENDERNAME\n                                Control the destination for console output.  \n                                  (default=`console-log')",
   "  -x, --exhaustive              Exhaustive logging of all connections.  \n                                  (default=off)",
   "      --exhaustive-db           Exhaustive logging for database connections.  \n                                  (default=off)",
@@ -211,9 +211,9 @@ static
 void clear_args (struct eucalyptus_opts *args_info)
 {
   FIX_UNUSED (args_info);
-  args_info->user_arg = gengetopt_strdup ("eucalyptus");
+  args_info->user_arg = getenv(EUCALYPTUS_USER_ENV_VAR_NAME) == NULL ? gengetopt_strdup ("eucalyptus") : gengetopt_strdup(getenv(EUCALYPTUS_USER_ENV_VAR_NAME));
   args_info->user_orig = NULL;
-  args_info->home_arg = gengetopt_strdup ("/");
+  args_info->home_arg = getenv(EUCALYPTUS_ENV_VAR_NAME) == NULL ? gengetopt_strdup ("/") : gengetopt_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
   args_info->home_orig = NULL;
   args_info->extra_version_arg = gengetopt_strdup ("");
   args_info->extra_version_orig = NULL;
