@@ -31,7 +31,8 @@ public class TokensException extends EucalyptusCloudException {
   private static final long serialVersionUID = 1L;
 
   enum Code {
-    InvalidAction(),
+    AccessDenied( HttpResponseStatus.FORBIDDEN, "Sender" ),
+    InvalidAction,
     InvalidParameterValue,
     MissingAuthenticationToken( HttpResponseStatus.FORBIDDEN, "Sender" ),
     ServiceUnavailable( HttpResponseStatus.SERVICE_UNAVAILABLE, "Receiver" ),
