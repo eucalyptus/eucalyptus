@@ -235,7 +235,14 @@ public class PolicyEngineImpl implements PolicyEngine {
                                      @Nonnull  final String resourceName,
                                      @Nonnull  final Map<Contract.Type, Contract> contracts ) throws AuthException {
     try {
-      if ( Decision.ALLOW != evaluateResourceAuthorization( context, authorizationMatch, resourceAccountNumber, resourceName, contracts ) ) {
+      final AuthEvaluationContextImpl evaluationContext = (AuthEvaluationContextImpl)context;
+      if ( Decision.ALLOW != evaluateResourceAuthorization(
+          evaluationContext, 
+          authorizationMatch,
+          !evaluationContext.isSystemUser( ),
+          resourceAccountNumber, 
+          resourceName, 
+          contracts ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
       // Allowed
@@ -270,8 +277,8 @@ public class PolicyEngineImpl implements PolicyEngine {
           LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED );
         } else {
-          decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourceAccountNumber, resourceName, contracts );
-          if ( Decision.DENY == decision || ( Decision.ALLOW != decision && resourcePolicy == null ) ) {
+          decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
+          if ( Decision.ALLOW != decision ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
           }
         }
@@ -347,6 +354,7 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   private Decision evaluateResourceAuthorization( @Nonnull  final AuthEvaluationContext context,
                                                   @Nonnull  final AuthorizationMatch authorizationMatch,
+                                                            final boolean accountOnly,
                                                   @Nullable final String resourceAccountNumber,
                                                   @Nonnull  String resourceName,
                                                   @Nonnull  final Map<Contract.Type, Contract> contracts ) throws AuthException {
@@ -363,22 +371,16 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
 
     final String accountNumber = evaluationContext.getRequestAccountNumber( );
-    if ( resourceAccountNumber != null && !resourceAccountNumber.equals( accountNumber ) && !evaluationContext.isSystemUser() ) {
-      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
-      if ( decision == Decision.DENY ) {
-        LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
-      }
-      // Local authorizations may DENY access to a resource in another account but cannot grant it
-      return decision == Decision.ALLOW ? Decision.DEFAULT : decision;
-    } else {
-      // If not denied by global authorizations, check local (intra-account) authorizations.
-      final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations(), authorizationMatch, action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
-      // Denied by explicit or default deny
-      if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
-        LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
-      }
-      return decision;
+    if ( accountOnly && resourceAccountNumber != null && !resourceAccountNumber.equals( accountNumber ) ) {
+      LOG.debug( "Request is rejected due to resource account mismatch with identity account" );
+      return Decision.DEFAULT;
     }
+
+    final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
+    if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
+      LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
+    }
+    return decision;
   }
 
   private Decision processAuthorizations( List<Authorization> authorizations,
@@ -389,7 +391,7 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           String resource,
                                           CachedKeyEvaluator keyEval,
                                           ContractKeyEvaluator contractEval ) throws AuthException {
-    return  processAuthorizations( authorizations, authorizationMatch ,action, resourceAccountNumber, resourceType, resource, null, null, keyEval, contractEval );
+    return processAuthorizations( authorizations, authorizationMatch, action, resourceAccountNumber, resourceType, resource, null, null, keyEval, contractEval );
   }
 
     /**
