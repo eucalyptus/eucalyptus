@@ -19,38 +19,34 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#pollForDecisionTask(PollForDecisionTaskRequest) PollForDecisionTask operation}.
  * <p>
  * Used by deciders to get a DecisionTask from the specified decision
- * <code>taskList</code> .
- * A decision task may be returned for any open workflow execution
- * that is using the specified task list. The task includes a paginated
- * view of the history of the workflow execution. The decider should use
- * the workflow type and the history to determine how to properly handle
- * the task.
+ * <code>taskList</code> . A decision task may be returned for any open
+ * workflow execution that is using the specified task list. The task
+ * includes a paginated view of the history of the workflow execution.
+ * The decider should use the workflow type and the history to determine
+ * how to properly handle the task.
  * </p>
  * <p>
  * This action initiates a long poll, where the service holds the HTTP
@@ -58,14 +54,14 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * decision task is available in the specified task list before the
  * timeout of 60 seconds expires, an empty result is returned. An empty
  * result, in this context, means that a DecisionTask is returned, but
- * that the value of taskToken is an empty string.
+ * that the value of <code>taskToken</code> is an empty string.
  * </p>
  * <p>
- * <b>IMPORTANT:</b> Deciders should set their client side socket timeout
+ * <b>IMPORTANT:</b>Deciders should set their client-side socket timeout
  * to at least 70 seconds (10 seconds higher than the timeout).
  * </p>
  * <p>
- * <b>IMPORTANT:</b> Because the number of workflow history events for a
+ * <b>IMPORTANT:</b>Because the number of workflow history events for a
  * single workflow execution might be very large, the result returned
  * might be split up across a number of pages. To retrieve subsequent
  * pages, make additional calls to PollForDecisionTask using the
@@ -86,17 +82,17 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * the action to only specified domains.</li>
  * <li>Use an <code>Action</code> element to allow or deny permission to
  * call this action.</li>
- * <li>Use a <b>Condition</b> element with the
- * <code>swf:taskList.name</code> key to allow the action to access only
- * certain task lists.</li>
+ * <li>Constrain the <code>taskList.name</code> parameter by using a
+ * <b>Condition</b> element with the <code>swf:taskList.name</code> key
+ * to allow the action to access only certain task lists.</li>
  * 
  * </ul>
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -139,16 +135,18 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
     private String identity;
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     * this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     * get the next page. You must call <a>PollForDecisionTask</a> again
-     * (with the <code>nextPageToken</code>) to retrieve the next page of
-     * history records. Calling <a>PollForDecisionTask</a> with a
-     * <code>nextPageToken</code> will not return a new decision
-     * task.</note>.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call. <note>The <code>nextPageToken</code>
+     * returned by this action cannot be used with
+     * <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     * <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     * to retrieve the next page of history records. Calling
+     * <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     * return a new decision task.</note>.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
@@ -157,12 +155,12 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
     private String nextPageToken;
 
     /**
-     * The maximum number of history events returned in each page. The
-     * default is 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of events may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
@@ -211,7 +209,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      *
      * @param domain The name of the domain containing the task lists to poll.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withDomain(String domain) {
@@ -268,7 +266,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      *         (vertical bar), or any control characters (\u0000-\u001f | \u007f -
      *         \u009f). Also, it must not contain the literal string "arn".
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withTaskList(TaskList taskList) {
@@ -328,7 +326,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      *         diagnostic tracing when problems arise. The form of this identity is
      *         user defined.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withIdentity(String identity) {
@@ -337,94 +335,106 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
     }
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     * this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     * get the next page. You must call <a>PollForDecisionTask</a> again
-     * (with the <code>nextPageToken</code>) to retrieve the next page of
-     * history records. Calling <a>PollForDecisionTask</a> with a
-     * <code>nextPageToken</code> will not return a new decision
-     * task.</note>.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call. <note>The <code>nextPageToken</code>
+     * returned by this action cannot be used with
+     * <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     * <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     * to retrieve the next page of history records. Calling
+     * <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     * return a new decision task.</note>.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @return If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     *         this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     *         get the next page. You must call <a>PollForDecisionTask</a> again
-     *         (with the <code>nextPageToken</code>) to retrieve the next page of
-     *         history records. Calling <a>PollForDecisionTask</a> with a
-     *         <code>nextPageToken</code> will not return a new decision
-     *         task.</note>.
+     * @return If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call. <note>The <code>nextPageToken</code>
+     *         returned by this action cannot be used with
+     *         <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     *         <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     *         to retrieve the next page of history records. Calling
+     *         <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     *         return a new decision task.</note>.
      */
     public String getNextPageToken() {
         return nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     * this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     * get the next page. You must call <a>PollForDecisionTask</a> again
-     * (with the <code>nextPageToken</code>) to retrieve the next page of
-     * history records. Calling <a>PollForDecisionTask</a> with a
-     * <code>nextPageToken</code> will not return a new decision
-     * task.</note>.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call. <note>The <code>nextPageToken</code>
+     * returned by this action cannot be used with
+     * <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     * <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     * to retrieve the next page of history records. Calling
+     * <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     * return a new decision task.</note>.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     *         this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     *         get the next page. You must call <a>PollForDecisionTask</a> again
-     *         (with the <code>nextPageToken</code>) to retrieve the next page of
-     *         history records. Calling <a>PollForDecisionTask</a> with a
-     *         <code>nextPageToken</code> will not return a new decision
-     *         task.</note>.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call. <note>The <code>nextPageToken</code>
+     *         returned by this action cannot be used with
+     *         <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     *         <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     *         to retrieve the next page of history records. Calling
+     *         <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     *         return a new decision task.</note>.
      */
     public void setNextPageToken(String nextPageToken) {
         this.nextPageToken = nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     * this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     * get the next page. You must call <a>PollForDecisionTask</a> again
-     * (with the <code>nextPageToken</code>) to retrieve the next page of
-     * history records. Calling <a>PollForDecisionTask</a> with a
-     * <code>nextPageToken</code> will not return a new decision
-     * task.</note>.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call. <note>The <code>nextPageToken</code>
+     * returned by this action cannot be used with
+     * <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     * <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     * to retrieve the next page of history records. Calling
+     * <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     * return a new decision task.</note>.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged. <note>The <code>nextPageToken</code> returned by
-     *         this action cannot be used with <a>GetWorkflowExecutionHistory</a> to
-     *         get the next page. You must call <a>PollForDecisionTask</a> again
-     *         (with the <code>nextPageToken</code>) to retrieve the next page of
-     *         history records. Calling <a>PollForDecisionTask</a> with a
-     *         <code>nextPageToken</code> will not return a new decision
-     *         task.</note>.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call. <note>The <code>nextPageToken</code>
+     *         returned by this action cannot be used with
+     *         <a>GetWorkflowExecutionHistory</a> to get the next page. You must call
+     *         <a>PollForDecisionTask</a> again (with the <code>nextPageToken</code>)
+     *         to retrieve the next page of history records. Calling
+     *         <a>PollForDecisionTask</a> with a <code>nextPageToken</code> will not
+     *         return a new decision task.</note>.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withNextPageToken(String nextPageToken) {
@@ -433,70 +443,70 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
     }
 
     /**
-     * The maximum number of history events returned in each page. The
-     * default is 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of events may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @return The maximum number of history events returned in each page. The
-     *         default is 100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of events may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @return The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public Integer getMaximumPageSize() {
         return maximumPageSize;
     }
     
     /**
-     * The maximum number of history events returned in each page. The
-     * default is 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of events may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of history events returned in each page. The
-     *         default is 100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of events may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public void setMaximumPageSize(Integer maximumPageSize) {
         this.maximumPageSize = maximumPageSize;
     }
     
     /**
-     * The maximum number of history events returned in each page. The
-     * default is 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of events may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of history events returned in each page. The
-     *         default is 100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of events may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withMaximumPageSize(Integer maximumPageSize) {
@@ -541,7 +551,7 @@ public class PollForDecisionTaskRequest extends SimpleWorkflowMessage implements
      *         default the results are returned in ascending order of the
      *         <code>eventTimestamp</code> of the events.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public PollForDecisionTaskRequest withReverseOrder(Boolean reverseOrder) {

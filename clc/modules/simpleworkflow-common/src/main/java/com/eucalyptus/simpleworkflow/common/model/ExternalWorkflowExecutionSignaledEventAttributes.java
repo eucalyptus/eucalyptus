@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -52,7 +51,7 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
     private WorkflowExecution workflowExecution;
 
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the
      * <code>SignalExternalWorkflowExecution</code> decision to request this
      * signal. This information can be useful for diagnosing problems by
@@ -85,7 +84,7 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
      *
      * @param workflowExecution The external workflow execution that the signal was delivered to.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ExternalWorkflowExecutionSignaledEventAttributes withWorkflowExecution(WorkflowExecution workflowExecution) {
@@ -94,13 +93,13 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
     }
 
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the
      * <code>SignalExternalWorkflowExecution</code> decision to request this
      * signal. This information can be useful for diagnosing problems by
      * tracing back the chain of events leading up to this event.
      *
-     * @return The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @return The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the
      *         <code>SignalExternalWorkflowExecution</code> decision to request this
      *         signal. This information can be useful for diagnosing problems by
@@ -111,13 +110,13 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
     }
     
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the
      * <code>SignalExternalWorkflowExecution</code> decision to request this
      * signal. This information can be useful for diagnosing problems by
      * tracing back the chain of events leading up to this event.
      *
-     * @param initiatedEventId The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @param initiatedEventId The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the
      *         <code>SignalExternalWorkflowExecution</code> decision to request this
      *         signal. This information can be useful for diagnosing problems by
@@ -128,7 +127,7 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
     }
     
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the
      * <code>SignalExternalWorkflowExecution</code> decision to request this
      * signal. This information can be useful for diagnosing problems by
@@ -136,13 +135,13 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param initiatedEventId The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @param initiatedEventId The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the
      *         <code>SignalExternalWorkflowExecution</code> decision to request this
      *         signal. This information can be useful for diagnosing problems by
      *         tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ExternalWorkflowExecutionSignaledEventAttributes withInitiatedEventId(Long initiatedEventId) {
@@ -192,6 +191,6 @@ public class ExternalWorkflowExecutionSignaledEventAttributes implements Seriali
         if (other.getInitiatedEventId() != null && other.getInitiatedEventId().equals(this.getInitiatedEventId()) == false) return false; 
         return true;
     }
-    
+
 }
     

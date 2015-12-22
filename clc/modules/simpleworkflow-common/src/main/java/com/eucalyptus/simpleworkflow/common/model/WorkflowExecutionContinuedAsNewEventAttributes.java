@@ -19,24 +19,26 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 
 /**
  * <p>
@@ -55,11 +57,11 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     private String input;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>ContinueAsNewWorkflowExecution</code> decision that started this
      * execution. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      */
     private Long decisionTaskCompletedEventId;
 
@@ -73,9 +75,8 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
 
     /**
      * The total duration allowed for the new workflow execution. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -87,11 +88,13 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      */
     private TaskList taskList;
 
+    @FieldRegex( FieldRegexValue.INT_MIN_MAX )
+    private String taskPriority;
+
     /**
      * The maximum duration of decision tasks for the new workflow execution.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
@@ -109,7 +112,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -129,6 +132,16 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * Represents a workflow type.
      */
     private WorkflowType workflowType;
+
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     */
+    @FieldRegex( FieldRegexValue.STRING_1224 )
+    private String lambdaRole;
 
     /**
      * The input provided to the new workflow execution.
@@ -164,7 +177,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param input The input provided to the new workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withInput(String input) {
@@ -173,55 +186,55 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>ContinueAsNewWorkflowExecution</code> decision that started this
      * execution. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>ContinueAsNewWorkflowExecution</code> decision that started this
      *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>ContinueAsNewWorkflowExecution</code> decision that started this
      * execution. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>ContinueAsNewWorkflowExecution</code> decision that started this
      *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>ContinueAsNewWorkflowExecution</code> decision that started this
      * execution. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>ContinueAsNewWorkflowExecution</code> decision that started this
      *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -263,7 +276,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param newExecutionRunId The <code>runId</code> of the new workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withNewExecutionRunId(String newExecutionRunId) {
@@ -273,17 +286,15 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
 
     /**
      * The total duration allowed for the new workflow execution. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @return The total duration allowed for the new workflow execution. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public String getExecutionStartToCloseTimeout() {
         return executionStartToCloseTimeout;
@@ -291,17 +302,15 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     
     /**
      * The total duration allowed for the new workflow execution. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @param executionStartToCloseTimeout The total duration allowed for the new workflow execution. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public void setExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
         this.executionStartToCloseTimeout = executionStartToCloseTimeout;
@@ -309,9 +318,8 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     
     /**
      * The total duration allowed for the new workflow execution. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -319,11 +327,10 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * <b>Length: </b>0 - 8<br/>
      *
      * @param executionStartToCloseTimeout The total duration allowed for the new workflow execution. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
@@ -356,7 +363,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param taskList Represents a task list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withTaskList(TaskList taskList) {
@@ -365,19 +372,59 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     }
 
     /**
+     * Returns the value of the TaskPriority property for this object.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @return The value of the TaskPriority property for this object.
+     */
+    public String getTaskPriority() {
+        return taskPriority;
+    }
+    
+    /**
+     * Sets the value of the TaskPriority property for this object.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority The new value for the TaskPriority property for this object.
+     */
+    public void setTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+    }
+    
+    /**
+     * Sets the value of the TaskPriority property for this object.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority The new value for the TaskPriority property for this object.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public WorkflowExecutionContinuedAsNewEventAttributes withTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+        return this;
+    }
+
+    /**
      * The maximum duration of decision tasks for the new workflow execution.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @return The maximum duration of decision tasks for the new workflow execution.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      */
     public String getTaskStartToCloseTimeout() {
@@ -386,18 +433,16 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     
     /**
      * The maximum duration of decision tasks for the new workflow execution.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration of decision tasks for the new workflow execution.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      */
     public void setTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
@@ -406,9 +451,8 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     
     /**
      * The maximum duration of decision tasks for the new workflow execution.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -417,12 +461,11 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration of decision tasks for the new workflow execution.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
@@ -440,7 +483,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -455,7 +498,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -474,7 +517,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -489,7 +532,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -508,7 +551,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -525,10 +568,10 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -548,7 +591,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -563,7 +606,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -582,7 +625,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -599,10 +642,10 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -621,11 +664,11 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      * @return The list of tags associated with the new workflow execution.
      */
     public java.util.List<String> getTagList() {
-        if (tagList == null) {
-              tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
-              tagList.setAutoConstruct(true);
-        }
-        return tagList;
+      if (tagList == null) {
+        tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
+        tagList.setAutoConstruct(true);
+      }
+      return tagList;
     }
     
     /**
@@ -649,6 +692,11 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
     /**
      * The list of tags associated with the new workflow execution.
      * <p>
+     * <b>NOTE:</b> This method appends the values to the existing list (if
+     * any). Use {@link #setTagList(java.util.Collection)} or {@link
+     * #withTagList(java.util.Collection)} if you want to override the
+     * existing values.
+     * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
@@ -656,7 +704,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param tagList The list of tags associated with the new workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withTagList(String... tagList) {
@@ -677,7 +725,7 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param tagList The list of tags associated with the new workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withTagList(java.util.Collection<String> tagList) {
@@ -717,11 +765,59 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
      *
      * @param workflowType Represents a workflow type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionContinuedAsNewEventAttributes withWorkflowType(WorkflowType workflowType) {
         this.workflowType = workflowType;
+        return this;
+    }
+
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @return The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public String getLambdaRole() {
+        return lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public void setLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public WorkflowExecutionContinuedAsNewEventAttributes withLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
         return this;
     }
 
@@ -742,10 +838,12 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
         if (getNewExecutionRunId() != null) sb.append("NewExecutionRunId: " + getNewExecutionRunId() + ",");
         if (getExecutionStartToCloseTimeout() != null) sb.append("ExecutionStartToCloseTimeout: " + getExecutionStartToCloseTimeout() + ",");
         if (getTaskList() != null) sb.append("TaskList: " + getTaskList() + ",");
+        if (getTaskPriority() != null) sb.append("TaskPriority: " + getTaskPriority() + ",");
         if (getTaskStartToCloseTimeout() != null) sb.append("TaskStartToCloseTimeout: " + getTaskStartToCloseTimeout() + ",");
         if (getChildPolicy() != null) sb.append("ChildPolicy: " + getChildPolicy() + ",");
         if (getTagList() != null) sb.append("TagList: " + getTagList() + ",");
-        if (getWorkflowType() != null) sb.append("WorkflowType: " + getWorkflowType() );
+        if (getWorkflowType() != null) sb.append("WorkflowType: " + getWorkflowType() + ",");
+        if (getLambdaRole() != null) sb.append("LambdaRole: " + getLambdaRole() );
         sb.append("}");
         return sb.toString();
     }
@@ -760,10 +858,12 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
         hashCode = prime * hashCode + ((getNewExecutionRunId() == null) ? 0 : getNewExecutionRunId().hashCode()); 
         hashCode = prime * hashCode + ((getExecutionStartToCloseTimeout() == null) ? 0 : getExecutionStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getTaskList() == null) ? 0 : getTaskList().hashCode()); 
+        hashCode = prime * hashCode + ((getTaskPriority() == null) ? 0 : getTaskPriority().hashCode()); 
         hashCode = prime * hashCode + ((getTaskStartToCloseTimeout() == null) ? 0 : getTaskStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getChildPolicy() == null) ? 0 : getChildPolicy().hashCode()); 
         hashCode = prime * hashCode + ((getTagList() == null) ? 0 : getTagList().hashCode()); 
         hashCode = prime * hashCode + ((getWorkflowType() == null) ? 0 : getWorkflowType().hashCode()); 
+        hashCode = prime * hashCode + ((getLambdaRole() == null) ? 0 : getLambdaRole().hashCode()); 
         return hashCode;
     }
     
@@ -785,6 +885,8 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
         if (other.getExecutionStartToCloseTimeout() != null && other.getExecutionStartToCloseTimeout().equals(this.getExecutionStartToCloseTimeout()) == false) return false; 
         if (other.getTaskList() == null ^ this.getTaskList() == null) return false;
         if (other.getTaskList() != null && other.getTaskList().equals(this.getTaskList()) == false) return false; 
+        if (other.getTaskPriority() == null ^ this.getTaskPriority() == null) return false;
+        if (other.getTaskPriority() != null && other.getTaskPriority().equals(this.getTaskPriority()) == false) return false; 
         if (other.getTaskStartToCloseTimeout() == null ^ this.getTaskStartToCloseTimeout() == null) return false;
         if (other.getTaskStartToCloseTimeout() != null && other.getTaskStartToCloseTimeout().equals(this.getTaskStartToCloseTimeout()) == false) return false; 
         if (other.getChildPolicy() == null ^ this.getChildPolicy() == null) return false;
@@ -793,8 +895,9 @@ public class WorkflowExecutionContinuedAsNewEventAttributes implements Serializa
         if (other.getTagList() != null && other.getTagList().equals(this.getTagList()) == false) return false; 
         if (other.getWorkflowType() == null ^ this.getWorkflowType() == null) return false;
         if (other.getWorkflowType() != null && other.getWorkflowType().equals(this.getWorkflowType()) == false) return false; 
+        if (other.getLambdaRole() == null ^ this.getLambdaRole() == null) return false;
+        if (other.getLambdaRole() != null && other.getLambdaRole().equals(this.getLambdaRole()) == false) return false; 
         return true;
     }
-    
 }
     

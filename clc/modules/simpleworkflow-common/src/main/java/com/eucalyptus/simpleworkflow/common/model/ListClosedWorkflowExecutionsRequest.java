@@ -19,27 +19,25 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listClosedWorkflowExecutions(ListClosedWorkflowExecutionsRequest) ListClosedWorkflowExecutions operation}.
@@ -50,7 +48,7 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * using the nextPageToken returned by the initial call.
  * </p>
  * <p>
- * <b>NOTE:</b> This operation is eventually consistent. The results are
+ * <b>NOTE:</b>This operation is eventually consistent. The results are
  * best effort and may not exactly reflect recent updates and changes.
  * </p>
  * <p>
@@ -69,12 +67,12 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <li>Constrain the following parameters by using a
  * <code>Condition</code> element with the appropriate keys.
  * <ul>
- * <li> <code>tag</code> : String constraint. The key is
+ * <li> <code>tagFilter.tag</code> : String constraint. The key is
  * <code>swf:tagFilter.tag</code> .</li>
- * <li> <code>typeFilter.name</code> : String constraint. String
- * constraint. The key is <code>swf:typeFilter.name</code> .</li>
- * <li> <code>typeFilter.version</code> : String constraint. String
- * constraint. The key is <code>swf:typeFilter.version</code> .</li>
+ * <li> <code>typeFilter.name</code> : String constraint. The key is
+ * <code>swf:typeFilter.name</code> .</li>
+ * <li> <code>typeFilter.version</code> : String constraint. The key is
+ * <code>swf:typeFilter.version</code> .</li>
  * 
  * </ul>
  * </li>
@@ -83,9 +81,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -128,7 +126,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     private ExecutionTimeFilter closeTimeFilter;
 
     /**
-     * If specified, only workflow executions matching the workflow id
+     * If specified, only workflow executions matching the workflow ID
      * specified in the filter are returned.
      * <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      * <code>typeFilter</code> and <code>tagFilter</code> are mutually
@@ -164,10 +162,12 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     private TagFilter tagFilter;
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
@@ -176,12 +176,12 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     private String nextPageToken;
 
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of executions may be less than
-     * the maxiumum page size, in which case, the returned page will have
-     * fewer results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
@@ -230,7 +230,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *
      * @param domain The name of the domain that contains the workflow executions to list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withDomain(String domain) {
@@ -299,7 +299,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         are mutually exclusive. You must specify one of these in a request but
      *         not both.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withStartTimeFilter(ExecutionTimeFilter startTimeFilter) {
@@ -368,7 +368,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         are mutually exclusive. You must specify one of these in a request but
      *         not both.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withCloseTimeFilter(ExecutionTimeFilter closeTimeFilter) {
@@ -377,13 +377,13 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     }
 
     /**
-     * If specified, only workflow executions matching the workflow id
+     * If specified, only workflow executions matching the workflow ID
      * specified in the filter are returned.
      * <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      * <code>typeFilter</code> and <code>tagFilter</code> are mutually
      * exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return If specified, only workflow executions matching the workflow id
+     * @return If specified, only workflow executions matching the workflow ID
      *         specified in the filter are returned.
      *         <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
@@ -394,13 +394,13 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     }
     
     /**
-     * If specified, only workflow executions matching the workflow id
+     * If specified, only workflow executions matching the workflow ID
      * specified in the filter are returned.
      * <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      * <code>typeFilter</code> and <code>tagFilter</code> are mutually
      * exclusive. You can specify at most one of these in a request.</note>
      *
-     * @param executionFilter If specified, only workflow executions matching the workflow id
+     * @param executionFilter If specified, only workflow executions matching the workflow ID
      *         specified in the filter are returned.
      *         <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
@@ -411,7 +411,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     }
     
     /**
-     * If specified, only workflow executions matching the workflow id
+     * If specified, only workflow executions matching the workflow ID
      * specified in the filter are returned.
      * <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      * <code>typeFilter</code> and <code>tagFilter</code> are mutually
@@ -419,13 +419,13 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param executionFilter If specified, only workflow executions matching the workflow id
+     * @param executionFilter If specified, only workflow executions matching the workflow ID
      *         specified in the filter are returned.
      *         <note><code>closeStatusFilter</code>, <code>executionFilter</code>,
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
      *         exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withExecutionFilter(WorkflowExecutionFilter executionFilter) {
@@ -488,7 +488,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
      *         exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withCloseStatusFilter(CloseStatusFilter closeStatusFilter) {
@@ -545,7 +545,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         <code>tagFilter</code> are mutually exclusive. You can specify at most
      *         one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withTypeFilter(WorkflowTypeFilter typeFilter) {
@@ -596,7 +596,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
      *         exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withTagFilter(TagFilter tagFilter) {
@@ -605,58 +605,70 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     }
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @return If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @return If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public String getNextPageToken() {
         return nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public void setNextPageToken(String nextPageToken) {
         this.nextPageToken = nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withNextPageToken(String nextPageToken) {
@@ -665,70 +677,70 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
     }
 
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of executions may be less than
-     * the maxiumum page size, in which case, the returned page will have
-     * fewer results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @return The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of executions may be less than
-     *         the maxiumum page size, in which case, the returned page will have
-     *         fewer results than the maximumPageSize specified.
+     * @return The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public Integer getMaximumPageSize() {
         return maximumPageSize;
     }
     
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of executions may be less than
-     * the maxiumum page size, in which case, the returned page will have
-     * fewer results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of executions may be less than
-     *         the maxiumum page size, in which case, the returned page will have
-     *         fewer results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public void setMaximumPageSize(Integer maximumPageSize) {
         this.maximumPageSize = maximumPageSize;
     }
     
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of executions may be less than
-     * the maxiumum page size, in which case, the returned page will have
-     * fewer results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of executions may be less than
-     *         the maxiumum page size, in which case, the returned page will have
-     *         fewer results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withMaximumPageSize(Integer maximumPageSize) {
@@ -773,7 +785,7 @@ public class ListClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage i
      *         By default the results are returned in descending order of the start
      *         or the close time of the executions.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListClosedWorkflowExecutionsRequest withReverseOrder(Boolean reverseOrder) {

@@ -19,22 +19,23 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
 
 /**
  * <p>
@@ -42,8 +43,7 @@ package com.eucalyptus.simpleworkflow.common.model;
  * to deciders in order for them to make decisions.
  * </p>
  */
-public class DecisionTask extends SimpleWorkflowMessage {
-
+public class DecisionTask extends SimpleWorkflowMessage implements Serializable {
     /**
      * The opaque string used as a handle on the task. This token is used by
      * workers to communicate progress and response information back to the
@@ -55,7 +55,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
     private String taskToken;
 
     /**
-     * The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * The ID of the <code>DecisionTaskStarted</code> event recorded in the
      * history.
      */
     private Long startedEventId;
@@ -78,9 +78,12 @@ public class DecisionTask extends SimpleWorkflowMessage {
     private com.amazonaws.internal.ListWithAutoConstructFlag<HistoryEvent> events;
 
     /**
-     * Returns a value if the results are paginated. To get the next page of
-     * results, repeat the request specifying this token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
@@ -88,7 +91,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
     private String nextPageToken;
 
     /**
-     * The id of the DecisionTaskStarted event of the previous decision task
+     * The ID of the DecisionTaskStarted event of the previous decision task
      * of this workflow execution that was processed by the decider. This can
      * be used to determine the events in the history new since the last
      * decision task received by the decider.
@@ -141,7 +144,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
      *         workers to communicate progress and response information back to the
      *         system about the task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withTaskToken(String taskToken) {
@@ -150,10 +153,10 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
 
     /**
-     * The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * The ID of the <code>DecisionTaskStarted</code> event recorded in the
      * history.
      *
-     * @return The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * @return The ID of the <code>DecisionTaskStarted</code> event recorded in the
      *         history.
      */
     public Long getStartedEventId() {
@@ -161,10 +164,10 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * The ID of the <code>DecisionTaskStarted</code> event recorded in the
      * history.
      *
-     * @param startedEventId The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * @param startedEventId The ID of the <code>DecisionTaskStarted</code> event recorded in the
      *         history.
      */
     public void setStartedEventId(Long startedEventId) {
@@ -172,15 +175,15 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * The ID of the <code>DecisionTaskStarted</code> event recorded in the
      * history.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The id of the <code>DecisionTaskStarted</code> event recorded in the
+     * @param startedEventId The ID of the <code>DecisionTaskStarted</code> event recorded in the
      *         history.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withStartedEventId(Long startedEventId) {
@@ -213,7 +216,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
      *
      * @param workflowExecution The workflow execution for which this decision task was created.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withWorkflowExecution(WorkflowExecution workflowExecution) {
@@ -252,7 +255,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
      * @param workflowType The type of the workflow execution for which this decision task was
      *         created.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withWorkflowType(WorkflowType workflowType) {
@@ -268,11 +271,11 @@ public class DecisionTask extends SimpleWorkflowMessage {
      *         decider uses this during the processing of the decision task.
      */
     public java.util.List<HistoryEvent> getEvents() {
-        if (events == null) {
-              events = new com.amazonaws.internal.ListWithAutoConstructFlag<HistoryEvent>();
-              events.setAutoConstruct(true);
-        }
-        return events;
+      if (events == null) {
+        events = new com.amazonaws.internal.ListWithAutoConstructFlag<HistoryEvent>();
+        events.setAutoConstruct(true);
+      }
+      return events;
     }
     
     /**
@@ -296,12 +299,17 @@ public class DecisionTask extends SimpleWorkflowMessage {
      * A paginated list of history events of the workflow execution. The
      * decider uses this during the processing of the decision task.
      * <p>
+     * <b>NOTE:</b> This method appends the values to the existing list (if
+     * any). Use {@link #setEvents(java.util.Collection)} or {@link
+     * #withEvents(java.util.Collection)} if you want to override the
+     * existing values.
+     * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
      * @param events A paginated list of history events of the workflow execution. The
      *         decider uses this during the processing of the decision task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withEvents(HistoryEvent... events) {
@@ -321,7 +329,7 @@ public class DecisionTask extends SimpleWorkflowMessage {
      * @param events A paginated list of history events of the workflow execution. The
      *         decider uses this during the processing of the decision task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withEvents(java.util.Collection<HistoryEvent> events) {
@@ -337,52 +345,70 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
 
     /**
-     * Returns a value if the results are paginated. To get the next page of
-     * results, repeat the request specifying this token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @return Returns a value if the results are paginated. To get the next page of
-     *         results, repeat the request specifying this token and all other
-     *         arguments unchanged.
+     * @return If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public String getNextPageToken() {
         return nextPageToken;
     }
     
     /**
-     * Returns a value if the results are paginated. To get the next page of
-     * results, repeat the request specifying this token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken Returns a value if the results are paginated. To get the next page of
-     *         results, repeat the request specifying this token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public void setNextPageToken(String nextPageToken) {
         this.nextPageToken = nextPageToken;
     }
     
     /**
-     * Returns a value if the results are paginated. To get the next page of
-     * results, repeat the request specifying this token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken Returns a value if the results are paginated. To get the next page of
-     *         results, repeat the request specifying this token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withNextPageToken(String nextPageToken) {
@@ -391,12 +417,12 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
 
     /**
-     * The id of the DecisionTaskStarted event of the previous decision task
+     * The ID of the DecisionTaskStarted event of the previous decision task
      * of this workflow execution that was processed by the decider. This can
      * be used to determine the events in the history new since the last
      * decision task received by the decider.
      *
-     * @return The id of the DecisionTaskStarted event of the previous decision task
+     * @return The ID of the DecisionTaskStarted event of the previous decision task
      *         of this workflow execution that was processed by the decider. This can
      *         be used to determine the events in the history new since the last
      *         decision task received by the decider.
@@ -406,12 +432,12 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the DecisionTaskStarted event of the previous decision task
+     * The ID of the DecisionTaskStarted event of the previous decision task
      * of this workflow execution that was processed by the decider. This can
      * be used to determine the events in the history new since the last
      * decision task received by the decider.
      *
-     * @param previousStartedEventId The id of the DecisionTaskStarted event of the previous decision task
+     * @param previousStartedEventId The ID of the DecisionTaskStarted event of the previous decision task
      *         of this workflow execution that was processed by the decider. This can
      *         be used to determine the events in the history new since the last
      *         decision task received by the decider.
@@ -421,19 +447,19 @@ public class DecisionTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the DecisionTaskStarted event of the previous decision task
+     * The ID of the DecisionTaskStarted event of the previous decision task
      * of this workflow execution that was processed by the decider. This can
      * be used to determine the events in the history new since the last
      * decision task received by the decider.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param previousStartedEventId The id of the DecisionTaskStarted event of the previous decision task
+     * @param previousStartedEventId The ID of the DecisionTaskStarted event of the previous decision task
      *         of this workflow execution that was processed by the decider. This can
      *         be used to determine the events in the history new since the last
      *         decision task received by the decider.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DecisionTask withPreviousStartedEventId(Long previousStartedEventId) {
@@ -503,6 +529,5 @@ public class DecisionTask extends SimpleWorkflowMessage {
         if (other.getPreviousStartedEventId() != null && other.getPreviousStartedEventId().equals(this.getPreviousStartedEventId()) == false) return false; 
         return true;
     }
-    
 }
     

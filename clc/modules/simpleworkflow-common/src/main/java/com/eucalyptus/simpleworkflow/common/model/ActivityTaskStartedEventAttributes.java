@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,7 +42,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskStarted</code> event.
  * </p>
  */
-public class ActivityTaskStartedEventAttributes implements WorkflowEventAttributes {
+public class ActivityTaskStartedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * Identity of the worker that was assigned this task. This aids
@@ -56,7 +55,7 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
     private String identity;
 
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
@@ -109,7 +108,7 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
      *         diagnostics when problems arise. The form of this identity is user
      *         defined.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskStartedEventAttributes withIdentity(String identity) {
@@ -118,12 +117,12 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
     }
 
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @return The id of the <code>ActivityTaskScheduled</code> event that was
+     * @return The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -133,12 +132,12 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
     }
     
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @param scheduledEventId The id of the <code>ActivityTaskScheduled</code> event that was
+     * @param scheduledEventId The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -148,29 +147,24 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
     }
     
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param scheduledEventId The id of the <code>ActivityTaskScheduled</code> event that was
+     * @param scheduledEventId The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskStartedEventAttributes withScheduledEventId(Long scheduledEventId) {
         this.scheduledEventId = scheduledEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setActivityTaskStartedEventAttributes( this );
     }
 
     /**
@@ -215,6 +209,10 @@ public class ActivityTaskStartedEventAttributes implements WorkflowEventAttribut
         if (other.getScheduledEventId() != null && other.getScheduledEventId().equals(this.getScheduledEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setActivityTaskStartedEventAttributes(this);
+    }
 }
     

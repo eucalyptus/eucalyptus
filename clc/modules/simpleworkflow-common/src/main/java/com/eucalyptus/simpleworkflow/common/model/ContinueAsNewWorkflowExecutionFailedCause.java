@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 /**
@@ -48,6 +47,7 @@ public enum ContinueAsNewWorkflowExecutionFailedCause {
     DEFAULT_TASK_START_TO_CLOSE_TIMEOUT_UNDEFINED("DEFAULT_TASK_START_TO_CLOSE_TIMEOUT_UNDEFINED"),
     DEFAULT_TASK_LIST_UNDEFINED("DEFAULT_TASK_LIST_UNDEFINED"),
     DEFAULT_CHILD_POLICY_UNDEFINED("DEFAULT_CHILD_POLICY_UNDEFINED"),
+    CONTINUE_AS_NEW_WORKFLOW_EXECUTION_RATE_EXCEEDED("CONTINUE_AS_NEW_WORKFLOW_EXECUTION_RATE_EXCEEDED"),
     OPERATION_NOT_PERMITTED("OPERATION_NOT_PERMITTED");
 
     private String value;
@@ -86,6 +86,8 @@ public enum ContinueAsNewWorkflowExecutionFailedCause {
             return ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_TASK_LIST_UNDEFINED;
         } else if ("DEFAULT_CHILD_POLICY_UNDEFINED".equals(value)) {
             return ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_CHILD_POLICY_UNDEFINED;
+        } else if ("CONTINUE_AS_NEW_WORKFLOW_EXECUTION_RATE_EXCEEDED".equals(value)) {
+            return ContinueAsNewWorkflowExecutionFailedCause.CONTINUE_AS_NEW_WORKFLOW_EXECUTION_RATE_EXCEEDED;
         } else if ("OPERATION_NOT_PERMITTED".equals(value)) {
             return ContinueAsNewWorkflowExecutionFailedCause.OPERATION_NOT_PERMITTED;
         } else {

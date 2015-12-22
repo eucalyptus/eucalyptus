@@ -19,27 +19,24 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#listWorkflowTypes(ListWorkflowTypesRequest) ListWorkflowTypes operation}.
@@ -68,9 +65,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -111,10 +108,12 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
     private String registrationStatus;
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
@@ -123,12 +122,12 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
     private String nextPageToken;
 
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of types may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
@@ -183,7 +182,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      * @param domain The name of the domain in which the workflow types have been
      *         registered.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListWorkflowTypesRequest withDomain(String domain) {
@@ -225,7 +224,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      *
      * @param name If specified, lists the workflow type with this name.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListWorkflowTypesRequest withName(String name) {
@@ -271,7 +270,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      *
      * @param registrationStatus Specifies the registration status of the workflow types to list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see RegistrationStatus
@@ -305,7 +304,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      *
      * @param registrationStatus Specifies the registration status of the workflow types to list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see RegistrationStatus
@@ -316,58 +315,70 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
     }
 
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @return If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @return If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public String getNextPageToken() {
         return nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public void setNextPageToken(String nextPageToken) {
         this.nextPageToken = nextPageToken;
     }
     
     /**
-     * If on a previous call to this method a <code>NextPageToken</code> was
-     * returned, the results are being paginated. To get the next page of
-     * results, repeat the call with the returned token and all other
-     * arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken If on a previous call to this method a <code>NextPageToken</code> was
-     *         returned, the results are being paginated. To get the next page of
-     *         results, repeat the call with the returned token and all other
-     *         arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListWorkflowTypesRequest withNextPageToken(String nextPageToken) {
@@ -376,70 +387,70 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
     }
 
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of types may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @return The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of types may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @return The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public Integer getMaximumPageSize() {
         return maximumPageSize;
     }
     
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of types may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of types may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      */
     public void setMaximumPageSize(Integer maximumPageSize) {
         this.maximumPageSize = maximumPageSize;
     }
     
     /**
-     * The maximum number of results returned in each page. The default is
-     * 100, but the caller can override this value to a page size
-     * <i>smaller</i> than the default. You cannot specify a page size
-     * greater than 100. Note that the number of types may be less than the
-     * maxiumum page size, in which case, the returned page will have fewer
-     * results than the maximumPageSize specified.
+     * The maximum number of results that will be returned per call.
+     * <code>nextPageToken</code> can be used to obtain futher pages of
+     * results. The default is 1000, which is the maximum allowed page size.
+     * You can, however, specify a page size <i>smaller</i> than the maximum.
+     * <p>This is an upper limit only; the actual number of results returned
+     * per call may be fewer than the specified maximum.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Range: </b>0 - 1000<br/>
      *
-     * @param maximumPageSize The maximum number of results returned in each page. The default is
-     *         100, but the caller can override this value to a page size
-     *         <i>smaller</i> than the default. You cannot specify a page size
-     *         greater than 100. Note that the number of types may be less than the
-     *         maxiumum page size, in which case, the returned page will have fewer
-     *         results than the maximumPageSize specified.
+     * @param maximumPageSize The maximum number of results that will be returned per call.
+     *         <code>nextPageToken</code> can be used to obtain futher pages of
+     *         results. The default is 1000, which is the maximum allowed page size.
+     *         You can, however, specify a page size <i>smaller</i> than the maximum.
+     *         <p>This is an upper limit only; the actual number of results returned
+     *         per call may be fewer than the specified maximum.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListWorkflowTypesRequest withMaximumPageSize(Integer maximumPageSize) {
@@ -484,7 +495,7 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
      *         By default the results are returned in ascending alphabetical order of
      *         the <code>name</code> of the workflow types.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ListWorkflowTypesRequest withReverseOrder(Boolean reverseOrder) {
@@ -563,6 +574,5 @@ public class ListWorkflowTypesRequest extends SimpleWorkflowMessage implements S
         if (other.isReverseOrder() != null && other.isReverseOrder().equals(this.isReverseOrder()) == false) return false; 
         return true;
     }
-    
 }
     

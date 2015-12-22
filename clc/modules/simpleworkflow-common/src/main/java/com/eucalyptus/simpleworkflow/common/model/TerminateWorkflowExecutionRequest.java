@@ -19,27 +19,24 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#terminateWorkflowExecution(TerminateWorkflowExecutionRequest) TerminateWorkflowExecution operation}.
@@ -84,9 +81,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -126,7 +123,8 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
     private String runId;
 
     /**
-     * An optional descriptive reason for terminating the workflow execution.
+     * <i>Optional.</i> A descriptive reason for terminating the workflow
+     * execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
@@ -135,7 +133,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
     private String reason;
 
     /**
-     * Optional details for terminating the workflow execution.
+     * <i>Optional.</i> Details for terminating the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -147,18 +145,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
@@ -200,7 +198,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      *
      * @param domain The domain of the workflow execution to terminate.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TerminateWorkflowExecutionRequest withDomain(String domain) {
@@ -242,7 +240,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      *
      * @param workflowId The workflowId of the workflow execution to terminate.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TerminateWorkflowExecutionRequest withWorkflowId(String workflowId) {
@@ -284,7 +282,7 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      *
      * @param runId The runId of the workflow execution to terminate.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TerminateWorkflowExecutionRequest withRunId(String runId) {
@@ -293,40 +291,46 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
     }
 
     /**
-     * An optional descriptive reason for terminating the workflow execution.
+     * <i>Optional.</i> A descriptive reason for terminating the workflow
+     * execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      *
-     * @return An optional descriptive reason for terminating the workflow execution.
+     * @return <i>Optional.</i> A descriptive reason for terminating the workflow
+     *         execution.
      */
     public String getReason() {
         return reason;
     }
     
     /**
-     * An optional descriptive reason for terminating the workflow execution.
+     * <i>Optional.</i> A descriptive reason for terminating the workflow
+     * execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      *
-     * @param reason An optional descriptive reason for terminating the workflow execution.
+     * @param reason <i>Optional.</i> A descriptive reason for terminating the workflow
+     *         execution.
      */
     public void setReason(String reason) {
         this.reason = reason;
     }
     
     /**
-     * An optional descriptive reason for terminating the workflow execution.
+     * <i>Optional.</i> A descriptive reason for terminating the workflow
+     * execution.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 256<br/>
      *
-     * @param reason An optional descriptive reason for terminating the workflow execution.
+     * @param reason <i>Optional.</i> A descriptive reason for terminating the workflow
+     *         execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TerminateWorkflowExecutionRequest withReason(String reason) {
@@ -335,40 +339,40 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
     }
 
     /**
-     * Optional details for terminating the workflow execution.
+     * <i>Optional.</i> Details for terminating the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional details for terminating the workflow execution.
+     * @return <i>Optional.</i> Details for terminating the workflow execution.
      */
     public String getDetails() {
         return details;
     }
     
     /**
-     * Optional details for terminating the workflow execution.
+     * <i>Optional.</i> Details for terminating the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param details Optional details for terminating the workflow execution.
+     * @param details <i>Optional.</i> Details for terminating the workflow execution.
      */
     public void setDetails(String details) {
         this.details = details;
     }
     
     /**
-     * Optional details for terminating the workflow execution.
+     * <i>Optional.</i> Details for terminating the workflow execution.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param details Optional details for terminating the workflow execution.
+     * @param details <i>Optional.</i> Details for terminating the workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TerminateWorkflowExecutionRequest withDetails(String details) {
@@ -380,18 +384,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
@@ -399,18 +403,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * @return If set, specifies the policy to use for the child workflow executions
      *         of the workflow execution being terminated. This policy overrides the
      *         child policy specified for the workflow execution at registration time
-     *         or when starting the execution. The supported child policies are: <ul>
-     *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     *         each child execution by recording a
+     *         or when starting the execution. <p>The supported child policies are:
+     *         <ul> <li><b>TERMINATE:</b> the child executions will be
+     *         terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     *         be attempted for each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *         <note>A child policy for this workflow execution must be specified
      *         either as a default for the workflow type or through this parameter.
      *         If neither this parameter is set nor a default child policy was
-     *         specified at registration time, a fault will be returned.</note>
+     *         specified at registration time then a fault will be returned.</note>
      *
      * @see ChildPolicy
      */
@@ -422,18 +426,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
@@ -441,18 +445,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * @param childPolicy If set, specifies the policy to use for the child workflow executions
      *         of the workflow execution being terminated. This policy overrides the
      *         child policy specified for the workflow execution at registration time
-     *         or when starting the execution. The supported child policies are: <ul>
-     *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     *         each child execution by recording a
+     *         or when starting the execution. <p>The supported child policies are:
+     *         <ul> <li><b>TERMINATE:</b> the child executions will be
+     *         terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     *         be attempted for each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *         <note>A child policy for this workflow execution must be specified
      *         either as a default for the workflow type or through this parameter.
      *         If neither this parameter is set nor a default child policy was
-     *         specified at registration time, a fault will be returned.</note>
+     *         specified at registration time then a fault will be returned.</note>
      *
      * @see ChildPolicy
      */
@@ -464,18 +468,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -485,20 +489,20 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * @param childPolicy If set, specifies the policy to use for the child workflow executions
      *         of the workflow execution being terminated. This policy overrides the
      *         child policy specified for the workflow execution at registration time
-     *         or when starting the execution. The supported child policies are: <ul>
-     *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     *         each child execution by recording a
+     *         or when starting the execution. <p>The supported child policies are:
+     *         <ul> <li><b>TERMINATE:</b> the child executions will be
+     *         terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     *         be attempted for each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *         <note>A child policy for this workflow execution must be specified
      *         either as a default for the workflow type or through this parameter.
      *         If neither this parameter is set nor a default child policy was
-     *         specified at registration time, a fault will be returned.</note>
+     *         specified at registration time then a fault will be returned.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -512,18 +516,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Allowed Values: </b>TERMINATE, REQUEST_CANCEL, ABANDON
@@ -531,18 +535,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * @param childPolicy If set, specifies the policy to use for the child workflow executions
      *         of the workflow execution being terminated. This policy overrides the
      *         child policy specified for the workflow execution at registration time
-     *         or when starting the execution. The supported child policies are: <ul>
-     *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     *         each child execution by recording a
+     *         or when starting the execution. <p>The supported child policies are:
+     *         <ul> <li><b>TERMINATE:</b> the child executions will be
+     *         terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     *         be attempted for each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *         <note>A child policy for this workflow execution must be specified
      *         either as a default for the workflow type or through this parameter.
      *         If neither this parameter is set nor a default child policy was
-     *         specified at registration time, a fault will be returned.</note>
+     *         specified at registration time then a fault will be returned.</note>
      *
      * @see ChildPolicy
      */
@@ -554,18 +558,18 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * If set, specifies the policy to use for the child workflow executions
      * of the workflow execution being terminated. This policy overrides the
      * child policy specified for the workflow execution at registration time
-     * or when starting the execution. The supported child policies are: <ul>
-     * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     * each child execution by recording a
+     * or when starting the execution. <p>The supported child policies are:
+     * <ul> <li><b>TERMINATE:</b> the child executions will be
+     * terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     * be attempted for each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <note>A child policy for this workflow execution must be specified
      * either as a default for the workflow type or through this parameter.
      * If neither this parameter is set nor a default child policy was
-     * specified at registration time, a fault will be returned.</note>
+     * specified at registration time then a fault will be returned.</note>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -575,20 +579,20 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
      * @param childPolicy If set, specifies the policy to use for the child workflow executions
      *         of the workflow execution being terminated. This policy overrides the
      *         child policy specified for the workflow execution at registration time
-     *         or when starting the execution. The supported child policies are: <ul>
-     *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
-     *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
-     *         each child execution by recording a
+     *         or when starting the execution. <p>The supported child policies are:
+     *         <ul> <li><b>TERMINATE:</b> the child executions will be
+     *         terminated.</li> <li><b>REQUEST_CANCEL:</b> a request to cancel will
+     *         be attempted for each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *         <note>A child policy for this workflow execution must be specified
      *         either as a default for the workflow type or through this parameter.
      *         If neither this parameter is set nor a default child policy was
-     *         specified at registration time, a fault will be returned.</note>
+     *         specified at registration time then a fault will be returned.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -656,6 +660,5 @@ public class TerminateWorkflowExecutionRequest extends SimpleWorkflowMessage imp
         if (other.getChildPolicy() != null && other.getChildPolicy().equals(this.getChildPolicy()) == false) return false; 
         return true;
     }
-    
 }
     

@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,7 +42,7 @@ import java.io.Serializable;
  * Provides details of the <code>ActivityTaskCanceled</code> event.
  * </p>
  */
-public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttributes {
+public class ActivityTaskCanceledEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * Details of the cancellation (if any).
@@ -54,7 +53,7 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     private String details;
 
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
@@ -62,7 +61,7 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     private Long scheduledEventId;
 
     /**
-     * The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * The ID of the <code>ActivityTaskStarted</code> event recorded when
      * this activity task was started. This information can be useful for
      * diagnosing problems by tracing back the chain of events leading up to
      * this event.
@@ -70,7 +69,7 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     private Long startedEventId;
 
     /**
-     * If set, contains the Id of the last
+     * If set, contains the ID of the last
      * <code>ActivityTaskCancelRequested</code> event recorded for this
      * activity task. This information can be useful for diagnosing problems
      * by tracing back the chain of events leading up to this event.
@@ -111,7 +110,7 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
      *
      * @param details Details of the cancellation (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCanceledEventAttributes withDetails(String details) {
@@ -120,12 +119,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
 
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @return The id of the <code>ActivityTaskScheduled</code> event that was
+     * @return The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -135,12 +134,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @param scheduledEventId The id of the <code>ActivityTaskScheduled</code> event that was
+     * @param scheduledEventId The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -150,19 +149,19 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * The id of the <code>ActivityTaskScheduled</code> event that was
+     * The ID of the <code>ActivityTaskScheduled</code> event that was
      * recorded when this activity task was scheduled. This information can
      * be useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param scheduledEventId The id of the <code>ActivityTaskScheduled</code> event that was
+     * @param scheduledEventId The ID of the <code>ActivityTaskScheduled</code> event that was
      *         recorded when this activity task was scheduled. This information can
      *         be useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCanceledEventAttributes withScheduledEventId(Long scheduledEventId) {
@@ -171,12 +170,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
 
     /**
-     * The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * The ID of the <code>ActivityTaskStarted</code> event recorded when
      * this activity task was started. This information can be useful for
      * diagnosing problems by tracing back the chain of events leading up to
      * this event.
      *
-     * @return The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * @return The ID of the <code>ActivityTaskStarted</code> event recorded when
      *         this activity task was started. This information can be useful for
      *         diagnosing problems by tracing back the chain of events leading up to
      *         this event.
@@ -186,12 +185,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * The ID of the <code>ActivityTaskStarted</code> event recorded when
      * this activity task was started. This information can be useful for
      * diagnosing problems by tracing back the chain of events leading up to
      * this event.
      *
-     * @param startedEventId The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * @param startedEventId The ID of the <code>ActivityTaskStarted</code> event recorded when
      *         this activity task was started. This information can be useful for
      *         diagnosing problems by tracing back the chain of events leading up to
      *         this event.
@@ -201,19 +200,19 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * The ID of the <code>ActivityTaskStarted</code> event recorded when
      * this activity task was started. This information can be useful for
      * diagnosing problems by tracing back the chain of events leading up to
      * this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The Id of the <code>ActivityTaskStarted</code> event recorded when
+     * @param startedEventId The ID of the <code>ActivityTaskStarted</code> event recorded when
      *         this activity task was started. This information can be useful for
      *         diagnosing problems by tracing back the chain of events leading up to
      *         this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCanceledEventAttributes withStartedEventId(Long startedEventId) {
@@ -222,12 +221,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
 
     /**
-     * If set, contains the Id of the last
+     * If set, contains the ID of the last
      * <code>ActivityTaskCancelRequested</code> event recorded for this
      * activity task. This information can be useful for diagnosing problems
      * by tracing back the chain of events leading up to this event.
      *
-     * @return If set, contains the Id of the last
+     * @return If set, contains the ID of the last
      *         <code>ActivityTaskCancelRequested</code> event recorded for this
      *         activity task. This information can be useful for diagnosing problems
      *         by tracing back the chain of events leading up to this event.
@@ -237,12 +236,12 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * If set, contains the Id of the last
+     * If set, contains the ID of the last
      * <code>ActivityTaskCancelRequested</code> event recorded for this
      * activity task. This information can be useful for diagnosing problems
      * by tracing back the chain of events leading up to this event.
      *
-     * @param latestCancelRequestedEventId If set, contains the Id of the last
+     * @param latestCancelRequestedEventId If set, contains the ID of the last
      *         <code>ActivityTaskCancelRequested</code> event recorded for this
      *         activity task. This information can be useful for diagnosing problems
      *         by tracing back the chain of events leading up to this event.
@@ -252,29 +251,24 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
     }
     
     /**
-     * If set, contains the Id of the last
+     * If set, contains the ID of the last
      * <code>ActivityTaskCancelRequested</code> event recorded for this
      * activity task. This information can be useful for diagnosing problems
      * by tracing back the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param latestCancelRequestedEventId If set, contains the Id of the last
+     * @param latestCancelRequestedEventId If set, contains the ID of the last
      *         <code>ActivityTaskCancelRequested</code> event recorded for this
      *         activity task. This information can be useful for diagnosing problems
      *         by tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCanceledEventAttributes withLatestCancelRequestedEventId(Long latestCancelRequestedEventId) {
         this.latestCancelRequestedEventId = latestCancelRequestedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setActivityTaskCanceledEventAttributes( this );
     }
 
     /**
@@ -327,6 +321,10 @@ public class ActivityTaskCanceledEventAttributes implements WorkflowEventAttribu
         if (other.getLatestCancelRequestedEventId() != null && other.getLatestCancelRequestedEventId().equals(this.getLatestCancelRequestedEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+            historyEvent.setActivityTaskCanceledEventAttributes(this);
+    }
 }
     

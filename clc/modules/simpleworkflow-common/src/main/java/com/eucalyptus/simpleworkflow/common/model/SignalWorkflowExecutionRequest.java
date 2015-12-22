@@ -19,36 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
 
-
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#signalWorkflowExecution(SignalWorkflowExecutionRequest) SignalWorkflowExecution operation}.
  * <p>
- * Records a <code>WorkflowExecutionSignaled</code> event in the
- * workflow execution history and creates a decision task for the
- * workflow execution identified by the given domain, workflowId and
- * runId. The event is recorded with the specified user defined
- * signalName and input (if provided).
+ * Records a <code>WorkflowExecutionSignaled</code> event in the workflow
+ * execution history and creates a decision task for the workflow
+ * execution identified by the given domain, workflowId and runId. The
+ * event is recorded with the specified user defined signalName and input
+ * (if provided).
  * </p>
  * <p>
  * <b>NOTE:</b> If a runId is not specified, then the
@@ -79,9 +76,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -175,7 +172,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      *
      * @param domain The name of the domain containing the workflow execution to signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalWorkflowExecutionRequest withDomain(String domain) {
@@ -217,7 +214,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      *
      * @param workflowId The workflowId of the workflow execution to signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalWorkflowExecutionRequest withWorkflowId(String workflowId) {
@@ -259,7 +256,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      *
      * @param runId The runId of the workflow execution to signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalWorkflowExecutionRequest withRunId(String runId) {
@@ -307,7 +304,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * @param signalName The name of the signal. This name must be meaningful to the target
      *         workflow.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalWorkflowExecutionRequest withSignalName(String signalName) {
@@ -355,7 +352,7 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
      * @param input Data to attach to the <code>WorkflowExecutionSignaled</code> event in
      *         the target workflow execution's history.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalWorkflowExecutionRequest withInput(String input) {
@@ -417,6 +414,6 @@ public class SignalWorkflowExecutionRequest extends SimpleWorkflowMessage implem
         if (other.getInput() != null && other.getInput().equals(this.getInput()) == false) return false; 
         return true;
     }
-    
+
 }
     

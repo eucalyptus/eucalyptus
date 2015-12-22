@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,7 +42,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionSignaled</code> event.
  * </p>
  */
-public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAttributes {
+public class WorkflowExecutionSignaledEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * The name of the signal received. The decider can use the signal name
@@ -70,10 +69,10 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
     private WorkflowExecution externalWorkflowExecution;
 
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the <code>SignalExternalWorkflow</code>
      * decision to signal this workflow execution.The source event with this
-     * Id can be found in the history of the source workflow execution. This
+     * ID can be found in the history of the source workflow execution. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event. This field is set only if
      * the signal was initiated by another workflow execution.
@@ -120,7 +119,7 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
      * @param signalName The name of the signal received. The decider can use the signal name
      *         and inputs to determine how to the process the signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionSignaledEventAttributes withSignalName(String signalName) {
@@ -168,7 +167,7 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
      * @param input Inputs provided with the signal (if any). The decider can use the
      *         signal name and inputs to determine how to process the signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionSignaledEventAttributes withInput(String input) {
@@ -207,7 +206,7 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
      * @param externalWorkflowExecution The workflow execution that sent the signal. This is set only of the
      *         signal was sent by another workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionSignaledEventAttributes withExternalWorkflowExecution(WorkflowExecution externalWorkflowExecution) {
@@ -216,18 +215,18 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
     }
 
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the <code>SignalExternalWorkflow</code>
      * decision to signal this workflow execution.The source event with this
-     * Id can be found in the history of the source workflow execution. This
+     * ID can be found in the history of the source workflow execution. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event. This field is set only if
      * the signal was initiated by another workflow execution.
      *
-     * @return The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @return The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the <code>SignalExternalWorkflow</code>
      *         decision to signal this workflow execution.The source event with this
-     *         Id can be found in the history of the source workflow execution. This
+     *         ID can be found in the history of the source workflow execution. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event. This field is set only if
      *         the signal was initiated by another workflow execution.
@@ -237,18 +236,18 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
     }
     
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the <code>SignalExternalWorkflow</code>
      * decision to signal this workflow execution.The source event with this
-     * Id can be found in the history of the source workflow execution. This
+     * ID can be found in the history of the source workflow execution. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event. This field is set only if
      * the signal was initiated by another workflow execution.
      *
-     * @param externalInitiatedEventId The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @param externalInitiatedEventId The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the <code>SignalExternalWorkflow</code>
      *         decision to signal this workflow execution.The source event with this
-     *         Id can be found in the history of the source workflow execution. This
+     *         ID can be found in the history of the source workflow execution. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event. This field is set only if
      *         the signal was initiated by another workflow execution.
@@ -258,35 +257,30 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
     }
     
     /**
-     * The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      * event corresponding to the <code>SignalExternalWorkflow</code>
      * decision to signal this workflow execution.The source event with this
-     * Id can be found in the history of the source workflow execution. This
+     * ID can be found in the history of the source workflow execution. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event. This field is set only if
      * the signal was initiated by another workflow execution.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param externalInitiatedEventId The id of the <code>SignalExternalWorkflowExecutionInitiated</code>
+     * @param externalInitiatedEventId The ID of the <code>SignalExternalWorkflowExecutionInitiated</code>
      *         event corresponding to the <code>SignalExternalWorkflow</code>
      *         decision to signal this workflow execution.The source event with this
-     *         Id can be found in the history of the source workflow execution. This
+     *         ID can be found in the history of the source workflow execution. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event. This field is set only if
      *         the signal was initiated by another workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionSignaledEventAttributes withExternalInitiatedEventId(Long externalInitiatedEventId) {
         this.externalInitiatedEventId = externalInitiatedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setWorkflowExecutionSignaledEventAttributes( this );
     }
 
     /**
@@ -339,6 +333,10 @@ public class WorkflowExecutionSignaledEventAttributes implements WorkflowEventAt
         if (other.getExternalInitiatedEventId() != null && other.getExternalInitiatedEventId().equals(this.getExternalInitiatedEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setWorkflowExecutionSignaledEventAttributes(this);
+    }
 }
     

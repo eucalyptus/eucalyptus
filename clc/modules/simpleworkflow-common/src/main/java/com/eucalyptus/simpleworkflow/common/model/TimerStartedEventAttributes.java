@@ -19,32 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
 
 /**
  * <p>
  * Provides details of the <code>TimerStarted</code> event.
  * </p>
  */
-public class TimerStartedEventAttributes implements WorkflowEventAttributes {
+public class TimerStartedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
-     * The unique Id of the timer that was started.
+     * The unique ID of the timer that was started.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -52,8 +53,8 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     private String timerId;
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -62,8 +63,7 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The duration of time after which the timer will fire. <p>The duration
-     * is specified in seconds. The valid values are integers greater than or
-     * equal to 0.
+     * is specified in seconds; an integer greater than or equal to 0.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 8<br/>
@@ -71,48 +71,49 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     private String startToFireTimeout;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>StartTimer</code>
      * decision for this activity task. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      */
     private Long decisionTaskCompletedEventId;
 
     /**
-     * The unique Id of the timer that was started.
+     * The unique ID of the timer that was started.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return The unique Id of the timer that was started.
+     * @return The unique ID of the timer that was started.
      */
     public String getTimerId() {
         return timerId;
     }
     
     /**
-     * The unique Id of the timer that was started.
+     * The unique ID of the timer that was started.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that was started.
+     * @param timerId The unique ID of the timer that was started.
      */
     public void setTimerId(String timerId) {
         this.timerId = timerId;
     }
     
     /**
-     * The unique Id of the timer that was started.
+     * The unique ID of the timer that was started.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that was started.
+     * @param timerId The unique ID of the timer that was started.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerStartedEventAttributes withTimerId(String timerId) {
@@ -121,46 +122,46 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     }
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks.
+     * @return <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks.
      */
     public String getControl() {
         return control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks.
      */
     public void setControl(String control) {
         this.control = control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerStartedEventAttributes withControl(String control) {
@@ -170,15 +171,13 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
 
     /**
      * The duration of time after which the timer will fire. <p>The duration
-     * is specified in seconds. The valid values are integers greater than or
-     * equal to 0.
+     * is specified in seconds; an integer greater than or equal to 0.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 8<br/>
      *
      * @return The duration of time after which the timer will fire. <p>The duration
-     *         is specified in seconds. The valid values are integers greater than or
-     *         equal to 0.
+     *         is specified in seconds; an integer greater than or equal to 0.
      */
     public String getStartToFireTimeout() {
         return startToFireTimeout;
@@ -186,15 +185,13 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     
     /**
      * The duration of time after which the timer will fire. <p>The duration
-     * is specified in seconds. The valid values are integers greater than or
-     * equal to 0.
+     * is specified in seconds; an integer greater than or equal to 0.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 8<br/>
      *
      * @param startToFireTimeout The duration of time after which the timer will fire. <p>The duration
-     *         is specified in seconds. The valid values are integers greater than or
-     *         equal to 0.
+     *         is specified in seconds; an integer greater than or equal to 0.
      */
     public void setStartToFireTimeout(String startToFireTimeout) {
         this.startToFireTimeout = startToFireTimeout;
@@ -202,8 +199,7 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     
     /**
      * The duration of time after which the timer will fire. <p>The duration
-     * is specified in seconds. The valid values are integers greater than or
-     * equal to 0.
+     * is specified in seconds; an integer greater than or equal to 0.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -211,10 +207,9 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
      * <b>Length: </b>1 - 8<br/>
      *
      * @param startToFireTimeout The duration of time after which the timer will fire. <p>The duration
-     *         is specified in seconds. The valid values are integers greater than or
-     *         equal to 0.
+     *         is specified in seconds; an integer greater than or equal to 0.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerStartedEventAttributes withStartToFireTimeout(String startToFireTimeout) {
@@ -223,59 +218,60 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>StartTimer</code>
      * decision for this activity task. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>StartTimer</code>
      *         decision for this activity task. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>StartTimer</code>
      * decision for this activity task. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>StartTimer</code>
      *         decision for this activity task. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>StartTimer</code>
      * decision for this activity task. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>StartTimer</code>
      *         decision for this activity task. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerStartedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setTimerStartedEventAttributes( this );
     }
 
     /**
@@ -328,6 +324,10 @@ public class TimerStartedEventAttributes implements WorkflowEventAttributes {
         if (other.getDecisionTaskCompletedEventId() != null && other.getDecisionTaskCompletedEventId().equals(this.getDecisionTaskCompletedEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setTimerStartedEventAttributes(this);
+    }
 }
     
