@@ -40,6 +40,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AttributeBooleanValueType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSubnetResponseType;
 import com.eucalyptus.compute.common.CreateSubnetType;
@@ -52,12 +53,13 @@ import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.ModifySubnetAttributeResponseType;
+import com.eucalyptus.compute.common.ModifySubnetAttributeType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.netflix.glisten.WorkflowOperations;
 
@@ -100,6 +102,23 @@ public class AWSEC2SubnetResourceAction extends ResourceAction {
         action.info.setPhysicalResourceId(createSubnetResponseType.getSubnet().getSubnetId());
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         action.info.setAvailabilityZone(JsonHelper.getStringFromJsonNode(new TextNode(createSubnetResponseType.getSubnet().getAvailabilityZone())));
+        return action;
+      }
+    },
+    MODIFY_SUBNET_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        final AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
+        if ( action.properties.getMapPublicIpOnLaunch( ) != null ) {
+          final ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          final ModifySubnetAttributeType modifySubnet =
+              MessageHelper.createMessage(ModifySubnetAttributeType.class, action.info.getEffectiveUserId());
+          final AttributeBooleanValueType value = new AttributeBooleanValueType( );
+          value.setValue( action.properties.getMapPublicIpOnLaunch( ) );
+          modifySubnet.setMapPublicIpOnLaunch( value );
+          modifySubnet.setSubnetId( action.info.getPhysicalResourceId( ) );
+          AsyncRequests.<ModifySubnetAttributeType,ModifySubnetAttributeResponseType>sendSync( configuration, modifySubnet );
+        }
         return action;
       }
     },
