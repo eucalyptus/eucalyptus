@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingLoadBalancerResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingLoadBalancerProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingAccessLoggingPolicy;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingListener;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyTypeAttribute;
@@ -39,6 +40,7 @@ import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckType;
@@ -290,14 +292,24 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         final AWSElasticLoadBalancingLoadBalancerResourceAction action =
             (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         final ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        final boolean accessLogging = action.properties.getAccessLoggingPolicy( ) != null;
         final boolean crossZone = action.properties.getCrossZone() != null &&
             action.properties.getCrossZone() == Boolean.TRUE;
         final boolean idleTimeout = action.properties.getConnectionSettings( ) != null &&
             action.properties.getConnectionSettings( ).getIdleTimeout( ) != null;
-        if ( crossZone || idleTimeout ) {
+        if ( accessLogging || crossZone || idleTimeout ) {
           ModifyLoadBalancerAttributesType modifyLoadBalancerAttributesType = MessageHelper.createMessage(ModifyLoadBalancerAttributesType.class, action.info.getEffectiveUserId());
           modifyLoadBalancerAttributesType.setLoadBalancerName(action.info.getPhysicalResourceId());
           LoadBalancerAttributes loadBalancerAttributes = new LoadBalancerAttributes();
+          if ( accessLogging ) {
+            final ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy = action.properties.getAccessLoggingPolicy( );
+            final AccessLog accessLog = new AccessLog( );
+            accessLog.setEnabled( accessLoggingPolicy.getEnabled( ) );
+            accessLog.setEmitInterval( accessLoggingPolicy.getEmitInterval( ) );
+            accessLog.setS3BucketName( accessLoggingPolicy.getS3BucketName( ) );
+            accessLog.setS3BucketPrefix( accessLoggingPolicy.getS3BucketPrefix( ) );
+            loadBalancerAttributes.setAccessLog( accessLog );
+          }
           if ( crossZone ) {
             CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
             crossZoneLoadBalancing.setEnabled( Boolean.TRUE );
@@ -314,7 +326,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         return action;
       }
     },
-    PLACEHOLDER_FOR_OTHER_FIELDS { //// placeholder for "AccessLoggingPolicy", "ConnectionDrainingPolicy"
+    PLACEHOLDER_FOR_OTHER_FIELDS { //// placeholder for ""ConnectionDrainingPolicy"
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
