@@ -90,6 +90,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends ResourceAct
         String newAssociationId = action.replaceAssociation(configuration, associationId, action.properties.getNetworkAclId());
         action.info.setPhysicalResourceId(newAssociationId);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        action.info.setAssociationId(JsonHelper.getStringFromJsonNode(new TextNode(newAssociationId)));
         return action;
       }
     };
