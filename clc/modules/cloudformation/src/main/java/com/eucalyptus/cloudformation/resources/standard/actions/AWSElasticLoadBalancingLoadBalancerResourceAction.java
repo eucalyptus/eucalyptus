@@ -42,6 +42,7 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckType;
+import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
 import com.eucalyptus.loadbalancing.common.msgs.CreateAppCookieStickinessPolicyResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.CreateAppCookieStickinessPolicyType;
 import com.eucalyptus.loadbalancing.common.msgs.CreateLBCookieStickinessPolicyResponseType;
@@ -283,18 +284,30 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         return action;
       }
     },
-    SET_CROSS_ZONE_ATTRIBUTE {
+    SET_CROSS_ZONE_ATTRIBUTE { // For any configured load balancer attributes
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-        if (action.properties.getCrossZone() != null && action.properties.getCrossZone() == Boolean.TRUE) {
+        final AWSElasticLoadBalancingLoadBalancerResourceAction action =
+            (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        final ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        final boolean crossZone = action.properties.getCrossZone() != null &&
+            action.properties.getCrossZone() == Boolean.TRUE;
+        final boolean idleTimeout = action.properties.getConnectionSettings( ) != null &&
+            action.properties.getConnectionSettings( ).getIdleTimeout( ) != null;
+        if ( crossZone || idleTimeout ) {
           ModifyLoadBalancerAttributesType modifyLoadBalancerAttributesType = MessageHelper.createMessage(ModifyLoadBalancerAttributesType.class, action.info.getEffectiveUserId());
           modifyLoadBalancerAttributesType.setLoadBalancerName(action.info.getPhysicalResourceId());
           LoadBalancerAttributes loadBalancerAttributes = new LoadBalancerAttributes();
-          CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing();
-          crossZoneLoadBalancing.setEnabled(Boolean.TRUE);
-          loadBalancerAttributes.setCrossZoneLoadBalancing(crossZoneLoadBalancing);
+          if ( crossZone ) {
+            CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
+            crossZoneLoadBalancing.setEnabled( Boolean.TRUE );
+            loadBalancerAttributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
+          }
+          if ( idleTimeout ) {
+            ConnectionSettings connectionSettings = new ConnectionSettings( );
+            connectionSettings.setIdleTimeout( action.properties.getConnectionSettings( ).getIdleTimeout( ) );
+            loadBalancerAttributes.setConnectionSettings( connectionSettings );
+          }
           modifyLoadBalancerAttributesType.setLoadBalancerAttributes(loadBalancerAttributes);
           AsyncRequests.<ModifyLoadBalancerAttributesType, ModifyLoadBalancerAttributesResponseType>sendSync(configuration, modifyLoadBalancerAttributesType);
         }
