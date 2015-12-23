@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -81,6 +80,14 @@ public class WorkflowExecutionOpenCounts implements Serializable {
     private Integer openChildWorkflowExecutions;
 
     /**
+     * The count of AWS Lambda functions that are currently executing.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Range: </b>0 - <br/>
+     */
+    private Integer openLambdaFunctions;
+
+    /**
      * The count of activity tasks whose status is OPEN.
      * <p>
      * <b>Constraints:</b><br/>
@@ -114,7 +121,7 @@ public class WorkflowExecutionOpenCounts implements Serializable {
      *
      * @param openActivityTasks The count of activity tasks whose status is OPEN.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionOpenCounts withOpenActivityTasks(Integer openActivityTasks) {
@@ -162,7 +169,7 @@ public class WorkflowExecutionOpenCounts implements Serializable {
      * @param openDecisionTasks The count of decision tasks whose status is OPEN. A workflow execution
      *         can have at most one open decision task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionOpenCounts withOpenDecisionTasks(Integer openDecisionTasks) {
@@ -210,7 +217,7 @@ public class WorkflowExecutionOpenCounts implements Serializable {
      * @param openTimers The count of timers started by this workflow execution that have not
      *         fired yet.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionOpenCounts withOpenTimers(Integer openTimers) {
@@ -252,11 +259,53 @@ public class WorkflowExecutionOpenCounts implements Serializable {
      *
      * @param openChildWorkflowExecutions The count of child workflow executions whose status is OPEN.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionOpenCounts withOpenChildWorkflowExecutions(Integer openChildWorkflowExecutions) {
         this.openChildWorkflowExecutions = openChildWorkflowExecutions;
+        return this;
+    }
+
+    /**
+     * The count of AWS Lambda functions that are currently executing.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Range: </b>0 - <br/>
+     *
+     * @return The count of AWS Lambda functions that are currently executing.
+     */
+    public Integer getOpenLambdaFunctions() {
+        return openLambdaFunctions;
+    }
+    
+    /**
+     * The count of AWS Lambda functions that are currently executing.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Range: </b>0 - <br/>
+     *
+     * @param openLambdaFunctions The count of AWS Lambda functions that are currently executing.
+     */
+    public void setOpenLambdaFunctions(Integer openLambdaFunctions) {
+        this.openLambdaFunctions = openLambdaFunctions;
+    }
+    
+    /**
+     * The count of AWS Lambda functions that are currently executing.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Range: </b>0 - <br/>
+     *
+     * @param openLambdaFunctions The count of AWS Lambda functions that are currently executing.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public WorkflowExecutionOpenCounts withOpenLambdaFunctions(Integer openLambdaFunctions) {
+        this.openLambdaFunctions = openLambdaFunctions;
         return this;
     }
 
@@ -275,7 +324,8 @@ public class WorkflowExecutionOpenCounts implements Serializable {
         if (getOpenActivityTasks() != null) sb.append("OpenActivityTasks: " + getOpenActivityTasks() + ",");
         if (getOpenDecisionTasks() != null) sb.append("OpenDecisionTasks: " + getOpenDecisionTasks() + ",");
         if (getOpenTimers() != null) sb.append("OpenTimers: " + getOpenTimers() + ",");
-        if (getOpenChildWorkflowExecutions() != null) sb.append("OpenChildWorkflowExecutions: " + getOpenChildWorkflowExecutions() );
+        if (getOpenChildWorkflowExecutions() != null) sb.append("OpenChildWorkflowExecutions: " + getOpenChildWorkflowExecutions() + ",");
+        if (getOpenLambdaFunctions() != null) sb.append("OpenLambdaFunctions: " + getOpenLambdaFunctions() );
         sb.append("}");
         return sb.toString();
     }
@@ -289,6 +339,7 @@ public class WorkflowExecutionOpenCounts implements Serializable {
         hashCode = prime * hashCode + ((getOpenDecisionTasks() == null) ? 0 : getOpenDecisionTasks().hashCode()); 
         hashCode = prime * hashCode + ((getOpenTimers() == null) ? 0 : getOpenTimers().hashCode()); 
         hashCode = prime * hashCode + ((getOpenChildWorkflowExecutions() == null) ? 0 : getOpenChildWorkflowExecutions().hashCode()); 
+        hashCode = prime * hashCode + ((getOpenLambdaFunctions() == null) ? 0 : getOpenLambdaFunctions().hashCode()); 
         return hashCode;
     }
     
@@ -308,8 +359,10 @@ public class WorkflowExecutionOpenCounts implements Serializable {
         if (other.getOpenTimers() != null && other.getOpenTimers().equals(this.getOpenTimers()) == false) return false; 
         if (other.getOpenChildWorkflowExecutions() == null ^ this.getOpenChildWorkflowExecutions() == null) return false;
         if (other.getOpenChildWorkflowExecutions() != null && other.getOpenChildWorkflowExecutions().equals(this.getOpenChildWorkflowExecutions()) == false) return false; 
+        if (other.getOpenLambdaFunctions() == null ^ this.getOpenLambdaFunctions() == null) return false;
+        if (other.getOpenLambdaFunctions() != null && other.getOpenLambdaFunctions().equals(this.getOpenLambdaFunctions()) == false) return false; 
         return true;
     }
-    
+
 }
     

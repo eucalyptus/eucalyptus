@@ -62,6 +62,7 @@ import com.eucalyptus.simpleworkflow.common.model.DecisionType;
 import com.eucalyptus.simpleworkflow.common.model.EventType;
 import com.eucalyptus.simpleworkflow.common.model.ExecutionStatus;
 import com.eucalyptus.simpleworkflow.common.model.FailWorkflowExecutionFailedCause;
+import com.eucalyptus.simpleworkflow.common.model.LambdaFunctionTimeoutType;
 import com.eucalyptus.simpleworkflow.common.model.RecordMarkerFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.RegistrationStatus;
 import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedCause;
@@ -168,6 +169,7 @@ public class SwfJsonUtils {
     @JsonIgnore void setTimeoutType(ActivityTaskTimeoutType timeoutType);
     @JsonIgnore void setTimeoutType(DecisionTaskTimeoutType timeoutType);
     @JsonIgnore void setTimeoutType(WorkflowExecutionTimeoutType timeoutType);
+    @JsonIgnore void setTimeoutType(LambdaFunctionTimeoutType timeoutType);
     @JsonIgnore Boolean isCancelRequested( );
     @JsonIgnore Boolean isTruncated( );
   }

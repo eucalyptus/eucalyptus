@@ -502,7 +502,8 @@ public class SimpleWorkflowService {
                 .withOpenActivityTasks( openActivities )
                 .withOpenChildWorkflowExecutions( 0 )
                 .withOpenDecisionTasks( workflowExecution.getDecisionStatus( ) != Idle ? 1 : 0 )
-                .withOpenTimers( openTimers ) );
+                .withOpenTimers( openTimers )
+                .withOpenLambdaFunctions( 0 ) );
               return detail;
             }
           }
@@ -1660,6 +1661,18 @@ public class SimpleWorkflowService {
                               .withWorkflowId( startChildWorkflow.getWorkflowId() )
                               .withWorkflowType( startChildWorkflow.getWorkflowType() )
                       ) );
+                      scheduleDecisionTask = true;
+                      break;
+                    case "ScheduleLambdaFunction":
+                      final ScheduleLambdaFunctionDecisionAttributes scheduleLambdaFunction =
+                          decision.getScheduleLambdaFunctionDecisionAttributes();
+                      workflowExecution.addHistoryEvent(WorkflowHistoryEvent.create(
+                          workflowExecution, 
+                          new ScheduleLambdaFunctionFailedEventAttributes()
+                          .withId(scheduleLambdaFunction.getId())
+                          .withName(scheduleLambdaFunction.getName())
+                          .withCause( ScheduleLambdaFunctionFailedCause.LAMBDA_SERVICE_NOT_AVAILABLE_IN_REGION )
+                          .withDecisionTaskCompletedEventId( completedId )));
                       scheduleDecisionTask = true;
                       break;
                     case "StartTimer":

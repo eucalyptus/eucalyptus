@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,17 +42,16 @@ import java.io.Serializable;
  * Contains details about a workflow type.
  * </p>
  */
-public class WorkflowTypeDetail extends SimpleWorkflowMessage {
-
+public class WorkflowTypeDetail extends SimpleWorkflowMessage implements Serializable {
     /**
-     * General information about the workflow type. <p> The status of the
+     * General information about the workflow type. <p>The status of the
      * workflow type (returned in the WorkflowTypeInfo structure) can be one
-     * of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     * and available. Workers supporting this type should be running. </li>
-     * <li> <b>DEPRECATED</b>: The type was deprecated using
+     * of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     * and available. Workers supporting this type should be running.</li>
+     * <li><b>DEPRECATED</b>: The type was deprecated using
      * <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      * workers supporting this type running. You cannot create new workflow
-     * executions of this type. </li> </ul>
+     * executions of this type.</li> </ul>
      */
     private WorkflowTypeInfo typeInfo;
 
@@ -64,73 +62,73 @@ public class WorkflowTypeDetail extends SimpleWorkflowMessage {
     private WorkflowTypeConfiguration configuration;
 
     /**
-     * General information about the workflow type. <p> The status of the
+     * General information about the workflow type. <p>The status of the
      * workflow type (returned in the WorkflowTypeInfo structure) can be one
-     * of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     * and available. Workers supporting this type should be running. </li>
-     * <li> <b>DEPRECATED</b>: The type was deprecated using
+     * of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     * and available. Workers supporting this type should be running.</li>
+     * <li><b>DEPRECATED</b>: The type was deprecated using
      * <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      * workers supporting this type running. You cannot create new workflow
-     * executions of this type. </li> </ul>
+     * executions of this type.</li> </ul>
      *
-     * @return General information about the workflow type. <p> The status of the
+     * @return General information about the workflow type. <p>The status of the
      *         workflow type (returned in the WorkflowTypeInfo structure) can be one
-     *         of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     *         and available. Workers supporting this type should be running. </li>
-     *         <li> <b>DEPRECATED</b>: The type was deprecated using
+     *         of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     *         and available. Workers supporting this type should be running.</li>
+     *         <li><b>DEPRECATED</b>: The type was deprecated using
      *         <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      *         workers supporting this type running. You cannot create new workflow
-     *         executions of this type. </li> </ul>
+     *         executions of this type.</li> </ul>
      */
     public WorkflowTypeInfo getTypeInfo() {
         return typeInfo;
     }
     
     /**
-     * General information about the workflow type. <p> The status of the
+     * General information about the workflow type. <p>The status of the
      * workflow type (returned in the WorkflowTypeInfo structure) can be one
-     * of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     * and available. Workers supporting this type should be running. </li>
-     * <li> <b>DEPRECATED</b>: The type was deprecated using
+     * of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     * and available. Workers supporting this type should be running.</li>
+     * <li><b>DEPRECATED</b>: The type was deprecated using
      * <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      * workers supporting this type running. You cannot create new workflow
-     * executions of this type. </li> </ul>
+     * executions of this type.</li> </ul>
      *
-     * @param typeInfo General information about the workflow type. <p> The status of the
+     * @param typeInfo General information about the workflow type. <p>The status of the
      *         workflow type (returned in the WorkflowTypeInfo structure) can be one
-     *         of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     *         and available. Workers supporting this type should be running. </li>
-     *         <li> <b>DEPRECATED</b>: The type was deprecated using
+     *         of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     *         and available. Workers supporting this type should be running.</li>
+     *         <li><b>DEPRECATED</b>: The type was deprecated using
      *         <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      *         workers supporting this type running. You cannot create new workflow
-     *         executions of this type. </li> </ul>
+     *         executions of this type.</li> </ul>
      */
     public void setTypeInfo(WorkflowTypeInfo typeInfo) {
         this.typeInfo = typeInfo;
     }
     
     /**
-     * General information about the workflow type. <p> The status of the
+     * General information about the workflow type. <p>The status of the
      * workflow type (returned in the WorkflowTypeInfo structure) can be one
-     * of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     * and available. Workers supporting this type should be running. </li>
-     * <li> <b>DEPRECATED</b>: The type was deprecated using
+     * of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     * and available. Workers supporting this type should be running.</li>
+     * <li><b>DEPRECATED</b>: The type was deprecated using
      * <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      * workers supporting this type running. You cannot create new workflow
-     * executions of this type. </li> </ul>
+     * executions of this type.</li> </ul>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param typeInfo General information about the workflow type. <p> The status of the
+     * @param typeInfo General information about the workflow type. <p>The status of the
      *         workflow type (returned in the WorkflowTypeInfo structure) can be one
-     *         of the following. <ul> <li> <b>REGISTERED</b>: The type is registered
-     *         and available. Workers supporting this type should be running. </li>
-     *         <li> <b>DEPRECATED</b>: The type was deprecated using
+     *         of the following. <ul> <li><b>REGISTERED</b>: The type is registered
+     *         and available. Workers supporting this type should be running.</li>
+     *         <li><b>DEPRECATED</b>: The type was deprecated using
      *         <a>DeprecateWorkflowType</a>, but is still in use. You should keep
      *         workers supporting this type running. You cannot create new workflow
-     *         executions of this type. </li> </ul>
+     *         executions of this type.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowTypeDetail withTypeInfo(WorkflowTypeInfo typeInfo) {
@@ -169,7 +167,7 @@ public class WorkflowTypeDetail extends SimpleWorkflowMessage {
      * @param configuration Configuration settings of the workflow type registered through
      *         <a>RegisterWorkflowType</a>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowTypeDetail withConfiguration(WorkflowTypeConfiguration configuration) {
@@ -219,6 +217,6 @@ public class WorkflowTypeDetail extends SimpleWorkflowMessage {
         if (other.getConfiguration() != null && other.getConfiguration().equals(this.getConfiguration()) == false) return false; 
         return true;
     }
-    
+
 }
     

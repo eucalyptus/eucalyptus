@@ -19,27 +19,24 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
+import com.eucalyptus.auth.policy.annotation.PolicyAction;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
-import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#countClosedWorkflowExecutions(CountClosedWorkflowExecutionsRequest) CountClosedWorkflowExecutions operation}.
@@ -48,7 +45,7 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * domain that meet the specified filtering criteria.
  * </p>
  * <p>
- * <b>NOTE:</b> This operation is eventually consistent. The results are
+ * <b>NOTE:</b>This operation is eventually consistent. The results are
  * best effort and may not exactly reflect recent updates and changes.
  * </p>
  * <p>
@@ -67,12 +64,12 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <li>Constrain the following parameters by using a
  * <code>Condition</code> element with the appropriate keys.
  * <ul>
- * <li> <code>tag</code> : String constraint. The key is
+ * <li> <code>tagFilter.tag</code> : String constraint. The key is
  * <code>swf:tagFilter.tag</code> .</li>
- * <li> <code>typeFilter.name</code> : String constraint. String
- * constraint. The key is <code>swf:typeFilter.name</code> .</li>
- * <li> <code>typeFilter.version</code> : String constraint. String
- * constraint. The key is <code>swf:typeFilter.version</code> .</li>
+ * <li> <code>typeFilter.name</code> : String constraint. The key is
+ * <code>swf:typeFilter.name</code> .</li>
+ * <li> <code>typeFilter.version</code> : String constraint. The key is
+ * <code>swf:typeFilter.version</code> .</li>
  * 
  * </ul>
  * </li>
@@ -81,9 +78,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -190,7 +187,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *
      * @param domain The name of the domain containing the workflow executions to count.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withDomain(String domain) {
@@ -241,7 +238,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         and <code>closeTimeFilter</code> are mutually exclusive. You must
      *         specify one of these in a request but not both.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withStartTimeFilter(ExecutionTimeFilter startTimeFilter) {
@@ -292,7 +289,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         and <code>closeTimeFilter</code> are mutually exclusive. You must
      *         specify one of these in a request but not both.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withCloseTimeFilter(ExecutionTimeFilter closeTimeFilter) {
@@ -349,7 +346,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
      *         exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withExecutionFilter(WorkflowExecutionFilter executionFilter) {
@@ -406,7 +403,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         <code>tagFilter</code> are mutually exclusive. You can specify at most
      *         one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withTypeFilter(WorkflowTypeFilter typeFilter) {
@@ -463,7 +460,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         <code>tagFilter</code> are mutually exclusive. You can specify at most
      *         one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withTagFilter(TagFilter tagFilter) {
@@ -526,7 +523,7 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
      *         <code>typeFilter</code> and <code>tagFilter</code> are mutually
      *         exclusive. You can specify at most one of these in a request.</note>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountClosedWorkflowExecutionsRequest withCloseStatusFilter(CloseStatusFilter closeStatusFilter) {
@@ -596,6 +593,5 @@ public class CountClosedWorkflowExecutionsRequest extends SimpleWorkflowMessage 
         if (other.getCloseStatusFilter() != null && other.getCloseStatusFilter().equals(this.getCloseStatusFilter()) == false) return false; 
         return true;
     }
-    
 }
     

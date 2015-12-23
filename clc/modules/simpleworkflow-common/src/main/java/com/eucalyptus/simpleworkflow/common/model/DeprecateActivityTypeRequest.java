@@ -19,23 +19,21 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
@@ -44,13 +42,13 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#deprecateActivityType(DeprecateActivityTypeRequest) DeprecateActivityType operation}.
  * <p>
- * Deprecates the specified <i>activity type</i> .
- * After an activity type has been deprecated, you cannot create
- * new tasks of that activity type. Tasks of this type that were
- * scheduled before the type was deprecated will continue to run.
+ * Deprecates the specified <i>activity type</i> . After an activity type
+ * has been deprecated, you cannot create new tasks of that activity
+ * type. Tasks of this type that were scheduled before the type was
+ * deprecated will continue to run.
  * </p>
  * <p>
- * <b>NOTE:</b> This operation is eventually consistent. The results are
+ * <b>NOTE:</b>This operation is eventually consistent. The results are
  * best effort and may not exactly reflect recent updates and changes.
  * </p>
  * <p>
@@ -81,9 +79,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -143,7 +141,7 @@ public class DeprecateActivityTypeRequest extends SimpleWorkflowMessage implemen
      *
      * @param domain The name of the domain in which the activity type is registered.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DeprecateActivityTypeRequest withDomain(String domain) {
@@ -176,7 +174,7 @@ public class DeprecateActivityTypeRequest extends SimpleWorkflowMessage implemen
      *
      * @param activityType The activity type to deprecate.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DeprecateActivityTypeRequest withActivityType(ActivityType activityType) {
@@ -226,6 +224,5 @@ public class DeprecateActivityTypeRequest extends SimpleWorkflowMessage implemen
         if (other.getActivityType() != null && other.getActivityType().equals(this.getActivityType()) == false) return false; 
         return true;
     }
-    
 }
     

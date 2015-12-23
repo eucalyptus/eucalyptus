@@ -19,24 +19,25 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 
 /**
  * <p>
@@ -60,8 +61,9 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     private WorkflowType workflowType;
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent decision tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -79,9 +81,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     /**
      * The maximum duration for the child workflow execution. If the workflow
      * execution is not closed within this duration, it will be timed out and
-     * force terminated. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
+     * force terminated. <p>The duration is specified in seconds; an integer
+     * greater than or equal to 0. The value "NONE" can be used to specify
      * unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
@@ -96,10 +97,27 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     private TaskList taskList;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * <i>Optional.</i> The priority assigned for the decision tasks for this
+     * workflow execution. Valid values are integers that range from Java's
+     * <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     */
+    @FieldRegex( FieldRegexValue.INT_MIN_MAX )
+    private String taskPriority;
+
+    /**
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
-     * <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     * this child workflow execution. This information can be useful for
+     * <code>StartChildWorkflowExecution</code> decision to request this
+     * child workflow execution. This information can be useful for
      * diagnosing problems by tracing back the cause of events.
      */
     private Long decisionTaskCompletedEventId;
@@ -113,7 +131,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -124,9 +142,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
 
     /**
      * The maximum duration allowed for the decision tasks for this workflow
-     * execution. <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * execution. <p>The duration is specified in seconds; an integer greater
+     * than or equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
@@ -141,6 +158,16 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * <b>Length: </b>0 - 5<br/>
      */
     private com.amazonaws.internal.ListWithAutoConstructFlag<String> tagList;
+
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     */
+    @FieldRegex( FieldRegexValue.STRING_1224 )
+    private String lambdaRole;
 
     /**
      * The <code>workflowId</code> of the child workflow execution.
@@ -176,7 +203,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param workflowId The <code>workflowId</code> of the child workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withWorkflowId(String workflowId) {
@@ -209,7 +236,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param workflowType The type of the child workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withWorkflowType(WorkflowType workflowType) {
@@ -218,46 +245,52 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     }
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent decision tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks. This data is not sent to the activity.
+     * @return <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent decision tasks. This data is not sent to the
+     *         activity.
      */
     public String getControl() {
         return control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent decision tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks. This data is not sent to the activity.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent decision tasks. This data is not sent to the
+     *         activity.
      */
     public void setControl(String control) {
         this.control = control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent decision tasks. This data is not sent to the
+     * activity.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks. This data is not sent to the activity.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent decision tasks. This data is not sent to the
+     *         activity.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withControl(String control) {
@@ -299,7 +332,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param input The inputs provided to the child workflow execution (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withInput(String input) {
@@ -310,9 +343,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     /**
      * The maximum duration for the child workflow execution. If the workflow
      * execution is not closed within this duration, it will be timed out and
-     * force terminated. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
+     * force terminated. <p>The duration is specified in seconds; an integer
+     * greater than or equal to 0. The value "NONE" can be used to specify
      * unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
@@ -320,9 +352,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @return The maximum duration for the child workflow execution. If the workflow
      *         execution is not closed within this duration, it will be timed out and
-     *         force terminated. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
+     *         force terminated. <p>The duration is specified in seconds; an integer
+     *         greater than or equal to 0. The value "NONE" can be used to specify
      *         unlimited duration.
      */
     public String getExecutionStartToCloseTimeout() {
@@ -332,9 +363,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     /**
      * The maximum duration for the child workflow execution. If the workflow
      * execution is not closed within this duration, it will be timed out and
-     * force terminated. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
+     * force terminated. <p>The duration is specified in seconds; an integer
+     * greater than or equal to 0. The value "NONE" can be used to specify
      * unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
@@ -342,9 +372,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param executionStartToCloseTimeout The maximum duration for the child workflow execution. If the workflow
      *         execution is not closed within this duration, it will be timed out and
-     *         force terminated. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
+     *         force terminated. <p>The duration is specified in seconds; an integer
+     *         greater than or equal to 0. The value "NONE" can be used to specify
      *         unlimited duration.
      */
     public void setExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
@@ -354,9 +383,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     /**
      * The maximum duration for the child workflow execution. If the workflow
      * execution is not closed within this duration, it will be timed out and
-     * force terminated. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
+     * force terminated. <p>The duration is specified in seconds; an integer
+     * greater than or equal to 0. The value "NONE" can be used to specify
      * unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -366,12 +394,11 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param executionStartToCloseTimeout The maximum duration for the child workflow execution. If the workflow
      *         execution is not closed within this duration, it will be timed out and
-     *         force terminated. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
+     *         force terminated. <p>The duration is specified in seconds; an integer
+     *         greater than or equal to 0. The value "NONE" can be used to specify
      *         unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
@@ -410,7 +437,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * @param taskList The name of the task list used for the decision tasks of the child
      *         workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withTaskList(TaskList taskList) {
@@ -419,16 +446,106 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * <i>Optional.</i> The priority assigned for the decision tasks for this
+     * workflow execution. Valid values are integers that range from Java's
+     * <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @return <i>Optional.</i> The priority assigned for the decision tasks for this
+     *         workflow execution. Valid values are integers that range from Java's
+     *         <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public String getTaskPriority() {
+        return taskPriority;
+    }
+    
+    /**
+     * <i>Optional.</i> The priority assigned for the decision tasks for this
+     * workflow execution. Valid values are integers that range from Java's
+     * <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority <i>Optional.</i> The priority assigned for the decision tasks for this
+     *         workflow execution. Valid values are integers that range from Java's
+     *         <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public void setTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+    }
+    
+    /**
+     * <i>Optional.</i> The priority assigned for the decision tasks for this
+     * workflow execution. Valid values are integers that range from Java's
+     * <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority <i>Optional.</i> The priority assigned for the decision tasks for this
+     *         workflow execution. Valid values are integers that range from Java's
+     *         <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public StartChildWorkflowExecutionInitiatedEventAttributes withTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+        return this;
+    }
+
+    /**
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
-     * <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     * this child workflow execution. This information can be useful for
+     * <code>StartChildWorkflowExecution</code> decision to request this
+     * child workflow execution. This information can be useful for
      * diagnosing problems by tracing back the cause of events.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
-     *         <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     *         this child workflow execution. This information can be useful for
+     *         <code>StartChildWorkflowExecution</code> decision to request this
+     *         child workflow execution. This information can be useful for
      *         diagnosing problems by tracing back the cause of events.
      */
     public Long getDecisionTaskCompletedEventId() {
@@ -436,16 +553,16 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
-     * <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     * this child workflow execution. This information can be useful for
+     * <code>StartChildWorkflowExecution</code> decision to request this
+     * child workflow execution. This information can be useful for
      * diagnosing problems by tracing back the cause of events.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
-     *         <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     *         this child workflow execution. This information can be useful for
+     *         <code>StartChildWorkflowExecution</code> decision to request this
+     *         child workflow execution. This information can be useful for
      *         diagnosing problems by tracing back the cause of events.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -453,21 +570,21 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
-     * <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     * this child workflow execution. This information can be useful for
+     * <code>StartChildWorkflowExecution</code> decision to request this
+     * child workflow execution. This information can be useful for
      * diagnosing problems by tracing back the cause of events.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
-     *         <code>StartChildWorkflowExecution</code> <a>Decision</a> to request
-     *         this child workflow execution. This information can be useful for
+     *         <code>StartChildWorkflowExecution</code> decision to request this
+     *         child workflow execution. This information can be useful for
      *         diagnosing problems by tracing back the cause of events.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -484,7 +601,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -499,7 +616,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *         request to cancel will be attempted for each child execution by
      *         recording a <code>WorkflowExecutionCancelRequested</code> event in its
      *         history. It is up to the decider to take appropriate actions when it
-     *         receives an execution history with this event. </li>
+     *         receives an execution history with this event.</li>
      *         <li><b>ABANDON:</b> no action will be taken. The child executions will
      *         continue to run.</li> </ul>
      *
@@ -518,7 +635,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -533,7 +650,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *         request to cancel will be attempted for each child execution by
      *         recording a <code>WorkflowExecutionCancelRequested</code> event in its
      *         history. It is up to the decider to take appropriate actions when it
-     *         receives an execution history with this event. </li>
+     *         receives an execution history with this event.</li>
      *         <li><b>ABANDON:</b> no action will be taken. The child executions will
      *         continue to run.</li> </ul>
      *
@@ -552,7 +669,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -569,11 +686,11 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *         request to cancel will be attempted for each child execution by
      *         recording a <code>WorkflowExecutionCancelRequested</code> event in its
      *         history. It is up to the decider to take appropriate actions when it
-     *         receives an execution history with this event. </li>
+     *         receives an execution history with this event.</li>
      *         <li><b>ABANDON:</b> no action will be taken. The child executions will
      *         continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -592,7 +709,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -607,7 +724,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *         request to cancel will be attempted for each child execution by
      *         recording a <code>WorkflowExecutionCancelRequested</code> event in its
      *         history. It is up to the decider to take appropriate actions when it
-     *         receives an execution history with this event. </li>
+     *         receives an execution history with this event.</li>
      *         <li><b>ABANDON:</b> no action will be taken. The child executions will
      *         continue to run.</li> </ul>
      *
@@ -626,7 +743,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * request to cancel will be attempted for each child execution by
      * recording a <code>WorkflowExecutionCancelRequested</code> event in its
      * history. It is up to the decider to take appropriate actions when it
-     * receives an execution history with this event. </li>
+     * receives an execution history with this event.</li>
      * <li><b>ABANDON:</b> no action will be taken. The child executions will
      * continue to run.</li> </ul>
      * <p>
@@ -643,11 +760,11 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *         request to cancel will be attempted for each child execution by
      *         recording a <code>WorkflowExecutionCancelRequested</code> event in its
      *         history. It is up to the decider to take appropriate actions when it
-     *         receives an execution history with this event. </li>
+     *         receives an execution history with this event.</li>
      *         <li><b>ABANDON:</b> no action will be taken. The child executions will
      *         continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -659,18 +776,16 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
 
     /**
      * The maximum duration allowed for the decision tasks for this workflow
-     * execution. <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * execution. <p>The duration is specified in seconds; an integer greater
+     * than or equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @return The maximum duration allowed for the decision tasks for this workflow
-     *         execution. <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         execution. <p>The duration is specified in seconds; an integer greater
+     *         than or equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      */
     public String getTaskStartToCloseTimeout() {
@@ -679,18 +794,16 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     
     /**
      * The maximum duration allowed for the decision tasks for this workflow
-     * execution. <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * execution. <p>The duration is specified in seconds; an integer greater
+     * than or equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration allowed for the decision tasks for this workflow
-     *         execution. <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         execution. <p>The duration is specified in seconds; an integer greater
+     *         than or equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      */
     public void setTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
@@ -699,9 +812,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     
     /**
      * The maximum duration allowed for the decision tasks for this workflow
-     * execution. <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
+     * execution. <p>The duration is specified in seconds; an integer greater
+     * than or equal to 0. The value "NONE" can be used to specify unlimited
      * duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -710,12 +822,11 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration allowed for the decision tasks for this workflow
-     *         execution. <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
+     *         execution. <p>The duration is specified in seconds; an integer greater
+     *         than or equal to 0. The value "NONE" can be used to specify unlimited
      *         duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
@@ -732,13 +843,13 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      * @return The list of tags to associated with the child workflow execution.
      */
     public java.util.List<String> getTagList() {
-        if (tagList == null) {
-              tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
-              tagList.setAutoConstruct(true);
-        }
-        return tagList;
+      if (tagList == null) {
+        tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
+        tagList.setAutoConstruct(true);
+      }
+      return tagList;
     }
-    
+
     /**
      * The list of tags to associated with the child workflow execution.
      * <p>
@@ -760,6 +871,11 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
     /**
      * The list of tags to associated with the child workflow execution.
      * <p>
+     * <b>NOTE:</b> This method appends the values to the existing list (if
+     * any). Use {@link #setTagList(java.util.Collection)} or {@link
+     * #withTagList(java.util.Collection)} if you want to override the
+     * existing values.
+     * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
@@ -767,7 +883,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param tagList The list of tags to associated with the child workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withTagList(String... tagList) {
@@ -788,7 +904,7 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
      *
      * @param tagList The list of tags to associated with the child workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public StartChildWorkflowExecutionInitiatedEventAttributes withTagList(java.util.Collection<String> tagList) {
@@ -800,6 +916,54 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
             this.tagList = tagListCopy;
         }
 
+        return this;
+    }
+
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @return The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public String getLambdaRole() {
+        return lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public void setLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public StartChildWorkflowExecutionInitiatedEventAttributes withLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
         return this;
     }
 
@@ -821,10 +985,12 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
         if (getInput() != null) sb.append("Input: " + getInput() + ",");
         if (getExecutionStartToCloseTimeout() != null) sb.append("ExecutionStartToCloseTimeout: " + getExecutionStartToCloseTimeout() + ",");
         if (getTaskList() != null) sb.append("TaskList: " + getTaskList() + ",");
+        if (getTaskPriority() != null) sb.append("TaskPriority: " + getTaskPriority() + ",");
         if (getDecisionTaskCompletedEventId() != null) sb.append("DecisionTaskCompletedEventId: " + getDecisionTaskCompletedEventId() + ",");
         if (getChildPolicy() != null) sb.append("ChildPolicy: " + getChildPolicy() + ",");
         if (getTaskStartToCloseTimeout() != null) sb.append("TaskStartToCloseTimeout: " + getTaskStartToCloseTimeout() + ",");
-        if (getTagList() != null) sb.append("TagList: " + getTagList() );
+        if (getTagList() != null) sb.append("TagList: " + getTagList() + ",");
+        if (getLambdaRole() != null) sb.append("LambdaRole: " + getLambdaRole() );
         sb.append("}");
         return sb.toString();
     }
@@ -840,10 +1006,12 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
         hashCode = prime * hashCode + ((getInput() == null) ? 0 : getInput().hashCode()); 
         hashCode = prime * hashCode + ((getExecutionStartToCloseTimeout() == null) ? 0 : getExecutionStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getTaskList() == null) ? 0 : getTaskList().hashCode()); 
+        hashCode = prime * hashCode + ((getTaskPriority() == null) ? 0 : getTaskPriority().hashCode()); 
         hashCode = prime * hashCode + ((getDecisionTaskCompletedEventId() == null) ? 0 : getDecisionTaskCompletedEventId().hashCode()); 
         hashCode = prime * hashCode + ((getChildPolicy() == null) ? 0 : getChildPolicy().hashCode()); 
         hashCode = prime * hashCode + ((getTaskStartToCloseTimeout() == null) ? 0 : getTaskStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getTagList() == null) ? 0 : getTagList().hashCode()); 
+        hashCode = prime * hashCode + ((getLambdaRole() == null) ? 0 : getLambdaRole().hashCode()); 
         return hashCode;
     }
     
@@ -867,6 +1035,8 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
         if (other.getExecutionStartToCloseTimeout() != null && other.getExecutionStartToCloseTimeout().equals(this.getExecutionStartToCloseTimeout()) == false) return false; 
         if (other.getTaskList() == null ^ this.getTaskList() == null) return false;
         if (other.getTaskList() != null && other.getTaskList().equals(this.getTaskList()) == false) return false; 
+        if (other.getTaskPriority() == null ^ this.getTaskPriority() == null) return false;
+        if (other.getTaskPriority() != null && other.getTaskPriority().equals(this.getTaskPriority()) == false) return false; 
         if (other.getDecisionTaskCompletedEventId() == null ^ this.getDecisionTaskCompletedEventId() == null) return false;
         if (other.getDecisionTaskCompletedEventId() != null && other.getDecisionTaskCompletedEventId().equals(this.getDecisionTaskCompletedEventId()) == false) return false; 
         if (other.getChildPolicy() == null ^ this.getChildPolicy() == null) return false;
@@ -875,8 +1045,9 @@ public class StartChildWorkflowExecutionInitiatedEventAttributes implements Seri
         if (other.getTaskStartToCloseTimeout() != null && other.getTaskStartToCloseTimeout().equals(this.getTaskStartToCloseTimeout()) == false) return false; 
         if (other.getTagList() == null ^ this.getTagList() == null) return false;
         if (other.getTagList() != null && other.getTagList().equals(this.getTagList()) == false) return false; 
+        if (other.getLambdaRole() == null ^ this.getLambdaRole() == null) return false;
+        if (other.getLambdaRole() != null && other.getLambdaRole().equals(this.getLambdaRole()) == false) return false; 
         return true;
     }
-    
 }
     

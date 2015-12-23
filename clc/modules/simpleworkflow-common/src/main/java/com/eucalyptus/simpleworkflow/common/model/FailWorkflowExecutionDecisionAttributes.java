@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
@@ -49,14 +48,14 @@ import java.io.Serializable;
  * </p>
  * <p>
  * You can use IAM policies to control this decision's access to Amazon
- * SWF in much the same way as for the regular API:
+ * SWF resources as follows:
  * </p>
  * 
  * <ul>
  * <li>Use a <code>Resource</code> element with the domain name to limit
- * the decision to only specified domains.</li>
+ * the action to only specified domains.</li>
  * <li>Use an <code>Action</code> element to allow or deny permission to
- * specify this decision.</li>
+ * call this action.</li>
  * <li>You cannot use an IAM policy to constrain this action's
  * parameters.</li>
  * 
@@ -83,7 +82,7 @@ public class FailWorkflowExecutionDecisionAttributes implements Serializable {
     private String reason;
 
     /**
-     * Optional details of the failure.
+     * <i>Optional.</i> Details of the failure.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -125,7 +124,7 @@ public class FailWorkflowExecutionDecisionAttributes implements Serializable {
      *
      * @param reason A descriptive reason for the failure that may help in diagnostics.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public FailWorkflowExecutionDecisionAttributes withReason(String reason) {
@@ -134,40 +133,40 @@ public class FailWorkflowExecutionDecisionAttributes implements Serializable {
     }
 
     /**
-     * Optional details of the failure.
+     * <i>Optional.</i> Details of the failure.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional details of the failure.
+     * @return <i>Optional.</i> Details of the failure.
      */
     public String getDetails() {
         return details;
     }
     
     /**
-     * Optional details of the failure.
+     * <i>Optional.</i> Details of the failure.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param details Optional details of the failure.
+     * @param details <i>Optional.</i> Details of the failure.
      */
     public void setDetails(String details) {
         this.details = details;
     }
     
     /**
-     * Optional details of the failure.
+     * <i>Optional.</i> Details of the failure.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param details Optional details of the failure.
+     * @param details <i>Optional.</i> Details of the failure.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public FailWorkflowExecutionDecisionAttributes withDetails(String details) {

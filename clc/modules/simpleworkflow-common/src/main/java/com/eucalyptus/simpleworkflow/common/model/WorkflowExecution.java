@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
@@ -59,7 +58,7 @@ public class WorkflowExecution implements Serializable {
     private String workflowId;
 
     /**
-     * A system generated unique identifier for the workflow execution.
+     * A system-generated unique identifier for the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
@@ -102,7 +101,7 @@ public class WorkflowExecution implements Serializable {
      *
      * @param workflowId The user defined identifier associated with the workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecution withWorkflowId(String workflowId) {
@@ -111,40 +110,40 @@ public class WorkflowExecution implements Serializable {
     }
 
     /**
-     * A system generated unique identifier for the workflow execution.
+     * A system-generated unique identifier for the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @return A system generated unique identifier for the workflow execution.
+     * @return A system-generated unique identifier for the workflow execution.
      */
     public String getRunId() {
         return runId;
     }
     
     /**
-     * A system generated unique identifier for the workflow execution.
+     * A system-generated unique identifier for the workflow execution.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @param runId A system generated unique identifier for the workflow execution.
+     * @param runId A system-generated unique identifier for the workflow execution.
      */
     public void setRunId(String runId) {
         this.runId = runId;
     }
     
     /**
-     * A system generated unique identifier for the workflow execution.
+     * A system-generated unique identifier for the workflow execution.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @param runId A system generated unique identifier for the workflow execution.
+     * @param runId A system-generated unique identifier for the workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecution withRunId(String runId) {
@@ -194,6 +193,5 @@ public class WorkflowExecution implements Serializable {
         if (other.getRunId() != null && other.getRunId().equals(this.getRunId()) == false) return false; 
         return true;
     }
-    
 }
     

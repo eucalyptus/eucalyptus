@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,7 +42,7 @@ import java.io.Serializable;
  * Provides details of the <code>WorkflowExecutionFailed</code> event.
  * </p>
  */
-public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttributes {
+public class WorkflowExecutionFailedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * The descriptive reason provided for the failure (if any).
@@ -62,11 +61,11 @@ public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttr
     private String details;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>FailWorkflowExecution</code> decision to fail this execution.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events.
+     * the chain of events leading up to this event.
      */
     private Long decisionTaskCompletedEventId;
 
@@ -104,7 +103,7 @@ public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttr
      *
      * @param reason The descriptive reason provided for the failure (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionFailedEventAttributes withReason(String reason) {
@@ -146,7 +145,7 @@ public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttr
      *
      * @param details The details of the failure (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionFailedEventAttributes withDetails(String details) {
@@ -155,65 +154,60 @@ public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttr
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>FailWorkflowExecution</code> decision to fail this execution.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events.
+     * the chain of events leading up to this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>FailWorkflowExecution</code> decision to fail this execution.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events.
+     *         the chain of events leading up to this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>FailWorkflowExecution</code> decision to fail this execution.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events.
+     * the chain of events leading up to this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>FailWorkflowExecution</code> decision to fail this execution.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events.
+     *         the chain of events leading up to this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>FailWorkflowExecution</code> decision to fail this execution.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events.
+     * the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>FailWorkflowExecution</code> decision to fail this execution.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events.
+     *         the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionFailedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setWorkflowExecutionFailedEventAttributes( this );
     }
 
     /**
@@ -261,6 +255,11 @@ public class WorkflowExecutionFailedEventAttributes implements WorkflowEventAttr
         if (other.getDecisionTaskCompletedEventId() == null ^ this.getDecisionTaskCompletedEventId() == null) return false;
         if (other.getDecisionTaskCompletedEventId() != null && other.getDecisionTaskCompletedEventId().equals(this.getDecisionTaskCompletedEventId()) == false) return false; 
         return true;
+    }
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setWorkflowExecutionFailedEventAttributes(this);
     }
     
 }

@@ -19,27 +19,25 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#requestCancelWorkflowExecution(RequestCancelWorkflowExecutionRequest) RequestCancelWorkflowExecution operation}.
@@ -52,13 +50,13 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * event.
  * </p>
  * <p>
- * <b>NOTE:</b> If the runId is not specified, the
+ * <b>NOTE:</b>If the runId is not specified, the
  * WorkflowExecutionCancelRequested event is recorded in the history of
  * the current open workflow execution with the specified workflowId in
  * the domain.
  * </p>
  * <p>
- * <b>NOTE:</b> Because this action allows the workflow to properly clean
+ * <b>NOTE:</b>Because this action allows the workflow to properly clean
  * up and gracefully close, it should be used instead of
  * TerminateWorkflowExecution when possible.
  * </p>
@@ -82,16 +80,16 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
  *
  * @see com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#requestCancelWorkflowExecution(RequestCancelWorkflowExecutionRequest)
  */
-@PolicyAction( vendor = "swf", action = "requestcancelworkflowexecution" )
+@PolicyAction( vendor = "swf", action = "cancelworkflowexecution" )
 public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage implements Serializable {
 
     /**
@@ -157,7 +155,7 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      *
      * @param domain The name of the domain containing the workflow execution to cancel.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RequestCancelWorkflowExecutionRequest withDomain(String domain) {
@@ -199,7 +197,7 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      *
      * @param workflowId The workflowId of the workflow execution to cancel.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RequestCancelWorkflowExecutionRequest withWorkflowId(String workflowId) {
@@ -241,7 +239,7 @@ public class RequestCancelWorkflowExecutionRequest extends SimpleWorkflowMessage
      *
      * @param runId The runId of the workflow execution to cancel.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RequestCancelWorkflowExecutionRequest withRunId(String runId) {

@@ -19,32 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
 
 /**
  * <p>
  * Provides details of the <code>TimerFired</code> event.
  * </p>
  */
-public class TimerFiredEventAttributes implements WorkflowEventAttributes {
+public class TimerFiredEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
-     * The unique Id of the timer that fired.
+     * The unique ID of the timer that fired.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -52,47 +53,47 @@ public class TimerFiredEventAttributes implements WorkflowEventAttributes {
     private String timerId;
 
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      */
     private Long startedEventId;
 
     /**
-     * The unique Id of the timer that fired.
+     * The unique ID of the timer that fired.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return The unique Id of the timer that fired.
+     * @return The unique ID of the timer that fired.
      */
     public String getTimerId() {
         return timerId;
     }
     
     /**
-     * The unique Id of the timer that fired.
+     * The unique ID of the timer that fired.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that fired.
+     * @param timerId The unique ID of the timer that fired.
      */
     public void setTimerId(String timerId) {
         this.timerId = timerId;
     }
     
     /**
-     * The unique Id of the timer that fired.
+     * The unique ID of the timer that fired.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that fired.
+     * @param timerId The unique ID of the timer that fired.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerFiredEventAttributes withTimerId(String timerId) {
@@ -101,11 +102,11 @@ public class TimerFiredEventAttributes implements WorkflowEventAttributes {
     }
 
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      *
-     * @return The id of the <code>TimerStarted</code> event that was recorded when
+     * @return The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      */
@@ -114,11 +115,11 @@ public class TimerFiredEventAttributes implements WorkflowEventAttributes {
     }
     
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      *
-     * @param startedEventId The id of the <code>TimerStarted</code> event that was recorded when
+     * @param startedEventId The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      */
@@ -127,27 +128,22 @@ public class TimerFiredEventAttributes implements WorkflowEventAttributes {
     }
     
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The id of the <code>TimerStarted</code> event that was recorded when
+     * @param startedEventId The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerFiredEventAttributes withStartedEventId(Long startedEventId) {
         this.startedEventId = startedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setTimerFiredEventAttributes( this );
     }
 
     /**
@@ -192,6 +188,10 @@ public class TimerFiredEventAttributes implements WorkflowEventAttributes {
         if (other.getStartedEventId() != null && other.getStartedEventId().equals(this.getStartedEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setTimerFiredEventAttributes(this);
+    }
 }
     

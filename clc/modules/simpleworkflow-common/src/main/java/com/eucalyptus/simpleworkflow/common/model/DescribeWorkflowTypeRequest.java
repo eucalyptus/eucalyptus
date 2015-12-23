@@ -19,34 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
 
-
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#describeWorkflowType(DescribeWorkflowTypeRequest) DescribeWorkflowType operation}.
  * <p>
  * Returns information about the specified <i>workflow type</i> . This
  * includes configuration settings specified when the type was registered
- * and other information such as creation date, current status, etc.
+ * and other information such as creation date, current status, and so
+ * on.
  * </p>
  * <p>
  * <b>Access Control</b>
@@ -76,9 +75,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -138,7 +137,7 @@ public class DescribeWorkflowTypeRequest extends SimpleWorkflowMessage implement
      *
      * @param domain The name of the domain in which this workflow type is registered.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DescribeWorkflowTypeRequest withDomain(String domain) {
@@ -171,7 +170,7 @@ public class DescribeWorkflowTypeRequest extends SimpleWorkflowMessage implement
      *
      * @param workflowType The workflow type to describe.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public DescribeWorkflowTypeRequest withWorkflowType(WorkflowType workflowType) {
@@ -221,6 +220,6 @@ public class DescribeWorkflowTypeRequest extends SimpleWorkflowMessage implement
         if (other.getWorkflowType() != null && other.getWorkflowType().equals(this.getWorkflowType()) == false) return false; 
         return true;
     }
-    
+
 }
     

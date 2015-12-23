@@ -19,27 +19,25 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#countPendingDecisionTasks(CountPendingDecisionTasksRequest) CountPendingDecisionTasks operation}.
@@ -62,17 +60,17 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * the action to only specified domains.</li>
  * <li>Use an <code>Action</code> element to allow or deny permission to
  * call this action.</li>
- * <li>Use a <b>Condition</b> element with the
- * <code>swf:taskList.name</code> key to allow the action to access only
- * certain task lists.</li>
+ * <li>Constrain the <code>taskList.name</code> parameter by using a
+ * <b>Condition</b> element with the <code>swf:taskList.name</code> key
+ * to allow the action to access only certain task lists.</li>
  * 
  * </ul>
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -132,7 +130,7 @@ public class CountPendingDecisionTasksRequest extends SimpleWorkflowMessage impl
      *
      * @param domain The name of the domain that contains the task list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountPendingDecisionTasksRequest withDomain(String domain) {
@@ -165,7 +163,7 @@ public class CountPendingDecisionTasksRequest extends SimpleWorkflowMessage impl
      *
      * @param taskList The name of the task list.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CountPendingDecisionTasksRequest withTaskList(TaskList taskList) {
@@ -215,6 +213,5 @@ public class CountPendingDecisionTasksRequest extends SimpleWorkflowMessage impl
         if (other.getTaskList() != null && other.getTaskList().equals(this.getTaskList()) == false) return false; 
         return true;
     }
-    
 }
     

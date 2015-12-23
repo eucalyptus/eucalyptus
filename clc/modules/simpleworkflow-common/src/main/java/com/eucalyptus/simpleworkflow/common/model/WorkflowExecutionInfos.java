@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,17 +42,19 @@ import java.io.Serializable;
  * Contains a paginated list of information about workflow executions.
  * </p>
  */
-public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
-
+public class WorkflowExecutionInfos extends SimpleWorkflowMessage implements Serializable {
     /**
      * The list of workflow information structures.
      */
     private com.amazonaws.internal.ListWithAutoConstructFlag<WorkflowExecutionInfo> executionInfos;
 
     /**
-     * The token of the next page in the result. If set, the results have
-     * more than one page. The next page can be retrieved by repeating the
-     * request with this token and all other arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
@@ -66,11 +67,11 @@ public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
      * @return The list of workflow information structures.
      */
     public java.util.List<WorkflowExecutionInfo> getExecutionInfos() {
-        if (executionInfos == null) {
-              executionInfos = new com.amazonaws.internal.ListWithAutoConstructFlag<WorkflowExecutionInfo>();
-              executionInfos.setAutoConstruct(true);
-        }
-        return executionInfos;
+      if (executionInfos == null) {
+        executionInfos = new com.amazonaws.internal.ListWithAutoConstructFlag<WorkflowExecutionInfo>();
+        executionInfos.setAutoConstruct(true);
+      }
+      return executionInfos;
     }
     
     /**
@@ -91,11 +92,16 @@ public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
     /**
      * The list of workflow information structures.
      * <p>
+     * <b>NOTE:</b> This method appends the values to the existing list (if
+     * any). Use {@link #setExecutionInfos(java.util.Collection)} or {@link
+     * #withExecutionInfos(java.util.Collection)} if you want to override the
+     * existing values.
+     * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
      * @param executionInfos The list of workflow information structures.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionInfos withExecutionInfos(WorkflowExecutionInfo... executionInfos) {
@@ -113,7 +119,7 @@ public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
      *
      * @param executionInfos The list of workflow information structures.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionInfos withExecutionInfos(java.util.Collection<WorkflowExecutionInfo> executionInfos) {
@@ -129,52 +135,70 @@ public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
     }
 
     /**
-     * The token of the next page in the result. If set, the results have
-     * more than one page. The next page can be retrieved by repeating the
-     * request with this token and all other arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @return The token of the next page in the result. If set, the results have
-     *         more than one page. The next page can be retrieved by repeating the
-     *         request with this token and all other arguments unchanged.
+     * @return If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public String getNextPageToken() {
         return nextPageToken;
     }
     
     /**
-     * The token of the next page in the result. If set, the results have
-     * more than one page. The next page can be retrieved by repeating the
-     * request with this token and all other arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken The token of the next page in the result. If set, the results have
-     *         more than one page. The next page can be retrieved by repeating the
-     *         request with this token and all other arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      */
     public void setNextPageToken(String nextPageToken) {
         this.nextPageToken = nextPageToken;
     }
     
     /**
-     * The token of the next page in the result. If set, the results have
-     * more than one page. The next page can be retrieved by repeating the
-     * request with this token and all other arguments unchanged.
+     * If a <code>NextPageToken</code> was returned by a previous call, there
+     * are more results available. To retrieve the next page of results, make
+     * the call again using the returned token in <code>nextPageToken</code>.
+     * Keep all other arguments unchanged. <p>The configured
+     * <code>maximumPageSize</code> determines how many results can be
+     * returned in a single call.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 2048<br/>
      *
-     * @param nextPageToken The token of the next page in the result. If set, the results have
-     *         more than one page. The next page can be retrieved by repeating the
-     *         request with this token and all other arguments unchanged.
+     * @param nextPageToken If a <code>NextPageToken</code> was returned by a previous call, there
+     *         are more results available. To retrieve the next page of results, make
+     *         the call again using the returned token in <code>nextPageToken</code>.
+     *         Keep all other arguments unchanged. <p>The configured
+     *         <code>maximumPageSize</code> determines how many results can be
+     *         returned in a single call.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionInfos withNextPageToken(String nextPageToken) {
@@ -224,6 +248,6 @@ public class WorkflowExecutionInfos extends SimpleWorkflowMessage {
         if (other.getNextPageToken() != null && other.getNextPageToken().equals(this.getNextPageToken()) == false) return false; 
         return true;
     }
-    
+
 }
     

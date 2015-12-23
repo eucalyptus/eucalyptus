@@ -19,30 +19,30 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
 
 /**
  * <p>
  * Unit of work sent to an activity worker.
  * </p>
  */
-public class ActivityTask extends SimpleWorkflowMessage {
-
+public class ActivityTask extends SimpleWorkflowMessage implements Serializable {
     /**
      * The opaque string used as a handle on the task. This token is used by
      * workers to communicate progress and response information back to the
@@ -62,7 +62,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
     private String activityId;
 
     /**
-     * The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * The ID of the <code>ActivityTaskStarted</code> event recorded in the
      * history.
      */
     private Long startedEventId;
@@ -133,7 +133,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
      *         workers to communicate progress and response information back to the
      *         system about the task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withTaskToken(String taskToken) {
@@ -175,7 +175,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
      *
      * @param activityId The unique ID of the task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withActivityId(String activityId) {
@@ -184,10 +184,10 @@ public class ActivityTask extends SimpleWorkflowMessage {
     }
 
     /**
-     * The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * The ID of the <code>ActivityTaskStarted</code> event recorded in the
      * history.
      *
-     * @return The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * @return The ID of the <code>ActivityTaskStarted</code> event recorded in the
      *         history.
      */
     public Long getStartedEventId() {
@@ -195,10 +195,10 @@ public class ActivityTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * The ID of the <code>ActivityTaskStarted</code> event recorded in the
      * history.
      *
-     * @param startedEventId The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * @param startedEventId The ID of the <code>ActivityTaskStarted</code> event recorded in the
      *         history.
      */
     public void setStartedEventId(Long startedEventId) {
@@ -206,15 +206,15 @@ public class ActivityTask extends SimpleWorkflowMessage {
     }
     
     /**
-     * The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * The ID of the <code>ActivityTaskStarted</code> event recorded in the
      * history.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The id of the <code>ActivityTaskStarted</code> event recorded in the
+     * @param startedEventId The ID of the <code>ActivityTaskStarted</code> event recorded in the
      *         history.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withStartedEventId(Long startedEventId) {
@@ -247,7 +247,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
      *
      * @param workflowExecution The workflow execution that started this activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withWorkflowExecution(WorkflowExecution workflowExecution) {
@@ -280,7 +280,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
      *
      * @param activityType The type of this activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withActivityType(ActivityType activityType) {
@@ -334,7 +334,7 @@ public class ActivityTask extends SimpleWorkflowMessage {
      *         the input is user defined and should be meaningful to the activity
      *         implementation.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTask withInput(String input) {
@@ -400,6 +400,5 @@ public class ActivityTask extends SimpleWorkflowMessage {
         if (other.getInput() != null && other.getInput().equals(this.getInput()) == false) return false; 
         return true;
     }
-    
 }
     
