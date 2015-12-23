@@ -543,6 +543,8 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   ElasticLoadBalancingConnectionDrainingPolicy connectionDrainingPolicy;
   @Property
+  ElasticLoadBalancingConnectionSettings connectionSettings;
+  @Property
   Boolean crossZone;
   @Property
   ElasticLoadBalancingHealthCheckType healthCheck;
