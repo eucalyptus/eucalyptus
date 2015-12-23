@@ -105,6 +105,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
@@ -119,6 +120,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasFullName;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -230,6 +232,7 @@ public class Threads {
     private Integer                              numThreads = -1;
     private final StackTraceElement[]            creationPoint;
     private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
+    private final ReentrantReadWriteLock         limitLock = new ReentrantReadWriteLock();
     
     private ThreadPool( final String groupPrefix, final Integer threadCount ) {
       this( groupPrefix );
@@ -254,21 +257,21 @@ public class Threads {
     }
     
     public ThreadPool limitTo( final Integer numThreads ) {
-      if ( this.numThreads.equals( numThreads ) ) {
+      Integer thisNumThreads;
+      try ( final LockResource lock = LockResource.lock( limitLock.readLock() ) ) {
+        thisNumThreads = this.numThreads;
+      }
+      if ( thisNumThreads.equals( numThreads ) ) {
         return this;
       } else {
-        synchronized ( this ) {
-          if ( this.numThreads.equals( numThreads ) ) {
-            return this;
-          } else {
-            this.numThreads = numThreads;
-            final ExecutorService oldExec = this.pool;
-            this.pool = null;
-            if ( oldExec != null ) {
-              oldExec.shutdown( );
-            }
-            this.pool = this.makePool( );
+        try ( final LockResource lock = LockResource.lock( limitLock.writeLock() ) ) {
+          this.numThreads = numThreads;
+          final ExecutorService oldExec = this.pool;
+          this.pool = null;
+          if ( oldExec != null ) {
+            oldExec.shutdown( );
           }
+          this.pool = this.makePool( );
         }
       }
       return this;
@@ -295,7 +298,7 @@ public class Threads {
       }
     }
     
-    public ExecutorService makePool( ) {
+    private ExecutorService makePool( ) {
       ExecutorService newPool = ( this.numThreads == -1 )
         ? Executors.newCachedThreadPool( this )
         : Executors.newFixedThreadPool( this.numThreads, this );
