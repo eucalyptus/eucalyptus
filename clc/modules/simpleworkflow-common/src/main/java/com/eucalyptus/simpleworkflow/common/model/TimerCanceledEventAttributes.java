@@ -19,32 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
 
 /**
  * <p>
  * Provides details of the <code>TimerCanceled</code> event.
  * </p>
  */
-public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
+public class TimerCanceledEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
-     * The unique Id of the timer that was canceled.
+     * The unique ID of the timer that was canceled.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -52,55 +53,56 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
     private String timerId;
 
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      */
     private Long startedEventId;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>CancelTimer</code>
      * decision to cancel this timer. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      */
     private Long decisionTaskCompletedEventId;
 
     /**
-     * The unique Id of the timer that was canceled.
+     * The unique ID of the timer that was canceled.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return The unique Id of the timer that was canceled.
+     * @return The unique ID of the timer that was canceled.
      */
     public String getTimerId() {
         return timerId;
     }
     
     /**
-     * The unique Id of the timer that was canceled.
+     * The unique ID of the timer that was canceled.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that was canceled.
+     * @param timerId The unique ID of the timer that was canceled.
      */
     public void setTimerId(String timerId) {
         this.timerId = timerId;
     }
     
     /**
-     * The unique Id of the timer that was canceled.
+     * The unique ID of the timer that was canceled.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param timerId The unique Id of the timer that was canceled.
+     * @param timerId The unique ID of the timer that was canceled.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerCanceledEventAttributes withTimerId(String timerId) {
@@ -109,11 +111,11 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
     }
 
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      *
-     * @return The id of the <code>TimerStarted</code> event that was recorded when
+     * @return The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      */
@@ -122,11 +124,11 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
     }
     
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      *
-     * @param startedEventId The id of the <code>TimerStarted</code> event that was recorded when
+     * @param startedEventId The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      */
@@ -135,17 +137,17 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
     }
     
     /**
-     * The id of the <code>TimerStarted</code> event that was recorded when
+     * The ID of the <code>TimerStarted</code> event that was recorded when
      * this timer was started. This information can be useful for diagnosing
      * problems by tracing back the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The id of the <code>TimerStarted</code> event that was recorded when
+     * @param startedEventId The ID of the <code>TimerStarted</code> event that was recorded when
      *         this timer was started. This information can be useful for diagnosing
      *         problems by tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerCanceledEventAttributes withStartedEventId(Long startedEventId) {
@@ -154,59 +156,60 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>CancelTimer</code>
      * decision to cancel this timer. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>CancelTimer</code>
      *         decision to cancel this timer. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>CancelTimer</code>
      * decision to cancel this timer. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>CancelTimer</code>
      *         decision to cancel this timer. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the <code>CancelTimer</code>
      * decision to cancel this timer. This information can be useful for
-     * diagnosing problems by tracing back the cause of events.
+     * diagnosing problems by tracing back the chain of events leading up to
+     * this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the <code>CancelTimer</code>
      *         decision to cancel this timer. This information can be useful for
-     *         diagnosing problems by tracing back the cause of events.
+     *         diagnosing problems by tracing back the chain of events leading up to
+     *         this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TimerCanceledEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setTimerCanceledEventAttributes( this );
     }
 
     /**
@@ -255,6 +258,10 @@ public class TimerCanceledEventAttributes implements WorkflowEventAttributes {
         if (other.getDecisionTaskCompletedEventId() != null && other.getDecisionTaskCompletedEventId().equals(this.getDecisionTaskCompletedEventId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setTimerCanceledEventAttributes(this);
+    }
 }
     

@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -65,16 +64,16 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
     private String result;
 
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this child workflow execution. This
-     * information can be useful for diagnosing problems by tracing back the
-     * chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this child workflow execution. This information can be useful
+     * for diagnosing problems by tracing back the chain of events leading up
+     * to this event.
      */
     private Long initiatedEventId;
 
     /**
-     * The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * The ID of the <code>ChildWorkflowExecutionStarted</code> event
      * recorded when this child workflow execution was started. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event.
@@ -106,7 +105,7 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
      *
      * @param workflowExecution The child workflow execution that was completed.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ChildWorkflowExecutionCompletedEventAttributes withWorkflowExecution(WorkflowExecution workflowExecution) {
@@ -139,7 +138,7 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
      *
      * @param workflowType The type of the child workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ChildWorkflowExecutionCompletedEventAttributes withWorkflowType(WorkflowType workflowType) {
@@ -181,7 +180,7 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
      *
      * @param result The result of the child workflow execution (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ChildWorkflowExecutionCompletedEventAttributes withResult(String result) {
@@ -190,55 +189,55 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
     }
 
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this child workflow execution. This
-     * information can be useful for diagnosing problems by tracing back the
-     * chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this child workflow execution. This information can be useful
+     * for diagnosing problems by tracing back the chain of events leading up
+     * to this event.
      *
-     * @return The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this child workflow execution. This
-     *         information can be useful for diagnosing problems by tracing back the
-     *         chain of events leading up to this event.
+     * @return The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this child workflow execution. This information can be useful
+     *         for diagnosing problems by tracing back the chain of events leading up
+     *         to this event.
      */
     public Long getInitiatedEventId() {
         return initiatedEventId;
     }
     
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this child workflow execution. This
-     * information can be useful for diagnosing problems by tracing back the
-     * chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this child workflow execution. This information can be useful
+     * for diagnosing problems by tracing back the chain of events leading up
+     * to this event.
      *
-     * @param initiatedEventId The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this child workflow execution. This
-     *         information can be useful for diagnosing problems by tracing back the
-     *         chain of events leading up to this event.
+     * @param initiatedEventId The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this child workflow execution. This information can be useful
+     *         for diagnosing problems by tracing back the chain of events leading up
+     *         to this event.
      */
     public void setInitiatedEventId(Long initiatedEventId) {
         this.initiatedEventId = initiatedEventId;
     }
     
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this child workflow execution. This
-     * information can be useful for diagnosing problems by tracing back the
-     * chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this child workflow execution. This information can be useful
+     * for diagnosing problems by tracing back the chain of events leading up
+     * to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param initiatedEventId The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this child workflow execution. This
-     *         information can be useful for diagnosing problems by tracing back the
-     *         chain of events leading up to this event.
+     * @param initiatedEventId The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this child workflow execution. This information can be useful
+     *         for diagnosing problems by tracing back the chain of events leading up
+     *         to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ChildWorkflowExecutionCompletedEventAttributes withInitiatedEventId(Long initiatedEventId) {
@@ -247,12 +246,12 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
     }
 
     /**
-     * The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * The ID of the <code>ChildWorkflowExecutionStarted</code> event
      * recorded when this child workflow execution was started. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event.
      *
-     * @return The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * @return The ID of the <code>ChildWorkflowExecutionStarted</code> event
      *         recorded when this child workflow execution was started. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event.
@@ -262,12 +261,12 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
     }
     
     /**
-     * The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * The ID of the <code>ChildWorkflowExecutionStarted</code> event
      * recorded when this child workflow execution was started. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event.
      *
-     * @param startedEventId The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * @param startedEventId The ID of the <code>ChildWorkflowExecutionStarted</code> event
      *         recorded when this child workflow execution was started. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event.
@@ -277,19 +276,19 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
     }
     
     /**
-     * The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * The ID of the <code>ChildWorkflowExecutionStarted</code> event
      * recorded when this child workflow execution was started. This
      * information can be useful for diagnosing problems by tracing back the
      * chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param startedEventId The Id of the <code>ChildWorkflowExecutionStarted</code> event
+     * @param startedEventId The ID of the <code>ChildWorkflowExecutionStarted</code> event
      *         recorded when this child workflow execution was started. This
      *         information can be useful for diagnosing problems by tracing back the
      *         chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ChildWorkflowExecutionCompletedEventAttributes withStartedEventId(Long startedEventId) {
@@ -351,6 +350,5 @@ public class ChildWorkflowExecutionCompletedEventAttributes implements Serializa
         if (other.getStartedEventId() != null && other.getStartedEventId().equals(this.getStartedEventId()) == false) return false; 
         return true;
     }
-    
 }
     

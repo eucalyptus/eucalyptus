@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -104,7 +103,7 @@ public class ActivityTypeInfo implements Serializable {
      *
      * @param activityType The <a>ActivityType</a> type structure representing the activity type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTypeInfo withActivityType(ActivityType activityType) {
@@ -150,7 +149,7 @@ public class ActivityTypeInfo implements Serializable {
      *
      * @param status The current status of the activity type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see RegistrationStatus
@@ -184,7 +183,7 @@ public class ActivityTypeInfo implements Serializable {
      *
      * @param status The current status of the activity type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see RegistrationStatus
@@ -234,7 +233,7 @@ public class ActivityTypeInfo implements Serializable {
      * @param description The description of the activity type provided in
      *         <a>RegisterActivityType</a>.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTypeInfo withDescription(String description) {
@@ -273,7 +272,7 @@ public class ActivityTypeInfo implements Serializable {
      * @param creationDate The date and time this activity type was created through
      *         <a>RegisterActivityType</a>.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTypeInfo withCreationDate(java.util.Date creationDate) {
@@ -312,7 +311,7 @@ public class ActivityTypeInfo implements Serializable {
      * @param deprecationDate If DEPRECATED, the date and time <a>DeprecateActivityType</a> was
      *         called.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTypeInfo withDeprecationDate(java.util.Date deprecationDate) {
@@ -374,6 +373,5 @@ public class ActivityTypeInfo implements Serializable {
         if (other.getDeprecationDate() != null && other.getDeprecationDate().equals(this.getDeprecationDate()) == false) return false; 
         return true;
     }
-    
 }
     

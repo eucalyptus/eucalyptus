@@ -19,27 +19,24 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.model;
 
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package com.eucalyptus.simpleworkflow.common.model;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
-
 
 /**
  * Container for the parameters to the {@link com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow#registerActivityType(RegisterActivityTypeRequest) RegisterActivityType operation}.
@@ -48,7 +45,7 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * settings in the specified domain.
  * </p>
  * <p>
- * <b>IMPORTANT:</b> A TypeAlreadyExists fault is returned if the type
+ * <b>IMPORTANT:</b>A TypeAlreadyExists fault is returned if the type
  * already exists in the domain. You cannot change any configuration
  * settings of the type after its registration, and it must be registered
  * as a new version.
@@ -69,8 +66,8 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <li>Constrain the following parameters by using a
  * <code>Condition</code> element with the appropriate keys.
  * <ul>
- * <li> <code>defaultTaskList</code> : String constraint. The key is
- * <code>swf:defaultTaskList.name</code> .</li>
+ * <li> <code>defaultTaskList.name</code> : String constraint. The key
+ * is <code>swf:defaultTaskList.name</code> .</li>
  * <li> <code>name</code> : String constraint. The key is
  * <code>swf:name</code> .</li>
  * <li> <code>version</code> : String constraint. The key is
@@ -83,9 +80,9 @@ import com.eucalyptus.auth.policy.annotation.PolicyAction;
  * <p>
  * If the caller does not have sufficient permissions to invoke the
  * action, or the parameter values fall outside the specified
- * constraints, the action fails by throwing
- * <code>OperationNotPermitted</code> . For details and example IAM
- * policies, see
+ * constraints, the action fails. The associated event attribute's
+ * <b>cause</b> parameter will be set to OPERATION_NOT_PERMITTED. For
+ * details and example IAM policies, see
  * <a href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/swf-dev-iam.html"> Using IAM to Manage Access to Amazon SWF Workflows </a>
  * .
  * </p>
@@ -120,9 +117,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     private String name;
 
     /**
-     * The version of the activity type. <note> The activity type consists of
+     * The version of the activity type. <note>The activity type consists of
      * the name and version, the combination of which must be unique within
-     * the domain. </note> <p>The specified string must not start or end with
+     * the domain.</note> <p>The specified string must not start or end with
      * whitespace. It must not contain a <code>:</code> (colon),
      * <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      * characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -148,10 +145,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a worker can take
      * to process tasks of this activity type. This default can be overridden
      * when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -165,15 +161,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      * activity task is automatically timed out. This default can be
      * overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     * worker subsequently attempts to record a heartbeat or returns a
-     * result, the activity worker receives an <code>UnknownResource</code>
-     * fault. In this case, Amazon SWF no longer considers the activity task
-     * to be valid; the activity worker should clean up the activity task.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
-     * duration.
+     * <code>ScheduleActivityTask</code> decision. If the activity worker
+     * subsequently attempts to record a heartbeat or returns a result, the
+     * activity worker receives an <code>UnknownResource</code> fault. In
+     * this case, Amazon SWF no longer considers the activity task to be
+     * valid; the activity worker should clean up the activity task. <p>The
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -185,18 +179,34 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default task list to use for scheduling tasks of
      * this activity type. This default task list is used if a task list is
      * not provided when a task is scheduled through the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>.
+     * <code>ScheduleActivityTask</code> decision.
      */
     private TaskList defaultTaskList;
+
+    /**
+     * The default task priority to assign to the activity type. If not
+     * assigned, then "0" will be used. Valid values are integers that range
+     * from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     */
+    @FieldRegex( FieldRegexValue.INT_MIN_MAX )
+    private String defaultTaskPriority;
 
     /**
      * If set, specifies the default maximum duration that a task of this
      * activity type can wait before being assigned to a worker. This default
      * can be overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -207,11 +217,10 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     /**
      * If set, specifies the default maximum duration for a task of this
      * activity type. This default can be overridden when scheduling an
-     * activity task using the <code>ScheduleActivityTask</code>
-     * <a>Decision</a>. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
-     * unlimited duration.
+     * activity task using the <code>ScheduleActivityTask</code> decision.
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
+     * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -253,7 +262,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *
      * @param domain The name of the domain in which this activity is to be registered.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDomain(String domain) {
@@ -319,7 +328,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *         (vertical bar), or any control characters (\u0000-\u001f | \u007f -
      *         \u009f). Also, it must not contain the literal string "arn".
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withName(String name) {
@@ -328,9 +337,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     }
 
     /**
-     * The version of the activity type. <note> The activity type consists of
+     * The version of the activity type. <note>The activity type consists of
      * the name and version, the combination of which must be unique within
-     * the domain. </note> <p>The specified string must not start or end with
+     * the domain.</note> <p>The specified string must not start or end with
      * whitespace. It must not contain a <code>:</code> (colon),
      * <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      * characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -339,9 +348,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @return The version of the activity type. <note> The activity type consists of
+     * @return The version of the activity type. <note>The activity type consists of
      *         the name and version, the combination of which must be unique within
-     *         the domain. </note> <p>The specified string must not start or end with
+     *         the domain.</note> <p>The specified string must not start or end with
      *         whitespace. It must not contain a <code>:</code> (colon),
      *         <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      *         characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -352,9 +361,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     }
     
     /**
-     * The version of the activity type. <note> The activity type consists of
+     * The version of the activity type. <note>The activity type consists of
      * the name and version, the combination of which must be unique within
-     * the domain. </note> <p>The specified string must not start or end with
+     * the domain.</note> <p>The specified string must not start or end with
      * whitespace. It must not contain a <code>:</code> (colon),
      * <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      * characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -363,9 +372,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @param version The version of the activity type. <note> The activity type consists of
+     * @param version The version of the activity type. <note>The activity type consists of
      *         the name and version, the combination of which must be unique within
-     *         the domain. </note> <p>The specified string must not start or end with
+     *         the domain.</note> <p>The specified string must not start or end with
      *         whitespace. It must not contain a <code>:</code> (colon),
      *         <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      *         characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -376,9 +385,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     }
     
     /**
-     * The version of the activity type. <note> The activity type consists of
+     * The version of the activity type. <note>The activity type consists of
      * the name and version, the combination of which must be unique within
-     * the domain. </note> <p>The specified string must not start or end with
+     * the domain.</note> <p>The specified string must not start or end with
      * whitespace. It must not contain a <code>:</code> (colon),
      * <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      * characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
@@ -389,15 +398,15 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 64<br/>
      *
-     * @param version The version of the activity type. <note> The activity type consists of
+     * @param version The version of the activity type. <note>The activity type consists of
      *         the name and version, the combination of which must be unique within
-     *         the domain. </note> <p>The specified string must not start or end with
+     *         the domain.</note> <p>The specified string must not start or end with
      *         whitespace. It must not contain a <code>:</code> (colon),
      *         <code>/</code> (slash), <code>|</code> (vertical bar), or any control
      *         characters (\u0000-\u001f | \u007f - \u009f). Also, it must not
      *         contain the literal string "arn".
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withVersion(String version) {
@@ -439,7 +448,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *
      * @param description A textual description of the activity type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDescription(String description) {
@@ -451,10 +460,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a worker can take
      * to process tasks of this activity type. This default can be overridden
      * when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -462,10 +470,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @return If set, specifies the default maximum duration that a worker can take
      *         to process tasks of this activity type. This default can be overridden
      *         when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public String getDefaultTaskStartToCloseTimeout() {
         return defaultTaskStartToCloseTimeout;
@@ -475,10 +482,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a worker can take
      * to process tasks of this activity type. This default can be overridden
      * when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -486,10 +492,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @param defaultTaskStartToCloseTimeout If set, specifies the default maximum duration that a worker can take
      *         to process tasks of this activity type. This default can be overridden
      *         when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public void setDefaultTaskStartToCloseTimeout(String defaultTaskStartToCloseTimeout) {
         this.defaultTaskStartToCloseTimeout = defaultTaskStartToCloseTimeout;
@@ -499,10 +504,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a worker can take
      * to process tasks of this activity type. This default can be overridden
      * when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -512,12 +516,11 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @param defaultTaskStartToCloseTimeout If set, specifies the default maximum duration that a worker can take
      *         to process tasks of this activity type. This default can be overridden
      *         when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDefaultTaskStartToCloseTimeout(String defaultTaskStartToCloseTimeout) {
@@ -531,15 +534,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      * activity task is automatically timed out. This default can be
      * overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     * worker subsequently attempts to record a heartbeat or returns a
-     * result, the activity worker receives an <code>UnknownResource</code>
-     * fault. In this case, Amazon SWF no longer considers the activity task
-     * to be valid; the activity worker should clean up the activity task.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
-     * duration.
+     * <code>ScheduleActivityTask</code> decision. If the activity worker
+     * subsequently attempts to record a heartbeat or returns a result, the
+     * activity worker receives an <code>UnknownResource</code> fault. In
+     * this case, Amazon SWF no longer considers the activity task to be
+     * valid; the activity worker should clean up the activity task. <p>The
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -549,15 +550,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *         <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      *         activity task is automatically timed out. This default can be
      *         overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     *         worker subsequently attempts to record a heartbeat or returns a
-     *         result, the activity worker receives an <code>UnknownResource</code>
-     *         fault. In this case, Amazon SWF no longer considers the activity task
-     *         to be valid; the activity worker should clean up the activity task.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
-     *         duration.
+     *         <code>ScheduleActivityTask</code> decision. If the activity worker
+     *         subsequently attempts to record a heartbeat or returns a result, the
+     *         activity worker receives an <code>UnknownResource</code> fault. In
+     *         this case, Amazon SWF no longer considers the activity task to be
+     *         valid; the activity worker should clean up the activity task. <p>The
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public String getDefaultTaskHeartbeatTimeout() {
         return defaultTaskHeartbeatTimeout;
@@ -569,15 +568,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      * activity task is automatically timed out. This default can be
      * overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     * worker subsequently attempts to record a heartbeat or returns a
-     * result, the activity worker receives an <code>UnknownResource</code>
-     * fault. In this case, Amazon SWF no longer considers the activity task
-     * to be valid; the activity worker should clean up the activity task.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
-     * duration.
+     * <code>ScheduleActivityTask</code> decision. If the activity worker
+     * subsequently attempts to record a heartbeat or returns a result, the
+     * activity worker receives an <code>UnknownResource</code> fault. In
+     * this case, Amazon SWF no longer considers the activity task to be
+     * valid; the activity worker should clean up the activity task. <p>The
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -587,15 +584,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *         <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      *         activity task is automatically timed out. This default can be
      *         overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     *         worker subsequently attempts to record a heartbeat or returns a
-     *         result, the activity worker receives an <code>UnknownResource</code>
-     *         fault. In this case, Amazon SWF no longer considers the activity task
-     *         to be valid; the activity worker should clean up the activity task.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
-     *         duration.
+     *         <code>ScheduleActivityTask</code> decision. If the activity worker
+     *         subsequently attempts to record a heartbeat or returns a result, the
+     *         activity worker receives an <code>UnknownResource</code> fault. In
+     *         this case, Amazon SWF no longer considers the activity task to be
+     *         valid; the activity worker should clean up the activity task. <p>The
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public void setDefaultTaskHeartbeatTimeout(String defaultTaskHeartbeatTimeout) {
         this.defaultTaskHeartbeatTimeout = defaultTaskHeartbeatTimeout;
@@ -607,15 +602,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      * activity task is automatically timed out. This default can be
      * overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     * worker subsequently attempts to record a heartbeat or returns a
-     * result, the activity worker receives an <code>UnknownResource</code>
-     * fault. In this case, Amazon SWF no longer considers the activity task
-     * to be valid; the activity worker should clean up the activity task.
-     * <p>The valid values are integers greater than or equal to
-     * <code>0</code>. An integer value can be used to specify the duration
-     * in seconds while <code>NONE</code> can be used to specify unlimited
-     * duration.
+     * <code>ScheduleActivityTask</code> decision. If the activity worker
+     * subsequently attempts to record a heartbeat or returns a result, the
+     * activity worker receives an <code>UnknownResource</code> fault. In
+     * this case, Amazon SWF no longer considers the activity task to be
+     * valid; the activity worker should clean up the activity task. <p>The
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -627,17 +620,15 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *         <a>RecordActivityTaskHeartbeat</a>. If the timeout is exceeded, the
      *         activity task is automatically timed out. This default can be
      *         overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. If the activity
-     *         worker subsequently attempts to record a heartbeat or returns a
-     *         result, the activity worker receives an <code>UnknownResource</code>
-     *         fault. In this case, Amazon SWF no longer considers the activity task
-     *         to be valid; the activity worker should clean up the activity task.
-     *         <p>The valid values are integers greater than or equal to
-     *         <code>0</code>. An integer value can be used to specify the duration
-     *         in seconds while <code>NONE</code> can be used to specify unlimited
-     *         duration.
+     *         <code>ScheduleActivityTask</code> decision. If the activity worker
+     *         subsequently attempts to record a heartbeat or returns a result, the
+     *         activity worker receives an <code>UnknownResource</code> fault. In
+     *         this case, Amazon SWF no longer considers the activity task to be
+     *         valid; the activity worker should clean up the activity task. <p>The
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDefaultTaskHeartbeatTimeout(String defaultTaskHeartbeatTimeout) {
@@ -649,12 +640,12 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default task list to use for scheduling tasks of
      * this activity type. This default task list is used if a task list is
      * not provided when a task is scheduled through the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>.
+     * <code>ScheduleActivityTask</code> decision.
      *
      * @return If set, specifies the default task list to use for scheduling tasks of
      *         this activity type. This default task list is used if a task list is
      *         not provided when a task is scheduled through the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>.
+     *         <code>ScheduleActivityTask</code> decision.
      */
     public TaskList getDefaultTaskList() {
         return defaultTaskList;
@@ -664,12 +655,12 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default task list to use for scheduling tasks of
      * this activity type. This default task list is used if a task list is
      * not provided when a task is scheduled through the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>.
+     * <code>ScheduleActivityTask</code> decision.
      *
      * @param defaultTaskList If set, specifies the default task list to use for scheduling tasks of
      *         this activity type. This default task list is used if a task list is
      *         not provided when a task is scheduled through the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>.
+     *         <code>ScheduleActivityTask</code> decision.
      */
     public void setDefaultTaskList(TaskList defaultTaskList) {
         this.defaultTaskList = defaultTaskList;
@@ -679,16 +670,16 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default task list to use for scheduling tasks of
      * this activity type. This default task list is used if a task list is
      * not provided when a task is scheduled through the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>.
+     * <code>ScheduleActivityTask</code> decision.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
      * @param defaultTaskList If set, specifies the default task list to use for scheduling tasks of
      *         this activity type. This default task list is used if a task list is
      *         not provided when a task is scheduled through the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>.
+     *         <code>ScheduleActivityTask</code> decision.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDefaultTaskList(TaskList defaultTaskList) {
@@ -697,13 +688,102 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     }
 
     /**
+     * The default task priority to assign to the activity type. If not
+     * assigned, then "0" will be used. Valid values are integers that range
+     * from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @return The default task priority to assign to the activity type. If not
+     *         assigned, then "0" will be used. Valid values are integers that range
+     *         from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public String getDefaultTaskPriority() {
+        return defaultTaskPriority;
+    }
+    
+    /**
+     * The default task priority to assign to the activity type. If not
+     * assigned, then "0" will be used. Valid values are integers that range
+     * from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param defaultTaskPriority The default task priority to assign to the activity type. If not
+     *         assigned, then "0" will be used. Valid values are integers that range
+     *         from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public void setDefaultTaskPriority(String defaultTaskPriority) {
+        this.defaultTaskPriority = defaultTaskPriority;
+    }
+    
+    /**
+     * The default task priority to assign to the activity type. If not
+     * assigned, then "0" will be used. Valid values are integers that range
+     * from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     * <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     * higher priority. <p>For more information about setting task priority,
+     * see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param defaultTaskPriority The default task priority to assign to the activity type. If not
+     *         assigned, then "0" will be used. Valid values are integers that range
+     *         from Java's <code>Integer.MIN_VALUE</code> (-2147483648) to
+     *         <code>Integer.MAX_VALUE</code> (2147483647). Higher numbers indicate
+     *         higher priority. <p>For more information about setting task priority,
+     *         see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public RegisterActivityTypeRequest withDefaultTaskPriority(String defaultTaskPriority) {
+        this.defaultTaskPriority = defaultTaskPriority;
+        return this;
+    }
+
+    /**
      * If set, specifies the default maximum duration that a task of this
      * activity type can wait before being assigned to a worker. This default
      * can be overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -711,10 +791,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @return If set, specifies the default maximum duration that a task of this
      *         activity type can wait before being assigned to a worker. This default
      *         can be overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public String getDefaultTaskScheduleToStartTimeout() {
         return defaultTaskScheduleToStartTimeout;
@@ -724,10 +803,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a task of this
      * activity type can wait before being assigned to a worker. This default
      * can be overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -735,10 +813,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @param defaultTaskScheduleToStartTimeout If set, specifies the default maximum duration that a task of this
      *         activity type can wait before being assigned to a worker. This default
      *         can be overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public void setDefaultTaskScheduleToStartTimeout(String defaultTaskScheduleToStartTimeout) {
         this.defaultTaskScheduleToStartTimeout = defaultTaskScheduleToStartTimeout;
@@ -748,10 +825,9 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * If set, specifies the default maximum duration that a task of this
      * activity type can wait before being assigned to a worker. This default
      * can be overridden when scheduling an activity task using the
-     * <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * <code>ScheduleActivityTask</code> decision. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -761,12 +837,11 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      * @param defaultTaskScheduleToStartTimeout If set, specifies the default maximum duration that a task of this
      *         activity type can wait before being assigned to a worker. This default
      *         can be overridden when scheduling an activity task using the
-     *         <code>ScheduleActivityTask</code> <a>Decision</a>. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     *         <code>ScheduleActivityTask</code> decision. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDefaultTaskScheduleToStartTimeout(String defaultTaskScheduleToStartTimeout) {
@@ -777,22 +852,20 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     /**
      * If set, specifies the default maximum duration for a task of this
      * activity type. This default can be overridden when scheduling an
-     * activity task using the <code>ScheduleActivityTask</code>
-     * <a>Decision</a>. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
-     * unlimited duration.
+     * activity task using the <code>ScheduleActivityTask</code> decision.
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
+     * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @return If set, specifies the default maximum duration for a task of this
      *         activity type. This default can be overridden when scheduling an
-     *         activity task using the <code>ScheduleActivityTask</code>
-     *         <a>Decision</a>. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
-     *         unlimited duration.
+     *         activity task using the <code>ScheduleActivityTask</code> decision.
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
+     *         duration.
      */
     public String getDefaultTaskScheduleToCloseTimeout() {
         return defaultTaskScheduleToCloseTimeout;
@@ -801,22 +874,20 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     /**
      * If set, specifies the default maximum duration for a task of this
      * activity type. This default can be overridden when scheduling an
-     * activity task using the <code>ScheduleActivityTask</code>
-     * <a>Decision</a>. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
-     * unlimited duration.
+     * activity task using the <code>ScheduleActivityTask</code> decision.
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
+     * duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @param defaultTaskScheduleToCloseTimeout If set, specifies the default maximum duration for a task of this
      *         activity type. This default can be overridden when scheduling an
-     *         activity task using the <code>ScheduleActivityTask</code>
-     *         <a>Decision</a>. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
-     *         unlimited duration.
+     *         activity task using the <code>ScheduleActivityTask</code> decision.
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
+     *         duration.
      */
     public void setDefaultTaskScheduleToCloseTimeout(String defaultTaskScheduleToCloseTimeout) {
         this.defaultTaskScheduleToCloseTimeout = defaultTaskScheduleToCloseTimeout;
@@ -825,11 +896,10 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
     /**
      * If set, specifies the default maximum duration for a task of this
      * activity type. This default can be overridden when scheduling an
-     * activity task using the <code>ScheduleActivityTask</code>
-     * <a>Decision</a>. <p>The valid values are integers greater than or
-     * equal to <code>0</code>. An integer value can be used to specify the
-     * duration in seconds while <code>NONE</code> can be used to specify
-     * unlimited duration.
+     * activity task using the <code>ScheduleActivityTask</code> decision.
+     * <p>The duration is specified in seconds; an integer greater than or
+     * equal to 0. The value "NONE" can be used to specify unlimited
+     * duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -838,13 +908,12 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
      *
      * @param defaultTaskScheduleToCloseTimeout If set, specifies the default maximum duration for a task of this
      *         activity type. This default can be overridden when scheduling an
-     *         activity task using the <code>ScheduleActivityTask</code>
-     *         <a>Decision</a>. <p>The valid values are integers greater than or
-     *         equal to <code>0</code>. An integer value can be used to specify the
-     *         duration in seconds while <code>NONE</code> can be used to specify
-     *         unlimited duration.
+     *         activity task using the <code>ScheduleActivityTask</code> decision.
+     *         <p>The duration is specified in seconds; an integer greater than or
+     *         equal to 0. The value "NONE" can be used to specify unlimited
+     *         duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public RegisterActivityTypeRequest withDefaultTaskScheduleToCloseTimeout(String defaultTaskScheduleToCloseTimeout) {
@@ -871,6 +940,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
         if (getDefaultTaskStartToCloseTimeout() != null) sb.append("DefaultTaskStartToCloseTimeout: " + getDefaultTaskStartToCloseTimeout() + ",");
         if (getDefaultTaskHeartbeatTimeout() != null) sb.append("DefaultTaskHeartbeatTimeout: " + getDefaultTaskHeartbeatTimeout() + ",");
         if (getDefaultTaskList() != null) sb.append("DefaultTaskList: " + getDefaultTaskList() + ",");
+        if (getDefaultTaskPriority() != null) sb.append("DefaultTaskPriority: " + getDefaultTaskPriority() + ",");
         if (getDefaultTaskScheduleToStartTimeout() != null) sb.append("DefaultTaskScheduleToStartTimeout: " + getDefaultTaskScheduleToStartTimeout() + ",");
         if (getDefaultTaskScheduleToCloseTimeout() != null) sb.append("DefaultTaskScheduleToCloseTimeout: " + getDefaultTaskScheduleToCloseTimeout() );
         sb.append("}");
@@ -889,6 +959,7 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
         hashCode = prime * hashCode + ((getDefaultTaskStartToCloseTimeout() == null) ? 0 : getDefaultTaskStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getDefaultTaskHeartbeatTimeout() == null) ? 0 : getDefaultTaskHeartbeatTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getDefaultTaskList() == null) ? 0 : getDefaultTaskList().hashCode()); 
+        hashCode = prime * hashCode + ((getDefaultTaskPriority() == null) ? 0 : getDefaultTaskPriority().hashCode()); 
         hashCode = prime * hashCode + ((getDefaultTaskScheduleToStartTimeout() == null) ? 0 : getDefaultTaskScheduleToStartTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getDefaultTaskScheduleToCloseTimeout() == null) ? 0 : getDefaultTaskScheduleToCloseTimeout().hashCode()); 
         return hashCode;
@@ -916,12 +987,13 @@ public class RegisterActivityTypeRequest extends SimpleWorkflowMessage implement
         if (other.getDefaultTaskHeartbeatTimeout() != null && other.getDefaultTaskHeartbeatTimeout().equals(this.getDefaultTaskHeartbeatTimeout()) == false) return false; 
         if (other.getDefaultTaskList() == null ^ this.getDefaultTaskList() == null) return false;
         if (other.getDefaultTaskList() != null && other.getDefaultTaskList().equals(this.getDefaultTaskList()) == false) return false; 
+        if (other.getDefaultTaskPriority() == null ^ this.getDefaultTaskPriority() == null) return false;
+        if (other.getDefaultTaskPriority() != null && other.getDefaultTaskPriority().equals(this.getDefaultTaskPriority()) == false) return false; 
         if (other.getDefaultTaskScheduleToStartTimeout() == null ^ this.getDefaultTaskScheduleToStartTimeout() == null) return false;
         if (other.getDefaultTaskScheduleToStartTimeout() != null && other.getDefaultTaskScheduleToStartTimeout().equals(this.getDefaultTaskScheduleToStartTimeout()) == false) return false; 
         if (other.getDefaultTaskScheduleToCloseTimeout() == null ^ this.getDefaultTaskScheduleToCloseTimeout() == null) return false;
         if (other.getDefaultTaskScheduleToCloseTimeout() != null && other.getDefaultTaskScheduleToCloseTimeout().equals(this.getDefaultTaskScheduleToCloseTimeout()) == false) return false; 
         return true;
     }
-    
 }
     

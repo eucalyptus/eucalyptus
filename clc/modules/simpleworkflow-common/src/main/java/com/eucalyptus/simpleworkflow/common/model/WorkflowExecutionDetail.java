@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -43,8 +42,7 @@ import java.io.Serializable;
  * Contains details about a workflow execution.
  * </p>
  */
-public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
-
+public class WorkflowExecutionDetail extends SimpleWorkflowMessage implements Serializable {
     /**
      * Information about the workflow execution.
      */
@@ -72,8 +70,8 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
 
     /**
      * The latest executionContext provided by the decider for this workflow
-     * execution. A decider can provide an executionContext, which is a free
-     * form string, when closing a decision task using
+     * execution. A decider can provide an executionContext (a free-form
+     * string) when closing a decision task using
      * <a>RespondDecisionTaskCompleted</a>.
      * <p>
      * <b>Constraints:</b><br/>
@@ -106,7 +104,7 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
      *
      * @param executionInfo Information about the workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionDetail withExecutionInfo(WorkflowExecutionInfo executionInfo) {
@@ -145,7 +143,7 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
      * @param executionConfiguration The configuration settings for this workflow execution including
      *         timeout values, tasklist etc.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionDetail withExecutionConfiguration(WorkflowExecutionConfiguration executionConfiguration) {
@@ -184,7 +182,7 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
      * @param openCounts The number of tasks for this workflow execution. This includes open
      *         and closed tasks of all types.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionDetail withOpenCounts(WorkflowExecutionOpenCounts openCounts) {
@@ -235,7 +233,7 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
      *         has not made progress for an unusually long period of time and might
      *         require a corrective action.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionDetail withLatestActivityTaskTimestamp(java.util.Date latestActivityTaskTimestamp) {
@@ -245,16 +243,16 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
 
     /**
      * The latest executionContext provided by the decider for this workflow
-     * execution. A decider can provide an executionContext, which is a free
-     * form string, when closing a decision task using
+     * execution. A decider can provide an executionContext (a free-form
+     * string) when closing a decision task using
      * <a>RespondDecisionTaskCompleted</a>.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
      * @return The latest executionContext provided by the decider for this workflow
-     *         execution. A decider can provide an executionContext, which is a free
-     *         form string, when closing a decision task using
+     *         execution. A decider can provide an executionContext (a free-form
+     *         string) when closing a decision task using
      *         <a>RespondDecisionTaskCompleted</a>.
      */
     public String getLatestExecutionContext() {
@@ -263,16 +261,16 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
     
     /**
      * The latest executionContext provided by the decider for this workflow
-     * execution. A decider can provide an executionContext, which is a free
-     * form string, when closing a decision task using
+     * execution. A decider can provide an executionContext (a free-form
+     * string) when closing a decision task using
      * <a>RespondDecisionTaskCompleted</a>.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
      * @param latestExecutionContext The latest executionContext provided by the decider for this workflow
-     *         execution. A decider can provide an executionContext, which is a free
-     *         form string, when closing a decision task using
+     *         execution. A decider can provide an executionContext (a free-form
+     *         string) when closing a decision task using
      *         <a>RespondDecisionTaskCompleted</a>.
      */
     public void setLatestExecutionContext(String latestExecutionContext) {
@@ -281,8 +279,8 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
     
     /**
      * The latest executionContext provided by the decider for this workflow
-     * execution. A decider can provide an executionContext, which is a free
-     * form string, when closing a decision task using
+     * execution. A decider can provide an executionContext (a free-form
+     * string) when closing a decision task using
      * <a>RespondDecisionTaskCompleted</a>.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -291,11 +289,11 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
      * <b>Length: </b>0 - 32768<br/>
      *
      * @param latestExecutionContext The latest executionContext provided by the decider for this workflow
-     *         execution. A decider can provide an executionContext, which is a free
-     *         form string, when closing a decision task using
+     *         execution. A decider can provide an executionContext (a free-form
+     *         string) when closing a decision task using
      *         <a>RespondDecisionTaskCompleted</a>.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionDetail withLatestExecutionContext(String latestExecutionContext) {
@@ -357,6 +355,6 @@ public class WorkflowExecutionDetail extends SimpleWorkflowMessage {
         if (other.getLatestExecutionContext() != null && other.getLatestExecutionContext().equals(this.getLatestExecutionContext()) == false) return false; 
         return true;
     }
-    
+
 }
     

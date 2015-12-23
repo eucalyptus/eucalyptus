@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -80,17 +79,17 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
     private String input;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>SignalExternalWorkflowExecution</code> decision for this signal.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events leading up to this event.
+     * the chain of events leading up to this event.
      */
     private Long decisionTaskCompletedEventId;
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks.
+     * <i>Optional.</i> data attached to the event that can be used by the
+     * decider in subsequent decision tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -131,7 +130,7 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
      *
      * @param workflowId The <code>workflowId</code> of the external workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withWorkflowId(String workflowId) {
@@ -179,7 +178,7 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
      * @param runId The <code>runId</code> of the external workflow execution to send the
      *         signal to.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withRunId(String runId) {
@@ -221,7 +220,7 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
      *
      * @param signalName The name of the signal.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withSignalName(String signalName) {
@@ -263,7 +262,7 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
      *
      * @param input Input provided to the signal (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withInput(String input) {
@@ -272,55 +271,55 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>SignalExternalWorkflowExecution</code> decision for this signal.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events leading up to this event.
+     * the chain of events leading up to this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>SignalExternalWorkflowExecution</code> decision for this signal.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events leading up to this event.
+     *         the chain of events leading up to this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>SignalExternalWorkflowExecution</code> decision for this signal.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events leading up to this event.
+     * the chain of events leading up to this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>SignalExternalWorkflowExecution</code> decision for this signal.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events leading up to this event.
+     *         the chain of events leading up to this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>SignalExternalWorkflowExecution</code> decision for this signal.
      * This information can be useful for diagnosing problems by tracing back
-     * the cause of events leading up to this event.
+     * the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>SignalExternalWorkflowExecution</code> decision for this signal.
      *         This information can be useful for diagnosing problems by tracing back
-     *         the cause of events leading up to this event.
+     *         the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -329,46 +328,46 @@ public class SignalExternalWorkflowExecutionInitiatedEventAttributes implements 
     }
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks.
+     * <i>Optional.</i> data attached to the event that can be used by the
+     * decider in subsequent decision tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks.
+     * @return <i>Optional.</i> data attached to the event that can be used by the
+     *         decider in subsequent decision tasks.
      */
     public String getControl() {
         return control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks.
+     * <i>Optional.</i> data attached to the event that can be used by the
+     * decider in subsequent decision tasks.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks.
+     * @param control <i>Optional.</i> data attached to the event that can be used by the
+     *         decider in subsequent decision tasks.
      */
     public void setControl(String control) {
         this.control = control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent decision tasks.
+     * <i>Optional.</i> data attached to the event that can be used by the
+     * decider in subsequent decision tasks.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent decision tasks.
+     * @param control <i>Optional.</i> data attached to the event that can be used by the
+     *         decider in subsequent decision tasks.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public SignalExternalWorkflowExecutionInitiatedEventAttributes withControl(String control) {

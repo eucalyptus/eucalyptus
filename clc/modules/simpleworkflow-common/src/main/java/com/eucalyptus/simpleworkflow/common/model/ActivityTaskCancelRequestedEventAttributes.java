@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -44,14 +43,14 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class ActivityTaskCancelRequestedEventAttributes implements WorkflowEventAttributes {
+public class ActivityTaskCancelRequestedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>RequestCancelActivityTask</code> decision for this cancellation
      * request. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      */
     private Long decisionTaskCompletedEventId;
 
@@ -64,55 +63,55 @@ public class ActivityTaskCancelRequestedEventAttributes implements WorkflowEvent
     private String activityId;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>RequestCancelActivityTask</code> decision for this cancellation
      * request. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>RequestCancelActivityTask</code> decision for this cancellation
      *         request. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      */
     public Long getDecisionTaskCompletedEventId() {
         return decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>RequestCancelActivityTask</code> decision for this cancellation
      * request. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>RequestCancelActivityTask</code> decision for this cancellation
      *         request. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      */
     public void setDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
         this.decisionTaskCompletedEventId = decisionTaskCompletedEventId;
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision task that resulted in the
      * <code>RequestCancelActivityTask</code> decision for this cancellation
      * request. This information can be useful for diagnosing problems by
-     * tracing back the cause of events.
+     * tracing back the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision task that resulted in the
      *         <code>RequestCancelActivityTask</code> decision for this cancellation
      *         request. This information can be useful for diagnosing problems by
-     *         tracing back the cause of events.
+     *         tracing back the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCancelRequestedEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -154,17 +153,12 @@ public class ActivityTaskCancelRequestedEventAttributes implements WorkflowEvent
      *
      * @param activityId The unique ID of the task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskCancelRequestedEventAttributes withActivityId(String activityId) {
         this.activityId = activityId;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setActivityTaskCancelRequestedEventAttributes( this );
     }
 
     /**
@@ -209,6 +203,10 @@ public class ActivityTaskCancelRequestedEventAttributes implements WorkflowEvent
         if (other.getActivityId() != null && other.getActivityId().equals(this.getActivityId()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setActivityTaskCancelRequestedEventAttributes(this);
+    }
 }
     

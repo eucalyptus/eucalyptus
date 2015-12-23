@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
@@ -44,7 +43,7 @@ import java.io.Serializable;
  * event.
  * </p>
  */
-public class WorkflowExecutionCancelRequestedEventAttributes implements WorkflowEventAttributes {
+public class WorkflowExecutionCancelRequestedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * The external workflow execution for which the cancellation was
@@ -53,11 +52,11 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
     private WorkflowExecution externalWorkflowExecution;
 
     /**
-     * The id of the
+     * The ID of the
      * <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      * corresponding to the
      * <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     * this workflow execution.The source event with this Id can be found in
+     * this workflow execution.The source event with this ID can be found in
      * the history of the source workflow execution. This information can be
      * useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
@@ -106,7 +105,7 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
      * @param externalWorkflowExecution The external workflow execution for which the cancellation was
      *         requested.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionCancelRequestedEventAttributes withExternalWorkflowExecution(WorkflowExecution externalWorkflowExecution) {
@@ -115,20 +114,20 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
     }
 
     /**
-     * The id of the
+     * The ID of the
      * <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      * corresponding to the
      * <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     * this workflow execution.The source event with this Id can be found in
+     * this workflow execution.The source event with this ID can be found in
      * the history of the source workflow execution. This information can be
      * useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @return The id of the
+     * @return The ID of the
      *         <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      *         corresponding to the
      *         <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     *         this workflow execution.The source event with this Id can be found in
+     *         this workflow execution.The source event with this ID can be found in
      *         the history of the source workflow execution. This information can be
      *         useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -138,20 +137,20 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
     }
     
     /**
-     * The id of the
+     * The ID of the
      * <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      * corresponding to the
      * <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     * this workflow execution.The source event with this Id can be found in
+     * this workflow execution.The source event with this ID can be found in
      * the history of the source workflow execution. This information can be
      * useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      *
-     * @param externalInitiatedEventId The id of the
+     * @param externalInitiatedEventId The ID of the
      *         <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      *         corresponding to the
      *         <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     *         this workflow execution.The source event with this Id can be found in
+     *         this workflow execution.The source event with this ID can be found in
      *         the history of the source workflow execution. This information can be
      *         useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
@@ -161,27 +160,27 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
     }
     
     /**
-     * The id of the
+     * The ID of the
      * <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      * corresponding to the
      * <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     * this workflow execution.The source event with this Id can be found in
+     * this workflow execution.The source event with this ID can be found in
      * the history of the source workflow execution. This information can be
      * useful for diagnosing problems by tracing back the chain of events
      * leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param externalInitiatedEventId The id of the
+     * @param externalInitiatedEventId The ID of the
      *         <code>RequestCancelExternalWorkflowExecutionInitiated</code> event
      *         corresponding to the
      *         <code>RequestCancelExternalWorkflowExecution</code> decision to cancel
-     *         this workflow execution.The source event with this Id can be found in
+     *         this workflow execution.The source event with this ID can be found in
      *         the history of the source workflow execution. This information can be
      *         useful for diagnosing problems by tracing back the chain of events
      *         leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionCancelRequestedEventAttributes withExternalInitiatedEventId(Long externalInitiatedEventId) {
@@ -245,7 +244,7 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
      *         the parent workflow execution times out or is terminated, and the
      *         child policy is set to cancel child executions.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see WorkflowExecutionCancelRequestedCause
@@ -291,7 +290,7 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
      *         the parent workflow execution times out or is terminated, and the
      *         child policy is set to cancel child executions.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see WorkflowExecutionCancelRequestedCause
@@ -299,11 +298,6 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
     public WorkflowExecutionCancelRequestedEventAttributes withCause(WorkflowExecutionCancelRequestedCause cause) {
         this.cause = cause.toString();
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setWorkflowExecutionCancelRequestedEventAttributes( this );
     }
 
     /**
@@ -352,6 +346,10 @@ public class WorkflowExecutionCancelRequestedEventAttributes implements Workflow
         if (other.getCause() != null && other.getCause().equals(this.getCause()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+     historyEvent.setWorkflowExecutionCancelRequestedEventAttributes(this); 
+    }
 }
     

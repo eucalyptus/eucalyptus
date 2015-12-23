@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
@@ -50,8 +49,8 @@ import javax.annotation.Nonnull;
 public class TagFilter implements Serializable {
 
     /**
-     * Specifies the tag that must be associated with the execution for it to
-     * meet the filter criteria. This field is required.
+     * <b>Required.</b> Specifies the tag that must be associated with the
+     * execution for it to meet the filter criteria.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -61,46 +60,46 @@ public class TagFilter implements Serializable {
     private String tag;
 
     /**
-     * Specifies the tag that must be associated with the execution for it to
-     * meet the filter criteria. This field is required.
+     * <b>Required.</b> Specifies the tag that must be associated with the
+     * execution for it to meet the filter criteria.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return Specifies the tag that must be associated with the execution for it to
-     *         meet the filter criteria. This field is required.
+     * @return <b>Required.</b> Specifies the tag that must be associated with the
+     *         execution for it to meet the filter criteria.
      */
     public String getTag() {
         return tag;
     }
     
     /**
-     * Specifies the tag that must be associated with the execution for it to
-     * meet the filter criteria. This field is required.
+     * <b>Required.</b> Specifies the tag that must be associated with the
+     * execution for it to meet the filter criteria.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param tag Specifies the tag that must be associated with the execution for it to
-     *         meet the filter criteria. This field is required.
+     * @param tag <b>Required.</b> Specifies the tag that must be associated with the
+     *         execution for it to meet the filter criteria.
      */
     public void setTag(String tag) {
         this.tag = tag;
     }
     
     /**
-     * Specifies the tag that must be associated with the execution for it to
-     * meet the filter criteria. This field is required.
+     * <b>Required.</b> Specifies the tag that must be associated with the
+     * execution for it to meet the filter criteria.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param tag Specifies the tag that must be associated with the execution for it to
-     *         meet the filter criteria. This field is required.
+     * @param tag <b>Required.</b> Specifies the tag that must be associated with the
+     *         execution for it to meet the filter criteria.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public TagFilter withTag(String tag) {
@@ -146,6 +145,5 @@ public class TagFilter implements Serializable {
         if (other.getTag() != null && other.getTag().equals(this.getTag()) == false) return false; 
         return true;
     }
-    
 }
     

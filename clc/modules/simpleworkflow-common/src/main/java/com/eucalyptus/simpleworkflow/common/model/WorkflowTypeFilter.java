@@ -19,21 +19,20 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
@@ -51,7 +50,7 @@ import javax.annotation.Nonnull;
 public class WorkflowTypeFilter implements Serializable {
 
     /**
-     * Name of the workflow type. This field is required.
+     * <b>Required.</b> Name of the workflow type.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -70,40 +69,40 @@ public class WorkflowTypeFilter implements Serializable {
     private String version;
 
     /**
-     * Name of the workflow type. This field is required.
+     * <b>Required.</b> Name of the workflow type.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return Name of the workflow type. This field is required.
+     * @return <b>Required.</b> Name of the workflow type.
      */
     public String getName() {
         return name;
     }
     
     /**
-     * Name of the workflow type. This field is required.
+     * <b>Required.</b> Name of the workflow type.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param name Name of the workflow type. This field is required.
+     * @param name <b>Required.</b> Name of the workflow type.
      */
     public void setName(String name) {
         this.name = name;
     }
     
     /**
-     * Name of the workflow type. This field is required.
+     * <b>Required.</b> Name of the workflow type.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param name Name of the workflow type. This field is required.
+     * @param name <b>Required.</b> Name of the workflow type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowTypeFilter withName(String name) {
@@ -145,7 +144,7 @@ public class WorkflowTypeFilter implements Serializable {
      *
      * @param version Version of the workflow type.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowTypeFilter withVersion(String version) {
@@ -195,6 +194,6 @@ public class WorkflowTypeFilter implements Serializable {
         if (other.getVersion() != null && other.getVersion().equals(this.getVersion()) == false) return false; 
         return true;
     }
-    
+
 }
     

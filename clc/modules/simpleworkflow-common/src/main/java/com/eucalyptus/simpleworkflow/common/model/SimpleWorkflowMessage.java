@@ -105,10 +105,12 @@ public class SimpleWorkflowMessage extends BaseMessage {
     STRING_128( "(?s).{1,128}" ),
     STRING_256( "(?s).{1,256}" ),
     STRING_1024( "(?s).{1,1024}" ),
+    STRING_1224( "(?s).{1,1224}" ),
 
     OPT_STRING_128( "(?s).{0,128}" ),
     OPT_STRING_256( "(?s).{0,256}" ),
     OPT_STRING_1024( "(?s).{0,1024}" ),
+    OPT_STRING_1728( "(?s).{0,1728}" ),
     OPT_STRING_2048( "(?s).{0,2048}" ),
     OPT_STRING_32768( "(?s).{0,32768}" ),
 
@@ -117,6 +119,8 @@ public class SimpleWorkflowMessage extends BaseMessage {
     DURATION_8( "[0-9]|[1-9][0-9]{1,7}" ),
 
     DURATION_8_NONE( "NONE|[0-9]|[1-9][0-9]{1,7}" ),
+    
+    INT_MIN_MAX("-?[0-9]|[1-9][0-9]{1,10}"),
 
     NAME_64( "(?U)[^\\s:/|\u0000-\u001F\u007F-\u009F]{1,2}|(?!.*arn)[^\\s:/|\u0000-\u001F\u007F-\u009F][^:/|\u0000-\u001f\u007f-\u009f]{1,62}[^\\s:/|\u0000-\u001F\u007F-\u009F]" ),
 
@@ -129,6 +133,7 @@ public class SimpleWorkflowMessage extends BaseMessage {
     DECISION( "ScheduleActivityTask|RequestCancelActivityTask|CompleteWorkflowExecution|FailWorkflowExecution|CancelWorkflowExecution|ContinueAsNewWorkflowExecution|RecordMarker|StartTimer|CancelTimer|SignalExternalWorkflowExecution|RequestCancelExternalWorkflowExecution|StartChildWorkflowExecution" ),
 
     REGISTRATION_STATUS( "REGISTERED|DEPRECATED" ),
+    LAMBDA_FUNCTION_FAILURE_CAUSE( "OPERATION_NOT_PERMITTED|ID_ALREADY_IN_USE|OPEN_LAMBDA_FUNCTIONS_LIMIT_EXCEEDED|LAMBDA_FUNCTION_CREATION_RATE_EXCEEDED|LAMBDA_SERVICE_NOT_AVAILABLE_IN_REGION")
     ;
 
     private final Pattern pattern;

@@ -19,27 +19,25 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
 import static com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 import java.io.Serializable;
-
 /**
  * <p>
  * Provides details of the <code>CompleteWorkflowExecution</code>
@@ -50,14 +48,14 @@ import java.io.Serializable;
  * </p>
  * <p>
  * You can use IAM policies to control this decision's access to Amazon
- * SWF in much the same way as for the regular API:
+ * SWF resources as follows:
  * </p>
  * 
  * <ul>
  * <li>Use a <code>Resource</code> element with the domain name to limit
- * the decision to only specified domains.</li>
+ * the action to only specified domains.</li>
  * <li>Use an <code>Action</code> element to allow or deny permission to
- * specify this decision.</li>
+ * call this action.</li>
  * <li>You cannot use an IAM policy to constrain this action's
  * parameters.</li>
  * 
@@ -124,7 +122,7 @@ public class CompleteWorkflowExecutionDecisionAttributes implements Serializable
      * @param result The result of the workflow execution. The form of the result is
      *         implementation defined.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public CompleteWorkflowExecutionDecisionAttributes withResult(String result) {
@@ -170,6 +168,5 @@ public class CompleteWorkflowExecutionDecisionAttributes implements Serializable
         if (other.getResult() != null && other.getResult().equals(this.getResult()) == false) return false; 
         return true;
     }
-    
 }
     

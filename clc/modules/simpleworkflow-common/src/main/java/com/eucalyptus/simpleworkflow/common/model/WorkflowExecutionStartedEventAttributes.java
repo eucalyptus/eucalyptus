@@ -19,29 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
+
+import java.io.Serializable;
+
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 
 /**
  * <p>
  * Provides details of <code>WorkflowExecutionStarted</code> event.
  * </p>
  */
-public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAttributes {
+public class WorkflowExecutionStartedEventAttributes implements Serializable, WorkflowEventAttributes {
 
     /**
      * The input provided to the workflow execution (if any).
@@ -52,10 +56,9 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     private String input;
 
     /**
-     * The maximum duration for this workflow execution. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * The maximum duration for this workflow execution. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -64,9 +67,8 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
 
     /**
      * The maximum duration of decision tasks for this workflow type. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
@@ -77,13 +79,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -111,6 +113,9 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      */
     private com.amazonaws.internal.ListWithAutoConstructFlag<String> tagList;
 
+    @FieldRegex( FieldRegexValue.INT_MIN_MAX )
+    private String taskPriority;
+
     /**
      * If this workflow execution was started due to a
      * <code>ContinueAsNewWorkflowExecution</code> decision, then it contains
@@ -130,14 +135,24 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     private WorkflowExecution parentWorkflowExecution;
 
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this workflow execution. The source event
-     * with this Id can be found in the history of the source workflow
-     * execution. This information can be useful for diagnosing problems by
-     * tracing back the chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this workflow execution. The source event with this ID can be
+     * found in the history of the source workflow execution. This
+     * information can be useful for diagnosing problems by tracing back the
+     * chain of events leading up to this event.
      */
     private Long parentInitiatedEventId;
+
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     */
+    @FieldRegex(FieldRegexValue.STRING_1224)
+    private String lambdaRole;
 
     /**
      * The input provided to the workflow execution (if any).
@@ -173,7 +188,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      *
      * @param input The input provided to the workflow execution (if any).
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withInput(String input) {
@@ -182,58 +197,52 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     }
 
     /**
-     * The maximum duration for this workflow execution. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * The maximum duration for this workflow execution. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
-     * @return The maximum duration for this workflow execution. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     * @return The maximum duration for this workflow execution. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public String getExecutionStartToCloseTimeout() {
         return executionStartToCloseTimeout;
     }
     
     /**
-     * The maximum duration for this workflow execution. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * The maximum duration for this workflow execution. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
-     * @param executionStartToCloseTimeout The maximum duration for this workflow execution. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     * @param executionStartToCloseTimeout The maximum duration for this workflow execution. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      */
     public void setExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
         this.executionStartToCloseTimeout = executionStartToCloseTimeout;
     }
     
     /**
-     * The maximum duration for this workflow execution. <p>The valid values
-     * are integers greater than or equal to <code>0</code>. An integer value
-     * can be used to specify the duration in seconds while <code>NONE</code>
-     * can be used to specify unlimited duration.
+     * The maximum duration for this workflow execution. <p>The duration is
+     * specified in seconds; an integer greater than or equal to 0. The value
+     * "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
-     * @param executionStartToCloseTimeout The maximum duration for this workflow execution. <p>The valid values
-     *         are integers greater than or equal to <code>0</code>. An integer value
-     *         can be used to specify the duration in seconds while <code>NONE</code>
-     *         can be used to specify unlimited duration.
+     * @param executionStartToCloseTimeout The maximum duration for this workflow execution. <p>The duration is
+     *         specified in seconds; an integer greater than or equal to 0. The value
+     *         "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withExecutionStartToCloseTimeout(String executionStartToCloseTimeout) {
@@ -243,17 +252,15 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
 
     /**
      * The maximum duration of decision tasks for this workflow type. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @return The maximum duration of decision tasks for this workflow type. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public String getTaskStartToCloseTimeout() {
         return taskStartToCloseTimeout;
@@ -261,17 +268,15 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     
     /**
      * The maximum duration of decision tasks for this workflow type. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration of decision tasks for this workflow type. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      */
     public void setTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
         this.taskStartToCloseTimeout = taskStartToCloseTimeout;
@@ -279,9 +284,8 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     
     /**
      * The maximum duration of decision tasks for this workflow type. <p>The
-     * valid values are integers greater than or equal to <code>0</code>. An
-     * integer value can be used to specify the duration in seconds while
-     * <code>NONE</code> can be used to specify unlimited duration.
+     * duration is specified in seconds; an integer greater than or equal to
+     * 0. The value "NONE" can be used to specify unlimited duration.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
@@ -289,11 +293,10 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * <b>Length: </b>0 - 8<br/>
      *
      * @param taskStartToCloseTimeout The maximum duration of decision tasks for this workflow type. <p>The
-     *         valid values are integers greater than or equal to <code>0</code>. An
-     *         integer value can be used to specify the duration in seconds while
-     *         <code>NONE</code> can be used to specify unlimited duration.
+     *         duration is specified in seconds; an integer greater than or equal to
+     *         0. The value "NONE" can be used to specify unlimited duration.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withTaskStartToCloseTimeout(String taskStartToCloseTimeout) {
@@ -305,13 +308,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -320,13 +323,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @return The policy to use for the child workflow executions if this workflow
      *         execution is terminated, by calling the
      *         <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     *         expired timeout. The supported child policies are: <ul>
+     *         expired timeout. <p>The supported child policies are: <ul>
      *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -339,13 +342,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -354,13 +357,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param childPolicy The policy to use for the child workflow executions if this workflow
      *         execution is terminated, by calling the
      *         <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     *         expired timeout. The supported child policies are: <ul>
+     *         expired timeout. <p>The supported child policies are: <ul>
      *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -373,13 +376,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -390,16 +393,16 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param childPolicy The policy to use for the child workflow executions if this workflow
      *         execution is terminated, by calling the
      *         <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     *         expired timeout. The supported child policies are: <ul>
+     *         expired timeout. <p>The supported child policies are: <ul>
      *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -413,13 +416,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * <b>Constraints:</b><br/>
@@ -428,13 +431,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param childPolicy The policy to use for the child workflow executions if this workflow
      *         execution is terminated, by calling the
      *         <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     *         expired timeout. The supported child policies are: <ul>
+     *         expired timeout. <p>The supported child policies are: <ul>
      *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
      * @see ChildPolicy
@@ -447,13 +450,13 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The policy to use for the child workflow executions if this workflow
      * execution is terminated, by calling the
      * <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     * expired timeout. The supported child policies are: <ul>
+     * expired timeout. <p>The supported child policies are: <ul>
      * <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      * <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      * each child execution by recording a
      * <code>WorkflowExecutionCancelRequested</code> event in its history. It
      * is up to the decider to take appropriate actions when it receives an
-     * execution history with this event. </li> <li><b>ABANDON:</b> no action
+     * execution history with this event.</li> <li><b>ABANDON:</b> no action
      * will be taken. The child executions will continue to run.</li> </ul>
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
@@ -464,16 +467,16 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param childPolicy The policy to use for the child workflow executions if this workflow
      *         execution is terminated, by calling the
      *         <a>TerminateWorkflowExecution</a> action explicitly or due to an
-     *         expired timeout. The supported child policies are: <ul>
+     *         expired timeout. <p>The supported child policies are: <ul>
      *         <li><b>TERMINATE:</b> the child executions will be terminated.</li>
      *         <li><b>REQUEST_CANCEL:</b> a request to cancel will be attempted for
      *         each child execution by recording a
      *         <code>WorkflowExecutionCancelRequested</code> event in its history. It
      *         is up to the decider to take appropriate actions when it receives an
-     *         execution history with this event. </li> <li><b>ABANDON:</b> no action
+     *         execution history with this event.</li> <li><b>ABANDON:</b> no action
      *         will be taken. The child executions will continue to run.</li> </ul>
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      *
      * @see ChildPolicy
@@ -514,7 +517,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param taskList The name of the task list for scheduling the decision tasks for this
      *         workflow execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withTaskList(TaskList taskList) {
@@ -547,7 +550,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      *
      * @param workflowType The workflow type of this execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withWorkflowType(WorkflowType workflowType) {
@@ -566,11 +569,11 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      *         can have up to 5 tags.
      */
     public java.util.List<String> getTagList() {
-        if (tagList == null) {
-              tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
-              tagList.setAutoConstruct(true);
-        }
-        return tagList;
+      if (tagList == null) {
+        tagList = new com.amazonaws.internal.ListWithAutoConstructFlag<String>();
+        tagList.setAutoConstruct(true);
+      }
+      return tagList;
     }
     
     /**
@@ -597,6 +600,11 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * The list of tags associated with this workflow execution. An execution
      * can have up to 5 tags.
      * <p>
+     * <b>NOTE:</b> This method appends the values to the existing list (if
+     * any). Use {@link #setTagList(java.util.Collection)} or {@link
+     * #withTagList(java.util.Collection)} if you want to override the
+     * existing values.
+     * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
@@ -605,7 +613,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param tagList The list of tags associated with this workflow execution. An execution
      *         can have up to 5 tags.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withTagList(String... tagList) {
@@ -628,7 +636,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      * @param tagList The list of tags associated with this workflow execution. An execution
      *         can have up to 5 tags.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withTagList(java.util.Collection<String> tagList) {
@@ -640,6 +648,48 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
             this.tagList = tagListCopy;
         }
 
+        return this;
+    }
+
+    /**
+     * Returns the value of the TaskPriority property for this object.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @return The value of the TaskPriority property for this object.
+     */
+    public String getTaskPriority() {
+        return taskPriority;
+    }
+    
+    /**
+     * Sets the value of the TaskPriority property for this object.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority The new value for the TaskPriority property for this object.
+     */
+    public void setTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+    }
+    
+    /**
+     * Sets the value of the TaskPriority property for this object.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority The new value for the TaskPriority property for this object.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public WorkflowExecutionStartedEventAttributes withTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
         return this;
     }
 
@@ -695,7 +745,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      *         the <code>runId</code> of the previous workflow execution that was
      *         closed and continued as this execution.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withContinuedExecutionRunId(String continuedExecutionRunId) {
@@ -740,7 +790,7 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
      *         The member is not set if the workflow execution was not started by a
      *         workflow.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withParentWorkflowExecution(WorkflowExecution parentWorkflowExecution) {
@@ -749,61 +799,61 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
     }
 
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this workflow execution. The source event
-     * with this Id can be found in the history of the source workflow
-     * execution. This information can be useful for diagnosing problems by
-     * tracing back the chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this workflow execution. The source event with this ID can be
+     * found in the history of the source workflow execution. This
+     * information can be useful for diagnosing problems by tracing back the
+     * chain of events leading up to this event.
      *
-     * @return The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this workflow execution. The source event
-     *         with this Id can be found in the history of the source workflow
-     *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the chain of events leading up to this event.
+     * @return The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this workflow execution. The source event with this ID can be
+     *         found in the history of the source workflow execution. This
+     *         information can be useful for diagnosing problems by tracing back the
+     *         chain of events leading up to this event.
      */
     public Long getParentInitiatedEventId() {
         return parentInitiatedEventId;
     }
     
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this workflow execution. The source event
-     * with this Id can be found in the history of the source workflow
-     * execution. This information can be useful for diagnosing problems by
-     * tracing back the chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this workflow execution. The source event with this ID can be
+     * found in the history of the source workflow execution. This
+     * information can be useful for diagnosing problems by tracing back the
+     * chain of events leading up to this event.
      *
-     * @param parentInitiatedEventId The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this workflow execution. The source event
-     *         with this Id can be found in the history of the source workflow
-     *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the chain of events leading up to this event.
+     * @param parentInitiatedEventId The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this workflow execution. The source event with this ID can be
+     *         found in the history of the source workflow execution. This
+     *         information can be useful for diagnosing problems by tracing back the
+     *         chain of events leading up to this event.
      */
     public void setParentInitiatedEventId(Long parentInitiatedEventId) {
         this.parentInitiatedEventId = parentInitiatedEventId;
     }
     
     /**
-     * The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     * corresponding to the <code>StartChildWorkflowExecution</code>
-     * <a>Decision</a> to start this workflow execution. The source event
-     * with this Id can be found in the history of the source workflow
-     * execution. This information can be useful for diagnosing problems by
-     * tracing back the chain of events leading up to this event.
+     * The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     * corresponding to the <code>StartChildWorkflowExecution</code> decision
+     * to start this workflow execution. The source event with this ID can be
+     * found in the history of the source workflow execution. This
+     * information can be useful for diagnosing problems by tracing back the
+     * chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param parentInitiatedEventId The id of the <code>StartChildWorkflowExecutionInitiated</code> event
-     *         corresponding to the <code>StartChildWorkflowExecution</code>
-     *         <a>Decision</a> to start this workflow execution. The source event
-     *         with this Id can be found in the history of the source workflow
-     *         execution. This information can be useful for diagnosing problems by
-     *         tracing back the chain of events leading up to this event.
+     * @param parentInitiatedEventId The ID of the <code>StartChildWorkflowExecutionInitiated</code> event
+     *         corresponding to the <code>StartChildWorkflowExecution</code> decision
+     *         to start this workflow execution. The source event with this ID can be
+     *         found in the history of the source workflow execution. This
+     *         information can be useful for diagnosing problems by tracing back the
+     *         chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public WorkflowExecutionStartedEventAttributes withParentInitiatedEventId(Long parentInitiatedEventId) {
@@ -811,9 +861,52 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
         return this;
     }
 
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setWorkflowExecutionStartedEventAttributes( this );
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @return The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public String getLambdaRole() {
+        return lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     */
+    public void setLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
+    }
+    
+    /**
+     * The IAM role attached to this workflow execution to use when invoking
+     * AWS Lambda functions.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>1 - 1224<br/>
+     *
+     * @param lambdaRole The IAM role attached to this workflow execution to use when invoking
+     *         AWS Lambda functions.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public WorkflowExecutionStartedEventAttributes withLambdaRole(String lambdaRole) {
+        this.lambdaRole = lambdaRole;
+        return this;
     }
 
     /**
@@ -835,9 +928,11 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
         if (getTaskList() != null) sb.append("TaskList: " + getTaskList() + ",");
         if (getWorkflowType() != null) sb.append("WorkflowType: " + getWorkflowType() + ",");
         if (getTagList() != null) sb.append("TagList: " + getTagList() + ",");
+        if (getTaskPriority() != null) sb.append("TaskPriority: " + getTaskPriority() + ",");
         if (getContinuedExecutionRunId() != null) sb.append("ContinuedExecutionRunId: " + getContinuedExecutionRunId() + ",");
         if (getParentWorkflowExecution() != null) sb.append("ParentWorkflowExecution: " + getParentWorkflowExecution() + ",");
-        if (getParentInitiatedEventId() != null) sb.append("ParentInitiatedEventId: " + getParentInitiatedEventId() );
+        if (getParentInitiatedEventId() != null) sb.append("ParentInitiatedEventId: " + getParentInitiatedEventId() + ",");
+        if (getLambdaRole() != null) sb.append("LambdaRole: " + getLambdaRole() );
         sb.append("}");
         return sb.toString();
     }
@@ -854,9 +949,11 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
         hashCode = prime * hashCode + ((getTaskList() == null) ? 0 : getTaskList().hashCode()); 
         hashCode = prime * hashCode + ((getWorkflowType() == null) ? 0 : getWorkflowType().hashCode()); 
         hashCode = prime * hashCode + ((getTagList() == null) ? 0 : getTagList().hashCode()); 
+        hashCode = prime * hashCode + ((getTaskPriority() == null) ? 0 : getTaskPriority().hashCode()); 
         hashCode = prime * hashCode + ((getContinuedExecutionRunId() == null) ? 0 : getContinuedExecutionRunId().hashCode()); 
         hashCode = prime * hashCode + ((getParentWorkflowExecution() == null) ? 0 : getParentWorkflowExecution().hashCode()); 
         hashCode = prime * hashCode + ((getParentInitiatedEventId() == null) ? 0 : getParentInitiatedEventId().hashCode()); 
+        hashCode = prime * hashCode + ((getLambdaRole() == null) ? 0 : getLambdaRole().hashCode()); 
         return hashCode;
     }
     
@@ -882,13 +979,22 @@ public class WorkflowExecutionStartedEventAttributes implements WorkflowEventAtt
         if (other.getWorkflowType() != null && other.getWorkflowType().equals(this.getWorkflowType()) == false) return false; 
         if (other.getTagList() == null ^ this.getTagList() == null) return false;
         if (other.getTagList() != null && other.getTagList().equals(this.getTagList()) == false) return false; 
+        if (other.getTaskPriority() == null ^ this.getTaskPriority() == null) return false;
+        if (other.getTaskPriority() != null && other.getTaskPriority().equals(this.getTaskPriority()) == false) return false; 
         if (other.getContinuedExecutionRunId() == null ^ this.getContinuedExecutionRunId() == null) return false;
         if (other.getContinuedExecutionRunId() != null && other.getContinuedExecutionRunId().equals(this.getContinuedExecutionRunId()) == false) return false; 
         if (other.getParentWorkflowExecution() == null ^ this.getParentWorkflowExecution() == null) return false;
         if (other.getParentWorkflowExecution() != null && other.getParentWorkflowExecution().equals(this.getParentWorkflowExecution()) == false) return false; 
         if (other.getParentInitiatedEventId() == null ^ this.getParentInitiatedEventId() == null) return false;
         if (other.getParentInitiatedEventId() != null && other.getParentInitiatedEventId().equals(this.getParentInitiatedEventId()) == false) return false; 
+        if (other.getLambdaRole() == null ^ this.getLambdaRole() == null) return false;
+        if (other.getLambdaRole() != null && other.getLambdaRole().equals(this.getLambdaRole()) == false) return false; 
         return true;
+    }
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setWorkflowExecutionStartedEventAttributes(this);
     }
     
 }

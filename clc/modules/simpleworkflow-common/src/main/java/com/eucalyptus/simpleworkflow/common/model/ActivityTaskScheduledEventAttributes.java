@@ -19,31 +19,33 @@
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights
- *   Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is
- *   distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
- *   ANY KIND, either express or implied. See the License for the specific
- *   language governing permissions and limitations under the License.
- ************************************************************************/
+
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ * 
+ *  http://aws.amazon.com/apache2.0
+ * 
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 package com.eucalyptus.simpleworkflow.common.model;
 
 import java.io.Serializable;
+
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegex;
+import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage.FieldRegexValue;
 
 /**
  * <p>
  * Provides details of the <code>ActivityTaskScheduled</code> event.
  * </p>
  */
-public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttributes {
+public class ActivityTaskScheduledEventAttributes implements Serializable, WorkflowEventAttributes{
 
     /**
      * The type of the activity task.
@@ -51,7 +53,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     private ActivityType activityType;
 
     /**
-     * The unique id of the activity task.
+     * The unique ID of the activity task.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
@@ -67,8 +69,9 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     private String input;
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
@@ -107,7 +110,25 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     private TaskList taskList;
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * <i>Optional.</i> The priority to assign to the scheduled activity
+     * task. If set, this will override any default priority value that was
+     * assigned when the activity type was registered. <p>Valid values are
+     * integers that range from Java's <code>Integer.MIN_VALUE</code>
+     * (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     * numbers indicate higher priority. <p>For more information about
+     * setting task priority, see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     */
+    @FieldRegex( FieldRegexValue.INT_MIN_MAX )
+    private String taskPriority;
+
+    /**
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision that resulted in the scheduling of this activity task.
      * This information can be useful for diagnosing problems by tracing back
      * the chain of events leading up to this event.
@@ -151,7 +172,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      *
      * @param activityType The type of the activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withActivityType(ActivityType activityType) {
@@ -160,40 +181,40 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     }
 
     /**
-     * The unique id of the activity task.
+     * The unique ID of the activity task.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @return The unique id of the activity task.
+     * @return The unique ID of the activity task.
      */
     public String getActivityId() {
         return activityId;
     }
     
     /**
-     * The unique id of the activity task.
+     * The unique ID of the activity task.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param activityId The unique id of the activity task.
+     * @param activityId The unique ID of the activity task.
      */
     public void setActivityId(String activityId) {
         this.activityId = activityId;
     }
     
     /**
-     * The unique id of the activity task.
+     * The unique ID of the activity task.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>1 - 256<br/>
      *
-     * @param activityId The unique id of the activity task.
+     * @param activityId The unique ID of the activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withActivityId(String activityId) {
@@ -235,7 +256,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      *
      * @param input The input provided to the activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withInput(String input) {
@@ -244,46 +265,52 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     }
 
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @return Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks. This data is not sent to the activity.
+     * @return <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks. This data is not sent to the
+     *         activity.
      */
     public String getControl() {
         return control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks. This data is not sent to the
+     * activity.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks. This data is not sent to the activity.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks. This data is not sent to the
+     *         activity.
      */
     public void setControl(String control) {
         this.control = control;
     }
     
     /**
-     * Optional data attached to the event that can be used by the decider in
-     * subsequent workflow tasks. This data is not sent to the activity.
+     * <i>Optional.</i> Data attached to the event that can be used by the
+     * decider in subsequent workflow tasks. This data is not sent to the
+     * activity.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      * <p>
      * <b>Constraints:</b><br/>
      * <b>Length: </b>0 - 32768<br/>
      *
-     * @param control Optional data attached to the event that can be used by the decider in
-     *         subsequent workflow tasks. This data is not sent to the activity.
+     * @param control <i>Optional.</i> Data attached to the event that can be used by the
+     *         decider in subsequent workflow tasks. This data is not sent to the
+     *         activity.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withControl(String control) {
@@ -331,7 +358,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      * @param scheduleToStartTimeout The maximum amount of time the activity task can wait to be assigned
      *         to a worker.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withScheduleToStartTimeout(String scheduleToStartTimeout) {
@@ -373,7 +400,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      *
      * @param scheduleToCloseTimeout The maximum amount of time for this activity task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withScheduleToCloseTimeout(String scheduleToCloseTimeout) {
@@ -421,7 +448,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      * @param startToCloseTimeout The maximum amount of time a worker may take to process the activity
      *         task.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withStartToCloseTimeout(String startToCloseTimeout) {
@@ -454,7 +481,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      *
      * @param taskList The task list in which the activity task has been scheduled.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withTaskList(TaskList taskList) {
@@ -463,12 +490,108 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     }
 
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * <i>Optional.</i> The priority to assign to the scheduled activity
+     * task. If set, this will override any default priority value that was
+     * assigned when the activity type was registered. <p>Valid values are
+     * integers that range from Java's <code>Integer.MIN_VALUE</code>
+     * (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     * numbers indicate higher priority. <p>For more information about
+     * setting task priority, see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @return <i>Optional.</i> The priority to assign to the scheduled activity
+     *         task. If set, this will override any default priority value that was
+     *         assigned when the activity type was registered. <p>Valid values are
+     *         integers that range from Java's <code>Integer.MIN_VALUE</code>
+     *         (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     *         numbers indicate higher priority. <p>For more information about
+     *         setting task priority, see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public String getTaskPriority() {
+        return taskPriority;
+    }
+    
+    /**
+     * <i>Optional.</i> The priority to assign to the scheduled activity
+     * task. If set, this will override any default priority value that was
+     * assigned when the activity type was registered. <p>Valid values are
+     * integers that range from Java's <code>Integer.MIN_VALUE</code>
+     * (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     * numbers indicate higher priority. <p>For more information about
+     * setting task priority, see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority <i>Optional.</i> The priority to assign to the scheduled activity
+     *         task. If set, this will override any default priority value that was
+     *         assigned when the activity type was registered. <p>Valid values are
+     *         integers that range from Java's <code>Integer.MIN_VALUE</code>
+     *         (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     *         numbers indicate higher priority. <p>For more information about
+     *         setting task priority, see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     */
+    public void setTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+    }
+    
+    /**
+     * <i>Optional.</i> The priority to assign to the scheduled activity
+     * task. If set, this will override any default priority value that was
+     * assigned when the activity type was registered. <p>Valid values are
+     * integers that range from Java's <code>Integer.MIN_VALUE</code>
+     * (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     * numbers indicate higher priority. <p>For more information about
+     * setting task priority, see <a
+     * href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     * Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     * Guide</i>.
+     * <p>
+     * Returns a reference to this object so that method calls can be chained together.
+     * <p>
+     * <b>Constraints:</b><br/>
+     * <b>Length: </b>0 - 11<br/>
+     *
+     * @param taskPriority <i>Optional.</i> The priority to assign to the scheduled activity
+     *         task. If set, this will override any default priority value that was
+     *         assigned when the activity type was registered. <p>Valid values are
+     *         integers that range from Java's <code>Integer.MIN_VALUE</code>
+     *         (-2147483648) to <code>Integer.MAX_VALUE</code> (2147483647). Higher
+     *         numbers indicate higher priority. <p>For more information about
+     *         setting task priority, see <a
+     *         href="http://docs.aws.amazon.com/amazonswf/latest/developerguide/programming-priority.html">Setting
+     *         Task Priority</a> in the <i>Amazon Simple Workflow Developer
+     *         Guide</i>.
+     *
+     * @return A reference to this updated object so that method calls can be chained
+     *         together.
+     */
+    public ActivityTaskScheduledEventAttributes withTaskPriority(String taskPriority) {
+        this.taskPriority = taskPriority;
+        return this;
+    }
+
+    /**
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision that resulted in the scheduling of this activity task.
      * This information can be useful for diagnosing problems by tracing back
      * the chain of events leading up to this event.
      *
-     * @return The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @return The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision that resulted in the scheduling of this activity task.
      *         This information can be useful for diagnosing problems by tracing back
      *         the chain of events leading up to this event.
@@ -478,12 +601,12 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision that resulted in the scheduling of this activity task.
      * This information can be useful for diagnosing problems by tracing back
      * the chain of events leading up to this event.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision that resulted in the scheduling of this activity task.
      *         This information can be useful for diagnosing problems by tracing back
      *         the chain of events leading up to this event.
@@ -493,19 +616,19 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
     }
     
     /**
-     * The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * The ID of the <code>DecisionTaskCompleted</code> event corresponding
      * to the decision that resulted in the scheduling of this activity task.
      * This information can be useful for diagnosing problems by tracing back
      * the chain of events leading up to this event.
      * <p>
      * Returns a reference to this object so that method calls can be chained together.
      *
-     * @param decisionTaskCompletedEventId The id of the <code>DecisionTaskCompleted</code> event corresponding
+     * @param decisionTaskCompletedEventId The ID of the <code>DecisionTaskCompleted</code> event corresponding
      *         to the decision that resulted in the scheduling of this activity task.
      *         This information can be useful for diagnosing problems by tracing back
      *         the chain of events leading up to this event.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withDecisionTaskCompletedEventId(Long decisionTaskCompletedEventId) {
@@ -571,17 +694,12 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
      *         the worker subsequently attempts to record a heartbeat or return a
      *         result, it will be ignored.
      *
-     * @return A reference to this updated object so that method calls can be chained 
+     * @return A reference to this updated object so that method calls can be chained
      *         together.
      */
     public ActivityTaskScheduledEventAttributes withHeartbeatTimeout(String heartbeatTimeout) {
         this.heartbeatTimeout = heartbeatTimeout;
         return this;
-    }
-
-    @Override
-    public void attach( final HistoryEvent historyEvent ) {
-        historyEvent.setActivityTaskScheduledEventAttributes( this );
     }
 
     /**
@@ -604,6 +722,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
         if (getScheduleToCloseTimeout() != null) sb.append("ScheduleToCloseTimeout: " + getScheduleToCloseTimeout() + ",");
         if (getStartToCloseTimeout() != null) sb.append("StartToCloseTimeout: " + getStartToCloseTimeout() + ",");
         if (getTaskList() != null) sb.append("TaskList: " + getTaskList() + ",");
+        if (getTaskPriority() != null) sb.append("TaskPriority: " + getTaskPriority() + ",");
         if (getDecisionTaskCompletedEventId() != null) sb.append("DecisionTaskCompletedEventId: " + getDecisionTaskCompletedEventId() + ",");
         if (getHeartbeatTimeout() != null) sb.append("HeartbeatTimeout: " + getHeartbeatTimeout() );
         sb.append("}");
@@ -623,6 +742,7 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
         hashCode = prime * hashCode + ((getScheduleToCloseTimeout() == null) ? 0 : getScheduleToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getStartToCloseTimeout() == null) ? 0 : getStartToCloseTimeout().hashCode()); 
         hashCode = prime * hashCode + ((getTaskList() == null) ? 0 : getTaskList().hashCode()); 
+        hashCode = prime * hashCode + ((getTaskPriority() == null) ? 0 : getTaskPriority().hashCode()); 
         hashCode = prime * hashCode + ((getDecisionTaskCompletedEventId() == null) ? 0 : getDecisionTaskCompletedEventId().hashCode()); 
         hashCode = prime * hashCode + ((getHeartbeatTimeout() == null) ? 0 : getHeartbeatTimeout().hashCode()); 
         return hashCode;
@@ -652,12 +772,18 @@ public class ActivityTaskScheduledEventAttributes implements WorkflowEventAttrib
         if (other.getStartToCloseTimeout() != null && other.getStartToCloseTimeout().equals(this.getStartToCloseTimeout()) == false) return false; 
         if (other.getTaskList() == null ^ this.getTaskList() == null) return false;
         if (other.getTaskList() != null && other.getTaskList().equals(this.getTaskList()) == false) return false; 
+        if (other.getTaskPriority() == null ^ this.getTaskPriority() == null) return false;
+        if (other.getTaskPriority() != null && other.getTaskPriority().equals(this.getTaskPriority()) == false) return false; 
         if (other.getDecisionTaskCompletedEventId() == null ^ this.getDecisionTaskCompletedEventId() == null) return false;
         if (other.getDecisionTaskCompletedEventId() != null && other.getDecisionTaskCompletedEventId().equals(this.getDecisionTaskCompletedEventId()) == false) return false; 
         if (other.getHeartbeatTimeout() == null ^ this.getHeartbeatTimeout() == null) return false;
         if (other.getHeartbeatTimeout() != null && other.getHeartbeatTimeout().equals(this.getHeartbeatTimeout()) == false) return false; 
         return true;
     }
-    
+
+    @Override
+    public void attach(HistoryEvent historyEvent) {
+      historyEvent.setActivityTaskScheduledEventAttributes(this);
+    }
 }
     
