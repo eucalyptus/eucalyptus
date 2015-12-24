@@ -44,12 +44,17 @@ import com.eucalyptus.compute.common.CreateVpcResponseType;
 import com.eucalyptus.compute.common.CreateVpcType;
 import com.eucalyptus.compute.common.DeleteVpcResponseType;
 import com.eucalyptus.compute.common.DeleteVpcType;
+import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
+import com.eucalyptus.compute.common.DescribeNetworkAclsType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
+import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyVpcAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeType;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
@@ -85,6 +90,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         CreateVpcResponseType createVpcResponseType = AsyncRequests.<CreateVpcType,CreateVpcResponseType> sendSync(configuration, createVpcType);
         action.info.setPhysicalResourceId(createVpcResponseType.getVpc().getVpcId());
+        action.info.setCidrBlock(JsonHelper.getStringFromJsonNode(new TextNode( createVpcResponseType.getVpc( ).getCidrBlock( ))));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -136,7 +142,37 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
+    },
+    DESCRIBE_VPC_RESOURCES_TO_GET_ATTRIBUTES {
+      @Override
+      public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
+        AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // Describe groups to find the default
+        final DescribeSecurityGroupsType groupsRequest = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
+        groupsRequest.setSecurityGroupSet( Lists.newArrayList( "default" ) );
+        groupsRequest.setFilterSet( Lists.newArrayList( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) ) );
+        final CheckedListenableFuture<DescribeSecurityGroupsResponseType> groupsFuture =
+            AsyncRequests.dispatch( configuration, groupsRequest );
+        // Describe network acls to find the default
+        final DescribeNetworkAclsType networkAclsRequest = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
+        networkAclsRequest.setFilterSet( Lists.newArrayList(
+            Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ),
+            Filter.filter( "default", "true" )
+        ) );
+        final CheckedListenableFuture<DescribeNetworkAclsResponseType> networkAclsFuture =
+            AsyncRequests.dispatch( configuration, networkAclsRequest );
+        // Record attribute values
+        if ( !groupsFuture.get( ).getSecurityGroupInfo( ).isEmpty( ) ) {
+          action.info.setDefaultSecurityGroup( JsonHelper.getStringFromJsonNode( new TextNode( groupsFuture.get( ).getSecurityGroupInfo( ).get( 0 ).getGroupId( ) ) ) );
+        }
+        if ( !networkAclsFuture.get( ).getNetworkAclSet( ).getItem( ).isEmpty( ) ) {
+          action.info.setDefaultNetworkAcl( JsonHelper.getStringFromJsonNode( new TextNode( networkAclsFuture.get( ).getNetworkAclSet( ).getItem( ).get( 0 ).getNetworkAclId( ) ) ) );
+        }
+        return action;
+      }
+    },
+    ;
 
     @Nullable
     @Override

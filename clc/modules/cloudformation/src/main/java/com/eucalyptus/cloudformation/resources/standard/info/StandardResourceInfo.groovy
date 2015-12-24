@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2013-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,7 +258,8 @@ public class AWSEC2SubnetResourceInfo extends ResourceInfo {
 @ToString(includeNames=true)
 public class AWSEC2SubnetNetworkAclAssociationResourceInfo extends ResourceInfo {
   @AttributeJson
-  String availabilityZone;
+  String associationId;
+
   public AWSEC2SubnetNetworkAclAssociationResourceInfo() {
     setType("AWS::EC2::SubnetNetworkAclAssociation");
   }
@@ -298,6 +299,12 @@ public class AWSEC2VolumeAttachmentResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2VPCResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String cidrBlock;
+  @AttributeJson
+  String defaultNetworkAcl;
+  @AttributeJson
+  String defaultSecurityGroup;
   public AWSEC2VPCResourceInfo() {
     setType("AWS::EC2::VPC");
   }
