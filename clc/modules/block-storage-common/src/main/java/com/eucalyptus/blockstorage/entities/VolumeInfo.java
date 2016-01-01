@@ -75,8 +75,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 
@@ -90,7 +88,6 @@ import com.google.common.base.Function;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "Volumes")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class VolumeInfo extends AbstractPersistent {
   private static final Logger LOG = Logger.getLogger(VolumeInfo.class);
 
@@ -115,7 +112,6 @@ public class VolumeInfo extends AbstractPersistent {
 
   @NotFound(action = NotFoundAction.IGNORE)
   @OneToMany(fetch = FetchType.LAZY, mappedBy = "volume", orphanRemoval = true, cascade = CascadeType.ALL)
-  @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
   private List<VolumeToken> attachmentTokens;
 
   public VolumeInfo() {

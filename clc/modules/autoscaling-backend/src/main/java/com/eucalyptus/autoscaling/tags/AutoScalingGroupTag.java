@@ -28,8 +28,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.Entities;
@@ -44,7 +42,6 @@ import com.google.common.base.Preconditions;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_tags_groups" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( "auto-scaling-group" )
 public class AutoScalingGroupTag extends Tag<AutoScalingGroupTag> {
   private static final long serialVersionUID = 1L;

@@ -72,8 +72,6 @@ import javax.persistence.Table;
 
 import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -90,7 +88,6 @@ import com.google.common.net.InternetDomainName;
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
 @Table( name = "system_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "system.dns", description = "Basic system configuration." )
 @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
 public class SystemConfiguration extends AbstractPersistent {

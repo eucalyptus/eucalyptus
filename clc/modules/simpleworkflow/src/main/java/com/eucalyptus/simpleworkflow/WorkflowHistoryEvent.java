@@ -27,8 +27,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
@@ -42,13 +40,11 @@ import com.google.common.base.Objects;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_workflow_history_event" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class WorkflowHistoryEvent extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
   @ManyToOne
   @JoinColumn( name = "workflow_execution_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowExecution workflowExecution;
 
   @Column( name = "event_order", nullable = false, updatable = false )

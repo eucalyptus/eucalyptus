@@ -25,15 +25,13 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
@@ -47,13 +45,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_subnets" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_subnets", indexes = {
-    @Index( name = "metadata_subnets_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_subnets_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_subnets_display_name_idx", columnNames = "metadata_display_name" ),
-} )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "metadata_subnets", indexes = {
+    @Index( name = "metadata_subnets_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_subnets_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_subnets_display_name_idx", columnList = "metadata_display_name" ),
+}  )
 public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata {
 
   private static final long serialVersionUID = 1L;
@@ -117,12 +113,10 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_vpc_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc vpc;
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_network_acl_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkAcl networkAcl;
 
   @Column( name = "metadata_nacl_association_id", nullable = false, unique = true )

@@ -22,23 +22,20 @@ package com.eucalyptus.objectstorage.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "bucket_tags")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "bucket_tags", indexes = {
+    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+})
 public class BucketTags extends AbstractPersistent {
 
   @Column(name = "bucket_uuid")
-  @Index(name = "IDX_bucket_uuid")
   private String bucketUuid;
 
   @Column(name = "tag_key", length = 128)

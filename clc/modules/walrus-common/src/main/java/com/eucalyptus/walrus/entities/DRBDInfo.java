@@ -68,9 +68,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -80,7 +77,6 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @Entity
 @PersistenceContext(name = "eucalyptus_walrus")
 @Table(name = "drbd_info")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "walrusbackend", alias = "drbd", description = "DRBD configuration.", deferred = true)
 public class DRBDInfo extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger(DRBDInfo.class);

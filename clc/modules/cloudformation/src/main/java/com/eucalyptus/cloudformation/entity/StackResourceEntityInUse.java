@@ -19,9 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -32,7 +29,6 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_resources" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackResourceEntityInUse extends StackResourceEntity {
 
   public StackResourceEntityInUse() {

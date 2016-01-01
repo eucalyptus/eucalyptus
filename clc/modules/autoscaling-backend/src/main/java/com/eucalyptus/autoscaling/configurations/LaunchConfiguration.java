@@ -35,8 +35,6 @@ import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -51,7 +49,6 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_launch_configurations" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LaunchConfiguration extends AbstractOwnedPersistent implements LaunchConfigurationMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -75,7 +72,6 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @Column( name = "metadata_security_group" )
   @JoinColumn( name = "metadata_launch_configuration_id" )
   @OrderColumn( name = "metadata_security_group_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> securityGroups = Lists.newArrayList();
 
   @Column( name = "metadata_user_data" )
@@ -90,7 +86,6 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @CollectionTable( name = "metadata_launch_configuration_block_device_mappings" )
   @JoinColumn( name = "metadata_launch_configuration_id" )
   @OrderColumn( name = "metadata_device_mapping_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
 
   @Column( name = "metadata_associate_public_ip" )

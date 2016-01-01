@@ -31,9 +31,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
@@ -44,7 +41,6 @@ import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "buckets")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class Bucket extends S3AccessControlledEntity<BucketState> implements Comparable {
   /**
      *

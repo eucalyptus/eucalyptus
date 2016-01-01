@@ -22,8 +22,6 @@ package com.eucalyptus.cloudformation.config;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -34,7 +32,6 @@ import java.io.Serializable;
  */
 @Entity
 @PersistenceContext( name="eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( CloudFormation.class )
 public class CloudFormationConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;

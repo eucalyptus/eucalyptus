@@ -73,9 +73,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -129,7 +126,6 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_type" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
   @Transient
   private static final long  serialVersionUID = 1L;
@@ -157,7 +153,6 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @ElementCollection
   @CollectionTable( name = "config_vm_types_ephemeral_disks" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<EphemeralDisk> ephemeralDisks = Sets.newHashSet( );
   
   private VmType( ) {}

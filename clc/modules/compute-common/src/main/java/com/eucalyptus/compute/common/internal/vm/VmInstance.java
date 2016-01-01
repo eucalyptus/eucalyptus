@@ -85,6 +85,7 @@ import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
@@ -95,9 +96,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Criterion;
@@ -172,13 +170,13 @@ import com.google.common.collect.Sets;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_instances" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_instances", indexes = {
-    @Index( name = "metadata_instances_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_instances_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_instances_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_instances", indexes = {
+    @Index( name = "metadata_instances_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_instances_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_instances_display_name_idx", columnList = "metadata_display_name" ),
+    @Index( name = "metadata_vm_private_address_idx", columnList = "metadata_vm_private_address" ),
+    @Index( name = "metadata_vm_public_address_idx", columnList = "metadata_vm_public_address" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
   private static final long    serialVersionUID = 1L;
   private static final Logger  LOG              = Logger.getLogger( VmInstance.class );
@@ -213,13 +211,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @NotFound( action = NotFoundAction.IGNORE )
   @ManyToMany( cascade = { CascadeType.ALL },
                fetch = FetchType.LAZY )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkGroup>    networkGroups    = Sets.newHashSet( );
 
   @ElementCollection
   @CollectionTable( name = "metadata_vm_instance_groups" )
   @JoinColumn( name = "metadata_vm_instance_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkGroupId>  networkGroupIds = Sets.newHashSet( );
 
   @NotFound( action = NotFoundAction.IGNORE )
@@ -231,7 +227,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                nullable = true,
                insertable = true,
                updatable = true )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex  networkIndex;
  
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "instance" )

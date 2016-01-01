@@ -74,8 +74,6 @@ import javax.persistence.Table;
 
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
@@ -94,7 +92,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_static_property" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_field_name", nullable = false, unique = true )
   private String fieldName;

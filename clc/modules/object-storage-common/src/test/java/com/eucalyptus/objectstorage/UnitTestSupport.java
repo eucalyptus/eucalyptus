@@ -23,18 +23,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 import javax.persistence.EntityTransaction;
-
-import org.hibernate.ejb.Ejb3Configuration;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.TestProvider;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceContextConfiguration;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
@@ -46,13 +44,15 @@ import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.entities.ScheduledJob;
 import com.eucalyptus.objectstorage.entities.TorrentInfo;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 public class UnitTestSupport {
   private static Map<String, List<String>> userMap = new HashMap<String, List<String>>();
   private static TestProvider testProvider;
 
   public static void setupOsgPersistenceContext() {
-    Properties props = new Properties();
+    Map<String,String> props = Maps.newHashMap( );
     props.put("hibernate.archive.autodetection", "jar, class, hbm");
     props.put("hibernate.ejb.interceptor.session_scoped", "com.eucalyptus.entities.DelegatingInterceptor");
     props.put("hibernate.show_sql", "false");
@@ -67,13 +67,16 @@ public class UnitTestSupport {
     props.put("hibernate.dialect", "org.hibernate.dialect.DerbyDialect");
     props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
 
-    Ejb3Configuration config =
-        (new Ejb3Configuration()).configure(props).addAnnotatedClass(Bucket.class).addAnnotatedClass(ObjectEntity.class)
-            .addAnnotatedClass(PartEntity.class).addAnnotatedClass(TorrentInfo.class).addAnnotatedClass(BucketTags.class)
-            .addAnnotatedClass(LifecycleRule.class).addAnnotatedClass(ScheduledJob.class).addAnnotatedClass(ObjectStorageGlobalConfiguration.class)
-            .addAnnotatedClass(S3AccessControlledEntity.class).addAnnotatedClass(S3ProviderConfiguration.class);
+    PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+        "eucalyptus_osg",
+        ImmutableList.<Class<?>>builder( ).add(Bucket.class).add(ObjectEntity.class)
+            .add(PartEntity.class).add(TorrentInfo.class).add(BucketTags.class)
+            .add(LifecycleRule.class).add(ScheduledJob.class).add(ObjectStorageGlobalConfiguration.class)
+            .add( S3AccessControlledEntity.class ).add( S3ProviderConfiguration.class ).build( ),
+        props
+    );
 
-    PersistenceContexts.registerPersistenceContext("eucalyptus_osg", config);
+    PersistenceContexts.registerPersistenceContext( config );
   }
 
   public static void tearDownOsgPersistenceContext() {

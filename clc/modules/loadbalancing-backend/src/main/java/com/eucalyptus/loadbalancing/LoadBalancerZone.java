@@ -36,9 +36,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -62,7 +59,6 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_zone" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerZone extends AbstractPersistent {
 
 	public enum STATE {
@@ -111,7 +107,6 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	@ManyToOne
 	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancer loadbalancer = null;
 	
 	
@@ -131,11 +126,9 @@ public class LoadBalancerZone extends AbstractPersistent {
 	private String zoneState;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "zone")
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances;
 		
 	public String getName( ){

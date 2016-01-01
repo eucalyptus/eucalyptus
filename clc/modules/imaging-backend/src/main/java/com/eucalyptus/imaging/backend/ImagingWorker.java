@@ -26,9 +26,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 /**
@@ -38,7 +35,6 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Table( name = "metadata_imaging_workers" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ImagingWorker extends AbstractStatefulPersistent<ImagingWorker.STATE> {
   enum STATE {
     RUNNING, RETIRING, DECOMMISSIONED,  

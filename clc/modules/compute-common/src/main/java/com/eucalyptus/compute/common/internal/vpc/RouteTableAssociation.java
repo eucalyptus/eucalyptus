@@ -26,8 +26,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -37,7 +35,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_route_table_associations" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class RouteTableAssociation extends AbstractPersistent {
 
   private static final long serialVersionUID = 1L;
@@ -50,7 +47,6 @@ public class RouteTableAssociation extends AbstractPersistent {
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_route_table", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RouteTable routeTable;
 
   @Column( name = "metadata_route_table_id", nullable = false, updatable = false )
@@ -58,7 +54,6 @@ public class RouteTableAssociation extends AbstractPersistent {
 
   @OneToOne
   @JoinColumn( name = "metadata_subnet" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Subnet subnet;
 
   @Column( name = "metadata_subnet_id", updatable = false, unique = true )

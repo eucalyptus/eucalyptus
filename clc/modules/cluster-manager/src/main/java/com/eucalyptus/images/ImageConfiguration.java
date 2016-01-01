@@ -75,9 +75,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -96,7 +93,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
 public class ImageConfiguration extends AbstractPersistent {
   @Transient

@@ -77,9 +77,6 @@ import javax.persistence.Table;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -95,7 +92,6 @@ import com.google.common.collect.Maps;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "Snapshots")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class SnapshotInfo extends AbstractPersistent {
   private static final String AUTHORITY = "snapshots";
 

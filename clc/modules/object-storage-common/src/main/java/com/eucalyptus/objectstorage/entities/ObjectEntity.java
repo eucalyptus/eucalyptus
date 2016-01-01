@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -42,10 +43,7 @@ import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.ForeignKey;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
@@ -68,13 +66,15 @@ import com.google.common.collect.Maps;
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "objects")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "objects", indexes = {
+    @Index(name = "IDX_object_key", columnList = "object_key"),
+    @Index(name = "IDX_object_uuid", columnList = "object_uuid"),
+    @Index(name = "IDX_version_id", columnList = "version_id"),
+})
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
   @Transient
   private static Logger LOG = Logger.getLogger(ObjectEntity.class);
 
-  @Index(name = "IDX_object_key")
   @Column(name = "object_key")
   private String objectKey;
 
@@ -84,11 +84,9 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
   @JoinColumn(name = "bucket_fk")
   private Bucket bucket;
 
-  @Index(name = "IDX_object_uuid")
   @Column(name = "object_uuid", unique = true, nullable = false)
   private String objectUuid; // The a uuid for this specific object content & request
 
-  @Index(name = "IDX_version_id")
   @Column(name = "version_id", nullable = false)
   private String versionId; // VersionId is required to uniquely identify ACLs and auth
 

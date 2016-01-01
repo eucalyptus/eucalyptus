@@ -23,8 +23,6 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudformation.CloudFormationMetadata;
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -44,7 +42,6 @@ import java.util.Date;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stacks" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEntity extends AbstractPersistent implements CloudFormationMetadata.StackMetadata {
 
   @Temporal(TemporalType.TIMESTAMP)

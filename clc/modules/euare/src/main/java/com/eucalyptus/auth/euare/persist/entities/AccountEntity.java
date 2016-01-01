@@ -84,8 +84,6 @@ import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Exceptions;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.base.Predicate;
 
@@ -96,7 +94,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_account" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @Transient
@@ -114,7 +111,6 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
 
   // Groups for this account
   @OneToMany( fetch = FetchType.LAZY, mappedBy = "account" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<GroupEntity> groups;
 
   public AccountEntity( ) {

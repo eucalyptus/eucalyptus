@@ -71,8 +71,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -127,7 +125,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   @Entity
   @PersistenceContext( name = "eucalyptus_cloud" )
   @Table( name = "cloud_cluster_configuration" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   @ConfigurableClass( root = "cloud.cluster", description = "Configuration options controlling interactions with Cluster Controllers." )
   static class Configuration extends AbstractPersistent {
     private static final long serialVersionUID = 1L;

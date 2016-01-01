@@ -23,8 +23,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -33,7 +31,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_unavailable_zones" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ZoneUnavailabilityMarker extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 

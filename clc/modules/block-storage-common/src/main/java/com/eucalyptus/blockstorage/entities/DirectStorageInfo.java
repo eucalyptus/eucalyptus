@@ -71,9 +71,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -92,7 +89,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "direct_storage_info")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "direct", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class DirectStorageInfo extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger(DirectStorageInfo.class);

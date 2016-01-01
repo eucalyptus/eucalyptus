@@ -51,8 +51,6 @@ import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.component.ComponentIds;
@@ -109,7 +107,6 @@ import com.google.common.collect.Maps;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
 
 	public enum Scheme {
@@ -213,38 +210,30 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private String loadbalancerDeploymentVersion;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerListener> listeners = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerZone> zones = null;
 	
 	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = false, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerSecurityGroup group = null;
 
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerAutoScalingGroup> autoscale_groups = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerPolicyDescription> policies = null;
 	
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
-  @Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
   private Collection<LoadBalancerBackendServerDescription> backendServers = null;
 
 	@ElementCollection
 	@CollectionTable( name = "metadata_loadbalancer_security_groups" )
 	@JoinColumn( name = "metadata_loadbalancer_id" )
 	@OrderColumn( name = "metadata_security_group_ordinal")
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private List<LoadBalancerSecurityGroupRef> securityGroupRefs = Lists.newArrayList( );
 
 	@ElementCollection
@@ -252,7 +241,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@MapKeyColumn( name = "metadata_key" )
 	@Column( name = "metadata_value" )
 	@JoinColumn( name = "metadata_loadbalancer_id" )
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Map<String,String> tags;
 
 	public String getVpcId( ) {
@@ -519,7 +507,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private LoadBalancerHealthCheckConfig healthConfig = null;
 	
 	@Embeddable
-	private static class LoadBalancerHealthCheckConfig {
+	public static class LoadBalancerHealthCheckConfig {
 		@Parent
 		private LoadBalancer loadBalancer = null;
 		

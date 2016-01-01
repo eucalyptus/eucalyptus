@@ -98,8 +98,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -170,7 +168,6 @@ public class Faults {
   @Entity
   @PersistenceContext( name = "eucalyptus_faults" )
   @Table( name = "faults_records" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   public static class CheckException extends RuntimeException implements Iterable<CheckException> {
     @Id
     @GeneratedValue( generator = "system-uuid" )

@@ -63,9 +63,6 @@
 package com.eucalyptus.config
 
 import com.eucalyptus.entities.AbstractPersistent
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
-
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.PersistenceContext
@@ -74,7 +71,6 @@ import javax.persistence.Table
 @Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_system" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class System extends AbstractPersistent implements Serializable {
   @Column( name = "config_system_default_kernel" )
   String defaultKernel

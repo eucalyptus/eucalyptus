@@ -75,6 +75,7 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -87,9 +88,6 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.compute.common.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -104,13 +102,11 @@ import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_snapshots" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_snapshots", indexes = {
-    @Index( name = "metadata_snapshots_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_snapshots_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_snapshots_display_name_idx", columnNames = "metadata_display_name" ),
-} )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "metadata_snapshots", indexes = {
+    @Index( name = "metadata_snapshots_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_snapshots_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_snapshots_display_name_idx", columnList = "metadata_display_name" ),
+}  )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @Transient
   private static Logger LOG = Logger.getLogger( Snapshot.class );
@@ -138,12 +134,10 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
 
     @ElementCollection
     @CollectionTable( name = "metadata_snapshot_permissions" )
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
     private Set<String> permissions = new HashSet<String>( );
 
     @ElementCollection
     @CollectionTable( name = "metadata_snapshot_pcodes" )
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
     private Set<String> productCodes = new HashSet<String>( );
 
     @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )

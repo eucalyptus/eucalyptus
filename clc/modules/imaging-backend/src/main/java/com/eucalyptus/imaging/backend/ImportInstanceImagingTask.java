@@ -37,8 +37,6 @@ import javax.persistence.PostLoad;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.Volumes;
@@ -74,7 +72,6 @@ import com.google.common.collect.Sets;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "instance-imaging-task" )
 public class ImportInstanceImagingTask extends VolumeImagingTask {
   private static Logger LOG  = Logger.getLogger( ImportInstanceImagingTask.class );
@@ -84,7 +81,6 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   
   @ElementCollection
   @CollectionTable( name = "metadata_launchspec_security_groups" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> groupNames;
   
   @Transient
@@ -92,7 +88,6 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   
   @ElementCollection
   @CollectionTable( name = "metadata_snapshots")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String> snapshotIds;
   
   @Transient

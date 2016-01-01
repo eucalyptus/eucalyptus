@@ -26,14 +26,12 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Optional;
@@ -44,12 +42,10 @@ import com.google.common.collect.Lists;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_route_tables" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_route_tables", indexes = {
-    @Index( name = "metadata_route_tables_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_route_tables_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_route_tables", indexes = {
+    @Index( name = "metadata_route_tables_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_route_tables_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class RouteTable extends AbstractOwnedPersistent implements RouteTableMetadata {
 
   private static final long serialVersionUID = 1L;
@@ -94,7 +90,6 @@ public class RouteTable extends AbstractOwnedPersistent implements RouteTableMet
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_vpc_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc vpc;
 
   /**
@@ -104,7 +99,6 @@ public class RouteTable extends AbstractOwnedPersistent implements RouteTableMet
   private Boolean main;
 
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "routeTable" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<Route> routes = Lists.newArrayList();
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.ALL , orphanRemoval = true, mappedBy = "routeTable" )

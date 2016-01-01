@@ -67,9 +67,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -78,7 +75,6 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "ISCSIMetadata")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", description = "Storage controller ISCSI meta info", singleton = false, deferred = true)
 public class ISCSIMetaInfo extends LVMMetaInfo {
   @ConfigurableIdentifier

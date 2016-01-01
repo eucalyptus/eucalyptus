@@ -23,8 +23,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -34,7 +32,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_compute_account" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ComputeAccount extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 

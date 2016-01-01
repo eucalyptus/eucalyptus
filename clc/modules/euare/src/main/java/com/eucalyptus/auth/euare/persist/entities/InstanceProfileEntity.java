@@ -22,15 +22,13 @@ package com.eucalyptus.auth.euare.persist.entities;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -39,8 +37,11 @@ import com.eucalyptus.entities.AbstractPersistent;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_instance_profile" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_instance_profile", indexes = {
+    @Index( name = "auth_instance_profile_name_idx", columnList = "auth_instance_profile_name" ),
+    @Index( name = "auth_instance_profile_role_idx", columnList = "auth_instance_profile_role" ),
+    @Index( name = "auth_instance_profile_owning_account_idx", columnList = "auth_instance_profile_owning_account" )
+} )
 public class InstanceProfileEntity extends AbstractPersistent implements Serializable {
 
   private static final long serialVersionUID = 1L;
@@ -51,7 +52,6 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
 
     // Instance Profile name
   @Column( name = "auth_instance_profile_name", nullable = false)
-  @Index( name = "auth_instance_profile_name_idx" )
   private String name;
 
   // Instance Profile path (prefix to organize profile name space)
@@ -59,15 +59,11 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
   private String path;
 
   @ManyToOne
-  @Index( name = "auth_instance_profile_role_idx" )
   @JoinColumn( name = "auth_instance_profile_role", nullable = true )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RoleEntity role;
 
   @ManyToOne
-  @Index( name = "auth_instance_profile_owning_account_idx" )
   @JoinColumn( name = "auth_instance_profile_owning_account", nullable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AccountEntity account;
 
   @Column( name = "auth_instance_profile_unique_name", unique = true, nullable = false )

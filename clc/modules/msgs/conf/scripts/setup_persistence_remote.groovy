@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,12 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-
-import com.eucalyptus.component.annotation.DatabaseNamingStrategy
+import com.eucalyptus.entities.PersistenceContextConfiguration
 import org.apache.log4j.Logger
-import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
-import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.util.EucalyptusCloudException
 
@@ -82,6 +79,7 @@ default_hiber_config = [
       'hibernate.generate_statistics': 'false',
       'hibernate.bytecode.use_reflection_optimizer': 'true',
       'hibernate.default_batch_fetch_size': '50',
+      'hibernate.discriminator.ignore_explicit_for_joined': 'true', // HHH-6911
 ]
 
 PersistenceContexts.listRemotable().each { String context_name ->
@@ -134,24 +132,22 @@ PersistenceContexts.listRemotable().each { String context_name ->
     hibernate_config.put( 'hibernate.default_schema', schemaName )
   }
 
-    // Register the properties with the config
-  config = new Ejb3Configuration();
-  LOG.info( "${context_name} Setting up persistence:        done." )
-  hibernate_config.each { k , v ->
-    LOG.trace( "${k} = ${v}" )
-    config.setProperty( k, v )
-  }
-  
-  // Register the system-discovered entity list
+  // Register the properties with the config
+  PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+      context_name,
+      PersistenceContexts.listEntities( context_name ),
+      hibernate_config
+  );
+
+  // Log the system-discovered entity list
   LOG.info( "${context_name} Registered entities:           " +
-      PersistenceContexts.listEntities( context_name ).collect{ Class<?> ent ->
-        config.addAnnotatedClass( ent )
+      config.entityClasses.collect{ Class<?> ent ->
         ent.simpleName
       }
   )
   // Register the context
   try {
-    PersistenceContexts.registerPersistenceContext(context_name, config)
+    PersistenceContexts.registerPersistenceContext( config )
   } catch( Exception t ) {
     t.printStackTrace();
   }

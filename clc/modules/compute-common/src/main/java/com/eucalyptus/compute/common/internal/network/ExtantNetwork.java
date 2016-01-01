@@ -75,8 +75,6 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.compute.common.internal.util.Reference;
@@ -95,7 +93,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ExtantNetwork extends UserMetadata<Reference.State> {
   private static final long                     serialVersionUID = 1L;
   private static final Logger                   LOG              = Logger.getLogger( ExtantNetwork.class );
@@ -105,11 +102,9 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   
   @NotFound( action = NotFoundAction.IGNORE )
   @OneToMany( fetch = FetchType.EAGER, orphanRemoval = true, cascade = CascadeType.ALL, mappedBy = "extantNetwork" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PrivateNetworkIndex> indexes           = new HashSet<>( );
   
   @OneToOne( fetch = FetchType.EAGER )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private NetworkGroup                   networkGroup;
   
   @SuppressWarnings( "unused" )

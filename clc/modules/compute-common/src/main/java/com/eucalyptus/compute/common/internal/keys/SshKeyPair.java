@@ -64,12 +64,10 @@ package com.eucalyptus.compute.common.internal.keys;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -82,13 +80,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_keypairs" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_keypairs", indexes = {
-    @Index( name = "metadata_keypairs_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_keypairs_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_keypairs_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_keypairs", indexes = {
+    @Index( name = "metadata_keypairs_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_keypairs_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_keypairs_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPairMetadata {
   enum State {
     available, removing

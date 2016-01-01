@@ -37,9 +37,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -58,7 +55,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_backend_server_description" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerBackendServerDescription extends AbstractPersistent {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerDescription.class );
   
@@ -70,7 +66,6 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
   
   @ManyToOne
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LoadBalancer loadbalancer = null;
   
   @Column( name = "instance_port", nullable=false)
@@ -81,7 +76,6 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
  
   @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
   @JoinTable( name = "metadata_policy_set_for_backends", joinColumns = { @JoinColumn( name = "metadata_backend_fk" ) },  inverseJoinColumns = @JoinColumn( name = "metadata_policy_fk" ) )
-  @Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<LoadBalancerPolicyDescription> policyDescriptions = null;
   
   private LoadBalancerBackendServerDescription() { }

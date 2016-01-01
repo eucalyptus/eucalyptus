@@ -79,8 +79,6 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PreRemove;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -112,17 +110,14 @@ public class VmBootRecord {
   @Parent
   private VmInstance              vmInstance;
   @ManyToOne
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ImageInfo               machineImage;
   @Column( name = "metadata_vm_machine_image_id")
   private String                  machineImageId;
   @ManyToOne( fetch = FetchType.LAZY )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private KernelImageInfo         kernel;
   @Column( name = "metadata_vm_kernel_image_id")
   private String                  kernelImageId;
   @ManyToOne( fetch = FetchType.LAZY )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RamdiskImageInfo        ramdisk;
   @Column( name = "metadata_vm_ramdisk_image_id")
   private String                  ramdiskImageId;
@@ -136,11 +131,9 @@ public class VmBootRecord {
   @Enumerated(  EnumType.STRING )
   private ImageMetadata.Architecture architecture;
   @OneToMany( mappedBy = "vmInstance", orphanRemoval = true, cascade = CascadeType.ALL )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmBootVolumeAttachment> persistentVolumes = Sets.newHashSet( );
   @ElementCollection
   @CollectionTable( name = "metadata_instances_ephemeral_storage" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<VmEphemeralAttachment> ephemeralStorage = Sets.newHashSet( );
   @Column( name = "metadata_vm_monitoring")
   private Boolean                 monitoring;
@@ -158,17 +151,14 @@ public class VmBootRecord {
   private String                  sshKeyString;
   @ManyToOne
   @JoinColumn(name="metadata_vm_type_id")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmType                  vmType;
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_vpc" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc                     vpc;
   @Column( name = "metadata_vpc_id", updatable = false )
   private String                  vpcId;
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_vpc_subnet" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Subnet                  subnet;
   @Column( name = "metadata_vpc_subnet_id", updatable = false )
   private String                  subnetId;

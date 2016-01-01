@@ -49,9 +49,6 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
@@ -72,7 +69,6 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_auto_scaling_groups" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoScalingGroupMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -84,7 +80,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_launch_configuration_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LaunchConfiguration launchConfiguration;
 
   @Column(name = "metadata_capacity_timestamp", nullable = false )
@@ -115,7 +110,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Column( name = "metadata_availability_zone" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @OrderColumn( name = "metadata_availability_zone_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> availabilityZones = Lists.newArrayList();
 
   @ElementCollection
@@ -123,7 +117,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @MapKeyColumn( name = "metadata_availability_zone" )
   @Column( name = "metadata_subnet_id" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Map<String,String> subnetIdByZone = Maps.newHashMap( );
 
   @ElementCollection
@@ -132,7 +125,6 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @OrderColumn( name = "metadata_policy_index")
   @Enumerated( EnumType.STRING )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<TerminationPolicyType> terminationPolicies = Lists.newArrayList();
   
   @ElementCollection
@@ -140,13 +132,11 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Column( name = "metadata_load_balancer_name" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @OrderColumn( name = "metadata_load_balancer_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> loadBalancerNames = Lists.newArrayList();
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_suspended_processes" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
 
   @ElementCollection
@@ -154,14 +144,12 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Column( name = "metadata_metric" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @Enumerated( EnumType.STRING )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<MetricCollectionType> enabledMetrics = Sets.newHashSet();
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_scaling_causes" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   @OrderColumn( name = "metadata_scaling_causes_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<GroupScalingCause> scalingCauses = Lists.newArrayList();
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "group" )

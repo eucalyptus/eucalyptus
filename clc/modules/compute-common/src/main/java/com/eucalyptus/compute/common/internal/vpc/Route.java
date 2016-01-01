@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,8 +27,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 /**
@@ -37,7 +35,6 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_routes" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class Route extends AbstractStatefulPersistent<Route.State> {
   private static final long serialVersionUID = 1L;
 
@@ -53,7 +50,6 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_route_table_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private RouteTable routeTable;
 
   @Column( name = "metadata_origin", nullable = false, updatable = false )
@@ -63,7 +59,8 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
   @Column( name = "metadata_destination_cidr", nullable = false, updatable = false )
   private String destinationCidr;
 
-  @Column( name = "metadata_internet_gateway_id", nullable = true, updatable = false )
+  @ManyToOne
+  @JoinColumn( name = "metadata_internet_gateway_id", nullable = true, updatable = false )
   private InternetGateway internetGateway;
 
   protected Route( ) {

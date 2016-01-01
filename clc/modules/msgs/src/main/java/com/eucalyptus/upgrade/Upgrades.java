@@ -37,13 +37,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -61,6 +59,7 @@ import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.entities.PersistenceContextConfiguration;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
@@ -871,19 +870,17 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         try {
-          final Map<String, String> props = getDatabaseProperties( );
+          final Map<String, String> props = Maps.newHashMap( getDatabaseProperties( ) );
           for ( final String ctx : PersistenceContexts.list( ) ) {
-            final Properties p = new Properties( );
-            p.putAll( props );
             final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx );
             final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx );
-            putContextProperties( p, schemaName, DatabaseFilters.NEWVERSION.getVersionedName( databaseName ) );
-            final Ejb3Configuration config = new Ejb3Configuration( );
-            config.setProperties( p );
-            for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
-              config.addAnnotatedClass( c );
-            }
-            PersistenceContexts.registerPersistenceContext( ctx, config );
+            putContextProperties( props, schemaName, DatabaseFilters.NEWVERSION.getVersionedName( databaseName ) );
+            final PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+                ctx,
+                PersistenceContexts.listEntities( ctx ),
+                props
+            );
+            PersistenceContexts.registerPersistenceContext( config );
           }
         } catch ( final Exception e ) {
           LOG.fatal( e, e );
@@ -1096,6 +1093,7 @@ public class Upgrades {
                                                     .put( "hibernate.dialect", db.getHibernateDialect( ) )
                                                     .put( "hibernate.cache.use_second_level_cache", "false" )
                                                     .put( "hibernate.cache.use_query_cache", "false" )
+                                                    .put( "hibernate.discriminator.ignore_explicit_for_joined", "true" ) // HHH-6911
                                                     .build( );
       return props;
     }
@@ -1118,19 +1116,17 @@ public class Upgrades {
 
   private static void runSchemaUpdate( DatabaseFilters dbName ) throws RuntimeException {
     try {
-      final Map<String, String> props = UpgradeState.getDatabaseProperties( );          
+      final Map<String, String> props = Maps.newHashMap( UpgradeState.getDatabaseProperties( ) );
       for ( final String ctx : PersistenceContexts.list( ) ) {
-        final Properties p = new Properties( );
-        p.putAll( props );
         final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx );
         final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx );
-        UpgradeState.putContextProperties( p, schemaName, dbName.getVersionedName( databaseName ) );
-        final Ejb3Configuration config = new Ejb3Configuration( );
-        config.setProperties( p );
-        for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
-          config.addAnnotatedClass( c );
-        }
-        new SchemaUpdate(config.getHibernateConfiguration()).execute(true, true);
+        UpgradeState.putContextProperties( props, schemaName, dbName.getVersionedName( databaseName ) );
+        final PersistenceContextConfiguration config = new PersistenceContextConfiguration(
+            ctx,
+            PersistenceContexts.listEntities( ctx ),
+            props
+        );
+        new SchemaUpdate(PersistenceContexts.getConfiguration( config )).execute(true, true);
       }
     } catch ( final Exception e ) {
       LOG.fatal( e, e );

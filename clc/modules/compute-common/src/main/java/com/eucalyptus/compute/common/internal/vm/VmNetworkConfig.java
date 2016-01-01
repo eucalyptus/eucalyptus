@@ -68,7 +68,6 @@ import javax.persistence.Embeddable;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
 import javax.persistence.Transient;
-import org.hibernate.annotations.Index;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.google.common.collect.Lists;
@@ -86,10 +85,8 @@ public class VmNetworkConfig {
   @Column( name = "metadata_vm_mac_address" )
   private String       macAddress;
   @Column( name = "metadata_vm_private_address" )
-  @Index( name = "metadata_vm_private_address_idx" )
   private String       privateAddress;
   @Column( name = "metadata_vm_public_address" )
-  @Index( name = "metadata_vm_public_address_idx" )
   private String       publicAddress;
   @Column( name = "metadata_vm_private_dns" )
   private String       privateDnsName;

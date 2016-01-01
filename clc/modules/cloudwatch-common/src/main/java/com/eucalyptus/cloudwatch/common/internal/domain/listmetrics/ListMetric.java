@@ -26,15 +26,12 @@ import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.cloudwatch.common.internal.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 
 @Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
 @Table(name="list_metrics")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ListMetric extends AbstractPersistentWithDimensions {
 
   @Override

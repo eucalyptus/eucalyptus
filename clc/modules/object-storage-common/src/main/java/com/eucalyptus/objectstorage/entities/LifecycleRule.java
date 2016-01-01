@@ -66,23 +66,20 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
-@Table(name = "lifecycle_rules")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+@Table(name = "lifecycle_rules", indexes = {
+    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+})
 public class LifecycleRule extends AbstractPersistent {
 
   @Column(name = "bucket_uuid")
-  @Index(name = "IDX_bucket_uuid")
   private String bucketUuid;
 
   @Column(name = "rule_id", length = 64)

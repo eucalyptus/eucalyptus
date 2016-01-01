@@ -61,6 +61,7 @@
   -->
 
 <project name="eucalyptus" default="build" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+	<property file="${basedir}/local.properties" />
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
 	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">

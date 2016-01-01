@@ -27,6 +27,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -36,9 +37,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Crypto;
@@ -51,8 +49,10 @@ import groovy.sql.Sql;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_role" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_role", indexes = {
+    @Index( name = "auth_role_name_idx", columnList = "auth_role_name" ),
+    @Index( name = "auth_role_owning_account_idx", columnList = "auth_role_owning_account" )
+} )
 public class RoleEntity extends AbstractPersistent implements Serializable {
 
   private static final long serialVersionUID = 1L;
@@ -63,7 +63,6 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   // Role name
   @Column( name = "auth_role_name", nullable = false)
-  @Index( name = "auth_role_name_idx" )
   private String name;
 
   // Role path (prefix to organize role name space)
@@ -78,17 +77,13 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   private PolicyEntity assumeRolePolicy;
 
   @OneToMany( cascade = CascadeType.ALL, mappedBy = "role" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<PolicyEntity> policies;
 
   @OneToMany( mappedBy = "role" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<InstanceProfileEntity> instanceProfiles;
 
   @ManyToOne
-  @Index( name = "auth_role_owning_account_idx" )
   @JoinColumn( name = "auth_role_owning_account", nullable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AccountEntity account;
 
   @Column( name = "auth_role_unique_name", unique = true, nullable = false )

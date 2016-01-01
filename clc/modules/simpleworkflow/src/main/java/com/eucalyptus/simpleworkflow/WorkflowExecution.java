@@ -45,8 +45,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.entities.UserMetadata;
@@ -67,7 +65,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_workflow_execution" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionStatus> implements WorkflowExecutionMetadata {
   private static final long serialVersionUID = 1L;
 
@@ -110,12 +107,10 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
 
   @ManyToOne
   @JoinColumn( name = "domain_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Domain domain;
 
   @ManyToOne
   @JoinColumn( name = "workflow_type_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private WorkflowType workflowType;
 
   @Column( name = "workflow_id", length = 256, nullable = false, updatable = false )
@@ -167,7 +162,6 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @Column( name = "tag", length = 256 )
   @JoinColumn( name = "workflow_execution_id" )
   @OrderColumn( name = "tag_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> tagList;
 
   @Column( name = "latest_activity_timestamp" )

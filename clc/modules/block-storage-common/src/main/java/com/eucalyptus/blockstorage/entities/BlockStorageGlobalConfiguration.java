@@ -71,9 +71,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -93,7 +90,6 @@ import com.google.common.base.Predicate;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "blockstorage_global_configuration")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", description = "Basic storage controller configuration.", singleton = true, deferred = true)
 public class BlockStorageGlobalConfiguration extends AbstractPersistent {
   private static Logger LOG = Logger.getLogger(BlockStorageGlobalConfiguration.class);

@@ -32,8 +32,6 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -56,7 +54,6 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_group" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancerSecurityGroup extends AbstractPersistent {
 
 	public enum STATE { InService, OutOfService }
@@ -120,7 +117,6 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	private String state = null;
     
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "security_group")
-	@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 
 	@Column(name="metadata_unique_name", nullable=false, unique=true)

@@ -30,9 +30,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.DiskImageDescription;
@@ -55,7 +52,6 @@ import com.google.common.collect.Lists;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "volume-imaging-task" )
 public class ImportVolumeImagingTask extends VolumeImagingTask {
   private static Logger LOG  = Logger.getLogger( ImportVolumeImagingTask.class );

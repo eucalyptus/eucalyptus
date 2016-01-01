@@ -79,8 +79,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import org.hibernate.id.UUIDHexGenerator;
 
@@ -182,7 +180,6 @@ public abstract class VmVolumeAttachment extends AbstractPersistent implements C
   
   @ManyToOne( optional = false )
   @JoinColumn( name = "vminstance_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_volume_id", unique = true )
   private String	volumeId;
@@ -205,8 +202,7 @@ public abstract class VmVolumeAttachment extends AbstractPersistent implements C
   
   //  @OneToOne
 //  @JoinTable( name = "metadata_vm_has_volume", joinColumns = { @JoinColumn( name = "metadata_vm_id" ) }, inverseJoinColumns = { @JoinColumn( name = "metadata_volume_id" ) } )
-//  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-//  private Volume     volume;
+//  //  private Volume     volume;
   
   VmVolumeAttachment( ) {
     super( );

@@ -80,6 +80,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -90,9 +91,6 @@ import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.component.ComponentIds;
@@ -118,13 +116,11 @@ import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_network_group" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_network_group", indexes = {
-    @Index( name = "metadata_network_group_user_id_idx", columnNames = "metadata_user_id" ),
-    @Index( name = "metadata_network_group_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_network_group_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_network_group", indexes = {
+    @Index( name = "metadata_network_group_user_id_idx", columnList = "metadata_user_id" ),
+    @Index( name = "metadata_network_group_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_network_group_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata {
   private static final long   serialVersionUID = 1L;
   private static final Logger LOG              = Logger.getLogger( NetworkGroup.class );
@@ -146,18 +142,15 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
 
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_vpc", updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc              vpc;
 
   @Column( name = "metadata_vpc_id", updatable = false )
   private String           vpcId;
 
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
 
   @OneToOne( cascade = CascadeType.ALL, fetch = FetchType.EAGER, optional = true, orphanRemoval = true, mappedBy = "networkGroup" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )

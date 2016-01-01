@@ -81,8 +81,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
@@ -90,7 +88,6 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.TABLE_PER_CLASS )
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )

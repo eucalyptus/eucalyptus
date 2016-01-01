@@ -41,9 +41,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
@@ -57,14 +54,12 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_scaling_activities" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ScalingActivity extends AbstractOwnedPersistent implements ScalingActivityMetadata {
 
   private static final long serialVersionUID = 1L;
 
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_group_id", nullable = false, updatable = false )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private AutoScalingGroup group;
 
   @Column( name = "metadata_auto_scaling_group_name", nullable = false, updatable = false )
@@ -96,7 +91,6 @@ public class ScalingActivity extends AbstractOwnedPersistent implements ScalingA
   @CollectionTable( name = "metadata_scaling_activity_causes" )
   @JoinColumn( name = "metadata_scaling_activity_id" )
   @OrderColumn( name = "metadata_cause_index")
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<ActivityCause> causes = Lists.newArrayList( );
 
   protected ScalingActivity() {    

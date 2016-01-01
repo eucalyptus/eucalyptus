@@ -69,9 +69,6 @@ import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
@@ -81,7 +78,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "snapshot_upload_info")
 @Entity
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class SnapshotUploadInfo extends AbstractPersistent {
 
   public static final Long PURGE_INTERVAL = (long) (60 * 60 * 1000); // one hour

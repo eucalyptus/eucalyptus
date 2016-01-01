@@ -75,8 +75,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.san.common.SANProperties;
@@ -100,7 +98,6 @@ import com.google.common.net.HostSpecifier;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "san_info")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "san", description = "Basic storage controller configuration for SAN.", singleton = false,
     deferred = true)
 public class SANInfo extends AbstractPersistent {

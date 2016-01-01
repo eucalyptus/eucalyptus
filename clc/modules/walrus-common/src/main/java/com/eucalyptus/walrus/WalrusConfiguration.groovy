@@ -70,14 +70,11 @@ import javax.persistence.Entity
 import javax.persistence.EntityTransaction
 import javax.persistence.PersistenceContext
 import javax.persistence.Transient
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
 import com.eucalyptus.component.annotation.ComponentPart
 import com.eucalyptus.config.ComponentConfiguration
 
 @Entity
 @PersistenceContext(name="eucalyptus_config")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart(WalrusBackend.class)
 public class WalrusConfiguration extends ComponentConfiguration implements Serializable {
   @Transient

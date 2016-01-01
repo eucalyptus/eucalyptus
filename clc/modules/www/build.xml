@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2014 Eucalyptus Systems, Inc.
+  Copyright 2009-2015 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@
 		</fileset>
 		<pathelement path="conf" />
 		<dirset dir="${modules.dir}">
-			<include name="**/build"/>
+			<include name="**/build/classes"/>
 		</dirset>
 	</path>
 	<property name="war.build.dir" value="build-war" />
@@ -101,9 +101,9 @@
 	</target>
 
 	<target name="compile-src">
-		<mkdir dir="${build.dir}"/>
+		<mkdir dir="${build.classes.dir}"/>
 		<mkdir dir="${test.dir}"/>
-		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.dir}" classpathref="warclasspath" failonerror="true" debug="true" source="1.7" target="1.7" includeantruntime="false"/>
+		<javac deprecation="false" srcdir="${src.dir}" destdir="${build.classes.dir}" classpathref="warclasspath" failonerror="true" debug="true" source="${javac.source}" target="${javac.target}" includeantruntime="${javac.includeantruntime}"/>
 	</target>
 
 	<target name="clean">

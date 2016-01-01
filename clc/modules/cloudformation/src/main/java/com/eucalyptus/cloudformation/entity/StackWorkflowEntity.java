@@ -20,9 +20,6 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -36,7 +33,6 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_workflows" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackWorkflowEntity extends AbstractPersistent {
 
   @Column(name = "stack_id", nullable = false, length = 400 )

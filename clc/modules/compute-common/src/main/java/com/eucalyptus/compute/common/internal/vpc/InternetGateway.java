@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2015 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,14 +24,12 @@ import java.util.Collection;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 
@@ -40,12 +38,10 @@ import com.eucalyptus.auth.principal.OwnerFullName;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_internet_gateways" )
-@org.hibernate.annotations.Table( appliesTo = "metadata_internet_gateways", indexes = {
-    @Index( name = "metadata_internet_gateways_account_id_idx", columnNames = "metadata_account_id" ),
-    @Index( name = "metadata_internet_gateways_display_name_idx", columnNames = "metadata_display_name" ),
+@Table( name = "metadata_internet_gateways", indexes = {
+    @Index( name = "metadata_internet_gateways_account_id_idx", columnList = "metadata_account_id" ),
+    @Index( name = "metadata_internet_gateways_display_name_idx", columnList = "metadata_display_name" ),
 } )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class InternetGateway extends AbstractOwnedPersistent implements InternetGatewayMetadata {
 
   private static final long serialVersionUID = 1L;
@@ -72,7 +68,6 @@ public class InternetGateway extends AbstractOwnedPersistent implements Internet
 
   @ManyToOne
   @JoinColumn( name = "metadata_vpc_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Vpc vpc;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "internetGateway" )

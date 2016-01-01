@@ -75,8 +75,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
@@ -101,7 +99,6 @@ import com.eucalyptus.util.fsm.StateMachine;
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_component_base" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn(length = 255)
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {

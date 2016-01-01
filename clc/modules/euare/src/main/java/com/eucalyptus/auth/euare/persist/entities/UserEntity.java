@@ -74,6 +74,7 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
@@ -82,9 +83,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Index;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -99,8 +97,9 @@ import groovy.sql.Sql;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_user" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Table( name = "auth_user", indexes = {
+    @Index( name = "auth_user_name_idx", columnList = "auth_user_name" )
+} )
 public class UserEntity extends AbstractPersistent implements Serializable {
 
   @Transient
@@ -112,7 +111,6 @@ public class UserEntity extends AbstractPersistent implements Serializable {
 
   // User name
   @Column( name = "auth_user_name" )
-  @Index( name = "auth_user_name_idx" )
   String name;
   
   // User path (prefix to organize user name space, see AWS spec)
@@ -144,12 +142,10 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   
   // List of secret keys
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<AccessKeyEntity> keys;
   
   // List of certificates
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "user" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Set<CertificateEntity> certificates;
   
   // Customizable user info in key-value pairs
@@ -157,12 +153,10 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @CollectionTable( name = "auth_user_info_map" )
   @MapKeyColumn( name = "auth_user_info_key" )
   @Column( name = "auth_user_info_value" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   Map<String, String> info;
   
   // User's groups
   @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<GroupEntity> groups;
 
   

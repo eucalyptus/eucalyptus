@@ -71,9 +71,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -84,7 +81,6 @@ import com.eucalyptus.entities.Transactions;
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "das_info")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton = false,
     deferred = true)
 public class DASInfo extends AbstractPersistent {

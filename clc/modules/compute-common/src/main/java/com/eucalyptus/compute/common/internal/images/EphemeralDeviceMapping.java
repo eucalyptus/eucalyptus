@@ -66,13 +66,10 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "ephemeral" )
 public class EphemeralDeviceMapping extends DeviceMapping {
   @Column( name = "metadata_device_mapping_ephemeral_number" )
