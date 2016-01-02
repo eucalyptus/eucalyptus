@@ -304,11 +304,17 @@ public class VmControl {
     final TerminateInstancesResponseType reply = request.getReply( );
     final List<String> failedVmList = new ArrayList<>( );
     final List<VmInstance> vmList = new ArrayList<>(  );
+    final Context context = Contexts.lookup( );
     final Collection<String> identifiers = normalizeIdentifiers( request.getInstancesSet( ) );
     for ( String requestedInstanceId : identifiers ) {
       try {
         VmInstance vm = RestrictedTypes.doPrivileged( requestedInstanceId, VmInstance.class );
+        if ( !context.isPrivileged( ) && Boolean.TRUE.equals( vm.getDisableApiTermination( ) ) ) {
+          throw new ClientComputeException( "OperationNotPermitted", "Termination protection enabled for instance " + requestedInstanceId );
+        }
         vmList.add( vm );
+      } catch ( final ClientComputeException e ) {
+        throw e;
       } catch ( final AuthException | NoSuchElementException e ) {
         failedVmList.add( requestedInstanceId );
       } catch ( final Exception e ) {
@@ -817,8 +823,9 @@ public class VmControl {
           throw new ClientComputeException( "InvalidInstanceAttributeValue", "No device is currently mapped at " + mapping.getDeviceName( ) );
         }
         tx.commit();
-      } else if ( request.getDisableApiTermination() != null ) {
-        // not currently supported
+      } else if ( request.getDisableApiTermination() != null && request.getDisableApiTermination( ).getValue( ) != null ) {
+        vm.setDisableApiTermination( request.getDisableApiTermination( ).getValue( ) );
+        tx.commit( );
       } else if ( request.getEbsOptimized() != null ) {
         // not currently supported
       } else if ( request.getGroupIdSet( ) != null && !request.getGroupIdSet( ).getItem( ).isEmpty( ) ) {

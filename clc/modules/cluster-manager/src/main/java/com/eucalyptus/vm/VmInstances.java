@@ -1924,6 +1924,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             .placement( allocInfo.getPartition( ) )
             .networkGroups( allocInfo.getNetworkGroups() )
             .addressing( allocInfo.isUsePrivateAddressing() )
+            .disableApiTermination( allocInfo.isDisableApiTermination() )
             .zombie( token.isZombie( ) )
             .expiresOn( allocInfo.getExpiration() )
             .build( token.getLaunchIndex( ) );
@@ -1944,14 +1945,15 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   public static class Builder {
-    private VmId vmId;
+    private VmId                vmId;
     private String              uuid;
-    private VmBootRecord vmBootRecord;
-    private VmPlacement vmPlacement;
+    private VmBootRecord        vmBootRecord;
+    private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
     private Optional<PrivateNetworkIndex> networkIndex = Optional.absent( );
     private Boolean             usePrivateAddressing;
     private Boolean             zombie;
+    private Boolean             disableApiTermination;
     private OwnerFullName       owner;
     private Date                expiration = new Date( 32503708800000l ); // 3000
     private List<Callback<VmInstance>> callbacks = Lists.newArrayList( );
@@ -1980,6 +1982,11 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     public Builder addressing( final Boolean usePrivate ) {
       this.usePrivateAddressing = usePrivate;
+      return this;
+    }
+
+    public Builder disableApiTermination( final Boolean disableApiTermination ) {
+      this.disableApiTermination = disableApiTermination;
       return this;
     }
 
@@ -2044,7 +2051,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
       VmInstance instance = new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
-          this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
+          this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.disableApiTermination, this.expiration );
       instance.setNaturalId( uuid );
       if ( Boolean.TRUE.equals( this.zombie ) ) {
         instance.getRuntimeState( ).zombie( );

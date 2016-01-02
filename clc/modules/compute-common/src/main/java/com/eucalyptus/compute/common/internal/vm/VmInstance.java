@@ -208,6 +208,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private final Date           expiration;
   @Column( name = "metadata_vm_private_networking" )
   private final Boolean        privateNetwork;
+  @Column( name = "metadata_vm_disable_api_termination" )
+  private Boolean              disableApiTermination;
   @NotFound( action = NotFoundAction.IGNORE )
   @ManyToMany( cascade = { CascadeType.ALL },
                fetch = FetchType.LAZY )
@@ -431,6 +433,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                      final List<NetworkGroup> networkRulesGroups,
                      final Optional<PrivateNetworkIndex> networkIndex,
                      final Boolean usePrivateAddressing,
+                     final Boolean disableApiTermination,
                      final Date expiration ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
     this.setState( VmState.PENDING );
@@ -440,6 +443,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.launchRecord = launchRecord;
     this.placement = placement;
     this.privateNetwork = Boolean.FALSE;
+    this.disableApiTermination = disableApiTermination;
     this.usageStats = new VmUsageStats( this );
     this.runtimeState = new VmRuntimeState( this );
     this.transientVolumeState = new VmVolumeState( this );
@@ -768,6 +772,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.privateNetwork;
   }
 
+  @Nullable
+  public Boolean getDisableApiTermination( ) {
+    return disableApiTermination;
+  }
+
   public Collection<VmInstanceTag> getTags() {
     return tags;
   }
@@ -939,6 +948,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
+  }
+
+  public void setDisableApiTermination( final Boolean disableApiTermination ) {
+    this.disableApiTermination = disableApiTermination;
   }
 
   /**

@@ -544,7 +544,7 @@ public class ComputeService implements Callable {
           }
           break;
         case "disableApiTermination":
-          reply.setDisableApiTermination( false );
+          reply.setDisableApiTermination( Optional.fromNullable( vm.getDisableApiTermination( ) ).or( Boolean.FALSE ) );
           break;
         case "ebsOptimized":
           reply.setEbsOptimized( false );

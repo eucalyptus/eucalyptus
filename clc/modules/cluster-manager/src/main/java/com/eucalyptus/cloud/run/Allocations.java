@@ -108,6 +108,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -132,6 +133,7 @@ public class Allocations {
     private final int minCount;
     private final int maxCount;
     private boolean usePrivateAddressing;
+    private boolean disableApiTermination;
     private final boolean monitoring;
     @Nullable
     private final String clientToken;
@@ -168,6 +170,7 @@ public class Allocations {
       this.minCount = request.getMinCount();
       this.maxCount = request.getMaxCount();
       this.usePrivateAddressing = "private".equals(request.getAddressingType());
+      this.disableApiTermination = Optional.fromNullable( request.getDisableTerminate( ) ).or( Boolean.FALSE );
       this.monitoring = request.getMonitoring() == null ? Boolean.FALSE
           : request.getMonitoring();
       this.clientToken = Strings.emptyToNull(request.getClientToken());
@@ -483,6 +486,14 @@ public class Allocations {
 
     public void setUsePrivateAddressing( final boolean usePrivateAddressing ) {
       this.usePrivateAddressing = usePrivateAddressing;
+    }
+
+    public boolean isDisableApiTermination( ) {
+      return disableApiTermination;
+    }
+
+    public void setDisableApiTermination( final boolean disableApiTermination ) {
+      this.disableApiTermination = disableApiTermination;
     }
 
     public final boolean isMonitoring() {
