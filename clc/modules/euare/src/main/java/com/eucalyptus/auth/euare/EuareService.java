@@ -2159,7 +2159,102 @@ public class EuareService {
     }
     return reply;
   }
-  
+
+  public AttachGroupPolicyResponseType attachGroupPolicy( final AttachGroupPolicyType request ) throws EucalyptusCloudException {
+    final AttachGroupPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public AttachRolePolicyResponseType attachRolePolicy( final AttachRolePolicyType request ) throws EucalyptusCloudException {
+    final AttachRolePolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public AttachUserPolicyResponseType attachUserPolicy( final AttachUserPolicyType request ) throws EucalyptusCloudException {
+    final AttachUserPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreatePolicyResponseType createPolicy( final CreatePolicyType request ) throws EucalyptusCloudException {
+    final CreatePolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public CreatePolicyVersionResponseType createPolicyVersion( final CreatePolicyVersionType request ) throws EucalyptusCloudException {
+    final CreatePolicyVersionResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeletePolicyResponseType deletePolicy( final DeletePolicyType request ) throws EucalyptusCloudException {
+    final DeletePolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeletePolicyVersionResponseType deletePolicyVersion( final DeletePolicyVersionType request ) throws EucalyptusCloudException {
+    final DeletePolicyVersionResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DetachGroupPolicyResponseType detachGroupPolicy( final DetachGroupPolicyType request ) throws EucalyptusCloudException {
+    final DetachGroupPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DetachRolePolicyResponseType detachRolePolicy( final DetachRolePolicyType request ) throws EucalyptusCloudException {
+    final DetachRolePolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DetachUserPolicyResponseType detachUserPolicy( final DetachUserPolicyType request ) throws EucalyptusCloudException {
+    final DetachUserPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public GetPolicyResponseType getPolicy( final GetPolicyType request ) throws EucalyptusCloudException {
+    final GetPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public GetPolicyVersionResponseType getPolicyVersion( final GetPolicyVersionType request ) throws EucalyptusCloudException {
+    final GetPolicyVersionResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListAttachedGroupPoliciesResponseType listAttachedGroupPolicies( final ListAttachedGroupPoliciesType request ) throws EucalyptusCloudException {
+    final ListAttachedGroupPoliciesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListAttachedRolePoliciesResponseType listAttachedRolePolicies( final ListAttachedRolePoliciesType request ) throws EucalyptusCloudException {
+    final ListAttachedRolePoliciesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListAttachedUserPoliciesResponseType listAttachedUserPolicies( final ListAttachedUserPoliciesType request ) throws EucalyptusCloudException {
+    final ListAttachedUserPoliciesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListEntitiesForPolicyResponseType listEntitiesForPolicy( final ListEntitiesForPolicyType request ) throws EucalyptusCloudException {
+    final ListEntitiesForPolicyResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListPoliciesResponseType listPolicies( final ListPoliciesType request ) throws EucalyptusCloudException {
+    final ListPoliciesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ListPolicyVersionsResponseType listPolicyVersions( final ListPolicyVersionsType request ) throws EucalyptusCloudException {
+    final ListPolicyVersionsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public SetDefaultPolicyVersionResponseType setDefaultPolicyVersion( final SetDefaultPolicyVersionType request ) throws EucalyptusCloudException {
+    final SetDefaultPolicyVersionResponseType reply = request.getReply( );
+    return reply;
+  }
+
   private void fillUserResult( UserType u, EuareUser userFound, EuareAccount account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );
