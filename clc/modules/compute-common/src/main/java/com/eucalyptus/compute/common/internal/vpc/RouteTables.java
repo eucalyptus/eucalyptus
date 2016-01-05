@@ -108,12 +108,21 @@ public interface RouteTables extends Lister<RouteTable> {
     public RouteType apply( @Nullable final Route route ) {
       return route == null ?
           null :
-          new RouteType(
-            route.getDestinationCidr(),
-            Optional.fromNullable( route.getInternetGateway( ) ).transform( CloudMetadatas.toDisplayName( ) ).or( "local" ),
-            Objects.toString( route.getState(), null ),
-            Objects.toString( route.getOrigin(), null )
-          );
+          route.getNetworkInterfaceId( ) != null ?
+              new RouteType(
+                  route.getDestinationCidr(),
+                  Objects.toString( route.getInstanceId( ), null ),
+                  Objects.toString( route.getInstanceAccountNumber( ), null ),
+                  Objects.toString( route.getNetworkInterfaceId( ) ),
+                  Objects.toString( route.getState(), null ),
+                  Objects.toString( route.getOrigin(), null )
+              ) :
+              new RouteType(
+                route.getDestinationCidr(),
+                Optional.fromNullable( route.getInternetGatewayId( ) ).or( "local" ),
+                Objects.toString( route.getState(), null ),
+                Objects.toString( route.getOrigin(), null )
+              );
     }
   }
 
@@ -145,7 +154,7 @@ public interface RouteTables extends Lister<RouteTable> {
               .withBooleanSetProperty( "association.main", FilterBooleanSetFunctions.ASSOCIATION_MAIN )
               .withStringSetProperty( "route.destination-cidr-block", FilterStringSetFunctions.ROUTE_DESTINATION_CIDR )
               .withStringSetProperty( "route.gateway-id", FilterStringSetFunctions.ROUTE_GATEWAY_ID )
-              .withUnsupportedProperty( "route.instance-id" )
+              .withStringSetProperty( "route.instance-id", FilterStringSetFunctions.ROUTE_INSTANCE_ID )
               .withUnsupportedProperty( "route.vpc-peering-connection-id" )
               .withStringSetProperty( "route.origin", FilterStringSetFunctions.ROUTE_ORIGIN )
               .withStringSetProperty( "route.state", FilterStringSetFunctions.ROUTE_STATE )
@@ -187,7 +196,13 @@ public interface RouteTables extends Lister<RouteTable> {
     GATEWAY_ID {
       @Override
       public String apply( final Route route ) {
-        return CloudMetadatas.toDisplayName( ).apply( route.getInternetGateway() );
+        return route.getInternetGatewayId( );
+      }
+    },
+    INSTANCE_ID {
+      @Override
+      public String apply( final Route route ) {
+        return route.getInstanceId( );
       }
     },
     ORIGIN {
@@ -233,6 +248,12 @@ public interface RouteTables extends Lister<RouteTable> {
       @Override
       public Set<String> apply( final RouteTable routeTable ) {
         return routePropertySet( routeTable, RouteFilterStringFunctions.GATEWAY_ID );
+      }
+    },
+    ROUTE_INSTANCE_ID {
+      @Override
+      public Set<String> apply( final RouteTable routeTable ) {
+        return routePropertySet( routeTable, RouteFilterStringFunctions.INSTANCE_ID );
       }
     },
     ROUTE_ORIGIN {

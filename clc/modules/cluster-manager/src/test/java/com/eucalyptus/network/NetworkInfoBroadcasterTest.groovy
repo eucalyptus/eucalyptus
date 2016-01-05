@@ -738,8 +738,11 @@ class NetworkInfoBroadcasterTest {
 
   private static NetworkInfoBroadcasts.RouteNetworkView route( String cidr, String internetGatewayId ) {
     new NetworkInfoBroadcasts.RouteNetworkView(
+        true,
         cidr,
-        internetGatewayId
+        internetGatewayId,
+        null,
+        null
     )
   }
 

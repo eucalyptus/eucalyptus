@@ -1753,7 +1753,7 @@ public class Entities {
     /**
      * @see CriteriaBuilder#isNotNull(Expression)
      */
-    public EntityRestrictionBuilder<E> isNotNull( @Nonnull final SingularAttribute<? super E, String> attribute ) {
+    public <V> EntityRestrictionBuilder<E> isNotNull( @Nonnull final SingularAttribute<? super E, V> attribute ) {
       restrictions.add( new EntityRestriction.NotNullPropertyEntityRestriction<>( entityClass, attribute ) );
       return this;
     }

@@ -227,6 +227,7 @@ class NetworkInfoBroadcasts {
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
         map
     }).asMap( )
+    Predicate<RouteNetworkView> activeRoutePredicate = activeRoutePredicate( internetGateways, instances )
     info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
       final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
       new NIVpc(
@@ -261,7 +262,7 @@ class NetworkInfoBroadcasts {
             new NIRouteTable(
                 name: routeTable.id,
                 ownerId: routeTable.ownerAccountNumber,
-                routes: Lists.transform( routeTable.routes, TypeMappers.lookup( RouteNetworkView, NIRoute ) ) as List<NIRoute>
+                routes: Lists.newArrayList( Iterables.transform( Iterables.filter( routeTable.routes, activeRoutePredicate ), TypeMappers.lookup( RouteNetworkView, NIRoute ) ) ) as List<NIRoute>
             )
           },
           vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
@@ -380,6 +381,20 @@ class NetworkInfoBroadcasts {
     info
   }
 
+  private static Predicate<RouteNetworkView> activeRoutePredicate(
+      final Iterable<InternetGatewayNetworkView> internetGateways,
+      final Iterable<VmInstanceNetworkView> instances
+  ) {
+    final Set<String> instanceIds = Sets.newHashSet( instances.collect{ VmInstanceNetworkView vm -> vm.id } )
+    final Set<String> internetGatewayIds = Sets.newHashSet( internetGateways
+        .findAll{ InternetGatewayNetworkView ig -> ig.vpcId } // only attached gateways have active routes
+        .collect{ Object ig -> ((InternetGatewayNetworkView)ig).id } )
+    return { RouteNetworkView routeNetworkView ->
+      (!routeNetworkView.gatewayId && !routeNetworkView.networkInterfaceId) || // local route
+          internetGatewayIds.contains( routeNetworkView.gatewayId ) ||
+          instanceIds.contains( routeNetworkView.instanceId )
+    } as Predicate<RouteNetworkView>
+  }
 
   private static Set<String> explodeRules( NetworkRule networkRule ) {
     Set<String> rules = Sets.newLinkedHashSet( )
@@ -891,8 +906,11 @@ class NetworkInfoBroadcasts {
 
   @Immutable
   static class RouteNetworkView {
+    boolean active
     String destinationCidr
     String gatewayId
+    String networkInterfaceId
+    String instanceId
   }
 
   @TypeMapper
@@ -920,8 +938,11 @@ class NetworkInfoBroadcasts {
     @Override
     RouteNetworkView apply(@Nullable final Route route) {
       new RouteNetworkView(
+          route.state == Route.State.active,
           route.destinationCidr,
-          route.getInternetGateway()?.displayName ?: 'local'
+          route.internetGatewayId,
+          route.networkInterfaceId,
+          route.instanceId
       )
     }
   }
@@ -934,7 +955,8 @@ class NetworkInfoBroadcasts {
     NIRoute apply(@Nullable final RouteNetworkView routeNetworkView) {
       new NIRoute(
           routeNetworkView.destinationCidr,
-          routeNetworkView.gatewayId
+          routeNetworkView.gatewayId?:(routeNetworkView.networkInterfaceId?null:'local'),
+          routeNetworkView.networkInterfaceId
       )
     }
   }

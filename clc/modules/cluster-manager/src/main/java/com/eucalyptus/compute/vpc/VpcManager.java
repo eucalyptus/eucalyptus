@@ -54,6 +54,7 @@ import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOption;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSets;
@@ -578,18 +579,30 @@ public class VpcManager {
     final CreateRouteResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
-    final String gatewayId = Identifier.igw.normalize( request.getGatewayId() );
+    final String gatewayId = request.getGatewayId( ) == null ?
+        null : Identifier.igw.normalize( request.getGatewayId( ) );
+    final String instanceId = request.getInstanceId( ) == null ?
+        null : Identifier.i.normalize( request.getInstanceId( ) );
+    final String networkInterfaceId = request.getNetworkInterfaceId( ) == null ?
+        null : Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId() );
     final String destinationCidr = request.getDestinationCidrBlock( );
     final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
     if ( !destinationCidrOption.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
     }
+    if ( gatewayId == null && instanceId == null && networkInterfaceId == null ) {
+      throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
+    }
     final Supplier<Route> allocator = transactional( new Supplier<Route>( ) {
       @Override
       public Route get( ) {
         try {
-          final InternetGateway internetGateway =
+          final NetworkInterface networkInterface = networkInterfaceId == null ? null :
+              networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.<NetworkInterface>identity( ) );
+          final VmInstance instance = instanceId == null ? null :
+              VmInstances.lookup( instanceId );
+          final InternetGateway internetGateway = gatewayId == null ? null :
               internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
           routeTables.updateByExample(
               RouteTable.exampleWithName( accountFullName, routeTableId ),
@@ -617,9 +630,37 @@ public class VpcManager {
                             "Route limit exceeded for " + request.getRouteTableId() );
                       }
 
-                      routeTable.getRoutes().add(
-                          Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway )
-                      );
+                      NetworkInterface targetNetworkInterface = networkInterface;
+                      if ( instance != null ) {
+                        final List<NetworkInterface> enis = instance.getNetworkInterfaces( );
+                        if ( enis.size() != 1 ) {
+                          throw new ClientComputeException(
+                              "InvalidInstanceID",
+                              "Network interface not found for " + request.getInstanceId( ) );
+                        }
+                        targetNetworkInterface = enis.get( 0 );
+                      }
+
+                      final Route route;
+                      if ( targetNetworkInterface != null ) {
+                        if ( !RestrictedTypes.filterPrivileged( ).apply( targetNetworkInterface ) ||
+                            !targetNetworkInterface.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+                          throw new ClientComputeException(
+                              "InvalidParameterValue",
+                              "Network interface invalid: " + targetNetworkInterface.getDisplayName( ) );
+                        }
+                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, targetNetworkInterface );
+                      } else {
+                        if ( internetGateway== null || internetGateway.getVpc( )==null ||
+                            !internetGateway.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+                          throw new ClientComputeException(
+                              "InvalidParameterValue",
+                              "Internet gateway invalid: " + gatewayId );
+                        }
+                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway );
+                      }
+
+                      routeTable.getRoutes().add( route );
                       routeTable.updateTimeStamps( ); // ensure version of table increments also
                     } else {
                       throw new ClientUnauthorizedComputeException( "Not authorized to create route" );
@@ -1715,6 +1756,7 @@ public class VpcManager {
     aclassoc( "networkAclAssociation" ),
     dopt( "DHCPOption" ),
     eni( "networkInterface" ),
+    i( "instance" ),
     igw( "internetGateway" ),
     rtb( "routeTable" ),
     rtbassoc( "routeTableAssociation" ),

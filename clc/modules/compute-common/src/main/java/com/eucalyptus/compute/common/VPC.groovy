@@ -1628,6 +1628,20 @@ class RouteType extends EucalyptusData {
     this.state = state
     this.origin = origin
   }
+
+  RouteType(final String destinationCidrBlock,
+            final String instanceId,
+            final String instanceOwnerId,
+            final String networkInterfaceId,
+            final String state,
+            final String origin) {
+    this.destinationCidrBlock = destinationCidrBlock
+    this.instanceId = instanceId
+    this.instanceOwnerId = instanceOwnerId
+    this.networkInterfaceId = networkInterfaceId
+    this.state = state
+    this.origin = origin
+  }
 }
 class ValueSetType extends EucalyptusData {
   ValueSetType() {  }
