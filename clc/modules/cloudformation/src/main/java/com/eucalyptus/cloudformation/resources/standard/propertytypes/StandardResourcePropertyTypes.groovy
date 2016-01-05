@@ -244,6 +244,13 @@ public class ElasticLoadBalancingConnectionDrainingPolicy {
 }
 
 @ToString(includeNames=true)
+public class ElasticLoadBalancingConnectionSettings {
+  @Required
+  @Property
+  Integer idleTimeout;
+}
+
+@ToString(includeNames=true)
 public class ElasticLoadBalancingHealthCheckType {
   @Property
   Integer healthyThreshold;
