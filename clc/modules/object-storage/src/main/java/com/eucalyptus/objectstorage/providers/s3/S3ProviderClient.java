@@ -22,6 +22,7 @@ package com.eucalyptus.objectstorage.providers.s3;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -400,28 +401,47 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     LOG.debug("Initialization completed successfully");
   }
 
+  protected int httpHeadToRootReturnCode() {
+    return HttpResponseStatus.METHOD_NOT_ALLOWED.getCode();
+  }
+
   @Override
   public void check() throws EucalyptusCloudException {
     LOG.debug("Checking");
-    Socket s = null;
     try {
-      URI endpoint = this.getUpstreamEndpoint();
-      s = new Socket(endpoint.getHost(), endpoint.getPort());
-    } catch (URISyntaxException | UnknownHostException e) {
+      // HEAD request to / is not supported and HTTP 405 should be returned
+      if ( httpHeadToRootReturnCode() != excuteHeadRequest( this.getUpstreamEndpoint() ) )
+        throw new EucalyptusCloudException("Unable to connect to S3 Endpoint Please check configuration and network connection");
+    } catch (URISyntaxException e) {
       // it is safe to do this because we won't try to execute an operation until enable returns successfully.
-      throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint Please check configuration and network connection");
-    } catch (IOException e) {
-      throw new EucalyptusCloudException("Unable to connect to S3 Endpoint. Please check configuration and network connection");
-    } finally {
-      try {
-        if (s != null && !s.isClosed()) {
-          s.close();
-        }
-      } catch (IOException e) {
-        LOG.warn("Failed closing socked used to check remote S3 endpoint", e);
-      }
+      throw new EucalyptusCloudException("Unable to connect to S3 Endpoint Please check configuration and network connection");
     }
     LOG.debug("Check completed successfully");
+  }
+
+  private static int excuteHeadRequest(URI targetURI) {
+    LOG.debug("HEAD request to " + targetURI);
+    HttpURLConnection connection = null;
+    int code = 500;
+    try {
+      connection = (HttpURLConnection)targetURI.toURL().openConnection();
+      connection.setRequestMethod("HEAD");
+      connection.setUseCaches(false);
+      try {
+        connection.getInputStream();
+        code = connection.getResponseCode();
+      } catch(IOException ex) {
+        code = connection.getResponseCode();
+      }
+      return code;
+    } catch (Exception ex) {
+      LOG.error(ex);
+      return code;
+    } finally {
+      if(connection != null) {
+        connection.disconnect();
+      }
+    }
   }
 
   @Override
