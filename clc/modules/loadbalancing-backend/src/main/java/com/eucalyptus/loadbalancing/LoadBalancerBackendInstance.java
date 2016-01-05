@@ -194,7 +194,12 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 				      if(instance.getInstanceId().equals(this.getDisplayName()) && instance.getStateName().equals("running")){
 				        this.vmInstance = instance;
 				        this.partition = instance.getPlacement();
-				        this.ipAddress = instance.getIpAddress();
+				        if(this.loadbalancer != null) {
+				          if(this.loadbalancer.getVpcId() == null)
+				            this.ipAddress = instance.getIpAddress();
+				          else
+				            this.ipAddress = instance.getPrivateIpAddress();
+				        }
 				        break;
 				      }
 				}
@@ -448,18 +453,27 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			    }finally{
 			      LoadBalancingServoCache.getInstance().invalidate(be);
 			    }
-			  }else if (instanceMap.containsKey(be.getInstanceId()) &&  // when IP address is changed
-			      !instanceMap.get(be.getInstanceId()).getIpAddress().equals(be.getIpAddress())){
-			    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			      final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-			      update.setIpAddress(instanceMap.get(be.getInstanceId()).getIpAddress());
-			      update.setPartition(instanceMap.get(be.getInstanceId()).getPlacement());
-			      Entities.persist(update);
-			      db.commit();
-			    }catch(final Exception ex) {
-			      ;
-			    }finally{
-			      LoadBalancingServoCache.getInstance().invalidate(be);
+			  }else if (instanceMap.containsKey(be.getInstanceId())) {
+			    String instanceIpAddress = null;
+			    if (be.getLoadBalancer().getVpcId() == null)
+			      instanceIpAddress = instanceMap.get(be.getInstanceId()).getIpAddress();
+			    else
+			      instanceIpAddress = instanceMap.get(be.getInstanceId()).getPrivateIpAddress();
+			    if(instanceIpAddress==null) {
+			      LOG.warn(String.format("Failed to determine ELB backend instance's IP address: %s", 
+			          be.getInstanceId()));
+			    }else if(!instanceIpAddress.equals(be.getIpAddress())) {
+			      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+			        final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+			        update.setIpAddress(instanceIpAddress);
+			        update.setPartition(instanceMap.get(be.getInstanceId()).getPlacement());
+			        Entities.persist(update);
+			        db.commit();
+			      }catch(final Exception ex) {
+			        ;
+			      }finally{
+			        LoadBalancingServoCache.getInstance().invalidate(be);
+			      }
 			    }
 			  }
 			}
