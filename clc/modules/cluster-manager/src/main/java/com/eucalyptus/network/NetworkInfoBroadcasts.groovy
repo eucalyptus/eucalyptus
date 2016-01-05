@@ -212,8 +212,15 @@ class NetworkInfoBroadcasts {
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
     Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
+    Set<String> activeInstances = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 500 ) ) {
+      Set<String> instanceIds, VmInstanceNetworkView inst -> instanceIds.add( inst.id ); instanceIds
+    }
     Set<String> activeVpcs = (Set<String>) networkInterfaces.inject( Sets.newHashSetWithExpectedSize( 500 ) ){
-      Set<String> vpcIds, NetworkInterfaceNetworkView networkInterface -> vpcIds.add( networkInterface.vpcId ); vpcIds
+      Set<String> vpcIds, NetworkInterfaceNetworkView networkInterface ->
+        if ( networkInterface.instanceId && activeInstances.contains( networkInterface.instanceId ) ) {
+          vpcIds.add( networkInterface.vpcId )
+        }
+        vpcIds
     }
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
@@ -326,8 +333,11 @@ class NetworkInfoBroadcasts {
     Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
       Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
     }
-    networkInterfaces.inject( activeSecurityGroups ){
-      Set<String> groups, NetworkInterfaceNetworkView networkInterface -> groups.addAll( networkInterface.securityGroupIds ); groups
+    networkInterfaces.inject( activeSecurityGroups ){ Set<String> groups, NetworkInterfaceNetworkView networkInterface ->
+      if ( networkInterface.instanceId && activeInstances.contains( networkInterface.instanceId ) ) {
+        groups.addAll( networkInterface.securityGroupIds )
+      }
+      groups
     }
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
     info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
