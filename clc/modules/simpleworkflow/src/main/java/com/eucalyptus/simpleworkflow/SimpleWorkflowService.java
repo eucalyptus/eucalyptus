@@ -243,7 +243,8 @@ public class SimpleWorkflowService {
               parsePeriod( request.getDefaultTaskHeartbeatTimeout( ), -1 ),
               parsePeriod( request.getDefaultTaskScheduleToCloseTimeout( ), -1 ),
               parsePeriod( request.getDefaultTaskScheduleToStartTimeout( ), -1 ),
-              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ), -1 )
+              parsePeriod( request.getDefaultTaskStartToCloseTimeout( ), -1 ),
+              parsePeriod( request.getDefaultTaskPriority( ), 0)
           );
           return activityTypes.save( activityType );
         } catch ( Exception ex ) {

@@ -101,6 +101,9 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
 
   @Column( name = "default_task_start_to_close_timeout", updatable = false  )
   private Integer defaultTaskStartToCloseTimeout;
+  
+  @Column( name = "default_task_priority", updatable = false)
+  private Integer defaultTaskPriority;
 
   @Column( name = "deprecation_timestamp" )
   @Temporal( TemporalType.TIMESTAMP )
@@ -122,7 +125,8 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
                                      final Integer defaultTaskHeartbeatTimeout,
                                      final Integer defaultTaskScheduleToCloseTimeout,
                                      final Integer defaultTaskScheduleToStartTimeout,
-                                     final Integer defaultTaskStartToCloseTimeout ) {
+                                     final Integer defaultTaskStartToCloseTimeout,
+                                     final Integer defaultTaskPriority) {
     final ActivityType activityType = new ActivityType( owner, name );
     activityType.setState( Status.Registered );
     activityType.setActivityVersion( version );
@@ -133,6 +137,7 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
     activityType.setDefaultTaskScheduleToCloseTimeout( defaultTaskScheduleToCloseTimeout );
     activityType.setDefaultTaskScheduleToStartTimeout( defaultTaskScheduleToStartTimeout );
     activityType.setDefaultTaskStartToCloseTimeout( defaultTaskStartToCloseTimeout );
+    activityType.setDefaultTaskPriority( defaultTaskPriority );
     return activityType;
   }
 
@@ -254,5 +259,13 @@ public class ActivityType extends UserMetadata<ActivityType.Status> implements A
 
   public void setDeprecationTimestamp( final Date deprecationTimestamp ) {
     this.deprecationTimestamp = deprecationTimestamp;
+  }
+
+  public void setDefaultTaskPriority( final Integer defaultTaskPriority ) {
+    this.defaultTaskPriority = defaultTaskPriority;
+  }
+  
+  public Integer getDefaultTaskPriority() {
+    return this.defaultTaskPriority;
   }
 }

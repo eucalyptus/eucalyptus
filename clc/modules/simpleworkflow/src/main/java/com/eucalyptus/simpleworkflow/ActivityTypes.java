@@ -80,14 +80,22 @@ public interface ActivityTypes {
                   .withDefaultTaskHeartbeatTimeout( timeout( activityType.getDefaultTaskHeartbeatTimeout( ) ) )
                   .withDefaultTaskScheduleToCloseTimeout( timeout( activityType.getDefaultTaskScheduleToCloseTimeout( ) ) )
                   .withDefaultTaskScheduleToStartTimeout( timeout( activityType.getDefaultTaskScheduleToStartTimeout( ) ) )
-                  .withDefaultTaskStartToCloseTimeout( timeout( activityType.getDefaultTaskStartToCloseTimeout() ) ) )
+                  .withDefaultTaskStartToCloseTimeout( timeout( activityType.getDefaultTaskStartToCloseTimeout() ) )
+                  .withDefaultTaskPriority(priority(activityType.getDefaultTaskPriority())))
               .withTypeInfo( TypeMappers.transform( activityType, ActivityTypeInfo.class ) );
     }
 
-    private String timeout( final Integer timeout ) {
+    private String timeout( Integer timeout ) {
+      timeout = timeout == -1 ? null : timeout;
       return Optional.fromNullable( timeout )
           .transform( Functions.toStringFunction() )
           .or( "NONE" );
+    }
+    
+    private String priority( final Integer priority ) {
+      return Optional.fromNullable( priority )
+          .transform( Functions.toStringFunction() )
+          .or("0");
     }
   }
 
