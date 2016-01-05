@@ -1,218 +1,371 @@
-These are build instructions for the development version of Eucalyptus.
-=======================================================================
+===================================
+This is the Eucalyptus process for:
+===================================
 
-***NOTE*** The following install instructions are subject to change and 
+1. Setting up your Linux environment,
+2. Obtaining the source code and dependent github repositories,
+3. Installing build and runtime dependencies,
+4. Building the code from source into RPM packages,
+5. Distributing the RPMs to other systems,
+6. Installing the RPMs to the build system and other systems,
+7. Configuring Eucalyptus, using the Eucalyptus Install Guide,
+8. Rebuilding code as needed, and installing rebuilt artifacts.
+
+***NOTE*** The following instructions are subject to change and 
 may be INCOMPLETE. Contributions encouraged! :)
 
-What follows are instructions to build and install Eucalyptus from source on
-CentOS/RHEL v6. Eucalyptus only supports 64-bit installations of CentOS/RHEL.
+Eucalyptus only supports 64-bit installations on CentOS/RHEL v6.7.
 
-You must install all dependencies to be able to build and install Eucalyptus.
+These instructions were tested on the "Minimal" distribution of CentOS v6.7.
 
-1. Get the source code
-======================
-
-If "git" is not already installed:
-yum install git
-
-git clone git://github.com/eucalyptus/eucalyptus --recursive
+We will use the Eucalyptus RPM build process to build the source code,
+install it to a certain directory tree, and create the RPM packages. Those
+packages will be installed on all systems that will be part of the
+Eucalyptus cloud, which can include the build system.
 
 
-2. Install dependencies
-=======================
+1. Set up the environment
+=========================
 
-Follow these instructions to install required build and run-time dependencies.
+On each system (build or others), add the following environment variables to
+your .bashrc, or another file you can source before executing the
+commands that use them.
 
-Install the EPEL repository:
+Pick any directories you wish. Just don't make any nested in any of the
+others.
 
-yum install http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+#------------------------
+# Get github repositories here
+export EUCAGIT=~/euca/git
 
-Install the ELRepo repository (needed on the Walrus host only for DRBD packages):
+# Lay out the rpmbuild structure here, for sources, build outputs, and RPMs
+export EUCARPM=~/euca/rpmbuild
 
-yum install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-5.el6.elrepo.noarch.rpm
+# Distribute the rpmbuild outputs to other systems here
+# Define this on the build system too
+export EUCAPKGS=~/euca/pkgs
+
+# Put the build artifacts from "make install" here.
+# Only for non-rpmbuild direct "make install" commands.
+export EUCALYPTUS=~/euca/built
+
+# Define the required JAVA environment variables
+# (Verify these are correct for your system)
+export JAVA_HOME="/usr/lib/jvm/java-1.7.0/"
+export JAVA="$JAVA_HOME/bin/java"
+#------------------------
+
+Log out and in again, or "source <this file>".
+
+Create the directories if they don't already exist:
+
+>>>>> Command 1a: 
+# mkdir -p $EUCAGIT $EUCAPKGS $EUCALYPTUS $EUCARPM/SPECS $EUCARPM/SOURCES
+
+Install the following tools and repos needed for building:
+
+>>>>> Command 1b: 
+# yum install git yum-utils wget \
+    http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm \
+    http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-5.el6.elrepo.noarch.rpm
 
 Install the Eucalyptus repository that will allow yum to find the packages
 needed for building Eucalyptus that are not in the other repos. Point your
 Web browser to:
-http://downloads.eucalyptus.com/software/eucalyptus/nightly/devel/ 
-...and drill down to find the latest version of
-eucalyptus-release-nightly-<...>.rpm for your desired Linux platform. 
+http://downloads.eucalyptus.com/software/eucalyptus/nightly/devel
 
-For example: (this won't work, don't copy & paste it)
-yum install http://downloads.eucalyptus.com/software/eucalyptus/nightly/devel/centos/6/x86_64/eucalyptus-release-nightly-0-2x.el6.noarch.rpm  
-Use the latest version number and the right intermediary paths for your platform.
+Drill down to find the latest version of the RPM for your desired Linux
+platform, for "x86_64" (not "source"). As of this writing, the subdirs "6",
+"6Server", and "6Workstation" all point to the same repositories. Look for
+the latest version of:
 
-Install the following build dependencies:
+eucalyptus-release-nightly-<...>.rpm
 
-yum groupinstall development
+>>>>> Command 1c: 
+# yum install <that URL>
 
-yum-builddep eucalyptus
+Similarly, install the euca2ools repository from:
+http://downloads.eucalyptus.com/software/euca2ools/nightly/devel
+Drill down to find the latest:
+euca2ools-release-nightly-<...>.rpm
 
-Download and save the following file to /opt, and make it executable.
+>>>>> Command 1d: 
+# yum install <that URL>
 
-cd /opt
-wget https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
-chmod +x euca-WSDL2C.sh
+
+2. Get the source code
+======================
+
+If you are setting up a non-build system to install Eucalyptus on, skip this
+step.
+
+Get the Eucalyptus source code repository:
+
+>>>>> Command 2a: 
+# git clone https://github.com/eucalyptus/eucalyptus.git $EUCAGIT/eucalyptus
+
+Get the repository containing the RPM build spec and a few other files
+needed to build and install the source code:
+
+>>>>> Command 2b: 
+# git clone https://github.com/eucalyptus/eucalyptus-rpmspec.git $EUCAGIT/eucalyptus-rpmspec
+
+Get the Eucalyptus-specific libraries needed to build and run:
+
+>>>>> Command 2c: 
+# git clone https://github.com/eucalyptus/eucalyptus-cloud-libs.git $EUCAGIT/eucalyptus-cloud-libs
+
+
+3. Install dependencies
+=======================
+
+If you are setting up a non-build system to install Eucalyptus on, finish
+all steps on the build system through step 5 before performing this step on
+the non-build systems.
+
+Follow these instructions to install required build and run-time dependencies.
+
+Install the general software development build dependencies:
+
+>>>>> Command 3a: 
+# yum groupinstall development
+
+Install the Eucalyptus-specific build dependencies:
+(The GPG keys are not kept up-to-date for nightly builds.)
+
+>>>>> Command 3b: 
+# yum-builddep --nogpgcheck eucalyptus
+
+Install the Eucalyptus-specific runtime dependencies. This is the superset
+of all dependencies. Not all may be required for every component. You
+install them in one of two ways:
+
+If you are setting up the build system:
+---------------------------------------
+
+The list of RPMs is parsed from the "Requires:" lines of the RPM spec
+file. We save it to a file so we can use it on other systems later.
+
+>>>>> Command 3c: 
+# grep -i '^Requires\:' $EUCAGIT/eucalyptus-rpmspec/eucalyptus.spec | sed -e 's/^Requires: *//' -e 's/\%.*//' | cut -d ' ' -f 1 | sort | uniq | grep -v euca | tr '\n' ' ' > $EUCAGIT/eucalyptus-rpmspec/eucalyptus_rundep
+
+Install the runtime dependencies:
+
+>>>>> Command 3d: 
+# cat $EUCAGIT/eucalyptus-rpmspec/eucalyptus_rundep | xargs yum -y install
+
+If you are setting up the other systems:
+---------------------------------------
+
+This step is for all other systems on which you will install the packages
+built on the build system. Do the following only after the packages have
+been built on the build system (through step 5):
+
+Install the runtime dependencies:
+
+>>>>> Command 3c: 
+# cat $EUCAPKGS/eucalyptus_rundep | xargs yum -y install
+
+In either case, continue here:
+------------------------------
 
 Download the Apache Ivy 2.1.0 tarball and replace the Ivy jar installed by
 the "apache-ivy" yum install.
 
-wget http://archive.apache.org/dist/ant/ivy/2.1.0/apache-ivy-2.1.0-bin.tar.gz
-tar -zxvf apache-ivy-2.1.0-bin.tar.gz
-cp -p apache-ivy-2.1.0/ivy-2.1.0.jar /usr/share/java
+>>>>> Command 3e: 
+# wget http://archive.apache.org/dist/ant/ivy/2.1.0/apache-ivy-2.1.0-bin.tar.gz && \
+tar -zxvf apache-ivy-2.1.0-bin.tar.gz && \
+cp -p apache-ivy-2.1.0/ivy-2.1.0.jar /usr/share/java && \
 ln -fs /usr/share/java/ivy-2.1.0.jar /usr/share/java/ivy.jar
-
-
-3. Set Environment Variables
-============================
-
-Define the following variables. Typically, they would go into
-/root/.bashrc. Remember to log out and log in again (or "source .bashrc")
-after editing it.
-
-Define the required JAVA environment variables:
-(Verify these are correct for your system)
-
-export JAVA_HOME="/usr/lib/jvm/java-1.7.0/"
-export JAVA="$JAVA_HOME/bin/java"
-
-Define the root directory where you want the tree of built Eucalyptus
-binaries to be placed. 
-
-If this is the only system you'll be running Eucalyptus on, as a
-cloud-in-a-box, then you can let that root be the root of the filesystem,
-"/". Files will then be placed in the directories /etc, /usr, and /var:
-
-export EUCALYPTUS="/"
-
-If instead you intend to deploy the binaries you build on this system to
-other systems and run that set of systems as a Eucalyptus cloud, then it's
-best to pick a directory that you can rsync to the other machines easily,
-for example:
-
-export EUCALYPTUS="/opt/eucalyptus"
-
-Be sure to create (mkdir) that directory if it does not yet exist.
+>>>>> (end of commands)
 
 
 4. Build Eucalyptus
 ===================
 
-Run the "configure" script to prepare the system to build:
+If you are setting up a non-build system to install Eucalyptus on, skip this
+step.
 
-./configure --with-axis2==/usr/share/java/axis2 \
---with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
---with-apache2-module-dir=/usr/lib64/httpd/modules \
---with-db-home=/usr/pgsql-9.2 \
---with-wsdl2c-sh=/opt/euca-WSDL2C.sh
+We run the rpmbuild command with the Eucalyptus build spec to build the
+source code, install it into a destination file tree, and create binary RPMs
+that can be installed on this system or any other system that has been
+prepared using steps 1-3 above.
 
-Run the "make" to clean the outputs from any previous build, build the
-binaries, and install all built files into the $EUCALYPTUS directory tree.
+Link the files from the rpmspec repo in their proper places:
 
-make clean ; make ; make install
+>>>>> Command 4a: 
+# ln -s $EUCAGIT/eucalyptus-rpmspec/eucalyptus.spec $EUCARPM/SPECS
+>>>>> Command 4b: 
+# ln -s $EUCAGIT/eucalyptus-rpmspec/euca-WSDL2C.sh $EUCARPM/SOURCES
+(Note this 2nd command links into SOURCES, not SPECS!)
 
-Repeat these 3 makes for each new build.
+Create the tarballs of eucalyptus and the eucalyptus-cloud-libs that
+rpmbuild will un-tar and build:
 
-To restore the source tree to a pristine state, removing even more than
-"make clean" does:
+>>>>> Command 4c: 
+# cd $EUCAGIT
+>>>>> Command 4d: 
+# tar -cvJf $EUCARPM/SOURCES/eucalyptus.tar.xz --exclude .git --exclude eucalyptus/clc/lib --exclude build-info.properties eucalyptus
 
-make distclean
+>>>>> Command 4e: 
+# cd $EUCAGIT/eucalyptus-cloud-libs
+>>>>> Command 4f: 
+# tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz --exclude .git --exclude HI --exclude tests --exclude README .
+
+Now rpmbuild will do all of the build and packaging, in one command:
+
+>>>>> Command 4g: 
+# rpmbuild --define "_topdir $EUCARPM" --define 'tarball_basedir eucalyptus' --define 'cloud_lib_tarball eucalyptus-cloud-libs.tar.xz' -bb $EUCARPM/SPECS/eucalyptus.spec
+
+Copy the list of runtime install dependencies into the RPMS directory so we
+can distribute it with the RPMs to other systems.
+
+>>>>> Command 4h: 
+# cp $EUCAGIT/eucalyptus-rpmspec/eucalyptus_rundep $EUCARPM/RPMS/
 
 
 5. Distribute the Build
 =======================
 
+If you are setting up a non-build system to install Eucalyptus on, skip this
+step.
+
 At this point, if you plan to use Eucalyptus on more than one system, you're
 ready to push the software out to the other systems.
 
-Perform steps 2 and 3 above on each system. Although not all software
-components are required on all systems, it is simpler to just mirror
-everything and selectively enable components via start-up scripts.
+If you plan to use your build system as one of the nodes of your Eucalyptus
+cloud, follow these instructions on the build system as well.
 
-You don't need to build the code again (skip step 3).
+On all systems except the build system:
 
-If you built Eucalyptus into its own directory as described above, where
-$EUCALYPTUS is not set to "/", then you can just sync the entire built tree
-to all of the other systems using whatever mechanism you typically use to
-push changes to systems. For example, using rsync:
-
-rsync -ar $EUCALYPTUS/ root@{host-2}:$EUCALYPTUS/
-rsync -ar $EUCALYPTUS/ root@{host-3}:$EUCALYPTUS/
+>>>>> Commands 5a: # 
+# rsync -ar $EUCARPM/RPMS/ root@{host-2}:$EUCAPKGS
+# rsync -ar $EUCARPM/RPMS/ root@{host-3}:$EUCAPKGS
 ...
-
-NOTE: For any systems running the NC you will also need to copy the
-policykit configuration file separately, since he build places it in /var
-and not within the $EUCALYPTUS tree like the other built files. Copy the
-file:
-./tools/eucalyptus-nc-libvirt.pkla
-...to the NC and put it in the directory:
-/var/lib/polkit-1/localauthority/10-vendor.d/
+>>>>> (end of commands)
 
 
-6. Configure Eucalyptus
+6. Install Eucalyptus
+=====================
+
+You can now install the Eucalyptus RPMs onto each system.
+
+On each of the non-build systems, set up your environment as described in
+Step 1, and install the dependencies as described in Step 3 (skip Step
+2). Be sure to follow the "setting up the other systems" steps instead of
+the "setting up the build system" step.
+
+Install all RPMs built on the build system, even if all the components are
+not needed, to prevent dependency problems with Eucalyptus packages that
+have the same names but different version numbers in the eucalyptus-nightly
+repository. You can still choose which components to configure and run on
+each system.
+
+For the build system (if you're installing onto it):
+
+>>>>> Command 6a: 
+# yum install $EUCARPM/RPMS/noarch/* $EUCARPM/RPMS/x86_64/*
+
+For all other systems:
+
+>>>>> Command 6a: 
+# yum install $EUCAPKGS/noarch/* $EUCAPKGS/x86_64/*
+
+
+7. Configure Eucalyptus
 =======================
 
-At this point forward, please follow instructions from the "Configuring
-Eucalyptus" section of the Installation Guide.
+From this point forward, follow the instructions from the Installation
+Guide. The Eucalyptus documentation can be found here:
 
-You can access Eucalyptus Documentation here:
 http://docs.hpcloud.com/eucalyptus
 
+Skip the "yum install" commands for the packages you have already installed,
+including:
 
-7. Run Eucalyptus
-=================
+eucalyptus-cc 
+eucalyptus-cloud
+eucalyptus-nc
+eucalyptus-sc 
+eucalyptus-walrus
 
-Eucalyptus comes with the euca_conf script for configuring Eucalyptus. For
-some requests it modifies the configuration file located in
-'$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf' (which can also be edited
-manually), for other requests it modifies the database maintained by the
-Cloud Controller (much of that functionality is duplicated in the Web
-interface, to be described later).
 
-In addition to modifying the configuration, euca_conf attempts to
-synchronize x509 credentials across the nodes of a Eucalyptus installation
-by relying on rsync and scp. We highly recommend setting up password-less
-SSH access for the root user across all nodes of your Eucalyptus
-installation (otherwise, euca_conf will prompt you for remote system
-passwords).
+8. Rebuild Eucalyptus
+=====================
 
-As explained in the overview, a Eucalyptus installation consists of five
-types of components: cloud controller (CLC), User Facing Services (UFS/API),
-cluster controller (CC), storage controller (SC), and the node controller(s)
-(NCs). In following instructions we assume that all components except the
-NCs are co-located on one machine that we refer to as the front end and that
-NCs run on one or more other machines referred to ascompute nodes.
+NOTE: The following steps require that the above rpmbuild process be
+performed at least once, and the resulting RPMs be installed at least once
+onto any system you intend to update with rebuilt artifacts (including the
+build system). 
 
-To run Eucalyptus, first, make sure that you have all of the runtime
-dependencies of Eucalyptus installed, based on your chosen set of
-configuration parameters. If there is a problem with runtime dependencies
-(for instance, if Eucalyptus cannot find/interact with them), all errors
-will be reported in log files located in $EUCALYPTUS/var/log/eucalyptus. For
-more information on Eucalyptus log files and error reports, please see
-Troubleshooting Eucalyptus.
+To rebuild code after changing it, you can either:
 
-Next, inspect the contents of $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
-carefully, on each machine, to make sure that the settings are appropriate
-for your environment. Once you have confirmed that everything is configured
-properly, enable the cloud services on the front-end:
+1. Repeat step 4, using rpmbuild. Then, you can then either:
 
-# enable services on the front-end
-$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --setup
+  1a. Copy the RPM packages you've changed to the installed systems, and
+      re-install them.
 
-#Initialize the DB on the host that will be the CLC component.
-$EUCALYPTUS/usr/sbin/euca_conf -d $EUCALYPTUS --initialize
+  1b. Or, copy individual jars or executables (or other built artifacts)
+      from the $EUCARPM/BUILD directory tree to the installed systems,
+      replacing those files.
 
-Start each component on the appropriate host.
+2. Or, you can build the code using "make", without rpmbuild. Then, you can
+copy individual jars or executables (or other built artifacts) built by
+"make" to the installed systems, replacing those files.
 
-# start enabled front-end services
-$EUCALYPTUS/etc/init.d/eucalyptus-cloud start
+Non-rpmbuild rebuilds (option 2)
+---------------------
 
-# start the cluster controller
-$EUCALYPTUS/etc/init.d/eucalyptus-cc start
+Run the "configure" script to prepare the system to build:
 
-And on each of the compute nodes run:
+>>>>> Command 8a: 
+# cd $EUCAGIT/eucalyptus
 
-$EUCALYPTUS/etc/init.d/eucalyptus-nc start
+>>>>> Command 8b: 
+# ./configure --with-axis2==/usr/share/java/axis2 \
+--with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
+--with-apache2-module-dir=/usr/lib64/httpd/modules \
+--with-db-home=/usr/pgsql-9.2 \
+--with-wsdl2c-sh=$EUCAGIT/eucalyptus-rpmspec/euca-WSDL2C.sh
 
-To stop them you call the script with stop instead of start.
+Run the "make" commands below. 
 
+>>>>> Command 8c: 
+# make clean ; make ; make install
+
+The "make clean" deletes the artifacts from any previous build (just those
+within $EUCALYPTUS). 
+
+The "make" builds the artifacts, in the $EUCAGIT/eucalyptus tree. 
+
+The "make install" copies most of the artifacts into the $EUCALYPTUS
+directory tree, and copies some into certain system directories.
+
+If your build system is also running Eucalyptus installed from packages,
+note that certain files in system directories will be overwritten by this
+"make install". As of this writing, the files that "make install" copies to
+system directories instead of within the $EUCALYPTUS tree are:
+
+/usr/bin/euctl
+/usr/bin/euserv-*
+/usr/lib64/axis2c/services/Eucalyptus*
+/usr/lib/python2.6/site-packages/eucalyptus_admin*
+/usr/share/man/man1/euctl.1
+/usr/share/man/man1/euserv-*
+
+After the make has completed, copy individual jars or executables (or other
+built artifacts) to the installed systems, replacing those files. All of the
+artifacts will be built into $EUCALYPTUS except for those listed above.
+
+Note: After replacing files, processes may have to be restarted to use them.
+
+Note: If you do a non-rpmbuild (option 2), and later wish to do an rpmbuild
+(option 1), remove all make artifacts from the non-rpmbuild before doing the
+rpmbuild:
+
+>>>>> Commands 8c: 
+# cd $EUCAGIT/eucalyptus
+# make distclean
+# rm -Rf $EUCAGIT/eucalyptus/clc/lib
+
+(End)
