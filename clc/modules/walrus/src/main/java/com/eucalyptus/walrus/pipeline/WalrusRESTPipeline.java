@@ -156,6 +156,8 @@ public class WalrusRESTPipeline extends FilteredPipeline {
    * @return
    */
   private boolean maybeBucketHostedStyle(String fullHostHeader) {
+    if (fullHostHeader == null || fullHostHeader.isEmpty())
+      return false;
     try {
       return DomainNames.absolute(Name.fromString(Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader))).subdomain(
           DomainNames.externalSubdomain(WalrusBackend.class));
