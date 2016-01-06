@@ -130,6 +130,13 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     return new NetworkInterface( owner, name );
   }
 
+  public static NetworkInterface exampleWithAttachment( final OwnerFullName owner, final String attachmentId ) {
+    final NetworkInterface example = new NetworkInterface( owner, null );
+    example.attachment = new NetworkInterfaceAttachment( );
+    example.attachment.setAttachmentId( attachmentId );
+    return example;
+  }
+
   @ManyToOne( optional = false )
   @JoinColumn( name = "metadata_vpc_id", nullable = false, updatable = false )
   private Vpc vpc;

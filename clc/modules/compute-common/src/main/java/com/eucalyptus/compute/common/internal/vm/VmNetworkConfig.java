@@ -134,6 +134,9 @@ public class VmNetworkConfig {
 
   /**
    * Get the attached network interfaces, default first.
+   *
+   * Interfaces can be positioned in the list according to device index, so
+   * there may be nulls.
    */
   List<NetworkInterface> getNetworkInterfaces( ) {
     return networkInterfaces;

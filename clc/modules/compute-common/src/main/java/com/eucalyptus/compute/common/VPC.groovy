@@ -32,6 +32,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation
 import groovy.transform.Canonical
 
+import javax.annotation.Nonnull
+
 import static com.eucalyptus.util.MessageValidation.validateRecursively;
 import static com.eucalyptus.util.MessageValidation.ValidatableMessage;
 import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRange
@@ -1331,6 +1333,8 @@ class FilterSetType extends EucalyptusData {
 class AttachNetworkInterfaceType extends VpcMessage {
   String networkInterfaceId;
   String instanceId;
+  @Nonnull
+  @FieldRange( min = 1l, max = 255l )
   Integer deviceIndex;
   AttachNetworkInterfaceType() {  }
 }

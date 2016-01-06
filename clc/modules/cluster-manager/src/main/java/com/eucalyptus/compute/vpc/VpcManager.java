@@ -22,7 +22,9 @@ package com.eucalyptus.compute.vpc;
 import static com.google.common.base.Objects.firstNonNull;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,6 +66,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkAcl;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
 import com.eucalyptus.compute.common.internal.vpc.Route;
 import com.eucalyptus.compute.common.internal.vpc.RouteTable;
@@ -292,8 +295,70 @@ public class VpcManager {
     return reply;
   }
 
-  public AttachNetworkInterfaceResponseType attachNetworkInterface(AttachNetworkInterfaceType request) throws EucalyptusCloudException {
-    AttachNetworkInterfaceResponseType reply = request.getReply( );
+  public AttachNetworkInterfaceResponseType attachNetworkInterface(
+      final AttachNetworkInterfaceType request
+  ) throws EucalyptusCloudException {
+    final AttachNetworkInterfaceResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final String networkInterfaceId = Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
+    final String instanceId = Identifier.i.normalize( request.getInstanceId( ) );
+    final Integer deviceIndex = request.getDeviceIndex( );
+    final VmInstance[] vmRef = new VmInstance[1];
+    try {
+      final NetworkInterface eni = networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithName( accountFullName, networkInterfaceId ),
+          accountFullName,
+          request.getNetworkInterfaceId( ),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) try {
+                final VmInstance vm = RestrictedTypes.resolver( VmInstance.class ).apply( instanceId );
+                if ( networkInterface.isAttached( ) ) {
+                  throw Exceptions.toUndeclared( new ClientComputeException( "InvalidNetworkInterface.InUse",
+                      "Network interface "+networkInterfaceId+" is already attached to instance " +
+                          networkInterface.getAttachment( ).getInstanceId( ) ) );
+                }
+                //noinspection ConstantConditions
+                for ( final NetworkInterface eni : vm.getNetworkInterfaces( ) ) {
+                  if ( eni.isAttached( ) && deviceIndex.equals( eni.getAttachment( ).getDeviceIndex( ) ) ) {
+                    throw new ClientComputeException( "InvalidParameterValue", "Device index in use" );
+                  }
+                }
+                vmRef[0] = vm;
+                networkInterface.attach( NetworkInterfaceAttachment.create(
+                    Identifier.eni_attach.generate( ),
+                    vm,
+                    vm.getDisplayName( ),
+                    vm.getOwnerAccountNumber( ),
+                    deviceIndex,
+                    NetworkInterfaceAttachment.Status.attached,
+                    new Date( ),
+                    false
+                )  );
+              } catch ( NoSuchElementException e ) {
+                throw Exceptions.toUndeclared( new ClientComputeException( "InvalidInstanceID.NotFound",
+                    "Instance not found '" + request.getInstanceId() + "'" ) );
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared(
+                    new ClientUnauthorizedComputeException( "Not authorized to attach network interface" ) );
+              }
+            }
+          } );
+      if ( vmRef[0] != null ) {
+        NetworkInterfaceHelper.start( eni, vmRef[0] );
+        invalidate( vmRef[0].getVpcId( ) );
+      }
+      reply.setAttachmentId( eni.getAttachment( ).getAttachmentId( ) );
+    } catch ( VpcMetadataNotFoundException e ) {
+      throw new ClientComputeException( "InvalidNetworkInterfaceID.NotFound",
+          "Network interface ("+request.getNetworkInterfaceId()+") not found " );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1289,8 +1354,47 @@ public class VpcManager {
     return reply;
   }
 
-  public DetachNetworkInterfaceResponseType detachNetworkInterface(DetachNetworkInterfaceType request) throws EucalyptusCloudException {
-    DetachNetworkInterfaceResponseType reply = request.getReply( );
+  public DetachNetworkInterfaceResponseType detachNetworkInterface(
+      final DetachNetworkInterfaceType request
+  ) throws EucalyptusCloudException {
+    final DetachNetworkInterfaceResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    final String attachmentId = Identifier.eni_attach.normalize( request.getAttachmentId( ) );
+    final String[] vpcId = new String[1];
+    try {
+      final NetworkInterface eni = networkInterfaces.updateByExample(
+          NetworkInterface.exampleWithAttachment( accountFullName, attachmentId ),
+          accountFullName,
+          request.getAttachmentId( ),
+          new Callback<NetworkInterface>() {
+            @Override
+            public void fire( final NetworkInterface networkInterface ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) try {
+                if ( Integer.valueOf( 0 ).equals( networkInterface.getAttachment( ).getDeviceIndex( ) ) ) {
+                  throw new ClientComputeException( "OperationNotPermitted",
+                      "Primary network interface cannot be detached" );
+                }
+                vpcId[0] = networkInterface.getVpc( ).getDisplayName( );
+                networkInterface.detach( );
+              } catch ( Exception e ) {
+                throw Exceptions.toUndeclared( e );
+              } else {
+                throw Exceptions.toUndeclared(
+                    new ClientUnauthorizedComputeException( "Not authorized to detach network interface" ) );
+              }
+            }
+          } );
+      if ( vpcId[0] != null ) {
+        NetworkInterfaceHelper.stop( eni );
+        invalidate( vpcId[0] );
+      }
+    } catch ( VpcMetadataNotFoundException e ) {
+      throw new ClientComputeException( "InvalidAttachmentID.NotFound",
+          "Network interface attachment ("+request.getAttachmentId()+") not found " );
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return reply;
   }
 
@@ -1756,6 +1860,7 @@ public class VpcManager {
     aclassoc( "networkAclAssociation" ),
     dopt( "DHCPOption" ),
     eni( "networkInterface" ),
+    eni_attach( "networkInterfaceAttachment" ),
     i( "instance" ),
     igw( "internetGateway" ),
     rtb( "routeTable" ),
@@ -1778,8 +1883,12 @@ public class VpcManager {
       this.defaultListParameter = defaultListParameter;
     }
 
+    private String prefix( ) {
+      return name( ).replace( '_', '-' );
+    }
+
     public String generate( ) {
-      return ResourceIdentifiers.generateString( name( ) );
+      return ResourceIdentifiers.generateString( prefix( ) );
     }
 
     public String normalize( final String identifier ) throws EucalyptusCloudException {
@@ -1797,11 +1906,11 @@ public class VpcManager {
     public List<String> normalize( final Iterable<String> identifiers,
                                    final String parameter ) throws EucalyptusCloudException {
       try {
-        return ResourceIdentifiers.normalize( name( ), identifiers );
+        return ResourceIdentifiers.normalize( prefix( ), identifiers );
       } catch ( final InvalidResourceIdentifier e ) {
         throw new ClientComputeException(
             code,
-            "Value ("+e.getIdentifier()+") for parameter "+parameter+" is invalid. Expected: '"+name()+"-...'." );
+            "Value ("+e.getIdentifier()+") for parameter "+parameter+" is invalid. Expected: '"+prefix()+"-...'." );
       }
     }
   }

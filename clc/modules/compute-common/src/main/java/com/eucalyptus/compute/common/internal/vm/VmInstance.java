@@ -164,6 +164,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -659,7 +660,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public List<NetworkInterface> getNetworkInterfaces( ) {
-    return this.getNetworkConfig().getNetworkInterfaces( );
+    return ImmutableList.copyOf( Iterables.filter(
+        this.getNetworkConfig( ).getNetworkInterfaces( ),
+        Predicates.<NetworkInterface>notNull( )
+    ) );
+  }
+
+  public void addNetworkInterface( final NetworkInterface networkInterface ) {
+    this.getNetworkConfig( ).getNetworkInterfaces( ).add( networkInterface );
   }
 
   public String getPasswordData( ) {

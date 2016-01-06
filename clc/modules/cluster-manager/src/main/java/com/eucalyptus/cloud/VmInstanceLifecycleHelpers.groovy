@@ -1056,7 +1056,7 @@ class VmInstanceLifecycleHelpers {
           }
           // Add so eni information is available from instance, not for
           // persistence
-          instance.getNetworkInterfaces( ).add( networkInterface );
+          instance.addNetworkInterface( networkInterface );
 
           // Handle secondary interfaces
           final List<VpcNetworkInterfaceResource> secondaryResources = resources.findAll{ NetworkResource networkResource ->
@@ -1105,7 +1105,7 @@ class VmInstanceLifecycleHelpers {
             NetworkInterfaceHelper.start( secondaryNetworkInterface, instance )
             // Add so eni information is available from instance, not for
             // persistence
-            instance.getNetworkInterfaces( ).add( secondaryNetworkInterface );
+            instance.addNetworkInterface( secondaryNetworkInterface );
           }
         } as Callback<VmInstance> )
       }
