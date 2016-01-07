@@ -47,14 +47,14 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
   WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
-  public void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+  public void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int updateVersion) {
     try {
       Promise<String> createInitialStackPromise =
         activities.createGlobalStackEvent(
           stackId,
           accountId,
           Status.CREATE_IN_PROGRESS.toString(),
-          "User Initiated"
+          "User Initiated", updateVersion
         );
 
       waitFor(createInitialStackPromise) {
@@ -68,7 +68,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         doTry {
           // This is in case any part of setting up the stack fails
           // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
-          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId);
+          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, updateVersion);
           waitFor(validateAWSParameterTypesPromise) {
             // Now for each resource, set up the promises and the dependencies they have for each other
             for (String resourceId : resourceDependencyManager.getNodes()) {
@@ -84,17 +84,17 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                     Lists.<String>newArrayList() :
                     resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
                 );
-                Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+                Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
                 createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
                 return currentResourcePromise;
               }
             }
             AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
             waitFor(allResourcePromises) {
-              waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId)) {
+              waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId, updateVersion)) {
                 activities.createGlobalStackEvent(stackId, accountId,
                   Status.CREATE_COMPLETE.toString(),
-                  "");
+                  "", updateVersion);
               }
             }
           }
@@ -104,14 +104,15 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
           Throwable cause = Throwables.getRootCause(t);
           Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
           if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId);
+            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId, updateVersion);
           }
           waitFor(errorMessagePromise) { String errorMessage ->
             activities.createGlobalStackEvent(
               stackId,
               accountId,
               Status.CREATE_FAILED.toString(),
-              errorMessage
+              errorMessage,
+              updateVersion
             );
           }
         }.getResult()
@@ -126,7 +127,8 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                                    String stackId,
                                    String accountId,
                                    String effectiveUserId,
-                                   String reverseDependentResourcesJson) {
-    return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+                                   String reverseDependentResourcesJson,
+                                   int updateVersion) {
+    return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
   }
 }

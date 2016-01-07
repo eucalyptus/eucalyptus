@@ -28,5 +28,5 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
 public interface UpdateStackWorkflow {
   @Execute(version = "1.0")
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId);
+  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion);
 }

@@ -49,14 +49,14 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
   WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     try {
       Promise<String> updateInitialStackPromise =
         activities.createGlobalStackEvent(
           stackId,
           accountId,
           Status.UPDATE_IN_PROGRESS.toString(),
-          "User Initiated"
+          "User Initiated", updateVersion
         );
 
       waitFor(updateInitialStackPromise) {
@@ -70,7 +70,7 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
         doTry {
           // This is in case any part of setting up the stack fails
           // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
-          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId);
+          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, updateVersion);
           waitFor(validateAWSParameterTypesPromise) {
             // Now for each resource, set up the promises and the dependencies they have for each other
             for (String resourceId : resourceDependencyManager.getNodes()) {
@@ -86,17 +86,17 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
                     Lists.<String>newArrayList() :
                     resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
                 );
-                Promise<String> currentResourcePromise = getUpdatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+                Promise<String> currentResourcePromise = getUpdatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
                 updatedResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
                 return currentResourcePromise;
               }
             }
             AndPromise allResourcePromises = new AndPromise(updatedResourcePromiseMap.values());
             waitFor(allResourcePromises) {
-              waitFor(activities.finalizeUpdateStack(stackId, accountId, effectiveUserId)) {
+              waitFor(activities.finalizeUpdateStack(stackId, accountId, effectiveUserId, updateVersion)) {
                 activities.createGlobalStackEvent(stackId, accountId,
                   Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString(),
-                  "");
+                  "", updateVersion);
               }
             }
           }
@@ -106,14 +106,14 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
           Throwable cause = Throwables.getRootCause(t);
           Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
           if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId);
+            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId, updateVersion);
           }
           waitFor(errorMessagePromise) { String errorMessage ->
             activities.createGlobalStackEvent(
               stackId,
               accountId,
               Status.UPDATE_FAILED.toString(), //TODO: implement rollback.
-              errorMessage
+              errorMessage, updateVersion
             );
           }
         }.getResult()
@@ -128,29 +128,30 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
                                    String stackId,
                                    String accountId,
                                    String effectiveUserId,
-                                   String reverseDependentResourcesJson) {
-    Promise<String> getResourceTypePromise = activities.getResourceTypeForUpdate(stackId, accountId, resourceId);
+                                   String reverseDependentResourcesJson,
+                                   int updateVersion) {
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updateVersion);
     waitFor(getResourceTypePromise) { String resourceType ->
       final ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initUpdateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+      Promise<String> initPromise = activities.initUpdateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result) || "NONE".equals(result)) {
           return promiseFor("");
         } else if ("CREATE".equals(result)) {
-          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson);
+          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
         } else {
           Promise<String> updatePromise;
           if ("NO_PROPERTIES".equals(result)) {
             updatePromise = promiseFor("");
           } else if (UpdateType.NO_INTERRUPTION.toString().equals(result)) {
-            updatePromise = resourceAction.getUpdateNoInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
+            updatePromise = resourceAction.getUpdateNoInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
           } else if (UpdateType.SOME_INTERRUPTION.toString().equals(result)) {
-            updatePromise = resourceAction.getUpdateSomeInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
+            updatePromise = resourceAction.getUpdateSomeInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
           } else {
-            updatePromise = resourceAction.getUpdateWithReplacementPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId);
+            updatePromise = resourceAction.getUpdateWithReplacementPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
           }
           waitFor(updatePromise) {
-            activities.finalizeUpdateResource(resourceId, stackId, accountId, effectiveUserId);
+            activities.finalizeUpdateResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
           }
         }
       }

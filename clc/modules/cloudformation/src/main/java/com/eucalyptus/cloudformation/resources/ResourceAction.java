@@ -21,7 +21,7 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.UpdateType;
 import com.netflix.glisten.WorkflowOperations;
@@ -35,13 +35,13 @@ public abstract class ResourceAction {
 
   public abstract void setResourceInfo(ResourceInfo resourceInfo);
 
-  protected StackEntity stackEntity;
+  protected VersionedStackEntity stackEntity;
 
-  public StackEntity getStackEntity() {
+  public VersionedStackEntity getStackEntity() {
     return stackEntity;
   }
 
-  public void setStackEntity(StackEntity stackEntity) {
+  public void setStackEntity(VersionedStackEntity stackEntity) {
     this.stackEntity = stackEntity;
   }
 
@@ -57,11 +57,11 @@ public abstract class ResourceAction {
     return getDefaultPhysicalResourceId(Integer.MAX_VALUE);
   }
 
-  public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
 
-  public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
 
-  public abstract Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
 
   public void refreshAttributes() throws Exception {
     return; // Most resources will not support this action
@@ -69,7 +69,7 @@ public abstract class ResourceAction {
   public UpdateType getUpdateType(ResourceAction resourceAction) throws Exception {
     return UpdateType.NONE; // TODO: make this method abstract once all resources implement their update logic.
   }
-  public abstract Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public abstract Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public abstract Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId);
+  public abstract Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
+  public abstract Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
+  public abstract Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion);
 }

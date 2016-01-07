@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,13 +24,12 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 /**
- * Created by ethomas on 12/10/15.
+ * Created by ethomas on 1/6/16.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_resources" )
-public class StackResourceEntityInUse extends StackResourceEntity {
-
-  public StackResourceEntityInUse() {
+@Table( name = "past_stacks" )
+public class PastStackEntity extends VersionedStackEntity {
+  public PastStackEntity() {
   }
 }

@@ -44,9 +44,9 @@ class UpdateNoInterruptionMultiStepPromise extends MultiUpdateStepPromise {
     return resourceAction.getUpdateNoInterruptionStep( stepId )
   }
 
-  Promise<String> getUpdateNoInterruptionPromise( String resourceId, String stackId, String accountId, String effectiveUserId ) {
+  Promise<String> getUpdateNoInterruptionPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
     getPromise( "Resource ${resourceId} failed to update for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateNoInterruptionStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+      activities.performUpdateNoInterruptionStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
     }
   }
 }

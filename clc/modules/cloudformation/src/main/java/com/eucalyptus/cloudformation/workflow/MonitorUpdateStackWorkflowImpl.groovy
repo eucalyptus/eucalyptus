@@ -54,19 +54,19 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   WorkflowUtils workflowUtils = new WorkflowUtils( workflowOperations )
 
   @Override
-  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId) {
+  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     try {
       Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 10 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
-          activities.getUpdateWorkflowExecutionCloseStatus( stackId )
+          activities.getUpdateWorkflowExecutionCloseStatus(stackId)
         }
       }
       waitFor( closeStatusPromise ) { String closedStatus ->
         if ( !closedStatus ) {
           throw new InternalFailureException( "Stack update timeout stack id ${stackId}" );
         }
-        waitFor( activities.getStackStatus( stackId, accountId ) ) { String stackStatus ->
-          determineRollbackOrCleanupAction( closedStatus, stackStatus, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId );
+        waitFor( activities.getStackStatus(stackId, accountId, updateVersion) ) { String stackStatus ->
+          determineRollbackOrCleanupAction( closedStatus, stackStatus, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updateVersion );
         }
       }
     } catch (Exception ex) {
@@ -76,9 +76,9 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   }
 
   private Promise<String> determineRollbackOrCleanupAction(String closedStatus, String stackStatus, String stackId, String accountId,
-                                                           String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId) {
+                                                           String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion ) {
     if (Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(stackStatus)) {
-      return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId); // just done...
+      return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, updateVersion ); // just done...
     } else if (Status.UPDATE_IN_PROGRESS.equals(stackStatus)) {
       // Once here, stack creation has failed.  Only in some cases do we know why.
       String statusReason = "";
@@ -97,29 +97,29 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
       } else {
         throw new InternalFailureException("Unsupported close status for workflow " + closedStatus);
       }
-      Promise<String> cancelOutstandingCreateResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource update cancelled.");
+      Promise<String> cancelOutstandingCreateResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource update cancelled.", updateVersion);
       Promise<String> cancelOutstandingUpdateResources = waitFor(cancelOutstandingCreateResources) {
-        activities.cancelOutstandingUpdateResources(stackId, accountId, "Resource update cancelled.");
+        activities.cancelOutstandingUpdateResources(stackId, accountId, "Resource update cancelled.", updateVersion);
       };
       Promise<String> setStackStatusPromise = waitFor(cancelOutstandingUpdateResources) {
         activities.setStackStatus(stackId, accountId,
-          Status.UPDATE_FAILED.toString(), statusReason) //TODO: change to rollback in progress
+          Status.UPDATE_FAILED.toString(), statusReason, updateVersion) //TODO: change to rollback in progress
       };
       return waitFor(setStackStatusPromise) {
         Promise<String> createGlobalStackEventPromise = activities.createGlobalStackEvent(stackId,
-          accountId, Status.UPDATE_FAILED.toString(), statusReason);
+          accountId, Status.UPDATE_FAILED.toString(), statusReason, updateVersion);
         waitFor(createGlobalStackEventPromise) {
-          performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
+          performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, updateVersion);
         }
       }
     } else if (Status.UPDATE_FAILED.equals(stackStatus)) {
-      return performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
+      return performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, updateVersion);
     } else {
-      throw new InternalFailureException("Unexpected stack status " + stackStatus + " during update monitoring");
+      // might be starting delete?  just exit
     }
   }
 
-  private Promise<String> performCleanup(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+  private Promise<String> performCleanup(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
       resourceDependencyManagerJson
     );
@@ -140,7 +140,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
         }
         AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
         waitFor(dependentAndPromise) {
-          Promise<String> currentResourcePromise = getUpdateCleanupPromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId);
+          Promise<String> currentResourcePromise = getUpdateCleanupPromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, updateVersion);
           deletedResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
           return currentResourcePromise;
         }
@@ -156,16 +156,16 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
           }
         }
         String errorMessage = resourceFailure ? "One or more resources could not be deleted." : "";
-        return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage)) {
-          activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage);
+        return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage, updateVersion)) {
+          activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage, updateVersion);
         }
       }
     }.withCatch { Throwable t ->
       CreateStackWorkflowImpl.LOG.error(t);
       CreateStackWorkflowImpl.LOG.debug(t, t);
       final String errorMessage = "One or more resources could not be deleted.";
-      return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage)) {
-        activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage);
+      return waitFor(activities.createGlobalStackEvent(stackId, accountId, Status.UPDATE_COMPLETE.toString(), errorMessage, updateVersion)) {
+        activities.finalizeUpdateCleanupStack(stackId, accountId, errorMessage, updateVersion);
       }
     }.getResult()
   }
@@ -175,27 +175,25 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   Promise<String> getUpdateCleanupPromise(String resourceId,
                                    String stackId,
                                    String accountId,
-                                   String effectiveUserId) {
-    // the resource will still also be in the current resource table.
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
+                                   String effectiveUserId,
+                                   int updateVersion) {
+    // all of these items are from the previous stack version
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updateVersion - 1);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId);
+      Promise<String> initPromise = activities.initUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("SUCCESS");
         } else {
           Promise<String> updateCleanupPromise = doTry {
-            waitFor(resourceAction.getUpdateCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId)) {
-              return activities.finalizeUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId);
+            waitFor(resourceAction.getUpdateCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion)) {
+              return activities.finalizeUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
             }
           }.withCatch { Throwable t ->
             Throwable rootCause = Throwables.getRootCause(t);
-            return activities.failUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage());
+            return activities.failUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), updateVersion);
           }.getResult();
-          return waitFor(updateCleanupPromise) {
-            activities.removeUpdateCleanupResourceIfAppropriateFromStack(resourceId, stackId, accountId);
-          }
         }
       }
     }
@@ -205,7 +203,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
 
 
 
-  private Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+  private Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     return promiseFor("");
 //    if ("DO_NOTHING".equals(onFailure)) {
 //      return promiseFor("");

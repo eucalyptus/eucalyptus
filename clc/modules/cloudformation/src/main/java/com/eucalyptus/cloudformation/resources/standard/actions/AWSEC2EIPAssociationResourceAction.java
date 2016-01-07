@@ -118,7 +118,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
         }
 
         // Update the instance info (if network id exists)
@@ -133,7 +133,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
                 networkInterfaceType.getAttachment().getInstanceId() != null) {
-                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId());
+                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
               }
             }
           }
@@ -181,7 +181,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
         }
 
         // Update the instance info (if network id exists)
@@ -196,7 +196,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
                 networkInterfaceType.getAttachment().getInstanceId() != null) {
-                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId());
+                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
               }
             }
           }

@@ -39,8 +39,8 @@ class MonitorCreateStackWorkflowClient implements MonitorCreateStackWorkflow {
   }
 
   @Override
-  void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
-    workflow.monitorCreateStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
+  void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int updateVersion) {
+    workflow.monitorCreateStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, updateVersion);
   }
 
 

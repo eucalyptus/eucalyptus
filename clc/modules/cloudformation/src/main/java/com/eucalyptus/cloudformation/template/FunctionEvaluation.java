@@ -22,7 +22,7 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -138,7 +138,7 @@ public class FunctionEvaluation {
     return objectCopy;
   }
 
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, VersionedStackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(resourceInfoMap);
     StackEntityHelper.populateTemplateWithStackEntity(template, stackEntity);

@@ -59,13 +59,14 @@ public class CommonDeleteRollbackPromises {
     this.deleteStackRecordsWhenSuccessful = deleteStackRecordsWhenSuccessful
   }
 
-  public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+  public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     Promise<String> deleteInitialStackPromise = activities.createGlobalStackEvent(
-        stackId,
-        accountId,
-        stackOperationInProgressStatus,
-        stackOperationInProgressStatusReason
-      ) ;
+      stackId,
+      accountId,
+      stackOperationInProgressStatus,
+      stackOperationInProgressStatusReason,
+      updateVersion
+    ) ;
     waitFor(deleteInitialStackPromise) {
       DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
         resourceDependencyManagerJson
@@ -87,7 +88,7 @@ public class CommonDeleteRollbackPromises {
           }
           AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
           waitFor(dependentAndPromise) {
-            Promise<String> currentResourcePromise = getDeletePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId);
+            Promise<String> currentResourcePromise = getDeletePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, updateVersion);
             deletedResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
             return currentResourcePromise;
           }
@@ -103,19 +104,19 @@ public class CommonDeleteRollbackPromises {
             }
           }
           if (resourceFailure) {
-            return waitFor(activities.determineDeleteResourceFailures(stackId, accountId)) { String errorMessage ->
+            return waitFor(activities.determineDeleteResourceFailures(stackId, accountId, updateVersion)) { String errorMessage ->
               activities.createGlobalStackEvent(
                 stackId,
                 accountId,
                 stackOperationFailedStatus,
-                errorMessage
+                errorMessage, updateVersion
               );
             }
           } else {
             return waitFor(
               activities.createGlobalStackEvent(stackId, accountId,
                 stackOperationCompleteStatus,
-                "")
+                "", updateVersion)
             ) {
 
               if (deleteStackRecordsWhenSuccessful) {
@@ -132,14 +133,14 @@ public class CommonDeleteRollbackPromises {
         Throwable cause = Throwables.getRootCause(t);
         Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
         if (cause != null && cause instanceof ResourceFailureException) {
-          errorMessagePromise = activities.determineDeleteResourceFailures(stackId, accountId);
+          errorMessagePromise = activities.determineDeleteResourceFailures(stackId, accountId, updateVersion);
         }
         waitFor(errorMessagePromise) { String errorMessage ->
           activities.createGlobalStackEvent(
             stackId,
             accountId,
             stackOperationFailedStatus,
-            errorMessage
+            errorMessage, updateVersion
           );
         }
       }.getResult()
@@ -149,22 +150,23 @@ public class CommonDeleteRollbackPromises {
   Promise<String> getDeletePromise(String resourceId,
                                    String stackId,
                                    String accountId,
-                                   String effectiveUserId) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId);
+                                   String effectiveUserId,
+                                   int updateVersion) {
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updateVersion);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId);
+      Promise<String> initPromise = activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("SUCCESS");
         } else {
           return doTry {
-            waitFor(resourceAction.getDeletePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId)) {
-              return activities.finalizeDeleteResource(resourceId, stackId, accountId, effectiveUserId);
+            waitFor(resourceAction.getDeletePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion)) {
+              return activities.finalizeDeleteResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
             }
           }.withCatch { Throwable t->
             Throwable rootCause = Throwables.getRootCause(t);
-            return activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage());
+            return activities.failDeleteResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), updateVersion);
           }.getResult();
         }
       }

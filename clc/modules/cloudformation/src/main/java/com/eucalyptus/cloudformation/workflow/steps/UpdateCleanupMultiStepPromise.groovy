@@ -45,9 +45,9 @@ class UpdateCleanupMultiStepPromise extends MultiStepPromise {
     return resourceAction.getDeleteStep( stepId )
   }
 
-  Promise<String> getUpdateCleanupPromise( String resourceId, String stackId, String accountId, String effectiveUserId ) {
+  Promise<String> getUpdateCleanupPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
     getPromise( "Resource ${resourceId} deletion failed for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateCleanupStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+      activities.performUpdateCleanupStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
     }
   }
 

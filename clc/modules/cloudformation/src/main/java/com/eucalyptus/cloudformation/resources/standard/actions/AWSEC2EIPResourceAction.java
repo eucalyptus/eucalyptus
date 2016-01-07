@@ -111,7 +111,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
 
           // Update the instance info
           if (action.properties.getInstanceId() != null) {
-            EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+            EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
           }
 
         }
@@ -152,7 +152,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
         }
 
         return action;

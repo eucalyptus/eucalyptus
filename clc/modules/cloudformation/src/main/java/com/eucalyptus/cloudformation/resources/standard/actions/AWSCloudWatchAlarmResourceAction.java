@@ -223,8 +223,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         putMetricAlarmType.setThreshold(newAction.properties.getThreshold());
         putMetricAlarmType.setUnit(newAction.properties.getUnit());
         AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
-        oldAction.info.setPropertiesJson(newAction.info.getPropertiesJson()); // TODO: consider what happens in the multistep case
-        return oldAction;
+        return newAction;
       }
     };
 

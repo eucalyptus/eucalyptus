@@ -27,6 +27,7 @@ import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -41,10 +42,12 @@ import java.util.List;
  */
 public class StackEntityManager {
 
-  public synchronized static StackEntity checkValidUpdateStatusAndUpdateStack(String stackId, String accountId, Template newTemplate, String newTemplateText, UpdateStackType request) throws CloudFormationException {
-    StackEntity stackEntity = null;
+  private static final Class STACK_ENTITY_TRANSACTION_CLASS = StackEntity.class; // We use one object for transactions on both StackEntity and PastStackEntity
+  private static final List<Class<? extends VersionedStackEntity>> ALL_STACK_ENTITY_CLASSES = Lists.newArrayList(StackEntity.class, PastStackEntity.class);
+
+  public synchronized static StackEntity checkValidUpdateStatusAndUpdateStack(String stackId, String accountId, Template newTemplate, String newTemplateText, UpdateStackType request, int previousUpdateVersion) throws CloudFormationException {
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("stackId", stackId))
         .add(Restrictions.eq("accountId", accountId))
@@ -53,47 +56,56 @@ public class StackEntityManager {
       if (entityList == null || entityList.isEmpty()) {
         throw new ValidationErrorException("Stack does not exist");
       } else if (entityList.size() > 1) {
-        throw new InternalFailureException("More than one stack exists with this id " + stackId+ " , currently");
+        throw new InternalFailureException("More than one stack exists with this id " + stackId);
       }
-      stackEntity = entityList.get(0);
+      StackEntity currentStackEntity = entityList.get(0);
+      if (currentStackEntity.getUpdateVersion() != previousUpdateVersion) {
+        throw new ValidationErrorException("Stack: " + stackId + " is already being updated");
+      }
       // Finally make sure the stack state is ok
-      if (stackEntity.getStackStatus() != Status.CREATE_COMPLETE && stackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
-        stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
-        throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be updated.");
+      if (currentStackEntity.getStackStatus() != Status.CREATE_COMPLETE && currentStackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
+        currentStackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_COMPLETE) {
+        throw new ValidationErrorException("Stack:" + stackId + " is in " + currentStackEntity.getStackStatus().toString() + " state and can not be updated.");
       }
-      // Change the appropriate fields in the old stack
-      StackEntityHelper.populateStackEntityWithTemplate(stackEntity, newTemplate);
-      stackEntity.setTemplateBody(newTemplateText);
-      stackEntity.setStackStatus(Status.UPDATE_IN_PROGRESS);
-      stackEntity.setStackStatusReason("User initiated");
-      stackEntity.setLastUpdateOperationTimestamp(new Date());
+
+      // put the old stack into the past table
+      PastStackEntity previousStackEntity = new PastStackEntity();
+      copyStackEntityFields(currentStackEntity, previousStackEntity);
+      addStack(previousStackEntity);
+
+      // populate all the stack entity fields with the new info
+      StackEntityHelper.populateStackEntityWithTemplate(currentStackEntity, newTemplate);
+      currentStackEntity.setTemplateBody(newTemplateText);
+      currentStackEntity.setStackStatus(Status.UPDATE_IN_PROGRESS);
+      currentStackEntity.setStackStatusReason("User initiated");
+      currentStackEntity.setLastUpdateOperationTimestamp(new Date());
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(request.getCapabilities().getMember()));
+        currentStackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(request.getCapabilities().getMember()));
       } else {
-        stackEntity.setCapabilitiesJson(null);
+        currentStackEntity.setCapabilitiesJson(null);
       }
       if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
-        stackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
+        currentStackEntity.setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
       } else {
-        stackEntity.setNotificationARNsJson(null);
+        currentStackEntity.setNotificationARNsJson(null);
       }
-      Entities.persist(stackEntity);
-      // do something
+      currentStackEntity.setUpdateVersion(previousUpdateVersion + 1);
       db.commit( );
+      return currentStackEntity;
     }
-    return stackEntity;
   }
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static StackEntity addStack(StackEntity stackEntity) throws AlreadyExistsException {
+  public static VersionedStackEntity addStack(VersionedStackEntity stackEntity) throws AlreadyExistsException {
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+      Criteria criteria = Entities.createCriteria(stackEntity.getClass())
         .add(Restrictions.eq("stackName", stackEntity.getStackName()))
         .add(Restrictions.eq("accountId", stackEntity.getAccountId()))
+        .add(Restrictions.eq("updateVersion", stackEntity.getUpdateVersion()))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-      List<StackEntity> EntityList = criteria.list();
-      if (!EntityList.isEmpty()) {
+      List entityList = criteria.list();
+      if (!entityList.isEmpty()) {
         throw new AlreadyExistsException("Stack already exists");
       }
       if (stackEntity.getCreateOperationTimestamp() == null) {
@@ -109,14 +121,14 @@ public class StackEntityManager {
   public static List<StackEntity> describeStacks(String accountId, String stackNameOrId) {
     final List<StackEntity> returnValue;
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) );
       if (stackNameOrId != null) {
         // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         criteria.add(Restrictions.or(
-          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
-          Restrictions.eq("stackId", stackNameOrId))
+            Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+            Restrictions.eq("stackId", stackNameOrId))
         );
       } else {
         criteria.add(Restrictions.eq("recordDeleted", Boolean.FALSE));
@@ -129,7 +141,7 @@ public class StackEntityManager {
   public static List<StackEntity> listStacks(String accountId, List<Status> statusValues) {
     List<StackEntity> returnValue;
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId));
       if (statusValues != null && !statusValues.isEmpty()) {
@@ -144,17 +156,23 @@ public class StackEntityManager {
     }
     return returnValue;
   }
-  public static StackEntity getNonDeletedStackById(String stackId, String accountId) {
-    StackEntity stackEntity = null;
-    try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq("stackId", stackId))
-        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-      List<StackEntity> entityList = criteria.list();
-      if (entityList != null && !entityList.isEmpty()) {
-        stackEntity = entityList.get(0);
+
+  public static VersionedStackEntity getNonDeletedVersionedStackById(String stackId, String accountId, int updateVersion) {
+    VersionedStackEntity stackEntity = null;
+    for (Class stackEntityClass: ALL_STACK_ENTITY_CLASSES) {
+      if (stackEntity == null) {
+        try ( TransactionResource db =
+                Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+          Criteria criteria = Entities.createCriteria(stackEntityClass)
+            .add(Restrictions.eq("accountId", accountId))
+            .add(Restrictions.eq("stackId", stackId))
+            .add(Restrictions.eq("updateVersion", updateVersion))
+            .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+          List<VersionedStackEntity> entityList = criteria.list();
+          if (entityList != null && !entityList.isEmpty()) {
+            stackEntity = entityList.get(0);
+          }
+        }
       }
     }
     return stackEntity;
@@ -163,9 +181,9 @@ public class StackEntityManager {
   public static StackEntity getNonDeletedStackByNameOrId(String stackNameOrId, String accountId) {
     StackEntity stackEntity = null;
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) )
+        .add(accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction())
           // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         .add(Restrictions.or(Restrictions.eq("stackName", stackNameOrId), Restrictions.eq("stackId", stackNameOrId)))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
@@ -180,13 +198,13 @@ public class StackEntityManager {
   public static StackEntity getAnyStackByNameOrId(String stackNameOrId, String accountId) {
     StackEntity stackEntity = null;
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add( accountId != null ? Restrictions.eq("accountId", accountId) : Restrictions.conjunction( ) )
           // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         .add(Restrictions.or(
-          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
-          Restrictions.eq("stackId", stackNameOrId))
+            Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+            Restrictions.eq("stackId", stackNameOrId))
         );
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
@@ -197,59 +215,84 @@ public class StackEntityManager {
   }
 
   public static void deleteStack(String stackId, String accountId) {
-    try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq( "stackId" , stackId))
-        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-
-      List<StackEntity> entityList = criteria.list();
-      for (StackEntity stackEntity: entityList) {
-        stackEntity.setRecordDeleted(Boolean.TRUE);
+    try (TransactionResource db =
+           Entities.transactionFor(STACK_ENTITY_TRANSACTION_CLASS)) {
+      for (Class stackEntityClass: ALL_STACK_ENTITY_CLASSES) {
+        Criteria criteria = Entities.createCriteria(stackEntityClass)
+          .add(Restrictions.eq("accountId", accountId))
+          .add(Restrictions.eq("stackId", stackId))
+          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        // in this case, all versions
+        List<VersionedStackEntity> entityList = criteria.list();
+        for (VersionedStackEntity stackEntity : entityList) {
+          stackEntity.setRecordDeleted(Boolean.TRUE);
+        }
       }
-      db.commit( );
+      db.commit();
     }
   }
 
-  public static void updateStack(StackEntity stackEntity) {
+  public static void reallyDeleteAllStackVersionsExcept(String stackId, String accountId, int updateVersion) {
+    try (TransactionResource db =
+           Entities.transactionFor(STACK_ENTITY_TRANSACTION_CLASS)) {
+      for (Class stackEntityClass: ALL_STACK_ENTITY_CLASSES) {
+        Criteria criteria = Entities.createCriteria(stackEntityClass)
+          .add(Restrictions.eq("accountId", accountId))
+          .add(Restrictions.eq("stackId", stackId))
+          .add(Restrictions.ne("updateVersion", updateVersion))
+          .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        List<VersionedStackEntity> entityList = criteria.list();
+        for (VersionedStackEntity stackEntity : entityList) {
+          Entities.delete(stackEntity);
+        }
+      }
+      db.commit();
+    }
+  }
+
+  public static void updateStack(VersionedStackEntity stackEntity) {
     try ( TransactionResource db =
-            Entities.transactionFor( StackEntity.class ) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+      Criteria criteria = Entities.createCriteria(stackEntity.getClass())
         .add(Restrictions.eq("naturalId" , stackEntity.getNaturalId()));
-      StackEntity dbEntity = (StackEntity) criteria.uniqueResult();
+      VersionedStackEntity dbEntity = (VersionedStackEntity) criteria.uniqueResult();
       if (dbEntity == null) {
         Entities.persist(stackEntity);
       } else {
-        dbEntity.setCreateOperationTimestamp(stackEntity.getCreateOperationTimestamp());
-        dbEntity.setLastUpdateOperationTimestamp(stackEntity.getLastUpdateOperationTimestamp());
-        dbEntity.setDeleteOperationTimestamp(stackEntity.getDeleteOperationTimestamp());
-        dbEntity.setAccountId(stackEntity.getAccountId());
-        dbEntity.setResourceDependencyManagerJson(stackEntity.getResourceDependencyManagerJson());
-        dbEntity.setCapabilitiesJson(stackEntity.getCapabilitiesJson());
-        dbEntity.setDescription(stackEntity.getDescription());
-        dbEntity.setDisableRollback(stackEntity.getDisableRollback());
-        dbEntity.setPseudoParameterMapJson(stackEntity.getPseudoParameterMapJson());
-        dbEntity.setConditionMapJson(stackEntity.getConditionMapJson());
-        dbEntity.setTemplateBody(stackEntity.getTemplateBody());
-        dbEntity.setMappingJson(stackEntity.getMappingJson());
-        dbEntity.setNotificationARNsJson(stackEntity.getNotificationARNsJson());
-        dbEntity.setWorkingOutputsJson(stackEntity.getWorkingOutputsJson());
-        dbEntity.setOutputsJson(stackEntity.getOutputsJson());
-        dbEntity.setParametersJson(stackEntity.getParametersJson());
-        dbEntity.setStackId(stackEntity.getStackId());
-        dbEntity.setStackName(stackEntity.getStackName());
-        dbEntity.setStackStatus(stackEntity.getStackStatus());
-        dbEntity.setStackStatusReason(stackEntity.getStackStatusReason());
-        dbEntity.setTagsJson(stackEntity.getTagsJson());
-        dbEntity.setTemplateFormatVersion(stackEntity.getTemplateFormatVersion());
-        dbEntity.setTimeoutInMinutes(stackEntity.getTimeoutInMinutes());
-        dbEntity.setRecordDeleted(stackEntity.getRecordDeleted());
-        dbEntity.setStackPolicy(stackEntity.getStackPolicy());
-        // TODO: why doesn't the below work?
-        // Entities.mergeDirect(stackEntity);
+        copyStackEntityFields(stackEntity, dbEntity);
       }
       db.commit( );
     }
   }
+
+  private static void copyStackEntityFields(VersionedStackEntity src, VersionedStackEntity dest) {
+    dest.setCreateOperationTimestamp(src.getCreateOperationTimestamp());
+    dest.setLastUpdateOperationTimestamp(src.getLastUpdateOperationTimestamp());
+    dest.setDeleteOperationTimestamp(src.getDeleteOperationTimestamp());
+    dest.setAccountId(src.getAccountId());
+    dest.setResourceDependencyManagerJson(src.getResourceDependencyManagerJson());
+    dest.setCapabilitiesJson(src.getCapabilitiesJson());
+    dest.setDescription(src.getDescription());
+    dest.setDisableRollback(src.getDisableRollback());
+    dest.setPseudoParameterMapJson(src.getPseudoParameterMapJson());
+    dest.setConditionMapJson(src.getConditionMapJson());
+    dest.setTemplateBody(src.getTemplateBody());
+    dest.setMappingJson(src.getMappingJson());
+    dest.setNotificationARNsJson(src.getNotificationARNsJson());
+    dest.setWorkingOutputsJson(src.getWorkingOutputsJson());
+    dest.setOutputsJson(src.getOutputsJson());
+    dest.setParametersJson(src.getParametersJson());
+    dest.setStackId(src.getStackId());
+    dest.setStackName(src.getStackName());
+    dest.setStackStatus(src.getStackStatus());
+    dest.setStackStatusReason(src.getStackStatusReason());
+    dest.setTagsJson(src.getTagsJson());
+    dest.setTemplateFormatVersion(src.getTemplateFormatVersion());
+    dest.setTimeoutInMinutes(src.getTimeoutInMinutes());
+    dest.setRecordDeleted(src.getRecordDeleted());
+    dest.setStackPolicy(src.getStackPolicy());
+    dest.setUpdateVersion(src.getUpdateVersion());
+
+  }
 }
+

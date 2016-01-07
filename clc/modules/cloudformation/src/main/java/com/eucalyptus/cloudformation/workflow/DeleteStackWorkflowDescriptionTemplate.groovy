@@ -27,7 +27,7 @@ import com.netflix.glisten.WorkflowDescriptionTemplate
 class DeleteStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements DeleteStackWorkflow {
 
   @Override
-  void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+  void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     description="DeleteStackWorkflow";
   }
 }

@@ -45,12 +45,12 @@ public class AWSCloudFormationWaitConditionCreatePromise {
   private final WorkflowUtils workflowUtils
   private final String stepId
 
-  public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getCreatePromise(String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     Promise<Integer> timeoutPromise =
-        activities.getAWSCloudFormationWaitConditionTimeout(resourceId, stackId, accountId, effectiveUserId)
+        activities.getAWSCloudFormationWaitConditionTimeout(resourceId, stackId, accountId, effectiveUserId, updateVersion)
     return waitFor( timeoutPromise ) { Integer timeout ->
       waitFor( workflowUtils.exponentialPollWithTimeout( timeout, 10, 1.15, (int)TimeUnit.MINUTES.toSeconds( 2 ) ) {
-        activities.performCreateStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+        activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
       } ) { Boolean created ->
         if ( !created ) {
           throw new RetryAfterConditionCheckFailedException( "Resource ${resourceId} timeout for stack ${stackId}" )

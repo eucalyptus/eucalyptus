@@ -44,9 +44,9 @@ class UpdateWithReplacementMultiStepPromise extends MultiUpdateStepPromise {
     return resourceAction.getUpdateWithReplacementStep( stepId )
   }
 
-  Promise<String> getUpdateWithReplacementPromise( String resourceId, String stackId, String accountId, String effectiveUserId ) {
+  Promise<String> getUpdateWithReplacementPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
     getPromise( "Resource ${resourceId} failed to update for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateWithReplacementStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+      activities.performUpdateWithReplacementStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
     }
   }
 }

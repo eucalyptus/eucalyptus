@@ -27,7 +27,7 @@ import com.netflix.glisten.WorkflowDescriptionTemplate
 class MonitorUpdateStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements MonitorUpdateStackWorkflow {
 
   @Override
-  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId) {
+  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
     description="MonitorUpdateStackWorkflow";
   }
 }

@@ -111,38 +111,38 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     });
   }
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(createSteps.keySet());
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
 
   @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
 
   @Override
-  public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new UpdateCleanupMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupPromise(resourceId, stackId, accountId, effectiveUserId);
+    return new UpdateCleanupMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupPromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
 
   @Override
-  public Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(updateNoInterruptionSteps.keySet());
-    return new UpdateNoInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateNoInterruptionPromise(resourceId, stackId, accountId, effectiveUserId);
+    return new UpdateNoInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateNoInterruptionPromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
   
   @Override
-  public Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(updateSomeInterruptionSteps.keySet());
-    return new UpdateSomeInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateSomeInterruptionPromise(resourceId, stackId, accountId, effectiveUserId);
+    return new UpdateSomeInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateSomeInterruptionPromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
   @Override
-  public Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
     List<String> stepIds = Lists.newArrayList(updateWithReplacementSteps.keySet());
-    return new UpdateWithReplacementMultiStepPromise(workflowOperations, stepIds, this).getUpdateWithReplacementPromise(resourceId, stackId, accountId, effectiveUserId);
+    return new UpdateWithReplacementMultiStepPromise(workflowOperations, stepIds, this).getUpdateWithReplacementPromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
   }
 
 

@@ -20,19 +20,27 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 /**
  * Created by ethomas on 12/18/13.
  */
-@MappedSuperclass
-public abstract class StackResourceEntity extends AbstractPersistent {
+@Entity
+@PersistenceContext( name = "eucalyptus_cloudformation" )
+@Table( name = "stack_resources" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
   @Column(name = "description", length =  4000)
@@ -91,6 +99,10 @@ public abstract class StackResourceEntity extends AbstractPersistent {
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
+  @Column(name = "update_version")
+  Integer updateVersion;
+
+
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
 
@@ -231,6 +243,14 @@ public abstract class StackResourceEntity extends AbstractPersistent {
 
   public void setResourceAttributesJson(String resourceAttributesJson) {
     this.resourceAttributesJson = resourceAttributesJson;
+  }
+
+  public Integer getUpdateVersion() {
+    return updateVersion;
+  }
+
+  public void setUpdateVersion(Integer updateVersion) {
+    this.updateVersion = updateVersion;
   }
 
   @Override

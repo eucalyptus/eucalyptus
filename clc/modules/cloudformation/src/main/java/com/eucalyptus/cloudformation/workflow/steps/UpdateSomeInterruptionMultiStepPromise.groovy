@@ -44,9 +44,9 @@ class UpdateSomeInterruptionMultiStepPromise extends MultiUpdateStepPromise {
     return resourceAction.getUpdateSomeInterruptionStep( stepId )
   }
 
-  Promise<String> getUpdateSomeInterruptionPromise( String resourceId, String stackId, String accountId, String effectiveUserId ) {
+  Promise<String> getUpdateSomeInterruptionPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
     getPromise( "Resource ${resourceId} failed to update for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateSomeInterruptionStep( stepId, resourceId, stackId, accountId, effectiveUserId )
+      activities.performUpdateSomeInterruptionStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
     }
   }
 }

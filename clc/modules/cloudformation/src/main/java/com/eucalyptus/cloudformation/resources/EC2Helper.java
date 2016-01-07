@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources;
 
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
@@ -46,11 +46,11 @@ public class EC2Helper {
     return resourceTags;
   }
 
-  public static void refreshInstanceAttributes(StackEntity stackEntity, String instanceId, String effectiveUserId) throws Exception {
+  public static void refreshInstanceAttributes(VersionedStackEntity stackEntity, String instanceId, String effectiveUserId, int updateVersion) throws Exception {
     if (instanceId != null) {
       String stackId = stackEntity.getStackId();
       String accountId = stackEntity.getAccountId();
-      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceInUseByPhysicalResourceId(stackId, accountId, instanceId);
+      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId, updateVersion);
       if (instanceStackResourceEntity != null) {
         ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
         ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
