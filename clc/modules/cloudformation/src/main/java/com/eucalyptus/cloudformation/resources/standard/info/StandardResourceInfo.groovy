@@ -195,13 +195,12 @@ public class AWSEC2NetworkInterfaceResourceInfo extends ResourceInfo {
 }
 
 
-// Can't do this one until we allow more than one network interface on an instance
-//@ToString(includeNames=true)
-//public class AWSEC2NetworkInterfaceAttachmentResourceInfo extends ResourceInfo {
-//  public AWSEC2NetworkInterfaceAttachmentResourceInfo() {
-//    setType("AWS::EC2::NetworkInterfaceAttachment");
-//  }
-//}
+@ToString(includeNames=true)
+public class AWSEC2NetworkInterfaceAttachmentResourceInfo extends ResourceInfo {
+  public AWSEC2NetworkInterfaceAttachmentResourceInfo() {
+    setType("AWS::EC2::NetworkInterfaceAttachment");
+  }
+}
 
 
 @ToString(includeNames=true)
