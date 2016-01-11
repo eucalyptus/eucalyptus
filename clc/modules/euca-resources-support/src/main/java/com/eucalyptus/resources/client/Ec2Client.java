@@ -717,6 +717,36 @@ public class Ec2Client {
       return this.snapshotId;
     }
   }
+  
+
+  private class ComputeDeleteSnapshotTask extends
+      EucalyptusClientTask<ComputeMessage, Compute> {
+    private String snapshotId = null;
+
+    private ComputeDeleteSnapshotTask( final String snapshotId ) {
+      this.snapshotId = snapshotId;
+    }
+    
+    private DeleteSnapshotType deleteSnapshot() {
+     final DeleteSnapshotType req = new  DeleteSnapshotType();
+     req.setSnapshotId(this.snapshotId);
+     return req;
+    }
+
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(deleteSnapshot(), callback);
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final DeleteSnapshotResponseType resp = (DeleteSnapshotResponseType) response;
+    }
+  }
 
   private class ComputeRegisterEBSImageTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
@@ -784,6 +814,34 @@ public class Ec2Client {
 
     public String getImageId() {
       return this.imageId;
+    }
+  }
+  
+  private class ComputeDeregisterImageTask extends
+  EucalyptusClientTask<ComputeMessage, Compute> {
+    private String imageId = null;
+    private ComputeDeregisterImageTask(final String imageId) {
+      this.imageId = imageId;
+    }
+    
+    private DeregisterImageType deregister() {
+      final DeregisterImageType req = new DeregisterImageType();
+      req.setImageId(this.imageId);
+      return req;
+    }
+    
+    @Override
+    void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
+        Checked<ComputeMessage> callback) {
+      final DispatchingClient<ComputeMessage, Compute> client = context
+          .getClient();
+      client.dispatch(deregister(), callback);      
+    }
+
+    @Override
+    void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
+        ComputeMessage response) {
+      final DeregisterImageResponseType resp = (DeregisterImageResponseType) response;
     }
   }
 
@@ -1365,6 +1423,22 @@ public class Ec2Client {
     }
   }
 
+  public void deleteSnapshot(final String userId, final String snapshotId) 
+      throws EucalyptusActivityException {
+    final ComputeDeleteSnapshotTask task = new ComputeDeleteSnapshotTask(snapshotId);
+
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try {
+      if (!result.get()) {
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to delete snapshot");
+      }
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }  
+  }
   public String registerEBSImage(final String userId, final String snapshotId,
       final String imageName, String architecture, final String platform,
       final String description, final boolean deleteOnTermination)
@@ -1395,6 +1469,25 @@ public class Ec2Client {
             task.getErrorMessage() != null ? task.getErrorMessage()
                 : "failed to register ebs image");
     } catch (final Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public void deregisterImage(final String userId, final String imageId) {
+    if (userId == null || userId.length() <= 0)
+      throw new IllegalArgumentException("User ID is required");
+    if (imageId == null || imageId.length() <= 0)
+      throw new IllegalArgumentException("Image ID is required");
+ 
+    final ComputeDeregisterImageTask task = new ComputeDeregisterImageTask(imageId);
+    final CheckedListenableFuture<Boolean> result = task
+        .dispatch(new Ec2Context(userId));
+    try{
+      if (!result.get())
+        throw new EucalyptusActivityException(
+            task.getErrorMessage() != null ? task.getErrorMessage()
+                : "failed to deregister image");    
+      }catch(final Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }

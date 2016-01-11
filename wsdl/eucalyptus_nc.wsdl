@@ -535,13 +535,15 @@
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
-        <xs:element minOccurs="0" maxOccurs="64" name="groupIds" type="xs:string"/>
+            <xs:element minOccurs="0" maxOccurs="64" name="groupIds" type="xs:string"/>
 
         <!-- updated by NC upon Attach/DetachVolume -->
-        <xs:element minOccurs="0" maxOccurs="64" name="volumes" type="tns:volumeType"/>
+            <xs:element minOccurs="0" maxOccurs="64" name="volumes" type="tns:volumeType"/>
 
         <!-- unused in NC, used by CC -->
 	    <xs:element minOccurs="0" name="serviceTag" type="xs:string"/> 
+        <!-- updated by NC upon floppy create -->
+            <xs:element minOccurs="0" name="hasFloopy" type="xs:int"/>
       </xs:sequence>
     </xs:complexType>
     

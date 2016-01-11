@@ -168,11 +168,8 @@ public class TokensQueryPipeline extends QueryPipeline {
           // in an effort to not break basic auth when doing a password change, we'll use a ';' instead of ':'
           // to indicate a new password is expected as well as encoded old password
           if ( authorization.length==2 && "basic".equalsIgnoreCase(authorization[0]) ) {
-            boolean isChangePassword = false;
             final String unEncodedAuth = B64.standard.decString( authorization[1] );
-            if ( unEncodedAuth.indexOf( ";" ) > -1 ) {
-              isChangePassword = true;
-            }
+            final boolean isChangePassword = isChangePassword( unEncodedAuth );
             final String[] basicUsernamePassword = unEncodedAuth.split( (isChangePassword?";":":"), 2 );
             final String[] encodedAccountUsername = basicUsernamePassword[0].split( "@" , 2 );
 
@@ -225,6 +222,15 @@ public class TokensQueryPipeline extends QueryPipeline {
       if ( !NioServerHandler.isPersistentConnection( httpRequest )  ) {
         writeFuture.addListener( ChannelFutureListener.CLOSE );
       }
+    }
+
+    static boolean isChangePassword( final String unEncodedAuth ) {
+      boolean changePassword = false;
+      if ( ( unEncodedAuth.indexOf( ";" ) > -1 )) {
+        if ( unEncodedAuth.indexOf(":") == -1  || !(unEncodedAuth.indexOf(":") < unEncodedAuth.indexOf(";")))
+          changePassword = true;
+      }
+      return changePassword;
     }
   }
 }
