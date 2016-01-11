@@ -187,11 +187,6 @@ public class WalrusProviderClient extends S3ProviderClient {
   }
 
   @Override
-  protected int httpHeadToRootReturnCode() {
-    return HttpResponseStatus.FORBIDDEN.getCode();
-  }
-
-  @Override
   protected URI getUpstreamEndpoint() {
     return Topology.lookup(WalrusBackend.class).getUri();
   }

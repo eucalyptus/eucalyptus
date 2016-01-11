@@ -42,6 +42,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.ServiceUnavailableException;
 import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
+import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
@@ -151,5 +152,6 @@ public enum MessageMapper {
     exceptionMap.put(com.eucalyptus.walrus.exceptions.PreconditionFailedException.class, PreconditionFailedException.class);
     exceptionMap.put(com.eucalyptus.walrus.exceptions.TooManyBucketsException.class, TooManyBucketsException.class);
     exceptionMap.put(com.eucalyptus.walrus.exceptions.WalrusException.class, InternalErrorException.class);
+    exceptionMap.put(com.eucalyptus.walrus.exceptions.MethodNotAllowedException.class, MethodNotAllowedException.class);
   }
 }

@@ -433,6 +433,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       } catch(IOException ex) {
         code = connection.getResponseCode();
       }
+      LOG.debug("Code is: " + code);
       return code;
     } catch (Exception ex) {
       LOG.error(ex);
