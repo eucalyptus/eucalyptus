@@ -218,11 +218,9 @@ do_stop() {
         # now kill the services
         pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
         pids=""
-        sids=""
         for pidfile in $pidfiles ; do
             if [ -s $pidfile ]; then
                 pid=`cat $pidfile 2> /dev/null`
-                sids="$pid $sids"
                 morepids="$pid"
                 for i in `pgrep -P $pid`; do
                     morepids="$morepids `echo $i`"
@@ -234,7 +232,6 @@ do_stop() {
         done
         if [ -n "$pids" ]; then
             kill -15 $pids >/dev/null 2>&1
-            pkill -9 -s $sids >/dev/null 2>&1
         fi
 
         dopkill=0
@@ -253,10 +250,6 @@ do_stop() {
                 kill -9 ${pid} >/dev/null 2>&1
             fi
         done
-        if [ $dopkill -gt 0 ]; then
-            pkill -9 -s $sids >/dev/null 2>&1
-        fi
-
         rm -f $LOCKFILE
 }
 
