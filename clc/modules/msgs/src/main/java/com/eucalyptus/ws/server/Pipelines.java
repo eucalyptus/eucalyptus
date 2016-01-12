@@ -153,9 +153,9 @@ public class Pipelines {
         return f;
       }
     }
-    if ( request.getHeader(HttpHeaders.Names.HOST).contains( "amazonaws.com" ) 
-        || request.getHeader(HttpHeaders.Names.HOST).contains( subDomain.get( ) ) ) {
-      String hostHeader = request.getHeader(HttpHeaders.Names.HOST);
+    final String hostHeader = request.getHeader( HttpHeaders.Names.HOST );
+    if ( hostHeader != null && ( hostHeader.contains( "amazonaws.com" ) || hostHeader.contains( subDomain.get( ) ) ) ) {
+      final String host = hostHeader.indexOf( ':' ) > 0 ? hostHeader.substring( 0, hostHeader.indexOf( ':' ) ) : hostHeader;
       LOG.debug( "Trying to intercept request for " + hostHeader );
       for ( final FilteredPipeline f : pipelines ) {
         if ( Ats.from( f ).has( ComponentPart.class ) ) {
@@ -169,9 +169,9 @@ public class Pipelines {
             }
             LOG.debug( "Maybe intercepting: " + hostHeader + " using " + f.getClass( ) );
             if ( Ats.from( compIdClass ).has( AwsServiceName.class ) 
-                && request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "\\.[\\w\\-]+\\.amazonaws.com" ) ) {
+                && host.matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "(?:\\.[\\w\\-]+)?\\.amazonaws.com" ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
-            } else if ( request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
+            } else if ( host.matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${system.dns.dnsdomain}
             }
           }
