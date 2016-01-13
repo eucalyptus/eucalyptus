@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,10 +25,14 @@ package com.eucalyptus.upgrade;
 
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.ObjectOutputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,6 +46,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.hibernate.cfg.Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -58,10 +63,12 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Database;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContextConfiguration;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Objects;
@@ -74,6 +81,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.io.BaseEncoding;
+import com.google.common.io.Files;
 import com.google.common.net.InetAddresses;
 
 public class Upgrades {
@@ -1126,7 +1135,30 @@ public class Upgrades {
             PersistenceContexts.listEntities( ctx ),
             props
         );
-        new SchemaUpdate(PersistenceContexts.getConfiguration( config )).execute(true, true);
+        final Configuration configuration = PersistenceContexts.getConfiguration( config );
+        final File configDigestFile = SubDirectory.RUNDB.getChildFile( ctx + ".cfg.sha256" );
+        final ByteArrayOutputStream output = new ByteArrayOutputStream( 4096 );
+        final ObjectOutputStream outputObject = new ObjectOutputStream( output );
+        outputObject.writeObject( configuration ); // when using Java 7 the EntityTuplizerFactory/ConcurrentHashMap can
+        outputObject.flush( );                     // cause spurious hash differences. This occurs much less with Java 8.
+        final String digest = BaseEncoding.base16().lowerCase( )
+            .encode( Digest.SHA256.digestBinary( output.toByteArray( ) ) );
+        final boolean upgrade = BootstrapArgs.isUpgradeSystem( ) || isForceUpgrade( );
+        if ( upgrade ||
+            !configDigestFile.canRead( ) ||
+            !digest.equals( Files.toString( configDigestFile, StandardCharsets.UTF_8 ) ) ) {
+          LOG.info( "Running schema update for " + ctx );
+          new SchemaUpdate( configuration ).execute( false, true );
+          if ( upgrade ) {
+            if ( configDigestFile.exists( ) && !configDigestFile.delete( ) ) {
+              LOG.warn( "Unable to delete configuration digest file: " + configDigestFile.getAbsolutePath( ) );
+            }
+          } else {
+            Files.write( digest.getBytes( StandardCharsets.UTF_8 ), configDigestFile );
+          }
+        } else {
+          LOG.debug( "Schema update skipped (no changes) for " + ctx );
+        }
       }
     } catch ( final Exception e ) {
       LOG.fatal( e, e );
