@@ -123,6 +123,11 @@
         <structure name="volumes" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume" />
       </collection>
     </structure>
+    <structure usage="optional">
+      <collection field="secondaryNetConfigList" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="secondaryNetConfig" map-as="edu.ucsb.eucalyptus.msgs.NetworkConfigType" />
+      </collection>
+    </structure>
   </mapping>
   <mapping name="RunInstances" class="com.eucalyptus.cloud.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
@@ -152,6 +157,11 @@
     <value name="ownerId" field="ownerId" />
     <value name="accountId" field="accountId" />
     <value name="rootDirective" field="rootDirective" usage="optional" />
+    <structure usage="optional">
+      <collection field="secondaryNetConfigList" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="secondaryNetConfig" map-as="edu.ucsb.eucalyptus.msgs.NetworkConfigType" />
+      </collection>
+    </structure>
   </mapping>
   <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.cloud.VmRunResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

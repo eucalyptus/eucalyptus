@@ -324,15 +324,22 @@ public class ResourceType extends EucalyptusData {
   }
 }
 public class NetworkConfigType extends EucalyptusData {
+  String interfaceId;
+  Integer device = 0;
   String macAddress;
   String ipAddress;
-  String ignoredPublicIp;
+  String ignoredPublicIp = "0.0.0.0";
   String privateDnsName;
   String publicDnsName;
-  Integer vlan;
-  Long networkIndex;
+  Integer vlan = -1;
+  Long networkIndex = -1l;
 
   def NetworkConfigType() {
+  }
+  
+  def NetworkConfigType(final String interfaceId, final Integer device) {
+    this.interfaceId = interfaceId;
+    this.device = device;
   }
 
   public void updateDns( String domain ) {
@@ -344,7 +351,8 @@ public class NetworkConfigType extends EucalyptusData {
 
   @Override
   public String toString() {
-    return "NetworkConfig ${vlan} ${networkIndex} ${ipAddress} ${ignoredPublicIp} ${privateDnsName} ${publicDnsName}";
+    return "NetworkConfig interfaceId=${interfaceId}, device=${device}, macAddress=${macAddress}, ipAddress=${ipAddress}, " +
+    "ignoredPublicIp=${ignoredPublicIp}, privateDnsName=${privateDnsName}, publicDnsName=${publicDnsName}, vlan=${vlan}, networkIndex=${networkIndex}";
   }
 }
 

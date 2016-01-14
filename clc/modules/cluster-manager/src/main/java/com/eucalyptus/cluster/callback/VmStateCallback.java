@@ -138,6 +138,7 @@ import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
 import edu.ucsb.eucalyptus.cloud.VmDescribeType;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
@@ -558,6 +559,13 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           report.getPublicIps( ).add( vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
           report.getPrivateIps().add( vmInfo.getNetParams( ).getIpAddress() );
           report.getMacs().add( vmInfo.getNetParams( ).getMacAddress() );
+          if (vmInfo.getSecondaryNetConfigList() != null && vmInfo.getSecondaryNetConfigList().size() > 0) {
+            for(NetworkConfigType netConfig : vmInfo.getSecondaryNetConfigList()) {
+              report.getPublicIps().add(netConfig.getIgnoredPublicIp());
+              report.getPrivateIps().add(netConfig.getIpAddress()); 
+              report.getMacs().add(netConfig.getMacAddress());
+            }
+          }
         }
       }
 

@@ -103,6 +103,7 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
 import edu.ucsb.eucalyptus.cloud.VmInfo
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
@@ -986,7 +987,7 @@ class VmInstanceLifecycleHelpers {
         final ResourceToken resourceToken,
         final VmRunBuilder builder
     ) {
-      VpcNetworkInterfaceResource resource = ( VpcNetworkInterfaceResource ) \
+      /*VpcNetworkInterfaceResource resource = ( VpcNetworkInterfaceResource ) \
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof VpcNetworkInterfaceResource }
       resource?.with{
         if ( resource.mac == null ) {
@@ -997,6 +998,44 @@ class VmInstanceLifecycleHelpers {
         } else {
           builder.privateAddress( resource.privateIp )
           builder.macAddress( resource.mac )
+        }
+      }*/
+      
+      Iterable<NetworkResource> resources = resourceToken.getAttribute(NetworkResourcesKey).findAll{
+        it instanceof VpcNetworkInterfaceResource }
+      if ( !Iterables.isEmpty( resources ) ) {
+        // Handle primary interface
+        final VpcNetworkInterfaceResource primaryInterface = resources.find{ NetworkResource networkResource ->
+          networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device == 0
+        } as VpcNetworkInterfaceResource
+        
+        if ( primaryInterface.mac == null ) {
+          VpcNetworkInterface networkInterface =
+              RestrictedTypes.resolver( VpcNetworkInterface ).apply( primaryInterface.value )
+          builder.privateAddress( networkInterface.privateIpAddress )
+          builder.macAddress( networkInterface.macAddress )
+        } else {
+          builder.privateAddress( primaryInterface.privateIp )
+          builder.macAddress( primaryInterface.mac )
+        }
+        
+        // Handle secondary interfaces
+        final List<VpcNetworkInterfaceResource> secondaryInterfaces = resources.findAll{ NetworkResource networkResource ->
+          networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device != 0
+        } as List<VpcNetworkInterfaceResource>
+      
+        secondaryInterfaces.each { VpcNetworkInterfaceResource secondaryInterface ->
+          NetworkConfigType netConfig = new NetworkConfigType(secondaryInterface.value, secondaryInterface.device)
+          if ( secondaryInterface.mac == null ) {
+            VpcNetworkInterface networkInterface =
+                RestrictedTypes.resolver( VpcNetworkInterface ).apply( secondaryInterface.value )
+            netConfig.macAddress = networkInterface.macAddress
+            netConfig.ipAddress = networkInterface.privateIpAddress
+          } else {
+            netConfig.macAddress = secondaryInterface.mac
+            netConfig.ipAddress = secondaryInterface.privateIp
+          }
+          builder.secondaryNetConfig(netConfig)
         }
       }
     }
