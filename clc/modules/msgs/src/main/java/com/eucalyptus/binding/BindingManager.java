@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,14 +64,19 @@ package com.eucalyptus.binding;
 
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Parameters;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
@@ -84,6 +89,7 @@ public class BindingManager {
   private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
   private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
   private static Binding              DEFAULT                   = null;
+  private static Map<BindingKey,Future<Boolean>> bindingSeedMap = Maps.newConcurrentMap( );
   
   public static Binding getDefaultBinding( ) {
     if ( DEFAULT != null ) {
@@ -105,23 +111,45 @@ public class BindingManager {
   
   public static boolean seedBinding( final String bindingName,
                                      final Class seedClass ) {
-    boolean seeded = trySeed( key( bindingName ), seedClass );
+    boolean foundComponent = false;
+    boolean seeded = false;
 
     if ( BaseMessage.class.isAssignableFrom( seedClass ) ) {
       Class<?> messageClass = seedClass;
       while ( messageClass != BaseMessage.class ) {
         final ComponentMessage componentMessage = messageClass.getAnnotation( ComponentMessage.class );
         if ( componentMessage != null ) {
-          seeded = seeded || trySeed(
-              key( Optional.<Class<? extends ComponentId>>fromNullable( componentMessage.value() ), bindingName ),
-              seedClass );
+          foundComponent = true;
+          final BindingKey key = key( Optional.<Class<? extends ComponentId>>fromNullable( componentMessage.value() ), bindingName );
+          seeded = trySeed( key , seedClass );
+          if ( seeded ) {
+            BindingManager.bindingMap.put( key( bindingName ), getBinding( key ) );
+          }
           break;
         }
         messageClass = messageClass.getSuperclass( );
       }
     }
 
+    if ( !seeded && !foundComponent ) {
+      seeded = trySeed( key( bindingName ), seedClass );
+    }
+
     return seeded;
+  }
+
+  public static void waitForSeeding( ) {
+    for ( Future<Boolean> seedFuture : bindingSeedMap.values( ) ) {
+      try {
+        seedFuture.get( );
+      } catch ( InterruptedException e ) {
+        Thread.currentThread( ).interrupt( );
+        break;
+      } catch ( ExecutionException e ) {
+        final Throwable cause = e.getCause( );
+        throw BootstrapException.error( cause.getMessage( ), cause );
+      }
+    }
   }
 
   public static boolean isRegisteredBinding( final String bindingName ) {
@@ -173,14 +201,21 @@ public class BindingManager {
   private static boolean trySeed( final BindingKey key, final Class seedClass ) {
     boolean seeded = false;
     if ( !BindingManager.bindingMap.containsKey( key ) ) {
-      try {
-        BindingManager.getBinding( key ).seed( seedClass );
-        Logs.exhaust().trace( "Seeding binding " + key.getName( ) + " for class " + seedClass.getCanonicalName( ) );
-        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, key.getName( ), seedClass.getName() ).trace( );
-        seeded = true;
-      } catch ( BindingException e ) {
-        throw BootstrapException.error( "Failed to seed binding " + key.getName( ) + " with class " + seedClass, e );
-      }
+      final Binding binding = BindingManager.getBinding( key );
+      seeded = true;
+      bindingSeedMap.put( key, Threads.enqueue( Empyrean.class, BindingManager.class, new Callable<Boolean>( ) {
+        @Override
+        public Boolean call( ) throws Exception {
+          try {
+            binding.seed( seedClass );
+            Logs.exhaust( ).trace( "Seeding binding " + key.getName( ) + " for class " + seedClass.getCanonicalName( ) );
+            EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, key.getName( ) + " " + key.component, seedClass.getName() ).debug( );
+          } catch ( BindingException e ) {
+            throw new BindingException( "Failed to seed binding " + key.getName( ) + " with class " + seedClass, e );
+          }
+          return true;
+        }
+      } ) );
     }
     return seeded;
   }

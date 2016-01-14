@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,6 @@
 package com.eucalyptus.binding;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -125,13 +124,14 @@ public class Binding {
   }
   
   public IBindingFactory seed( final Class seed ) throws BindingException {
+    final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader( );
     try {
-      this.bindingFactory = BindingDirectory.getFactory( this.name, seed );
-      String[] mappedClasses = this.bindingFactory.getMappedClasses( );
+      this.bindingFactory = BindingDirectory.getFactory( this.name, seed, systemClassLoader );
+      final String[] mappedClasses = this.bindingFactory.getMappedClasses( );
       for ( int i = 0; i < mappedClasses.length; i++ ) {
         if ( this.bindingFactory.getElementNames( )[i] != null ) {
           try {
-            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], ClassLoader.getSystemClassLoader( ).loadClass( mappedClasses[i] ) );
+            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], systemClassLoader.loadClass( mappedClasses[i] ) );
             this.classToElementMap.put( mappedClasses[i], this.bindingFactory.getElementNames( )[i] );
             this.classToNamespaceMap.put( mappedClasses[i], this.bindingFactory.getElementNamespaces( )[i] );
           } catch ( ClassNotFoundException e ) {

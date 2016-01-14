@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.math.BigInteger;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -132,6 +131,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
@@ -246,8 +246,20 @@ public class BindingCache {
         throw ex;
       }
     }
-    
-    public void process( File f ) throws Exception {
+
+    enum FileProcessingMode {
+      /**
+       * Scan files but do not update cache
+       */
+      Scan,
+
+      /**
+       * Scan and build classcache
+       */
+      Process,
+    }
+
+    public void process( final FileProcessingMode mode, File f ) throws Exception {
       if ( f.isDirectory( ) ) {
         File[] files = f.listFiles( new FilenameFilter( ) {
           
@@ -262,10 +274,11 @@ public class BindingCache {
         }
       } else {
         byte[] digestBytes = Files.hash( f, Hashing.md5() ).asBytes( );
-        String digest = new BigInteger( digestBytes ).abs( ).toString( 16 );
+        String digest = BaseEncoding.base16( ).lowerCase( ).encode( digestBytes );
         CURRENT_PROPS.put( BINDING_CACHE_JAR_PREFIX + f.getName( ), digest );
         final JarFile jar = new JarFile( f );
         final List<JarEntry> jarList = Collections.list( jar.entries( ) );
+        final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader( );
         for ( final JarEntry j : jarList ) {
           try {
             if ( j.getName( ).matches( FILE_PATTERN ) ) {
@@ -273,9 +286,9 @@ public class BindingCache {
               String bindingName = j.getName( );
               String bindingFullPath = "jar:file:" + f.getAbsolutePath( ) + "!/" + bindingName;
               this.addCurrentBinding( bindingBytes, bindingName, bindingFullPath );
-            } else if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
-              final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-              final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
+            } else if ( FileProcessingMode.Process == mode && j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
+              final String classGuess = j.getName( ).replace( '/', '.' ).replaceAll( "\\.class.{0,1}", "" );
+              final Class candidate = systemClassLoader.loadClass( classGuess );
               if ( MSG_BASE_CLASS.isAssignableFrom( candidate ) || MSG_DATA_CLASS.isAssignableFrom( candidate ) ) {
                 ByteSource classSupplier = Resources.asByteSource( ClassLoader.getSystemResource( j.getName( ) ) );
                 File destClassFile = SubDirectory.CLASSCACHE.getChildFile( j.getName( ) );
@@ -304,7 +317,7 @@ public class BindingCache {
     private void addCurrentBinding( byte[] bindingBytes, String bindingName, String bindingFullPath ) {
       LOG.debug( "Binding cache: loading binding from: " + bindingFullPath );
       BINDING_LIST.add( URI.create( bindingFullPath ) );
-      String digest = new BigInteger( Digest.MD5.get( ).digest( bindingBytes ) ).abs( ).toString( 16 );
+      String digest = BaseEncoding.base16( ).lowerCase( ).encode( Hashing.md5( ).hashBytes( bindingBytes ).asBytes( ) );
       String entryName = BINDING_CACHE_BINDING_PREFIX + bindingName;
       if ( !CURRENT_PROPS.containsKey( entryName ) ) {
         CURRENT_PROPS.put( entryName, digest );
@@ -367,11 +380,13 @@ public class BindingCache {
     }
     
     public static void compile( ) {
-      LOG.info( "Binding cache: processing message and binding files." );
-      processFiles( );
+      LOG.info( "Binding cache: scanning message and binding files." );
+      processFiles( FileProcessingMode.Scan );
       if ( BindingFileSearch.INSTANCE.check( ) ) {
         LOG.info( "Binding cache: nothing to do." );
       } else {
+        LOG.info( "Binding cache: processing message and binding files." );
+        processFiles( FileProcessingMode.Process );
         LOG.info( "Binding cache: regenerating cache." );
         try {
           LOG.info( "Binding cache: generating internal bindings." );
@@ -384,7 +399,7 @@ public class BindingCache {
           gen.close( );
           BINDING_LIST.add( gen.getOutFile( ).toURI( ) );
           byte[] digestBytes = Files.hash( gen.getOutFile( ), Hashing.md5() ).asBytes( );
-          String digest = new BigInteger( digestBytes ).abs( ).toString( 16 );
+          String digest = BaseEncoding.base16( ).lowerCase( ).encode( digestBytes );
           CURRENT_PROPS.put( BINDING_CACHE_BINDING_PREFIX + gen.getOutFile( ).getName( ), digest );
           LOG.info( "Binding cache: populating cache from transitive closure of bindings." );
           // load *-binding.xml, populate cache w/ all referenced files
@@ -430,15 +445,16 @@ public class BindingCache {
         }
       }
     }
-    
-    public static void processFiles( ) {
+
+    public static void processFiles( final FileProcessingMode mode ) {
+      BindingFileSearch.CURRENT_PROPS.clear( );
       final File libDir = new File( BaseDirectory.LIB.toString( ) );
       for ( final File f : libDir.listFiles( ) ) {
         if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
              && !f.getName( ).matches( ".*-ext-.*" ) ) {
           EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
           try {
-            BindingFileSearch.INSTANCE.process( f );
+            BindingFileSearch.INSTANCE.process( mode, f );
           } catch ( final Throwable e ) {
             LOG.error( e.getMessage( ) );
           }
@@ -448,7 +464,7 @@ public class BindingCache {
         File pathFile = new File( pathName );
         if ( pathFile.isDirectory( ) ) {
           try {
-            BindingFileSearch.INSTANCE.process( pathFile );
+            BindingFileSearch.INSTANCE.process( mode, pathFile );
           } catch ( final Throwable e ) {
             LOG.error( e.getMessage( ) );
           }
