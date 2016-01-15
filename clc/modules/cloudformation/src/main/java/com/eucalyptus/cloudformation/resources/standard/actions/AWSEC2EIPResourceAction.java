@@ -37,6 +37,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepTransform;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.AllocateAddressResponseType;
 import com.eucalyptus.compute.common.AllocateAddressType;
 import com.eucalyptus.compute.common.AssociateAddressResponseType;
@@ -46,6 +47,8 @@ import com.eucalyptus.compute.common.DescribeAddressesResponseType;
 import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.DisassociateAddressResponseType;
+import com.eucalyptus.compute.common.DisassociateAddressType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
@@ -138,19 +141,46 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
   }
 
   private enum DeleteSteps implements Step {
+    DETACH_FROM_INSTANCE {
+      @Override
+      public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
+        final AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
+        if ( action.info.getPhysicalResourceId( ) == null ) return action;
+        if ( action.properties.getInstanceId( ) != null ) {
+          final ServiceConfiguration configuration = Topology.lookup( Compute.class );
+          final List<AddressInfoType> addresses = describeAddresses( action, configuration ).getAddressesSet( );
+          if ( addresses != null && !addresses.isEmpty( ) &&
+              ( addresses.get( 0 ).getInstanceId( ) != null || addresses.get( 0 ).getNetworkInterfaceId( ) != null ) ) {
+            final DisassociateAddressType disassociateAddressType =
+                MessageHelper.createMessage( DisassociateAddressType.class, action.info.getEffectiveUserId( ) );
+            if ( action.properties.getDomain( ) != null ) {
+              disassociateAddressType.setAssociationId( addresses.get( 0 ).getAssociationId( ) );
+            } else {
+              disassociateAddressType.setPublicIp( action.info.getPhysicalResourceId( ) );
+            }
+            AsyncRequests.<DisassociateAddressType, DisassociateAddressResponseType> sendSync(
+                configuration,
+                disassociateAddressType
+            );
+          }
+
+          // Update the instance info
+          EC2Helper.refreshInstanceAttributes(
+              action.getStackEntity( ),
+              action.properties.getInstanceId( ),
+              action.info.getEffectiveUserId( )
+          );
+        }
+        return action;
+      }
+    },
     DELETE_EIP_ADDRESS {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.info.getPhysicalResourceId() == null) return action;
-        DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
-        if (action.properties.getDomain() != null) {
-          describeAddressesType.setAllocationIds(Lists.newArrayList(JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).asText()));
-        } else {
-          describeAddressesType.setPublicIpsSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
-        }
-        DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+        final DescribeAddressesResponseType describeAddressesResponseType = describeAddresses( action, configuration );
         if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
           ReleaseAddressType releaseAddressType = MessageHelper.createMessage(ReleaseAddressType.class, action.info.getEffectiveUserId());
           if (action.properties.getDomain() != null) {
@@ -160,12 +190,6 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
           }
           AsyncRequests.<ReleaseAddressType, ReleaseAddressResponseType> sendSync(configuration, releaseAddressType);
         }
-
-        // Update the instance info
-        if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
-        }
-
         return action;
       }
     };
@@ -174,6 +198,22 @@ public class AWSEC2EIPResourceAction extends ResourceAction {
     @Override
     public Integer getTimeout() {
       return null;
+    }
+
+    private static DescribeAddressesResponseType describeAddresses(
+        final AWSEC2EIPResourceAction action,
+        final ServiceConfiguration configuration
+    ) throws Exception {
+      final DescribeAddressesType describeAddressesType =
+          MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
+      if (action.properties.getDomain() != null) {
+        describeAddressesType.setAllocationIds(
+            Lists.newArrayList( JsonHelper.getJsonNodeFromString( action.info.getAllocationId( ) ).asText( ) )
+        );
+      } else {
+        describeAddressesType.setPublicIpsSet( Lists.newArrayList( action.info.getPhysicalResourceId( ) ) );
+      }
+      return AsyncRequests.sendSync( configuration, describeAddressesType );
     }
   }
 
