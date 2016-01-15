@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.log.EucaLoggingEvent;
 import com.eucalyptus.system.log.EucaPatternLayout;
+import com.google.common.base.Optional;
 
 /**
  * @author Sang-Min Park
@@ -35,8 +36,8 @@ public class RequestTrackingLayout extends EucaPatternLayout {
   private static final String DEFAULT_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.5p | [%o] %m%n";
   private static final String DEBUG_LOG_PATTERN       = "%d{yyyy-MM-dd HH:mm:ss} %5.5p %-24.24c{1} | [%o] %m%n";
   private static final String EXTREME_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.9p %-24.24c{1} %-33.33f | [%o] %m%n";
- 
-  private String CONTINUATION = "[%o] %m%n";
+  private static final String CONTINUATION            = "[%o] %m%n";
+
   private EucaPatternLayout continuation = null;
   private final EucaPatternLayout extremeLayout;
   private final EucaPatternLayout debugLayout;
@@ -59,12 +60,10 @@ public class RequestTrackingLayout extends EucaPatternLayout {
   @Override
   public String format( LoggingEvent event ) {
     try {
-      String corrId = null;
-      try {
-        corrId = Contexts.lookup().getCorrelationId();
-      }catch(final Exception ex){
-        corrId = Threads.getCorrelationId();
-      }         
+      final String corrId = Contexts.lookupCorrelationId( )
+          .or( Optional.fromNullable( Threads.getCorrelationId( ) ) )
+          .orNull( );
+
       if(corrId==null || corrId.length()<36)
         return "";
       
