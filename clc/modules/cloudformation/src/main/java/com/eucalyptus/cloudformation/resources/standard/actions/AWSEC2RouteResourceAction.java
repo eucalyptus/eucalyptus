@@ -59,7 +59,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
   private AWSEC2RouteResourceInfo info = new AWSEC2RouteResourceInfo();
 
   public AWSEC2RouteResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

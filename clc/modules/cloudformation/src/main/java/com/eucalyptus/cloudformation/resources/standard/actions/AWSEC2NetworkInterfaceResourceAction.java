@@ -79,7 +79,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
   public static volatile Integer NETWORK_INTERFACE_DELETED_MAX_DELETE_RETRY_SECS = 300;
 
   public AWSEC2NetworkInterfaceResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

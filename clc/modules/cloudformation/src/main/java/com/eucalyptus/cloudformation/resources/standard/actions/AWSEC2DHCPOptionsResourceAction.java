@@ -68,7 +68,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
   private AWSEC2DHCPOptionsResourceInfo info = new AWSEC2DHCPOptionsResourceInfo();
 
   public AWSEC2DHCPOptionsResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
   private enum CreateSteps implements Step {
     CREATE_DHCP_OPTIONS {

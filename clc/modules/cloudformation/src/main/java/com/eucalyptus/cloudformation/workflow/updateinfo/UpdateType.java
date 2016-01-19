@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow
+package com.eucalyptus.cloudformation.workflow.updateinfo;
 
 /**
  * Created by ethomas on 12/11/15.
@@ -26,9 +26,11 @@ public enum UpdateType {
   NONE,
   NO_INTERRUPTION,
   SOME_INTERRUPTION,
-  NEEDS_REPLACEMENT;
+  NEEDS_REPLACEMENT,
+  UNSUPPORTED;
 
   public static UpdateType max(UpdateType u1, UpdateType u2) {
+    if (u1 == UNSUPPORTED || u2 == UNSUPPORTED) return UNSUPPORTED;
     if (u1 == NEEDS_REPLACEMENT || u2 == NEEDS_REPLACEMENT) return NEEDS_REPLACEMENT;
     if (u1 == SOME_INTERRUPTION || u2 == SOME_INTERRUPTION) return SOME_INTERRUPTION;
     if (u1 == NO_INTERRUPTION || u2 == NO_INTERRUPTION) return NO_INTERRUPTION;

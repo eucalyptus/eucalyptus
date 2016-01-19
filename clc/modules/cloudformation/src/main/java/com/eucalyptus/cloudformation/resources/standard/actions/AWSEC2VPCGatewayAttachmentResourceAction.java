@@ -66,7 +66,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
   private AWSEC2VPCGatewayAttachmentResourceInfo info = new AWSEC2VPCGatewayAttachmentResourceInfo();
 
   public AWSEC2VPCGatewayAttachmentResourceAction() {
-   super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+   super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

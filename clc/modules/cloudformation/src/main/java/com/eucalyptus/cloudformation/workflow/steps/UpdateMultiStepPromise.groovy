@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
@@ -29,24 +30,28 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 9/28/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-class UpdateNoInterruptionMultiStepPromise extends MultiUpdateStepPromise {
+class UpdateMultiStepPromise extends MultiUpdateStepPromise {
 
-  UpdateNoInterruptionMultiStepPromise(
+  UpdateTypeAndDirection updateTypeAndDirection;
+
+  UpdateMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
-      final StepBasedResourceAction resourceAction
+      final StepBasedResourceAction resourceAction,
+      final UpdateTypeAndDirection updateTypeAndDirection
   ) {
     super( workflowOperations, stepIds, resourceAction )
+    this.updateTypeAndDirection = updateTypeAndDirection;
   }
 
   @Override
   protected UpdateStep getStep( final String stepId ) {
-    return resourceAction.getUpdateNoInterruptionStep( stepId )
+    return resourceAction.getUpdateStep( updateTypeAndDirection, stepId )
   }
 
-  Promise<String> getUpdateNoInterruptionPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
+  Promise<String> getUpdatePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion ) {
     getPromise( "Resource ${resourceId} failed to update for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateNoInterruptionStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
+      activities.performUpdateStep(updateTypeAndDirection.toString(), stepId, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)
     }
   }
 }

@@ -29,7 +29,6 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
-import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -99,8 +98,8 @@ public class StackResourceEntity extends AbstractPersistent {
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
-  @Column(name = "update_version")
-  Integer updateVersion;
+  @Column(name = "resource_version")
+  Integer resourceVersion;
 
 
   @Column(name="is_record_deleted", nullable = false)
@@ -245,12 +244,12 @@ public class StackResourceEntity extends AbstractPersistent {
     this.resourceAttributesJson = resourceAttributesJson;
   }
 
-  public Integer getUpdateVersion() {
-    return updateVersion;
+  public Integer getResourceVersion() {
+    return resourceVersion;
   }
 
-  public void setUpdateVersion(Integer updateVersion) {
-    this.updateVersion = updateVersion;
+  public void setResourceVersion(Integer resourceVersion) {
+    this.resourceVersion = resourceVersion;
   }
 
   @Override

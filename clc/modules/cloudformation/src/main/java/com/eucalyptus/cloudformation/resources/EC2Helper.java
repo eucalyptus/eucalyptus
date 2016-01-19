@@ -46,11 +46,11 @@ public class EC2Helper {
     return resourceTags;
   }
 
-  public static void refreshInstanceAttributes(VersionedStackEntity stackEntity, String instanceId, String effectiveUserId, int updateVersion) throws Exception {
+  public static void refreshInstanceAttributes(VersionedStackEntity stackEntity, String instanceId, String effectiveUserId, int resourceVersion) throws Exception {
     if (instanceId != null) {
       String stackId = stackEntity.getStackId();
       String accountId = stackEntity.getAccountId();
-      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId, updateVersion);
+      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId, resourceVersion);
       if (instanceStackResourceEntity != null) {
         ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
         ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());

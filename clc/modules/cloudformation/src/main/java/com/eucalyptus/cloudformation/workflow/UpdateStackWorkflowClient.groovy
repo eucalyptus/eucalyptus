@@ -39,8 +39,8 @@ class UpdateStackWorkflowClient implements UpdateStackWorkflow {
   }
 
   @Override
-  void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
-    workflow.updateStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, updateVersion);
+  void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
+    workflow.updateStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
   }
 
 

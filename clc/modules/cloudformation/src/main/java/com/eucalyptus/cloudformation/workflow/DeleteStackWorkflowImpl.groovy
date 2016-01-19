@@ -39,7 +39,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
-  public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
+  public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion) {
     try {
       // cancel existing creae/monitor workflows...
       ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([RetryAfterConditionCheckFailedException.class])
@@ -55,7 +55,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             "User Initiated",
             Status.DELETE_FAILED.toString(),
             Status.DELETE_COMPLETE.toString(),
-            true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, updateVersion);
+            true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion);
         }
       }
     } catch (Exception ex) {

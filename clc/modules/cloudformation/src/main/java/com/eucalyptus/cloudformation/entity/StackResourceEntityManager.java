@@ -43,6 +43,7 @@ import java.util.Map;
  * Created by ethomas on 12/19/13.
  */
 public class StackResourceEntityManager {
+
   public static void addStackResource(StackResourceEntity stackResourceEntity) {
     try ( TransactionResource db =
             Entities.transactionFor( stackResourceEntity.getClass() ) ) {
@@ -88,7 +89,7 @@ public class StackResourceEntityManager {
     destEntity.setAllowedByCondition(sourceEntity.getAllowedByCondition());
     destEntity.setReferenceValueJson(sourceEntity.getReferenceValueJson());
     destEntity.setResourceAttributesJson(sourceEntity.getResourceAttributesJson());
-    destEntity.setUpdateVersion(sourceEntity.getUpdateVersion());
+    destEntity.setResourceVersion(sourceEntity.getResourceVersion());
   }
 
   public static void updateStackResource(StackResourceEntity stackResourceEntity) {
@@ -106,7 +107,7 @@ public class StackResourceEntityManager {
     }
   }
 
-  public static StackResourceEntity getStackResource(String stackId, String accountId, String logicalResourceId, int updateVersion) {
+  public static StackResourceEntity getStackResource(String stackId, String accountId, String logicalResourceId, int resourceVersion) {
     StackResourceEntity stackResourceEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
@@ -114,18 +115,18 @@ public class StackResourceEntityManager {
         .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackId" , stackId))
         .add(Restrictions.eq("logicalResourceId" , logicalResourceId))
-        .add(Restrictions.eq("updateVersion", updateVersion))
+        .add(Restrictions.eq("resourceVersion", resourceVersion))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackResourceEntity> stackResourceEntityList = criteria.list();
       if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
         stackResourceEntity = stackResourceEntityList.get(0);
       }
-      db.commit( );
     }
     return stackResourceEntity;
   }
 
-  public static StackResourceEntity getStackResourceByPhysicalResourceId(String stackId, String accountId, String physicalResourceId, int updateVersion) {
+
+  public static StackResourceEntity getStackResourceByPhysicalResourceId(String stackId, String accountId, String physicalResourceId, int resourceVersion) {
     StackResourceEntity stackResourceEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
@@ -133,7 +134,7 @@ public class StackResourceEntityManager {
         .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackId" , stackId))
         .add(Restrictions.eq("physicalResourceId" , physicalResourceId))
-        .add(Restrictions.eq("updateVersion", updateVersion))
+        .add(Restrictions.eq("resourceVersion", resourceVersion))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackResourceEntity> stackResourceEntityList = criteria.list();
       if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
@@ -144,14 +145,14 @@ public class StackResourceEntityManager {
     return stackResourceEntity;
   }
 
-  public static List<StackResourceEntity> getStackResources(String stackId, String accountId, int updateVersion) {
+  public static List<StackResourceEntity> getStackResources(String stackId, String accountId, int resourceVersion) {
     List<StackResourceEntity> stackResourceEntityList = Lists.newArrayList();
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
         .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackId" , stackId))
-        .add(Restrictions.eq("updateVersion", updateVersion))
+        .add(Restrictions.eq("resourceVersion", resourceVersion))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       stackResourceEntityList = criteria.list();
     }
@@ -172,24 +173,24 @@ public class StackResourceEntityManager {
     }
   }
 
-  public static void reallyDeleteAllVersionsExcept(String stackId, String accountId, int updateVersion) {
+  public static void reallyDeleteAllVersionsExcept(String stackId, String accountId, int resourceVersion) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
         .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq("stackId", stackId))
-        .add(Restrictions.ne("updateVersion", updateVersion))
+        .add(Restrictions.ne("resourceVersion", resourceVersion))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       for (StackResourceEntity stackResourceEntity : (List<StackResourceEntity>) criteria.list()) {
-        stackResourceEntity.setRecordDeleted(Boolean.TRUE);
+        Entities.delete(stackResourceEntity);
       }
       db.commit( );
     }
   }
 
-  public static ResourceInfo getResourceInfo(String stackId, String accountId, String logicalResourceId, int updateVersion)
+  public static ResourceInfo getResourceInfo(String stackId, String accountId, String logicalResourceId, int resourceVersion)
     throws CloudFormationException {
-    return getResourceInfo(getStackResource(stackId, accountId, logicalResourceId, updateVersion));
+    return getResourceInfo(getStackResource(stackId, accountId, logicalResourceId, resourceVersion));
   }
 
   public static ResourceInfo getResourceInfo(StackResourceEntity stackResourceEntity)
@@ -312,7 +313,7 @@ public class StackResourceEntityManager {
         latestVersionMap.put(key, stackResourceEntity);
       } else {
         StackResourceEntity alreadyInMapStackResourceEntity = latestVersionMap.get(key);
-        if (alreadyInMapStackResourceEntity.getUpdateVersion() < stackResourceEntity.getUpdateVersion()) {
+        if (alreadyInMapStackResourceEntity.getResourceVersion() < stackResourceEntity.getResourceVersion()) {
           latestVersionMap.put(key, stackResourceEntity);
         }
       }
@@ -320,4 +321,48 @@ public class StackResourceEntityManager {
     return Lists.newArrayList(latestVersionMap.values());
   }
 
+  public static void flattenResources(String stackId, String accountId, int finalResourceVersion) {
+    // This method is used for delete.  It essentially takes all the items you would get from describeResources() and makes them the only version that is seen.
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId" , accountId))
+        .add(Restrictions.eq("stackId" , stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackResourceEntity> stackResourceEntityList = criteria.list();
+      Map<String, List<StackResourceEntity>> stackResourceEntityVersionMap = Maps.newHashMap();
+      if (stackResourceEntityList != null) {
+        for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
+          String key = stackResourceEntity.getAccountId() + " | " + stackResourceEntity.getStackId() + " | " + stackResourceEntity.getLogicalResourceId();
+          if (!stackResourceEntityVersionMap.containsKey(key)) {
+            stackResourceEntityVersionMap.put(key, Lists.<StackResourceEntity>newArrayList());
+          }
+          stackResourceEntityVersionMap.get(key).add(stackResourceEntity);
+        }
+        for (List<StackResourceEntity> stackResourceEntityPerKeyList : stackResourceEntityVersionMap.values()) {
+          StackResourceEntity maxEntity = null;
+          for (StackResourceEntity stackResourceEntity : stackResourceEntityPerKeyList) {
+            if (maxEntity == null) {
+              maxEntity = stackResourceEntity;
+            } else if (stackResourceEntity.getResourceStatus() != Status.NOT_STARTED && maxEntity.getResourceStatus() == Status.NOT_STARTED) {
+              maxEntity = stackResourceEntity;
+            } else if (stackResourceEntity.getResourceStatus() == Status.NOT_STARTED && maxEntity.getResourceStatus() == Status.NOT_STARTED
+              && stackResourceEntity.getResourceVersion() > maxEntity.getResourceVersion()) {
+              maxEntity = stackResourceEntity;
+            } else if (stackResourceEntity.getResourceStatus() != Status.NOT_STARTED && maxEntity.getResourceStatus() != Status.NOT_STARTED
+              && stackResourceEntity.getResourceVersion() > maxEntity.getResourceVersion()) {
+              maxEntity = stackResourceEntity;
+            }
+          }
+          maxEntity.setResourceVersion(finalResourceVersion);
+          for (StackResourceEntity stackResourceEntity : stackResourceEntityPerKeyList) {
+            if (stackResourceEntity != maxEntity) { // this is a reference equals on purpose
+              Entities.delete(stackResourceEntity);
+            }
+          }
+        }
+      }
+      db.commit();
+    }
+  }
 }

@@ -27,7 +27,7 @@ import com.netflix.glisten.WorkflowDescriptionTemplate
 class CreateStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements CreateStackWorkflow {
 
   @Override
-  void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int updateVersion) {
+  void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
     description="CreateStackWorkflow";
   }
 }

@@ -59,7 +59,7 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
   private AWSIAMAccessKeyResourceInfo info = new AWSIAMAccessKeyResourceInfo();
 
   public AWSIAMAccessKeyResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

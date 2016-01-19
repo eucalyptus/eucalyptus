@@ -63,7 +63,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
 //  public static volatile Integer NETWORK_INTERFACE_DETACHMENT_MAX_DELETE_RETRY_SECS = 300;
 
   public AWSEC2NetworkInterfaceAttachmentResourceAction() {
-    super( fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null );
+    super( fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null );
   }
 
   private enum CreateSteps implements Step {

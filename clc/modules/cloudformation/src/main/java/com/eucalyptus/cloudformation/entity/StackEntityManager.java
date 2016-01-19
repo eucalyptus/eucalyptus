@@ -45,7 +45,57 @@ public class StackEntityManager {
   private static final Class STACK_ENTITY_TRANSACTION_CLASS = StackEntity.class; // We use one object for transactions on both StackEntity and PastStackEntity
   private static final List<Class<? extends VersionedStackEntity>> ALL_STACK_ENTITY_CLASSES = Lists.newArrayList(StackEntity.class, PastStackEntity.class);
 
-  public synchronized static StackEntity checkValidUpdateStatusAndUpdateStack(String stackId, String accountId, Template newTemplate, String newTemplateText, UpdateStackType request, int previousUpdateVersion) throws CloudFormationException {
+  public synchronized static StackEntity rollbackUpdateStack(String stackId, String accountId, int rolledBackStackVersion) throws CloudFormationException {
+    int updatedStackVersion = rolledBackStackVersion - 1; // version passed in is 1 more than the current updated stack version
+    try ( TransactionResource db =
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+      // Get current stack
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackVersion", updatedStackVersion))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEntity> entityList = criteria.list();
+      if (entityList == null || entityList.isEmpty()) {
+        throw new ValidationErrorException("Stack does not exist");
+      } else if (entityList.size() > 1) {
+        throw new InternalFailureException("More than one stack  exists with this id " + stackId + " and version " + updatedStackVersion);
+      }
+      StackEntity currentStackEntity = entityList.get(0);
+      // Get previous stack
+      Criteria pastCriteria = Entities.createCriteria(PastStackEntity.class)
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackVersion", updatedStackVersion - 1))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<PastStackEntity> pastEntityList = pastCriteria.list();
+      if (pastEntityList == null || pastEntityList.isEmpty()) {
+        throw new ValidationErrorException("Previous version of stack does not exist with version " + (updatedStackVersion - 1));
+      } else if (entityList.size() > 1) {
+        throw new InternalFailureException("More than one stack  exists with this id " + stackId + " and version " + (updatedStackVersion - 1));
+      }
+      PastStackEntity pastStackEntity = pastEntityList.get(0);
+      // Basically swap the two entries.
+      swapStackEntityFields(pastStackEntity, currentStackEntity);
+      // set the versions accordingly
+      currentStackEntity.setStackVersion(rolledBackStackVersion);
+      pastStackEntity.setStackVersion(updatedStackVersion);
+      // the past stack entry now has the current status, so update that at least
+      currentStackEntity.setStackStatus(pastStackEntity.getStackStatus());
+      currentStackEntity.setStackStatusReason(pastStackEntity.getStackStatusReason());
+      db.commit();
+      return currentStackEntity;
+    }
+  }
+
+  public static void swapStackEntityFields(VersionedStackEntity s1, VersionedStackEntity s2) {
+    VersionedStackEntity temp = new StackEntity(); // could be any subtype, it really doesn't matter.
+    copyStackEntityFields(s1, temp);
+    copyStackEntityFields(s2, s1);
+    copyStackEntityFields(temp, s2);
+  }
+
+  public synchronized static StackEntity checkValidUpdateStatusAndUpdateStack(String stackId, String accountId, Template newTemplate, String newTemplateText, UpdateStackType request, int previousStackVersion) throws CloudFormationException {
     try ( TransactionResource db =
             Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -59,7 +109,7 @@ public class StackEntityManager {
         throw new InternalFailureException("More than one stack exists with this id " + stackId);
       }
       StackEntity currentStackEntity = entityList.get(0);
-      if (currentStackEntity.getUpdateVersion() != previousUpdateVersion) {
+      if (currentStackEntity.getStackVersion() != previousStackVersion) {
         throw new ValidationErrorException("Stack: " + stackId + " is already being updated");
       }
       // Finally make sure the stack state is ok
@@ -89,20 +139,42 @@ public class StackEntityManager {
       } else {
         currentStackEntity.setNotificationARNsJson(null);
       }
-      currentStackEntity.setUpdateVersion(previousUpdateVersion + 1);
+      currentStackEntity.setStackVersion(previousStackVersion + 1);
       db.commit( );
       return currentStackEntity;
     }
   }
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static VersionedStackEntity addStack(VersionedStackEntity stackEntity) throws AlreadyExistsException {
+
+  public static VersionedStackEntity addStack(StackEntity stackEntity) throws AlreadyExistsException {
     try ( TransactionResource db =
             Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
       Criteria criteria = Entities.createCriteria(stackEntity.getClass())
         .add(Restrictions.eq("stackName", stackEntity.getStackName()))
         .add(Restrictions.eq("accountId", stackEntity.getAccountId()))
-        .add(Restrictions.eq("updateVersion", stackEntity.getUpdateVersion()))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List entityList = criteria.list();
+      if (!entityList.isEmpty()) {
+        throw new AlreadyExistsException("Stack already exists");
+      }
+      if (stackEntity.getCreateOperationTimestamp() == null) {
+        stackEntity.setCreateOperationTimestamp(new Date());
+      }
+      Entities.persist(stackEntity);
+      // do something
+      db.commit( );
+    }
+    return stackEntity;
+  }
+
+  public static VersionedStackEntity addStack(PastStackEntity stackEntity) throws AlreadyExistsException {
+    try ( TransactionResource db =
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+      Criteria criteria = Entities.createCriteria(stackEntity.getClass())
+        .add(Restrictions.eq("stackName", stackEntity.getStackName()))
+        .add(Restrictions.eq("accountId", stackEntity.getAccountId()))
+        .add(Restrictions.eq("stackVersion", stackEntity.getStackVersion()))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List entityList = criteria.list();
       if (!entityList.isEmpty()) {
@@ -157,7 +229,7 @@ public class StackEntityManager {
     return returnValue;
   }
 
-  public static VersionedStackEntity getNonDeletedVersionedStackById(String stackId, String accountId, int updateVersion) {
+  public static VersionedStackEntity getNonDeletedVersionedStackById(String stackId, String accountId, int stackVersion) {
     VersionedStackEntity stackEntity = null;
     for (Class stackEntityClass: ALL_STACK_ENTITY_CLASSES) {
       if (stackEntity == null) {
@@ -166,7 +238,7 @@ public class StackEntityManager {
           Criteria criteria = Entities.createCriteria(stackEntityClass)
             .add(Restrictions.eq("accountId", accountId))
             .add(Restrictions.eq("stackId", stackId))
-            .add(Restrictions.eq("updateVersion", updateVersion))
+            .add(Restrictions.eq("stackVersion", stackVersion))
             .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
           List<VersionedStackEntity> entityList = criteria.list();
           if (entityList != null && !entityList.isEmpty()) {
@@ -232,14 +304,14 @@ public class StackEntityManager {
     }
   }
 
-  public static void reallyDeleteAllStackVersionsExcept(String stackId, String accountId, int updateVersion) {
+  public static void reallyDeleteAllStackVersionsExcept(String stackId, String accountId, int stackVersion) {
     try (TransactionResource db =
            Entities.transactionFor(STACK_ENTITY_TRANSACTION_CLASS)) {
       for (Class stackEntityClass: ALL_STACK_ENTITY_CLASSES) {
         Criteria criteria = Entities.createCriteria(stackEntityClass)
           .add(Restrictions.eq("accountId", accountId))
           .add(Restrictions.eq("stackId", stackId))
-          .add(Restrictions.ne("updateVersion", updateVersion))
+          .add(Restrictions.ne("stackVersion", stackVersion))
           .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
         List<VersionedStackEntity> entityList = criteria.list();
         for (VersionedStackEntity stackEntity : entityList) {
@@ -291,7 +363,7 @@ public class StackEntityManager {
     dest.setTimeoutInMinutes(src.getTimeoutInMinutes());
     dest.setRecordDeleted(src.getRecordDeleted());
     dest.setStackPolicy(src.getStackPolicy());
-    dest.setUpdateVersion(src.getUpdateVersion());
+    dest.setStackVersion(src.getStackVersion());
 
   }
 }

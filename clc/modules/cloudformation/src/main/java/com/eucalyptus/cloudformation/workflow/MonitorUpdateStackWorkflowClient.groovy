@@ -39,8 +39,8 @@ class MonitorUpdateStackWorkflowClient implements MonitorUpdateStackWorkflow {
   }
 
   @Override
-  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
-    workflow.monitorUpdateStack(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updateVersion);
+  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
+    workflow.monitorUpdateStack(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
   }
 
 

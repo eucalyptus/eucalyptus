@@ -60,7 +60,7 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
   private AWSEC2NetworkAclEntryResourceInfo info = new AWSEC2NetworkAclEntryResourceInfo();
 
   public AWSEC2NetworkAclEntryResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

@@ -45,9 +45,9 @@ class DeleteMultiStepPromise extends MultiStepPromise {
     return resourceAction.getDeleteStep( stepId )
   }
 
-  Promise<String> getDeletePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
+  Promise<String> getDeletePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion ) {
     getPromise( "Resource ${resourceId} deletion failed for stack ${stackId}" as String) { String stepId ->
-      activities.performDeleteStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
+      activities.performDeleteStep(stepId, resourceId, stackId, accountId, effectiveUserId, deletedResourceVersion)
     }
   }
 

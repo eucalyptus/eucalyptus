@@ -66,7 +66,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
 
   public AWSEC2EIPResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {
@@ -115,7 +115,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
 
           // Update the instance info
           if (action.properties.getInstanceId() != null) {
-            EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getUpdateVersion());
+            EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getStackVersion());
           }
 
         }
@@ -159,7 +159,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
               action.getStackEntity( ),
               action.properties.getInstanceId( ),
               action.info.getEffectiveUserId( ),
-              action.getStackEntity().getUpdateVersion()
+              action.getStackEntity().getStackVersion()
           );
         }
         return action;

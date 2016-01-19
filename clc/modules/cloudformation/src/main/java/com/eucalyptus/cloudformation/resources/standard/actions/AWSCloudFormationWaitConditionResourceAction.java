@@ -66,7 +66,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   private AWSCloudFormationWaitConditionResourceInfo info = new AWSCloudFormationWaitConditionResourceInfo();
 
   public AWSCloudFormationWaitConditionResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   @Override
@@ -102,7 +102,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
         }
         LOG.trace("Timeout = " + action.properties.getTimeout());
         LOG.trace("Looking for handle : " + action.properties.getHandle());
-        List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId(), action.getStackEntity().getUpdateVersion());
+        List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId(), action.getStackEntity().getStackVersion());
         StackResourceEntity handleEntity = null;
         for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
           if (stackResourceEntity.getPhysicalResourceId() != null && stackResourceEntity.getPhysicalResourceId().equals(action.properties.getHandle())) {
@@ -221,8 +221,8 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   }
 
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion) {
-    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, updateVersion);
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
+    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
   }
 
 }

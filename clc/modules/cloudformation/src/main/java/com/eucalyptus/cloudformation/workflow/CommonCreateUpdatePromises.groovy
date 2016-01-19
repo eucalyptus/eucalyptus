@@ -46,18 +46,18 @@ public class CommonCreateUpdatePromises {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson,
-                                   int updateVersion) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updateVersion);
+                                   int createdResourceVersion) {
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, createdResourceVersion);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
+      Promise<String> initPromise = activities.initCreateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, createdResourceVersion);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("");
         } else {
-          Promise<String> createPromise = resourceAction.getCreatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
+          Promise<String> createPromise = resourceAction.getCreatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
           waitFor(createPromise) {
-            activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
+            activities.finalizeCreateResource(resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
           }
         }
       }

@@ -44,9 +44,9 @@ class CreateMultiStepPromise extends MultiStepPromise {
     return resourceAction.getCreateStep( stepId )
   }
 
-  Promise<String> getCreatePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updateVersion ) {
+  Promise<String> getCreatePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion ) {
     getPromise( "Resource ${resourceId} creation timeout for stack ${stackId}" as String) { String stepId ->
-      activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId, updateVersion)
+      activities.performCreateStep(stepId, resourceId, stackId, accountId, effectiveUserId, createdResourceVersion)
     }
   }
 }

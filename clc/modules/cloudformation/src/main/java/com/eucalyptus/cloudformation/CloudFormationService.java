@@ -213,7 +213,7 @@ public class CloudFormationService {
         public StackEntity get() {
           try {
             StackEntity stackEntity = new StackEntity();
-            final int INIT_UPDATE_VERSION = 0;
+            final int INIT_STACK_VERSION = 0;
             StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
             stackEntity.setStackName(stackName);
             stackEntity.setStackId(stackId);
@@ -234,7 +234,7 @@ public class CloudFormationService {
             if (request.getTags()!= null && request.getTags().getMember() != null) {
               stackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
             }
-            stackEntity.setUpdateVersion(INIT_UPDATE_VERSION);
+            stackEntity.setStackVersion(INIT_STACK_VERSION);
             stackEntity.setRecordDeleted(Boolean.FALSE);
             stackEntity = (StackEntity) StackEntityManager.addStack(stackEntity);
 
@@ -260,7 +260,7 @@ public class CloudFormationService {
               stackResourceEntity.setResourceStatus(Status.NOT_STARTED);
               stackResourceEntity.setStackId(stackId);
               stackResourceEntity.setStackName(stackName);
-              stackResourceEntity.setUpdateVersion(INIT_UPDATE_VERSION);
+              stackResourceEntity.setResourceVersion(INIT_STACK_VERSION);
               stackResourceEntity.setRecordDeleted(Boolean.FALSE);
               StackResourceEntityManager.addStackResource(stackResourceEntity);
             }
@@ -273,7 +273,7 @@ public class CloudFormationService {
               .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
 
             CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
-            createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_UPDATE_VERSION);
+            createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
               CloudFormationProperties.SWF_DOMAIN,
@@ -286,7 +286,7 @@ public class CloudFormationService {
               .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 
             MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
-            monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_UPDATE_VERSION);
+            monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
 
 
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -437,7 +437,7 @@ public class CloudFormationService {
           InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
             .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
           DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
-          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId, stackEntity.getUpdateVersion());
+          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId, stackEntity.getStackVersion());
           StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
             StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
             CloudFormationProperties.SWF_DOMAIN,
@@ -980,7 +980,7 @@ public class CloudFormationService {
         throw new ValidationErrorException("Stack:" + stackId + " is in " + previousStackEntity.getStackStatus().toString() + " state and can not be updated.");
       }
 
-      int previousStackUpdateVersion = previousStackEntity.getUpdateVersion();
+      int previousStackVersion = previousStackEntity.getStackVersion();
 
       final PseudoParameterValues nextPseudoParameterValues = new PseudoParameterValues();
       nextPseudoParameterValues.setAccountId(accountId);
@@ -1074,7 +1074,7 @@ public class CloudFormationService {
       }
 
       // don't add the record until we check the stack status though and update it.
-      final StackEntity nextStackEntity = StackEntityManager.checkValidUpdateStatusAndUpdateStack(stackId, accountId, nextTemplate, nextTemplateText, request, previousStackUpdateVersion);
+      final StackEntity nextStackEntity = StackEntityManager.checkValidUpdateStatusAndUpdateStack(stackId, accountId, nextTemplate, nextTemplateText, request, previousStackVersion);
 
       // Create the new stack resources
       for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
@@ -1085,7 +1085,7 @@ public class CloudFormationService {
         stackResourceEntity.setStackId(stackId);
         stackResourceEntity.setStackName(stackName);
         stackResourceEntity.setRecordDeleted(Boolean.FALSE);
-        stackResourceEntity.setUpdateVersion(nextStackEntity.getUpdateVersion());
+        stackResourceEntity.setResourceVersion(nextStackEntity.getStackVersion());
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
 
@@ -1096,7 +1096,7 @@ public class CloudFormationService {
         .getNewWorkflowClient(UpdateStackWorkflow.class, updateStackWorkflowDescriptionTemplate, stackWorkflowTags);
 
       UpdateStackWorkflow updateStackWorkflow = new UpdateStackWorkflowClient(updateStackWorkflowClient);
-      updateStackWorkflow.updateStack(nextStackEntity.getStackId(), nextStackEntity.getAccountId(), nextStackEntity.getResourceDependencyManagerJson(), userId, nextStackEntity.getUpdateVersion());
+      updateStackWorkflow.updateStack(nextStackEntity.getStackId(), nextStackEntity.getAccountId(), nextStackEntity.getResourceDependencyManagerJson(), userId, nextStackEntity.getStackVersion());
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
         CloudFormationProperties.SWF_DOMAIN,
@@ -1112,7 +1112,7 @@ public class CloudFormationService {
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
         StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager()),
         nextStackEntity.getResourceDependencyManagerJson(),
-        userId, nextStackEntity.getUpdateVersion());
+        userId, nextStackEntity.getStackVersion());
 
 
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,

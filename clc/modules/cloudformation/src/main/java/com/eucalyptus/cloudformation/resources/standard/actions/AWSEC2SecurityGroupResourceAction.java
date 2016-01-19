@@ -83,7 +83,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
 
   public AWSEC2SecurityGroupResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   @Override

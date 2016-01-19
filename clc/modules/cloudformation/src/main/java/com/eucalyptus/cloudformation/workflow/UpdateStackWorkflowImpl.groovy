@@ -24,11 +24,14 @@ import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Throwables
@@ -49,14 +52,14 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
   WorkflowOperations<StackActivityClient> workflowOperations = SwfWorkflowOperations.of(StackActivityClient);
 
   @Override
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updateVersion) {
+  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
     try {
       Promise<String> updateInitialStackPromise =
         activities.createGlobalStackEvent(
           stackId,
           accountId,
           Status.UPDATE_IN_PROGRESS.toString(),
-          "User Initiated", updateVersion
+          "User Initiated", updatedStackVersion
         );
 
       waitFor(updateInitialStackPromise) {
@@ -70,7 +73,7 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
         doTry {
           // This is in case any part of setting up the stack fails
           // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
-          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, updateVersion);
+          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, updatedStackVersion);
           waitFor(validateAWSParameterTypesPromise) {
             // Now for each resource, set up the promises and the dependencies they have for each other
             for (String resourceId : resourceDependencyManager.getNodes()) {
@@ -86,17 +89,17 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
                     Lists.<String>newArrayList() :
                     resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
                 );
-                Promise<String> currentResourcePromise = getUpdatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
+                Promise<String> currentResourcePromise = getUpdatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updatedStackVersion);
                 updatedResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
                 return currentResourcePromise;
               }
             }
             AndPromise allResourcePromises = new AndPromise(updatedResourcePromiseMap.values());
             waitFor(allResourcePromises) {
-              waitFor(activities.finalizeUpdateStack(stackId, accountId, effectiveUserId, updateVersion)) {
+              waitFor(activities.finalizeUpdateStack(stackId, accountId, effectiveUserId, updatedStackVersion)) {
                 activities.createGlobalStackEvent(stackId, accountId,
                   Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString(),
-                  "", updateVersion);
+                  "", updatedStackVersion);
               }
             }
           }
@@ -104,17 +107,20 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
           UpdateStackWorkflowImpl.LOG.error(t);
           UpdateStackWorkflowImpl.LOG.debug(t, t);
           Throwable cause = Throwables.getRootCause(t);
-          Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
-          if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId, updateVersion);
-          }
-          waitFor(errorMessagePromise) { String errorMessage ->
-            activities.createGlobalStackEvent(
-              stackId,
-              accountId,
-              Status.UPDATE_FAILED.toString(), //TODO: implement rollback.
-              errorMessage, updateVersion
-            );
+          String originalCause = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
+          Promise<String> createFailurePromise = activities.determineCreateResourceFailures(stackId, accountId, updatedStackVersion);
+          waitFor(createFailurePromise) { String createCause ->
+            Promise<String> updateFailurePromise = activities.determineUpdateResourceFailures(stackId, accountId, updatedStackVersion);
+            waitFor(updateFailurePromise) { String updateCause ->
+              String createAndUpdateCause = ((createCause == null ? "" : createCause) + "  " + (updateCause == null ? "" : updateCause)).trim();
+              String finalCause = createAndUpdateCause.isEmpty() ? originalCause : createAndUpdateCause;
+              activities.createGlobalStackEvent(
+                stackId,
+                accountId,
+                Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(),
+                finalCause, updatedStackVersion
+              );
+            }
           }
         }.getResult()
       }
@@ -129,29 +135,31 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
                                    String accountId,
                                    String effectiveUserId,
                                    String reverseDependentResourcesJson,
-                                   int updateVersion) {
-    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updateVersion);
+                                   int updatedResourceVersion) {
+    Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updatedResourceVersion);
     waitFor(getResourceTypePromise) { String resourceType ->
       final ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initUpdateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
+      Promise<String> initPromise = activities.initUpdateResource(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updatedResourceVersion);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result) || "NONE".equals(result)) {
           return promiseFor("");
         } else if ("CREATE".equals(result)) {
-          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updateVersion);
+          return new CommonCreateUpdatePromises(workflowOperations).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, updatedResourceVersion);
         } else {
           Promise<String> updatePromise;
           if ("NO_PROPERTIES".equals(result)) {
             updatePromise = promiseFor("");
           } else if (UpdateType.NO_INTERRUPTION.toString().equals(result)) {
-            updatePromise = resourceAction.getUpdateNoInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
+            updatePromise = resourceAction.getUpdatePromise(UpdateTypeAndDirection.UPDATE_NO_INTERRUPTION, workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
           } else if (UpdateType.SOME_INTERRUPTION.toString().equals(result)) {
-            updatePromise = resourceAction.getUpdateSomeInterruptionPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
-          } else {
-            updatePromise = resourceAction.getUpdateWithReplacementPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updateVersion);
+            updatePromise = resourceAction.getUpdatePromise(UpdateTypeAndDirection.UPDATE_SOME_INTERRUPTION, workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+          } else if (UpdateType.NEEDS_REPLACEMENT.toString().equals(result)) {
+            updatePromise = resourceAction.getUpdatePromise(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+          } else if (UpdateType.UNSUPPORTED.toString().equals(result)) {
+            throw new ValidationErrorException("Update is not supported for " + resourceType);
           }
           waitFor(updatePromise) {
-            activities.finalizeUpdateResource(resourceId, stackId, accountId, effectiveUserId, updateVersion);
+            activities.finalizeUpdateResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
           }
         }
       }

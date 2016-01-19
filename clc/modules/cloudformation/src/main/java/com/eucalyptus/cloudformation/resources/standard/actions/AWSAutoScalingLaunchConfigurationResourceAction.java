@@ -59,7 +59,7 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
   private AWSAutoScalingLaunchConfigurationResourceInfo info = new AWSAutoScalingLaunchConfigurationResourceInfo();
 
   public AWSAutoScalingLaunchConfigurationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

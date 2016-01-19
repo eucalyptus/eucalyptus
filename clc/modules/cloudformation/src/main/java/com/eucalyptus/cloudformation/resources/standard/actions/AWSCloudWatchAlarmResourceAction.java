@@ -29,7 +29,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
@@ -63,7 +63,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
   private AWSCloudWatchAlarmResourceInfo info = new AWSCloudWatchAlarmResourceInfo();
 
   public AWSCloudWatchAlarmResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null, createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
 
   private enum CreateSteps implements Step {

@@ -58,7 +58,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
   private AWSEC2SubnetNetworkAclAssociationResourceInfo info = new AWSEC2SubnetNetworkAclAssociationResourceInfo();
 
   public AWSEC2SubnetNetworkAclAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

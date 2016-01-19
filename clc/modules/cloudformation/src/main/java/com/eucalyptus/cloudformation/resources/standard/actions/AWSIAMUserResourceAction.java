@@ -69,7 +69,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
   private AWSIAMUserResourceInfo info = new AWSIAMUserResourceInfo();
 
   public AWSIAMUserResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

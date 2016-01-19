@@ -55,7 +55,7 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
   private AWSIAMInstanceProfileResourceInfo info = new AWSIAMInstanceProfileResourceInfo();
 
   public AWSIAMInstanceProfileResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

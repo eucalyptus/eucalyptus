@@ -138,8 +138,8 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
   @Column(name = "timeout_in_minutes")
   Integer timeoutInMinutes;
 
-  @Column(name = "update_version")
-  Integer updateVersion;
+  @Column(name = "stack_version")
+  Integer stackVersion;
 
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
@@ -343,12 +343,12 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
     this.stackPolicy = stackPolicy;
   }
 
-  public Integer getUpdateVersion() {
-    return updateVersion;
+  public Integer getStackVersion() {
+    return stackVersion;
   }
 
-  public void setUpdateVersion(Integer updateVersion) {
-    this.updateVersion = updateVersion;
+  public void setStackVersion(Integer stackVersion) {
+    this.stackVersion = stackVersion;
   }
 
   public Boolean getRecordDeleted() {
@@ -359,4 +359,35 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
     this.recordDeleted = recordDeleted;
   }
 
+  @Override
+  public String toString() {
+    return "VersionedStackEntity{" +
+      "createOperationTimestamp=" + createOperationTimestamp +
+      ", lastUpdateOperationTimestamp=" + lastUpdateOperationTimestamp +
+      ", deleteOperationTimestamp=" + deleteOperationTimestamp +
+      ", accountId='" + accountId + '\'' +
+      ", capabilitiesJson='" + capabilitiesJson + '\'' +
+      ", description='" + description + '\'' +
+      ", disableRollback=" + disableRollback +
+      ", pseudoParameterMapJson='" + pseudoParameterMapJson + '\'' +
+      ", conditionMapJson='" + conditionMapJson + '\'' +
+      ", resourceDependencyManagerJson='" + resourceDependencyManagerJson + '\'' +
+      ", mappingJson='" + mappingJson + '\'' +
+      ", notificationARNsJson='" + notificationARNsJson + '\'' +
+      ", workingOutputsJson='" + workingOutputsJson + '\'' +
+      ", outputsJson='" + outputsJson + '\'' +
+      ", parametersJson='" + parametersJson + '\'' +
+      ", stackId='" + stackId + '\'' +
+      ", stackPolicy='" + stackPolicy + '\'' +
+      ", stackName='" + stackName + '\'' +
+      ", stackStatus=" + stackStatus +
+      ", stackStatusReason='" + stackStatusReason + '\'' +
+      ", tagsJson='" + tagsJson + '\'' +
+      ", templateBody='" + templateBody + '\'' +
+      ", templateFormatVersion='" + templateFormatVersion + '\'' +
+      ", timeoutInMinutes=" + timeoutInMinutes +
+      ", stackVersion=" + stackVersion +
+      ", recordDeleted=" + recordDeleted +
+      '}';
+  }
 }

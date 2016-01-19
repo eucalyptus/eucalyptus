@@ -89,7 +89,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
   private AWSElasticLoadBalancingLoadBalancerResourceInfo info = new AWSElasticLoadBalancingLoadBalancerResourceInfo();
 
   public AWSElasticLoadBalancingLoadBalancerResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {

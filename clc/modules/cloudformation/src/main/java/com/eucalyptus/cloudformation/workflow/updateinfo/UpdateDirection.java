@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,15 +17,12 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.cloudformation.workflow.updateinfo;
 
-package com.eucalyptus.cloudformation.workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
-
-@Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
-public interface DeleteStackWorkflow {
-  @Execute(version = "1.0")
-  public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion);
+/**
+* Created by ethomas on 1/18/16.
+*/
+public enum UpdateDirection {
+  FORWARD,
+  ROLLBACK;
 }
