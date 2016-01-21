@@ -198,8 +198,8 @@ static boolean gInitialized = FALSE;
 static int network_driver_init(eucanetdConfig * pEucanetdConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
-static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
+//static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+//static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
 //! @}
@@ -240,8 +240,11 @@ struct driver_handler_t edgeDriverHandler = {
     .init = network_driver_init,
     .cleanup = network_driver_cleanup,
     .system_flush = network_driver_system_flush,
-    .system_scrub = network_driver_system_scrub,
-    .implement_network = network_driver_implement_network,
+    .system_maint = NULL,
+    //.system_scrub = network_driver_system_scrub,
+    .system_scrub = NULL,
+    //.implement_network = network_driver_implement_network,
+    .implement_network = NULL,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
 };
@@ -257,7 +260,7 @@ struct driver_handler_t edgeDriverHandler = {
 //!
 //! @param[in] pEucanetdConfig a pointer to our application configuration
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -298,7 +301,7 @@ static int network_driver_init(eucanetdConfig * pEucanetdConfig)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] forceFlush set to TRUE if a network flush needs to be performed
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -332,14 +335,14 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
 //! @pre The driver must be initialized already
 //!
 //! @post On success, all networking mode artifacts will be flushed from the system. If any
-//!       failure occured. The system is left in a non-deterministic state and a subsequent
+//!       failure occurred. The system is left in a non-deterministic state and a subsequent
 //!       call to this API may resolve the remaining issues.
 //!
 //! @note
@@ -492,11 +495,13 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
+/*
 static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 {
     LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
     return (EUCANETD_RUN_ALL_API);
 }
+*/
 
 //!
 //! This takes care of implementing the network artifacts necessary. This will add or
@@ -505,7 +510,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -517,6 +522,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 //!
 //! @note For EDGE mode, we have no networking artifacts that we own.
 //!
+/*
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni)
 {
     LOGINFO("Implementing network artifacts for '%s' network driver.\n", DRIVER_NAME());
@@ -539,6 +545,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 
     return (0);
 }
+*/
 
 //!
 //! This takes care of implementing the security-group artifacts necessary. This will add or
@@ -547,7 +554,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -839,7 +846,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see update_private_ips(), update_elastic_ips(), update_l2_addressing()
 //!
@@ -905,7 +912,7 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -1024,11 +1031,11 @@ static int generate_dhcpd_config(globalNetworkInfo * pGni)
 
 //!
 //! Update the private IP addressing. This will ensure a DHCP configuration file
-//! is generated and the server restarted uppon success.
+//! is generated and the server restarted upon success.
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see generate_dhcpd_config(), eucanetd_kick_dhcpd_server()
 //!
@@ -1042,7 +1049,9 @@ static int generate_dhcpd_config(globalNetworkInfo * pGni)
 static int update_private_ips(globalNetworkInfo * pGni)
 {
     int rc = 0;
+    struct timeval tv = { 0 };
 
+    eucanetd_timer_usec(&tv);
     LOGDEBUG("Updating private IP and DHCPD handling.\n");
 
     // Make sure our given parameter is valid
@@ -1074,6 +1083,7 @@ static int update_private_ips(globalNetworkInfo * pGni)
         LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
         return (1);
     }
+    LOGINFO("update_private_ips executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
@@ -1083,7 +1093,7 @@ static int update_private_ips(globalNetworkInfo * pGni)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -1116,7 +1126,9 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
     gni_cluster *mycluster = NULL;
     gni_node *myself = NULL;
     gni_instance *instances = NULL;
+    struct timeval tv = { 0 };
 
+    eucanetd_timer_usec(&tv);
     LOGDEBUG("Updating public IP to private IP mappings.\n");
 
     // Make sure our given parameter is valid
@@ -1329,6 +1341,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
         EUCA_FREE(nms);
     }
     EUCA_FREE(instances);
+    LOGINFO("update_elastic_ips exected in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (ret);
 
 #undef MAX_RULE_LEN
@@ -1340,7 +1353,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if a failure occured
+//! @return 0 on success or 1 if a failure occurred
 //!
 //! @see
 //!
@@ -1367,7 +1380,9 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
     gni_node *myself = NULL;
     gni_cluster *mycluster = NULL;
     gni_instance *instances = NULL;
+    struct timeval tv = { 0 };
 
+    eucanetd_timer_usec(&tv);
     LOGDEBUG("Updating IP/MAC pairing rules.\n");
 
     // Make sure our given parameter is valid
@@ -1612,6 +1627,8 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
     }
 #endif /* USE_IP_ROUTE_HANDLER */
 
+    LOGINFO("update_l2_addressing executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
     return (ret);
 }
 
@@ -1622,7 +1639,7 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -1835,7 +1852,7 @@ static int install_public_routes(globalNetworkInfo * pGni)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -1973,7 +1990,7 @@ static int install_private_routes(globalNetworkInfo * pGni)
 //! Go through the list of instances that we are managing on this node and
 //! send a gratuitous ARP for the newly created instances only
 //!
-//! @return 0 on success or 1 if a failure occured
+//! @return 0 on success or 1 if a failure occurred
 //!
 //! @see
 //!

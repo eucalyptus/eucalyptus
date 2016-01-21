@@ -1104,6 +1104,45 @@ int ebt_handler_free(ebt_handler * ebth)
 }
 
 //!
+//! Releases all resources of the given ebt_handler.
+//!
+//! @param[in] ebth pointer to the EB table handler structure
+//!
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int ebt_handler_close(ebt_handler * ebth)
+{
+    int i = 0;
+    int j = 0;
+    if (!ebth || !ebth->init) {
+        LOGDEBUG("Invalid argument. NULL or uninitialized ebt_handler.\n");
+        return (1);
+    }
+
+    for (i = 0; i < ebth->max_tables; i++) {
+        for (j = 0; j < ebth->tables[i].max_chains; j++) {
+            EUCA_FREE(ebth->tables[i].chains[j].rules);
+        }
+        EUCA_FREE(ebth->tables[i].chains);
+    }
+    EUCA_FREE(ebth->tables);
+
+    unlink(ebth->ebt_filter_file);
+    unlink(ebth->ebt_nat_file);
+    unlink(ebth->ebt_asc_file);
+
+    return (0);
+}
+
+//!
 //! Function description.
 //!
 //! @param[in] ebth pointer to the EB table handler structure

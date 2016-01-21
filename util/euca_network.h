@@ -177,6 +177,17 @@
  |                                ENUMERATIONS                                |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+//! Enumeration of eucanetd network modes
+typedef enum euca_netmode_t {
+    NM_INVALID = 0,
+    NM_EDGE = 1,
+    NM_STATIC = 2,
+    NM_SYSTEM = 3,
+    NM_MANAGED = 4,
+    NM_MANAGED_NOVLAN = 5,
+    NM_VPCMIDO = 6,
+    NM_MAX = 7,
+} euca_netmode;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -242,6 +253,11 @@ char *euca_mac2intfc(const char *psMac);
 char *euca_intfc2mac(const char *psDevName);
 //! @}
 
+//! @{
+//! @name APIs to manipulate network mode names
+euca_netmode euca_netmode_atoi(const char *psNetMode);
+//! @}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -286,12 +302,14 @@ char *euca_intfc2mac(const char *psDevName);
 //! @}
 
 //! @{
-//! @name APIs to determine the current networking mode
-
-#define IS_NETMODE_EDGE()                        (strcmp(eucaNet.sMode, NETMODE_EDGE) == 0)
-#define IS_NETMODE_MANAGED()                     (strcmp(eucaNet.sMode, NETMODE_MANAGED) == 0)
-#define IS_NETMODE_MANAGED_NOVLAN()              (strcmp(eucaNet.sMode, NETMODE_MANAGED_NOVLAN) == 0)
-
+//! @name APIs to check networking mode
+//! parameter expected to be a pointer to a structure with a valid nmCode field,
+//! with enumeration euca_netmode_t type.
+#define IS_NETMODE_VALID(_p)             (((_p->nmCode) > NM_INVALID) && ((_p->nmCode) < NM_MAX))
+#define IS_NETMODE_EDGE(_p)              ((_p->nmCode) == NM_EDGE)
+#define IS_NETMODE_VPCMIDO(_p)           ((_p->nmCode) == NM_VPCMIDO)
+#define IS_NETMODE_MANAGED(_p)           ((_p->nmCode) == NM_MANAGED)
+#define IS_NETMODE_MANAGED_NOVLAN(_p)    ((_p->nmCode) == NM_MANAGED_NOVLAN)
 //! @}
 
 /*----------------------------------------------------------------------------*\

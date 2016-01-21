@@ -97,13 +97,14 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
-#define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
+#define VERY_BIG_CHAR_BUFFER_SIZE		 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             256   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
 
 #define KEY_STRING_SIZE                          4096   //! Buffer to hold RSA pub/private keys
 #define INSTANCE_ID_LEN                            11   //! Length of the instance ID string (i-xxxxxxxx\0)
+#define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
 //! @}
 

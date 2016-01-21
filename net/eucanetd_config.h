@@ -160,6 +160,7 @@ typedef struct eucanetdConfig_t {
     ebt_handler *ebt;                  //!< Pointer to the EB Tables Handler
 
     char netMode[NETMODE_LEN];         //!< Network mode name string
+    euca_netmode nmCode;               //!< Network mode integer code
     char *eucahome;                    //!< Pointer to the string containing the eucalyptus area home path
     char *eucauser;                    //!< Pointer to the string containing the eucalyptus system user name
     char cmdprefix[EUCA_MAX_PATH];

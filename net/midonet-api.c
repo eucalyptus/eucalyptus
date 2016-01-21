@@ -103,6 +103,7 @@
 #include "ebt_handler.h"
 #include "euca_gni.h"
 #include "midonet-api.h"
+#include "euca-to-mido.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -148,6 +149,15 @@ struct mem_params_t {
 \*----------------------------------------------------------------------------*/
 
 int midonet_api_dirty_cache = 0;
+int http_gets = 0;
+int http_posts = 0;
+int http_puts = 0;
+int http_deletes = 0;
+
+static int http_gets_prev = 0;
+static int http_posts_prev = 0;
+static int http_puts_prev = 0;
+static int http_deletes_prev = 0;
 
 //!
 //!
@@ -169,6 +179,33 @@ void mido_print_midoname(midoname * name)
     //    printf("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s jsonbuf=%s\n", name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type), SP(name->content_type), SP(name->jsonbuf));
     LOGDEBUG("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n", name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
              SP(name->content_type), SP(name->vers));
+}
+
+//!
+//! Logs the API HTTP request counts (diff from a previous call)
+//!
+//! @see mido_info_http_count_total() for cumulative count.
+//!
+void mido_info_http_count()
+{
+    LOGINFO("MidoNet API requests: %d gets, %d puts, %d posts, %d deletes\n", 
+            http_gets - http_gets_prev, http_puts - http_puts_prev,
+            http_posts - http_posts_prev, http_deletes - http_deletes_prev);
+    http_gets_prev = http_gets;
+    http_puts_prev = http_puts;
+    http_posts_prev = http_posts;
+    http_deletes_prev = http_deletes;
+}
+
+//!
+//! Logs the API HTTP request counts (cumulative count)
+//!
+//! @see mido_info_http_count() for counts between calls.
+//!
+void mido_info_http_count_total()
+{
+    LOGINFO("Total MidoNet API requests: %d gets, %d puts, %d posts, %d deletes\n", 
+            http_gets, http_puts, http_posts, http_deletes);
 }
 
 //!
@@ -275,6 +312,50 @@ int mido_getel_midoname(midoname * name, char *key, char **val)
 }
 
 //!
+//! Retrieves extant tunnel-zones from MidoNet NSDB.
+//!
+//! @param[in]  tenant name of the tenant.
+//! @param[out] outnames array of midoname data structures with tunnel-zones.
+//! @param[out] outnames_max number of tunnel-zones found.
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_get_tunnelzones(char *tenant, midoname **outnames, int *outnames_max)
+{
+    return (mido_get_resources(NULL, 0, tenant, "tunnel_zones", "application/vnd.org.midonet.collection.TunnelZone-v1+json", outnames, outnames_max));
+}
+
+//!
+//! Retrieves hosts that are member of the given GRE tunnel-zone.
+//!
+//! @param[in]  tzone tunnel-zone of interest.
+//! @param[out] outnames array of midoname data structures with tunnel-zone members.
+//! @param[out] outnames_max number of tunnel-zone members found.
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_get_tunnelzone_hosts(midoname *tzone, midoname **outnames, int *outnames_max)
+{
+    return (mido_get_resources(tzone, 1, tzone->tenant, "hosts", "application/vnd.org.midonet.collection.GreTunnelZoneHost-v1+json", outnames, outnames_max));
+}
+
+//!
 //!
 //!
 //! @param[in]  tenant
@@ -305,7 +386,6 @@ int mido_create_router(char *tenant, char *name, midoname * outname)
     rc = mido_create_resource(NULL, 0, &myname, outname, "name", myname.name, NULL);
 
     mido_free_midoname(&myname);
-    //    mido_free_midoname(&parentname);
     return (rc);
 }
 
@@ -521,7 +601,6 @@ int mido_delete_bridge(midoname * name)
     return (mido_delete_resource(NULL, name));
 }
 
-
 int mido_create_portgroup(char *tenant, char *name, midoname *outname) {
     int rc = 0, found = 0;
     midoname myname;
@@ -567,9 +646,9 @@ int mido_get_portgroups(char *tenant, midoname ** outnames, int *outnames_max) {
     return (mido_get_resources(NULL, 0, tenant, "port_groups", "application/vnd.org.midonet.collection.PortGroup-v1+json", outnames, outnames_max));
 }
 
-int mido_create_portgroup_port(midoname * portgroup, char *portId, midoname * outname) {
+int mido_create_portgroup_port(mido_config *mido, midoname * portgroup, char *portId, midoname * outname) {
     int rc = 0, ret = 0, max_ports = 0, found = 0, i = 0;
-    midoname myname, *ports = NULL;
+    midoname myname, **ports = NULL;
 
     bzero(&myname, sizeof(midoname));
 
@@ -578,24 +657,33 @@ int mido_create_portgroup_port(midoname * portgroup, char *portId, midoname * ou
     myname.content_type = strdup("PortGroupPort");
     myname.vers = strdup("v1");
 
-    rc = mido_get_portgroup_ports(portgroup, &ports, &max_ports);
-    if (!rc) {
+    mido_resource_portgroup *cportgroup = find_mido_portgroup(mido, portgroup->name);
+    if (cportgroup == NULL) {
+        //Likely a newly created portgroup
+        ports = NULL;
+        max_ports = 0;
+    } else {
+        ports = cportgroup->ports;
+        max_ports = cportgroup->max_ports;
+    }
+    //rc = mido_get_portgroup_ports(portgroup, &ports, &max_ports);
+    //if (!rc) {
         found = 0;
         for (i = 0; i < max_ports && !found; i++) {
-            rc = mido_cmp_midoname_to_input(&(ports[i]), "portId", portId, NULL);
+            //rc = mido_cmp_midoname_to_input(ports[i], "portId", portId, NULL);
+            rc = strcmp(ports[i]->uuid, portId);
             if (!rc) {
                 if (outname) {
-                    mido_copy_midoname(outname, &(ports[i]));
+                    mido_copy_midoname(outname, ports[i]);
                 }
                 found = 1;
             }
         }
-    }
-    if (ports && (max_ports > 0)) {
-        mido_free_midoname_list(ports, max_ports);
-        EUCA_FREE(ports);
-    }
-
+    //}
+    //if (ports && (max_ports > 0)) {
+    //    mido_free_midoname_list(ports, max_ports);
+    //    EUCA_FREE(ports);
+    //}
     if (!found) {
         rc = mido_create_resource(portgroup, 1, &myname, outname, "portId", portId, NULL);
         if (rc) {
@@ -637,7 +725,7 @@ int mido_create_ipaddrgroup(char *tenant, char *name, midoname * outname)
 {
     int rc = 0, found = 0;
     midoname myname;
-
+    
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
@@ -1181,13 +1269,13 @@ int mido_delete_chain(midoname * name)
 }
 
 //!
+//! Adds an IP address to the ip-address-group specified in the argument.
 //!
-//!
-//! @param[in]  ipaddrgroup
-//! @param[in]  ip
-//! @param[out] outname
-//!
-//! @return
+//! @param[in]  mido data structure holding current eucanetd MidoNet config.
+//! @param[in]  ipaddrgroup ip-address-group of interest.
+//! @param[in]  ip IP address to add to the specified ip-addrress-group.
+//! @param[out] outname newly created ip-address-group membership information.
+//! @return 0 if the membership is successfully created. 1 otherwise.
 //!
 //! @see
 //!
@@ -1197,22 +1285,34 @@ int mido_delete_chain(midoname * name)
 //!
 //! @note
 //!
-int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outname)
+int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *ip, midoname *outname)
 {
     int rc = 0, ret = 0, max_ips = 0, found = 0, i = 0;
     midoname myname, *ips = NULL;
 
     bzero(&myname, sizeof(midoname));
-
     myname.tenant = strdup(ipaddrgroup->tenant);
     myname.resource_type = strdup("ip_addrs");
     myname.content_type = strdup("IpAddrGroupAddr");
 
-    // check if host already has a rule in place
-    rc = mido_get_ipaddrgroup_ips(ipaddrgroup, &ips, &max_ips);
-    if (!rc) {
+    // check if IP is already a member
+    mido_resource_ipaddrgroup *cipaddrgroup = find_mido_ipaddrgroup(mido, ipaddrgroup->name);
+    if (cipaddrgroup == NULL) {
+        // Likely a newly created ip-address-group
+        ips = NULL;
+        max_ips = 0;
+    } else {
+        ips = cipaddrgroup->ips;
+        max_ips = cipaddrgroup->max_ips;
+    }
+    //rc = mido_get_ipaddrgroup_ips(ipaddrgroup, &ips, &max_ips);
+    //if (!rc) {
         found = 0;
         for (i = 0; i < max_ips && !found; i++) {
+            if (ips[i].init == 0) {
+                // skip deleted entries
+                continue;
+            }
             rc = mido_cmp_midoname_to_input(&(ips[i]), "addr", ip, NULL);
             if (!rc) {
                 if (outname) {
@@ -1221,13 +1321,14 @@ int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outn
                 found = 1;
             }
         }
-    }
-    if (ips && (max_ips > 0)) {
-        mido_free_midoname_list(ips, max_ips);
-        EUCA_FREE(ips);
-    }
+    //}
+    //if (ips && (max_ips > 0)) {
+    //    mido_free_midoname_list(ips, max_ips);
+    //    EUCA_FREE(ips);
+    //}
 
     if (!found) {
+        LOGINFO("\tadding %s to %s\n", ip, ipaddrgroup->name);
         rc = mido_create_resource(ipaddrgroup, 1, &myname, outname, "addr", ip, "version", "4", NULL);
         if (rc) {
             ret = 1;
@@ -1375,8 +1476,9 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
     myname.resource_type = strdup("rules");
     myname.content_type = strdup("Rule");
     myname.vers = strdup("v2");
-    
-    if (memorules) {
+
+    if (memorules != NULL) {
+        LOGTRACE("Checking %d rules in memory.\n", max_memorules);
         rules = memorules;
         max_rules = max_memorules;
         rc = 0;
@@ -1388,6 +1490,9 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
     if (!rc) {
         found = 0;
         for (i = 0; i < max_rules && !found; i++) {
+            if (rules[i].init == 0) {
+                continue;
+            }
             va_copy(ap1, ap);
             rc = mido_cmp_midoname_to_input_json_v(&(rules[i]), &ap1);
             va_end(ap1);
@@ -1401,7 +1506,7 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
         }
     }
     
-    if (!memorules) {
+    if (memorules == NULL) {
         mido_free_midoname_list(rules, max_rules);
         EUCA_FREE(rules);
     }
@@ -1635,7 +1740,11 @@ int mido_delete_port(midoname * name)
 //!
 int mido_get_ports(midoname * devname, midoname ** outnames, int *outnames_max)
 {
-    return (mido_get_resources(devname, 1, devname->tenant, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
+    if (devname) {
+        return (mido_get_resources(devname, 1, devname->tenant, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
+    } else {
+        return (mido_get_resources(NULL, 0, VPCMIDO_TENANT, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
+    }
 }
 
 //!
@@ -1821,12 +1930,12 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
     // check to see if resource needs updating
     va_copy(alb, *al);
     rc = mido_cmp_midoname_to_input_json_v(name, &alb);
-    LOGDEBUG("YELLOW: cmp return: %d\n", rc);
+    LOGDEBUG("update_resource cmp return: %d\n", rc);
     va_end(alb);
 
     if (!rc) {
         LOGDEBUG("resource to update matches in place resource - skipping update\n");
-        //        return(ret);
+        return(ret);
     }
 
     va_copy(ala, *al);
@@ -2664,7 +2773,6 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     if (!strstr(url, "system_state")) {
         //mido_check_state();
     }
-
     *out_payload = NULL;
 
     curl = curl_easy_init();
@@ -2686,7 +2794,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if (httpcode != 200L) {
-        LOGWARN("curl http code: %ld\n", httpcode);
+        LOGWARN("curl get http code: %ld\n", httpcode);
         ret = 1;
     }
     curl_slist_free_all(headers);
@@ -2708,6 +2816,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
         free(mem_writer_params.mem);
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    http_gets++;
     return (ret);
 }
 
@@ -2775,7 +2884,8 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
         ret = 0;
         midonet_api_dirty_cache = 1;
     } else {
-        LOGWARN("curl http code: %ld\n", httpcode);
+        LOGWARN("curl put http code: %ld\n", httpcode);
+        LOGINFO("\turl %s payload %s\n", url, SP(payload));
         ret = 1;
     }
 
@@ -2784,6 +2894,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     curl_global_cleanup();
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    http_puts++;
     return (ret);
 }
 
@@ -2879,7 +2990,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     //    headers = curl_slist_append(headers, "Content-Type: application/vnd.org.midonet");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    LOGDEBUG("POST PAYLOAD: %s\n", payload);
+    LOGDEBUG("POST PAYLOAD: %s\n", SP(payload));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -2889,7 +3000,8 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if ((httpcode != 200L) && (httpcode != 201L)) {
-        LOGWARN("curl http code: %ld\n", httpcode);
+        LOGWARN("curl post http code: %ld\n", httpcode);
+        LOGINFO("\turl %s payload %s\n", url, payload);
         ret = 1;
     }
     curl_slist_free_all(headers);
@@ -2904,6 +3016,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     EUCA_FREE(loc);
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    http_posts++;
     return (ret);
 }
 
@@ -2948,7 +3061,8 @@ int midonet_http_delete(char *url)
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if ((httpcode != 200L) && (httpcode != 204L)) {
-        LOGWARN("curl http code: %ld\n", httpcode);
+        LOGWARN("curl delete http code: %ld\n", httpcode);
+        LOGINFO("\turl %s\n", SP(url));
         ret = 1;
     }
 
@@ -2956,23 +3070,24 @@ int midonet_http_delete(char *url)
     curl_global_cleanup();
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    http_deletes++;
     return (ret);
 }
 
 //!
+//! Creates a new router route as specified in the argument. 
 //!
-//!
-//! @param[in]  router
-//! @param[in]  rport
-//! @param[in]  src
-//! @param[in]  src_slashnet
-//! @param[in]  dst
-//! @param[in]  dst_slashnet
-//! @param[in]  next_hop_ip
-//! @param[in]  weight
-//! @param[out] outname
-//!
-//! @return
+//! @param[in]  mido data structure holding all discovered MidoNet resources.
+//! @param[in]  router router of interest.
+//! @param[in]  rport router port to be routed.
+//! @param[in]  src source subnet.
+//! @param[in]  src_slashnet source slash net.
+//! @param[in]  dst destination subnet.
+//! @param[in]  dst_slashnet destination slash net.
+//! @param[in]  next_hop_ip next hop.
+//! @param[in]  weight route weight.
+//! @param[out] outname newly created route information.
+//! @return 0 if the route is successfully created. 1 otherwise.
 //!
 //! @see
 //!
@@ -2982,7 +3097,7 @@ int midonet_http_delete(char *url)
 //!
 //! @note
 //!
-int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname)
+int mido_create_route(mido_config *mido, midoname *router, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname)
 {
     int rc = 0, found = 0, ret = 0;
     midoname myname;
@@ -2996,29 +3111,41 @@ int mido_create_route(midoname * router, midoname * rport, char *src, char *src_
     myname.content_type = NULL;
 
     // only create the route if it doesn't already exist
-    rc = mido_get_routes(router, &routes, &max_routes);
+    mido_resource_router *crouter = find_mido_router(mido, router->name);
+    if (crouter == NULL) {
+        // Likely a newly created router
+        routes = NULL;
+        max_routes = 0;
+    } else {
+        routes = crouter->routes;
+        max_routes = crouter->max_routes;
+    }
+    //rc = mido_get_routes(router, &routes, &max_routes);
     if (!rc) {
         found = 0;
         for (i = 0; i < max_routes && !found; i++) {
+            if (routes[i].init == 0) {
+                continue;
+            }
             if (strcmp(next_hop_ip, "UNSET")) {
                 rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
-                                                "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
+                        "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
                 if (!rc) {
                     found = 1;
                 }
             } else {
                 rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
-                                                "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
+                        "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
                 if (!rc) {
                     found = 1;
                 }
             }
         }
     }
-    if (routes && max_routes > 0) {
-        mido_free_midoname_list(routes, max_routes);
-        EUCA_FREE(routes);
-    }
+    //if (routes && max_routes > 0) {
+    //    mido_free_midoname_list(routes, max_routes);
+    //    EUCA_FREE(routes);
+    //}
 
     // route doesn't already exist, create it
     if (!found) {

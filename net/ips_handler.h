@@ -152,6 +152,7 @@ int ips_set_flush(ips_handler * ipsh, char *setname);
 int ips_handler_deletesetmatch(ips_handler * ipsh, char *match);
 
 int ips_handler_free(ips_handler * ipsh);
+int ips_handler_close(ips_handler * ipsh);
 
 int ips_handler_print(ips_handler * ipsh);
 //! @}
