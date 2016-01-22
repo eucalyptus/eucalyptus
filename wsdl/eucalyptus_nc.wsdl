@@ -485,6 +485,7 @@
 	    <xs:element minOccurs="0" maxOccurs="64" name="groupNames" type="xs:string"/>
 	    <xs:element minOccurs="0" name="rootDirective" type="xs:string"/>
         <xs:element minOccurs="0" maxOccurs="64" name="groupIds" type="xs:string"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
 	  </xs:sequence>
 	</xs:extension>
       </xs:complexContent>
@@ -544,11 +545,14 @@
 	    <xs:element minOccurs="0" name="serviceTag" type="xs:string"/> 
         <!-- updated by NC upon floppy create -->
             <xs:element minOccurs="0" name="hasFloopy" type="xs:int"/>
+        <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
       </xs:sequence>
     </xs:complexType>
     
     <xs:complexType name="netConfigType">
       <xs:sequence>
+    <xs:element name="interfaceId" type="xs:string"/>
+    <xs:element name="device" type="xs:int"/>
 	<xs:element name="privateMacAddress" type="xs:string"/>
 	<xs:element name="privateIp" type="xs:string"/>
 	<xs:element name="publicIp" type="xs:string"/>

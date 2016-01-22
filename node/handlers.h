@@ -229,7 +229,8 @@ struct handlers {
     int (*doRunInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                           char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                           char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                          char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr);
+                          char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize,
+                          netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInstPtr);
     int (*doTerminateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
     int (*doRebootInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doGetConsoleOutput) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -315,7 +316,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
                   netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInst);
+                  char *rootDirective, char **groupIds, int groupIdsSize, netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInst);
 int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
 int doRebootInstance(ncMetadata * pMeta, char *instanceId);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);

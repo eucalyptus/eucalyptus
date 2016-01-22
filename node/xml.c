@@ -698,6 +698,8 @@ int gen_instance_xml(const ncInstance * instance)
             char str[16];
 
             nics = _NODE(instanceNode, "nics");
+
+            // Handle primary network interface
             nic = _NODE(nics, "nic");
             snprintf(str, sizeof(str), "%d", instance->ncnet.vlan);
             _ATTRIBUTE(nic, "vlan", str);
@@ -707,8 +709,30 @@ int gen_instance_xml(const ncInstance * instance)
             _ATTRIBUTE(nic, "publicIp", instance->ncnet.publicIp);
             _ATTRIBUTE(nic, "privateIp", instance->ncnet.privateIp);
             _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
-            snprintf(str, sizeof(str), "vn_%s", instance->instanceId);
+            snprintf(str, sizeof(str), "vn_%s", instance->ncnet.interfaceId);
             _ATTRIBUTE(nic, "guestDeviceName", str);
+            snprintf(str, sizeof(str), "%d", instance->ncnet.device);
+            _ATTRIBUTE(nic, "device", str);
+
+            // Handle secondary network interfaces in VPC mode
+            for (int i = 0; i < EUCA_MAX_NICS; i++) {
+                const netConfig *net = instance->secNetCfgs + i;
+                if (strlen(net->interfaceId) == 0) // empty slot
+                    continue;
+                xmlNodePtr secNic = _NODE(nics, "nic");
+                snprintf(str, sizeof(str), "%d", net->vlan);
+                _ATTRIBUTE(secNic, "vlan", str);
+                snprintf(str, sizeof(str), "%d", net->networkIndex);
+                _ATTRIBUTE(secNic, "networkIndex", str);
+                _ATTRIBUTE(secNic, "mac", net->privateMac);
+                _ATTRIBUTE(secNic, "publicIp", net->publicIp);
+                _ATTRIBUTE(secNic, "privateIp", net->privateIp);
+                _ATTRIBUTE(secNic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+                snprintf(str, sizeof(str), "vn_%s", net->interfaceId);
+                _ATTRIBUTE(secNic, "guestDeviceName", str);
+                snprintf(str, sizeof(str), "%d", net->device);
+                _ATTRIBUTE(secNic, "device", str);
+            }
         }
 
         {                              // set /instance/states
@@ -783,6 +807,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
 #define MKVBRPATH(_suffix)   snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s", (i + 1), _suffix);
 #define MKVOLPATH(_suffix)   snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s", (i + 1), _suffix);
+#define MKNICPATH(_suffix)   snprintf(nicxpath, sizeof(nicxpath), "/instance/nics/nic[%d]/@%s", (i + 1), _suffix);
 
 #define XGET_STR_FREE(_XPATH, _dest)                                                 \
 {                                                                                    \
@@ -842,6 +867,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     char *groupName = NULL;
     char vbrxpath[128] = "";
     char volxpath[128] = "";
+    char nicxpath[128] = "";
     char **res_array = NULL;
     char ver_s[4] = "";
     int xml_ver = 0;
@@ -1038,12 +1064,77 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
         EUCA_FREE(res_array);
     }
     // get NIC information
-    XGET_INT("/instance/nics/nic/@vlan", instance->ncnet.vlan);
+    if ((res_array = get_xpath_content(xml_path, "/instance/nics/nic")) != NULL) {
+        int secNet = 0;
+        for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_NICS); i++) {
+            int device = 0;
+            char str[16] = "";
+            char * tok = NULL;
+
+            // TODO code for upgrade to 4.3.0 swathi to check if this correct
+            MKNICPATH("device");
+            if (get_xpath_content_at(xml_path, nicxpath, 0, str, sizeof(str)) != NULL) {
+                XGET_INT_FREE(nicxpath, device);
+            } else { // previous version of instance xml does not contain device and has only one nic interface
+                device = 0;
+            }
+
+            if (device == 0) { // primary network interface
+                MKNICPATH("vlan");
+                XGET_INT_FREE(nicxpath, instance->ncnet.vlan);
+                MKNICPATH("networkIndex");
+                XGET_INT_FREE(nicxpath, instance->ncnet.networkIndex);
+                MKNICPATH("mac");
+                XGET_STR_FREE(nicxpath, instance->ncnet.privateMac);
+                MKNICPATH("publicIp");
+                XGET_STR_FREE(nicxpath, instance->ncnet.publicIp);
+                MKNICPATH("privateIp");
+                XGET_STR_FREE(nicxpath, instance->ncnet.privateIp);
+                MKNICPATH("guestDeviceName");
+                XGET_STR_FREE(nicxpath, str);
+                if ((tok = strchr(str, '_')) != NULL) {
+                    euca_strncpy(instance->ncnet.interfaceId, (tok + 1), ENI_ID_LEN);
+                }
+                instance->ncnet.device = device;
+
+                MKNICPATH("bridgeDeviceName");
+                XGET_STR_FREE(nicxpath, instance->params.guestNicDeviceName);
+            } else { // secondary network interfaces
+                netConfig *net = instance->secNetCfgs + secNet;
+
+                MKNICPATH("vlan");
+                XGET_INT_FREE(nicxpath, net->vlan);
+                MKNICPATH("networkIndex");
+                XGET_INT_FREE(nicxpath, net->networkIndex);
+                MKNICPATH("mac");
+                XGET_STR_FREE(nicxpath, net->privateMac);
+                MKNICPATH("publicIp");
+                XGET_STR_FREE(nicxpath, net->publicIp);
+                MKNICPATH("privateIp");
+                XGET_STR_FREE(nicxpath, net->privateIp);
+                MKNICPATH("guestDeviceName");
+                XGET_STR_FREE(nicxpath, str);
+                if ((tok = strchr(str, '_')) != NULL) {
+                    euca_strncpy(net->interfaceId, (tok + 1), ENI_ID_LEN);
+                }
+                net->device = device;
+
+                secNet++;
+            }
+        }
+
+        // Free our allocated memory
+        for (int i = 0; res_array[i] != NULL; i++)
+            EUCA_FREE(res_array[i]);
+        EUCA_FREE(res_array);
+    }
+
+    /*XGET_INT("/instance/nics/nic/@vlan", instance->ncnet.vlan);
     XGET_INT("/instance/nics/nic/@networkIndex", instance->ncnet.networkIndex);
     XGET_STR("/instance/nics/nic/@mac", instance->ncnet.privateMac);
     XGET_STR("/instance/nics/nic/@publicIp", instance->ncnet.publicIp);
     XGET_STR("/instance/nics/nic/@privateIp", instance->ncnet.privateIp);
-    XGET_STR("/instance/nics/nic/@bridgeDeviceName", instance->params.guestNicDeviceName);
+    XGET_STR("/instance/nics/nic/@bridgeDeviceName", instance->params.guestNicDeviceName);*/
     if (strcmp(instance->platform, "windows") == 0) {
         instance->params.nicType = NIC_TYPE_WINDOWS;
     } else {

@@ -206,11 +206,11 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInstPtr)
 {
     return doRunInstance(pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId,
                          accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, groupIds, groupIdsSize,
-                         outInstPtr);
+                         secNetCfgs, secNetCfgsLen, outInstPtr);
 }
 
 //!

@@ -836,6 +836,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
                         psPrivIp = pOutInsts[i].ccnet.privateIp;
                         psUuid = pOutInsts[i].uuid;
                     }
+                    // TODO swathi should secondary enis be taken into account?
                 }
             }
             psUuid = ((psUuid) ? psUuid : "");
@@ -1519,12 +1520,28 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     }
 
     netconf = adb_netConfigType_create(env);
+    adb_netConfigType_set_interfaceId(netconf, env, src->ccnet.interfaceId);
+    adb_netConfigType_set_device(netconf, env, src->ccnet.device);
     adb_netConfigType_set_privateMacAddress(netconf, env, src->ccnet.privateMac);
     adb_netConfigType_set_privateIp(netconf, env, src->ccnet.privateIp);
     adb_netConfigType_set_publicIp(netconf, env, src->ccnet.publicIp);
     adb_netConfigType_set_vlan(netconf, env, src->ccnet.vlan);
     adb_netConfigType_set_networkIndex(netconf, env, src->ccnet.networkIndex);
     adb_ccInstanceType_set_netParams(dst, env, netconf);
+
+    for (i = 0; i < src->secNetCfgsSize; i++) {
+       if (strlen( src->secNetCfgs[i].interfaceId) == 0)
+           continue;
+       netconf = adb_netConfigType_create(env);
+       adb_netConfigType_set_interfaceId(netconf, env, src->secNetCfgs[i].interfaceId);
+       adb_netConfigType_set_device(netconf, env, src->secNetCfgs[i].device);
+       adb_netConfigType_set_privateMacAddress(netconf, env, src->secNetCfgs[i].privateMac);
+       adb_netConfigType_set_privateIp(netconf, env, src->secNetCfgs[i].privateIp);
+       adb_netConfigType_set_publicIp(netconf, env, src->secNetCfgs[i].publicIp);
+       adb_netConfigType_set_vlan(netconf, env, src->secNetCfgs[i].vlan);
+       adb_netConfigType_set_networkIndex(netconf, env, src->secNetCfgs[i].networkIndex);
+       adb_ccInstanceType_add_secondaryNetConfig(dst, env, netconf);
+    }
 
     vm = copy_vm_type_to_adb(env, &(src->ccvm));
     adb_virtualMachineType_set_name(vm, env, src->ccvm.name);
@@ -1598,6 +1615,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     adb_virtualMachineType_t *vm = NULL;
     ccInstance *outInsts = NULL;
     ccInstance *myInstance = NULL;
+    netConfig secNetCfgs[EUCA_MAX_NICS] = {{ 0 }};
+    int secNetCfgsLen = 0;
 
     rit = adb_RunInstances_get_RunInstances(runInstances, env);
     EUCA_MESSAGE_UNMARSHAL(runInstancesType, rit, (&ccMeta));
@@ -1699,6 +1718,23 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         }
     }
 
+    secNetCfgsLen = adb_runInstancesType_sizeof_secondaryNetConfig(rit, env);
+    if (secNetCfgsLen > EUCA_MAX_NICS) {// Warn that number of net configs is greater than supported
+        LOGWARN("Maximum number of secondary enis supported is %d\n", EUCA_MAX_NICS);
+        secNetCfgsLen = EUCA_MAX_NICS;
+    }
+    for (i = 0; i < secNetCfgsLen; i++) {
+        bzero(&(secNetCfgs[i]), sizeof(netConfig));
+        adb_netConfigType_t *net = adb_runInstancesType_get_secondaryNetConfig_at(rit, env, i);
+        euca_strncpy(secNetCfgs[i].interfaceId, adb_netConfigType_get_interfaceId(net, env), ENI_ID_LEN);
+        secNetCfgs[i].device = adb_netConfigType_get_device(net, env);
+        euca_strncpy(secNetCfgs[i].privateMac, adb_netConfigType_get_privateMacAddress(net, env), ENET_ADDR_LEN);
+        euca_strncpy(secNetCfgs[i].privateIp, adb_netConfigType_get_privateIp(net, env), INET_ADDR_LEN);
+        euca_strncpy(secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(net, env), INET_ADDR_LEN);
+        secNetCfgs[i].vlan = adb_netConfigType_get_vlan(net, env);
+        secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(net, env);
+    }
+
     accountId = adb_runInstancesType_get_accountId(rit, env);
     if (!accountId) {
         accountId = ccMeta.userId;
@@ -1721,7 +1757,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, netIds, netIdsLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
-                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective, &outInsts, &outInstsLen);
+                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective,
+                            secNetCfgs, secNetCfgsLen, &outInsts, &outInstsLen);
         unset_corrid(corr_id);
     }
 

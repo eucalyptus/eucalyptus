@@ -817,12 +817,28 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     adb_instanceType_set_instanceType(instance, env, copy_vm_type_to_adb(env, &(outInst->params)));
 
     netconf = adb_netConfigType_create(env);
+    adb_netConfigType_set_interfaceId(netconf, env, outInst->ncnet.interfaceId);
+    adb_netConfigType_set_device(netconf, env, outInst->ncnet.device);
     adb_netConfigType_set_privateMacAddress(netconf, env, outInst->ncnet.privateMac);
     adb_netConfigType_set_privateIp(netconf, env, outInst->ncnet.privateIp);
     adb_netConfigType_set_publicIp(netconf, env, outInst->ncnet.publicIp);
     adb_netConfigType_set_vlan(netconf, env, outInst->ncnet.vlan);
     adb_netConfigType_set_networkIndex(netconf, env, outInst->ncnet.networkIndex);
     adb_instanceType_set_netParams(instance, env, netconf);
+
+    for (i = 0; i < EUCA_MAX_NICS; i++) {
+        if (strlen(outInst->secNetCfgs[i].interfaceId) == 0)
+            continue;
+        netconf = adb_netConfigType_create(env);
+        adb_netConfigType_set_interfaceId(netconf, env, outInst->secNetCfgs[i].interfaceId);
+        adb_netConfigType_set_device(netconf, env, outInst->secNetCfgs[i].device);
+        adb_netConfigType_set_privateMacAddress(netconf, env, outInst->secNetCfgs[i].privateMac);
+        adb_netConfigType_set_privateIp(netconf, env, outInst->secNetCfgs[i].privateIp);
+        adb_netConfigType_set_publicIp(netconf, env, outInst->secNetCfgs[i].publicIp);
+        adb_netConfigType_set_vlan(netconf, env, outInst->secNetCfgs[i].vlan);
+        adb_netConfigType_set_networkIndex(netconf, env, outInst->secNetCfgs[i].networkIndex);
+        adb_instanceType_add_secondaryNetConfig(instance, env, netconf);
+    }
 
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
@@ -898,6 +914,8 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     copy_vm_type_from_adb(&params, vm_type, env);
     bzero(&ncnet, sizeof(netConfig));
     if ((netconf = adb_instanceType_get_netParams(instance, env)) != NULL) {
+        euca_strncpy(ncnet.interfaceId, adb_netConfigType_get_interfaceId(netconf, env), ENI_ID_LEN);
+        ncnet.device = adb_netConfigType_get_device(netconf, env);
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
         euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), ENET_ADDR_LEN);
@@ -931,7 +949,8 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
                                 (char *)adb_instanceType_get_keyName(instance, env),
                                 (char *)adb_instanceType_get_userData(instance, env),
                                 (char *)adb_instanceType_get_launchIndex(instance, env),
-                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize);
+                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize,
+                                NULL, 0); // sending null for secNetCfgs intentionally, it gets populated at the end of this method
 
     euca_strncpy(outInst->guestStateName, (char *)adb_instanceType_get_guestStateName(instance, env), CHAR_BUFFER_SIZE);
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
@@ -954,6 +973,18 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         euca_strncpy(outInst->volumes[i].attachmentToken, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
         euca_strncpy(outInst->volumes[i].devName, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
         euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
+    }
+
+    bzero(outInst->secNetCfgs, sizeof(netConfig) * EUCA_MAX_NICS);
+    for (i = 0; ((i < EUCA_MAX_NICS) && (i < adb_instanceType_sizeof_secondaryNetConfig(instance, env))); i++) {
+        adb_netConfigType_t *netParams = adb_instanceType_get_secondaryNetConfig_at(instance, env, i);
+        euca_strncpy(outInst->secNetCfgs[i].interfaceId, adb_netConfigType_get_interfaceId(netParams, env), ENI_ID_LEN);
+        outInst->secNetCfgs[i].device = adb_netConfigType_get_device(netParams, env);
+        euca_strncpy(outInst->secNetCfgs[i].privateMac, adb_netConfigType_get_privateMacAddress(netParams, env), ENET_ADDR_LEN);
+        euca_strncpy(outInst->secNetCfgs[i].privateIp, adb_netConfigType_get_privateIp(netParams, env), INET_ADDR_LEN);
+        euca_strncpy(outInst->secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(netParams, env), INET_ADDR_LEN);
+        outInst->secNetCfgs[i].vlan = adb_netConfigType_get_vlan(netParams, env);
+        outInst->secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(netParams, env);
     }
     outInst->hasFloppy = adb_instanceType_get_hasFloopy(instance, env);
     return (outInst);

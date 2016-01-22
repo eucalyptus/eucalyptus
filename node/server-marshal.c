@@ -516,6 +516,8 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     adb_ncRunInstanceResponse_t *response = NULL;
     adb_ncRunInstanceResponseType_t *output = NULL;
     long long call_time = time_ms();
+    netConfig secNetCfgs[EUCA_MAX_NICS] = {{ 0 }};
+    int secNetCfgsLen = 0;
 
     pthread_mutex_lock(&ncHandlerLock);
     {
@@ -543,6 +545,25 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         snprintf(netparams.privateMac, ENET_ADDR_LEN, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
         snprintf(netparams.privateIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_privateIp(net_type, env));
         snprintf(netparams.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(net_type, env));
+        snprintf(netparams.interfaceId, ENI_ID_LEN, "%s", adb_netConfigType_get_interfaceId(net_type, env));
+        netparams.device = adb_netConfigType_get_device(net_type, env);
+        // Handle secondary network interfaces
+        secNetCfgsLen = adb_ncRunInstanceType_sizeof_secondaryNetConfig(input, env);
+        if (secNetCfgsLen > EUCA_MAX_NICS) {// Warn that number of net configs is greater than supported
+           LOGWARN("Maximum number of secondary enis supported is %d\n", EUCA_MAX_NICS);
+           secNetCfgsLen = EUCA_MAX_NICS;
+        }
+        for (i = 0; i < secNetCfgsLen; i++) {
+           bzero(&(secNetCfgs[i]), sizeof(netConfig));
+           adb_netConfigType_t *net = adb_ncRunInstanceType_get_secondaryNetConfig_at(input, env, i);
+           euca_strncpy(secNetCfgs[i].interfaceId, adb_netConfigType_get_interfaceId(net, env), ENI_ID_LEN);
+           secNetCfgs[i].device = adb_netConfigType_get_device(net, env);
+           secNetCfgs[i].vlan = adb_netConfigType_get_vlan(net, env);
+           secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(net, env);
+           euca_strncpy(secNetCfgs[i].privateMac, adb_netConfigType_get_privateMacAddress(net, env), ENET_ADDR_LEN);
+           euca_strncpy(secNetCfgs[i].privateIp, adb_netConfigType_get_privateIp(net, env), INET_ADDR_LEN);
+           euca_strncpy(secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(net, env), INET_ADDR_LEN);
+        }
         userData = adb_ncRunInstanceType_get_userData(input, env);
         credential = adb_ncRunInstanceType_get_credential(input, env);
         launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
@@ -577,7 +598,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
 
                 error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
                                       ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames,
-                                      groupNamesSize, rootDirective, groupIds, groupIdsSize, &outInst);
+                                      groupNamesSize, rootDirective, groupIds, groupIdsSize, secNetCfgs, secNetCfgsLen, &outInst);
 
                 unset_corrid(corr_id);
 

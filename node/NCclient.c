@@ -390,6 +390,8 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
     char sTempBuffer[64] = "";
     netConfig netParams = { 0 };
     ncInstance *pOutInst = NULL;
+    netConfig secNetCfgs[EUCA_MAX_NICS];
+    int secNetCfgsLen = 0;
 
     psPrivateMac = strdup(psMacAddr);
     psPrivateIP = strdup("10.0.0.202");
@@ -424,10 +426,12 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
         netParams.vlan = vlan;
         snprintf(netParams.privateIp, sizeof(netParams.privateIp), "%s", psPrivateIP);
         snprintf(netParams.privateMac, sizeof(netParams.privateMac), "%s", psPrivateMac);
+        snprintf(netParams.interfaceId, ENI_ID_LEN, "%s", psLocalInstanceId);
+        netParams.device = 0;
 
         rc = ncRunInstanceStub(pStub, pMeta, psLocalUUID, psLocalInstanceId, psLocalReservationId, pVirtMachine, psImageId, psImageURL, psKernelId, psKernelURL, psRamdiskId,
                                psRamdiskURL, "eucalyptusUser", "eucalyptusAccount", "", &netParams, psUserData, psCredential, psLaunchIndex, psPlatform, 0, ppsGroupNames,
-                               groupNameSize, "", NULL, 0, &pOutInst);
+                               groupNameSize, "", NULL, 0, secNetCfgs, secNetCfgsLen, &pOutInst);
         if (rc != EUCA_OK) {
             printf("ncRunInstanceStub = %d : instanceId=%s\n", rc, psInstanceId);
             exit(1);
