@@ -345,10 +345,9 @@ public class Contexts {
       Context ctx = lookup( corrId );
       EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
-      if (cause.getCause() != null) {
-          Channel channel = ctx.getChannel( );
-          Channels.write( channel, new ExceptionResponseType( ctx.getRequest( ), cause.getCause( ).getMessage( ), cause.getCause( ) ) );
-      }
+      final Throwable errorThrowable = cause.getCause( ) != null ? cause.getCause( ) : cause;
+      Channel channel = ctx.getChannel( );
+      Channels.write( channel, new ExceptionResponseType( ctx.getRequest( ), errorThrowable.getMessage( ), errorThrowable ) );
       if ( !( cause instanceof BaseException ) ) {
         clear( ctx );
       }
