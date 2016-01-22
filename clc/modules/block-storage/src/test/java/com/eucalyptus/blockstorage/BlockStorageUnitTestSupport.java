@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,6 @@ public class BlockStorageUnitTestSupport {
 
   public static void setupBlockStoragePersistenceContext() {
     Map<String,String> props = Maps.newHashMap( );
-    props.put("hibernate.archive.autodetection", "jar, class, hbm");
     props.put("hibernate.ejb.interceptor.session_scoped", "com.eucalyptus.entities.DelegatingInterceptor");
     props.put("hibernate.show_sql", "false");
     props.put("hibernate.format_sql", "false");

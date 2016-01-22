@@ -488,23 +488,27 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
 
     final Set<String> createdDatabases = Sets.newHashSet( )
+    final Set<Pair<String,String>> createdSchemas = Sets.newHashSet( )
     for ( Pair<String,Optional<String>> databasePair : databases( ) ) {
       final String databaseName = databasePair.left
       final String schemaName = databasePair.right.orNull( )
-      if ( createdDatabases.add( databaseName ) ) try {
-        String createDatabase = "CREATE DATABASE " + databaseName + " OWNER " + getUserName( )
-        dbExecute( PG_DEFAULT_DBNAME, createDatabase )
-        
-        String alterUser = "ALTER ROLE " + getUserName( ) + " WITH LOGIN PASSWORD \'" + getPassword( ) + "\'"
-        dbExecute( databaseName, alterUser )
-      } catch (Exception e) {
-        if (!e.message.contains("already exists")) {
-          LOG.error("Unable to create the database.", e)
-          return false
+      if ( createdDatabases.add( databaseName ) ) {
+        try {
+          String createDatabase = "CREATE DATABASE " + databaseName + " OWNER " + getUserName( )
+          dbExecute( PG_DEFAULT_DBNAME, createDatabase )
+
+          String alterUser = "ALTER ROLE " + getUserName( ) + " WITH LOGIN PASSWORD \'" + getPassword( ) + "\'"
+          dbExecute( databaseName, alterUser )
+        } catch (Exception e) {
+          if (!e.message.contains("already exists")) {
+            LOG.error("Unable to create the database.", e)
+            return false
+          }
         }
+        listSchemas( databaseName ).each{ String schema -> createdSchemas << Pair.pair( databaseName, schema )  }
       }
 
-      if ( schemaName ) try {
+      if ( schemaName && !createdSchemas.contains( Pair.pair( databaseName, schemaName ) ) ) try {
         //TODO use IF NOT EXISTS when we can require postgres 9.3
         dbExecute( databaseName, "CREATE SCHEMA \"${schemaName}\" AUTHORIZATION \"${userName}\"" )
       } catch (Exception e) {
@@ -742,7 +746,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     Component dbComp = Components.lookup( Database.class )
     dbComp.initService( )
     prepareService( )
-    
+
     true
   }
   

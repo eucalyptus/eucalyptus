@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2011-2014 Eucalyptus Systems, Inc.
+  Copyright 2011-2016 Eucalyptus Systems, Inc.
 
   Redistribution and use of this software in source and binary forms,
   with or without modification, are permitted provided that the following
@@ -25,7 +25,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2007-03-01/" name="ec2_amazonaws_com_doc_2007">
+<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2007-03-01/" name="ec2_amazonaws_com_doc_2007_03_01">
   <namespace uri="http://ec2.amazonaws.com/doc/2007-03-01/" default="elements" />
   <include path="classpath:ec2-null-base.xml" />
   <include path="classpath:ec2-instances.xml" />

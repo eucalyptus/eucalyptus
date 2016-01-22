@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,16 +62,15 @@
 
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.Faults.FaultRecord
-import com.eucalyptus.scripting.Groovyness
 import com.eucalyptus.util.Exceptions
 import com.google.common.base.Throwables
 
-summary = ""
-details = ""
+def summary = ''
+def details = ''
 faults.each{ FaultRecord f ->
-  ServiceConfiguration s = Groovyness.expandoMetaClass(f.getServiceConfiguration( ));
+  ServiceConfiguration s = f.getServiceConfiguration( );
   summary += """
-- ${s.getFullName( )} ${f.getTransitionRecord( )?.getRule( ).getFromState( )}->${f.getFinalState( )} ${f.getError( ).getTimestamp( )}
+- ${s.getFullName( )} ${f.getTransitionRecord( )?.getRule( )?.getFromState( )}->${f.getFinalState( )} ${f.getError( ).getTimestamp( )}
   ${Throwables.getRootCause(f.getError( )).getMessage( )}
 """
   details += """

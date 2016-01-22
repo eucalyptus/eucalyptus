@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -76,6 +77,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -101,6 +103,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LockResource;
@@ -111,6 +114,7 @@ import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
 import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -120,6 +124,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -195,6 +200,8 @@ public class Topology {
     private static final AtomicInteger counter = new AtomicInteger( 0 );
     private static final AtomicBoolean busy    = new AtomicBoolean( false );
     private static final ReadWriteLock lock    = new ReentrantReadWriteLock( );
+    private static final AtomicReference<Set<String>> enabledClassNames =
+        new AtomicReference<>( Collections.<String>emptySet( ) );
 
     @Override
     public void fireEvent( final ClockTick event ) {
@@ -219,10 +226,15 @@ public class Topology {
           return;
         }
 
-        if ( ( Hosts.isCoordinator( ) || counter.incrementAndGet( ) % 5 == 0 ) && lock.writeLock( ).tryLock( ) ) {
+        final Set<String> enabledComponentClassNames = ImmutableSet.copyOf( Iterables.transform(
+            Topology.getInstance( ).services.values( ),
+            Functions.compose( Classes.nameFunction( ), ServiceConfigurations.componentId( ) ) ) );
+        if ( ( Hosts.isCoordinator( ) || counter.incrementAndGet( ) % 3 == 0 ||
+            !enabledClassNames.get( ).containsAll( enabledComponentClassNames ) ) && lock.writeLock( ).tryLock( ) ) {
           // Write lock acquisition is to ensure no other tasks in progress
           // we don't want to block others from running
           lock.writeLock( ).unlock( );
+          enabledClassNames.set( enabledComponentClassNames );
           try {
             Queue.INTERNAL.enqueue( call );
           } catch ( Exception ex ) {
