@@ -142,11 +142,6 @@ public class RegionSpoofingResolver extends DnsResolver {
                + SPOOF_AWS_REGIONS
                + " region="
                + REGION_NAME );
-    if ( !Strings.isNullOrEmpty( REGION_NAME ) && !REGION_NAME.equals( label1 ) ) {
-      LOG.debug( "Spoofing skipped mismatched Eucalyptus region name: " + name + " query-region=" + label1 + " region=" + REGION_NAME );
-      throw new NoSuchElementException( "Failed to lookup name: " + name );
-    }
-    LOG.debug( "Spoofing proceeding for name: " + name + " aws-service=" + label0 + " region=" + label1 );
     for ( ComponentId compId : ComponentIds.list( ) ) {
       if ( compId.getAwsServiceName( ).equals( label0 ) ) {
         LOG.debug( "Spoofing found component for name: "
@@ -176,5 +171,9 @@ public class RegionSpoofingResolver extends DnsResolver {
     }
     throw new NoSuchElementException( "Failed to lookup name: " + name );
   }
-  
+
+  @Override
+  public int getOrder( ) {
+    return DEFAULT_ORDER - 200;
+  }
 }
