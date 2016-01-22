@@ -169,7 +169,7 @@ public class Pipelines {
             }
             LOG.debug( "Maybe intercepting: " + hostHeader + " using " + f.getClass( ) );
             if ( Ats.from( compIdClass ).has( AwsServiceName.class ) 
-                && request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "\\.\\w+\\.amazonaws.com" ) ) {
+                && request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "\\.[\\w\\-]+\\.amazonaws.com" ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
             } else if ( request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${system.dns.dnsdomain}
