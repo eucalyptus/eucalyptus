@@ -141,5 +141,10 @@
 
   <spring:beans>
     <spring:import resource="classpath:eucalyptus-context.xml"/>
+
+    <!-- Override some mule defaults -->
+    <spring:bean name="_defaultPersistentQueueStore,_fileQueueStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryQueueStore"/>
+    <spring:bean name="_localPersistentObjectStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryObjectStore"/>
+    <spring:bean name="_localUserObjectStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryObjectStore"/>
   </spring:beans>
 </mule>

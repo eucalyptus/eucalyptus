@@ -85,7 +85,9 @@ import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.service.Service;
 import org.mule.api.transformer.Transformer;
 import org.mule.config.ConfigResource;
+import org.mule.config.DefaultMuleConfiguration;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
+import org.mule.context.DefaultMuleContextBuilder;
 import org.mule.context.DefaultMuleContextFactory;
 import org.mule.endpoint.EndpointURIEndpointBuilder;
 import org.mule.module.client.MuleClient;
@@ -104,6 +106,7 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
@@ -299,7 +302,11 @@ public class ServiceContextManager {
     }
     try {
       final SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-      muleCtx = contextFactory.createMuleContext( builder );
+      final DefaultMuleContextBuilder muleContextBuilder = new DefaultMuleContextBuilder( );
+      final DefaultMuleConfiguration muleConfiguration = new DefaultMuleConfiguration( );
+      muleConfiguration.setWorkingDirectory( BaseDirectory.RUN.getChildPath( "mule" ) );
+      muleContextBuilder.setMuleConfiguration( muleConfiguration );
+      muleCtx = contextFactory.createMuleContext( builder, muleContextBuilder );
       this.enabledCompIds.clear( );
       this.enabledCompIds.addAll( currentComponentIds );
     } catch ( final Exception ex ) {
