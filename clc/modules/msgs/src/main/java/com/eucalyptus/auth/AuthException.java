@@ -105,6 +105,7 @@ public class AuthException extends Exception {
   public static final String NO_SUCH_ROLE = "No such role";
   public static final String NO_SUCH_INSTANCE_PROFILE = "No such instance profile";
   public static final String NO_SUCH_ACCOUNT = "No such account";
+  public static final String NO_SUCH_LOGIN_PROFILE = "No such login profile";
   public static final String USER_GROUP_DELETE = "Can not delete user group";
   public static final String NO_SUCH_CERTIFICATE = "No such certificate";
   public static final String NO_SUCH_KEY = "No such access key";

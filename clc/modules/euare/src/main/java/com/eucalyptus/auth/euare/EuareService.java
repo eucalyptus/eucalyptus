@@ -468,6 +468,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
+        } else if ( AuthException.NO_SUCH_LOGIN_PROFILE.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Cannot find Login Profile for User " + userFound.getName( ) );
         }
       }
       LOG.error( e, e );
