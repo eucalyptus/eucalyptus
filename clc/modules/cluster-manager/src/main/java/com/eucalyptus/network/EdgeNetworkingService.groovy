@@ -37,11 +37,13 @@ import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.entities.Entities
+import com.eucalyptus.entities.PersistenceExceptions
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.Cidr
+import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.Pair
 import com.eucalyptus.util.Strings
 import com.google.common.base.Function
@@ -263,15 +265,23 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   }
 
   protected void updateFreeAddressesForSubnet( final String subnetIdForUpdate ) {
-    Entities.asDistinctTransaction( Subnet, new Function<String, Void>( ){
-      @Override
-      Void apply( final String subnetId ) {
-        final Subnet subnet = Entities.uniqueResult( Subnet.exampleWithName( null, subnetId ) )
-        subnet.setAvailableIpAddressCount(
-            Subnet.usableAddressesForSubnet( subnet.getCidr( ) ) - (int) Entities.count( PrivateAddress.tagged( subnetId ) )
-        )
-        null
+    try {
+      Entities.asDistinctTransaction( Subnet, new Function<String, Void>( ){
+        @Override
+        Void apply( final String subnetId ) {
+          final Subnet subnet = Entities.uniqueResult( Subnet.exampleWithName( null, subnetId ) )
+          subnet.setAvailableIpAddressCount(
+              Subnet.usableAddressesForSubnet( subnet.getCidr( ) ) - (int) Entities.count( PrivateAddress.tagged( subnetId ) )
+          )
+          null
+        }
+      } ).apply( subnetIdForUpdate );
+    } catch ( Exception e ) {
+      if ( PersistenceExceptions.isStaleUpdate( e ) ) {
+        logger.warn( "Unable to update free addresses for subnet " + subnetIdForUpdate )
+      } else {
+        throw Exceptions.toUndeclared( e );
       }
-    } ).apply( subnetIdForUpdate );
+    }
   }
 }
