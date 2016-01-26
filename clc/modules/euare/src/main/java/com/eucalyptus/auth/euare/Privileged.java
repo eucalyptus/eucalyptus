@@ -828,6 +828,9 @@ class Privileged {
         accountAdminActionPermittedIfAuthorized( requestUser, user ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    if ( null == user.getPassword( ) ) {
+      throw new AuthException( AuthException.NO_SUCH_LOGIN_PROFILE );
+    }
     setUserPassword( user, newPass );
   }
 
