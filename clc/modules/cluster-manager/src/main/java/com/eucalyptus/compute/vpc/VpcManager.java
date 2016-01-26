@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,6 +100,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -321,6 +322,10 @@ public class VpcManager {
                           networkInterface.getAttachment( ).getInstanceId( ) ) );
                 }
                 //noinspection ConstantConditions
+                final int maxInterfaces = VmTypes.lookup( vm.getInstanceType( ) ).getNetworkInterfaces( );
+                if ( deviceIndex < 0 || deviceIndex >= maxInterfaces ) {
+                  throw new ClientComputeException( "InvalidParameterValue", "Device index invalid for instance type" );
+                }
                 for ( final NetworkInterface eni : vm.getNetworkInterfaces( ) ) {
                   if ( eni.isAttached( ) && deviceIndex.equals( eni.getAttachment( ).getDeviceIndex( ) ) ) {
                     throw new ClientComputeException( "InvalidParameterValue", "Device index in use" );

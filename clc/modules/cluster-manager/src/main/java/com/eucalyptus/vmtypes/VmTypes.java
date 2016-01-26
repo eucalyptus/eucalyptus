@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vmtypes;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_3_0;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -77,6 +78,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
@@ -95,14 +97,18 @@ import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.Iterables;
@@ -203,7 +209,7 @@ public class VmTypes {
         if ( !(ex instanceof NoSuchElementException) ) LOG.error( ex );
         LOG.debug( ex, ex );
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
-        VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ) );
+        VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ), t.getEthernetInterfaceLimit( ) );
         vmType = Entities.persist( vmType );
         Iterators.size( vmType.getEphemeralDisks().iterator() ); // Ensure materialized
         return vmType;
@@ -334,7 +340,13 @@ public class VmTypes {
             if ( !this.vmTypeMap.containsKey( preDefVmType.getName() ) ) {
               this.vmTypeMap.putIfAbsent(
                 preDefVmType.getName( ),
-                VmType.create( preDefVmType.getName( ), preDefVmType.getCpu( ), preDefVmType.getDisk( ), preDefVmType.getMemory( ) ) );
+                VmType.create(
+                    preDefVmType.getName( ),
+                    preDefVmType.getCpu( ),
+                    preDefVmType.getDisk( ),
+                    preDefVmType.getMemory( ),
+                    preDefVmType.getEthernetInterfaceLimit( )
+                ) );
             }
           }
         }
@@ -414,77 +426,77 @@ public class VmTypes {
    */
   enum PredefinedTypes {
     T1MICRO( "t1.micro",
-            1, ROOTFS / 2, GB / 4,
+            1, ROOTFS / 2, GB / 4, 2,
             Attribute.ebsonly ),
     M1SMALL( "m1.small",
-            1, ROOTFS / 2, GB / 4,
+            1, ROOTFS / 2, GB / 4, 2,
             VirtualDevice.ephemeral0.create( "/dev/sda2", 10, EphemeralDisk.Format.ext3 ),
             VirtualDevice.ephemeral1.create( "/dev/sda3", 1, EphemeralDisk.Format.swap ) ),
     M1MEDIUM( "m1.medium",
-             1, ROOTFS, GB / 2,
+             1, ROOTFS, GB / 2, 2,
              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     C1MEDIUM( "c1.medium",
-             2, ROOTFS, GB / 2,
+             2, ROOTFS, GB / 2, 2,
              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     M1LARGE( "m1.large",
-            2, ROOTFS, GB / 2,
+            2, ROOTFS, GB / 2, 3,
             VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
             VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     M1XLARGE( "m1.xlarge",
-             2, ROOTFS, GB,
+             2, ROOTFS, GB, 4,
              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     M2XLARGE( "m2.xlarge",
-             2, ROOTFS, 2 * GB,
+             2, ROOTFS, 2 * GB, 4,
              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     C1XLARGE( "c1.xlarge",
-             2, ROOTFS, 2 * GB,
+             2, ROOTFS, 2 * GB, 4,
              VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
              VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     M3XLARGE( "m3.xlarge",
-             4, ROOTFS + ROOTFS / 2, 2 * GB,
+             4, ROOTFS + ROOTFS / 2, 2 * GB, 4,
              Attribute.ebsonly ),
     M22XLARGE( "m2.2xlarge",
-              2, 3 * ROOTFS, 4 * GB,
+              2, 3 * ROOTFS, 4 * GB, 4,
               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) ),
     M32XLARGE( "m3.2xlarge",
-              4, 3 * ROOTFS, 4 * GB,
+              4, 3 * ROOTFS, 4 * GB, 4,
               Attribute.ebsonly ),
     CC14XLARGE( "cc1.4xlarge",
-               8, 6 * ROOTFS, 3 * GB,
+               8, 6 * ROOTFS, 3 * GB, 4,
                VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     M24XLARGE( "m2.4xlarge",
-              8, 6 * ROOTFS, 4 * GB,
+              8, 6 * ROOTFS, 4 * GB, 8,
               VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
               VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     HI14XLARGE( "hi1.4xlarge",
-               8, 12 * ROOTFS, 6 * GB,
+               8, 12 * ROOTFS, 6 * GB, 8,
                Attribute.ssd,
                VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     CC28XLARGE( "cc2.8xlarge",
-               16, 12 * ROOTFS, 6 * GB,
+               16, 12 * ROOTFS, 6 * GB, 8,
                VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral2.create( "/dev/sdd", 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral3.create( "/dev/sde", 20, EphemeralDisk.Format.ext3 ) ),
     CG14XLARGE( "cg1.4xlarge",
-               16, 20 * ROOTFS, 12 * GB,
+               16, 20 * ROOTFS, 12 * GB, 8,
                Attribute.gpu,
                VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     CR18XLARGE( "cr1.8xlarge",
-               16, 24 * ROOTFS, 16 * GB,
+               16, 24 * ROOTFS, 16 * GB, 8,
                Attribute.ssd,
                VirtualDevice.ephemeral0.create( Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ),
                VirtualDevice.ephemeral1.create( "/dev/sdc", 20, EphemeralDisk.Format.ext3 ) ),
     HS18XLARGE( "hs1.8xlarge",
-               48, 24 * 100 * ROOTFS, 117 * GB ) {
+               48, 24 * 100 * ROOTFS, 117 * GB, 8 ) {
       {
         for ( int i = 0; i < 24; i++ ) {
           this.getEphemeralDisks( ).add( VirtualDevice.create( i, Images.DEFAULT_EPHEMERAL_DEVICE, 20, EphemeralDisk.Format.ext3 ) );
@@ -499,21 +511,21 @@ public class VmTypes {
     private final Integer            ethernetInterfaceLimit;
     private final Set<EphemeralDisk> ephemeralDisks = Sets.newHashSet( );
     
-    private PredefinedTypes( String name, Integer cpu, Integer disk, Integer memory, EphemeralDisk... disks ) {
+    private PredefinedTypes( String name, Integer cpu, Integer disk, Integer memory, Integer ethernetInterfaceLimit, EphemeralDisk... disks ) {
       this.name = name;
       this.cpu = cpu;
       this.disk = disk;
       this.memory = memory;
-      this.ethernetInterfaceLimit = 1;
+      this.ethernetInterfaceLimit = ethernetInterfaceLimit;
       this.ebsOnly = Boolean.FALSE;
     }
     
-    private PredefinedTypes( String name, Integer cpu, Integer disk, Integer memory, Attribute attribute, EphemeralDisk... disks ) {
+    private PredefinedTypes( String name, Integer cpu, Integer disk, Integer memory, Integer ethernetInterfaceLimit, Attribute attribute, EphemeralDisk... disks ) {
       this.name = name;
       this.cpu = cpu;
       this.disk = disk;
       this.memory = memory;
-      this.ethernetInterfaceLimit = 1;
+      this.ethernetInterfaceLimit = ethernetInterfaceLimit;
       this.ebsOnly = Attribute.ebsonly.equals( attribute );
     }
     
@@ -644,8 +656,31 @@ public class VmTypes {
       vmTypeDetails.setCpu( vmType.getCpu( ) );
       vmTypeDetails.setDisk( vmType.getDisk( ) );
       vmTypeDetails.setMemory( vmType.getMemory( ) );
+      vmTypeDetails.setNetworkInterfaces( vmType.getNetworkInterfaces( ) );
       return vmTypeDetails;
     }
   }
 
+  @EntityUpgrade( entities = VmType.class,  since = v4_3_0, value = Compute.class )
+  public enum VmType430Upgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger logger = Logger.getLogger( VmType430Upgrade.class );
+
+    @Override
+    public boolean apply( Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( VmType.class ) ) {
+        for ( final VmType type : Entities.criteriaQuery( VmType.class ).list( ) ) {
+          final Optional<PredefinedTypes> predefinedType =
+              Enums.getIfPresent( PredefinedTypes.class, type.getName( ).toUpperCase( ).replace( ".", "" ) );
+          if ( predefinedType.isPresent( ) && type.getNetworkInterfaces( ) == null ) {
+            final Integer networkInterfaces = predefinedType.get( ).getEthernetInterfaceLimit( );
+            logger.info( "Updating instance type " + type.getName( ) + " with max enis " + networkInterfaces );
+            type.setNetworkInterfaces( networkInterfaces );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
+    }
+  }
 }

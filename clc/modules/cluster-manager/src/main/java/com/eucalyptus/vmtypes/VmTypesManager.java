@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +89,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.vmtypes.VmTypes.PredefinedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 public class VmTypesManager {
@@ -118,6 +118,7 @@ public class VmTypesManager {
           this.setDisk( v.getDisk( ) );
           this.setCpu( v.getCpu( ) );
           this.setMemory( v.getMemory( ) );
+          this.setNetworkInterfaces( v.getNetworkInterfaces( ) );
           if ( request.getVerbose( ) ) {
             for ( EphemeralDisk e : v.getEphemeralDisks() ) {
               this.getEphemeralDisk( ).add( new VmTypeEphemeralDisk( e.getDiskName( ), e.getDeviceName( ), e.getSize( ), e.getFormat( ).name( ) ) );
@@ -154,10 +155,12 @@ public class VmTypesManager {
               vmType.setCpu( defaultVmType.getCpu( ) );
               vmType.setDisk( defaultVmType.getDisk( ) );
               vmType.setMemory( defaultVmType.getMemory( ) );
+              vmType.setNetworkInterfaces( defaultVmType.getEthernetInterfaceLimit( ) );
             } else {
-              vmType.setCpu( Objects.firstNonNull( request.getCpu( ), vmType.getCpu( ) ) );
-              vmType.setDisk( Objects.firstNonNull( request.getDisk( ), vmType.getDisk( ) ) );
-              vmType.setMemory( Objects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
+              vmType.setCpu( MoreObjects.firstNonNull( request.getCpu( ), vmType.getCpu( ) ) );
+              vmType.setDisk( MoreObjects.firstNonNull( request.getDisk( ), vmType.getDisk( ) ) );
+              vmType.setMemory( MoreObjects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
+              vmType.setNetworkInterfaces( MoreObjects.firstNonNull( request.getNetworkInterfaces( ), vmType.getNetworkInterfaces( ) ) );
             }
             //GRZE:TODO:EUCA-3500 do the appropriate sanity checks here.
             VmTypes.update( vmType );

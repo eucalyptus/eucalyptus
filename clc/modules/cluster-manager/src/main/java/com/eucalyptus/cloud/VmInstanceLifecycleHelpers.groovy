@@ -826,9 +826,21 @@ class VmInstanceLifecycleHelpers {
             networkInterfaceAvailabilityZone = networkInterface.availabilityZone
           }
         }
+        int maxInterfaces = allocation.getVmType( )?.getNetworkInterfaces( )?:1
+        Set<Integer> deviceIndexes = [ 0 ] as Set<Integer>
         secondaryNetworkInterfaces.each { InstanceNetworkInterfaceSetItemRequestType networkInterfaceItem ->
           if ( networkInterfaceItem.networkInterfaceId != null && ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) ) {
             throw new InvalidMetadataException("Network interface can only be specified for a single instance")
+          }
+
+          // check device indexes against instance type here?
+          Integer networkInterfaceDeviceIndex = networkInterfaceItem.deviceIndex
+          if ( networkInterfaceDeviceIndex == null ) {
+            throw new InvalidMetadataException("Network interface device index required" )
+          } else if ( !deviceIndexes.add( networkInterfaceDeviceIndex ) ) {
+            throw new InvalidMetadataException("Network interface duplicate device index (${networkInterfaceDeviceIndex})" )
+          } else if ( networkInterfaceDeviceIndex < 1 || networkInterfaceDeviceIndex >= maxInterfaces ) {
+            throw new InvalidMetadataException("Network interface device index (${networkInterfaceDeviceIndex}) invalid for instance type")
           }
 
           //TODO:STEVE: verify other info (private address for subnet etc)

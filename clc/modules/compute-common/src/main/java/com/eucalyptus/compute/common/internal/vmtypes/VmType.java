@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,7 +150,10 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @Column( name = "config_vm_type_64bit_only" )
   private Boolean            x86_64only;
-  
+
+  @Column( name = "config_vm_type_enis" )
+  private Integer            networkInterfaces;
+
   @ElementCollection
   @CollectionTable( name = "config_vm_types_ephemeral_disks" )
   private Set<EphemeralDisk> ephemeralDisks = Sets.newHashSet( );
@@ -162,11 +165,18 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     this.setNaturalId( Crypto.getDigestBase64( name, Digest.SHA1 ) );//this ensures that natural ids are used when unique queries are performed.
   }
   
-  private VmType( final String name, final Integer cpu, final Integer disk, final Integer memory ) {
+  private VmType(
+      final String name,
+      final Integer cpu,
+      final Integer disk,
+      final Integer memory,
+      final Integer networkInterfaces
+  ) {
     this( name );
     this.cpu = cpu;
     this.disk = disk;
     this.memory = memory;
+    this.networkInterfaces = networkInterfaces;
   }
   
   public static VmType create( ) {
@@ -376,7 +386,15 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   void setX86_64only( Boolean x86_64only ) {
     this.x86_64only = x86_64only;
   }
-  
+
+  public Integer getNetworkInterfaces( ) {
+    return networkInterfaces;
+  }
+
+  public void setNetworkInterfaces( final Integer networkInterfaces ) {
+    this.networkInterfaces = networkInterfaces;
+  }
+
   public Set<EphemeralDisk> getEphemeralDisks() {
     return this.ephemeralDisks;
   }
@@ -393,8 +411,8 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return new VmType.EphemeralBuilder( this );
   }
   
-  public static VmType create( String name, Integer cpu, Integer disk, Integer memory ) {
-    return new VmType( name, cpu, disk, memory );
+  public static VmType create( String name, Integer cpu, Integer disk, Integer memory, Integer networkInterfaces ) {
+    return new VmType( name, cpu, disk, memory, networkInterfaces );
   }
   
   public static VmType named( String name ) {

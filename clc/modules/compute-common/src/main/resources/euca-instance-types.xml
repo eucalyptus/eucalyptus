@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2011-2014 Eucalyptus Systems, Inc.
+  Copyright 2011-2016 Eucalyptus Systems, Inc.
 
   Redistribution and use of this software in source and binary forms,
   with or without modification, are permitted provided that the following
@@ -35,6 +35,7 @@
         <value name="cpu" field="cpu" usage="optional" style="element"/>
         <value name="disk" field="disk" usage="optional" style="element"/>
         <value name="memory" field="memory" usage="optional" style="element"/>
+        <value name="networkInterfaces" field="networkInterfaces" usage="optional" style="element"/>
         <structure name="availability" usage="optional">
             <collection factory="com.eucalyptus.binding.Binding.listFactory" field="availability" usage="required">
                 <structure name="item" map-as="com.eucalyptus.compute.common.VmTypeZoneStatus"/>
