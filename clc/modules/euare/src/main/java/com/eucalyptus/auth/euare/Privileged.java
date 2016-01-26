@@ -330,10 +330,9 @@ class Privileged {
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_ADDUSERTOGROUP, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( group.hasUser( user.getName( ) ) ) {
-      throw new AuthException( AuthException.CONFLICT );
+    if ( !group.hasUser( user.getName( ) ) ) {
+      group.addUserByName( user.getName( ) );
     }
-    group.addUserByName( user.getName( ) );
   }
   
   public static void removeUserFromGroup( AuthContext requestUser, EuareAccount account, User user, EuareGroup group ) throws AuthException {
@@ -341,10 +340,9 @@ class Privileged {
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_REMOVEUSERFROMGROUP, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( !group.hasUser( user.getName( ) ) ) {
-      throw new AuthException( AuthException.NO_SUCH_USER );
+    if ( group.hasUser( user.getName( ) ) ) {
+      group.removeUserByName( user.getName( ) );
     }
-    group.removeUserByName( user.getName( ) );
   }
   
   public static List<EuareGroup> listGroupsForUser( AuthContext requestUser, EuareAccount account, EuareUser user ) throws AuthException {
