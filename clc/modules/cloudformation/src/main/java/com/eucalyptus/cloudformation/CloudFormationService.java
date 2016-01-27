@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest;
+import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Permissions;
@@ -131,7 +132,64 @@ public class CloudFormationService {
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);
 
   public CancelUpdateStackResponseType cancelUpdateStack( CancelUpdateStackType request ) throws CloudFormationException {
-    return request.getReply( );
+    CancelUpdateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = ctx.getAccountNumber();
+      final String accountAlias = ctx.getAccountAlias();
+      final String stackName = request.getStackName();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
+      if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
+        stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, null);
+      }
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        throw new AccessDeniedException( "Not authorized." );
+      }
+      if (stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS) {
+        throw new ValidationErrorException("CancelUpdateStack cannot be called from current stack status.");
+      }
+      final String stackAccountId = stackEntity.getAccountId( );
+
+      // check to see if there is an update workflow.  :
+      boolean existingOpenUpdateWorkflow = false;
+      List<StackWorkflowEntity> updateWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW);
+      if ( updateWorkflows != null && !updateWorkflows.isEmpty( ) ) {
+        if (updateWorkflows.size() > 1) {
+          throw new ValidationErrorException("More than one update workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
+        }
+        try {
+          AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
+          StackWorkflowEntity updateStackWorkflowEntity = updateWorkflows.get(0);
+          DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+          describeWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
+          WorkflowExecution execution = new WorkflowExecution();
+          execution.setRunId(updateStackWorkflowEntity.getRunId());
+          execution.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
+          describeWorkflowExecutionRequest.setExecution(execution);
+          WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+          if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+            RequestCancelWorkflowExecutionRequest requestCancelWorkflowExecutionRequest = new RequestCancelWorkflowExecutionRequest();
+            requestCancelWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
+            requestCancelWorkflowExecutionRequest.setRunId(updateStackWorkflowEntity.getRunId());
+            requestCancelWorkflowExecutionRequest.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
+            simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowExecutionRequest);
+          }
+        } catch (Exception ex) {
+          LOG.error(ex);
+          LOG.debug(ex, ex);
+          throw new ValidationErrorException("Unable to cancel update workflow for " + stackEntity.getStackId());
+        }
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
   }
 
   public CreateStackResponseType createStack( final CreateStackType request ) throws CloudFormationException {
@@ -915,8 +973,6 @@ public class CloudFormationService {
     UpdateStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      // IAM Action Check
-      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccountNumber();
