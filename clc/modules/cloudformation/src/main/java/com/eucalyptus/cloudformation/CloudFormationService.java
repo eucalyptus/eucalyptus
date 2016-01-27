@@ -145,44 +145,45 @@ public class CloudFormationService {
       if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
         stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, null);
       }
-      if ( stackEntity != null ) {
-        if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
-          throw new AccessDeniedException( "Not authorized." );
-        }
-        if (stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS) {
-          throw new ValidationErrorException("CancelUpdateStack cannot be called from current stack status.");
-        }
-        final String stackAccountId = stackEntity.getAccountId( );
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        throw new AccessDeniedException( "Not authorized." );
+      }
+      if (stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS) {
+        throw new ValidationErrorException("CancelUpdateStack cannot be called from current stack status.");
+      }
+      final String stackAccountId = stackEntity.getAccountId( );
 
-        // check to see if there is an update workflow.  :
-        boolean existingOpenUpdateWorkflow = false;
-        List<StackWorkflowEntity> updateWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW);
-        if ( updateWorkflows != null && !updateWorkflows.isEmpty( ) ) {
-          if (updateWorkflows.size() > 1) {
-            throw new ValidationErrorException("More than one update workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
+      // check to see if there is an update workflow.  :
+      boolean existingOpenUpdateWorkflow = false;
+      List<StackWorkflowEntity> updateWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW);
+      if ( updateWorkflows != null && !updateWorkflows.isEmpty( ) ) {
+        if (updateWorkflows.size() > 1) {
+          throw new ValidationErrorException("More than one update workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
+        }
+        try {
+          AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
+          StackWorkflowEntity updateStackWorkflowEntity = updateWorkflows.get(0);
+          DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+          describeWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
+          WorkflowExecution execution = new WorkflowExecution();
+          execution.setRunId(updateStackWorkflowEntity.getRunId());
+          execution.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
+          describeWorkflowExecutionRequest.setExecution(execution);
+          WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+          if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+            RequestCancelWorkflowExecutionRequest requestCancelWorkflowExecutionRequest = new RequestCancelWorkflowExecutionRequest();
+            requestCancelWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
+            requestCancelWorkflowExecutionRequest.setRunId(updateStackWorkflowEntity.getRunId());
+            requestCancelWorkflowExecutionRequest.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
+            simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowExecutionRequest);
           }
-          try {
-            AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
-            StackWorkflowEntity updateStackWorkflowEntity = updateWorkflows.get(0);
-            DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
-            describeWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
-            WorkflowExecution execution = new WorkflowExecution();
-            execution.setRunId(updateStackWorkflowEntity.getRunId());
-            execution.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
-            describeWorkflowExecutionRequest.setExecution(execution);
-            WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
-            if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
-              RequestCancelWorkflowExecutionRequest requestCancelWorkflowExecutionRequest = new RequestCancelWorkflowExecutionRequest();
-              requestCancelWorkflowExecutionRequest.setDomain(updateStackWorkflowEntity.getDomain());
-              requestCancelWorkflowExecutionRequest.setRunId(updateStackWorkflowEntity.getRunId());
-              requestCancelWorkflowExecutionRequest.setWorkflowId(updateStackWorkflowEntity.getWorkflowId());
-              simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowExecutionRequest);
-            }
-          } catch (Exception ex) {
-            LOG.error(ex);
-            LOG.debug(ex, ex);
-            throw new ValidationErrorException("Unable to cancel update workflow for " + stackEntity.getStackId());
-          }
+        } catch (Exception ex) {
+          LOG.error(ex);
+          LOG.debug(ex, ex);
+          throw new ValidationErrorException("Unable to cancel update workflow for " + stackEntity.getStackId());
         }
       }
     } catch (Exception ex) {
