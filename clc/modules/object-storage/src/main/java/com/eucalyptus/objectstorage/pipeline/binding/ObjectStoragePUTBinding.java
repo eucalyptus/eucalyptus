@@ -85,6 +85,9 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
 
+    // Cross-Origin Resource Sharing (cors)
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "SetBucketCors");
+
     // Object operations
     SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
     SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString(), "PutObject");
@@ -103,8 +106,6 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
   private static final Map<String, String> UNSUPPORTED_OPS = new HashMap<>();
   static {
     // Bucket operations
-    // Cross-Origin Resource Sharing (cors)
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
 
     // Policy
     UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");

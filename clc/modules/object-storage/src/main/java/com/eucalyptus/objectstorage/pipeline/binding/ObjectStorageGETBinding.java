@@ -94,6 +94,9 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GetBucketTagging");
+    // Cross-Origin Resource Sharing (cors)
+    newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GetBucketCors");
+
 
     // Multipart uploads
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
@@ -114,9 +117,6 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     Map<String, String> opsMap = new HashMap<>();
 
     // Bucket operations
-    // Cross-Origin Resource Sharing (cors)
-    opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GET Bucket cors");
-
     // Policy
     opsMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "GET Bucket policy");
 

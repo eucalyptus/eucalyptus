@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,54 +60,98 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.binding;
+package com.eucalyptus.objectstorage.entities;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Index;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import com.eucalyptus.entities.AbstractPersistent;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+@Entity
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "cors_rules", indexes = {
+    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+})
+public class CorsRule extends AbstractPersistent {
+ 
+  @Column(name = "bucket_uuid")
+  private String bucketUuid;
 
-public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStorageDELETEBinding.class);
+  @Column(name = "rule_id")
+  private String ruleId;
 
-  @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
+  @Column(name = "allowed_methods_json")
+  private String allowedMethodsJSON;
 
-    // Bucket operations
-    newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
+  @Column(name = "allowed_origins_json")
+  private String allowedOriginsJSON;
 
-    // Cross-Origin Resource Sharing (cors)
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
+  @Column(name = "allowed_headers_json")
+  private String allowedHeadersJSON;
 
-    // Object operations
-    newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+  @Column(name = "max_age_seconds")
+  private Integer maxAgeSeconds;
 
-    // Multipart Uploads
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-        "AbortMultipartUpload");
+  @Column(name = "expose_headers_json")
+  private String exposeHeadersJSON;
 
-    return newMap;
+  public String getBucketUuid() {
+    return bucketUuid;
   }
 
-  protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-
-    // Bucket operations
-
-    // Policy
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
-
-    // Website
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-
-    // Object operations
-    return opsMap;
+  public void setBucketUuid(String bucketUuid) {
+    this.bucketUuid = bucketUuid;
   }
+
+  public String getRuleId() {
+    return ruleId;
+  }
+
+  public void setRuleId(String ruleId) {
+    this.ruleId = ruleId;
+  }
+
+  public String getAllowedMethodsJSON() {
+    return allowedMethodsJSON;
+  }
+
+  public void setAllowedMethodsJSON(String allowedMethodsJSON) {
+    this.allowedMethodsJSON = allowedMethodsJSON;
+  }
+
+  public String getAllowedOriginsJSON() {
+    return allowedOriginsJSON;
+  }
+
+  public void setAllowedOriginsJSON(String allowedOriginsJSON) {
+    this.allowedOriginsJSON = allowedOriginsJSON;
+  }
+
+  public String getAllowedHeadersJSON() {
+    return allowedHeadersJSON;
+  }
+
+  public void setAllowedHeadersJSON(String allowedHeadersJSON) {
+    this.allowedHeadersJSON = allowedHeadersJSON;
+  }
+
+  public Integer getMaxAgeSeconds() {
+    return maxAgeSeconds;
+  }
+
+  public void setMaxAgeSeconds(Integer maxAgeSeconds) {
+    this.maxAgeSeconds = maxAgeSeconds;
+  }
+
+  public String getExposeHeadersJSON() {
+    return exposeHeadersJSON;
+  }
+
+  public void setExposeHeadersJSON(String exposeHeadersJSON) {
+    this.exposeHeadersJSON = exposeHeadersJSON;
+  }
+
 }

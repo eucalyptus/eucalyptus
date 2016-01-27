@@ -81,6 +81,9 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.lang.StringUtils;
@@ -133,6 +136,8 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
 import com.eucalyptus.storage.msgs.s3.Expiration;
@@ -593,6 +598,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
         && params.containsKey(ObjectStorageProperties.BucketParameter.tagging.toString())) {
       operationParams.put("taggingConfiguration", getTagging(httpRequest));
+    }
+
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
+        && params.containsKey(ObjectStorageProperties.BucketParameter.cors.toString())) {
+      operationParams.put("corsConfiguration", getCors(httpRequest));
     }
 
     ArrayList paramsToRemove = new ArrayList();
@@ -1498,6 +1508,114 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
     return lifecycleRule;
+  }
+
+  private CorsConfiguration getCors(MappingHttpRequest httpRequest) throws S3Exception {
+    CorsConfiguration corsConfigurationType = new CorsConfiguration();
+    corsConfigurationType.setRules(new ArrayList<CorsRule>());
+    String message = getMessageString(httpRequest);
+    if (message.length() > 0) {
+      try {
+        XMLParser xmlParser = new XMLParser(message);
+        DTMNodeList rules = xmlParser.getNodes("//CORSConfiguration/CORSRule");
+        if (rules == null) {
+          throw new MalformedXMLException("/CORSConfiguration/CORSRule");
+        }
+        for (int idx = 0; idx < rules.getLength(); idx++) {
+          CorsRule extractedCorsRule = extractCorsRule(xmlParser, rules.item(idx));
+          corsConfigurationType.getRules().add(extractedCorsRule);
+        }
+      } catch (S3Exception e) {
+        throw e;
+      } catch (Exception ex) {
+        MalformedXMLException e = new MalformedXMLException("/CORSConfiguration");
+        e.initCause(ex);
+        throw e;
+      }
+    }
+    return corsConfigurationType;
+  }
+
+  private CorsRule extractCorsRule(XMLParser parser, Node node) throws S3Exception {
+    CorsRule corsRule = new CorsRule();
+
+    LOG.debug("In extractCorsRule"); //LPT
+
+    try {
+
+      String id = parser.getValue(node, "ID");
+      // Don't populate the ID if it's empty
+      if (id != null && id.length() > 0) {
+        corsRule.setId(id);
+      }
+
+      String maxAgeSecondsString = parser.getValue(node, "MaxAgeSeconds");
+      if (maxAgeSecondsString != null) {
+        try {
+          int maxAgeSeconds = Integer.parseInt(maxAgeSecondsString);
+          // Don't populate the max age if it's negative (invalid) or zero (the default)
+          if (maxAgeSeconds > 0) {  
+            corsRule.setMaxAgeSeconds(maxAgeSeconds);
+          }
+        } catch (NumberFormatException nfe) {
+          // Should only get here on an empty (but not null) string
+        }
+      }
+
+      String[] corsElementArray = null;
+
+      corsElementArray = extractCorsElementArray(parser, node, "AllowedMethod");
+      corsRule.setAllowedMethods(corsElementArray);
+
+      corsElementArray = extractCorsElementArray(parser, node, "AllowedOrigin");
+      corsRule.setAllowedOrigins(corsElementArray);
+
+      corsElementArray = extractCorsElementArray(parser, node, "AllowedHeader");
+      corsRule.setAllowedHeaders(corsElementArray);
+
+      corsElementArray = extractCorsElementArray(parser, node, "ExposeHeader");
+      corsRule.setExposeHeaders(corsElementArray);
+
+    } catch (S3Exception e) {
+      throw e;
+    } catch (Exception ex) {
+      MalformedXMLException e = new MalformedXMLException("/CORSConfiguration/CORSRule");
+      e.initCause(ex);
+      throw e;
+    }
+
+    return corsRule;
+  }
+
+  private String[] extractCorsElementArray(XMLParser parser, Node node, String element) throws S3Exception {
+    String[] elementArray = null;
+    try {
+
+      DTMNodeList elementNodes = parser.getNodes(node, element);
+      if (elementNodes == null) {
+        throw new MalformedXMLException("/CORSConfiguration/CORSRule/" + element);
+      }
+      int elementNodesSize = elementNodes.getLength();
+      LOG.debug("elementNodes list size is " + elementNodesSize); //LPT
+
+      if (elementNodesSize > 0) {
+        elementArray = new String[elementNodesSize];
+        for (int idx = 0; idx < elementNodes.getLength(); idx++) {
+          Node elementNode = elementNodes.item(idx);
+          LOG.debug("Node value is <" + elementNode.getNodeValue() + ">"); //LPT
+          elementArray[idx] = elementNode.getFirstChild().getNodeValue();
+          LOG.debug("Node first child value is <" + elementArray[idx] + ">"); //LPT
+        }
+      }
+    } catch (S3Exception e) {
+      throw e;
+    } catch (Exception ex) {
+      MalformedXMLException e = new MalformedXMLException("/CORSConfiguration/CORSRule");
+      e.initCause(ex);
+      throw e;
+    }
+
+    return elementArray;
   }
 
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {

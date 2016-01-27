@@ -1,107 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="modules/autoscaling-backend/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling-backend/src/test/java"/>
-	<classpathentry kind="src" path="modules/autoscaling-service/src/main/java"/>
-	<classpathentry kind="src" path="modules/autoscaling-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudformation-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudformation/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudformation/src/test/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-backend/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-backend/src/test/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-common/src/test/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-service/src/main/java"/>
-	<classpathentry kind="src" path="modules/cloudwatch-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/cluster-manager/src/test/groovy"/>
-	<classpathentry kind="src" path="modules/compute-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/compute-common/src/test/java"/>
-	<classpathentry kind="src" path="modules/compute-service/src/main/java"/>
-	<classpathentry kind="src" path="modules/compute-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/configuration/conf/scripts"/>
-	<classpathentry kind="src" path="modules/database-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/database-common/src/test/java"/>
-	<classpathentry kind="src" path="modules/euca-resources-support/src/main/java"/>
-	<classpathentry kind="src" path="modules/euca-resources-support/src/test/java"/>
-	<classpathentry kind="src" path="modules/imaging-backend/src/main/java"/>
-	<classpathentry kind="src" path="modules/imaging-backend/src/test/java"/>
-	<classpathentry kind="src" path="modules/imaging-service/src/main/java"/>
-	<classpathentry kind="src" path="modules/imaging-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/loadbalancing-backend/src/main/java"/>
-	<classpathentry kind="src" path="modules/loadbalancing-backend/src/test/java"/>
-	<classpathentry kind="src" path="modules/loadbalancing-service/src/main/java"/>
-	<classpathentry kind="src" path="modules/loadbalancing-service/src/test/java"/>
-	<classpathentry kind="src" path="modules/msgs/conf/jmx"/>
-	<classpathentry kind="src" path="modules/msgs/conf/scripts"/>
-	<classpathentry kind="src" path="modules/msgs/src/test/groovy"/>
-	<classpathentry kind="src" path="modules/postgresql/conf/init.d"/>
-	<classpathentry kind="src" path="modules/postgresql/conf/scripts"/>
-	<classpathentry kind="src" path="modules/simpleworkflow-common/src/main/java"/>
-	<classpathentry kind="src" path="modules/simpleworkflow-common/src/test/java"/>
-	<classpathentry kind="src" path="modules/simpleworkflow/src/main/java"/>
-	<classpathentry kind="src" path="modules/simpleworkflow/src/test/java"/>
-	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
-	<classpathentry kind="src" path="modules/www/conf/www"/>
-	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
-	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/test/java"/>
-	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/block-storage/build" path="modules/block-storage/src/main/java"/>
-	<classpathentry kind="src" output="modules/block-storage/build" path="modules/block-storage/src/test/java"/>
-	<classpathentry kind="src" output="modules/block-storage-common/build" path="modules/block-storage-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/block-storage-common/build" path="modules/block-storage-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/test/java"/>
-	<classpathentry kind="src" output="modules/cloudwatch/build" path="modules/cloudwatch/src/main/java"/>
-	<classpathentry kind="src" output="modules/cloudwatch/build" path="modules/cloudwatch/src/test/java"/>
-	<classpathentry kind="src" output="modules/cloudwatch-common/build" path="modules/cloudwatch-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/main/java"/>
-	<classpathentry kind="src" output="modules/cluster-manager/build" path="modules/cluster-manager/src/test/java"/>
-	<classpathentry kind="src" output="modules/component/build" path="modules/component/src/main/java"/>
-	<classpathentry kind="src" output="modules/component/build" path="modules/component/src/test/java"/>
-	<classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/main/java"/>
-	<classpathentry kind="src" output="modules/configuration/build" path="modules/configuration/src/test/java"/>
-	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/main/java"/>
-	<classpathentry kind="src" output="modules/core/build" path="modules/core/src/test/java"/>
-	<classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/main/java"/>
-	<classpathentry kind="src" output="modules/dns/build" path="modules/dns/src/test/java"/>
-	<classpathentry kind="src" output="modules/euare/build" path="modules/euare/src/main/java"/>
-	<classpathentry kind="src" output="modules/euare/build" path="modules/euare/src/test/java"/>
-	<classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/euare-common/build" path="modules/euare-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/imaging-common/build" path="modules/imaging-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/imaging-common/build" path="modules/imaging-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/loadbalancing/build" path="modules/loadbalancing/src/main/java"/>
-	<classpathentry kind="src" output="modules/loadbalancing/build" path="modules/loadbalancing/src/test/java"/>
-	<classpathentry kind="src" output="modules/loadbalancing-common/build" path="modules/loadbalancing-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/loadbalancing-common/build" path="modules/loadbalancing-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/main/java"/>
-	<classpathentry kind="src" output="modules/msgs/build" path="modules/msgs/src/test/java"/>
-	<classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/main/java"/>
-	<classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/test/java"/>
-	<classpathentry kind="src" output="modules/object-storage/build" path="modules/object-storage/src/main/java"/>
-	<classpathentry kind="src" output="modules/object-storage/build" path="modules/object-storage/src/test/java"/>
-	<classpathentry kind="src" output="modules/object-storage-common/build" path="modules/object-storage-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/object-storage-common/build" path="modules/object-storage-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/postgresql/build" path="modules/postgresql/src/main/java"/>
-	<classpathentry kind="src" output="modules/postgresql/build" path="modules/postgresql/src/test/java"/>
-	<classpathentry kind="src" output="modules/reporting/build" path="modules/reporting/src/main/java"/>
-	<classpathentry kind="src" output="modules/reporting/build" path="modules/reporting/src/test/java"/>
-	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/tokens/build" path="modules/tokens/src/main/java"/>
-	<classpathentry kind="src" output="modules/tokens/build" path="modules/tokens/src/test/java"/>
-	<classpathentry kind="src" output="modules/tokens-common/build" path="modules/tokens-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/tokens-common/build" path="modules/tokens-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/troubleshooting/build" path="modules/troubleshooting/src/main/java"/>
-	<classpathentry kind="src" output="modules/troubleshooting/build" path="modules/troubleshooting/src/test/java"/>
-	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
-	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/test/java"/>
-	<classpathentry kind="src" output="modules/walrus-common/build" path="modules/walrus-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/walrus-common/build" path="modules/walrus-common/src/test/java"/>
-	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
-	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/test/java"/>
-	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
-	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/test/java"/>
+	<classpathentry exported="true" kind="con" path="GROOVY_DSL_SUPPORT"/>
+	<classpathentry exported="true" kind="con" path="GROOVY_SUPPORT"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry exported="true" kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/antlr-3.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/antlrall.jar"/>
@@ -112,6 +13,7 @@
 	<classpathentry exported="true" kind="lib" path="lib/axiom-api-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/axiom-dom-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/axiom-impl-1.2.8.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/bcel-6.0-SNAPSHOT-1692775.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bcpkix-jdk15on-150.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bcprov-jdk15on-150.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bsf-2.4.0.jar"/>
@@ -135,34 +37,20 @@
 	<classpathentry exported="true" kind="lib" path="lib/excalibur-logkit.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/ezmorph-1.0.6.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/freemarker-2.3.18.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/geronimo-activation_1.1_spec-1.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/geronimo-ejb-3.0-spec-1.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-j2ee-connector_1.5_spec-2.0.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/geronimo-j2ee-management_1.1_spec-1.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-javamail_1.4_provider-1.8.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-javamail_1.4_spec-1.7.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/geronimo-jms_1.1_spec-1.1.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/glisten-0.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/groovy-all-2.2.1-indy.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/guava-14.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/ha-jdbc-3.0.2.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/glisten-0.3.euca.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/groovy-all-2.4.5-indy.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/guava-18.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/hamcrest-all-1.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-commons-annotations-4.0.2.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-core-4.2.3.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-entitymanager-4.2.3.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-infinispan-4.2.3.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-jpa-2.0-api-1.0.1.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/hibernate-proxool-4.2.3.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/httpclient-4.2.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/httpcore-4.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/infinispan-core-5.2.6.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jackson-annotations-2.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jackson-core-2.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jackson-core-asl-1.8.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jackson-databind-2.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jackson-mapper-asl-1.8.7.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/javassist-3.17.1-GA.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/javax.inject-1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jaxen-1.1.4.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jaxp-1.3.jar"/>
@@ -170,7 +58,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/jboss-logging-3.1.3.GA.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jboss-marshalling-1.3.17.GA.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jboss-marshalling-river-1.3.17.GA.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/jboss-transaction-api_1.1_spec-1.0.0.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jcip-annotations-1.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jcl-over-slf4j-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jetty-continuation-8.1.10.v20130312.jar"/>
@@ -201,16 +88,17 @@
 	<classpathentry exported="true" kind="lib" path="lib/jug-asl-2.0.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/jul-to-slf4j-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/log4j-1.2.17.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-core-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-annotations-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-builders-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-client-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-management-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-spring-config-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-module-xml-3.4.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mule-transport-vm-3.4.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-core-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-extensions-api-1.0.0-alpha.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-annotations-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-builders-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-client-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-management-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-spring-config-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-module-xml-3.7.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-mvel2-2.1.9-MULE-006.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/mule-transport-vm-3.7.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/mvel2-2.1.3.Final.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/mysql-connector-java-commercial-5.1.18-bin.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/netty-3.6.6.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/org.simpleframework-3.1.3.jar"/>
@@ -219,34 +107,141 @@
 	<classpathentry exported="true" kind="lib" path="lib/proxool-cglib.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/quartz-2.1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/rados-1.0-SNAPSHOT.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/serializer.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/reflections-0.9.9.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/regexp.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/servlet-api-3.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/slf4j-api-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/slf4j-log4j12-1.7.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/spock-core-0.7-groovy-2.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-aop-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-beans-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-context-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-context-support-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-core-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-expression-3.2.3.RELEASE.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/spring-web-3.2.3.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-aop-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-beans-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-context-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-context-support-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-core-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-expression-4.1.8.RELEASE.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/spring-web-4.1.8.RELEASE.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/stax-1.2.0.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/stax2-api-3.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/stax-api-1.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/staxmapper-1.1.0.Final.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/stax-utils-20080702-osgi.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/stax2-api-3.1.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/staxmapper-1.1.0.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/tests/derby-10.8.3.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/tests/jmock-2.6.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/tests/jmock-junit4-2.6.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/tests/junit-4.11.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/uuid-3.4.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/velocity-1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/woodstox-core-asl-4.2.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/wrapper-3.2.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/wss4j-1.6.13.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/xalan2.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/xalan-j2-serializer.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/xalan-j2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xercesImpl-2.11.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xml-apis-1.4.01.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xmlsec-1.5.6.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xom-1.2.9.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xpp3-1.1.4c.jar"/>
-	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="src" path="modules/autoscaling-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/block-storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/block-storage-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/block-storage/src/main/java"/>
+	<classpathentry kind="src" path="modules/block-storage/src/test/java"/>
+	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudformation-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudformation/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudformation/src/test/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/cluster-manager/src/main/java"/>
+	<classpathentry kind="src" path="modules/cluster-manager/src/test/java"/>
+	<classpathentry kind="src" path="modules/component/src/main/java"/>
+	<classpathentry kind="src" path="modules/component/src/test/java"/>
+	<classpathentry kind="src" path="modules/compute-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/compute-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/compute-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/compute-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/configuration/src/main/java"/>
+	<classpathentry kind="src" path="modules/configuration/src/test/java"/>
+	<classpathentry kind="src" path="modules/core/src/main/java"/>
+	<classpathentry kind="src" path="modules/core/src/test/java"/>
+	<classpathentry kind="src" path="modules/database-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/database-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/dns/src/main/java"/>
+	<classpathentry kind="src" path="modules/dns/src/test/java"/>
+	<classpathentry kind="src" path="modules/euare-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/euare-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/euare/src/main/java"/>
+	<classpathentry kind="src" path="modules/euare/src/test/java"/>
+	<classpathentry kind="src" path="modules/euca-resources-support/src/main/java"/>
+	<classpathentry kind="src" path="modules/euca-resources-support/src/test/java"/>
+	<classpathentry kind="src" path="modules/imaging-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/imaging-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/imaging-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/imaging-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/imaging-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/imaging-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-backend/src/test/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/loadbalancing-service/src/test/java"/>
+	<classpathentry kind="src" path="modules/msgs/conf/jmx"/>
+	<classpathentry kind="src" path="modules/msgs/conf/scripts"/>
+	<classpathentry kind="src" path="modules/msgs/src/main/java"/>
+	<classpathentry kind="src" path="modules/msgs/src/test/groovy"/>
+	<classpathentry kind="src" path="modules/msgs/src/test/java"/>
+	<classpathentry kind="src" path="modules/notifications/src/main/java"/>
+	<classpathentry kind="src" path="modules/notifications/src/test/java"/>
+	<classpathentry kind="src" path="modules/object-storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/object-storage-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/object-storage/src/main/java"/>
+	<classpathentry kind="src" path="modules/object-storage/src/test/java"/>
+	<classpathentry kind="src" path="modules/postgresql/conf/init.d"/>
+	<classpathentry kind="src" path="modules/postgresql/conf/scripts"/>
+	<classpathentry kind="src" path="modules/postgresql/src/main/java"/>
+	<classpathentry kind="src" path="modules/postgresql/src/test/java"/>
+	<classpathentry kind="src" path="modules/reporting/src/main/java"/>
+	<classpathentry kind="src" path="modules/reporting/src/test/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow/src/main/java"/>
+	<classpathentry kind="src" path="modules/simpleworkflow/src/test/java"/>
+	<classpathentry kind="src" path="modules/storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/storage-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/tokens-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/tokens-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/tokens/src/main/java"/>
+	<classpathentry kind="src" path="modules/tokens/src/test/java"/>
+	<classpathentry kind="src" path="modules/troubleshooting/src/main/java"/>
+	<classpathentry kind="src" path="modules/troubleshooting/src/test/java"/>
+	<classpathentry kind="src" path="modules/walrus-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/walrus-common/src/test/java"/>
+	<classpathentry kind="src" path="modules/walrus/src/main/java"/>
+	<classpathentry kind="src" path="modules/walrus/src/test/java"/>
+	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
+	<classpathentry kind="src" path="modules/wsstack/src/main/java"/>
+	<classpathentry kind="src" path="modules/wsstack/src/test/java"/>
+	<classpathentry kind="src" path="modules/www/conf/www"/>
+	<classpathentry kind="src" path="modules/www/src/main/java"/>
+	<classpathentry kind="src" path="modules/www/src/test/java"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-commons-annotations-4.0.5.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-core-4.3.11.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-entitymanager-4.3.11.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-jpa-2.1-api-1.0.0.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-jpamodelgen-4.3.11.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/hibernate-proxool-4.3.11.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/jandex-1.1.0.Final.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/javassist-3.18.1-GA.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/jboss-transaction-api_1.2_spec-1.0.0.Final.jar"/>
+	<classpathentry kind="output" path="build/Eclipse"/>
 </classpath>

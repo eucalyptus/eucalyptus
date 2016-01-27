@@ -38,6 +38,7 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.BucketLogData
 import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
+import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage
@@ -809,6 +810,41 @@ public class DeleteBucketTaggingType extends ObjectStorageRequestType {}
 
 public class DeleteBucketTaggingResponseType extends ObjectStorageResponseType {}
 
+// Bucket CORS Configuration //
+
+/* PUT /bucket/?cors */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
+public class SetBucketCorsType extends ObjectStorageRequestType {
+  CorsConfiguration corsConfiguration;
+}
+
+public class SetBucketCorsResponseType extends ObjectStorageResponseType {}
+
+/* GET /bucket/?cors */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETBUCKETCORS])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
+public class GetBucketCorsType extends ObjectStorageRequestType {}
+
+public class GetBucketCorsResponseType extends ObjectStorageResponseType {
+  CorsConfiguration corsConfiguration;
+}
+
+/* DELETE /bucket/?cors */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
+public class DeleteBucketCorsType extends ObjectStorageRequestType {}
+
+public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
+
+
+// AddObject not used yet
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 
 public class AddObjectType extends ObjectStorageDataRequestType {
@@ -816,6 +852,7 @@ public class AddObjectType extends ObjectStorageDataRequestType {
   String etag;
   AccessControlList accessControlList = new AccessControlList();
 }
+
 
 public class UpdateObjectStorageConfigurationType extends ObjectStorageRequestType {
   String name;

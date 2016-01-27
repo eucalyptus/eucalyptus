@@ -246,6 +246,16 @@ public class XMLParser {
 		return null;
 	}
 
+	public DTMNodeList getNodes(Node node, String name) {
+		try {
+			DTMNodeList nodes = (DTMNodeList) xpath.evaluate(name, node, XPathConstants.NODESET);
+			return nodes;
+		} catch(XPathExpressionException ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
 
 	public String getXML(String name) {
 		if(rawData == null) {

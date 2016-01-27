@@ -60,54 +60,32 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.binding;
+package com.eucalyptus.objectstorage.metadata;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+/*
+ *
+ */
+public interface BucketCorsManager {
 
-public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStorageDELETEBinding.class);
+  public static final String RULE_STATUS_ENABLED = "Enabled";
+  public static final long MAX_WAIT_TIME_FOR_PROCESSING = 60l * 1000l; // 60 seconds (for now)
 
-  @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
+  public void start() throws Exception;
 
-    // Bucket operations
-    newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
+  public void stop() throws Exception;
 
-    // Cross-Origin Resource Sharing (cors)
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
+  public void deleteCorsRules(String bucketUuid) throws ObjectStorageException;
 
-    // Object operations
-    newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+  public void deleteCorsRules(String bucketUuid, TransactionResource tran);
 
-    // Multipart Uploads
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-        "AbortMultipartUpload");
+  public void addCorsRules(List<com.eucalyptus.storage.msgs.s3.CorsRule> rules, String bucketUuid) throws ObjectStorageException;
 
-    return newMap;
-  }
+  public List<CorsRule> getCorsRules(String bucketUuid) throws Exception;
 
-  protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-
-    // Bucket operations
-
-    // Policy
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
-
-    // Website
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-
-    // Object operations
-    return opsMap;
-  }
 }
