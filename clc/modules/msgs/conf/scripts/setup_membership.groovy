@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_membership" );
 /**
  * UDP/Multicast configuration
  */
-String        multicastAddress           = "228.7.7.3";
+String        multicastAddress           = "239.193.7.3";
 InetAddress   multicastInetAddress       = InetAddress.getByName( multicastAddress );
 Integer       multicastPort              = 8773;
 /**
