@@ -495,7 +495,7 @@ public class StackActivityImpl implements StackActivity {
   public String getCreateWorkflowExecutionCloseStatus(final String stackId) {
     final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
     final List<StackWorkflowEntity> createStackWorkflowEntities =
-        StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
+      StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
     // TODO: is it really appropriate to fail if no workflows exist
     if ( createStackWorkflowEntities == null || createStackWorkflowEntities.empty ) {
       throw new InternalFailureException( "There is no create stack workflow for stack id ${stackId}" );
@@ -505,13 +505,13 @@ public class StackActivityImpl implements StackActivity {
     }
     createStackWorkflowEntities.get( 0 ).with{
       simpleWorkflowClient.describeWorkflowExecution(
-          new DescribeWorkflowExecutionRequest(
-              domain: domain,
-              execution: new WorkflowExecution(
-                  runId: runId,
-                  workflowId: workflowId
-              )
+        new DescribeWorkflowExecutionRequest(
+          domain: domain,
+          execution: new WorkflowExecution(
+            runId: runId,
+            workflowId: workflowId
           )
+        )
       ).with{
         executionInfo.closeStatus
       }
@@ -646,10 +646,10 @@ public class StackActivityImpl implements StackActivity {
       Integer timeout = ((AWSCloudFormationWaitConditionProperties) resourceAction.getResourceProperties()).getTimeout(); // not proud of this hard coding.
       return timeout
     } catch (Exception ex) {
-        Throwable rootCause = Throwables.getRootCause(ex);
-        LOG.info("Error getting timeout for resource " + resourceId);
-        LOG.error(ex, ex);
-        throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
+      Throwable rootCause = Throwables.getRootCause(ex);
+      LOG.info("Error getting timeout for resource " + resourceId);
+      LOG.error(ex, ex);
+      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
   }
   @Override
@@ -757,7 +757,7 @@ public class StackActivityImpl implements StackActivity {
     nextStackResourceEntity.setResourceStatus(previousStackResourceEntity.getResourceStatus());
     nextStackResourceEntity.setResourceStatusReason(previousStackResourceEntity.getResourceStatusReason());
     StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
-    
+
     if (!propertiesChanged) {
       return "NO_PROPERTIES";
     }
@@ -783,6 +783,15 @@ public class StackActivityImpl implements StackActivity {
       nextStackResourceEntity.setResourceStatusReason("Requested update requires the creation of a new physical resource; hence creating one.");
       StackEventEntityManager.addStackEvent(nextStackResourceEntity);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+    } else if (updateType == UpdateType.NONE) { // This really shouldn't happen, as we have already shown properties have
+      // changed.  copy everything and log it for now.
+      // nothing has changed, so copy the old values to the new one.
+      LOG.warn("Resource " + nextStackResourceEntity.getLogicalResourceId() + " on stack " + nextStackResourceEntity.getStackId() + " has changed properties, but the resource update type is NONE.  Copying the previous value");
+      StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
+      nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+      return "NONE";
+
     }
     return updateType.toString();
   }
