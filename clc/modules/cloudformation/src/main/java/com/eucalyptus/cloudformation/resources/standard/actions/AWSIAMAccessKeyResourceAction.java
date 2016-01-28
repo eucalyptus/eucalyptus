@@ -25,14 +25,10 @@ import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
 import com.eucalyptus.auth.euare.CreateAccessKeyType;
 import com.eucalyptus.auth.euare.DeleteAccessKeyResponseType;
 import com.eucalyptus.auth.euare.DeleteAccessKeyType;
-import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
-import com.eucalyptus.auth.euare.ListAccessKeysType;
-import com.eucalyptus.auth.euare.ListUsersResponseType;
-import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.UpdateAccessKeyResponseType;
 import com.eucalyptus.auth.euare.UpdateAccessKeyType;
-import com.eucalyptus.auth.euare.UserType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -42,13 +38,19 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -59,7 +61,28 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
   private AWSIAMAccessKeyResourceInfo info = new AWSIAMAccessKeyResourceInfo();
 
   public AWSIAMAccessKeyResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    // In this case, update with replacement has a precondition check before essentially the same steps as "create".  We add both.
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSIAMAccessKeyResourceAction otherAction = (AWSIAMAccessKeyResourceAction) resourceAction;
+    if (!Objects.equals(properties.getUserName(), otherAction.properties.getUserName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getStatus(), otherAction.properties.getStatus())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getSerial(), otherAction.properties.getSerial())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -113,57 +136,11 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         if (action.properties.getStatus() == null) action.properties.setStatus("Active");
-        // if no user, return
-        boolean seenAllUsers = false;
-        boolean foundUser = false;
-        String userMarker = null;
-        while (!seenAllUsers && !foundUser) {
-          ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, action.info.getEffectiveUserId());
-          if (userMarker != null) {
-            listUsersType.setMarker(userMarker);
-          }
-          ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-          if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
-            userMarker = listUsersResponseType.getListUsersResult().getMarker();
-          } else {
-            seenAllUsers = true;
-          }
-          if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
-            for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
-              if (userType.getUserName().equals(action.properties.getUserName())) {
-                foundUser = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!foundUser) return action;
+        // if no user, bye.
+        if (!IAMHelper.userExists(configuration, action.properties.getUserName(), action.info.getEffectiveUserId())) return action;
 
-        boolean seenAllAccessKeys = false;
-        boolean foundAccessKey = false;
-        String accessKeyMarker = null;
-        while (!seenAllAccessKeys && !foundAccessKey) {
-          ListAccessKeysType listAccessKeysType = MessageHelper.createMessage(ListAccessKeysType.class, action.info.getEffectiveUserId());
-          listAccessKeysType.setUserName(action.properties.getUserName());
-          if (accessKeyMarker != null) {
-            listAccessKeysType.setMarker(accessKeyMarker);
-          }
-          ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
-          if (listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated() == Boolean.TRUE) {
-            accessKeyMarker = listAccessKeysResponseType.getListAccessKeysResult().getMarker();
-          } else {
-            seenAllAccessKeys = true;
-          }
-          if (listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata() != null && listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList() != null) {
-            for (AccessKeyMetadataType accessKeyMetadataType: listAccessKeysResponseType.getListAccessKeysResult().getAccessKeyMetadata().getMemberList()) {
-              if (accessKeyMetadataType.getAccessKeyId().equals(action.info.getPhysicalResourceId())) {
-                foundAccessKey = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!foundAccessKey) return action;
+        if (!IAMHelper.accessKeyExists(configuration, action.info.getPhysicalResourceId(),
+          action.properties.getUserName(), action.info.getEffectiveUserId())) return action;
         DeleteAccessKeyType deleteAccessKeyType = MessageHelper.createMessage(DeleteAccessKeyType.class, action.info.getEffectiveUserId());
         deleteAccessKeyType.setUserName(action.properties.getUserName());
         deleteAccessKeyType.setAccessKeyId(action.info.getPhysicalResourceId());
@@ -200,7 +177,51 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
   }
 
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_STATUS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMAccessKeyResourceAction oldAction = (AWSIAMAccessKeyResourceAction) oldResourceAction;
+        AWSIAMAccessKeyResourceAction newAction = (AWSIAMAccessKeyResourceAction) newResourceAction;
+        if (newAction.properties.getStatus() == null) newAction.properties.setStatus("Active");
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        UpdateAccessKeyType updateAccessKeyType = MessageHelper.createMessage(UpdateAccessKeyType.class, newAction.info.getEffectiveUserId());
+        updateAccessKeyType.setUserName(newAction.properties.getUserName());
+        updateAccessKeyType.setAccessKeyId(newAction.info.getPhysicalResourceId());
+        updateAccessKeyType.setStatus(newAction.properties.getStatus());
+        AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
+        return newAction;
+      }
+    };
 
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_SERIAL {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMAccessKeyResourceAction oldAction = (AWSIAMAccessKeyResourceAction) oldResourceAction;
+        AWSIAMAccessKeyResourceAction newAction = (AWSIAMAccessKeyResourceAction) newResourceAction;
+        int oldSerial = oldAction.properties.getSerial() != null ? oldAction.properties.getSerial().intValue() : 0;
+        int newSerial = oldAction.properties.getSerial() != null ? newAction.properties.getSerial().intValue() : 0;
+        if (newSerial < oldSerial) {
+          throw new ValidationErrorException("AccessKey Serial cannot be decreased");
+        }
+        return newAction;
+      }
+
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
+    }
+  }
 }
 
 
