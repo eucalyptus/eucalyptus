@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.common.internal.vpc.Subnet
+import com.eucalyptus.compute.vpc.NotEnoughPrivateAddressResourcesException
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.PersistenceExceptions
 import com.eucalyptus.entities.Transactions
@@ -226,10 +227,16 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
             " for instance ${privateIPResource.ownerId} because address is not valid for ${scopeDescription}" );
       }
     } else {
-      resource = new PrivateIPResource(
-          mac: mac( privateIPResource.ownerId  ),
-          value: PrivateAddresses.allocate( vpcId, subnetId, addresses, addressCount, allocatedCount ),
-          ownerId: privateIPResource.ownerId )
+      try {
+        resource = new PrivateIPResource(
+            mac: mac( privateIPResource.ownerId  ),
+            value: PrivateAddresses.allocate( vpcId, subnetId, addresses, addressCount, allocatedCount ),
+            ownerId: privateIPResource.ownerId )
+      } catch ( NotEnoughResourcesException e ) {
+        throw subnetId == null ?
+            e :
+            new NotEnoughPrivateAddressResourcesException( e.getMessage( ) )
+      }
     }
 
     if ( resource && subnetId ) {

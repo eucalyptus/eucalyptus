@@ -596,7 +596,7 @@ public class VpcManager {
           final Set<NetworkGroup> groups = request.getGroupSet( )==null || request.getGroupSet( ).groupIds( ).isEmpty( ) ?
               Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkGroup>identity( ) ) ) :
               Sets.newHashSet( Iterables.transform(
-                  request.getGroupSet( ).groupIds( ),
+                  Identifier.sg.normalize( request.getGroupSet( ).groupIds( ) ),
                   RestrictedTypes.resolver( NetworkGroup.class ) ) );
           if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
             throw new ClientComputeException( "SecurityGroupsPerInterfaceLimitExceeded", "Security group limit exceeded" );
@@ -1870,6 +1870,7 @@ public class VpcManager {
     igw( "internetGateway" ),
     rtb( "routeTable" ),
     rtbassoc( "routeTableAssociation" ),
+    sg( "securityGroup" ),
     subnet( "subnet" ),
     vpc( "vpc" ),
     ;
