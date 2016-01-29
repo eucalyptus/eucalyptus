@@ -21,10 +21,13 @@ package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
 import com.eucalyptus.auth.euare.GroupType;
+import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
 import com.eucalyptus.auth.euare.ListAccessKeysType;
 import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
+import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
+import com.eucalyptus.auth.euare.ListInstanceProfilesType;
 import com.eucalyptus.auth.euare.ListUsersResponseType;
 import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.UserType;
@@ -145,4 +148,36 @@ public class IAMHelper {
     }
     return policyNames;
   }
+
+  public static boolean instanceProfileExists(ServiceConfiguration configuration, String instanceProfileName, String effectiveUserId) throws Exception {
+    return getInstanceProfile(configuration, instanceProfileName, effectiveUserId) != null;
+  }
+
+  public static InstanceProfileType getInstanceProfile(ServiceConfiguration configuration, String instanceProfileName, String effectiveUserId) throws Exception {
+    InstanceProfileType retVal = null;
+    boolean seenAllInstanceProfiles = false;
+    String instanceProfileMarker = null;
+    while (!seenAllInstanceProfiles && retVal == null) {
+      ListInstanceProfilesType listInstanceProfilesType = MessageHelper.createMessage(ListInstanceProfilesType.class, effectiveUserId);
+      if (instanceProfileMarker != null) {
+        listInstanceProfilesType.setMarker(instanceProfileMarker);
+      }
+      ListInstanceProfilesResponseType listInstanceProfilesResponseType = AsyncRequests.<ListInstanceProfilesType,ListInstanceProfilesResponseType> sendSync(configuration, listInstanceProfilesType);
+      if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getIsTruncated() == Boolean.TRUE) {
+        instanceProfileMarker = listInstanceProfilesResponseType.getListInstanceProfilesResult().getMarker();
+      } else {
+        seenAllInstanceProfiles = true;
+      }
+      if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles() != null && listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember() != null) {
+        for (InstanceProfileType instanceProfileType: listInstanceProfilesResponseType.getListInstanceProfilesResult().getInstanceProfiles().getMember()) {
+          if (instanceProfileType.getInstanceProfileName().equals(instanceProfileName)) {
+            retVal = instanceProfileType;
+            break;
+          }
+        }
+      }
+    }
+    return retVal;
+  }
+
 }
