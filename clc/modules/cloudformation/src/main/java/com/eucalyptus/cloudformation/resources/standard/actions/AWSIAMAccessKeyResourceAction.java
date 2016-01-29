@@ -209,7 +209,7 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
         AWSIAMAccessKeyResourceAction newAction = (AWSIAMAccessKeyResourceAction) newResourceAction;
         int oldSerial = oldAction.properties.getSerial() != null ? oldAction.properties.getSerial().intValue() : 0;
         int newSerial = oldAction.properties.getSerial() != null ? newAction.properties.getSerial().intValue() : 0;
-        if (newSerial < oldSerial) {
+        if (newSerial < oldSerial && Objects.equals(oldAction.properties.getUserName(), newAction.properties.getUserName())) {
           throw new ValidationErrorException("AccessKey Serial cannot be decreased");
         }
         return newAction;
