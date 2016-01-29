@@ -73,7 +73,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "cors_rules", indexes = {
-    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+    @Index(name = "IDX_cors_bucket_uuid", columnList = "bucket_uuid")
 })
 public class CorsRule extends AbstractPersistent {
  
