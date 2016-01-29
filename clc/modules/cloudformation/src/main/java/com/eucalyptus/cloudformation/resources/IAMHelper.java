@@ -20,14 +20,22 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
+import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
 import com.eucalyptus.auth.euare.ListAccessKeysType;
+import com.eucalyptus.auth.euare.ListGroupsResponseType;
+import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.ListUsersResponseType;
 import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.UserType;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EmbeddedIAMPolicy;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.collect.Sets;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * Created by ethomas on 1/28/16.
@@ -97,4 +105,44 @@ public class IAMHelper {
     return getAccessKey(configuration, accessKeyId, userName, effectiveUserId) != null;
   }
 
+  public static boolean groupExists(ServiceConfiguration configuration, String groupName, String effectiveUserId) throws Exception {
+    return (getGroup(configuration, groupName, effectiveUserId) != null);
+  }
+
+  public static GroupType getGroup(ServiceConfiguration configuration, String groupName, String effectiveUserId) throws Exception {
+    GroupType retVal = null;
+    boolean seenAllGroups = false;
+    String groupMarker = null;
+    while (!seenAllGroups && retVal == null) {
+      ListGroupsType listGroupsType = MessageHelper.createMessage(ListGroupsType.class, effectiveUserId);
+      if (groupMarker != null) {
+        listGroupsType.setMarker(groupMarker);
+      }
+      ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
+      if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
+        groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
+      } else {
+        seenAllGroups = true;
+      }
+      if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
+        for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
+          if (groupType.getGroupName().equals(groupName)) {
+            retVal = groupType;
+            break;
+          }
+        }
+      }
+    }
+    return retVal;
+  }
+
+  public static Set<String> getPolicyNames(List<EmbeddedIAMPolicy> policies) {
+    Set<String> policyNames = Sets.newLinkedHashSet();
+    if (policies != null) {
+      for (EmbeddedIAMPolicy policy : policies) {
+        policyNames.add(policy.getPolicyName());
+      }
+    }
+    return policyNames;
+  }
 }
