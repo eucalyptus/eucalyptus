@@ -91,9 +91,9 @@ import com.google.common.collect.Sets;
 Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_membership" );
 
 /**
- * UDP/Multicast configuration
+ * UDP/Multicast configuration, use multicastAddress '228.7.7.3' for compatibility with pre-4.3 default
  */
-String        multicastAddress           = "239.193.7.3";
+String        multicastAddress           = System.getProperty('euca.mcast.addr') ?: '239.193.7.3';
 InetAddress   multicastInetAddress       = InetAddress.getByName( multicastAddress );
 Integer       multicastPort              = 8773;
 /**

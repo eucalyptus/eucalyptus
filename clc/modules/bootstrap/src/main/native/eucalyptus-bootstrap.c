@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -946,6 +946,9 @@ int java_init(euca_opts * args, java_home_t * data)
         JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->bootstrap_host_arg[i]);
     for (i = 0; i < args->bind_addr_given; i++)
         JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->bind_addr_arg[i]);
+    if (args->mcast_addr_given) {
+        JVM_ARG(opt[++x], "-Deuca.mcast.addr=%s", GETARG(args, mcast_addr));
+    }
 
     if (encoding_not_defined_flag)
         JVM_ARG(opt[++x], "-Dfile.encoding=UTF-8");

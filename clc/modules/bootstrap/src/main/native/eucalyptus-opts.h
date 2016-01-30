@@ -76,6 +76,9 @@ struct eucalyptus_opts
   unsigned int bind_addr_min; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size.'s minimum occurreces */
   unsigned int bind_addr_max; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size.'s maximum occurreces */
   const char *bind_addr_help; /**< @brief Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size. help description.  */
+  char * mcast_addr_arg;	/**< @brief Multicast address to use for group memebership.  */
+  char * mcast_addr_orig;	/**< @brief Multicast address to use for group memebership original value given at command line.  */
+  const char *mcast_addr_help; /**< @brief Multicast address to use for group memebership help description.  */
   char ** bootstrap_host_arg;	/**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available..  */
   char ** bootstrap_host_orig;	/**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available. original value given at command line.  */
   unsigned int bootstrap_host_min; /**< @brief Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available.'s minimum occurreces */
@@ -185,6 +188,7 @@ struct eucalyptus_opts
   unsigned int upgrade_old_dir_given ;	/**< @brief Whether upgrade-old-dir was given.  */
   unsigned int upgrade_force_given ;	/**< @brief Whether upgrade-force was given.  */
   unsigned int bind_addr_given ;	/**< @brief Whether bind-addr was given.  */
+  unsigned int mcast_addr_given ;	/**< @brief Whether mcast-addr was given.  */
   unsigned int bootstrap_host_given ;	/**< @brief Whether bootstrap-host was given.  */
   unsigned int force_remote_bootstrap_given ;	/**< @brief Whether force-remote-bootstrap was given.  */
   unsigned int define_given ;	/**< @brief Whether define was given.  */
