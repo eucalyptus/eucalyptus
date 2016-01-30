@@ -28,13 +28,17 @@ import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesType;
+import com.eucalyptus.auth.euare.ListRolesResponseType;
+import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.ListUsersResponseType;
 import com.eucalyptus.auth.euare.ListUsersType;
+import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.UserType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EmbeddedIAMPolicy;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import java.util.List;
@@ -180,4 +184,81 @@ public class IAMHelper {
     return retVal;
   }
 
+  public static List<String> getExistingGroups(ServiceConfiguration configuration, Set<String> passedInGroups, String effectiveUserId) throws Exception {
+    List<String> realGroups = Lists.newArrayList();
+    boolean seenAllGroups = false;
+    String groupMarker = null;
+    while (!seenAllGroups) {
+      ListGroupsType listGroupsType = MessageHelper.createMessage(ListGroupsType.class, effectiveUserId);
+      if (groupMarker != null) {
+        listGroupsType.setMarker(groupMarker);
+      }
+      ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
+      if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
+        groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
+      } else {
+        seenAllGroups = true;
+      }
+      if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
+        for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
+          if (passedInGroups.contains(groupType.getGroupName())) {
+            realGroups.add(groupType.getGroupName());
+          }
+        }
+      }
+    }
+    return realGroups;
+  }
+
+  public static List<String> getExistingUsers(ServiceConfiguration configuration, Set<String> passedInUsers, String effectiveUserId) throws Exception {
+    List<String> realUsers = Lists.newArrayList();
+    boolean seenAllUsers = false;
+    String userMarker = null;
+    while (!seenAllUsers) {
+      ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, effectiveUserId);
+      if (userMarker != null) {
+        listUsersType.setMarker(userMarker);
+      }
+      ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = listUsersResponseType.getListUsersResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
+        for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
+          if (passedInUsers.contains(userType.getUserName())) {
+            realUsers.add(userType.getUserName());
+          }
+        }
+      }
+    }
+    return realUsers;
+  }
+
+  public static List<String> getExistingRoles(ServiceConfiguration configuration, Set<String> passedInRoles, String effectiveUserId) throws Exception {
+    List<String> realRoles = Lists.newArrayList();
+    boolean seenAllRoles = false;
+    String roleMarker = null;
+    while (!seenAllRoles) {
+      ListRolesType listRolesType = MessageHelper.createMessage(ListRolesType.class, effectiveUserId);
+      if (roleMarker != null) {
+        listRolesType.setMarker(roleMarker);
+      }
+      ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
+      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+        roleMarker = listRolesResponseType.getListRolesResult().getMarker();
+      } else {
+        seenAllRoles = true;
+      }
+      if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
+        for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
+          if (passedInRoles.contains(roleType.getRoleName())) {
+            realRoles.add(roleType.getRoleName());
+          }
+        }
+      }
+    }
+    return realRoles;
+  }
 }

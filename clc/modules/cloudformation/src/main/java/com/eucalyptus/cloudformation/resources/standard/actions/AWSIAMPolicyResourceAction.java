@@ -26,21 +26,13 @@ import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyType;
-import com.eucalyptus.auth.euare.GroupType;
-import com.eucalyptus.auth.euare.ListGroupsResponseType;
-import com.eucalyptus.auth.euare.ListGroupsType;
-import com.eucalyptus.auth.euare.ListRolesResponseType;
-import com.eucalyptus.auth.euare.ListRolesType;
-import com.eucalyptus.auth.euare.ListUsersResponseType;
-import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.PutGroupPolicyType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
 import com.eucalyptus.auth.euare.PutUserPolicyType;
-import com.eucalyptus.auth.euare.RoleType;
-import com.eucalyptus.auth.euare.UserType;
+import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -50,17 +42,20 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -72,7 +67,29 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
   private AWSIAMPolicyResourceInfo info = new AWSIAMPolicyResourceInfo();
 
   public AWSIAMPolicyResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSIAMPolicyResourceAction otherAction = (AWSIAMPolicyResourceAction) resourceAction;
+    if (!Objects.equals(properties.getGroups(), otherAction.properties.getGroups())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getPolicyDocument(), otherAction.properties.getPolicyDocument())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getPolicyName(), otherAction.properties.getPolicyName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getRoles(), otherAction.properties.getRoles())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getUsers(), otherAction.properties.getUsers())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -155,102 +172,33 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         // find all roles that still exist from the list and remove the policy
-        if (action.properties.getRoles() != null && action.properties.getRoles().size() > 0) {
-          List<String> realRolesToRemovePolicyFrom = Lists.newArrayList();
-          Set<String> passedInRoles = action.properties.getRoles() == null ? new HashSet<String>() : Sets.newHashSet(action.properties.getRoles());
-          boolean seenAllRoles = false;
-          String roleMarker = null;
-          while (!seenAllRoles) {
-            ListRolesType listRolesType = MessageHelper.createMessage(ListRolesType.class, action.info.getEffectiveUserId());
-            if (roleMarker != null) {
-              listRolesType.setMarker(roleMarker);
-            }
-            ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
-            if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
-              roleMarker = listRolesResponseType.getListRolesResult().getMarker();
-            } else {
-              seenAllRoles = true;
-            }
-            if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
-              for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
-                if (passedInRoles.contains(roleType.getRoleName())) {
-                  realRolesToRemovePolicyFrom.add(roleType.getRoleName());
-                }
-              }
-            }
-          }
-          for (String role: realRolesToRemovePolicyFrom) {
-            DeleteRolePolicyType deleteRolePolicyType = MessageHelper.createMessage(DeleteRolePolicyType.class, action.info.getEffectiveUserId());
-            deleteRolePolicyType.setRoleName(role);
-            deleteRolePolicyType.setPolicyName(action.properties.getPolicyName());
-            AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
-          }
+        Set<String> passedInRoles = collectionToSetAndNullToEmpty(action.properties.getRoles());
+        List<String> realRolesToRemovePolicyFrom = IAMHelper.getExistingRoles(configuration, passedInRoles, action.info.getEffectiveUserId());
+        for (String role: realRolesToRemovePolicyFrom) {
+          DeleteRolePolicyType deleteRolePolicyType = MessageHelper.createMessage(DeleteRolePolicyType.class, action.info.getEffectiveUserId());
+          deleteRolePolicyType.setRoleName(role);
+          deleteRolePolicyType.setPolicyName(action.properties.getPolicyName());
+          AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
         }
 
         // find all users that still exist from the list and remove the policy
-        if (action.properties.getUsers() != null && action.properties.getUsers().size() > 0) {
-          List<String> realUsersToRemovePolicyFrom = Lists.newArrayList();
-          Set<String> passedInUsers = action.properties.getUsers() == null ? new HashSet<String>() : Sets.newHashSet(action.properties.getUsers());
-          boolean seenAllUsers = false;
-          String userMarker = null;
-          while (!seenAllUsers) {
-            ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, action.info.getEffectiveUserId());;
-            if (userMarker != null) {
-              listUsersType.setMarker(userMarker);
-            }
-            ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-            if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
-              userMarker = listUsersResponseType.getListUsersResult().getMarker();
-            } else {
-              seenAllUsers = true;
-            }
-            if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
-              for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
-                if (passedInUsers.contains(userType.getUserName())) {
-                  realUsersToRemovePolicyFrom.add(userType.getUserName());
-                }
-              }
-            }
-          }
-          for (String user: realUsersToRemovePolicyFrom) {
-            DeleteUserPolicyType deleteUserPolicyType = MessageHelper.createMessage(DeleteUserPolicyType.class, action.info.getEffectiveUserId());
-            deleteUserPolicyType.setUserName(user);
-            deleteUserPolicyType.setPolicyName(action.properties.getPolicyName());
-            AsyncRequests.<DeleteUserPolicyType,DeleteUserPolicyResponseType> sendSync(configuration, deleteUserPolicyType);
-          }
+        Set<String> passedInUsers = action.properties.getUsers() == null ? new HashSet<String>() : Sets.newHashSet(action.properties.getUsers());
+        List<String> realUsersToRemovePolicyFrom = IAMHelper.getExistingUsers(configuration, passedInUsers, action.info.getEffectiveUserId());
+        for (String user: realUsersToRemovePolicyFrom) {
+          DeleteUserPolicyType deleteUserPolicyType = MessageHelper.createMessage(DeleteUserPolicyType.class, action.info.getEffectiveUserId());
+          deleteUserPolicyType.setUserName(user);
+          deleteUserPolicyType.setPolicyName(action.properties.getPolicyName());
+          AsyncRequests.<DeleteUserPolicyType,DeleteUserPolicyResponseType> sendSync(configuration, deleteUserPolicyType);
         }
 
         // find all groups that still exist from the list and remove the policy
-        if (action.properties.getGroups() != null && action.properties.getGroups().size() > 0) {
-          List<String> realGroupsToRemovePolicyFrom = Lists.newArrayList();
-          Set<String> passedInGroups = action.properties.getGroups() == null ? new HashSet<String>() : Sets.newHashSet(action.properties.getGroups());
-          boolean seenAllGroups = false;
-          String groupMarker = null;
-          while (!seenAllGroups) {
-            ListGroupsType listGroupsType = MessageHelper.createMessage(ListGroupsType.class, action.info.getEffectiveUserId());
-            if (groupMarker != null) {
-              listGroupsType.setMarker(groupMarker);
-            }
-            ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
-            if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
-              groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
-            } else {
-              seenAllGroups = true;
-            }
-            if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
-              for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
-                if (passedInGroups.contains(groupType.getGroupName())) {
-                  realGroupsToRemovePolicyFrom.add(groupType.getGroupName());
-                }
-              }
-            }
-          }
-          for (String group: realGroupsToRemovePolicyFrom) {
-            DeleteGroupPolicyType deleteGroupPolicyType = MessageHelper.createMessage(DeleteGroupPolicyType.class, action.info.getEffectiveUserId());
-            deleteGroupPolicyType.setGroupName(group);
-            deleteGroupPolicyType.setPolicyName(action.properties.getPolicyName());
-            AsyncRequests.<DeleteGroupPolicyType,DeleteGroupPolicyResponseType> sendSync(configuration, deleteGroupPolicyType);
-          }
+        Set<String> passedInGroups = collectionToSetAndNullToEmpty(action.properties.getGroups());
+        List<String> realGroupsToRemovePolicyFrom = IAMHelper.getExistingGroups(configuration, passedInGroups, action.info.getEffectiveUserId());
+        for (String group: realGroupsToRemovePolicyFrom) {
+          DeleteGroupPolicyType deleteGroupPolicyType = MessageHelper.createMessage(DeleteGroupPolicyType.class, action.info.getEffectiveUserId());
+          deleteGroupPolicyType.setGroupName(group);
+          deleteGroupPolicyType.setPolicyName(action.properties.getPolicyName());
+          AsyncRequests.<DeleteGroupPolicyType,DeleteGroupPolicyResponseType> sendSync(configuration, deleteGroupPolicyType);
         }
         return action;
       }
@@ -283,8 +231,113 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
     info = (AWSIAMPolicyResourceInfo) resourceInfo;
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ATTACHMENT_TO_GROUPS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
+        AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldGroupNames = collectionToSetAndNullToEmpty(oldAction.properties.getGroups());
+        Set<String> newGroupNames = collectionToSetAndNullToEmpty(newAction.properties.getGroups());
+        // add the policy to the new group
+        for (String groupName : newGroupNames) {
+          PutGroupPolicyType putGroupPolicyType = MessageHelper.createMessage(PutGroupPolicyType.class, newAction.info.getEffectiveUserId());
+          putGroupPolicyType.setGroupName(groupName);
+          putGroupPolicyType.setPolicyName(newAction.properties.getPolicyName());
+          putGroupPolicyType.setPolicyDocument(newAction.properties.getPolicyDocument().toString());
+          AsyncRequests.<PutGroupPolicyType, PutGroupPolicyResponseType>sendSync(configuration, putGroupPolicyType);
+        }
+        // if the policy name has changed, remove it from all the old groups
+        // otherwise remove it from just the old groups that are not new groups
+        Collection<String> targetOldGroupNames =
+          oldAction.properties.getPolicyName().equals(newAction.properties.getPolicyName()) ?
+            Sets.difference(oldGroupNames, newGroupNames) : oldGroupNames;
+        for (String groupName : targetOldGroupNames) {
+          DeleteGroupPolicyType deleteGroupPolicyType = MessageHelper.createMessage(DeleteGroupPolicyType.class, newAction.info.getEffectiveUserId());
+          deleteGroupPolicyType.setGroupName(groupName);
+          deleteGroupPolicyType.setPolicyName(oldAction.properties.getPolicyName());
+          AsyncRequests.<DeleteGroupPolicyType, DeleteGroupPolicyResponseType>sendSync(configuration, deleteGroupPolicyType);
+        }
+        return newAction;
+      }
+    },
+    UPDATE_ATTACHMENT_TO_USERS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
+        AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldUserNames = collectionToSetAndNullToEmpty(oldAction.properties.getUsers());
+        Set<String> newUserNames = collectionToSetAndNullToEmpty(newAction.properties.getUsers());
+        // add the policy to the new user
+        for (String userName: newUserNames) {
+          PutUserPolicyType putUserPolicyType = MessageHelper.createMessage(PutUserPolicyType.class, newAction.info.getEffectiveUserId());
+          putUserPolicyType.setUserName(userName);
+          putUserPolicyType.setPolicyName(newAction.properties.getPolicyName());
+          putUserPolicyType.setPolicyDocument(newAction.properties.getPolicyDocument().toString());
+          AsyncRequests.<PutUserPolicyType,PutUserPolicyResponseType> sendSync(configuration, putUserPolicyType);
+        }
+        // if the policy name has changed, remove it from all the old groups
+        // otherwise remove it from just the old groups that are not new groups
+        Collection<String> targetOldUserNames =
+          oldAction.properties.getPolicyName().equals(newAction.properties.getPolicyName()) ?
+            Sets.difference(oldUserNames, newUserNames) : oldUserNames;
+        for (String userName: targetOldUserNames) {
+          DeleteUserPolicyType deleteUserPolicyType = MessageHelper.createMessage(DeleteUserPolicyType.class, newAction.info.getEffectiveUserId());
+          deleteUserPolicyType.setUserName(userName);
+          deleteUserPolicyType.setPolicyName(oldAction.properties.getPolicyName());
+          AsyncRequests.<DeleteUserPolicyType,DeleteUserPolicyResponseType> sendSync(configuration, deleteUserPolicyType);
+        }
+        return newAction;
+      }
+    },
+    UPDATE_ATTACHMENT_TO_ROLES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
+        AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldRoleNames = collectionToSetAndNullToEmpty(oldAction.properties.getRoles());
+        Set<String> newRoleNames = collectionToSetAndNullToEmpty(newAction.properties.getRoles());
+        // add the policy to the new role
+        for (String roleName: newRoleNames) {
+          PutRolePolicyType putRolePolicyType = MessageHelper.createMessage(PutRolePolicyType.class, newAction.info.getEffectiveUserId());
+          putRolePolicyType.setRoleName(roleName);
+          putRolePolicyType.setPolicyName(newAction.properties.getPolicyName());
+          putRolePolicyType.setPolicyDocument(newAction.properties.getPolicyDocument().toString());
+          AsyncRequests.<PutRolePolicyType,PutRolePolicyResponseType> sendSync(configuration, putRolePolicyType);
+        }
+        // if the policy name has changed, remove it from all the old roles
+        // otherwise remove it from just the old roles that are not new roles
+        Collection<String> targetOldRoleNames =
+          oldAction.properties.getPolicyName().equals(newAction.properties.getPolicyName()) ?
+            Sets.difference(oldRoleNames, newRoleNames) : oldRoleNames;
+        for (String roleName: targetOldRoleNames) {
+          DeleteRolePolicyType deleteRolePolicyType = MessageHelper.createMessage(DeleteRolePolicyType.class, newAction.info.getEffectiveUserId());
+          deleteRolePolicyType.setRoleName(roleName);
+          deleteRolePolicyType.setPolicyName(oldAction.properties.getPolicyName());
+          AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
 
 
+  static <T> Set<T> collectionToSetAndNullToEmpty(Collection<T> c) {
+    HashSet<T> set = Sets.newLinkedHashSet();
+    if (c != null) {
+      set.addAll(c);
+    }
+    return set;
+  }
 }
 
 
