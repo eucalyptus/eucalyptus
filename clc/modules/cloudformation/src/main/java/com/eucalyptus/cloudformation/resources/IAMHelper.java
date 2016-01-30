@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
+import com.eucalyptus.auth.euare.GetGroupResponseType;
+import com.eucalyptus.auth.euare.GetGroupType;
 import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
@@ -34,6 +36,8 @@ import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.ListUsersResponseType;
 import com.eucalyptus.auth.euare.ListUsersType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.UserType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EmbeddedIAMPolicy;
@@ -329,4 +333,74 @@ public class IAMHelper {
     }
     return groupSet;
   }
+
+  public static Collection<String> nonexistantUsers(ServiceConfiguration configuration, Collection<String> userNames, String effectiveUserId) throws Exception {
+    boolean seenAllUsers = false;
+    List<String> currentUsers = Lists.newArrayList();
+    String userMarker = null;
+    while (!seenAllUsers) {
+      ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, effectiveUserId);
+      if (userMarker != null) {
+        listUsersType.setMarker(userMarker);
+      }
+      ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = listUsersResponseType.getListUsersResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
+        for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
+          currentUsers.add(userType.getUserName());
+        }
+      }
+    }
+    List<String> nonexistantUsers = Lists.newArrayList();
+    for (String user: userNames) {
+      if (!currentUsers.contains(user)) {
+        nonexistantUsers.add(user);
+      }
+    }
+    return nonexistantUsers;
+  }
+
+  public static void removeUsersFromGroup(ServiceConfiguration configuration, Collection<String> userNames, String groupName, String effectiveUserId) throws Exception {
+    // if no group, bye...
+    if (!groupExists(configuration, groupName, effectiveUserId)) return;
+    Set<String> passedInUsers = userNames == null ? new HashSet<String>() : Sets.newHashSet(userNames);
+    Set<String> actualUsers = getUserNamesForGroup(configuration, groupName, effectiveUserId);
+    for (String user: Sets.intersection(passedInUsers, actualUsers)) {
+      RemoveUserFromGroupType removeUserFromGroupType = MessageHelper.createMessage(RemoveUserFromGroupType.class, effectiveUserId);
+      removeUserFromGroupType.setGroupName(groupName);
+      removeUserFromGroupType.setUserName(user);
+      AsyncRequests.<RemoveUserFromGroupType,RemoveUserFromGroupResponseType> sendSync(configuration, removeUserFromGroupType);
+    }
+
+  }
+
+  public static Set<String> getUserNamesForGroup(ServiceConfiguration configuration, String groupName, String effectiveUserId) throws Exception {
+    Set<String> users = Sets.newLinkedHashSet();
+    boolean seenAllUsers = false;
+    String userMarker = null;
+    while (!seenAllUsers) {
+      GetGroupType getGroupType = MessageHelper.createMessage(GetGroupType.class, effectiveUserId);
+      getGroupType.setGroupName(groupName);
+      if (userMarker != null) {
+        getGroupType.setMarker(userMarker);
+      }
+      GetGroupResponseType getGroupResponseType = AsyncRequests.<GetGroupType,GetGroupResponseType> sendSync(configuration, getGroupType);
+      if (getGroupResponseType.getGetGroupResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = getGroupResponseType.getGetGroupResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (getGroupResponseType.getGetGroupResult() != null && getGroupResponseType.getGetGroupResult().getUsers().getMemberList() != null) {
+        for (UserType userType: getGroupResponseType.getGetGroupResult().getUsers().getMemberList()) {
+          users.add(userType.getUserName());
+        }
+      }
+    }
+    return users;
+  }
+
 }
