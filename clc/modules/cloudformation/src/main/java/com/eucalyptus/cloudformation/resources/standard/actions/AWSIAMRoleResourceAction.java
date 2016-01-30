@@ -71,7 +71,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
     UpdateType updateType = UpdateType.NONE;
     AWSIAMRoleResourceAction otherAction = (AWSIAMRoleResourceAction) resourceAction;
     if (!Objects.equals(properties.getAssumeRolePolicyDocument(), otherAction.properties.getAssumeRolePolicyDocument())) {
-      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
     if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
