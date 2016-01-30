@@ -24,6 +24,8 @@ import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
 import com.eucalyptus.auth.euare.ListAccessKeysType;
+import com.eucalyptus.auth.euare.ListGroupsForUserResponseType;
+import com.eucalyptus.auth.euare.ListGroupsForUserType;
 import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
@@ -41,6 +43,8 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -291,5 +295,38 @@ public class IAMHelper {
       }
     }
     return retVal;
+  }
+
+  public static <T> Set<T> collectionToSetAndNullToEmpty(Collection<T> c) {
+    HashSet<T> set = Sets.newLinkedHashSet();
+    if (c != null) {
+      set.addAll(c);
+    }
+    return set;
+  }
+
+  public static Set<String> getGroupNamesForUser(ServiceConfiguration configuration, String userName, String effectiveUserId) throws Exception {
+    Set<String> groupSet = Sets.newLinkedHashSet();
+    boolean seenAllGroups = false;
+    String groupMarker = null;
+    while (!seenAllGroups) {
+      ListGroupsForUserType listGroupsForUserType = MessageHelper.createMessage(ListGroupsForUserType.class, effectiveUserId);
+      listGroupsForUserType.setUserName(userName);
+      if (groupMarker != null) {
+        listGroupsForUserType.setMarker(groupMarker);
+      }
+      ListGroupsForUserResponseType listGroupsForUserResponseType = AsyncRequests.<ListGroupsForUserType,ListGroupsForUserResponseType> sendSync(configuration, listGroupsForUserType);
+      if (listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated() == Boolean.TRUE) {
+        groupMarker = listGroupsForUserResponseType.getListGroupsForUserResult().getMarker();
+      } else {
+        seenAllGroups = true;
+      }
+      if (listGroupsForUserResponseType.getListGroupsForUserResult().getGroups() != null && listGroupsForUserResponseType.getListGroupsForUserResult().getGroups().getMemberList() != null) {
+        for (GroupType groupType: listGroupsForUserResponseType.getListGroupsForUserResult().getGroups().getMemberList()) {
+          groupSet.add(groupType.getGroupName());
+        }
+      }
+    }
+    return groupSet;
   }
 }
