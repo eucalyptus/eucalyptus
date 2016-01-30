@@ -261,4 +261,35 @@ public class IAMHelper {
     }
     return realRoles;
   }
+
+  public static boolean roleExists(ServiceConfiguration configuration, String roleName, String effectiveUserId) throws Exception {
+    return getRole(configuration, roleName, effectiveUserId) != null;
+  }
+
+  private static RoleType getRole(ServiceConfiguration configuration, String roleName, String effectiveUserId) throws Exception {
+    RoleType retVal = null;
+    boolean seenAllRoles = false;
+    String RoleMarker = null;
+    while (!seenAllRoles && retVal == null) {
+      ListRolesType listRolesType = MessageHelper.createMessage(ListRolesType.class, effectiveUserId);
+      if (RoleMarker != null) {
+        listRolesType.setMarker(RoleMarker);
+      }
+      ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
+      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+        RoleMarker = listRolesResponseType.getListRolesResult().getMarker();
+      } else {
+        seenAllRoles = true;
+      }
+      if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
+        for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
+          if (roleType.getRoleName().equals(roleName)) {
+            retVal = roleType;
+            break;
+          }
+        }
+      }
+    }
+    return retVal;
+  }
 }
