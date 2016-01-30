@@ -17,11 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.internal.util;
+package com.eucalyptus.compute.vpc;
+
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 
 /**
  *
  */
-public class SecurityGroupLimitMetadataException extends InvalidMetadataException {
+public class NotEnoughPrivateAddressResourcesException extends NotEnoughResourcesException {
   private static final long serialVersionUID = 1L;
+
+  public NotEnoughPrivateAddressResourcesException( final String message ) {
+    super( message );
+  }
 }

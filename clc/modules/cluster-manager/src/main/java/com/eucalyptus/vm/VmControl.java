@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,11 @@ import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.vpc.NetworkInterfaceInUseMetadataException;
+import com.eucalyptus.compute.vpc.NoSuchNetworkInterfaceMetadataException;
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
+import com.eucalyptus.compute.vpc.NotEnoughPrivateAddressResourcesException;
+import com.eucalyptus.compute.vpc.PrivateAddressResourceAllocationException;
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.B64;
@@ -165,7 +169,7 @@ import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -257,30 +261,23 @@ public class VmControl {
       db.commit( );
     } catch ( Exception ex ) {
       allocInfo.abort( );
-      final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
-      if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
-      final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
-      if ( e2 != null ) throw new ClusterComputeServiceUnavailableException( "InsufficientInstanceCapacity", e2.getMessage( ) );
-      final NoSuchKeyMetadataException e3 = Exceptions.findCause( ex, NoSuchKeyMetadataException.class );
-      if ( e3 != null ) throw new ClientComputeException( "InvalidKeyPair.NotFound", e3.getMessage( ) );
-      final InvalidMetadataException e4 = Exceptions.findCause( ex, InvalidMetadataException.class );
-      if ( e4 instanceof VpcRequiredMetadataException ) {
-        throw new ClientComputeException( "VPCIdNotSpecified", "Default VPC not found, please specify a subnet." );
-      }
-      if ( e4 instanceof InvalidParameterCombinationMetadataException ) {
-        throw new ClientComputeException( "InvalidParameterCombination", e4.getMessage( ) );
-      }
-      if ( e4 != null ) throw new ClientComputeException( "InvalidParameterValue", e4.getMessage( ) );
-      final NoSuchImageIdException e5 = Exceptions.findCause( ex, NoSuchImageIdException.class );
-      if ( e5 != null ) throw new ClientComputeException( "InvalidAMIID.NotFound", e5.getMessage( ) );
-      final NoSuchSubnetMetadataException e6 = Exceptions.findCause( ex, NoSuchSubnetMetadataException.class );
-      if ( e6 != null ) throw new ClientComputeException( "InvalidSubnetID.NotFound", e6.getMessage( ) );
-      final IllegalMetadataAccessException e7 = Exceptions.findCause( ex, IllegalMetadataAccessException.class );
-      if ( e7 != null ) throw new ClientUnauthorizedComputeException( e7.getMessage( ) );
-      final SecurityGroupLimitMetadataException e8 = Exceptions.findCause( ex, SecurityGroupLimitMetadataException.class );
-      if ( e8 != null ) throw new ClientComputeException( "SecurityGroupLimitExceeded", "Security group limit exceeded" );
-      final NoSuchGroupMetadataException e9 = Exceptions.findCause( ex, NoSuchGroupMetadataException.class );
-      if ( e9 != null ) throw new ClientComputeException( "InvalidGroup.NotFound", e9.getMessage( ) );
+      throwClientIfFound( ex, ImageInstanceTypeVerificationException.class, "InvalidParameterCombination" );
+      throwClientIfFound( ex, NotEnoughPrivateAddressResourcesException.class, "InsufficientFreeAddressesInSubnet" );
+      throwClientIfFound( ex, PrivateAddressResourceAllocationException.class, "InvalidIPAddress.InUse" );
+      final NotEnoughResourcesException e1 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
+      if ( e1 != null ) throw new ClusterComputeServiceUnavailableException( "InsufficientInstanceCapacity", e1.getMessage( ) );
+      final IllegalMetadataAccessException e2 = Exceptions.findCause( ex, IllegalMetadataAccessException.class );
+      if ( e2 != null ) throw new ClientUnauthorizedComputeException( e2.getMessage( ) );
+      throwClientIfFound( ex, NoSuchKeyMetadataException.class, "InvalidKeyPair.NotFound" );
+      throwClientIfFound( ex, VpcRequiredMetadataException.class, "VPCIdNotSpecified", "Default VPC not found, please specify a subnet.");
+      throwClientIfFound( ex, InvalidParameterCombinationMetadataException.class, "InvalidParameterCombination" );
+      throwClientIfFound( ex, NetworkInterfaceInUseMetadataException.class, "InvalidNetworkInterface.InUse" );
+      throwClientIfFound( ex, SecurityGroupLimitMetadataException.class, "SecurityGroupLimitExceeded", "Security group limit exceeded" );
+      throwClientIfFound( ex, InvalidMetadataException.class, "InvalidParameterValue" );
+      throwClientIfFound( ex, NoSuchImageIdException.class, "InvalidAMIID.NotFound" );
+      throwClientIfFound( ex, NoSuchSubnetMetadataException.class, "InvalidSubnetID.NotFound" );
+      throwClientIfFound( ex, NoSuchNetworkInterfaceMetadataException.class, "InvalidNetworkInterfaceID.NotFound" );
+      throwClientIfFound( ex, NoSuchGroupMetadataException.class, "InvalidGroup.NotFound" );
       LOG.error( ex, ex );
       throw ex;
     } finally {
@@ -816,7 +813,7 @@ public class VmControl {
               }
               vmVolumeAttachment.setDeleteOnTerminate( mapping.getEbs( ) == null ?
                   true :
-                  Objects.firstNonNull( mapping.getEbs( ).getDeleteOnTermination( ), true ) );
+                  MoreObjects.firstNonNull( mapping.getEbs( ).getDeleteOnTermination( ), true ) );
               continue nextmapping;
             }
           }
@@ -837,7 +834,7 @@ public class VmControl {
           if ( !RestrictedTypes.filterPrivileged( ).apply( networkGroup ) ) {
             throw new IllegalAccessException( "Not authorized to access security group " + groupId + " for " + ctx.getUserFullName( ) );
           }
-          if ( !Objects.firstNonNull( networkGroup.getVpcId( ), "" ).equals( vm.getVpcId( ) ) ) {
+          if ( !MoreObjects.firstNonNull( networkGroup.getVpcId( ), "" ).equals( vm.getVpcId( ) ) ) {
             throw new ClientComputeException( "InvalidGroup.NotFound", "Security group ("+groupId+") not found" );
           }
           groups.add( networkGroup );
@@ -1138,6 +1135,24 @@ public class VmControl {
     reply.setTimestamp( new Date() );
     reply.setInstanceId( v.getInstanceId() );
     return reply;
+  }
+
+  private static void throwClientIfFound(
+      final Throwable throwable,
+      final Class<? extends Throwable> exceptionClass,
+      final String code
+  ) throws ClientComputeException {
+    throwClientIfFound( throwable, exceptionClass, code, null );
+  }
+
+  private static void throwClientIfFound(
+      final Throwable throwable,
+      final Class<? extends Throwable> exceptionClass,
+      final String code,
+      final String message
+  ) throws ClientComputeException {
+    final Throwable cause = Exceptions.findCause( throwable, exceptionClass );
+    if ( cause != null ) throw new ClientComputeException( code, message!=null ? message : cause.getMessage( ) );
   }
 
   private static Set<String> toInstanceIds( final Iterable<String> ids ) throws EucalyptusCloudException {

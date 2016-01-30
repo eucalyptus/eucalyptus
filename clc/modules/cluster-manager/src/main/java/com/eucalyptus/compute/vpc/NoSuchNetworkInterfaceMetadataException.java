@@ -17,11 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.internal.util;
+package com.eucalyptus.compute.vpc;
+
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 
 /**
  *
  */
-public class SecurityGroupLimitMetadataException extends InvalidMetadataException {
-  private static final long serialVersionUID = 1L;
+public class NoSuchNetworkInterfaceMetadataException extends NoSuchMetadataException {
+  private static final long serialVersionUID = -1L;
+
+  public NoSuchNetworkInterfaceMetadataException( final String message, final Throwable cause ) {
+    super( message, cause );
+  }
+
+  public NoSuchNetworkInterfaceMetadataException( final String message ) {
+    super( message );
+  }
 }

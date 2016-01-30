@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -111,7 +111,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vmtypes.VmTypes;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -507,8 +507,10 @@ public class AdmissionControl {
             }
           }
         }
+
+        helper.verifyNetworkAllocation( allocInfo, result );
       } catch ( Exception e ) {
-        throw Objects.firstNonNull( Exceptions.findCause( e, NotEnoughResourcesException.class ), e );
+        throw MoreObjects.firstNonNull( Exceptions.findCause( e, NotEnoughResourcesException.class ), e );
       }
     }
     

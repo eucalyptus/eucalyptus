@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.compute.common.internal.util.MetadataException
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.compute.common.internal.vm.VmInstance
@@ -52,6 +53,14 @@ interface VmInstanceLifecycleHelper {
    */
   void prepareNetworkAllocation( Allocation allocation,
                                  PrepareNetworkResourcesType prepareNetworkResourcesType )
+
+  /**
+   * Verify network resource allocation successful.
+   *
+   * Tokens will have been updated prior to this call.
+   */
+  void verifyNetworkAllocation( Allocation allocation,
+                                PrepareNetworkResourcesResultType prepareNetworkResourcesResultType )
 
   void prepareNetworkMessages( Allocation allocation,
                                StatefulMessageSet<State> state )

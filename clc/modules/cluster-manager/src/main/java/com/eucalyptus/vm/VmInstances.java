@@ -2328,7 +2328,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       Emis.BootableSet bootSet;
       try {
         bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-      } catch ( final NoSuchMetadataException | NoSuchImageIdException e ) {
+      } catch ( final NoSuchMetadataException e ) {
         LOG.error( "Using transient bootset in place of imageId " + imageId
             + ", kernelId " + kernelId
             + ", ramdiskId " + ramdiskId
