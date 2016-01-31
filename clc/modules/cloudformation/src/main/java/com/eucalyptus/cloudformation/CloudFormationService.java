@@ -1190,23 +1190,15 @@ public class CloudFormationService {
     return reply;
   }
 
-  private JsonNode tryEvaluateFunctionsInProperties(Template template, String fieldName, String userId) throws CloudFormationException {
+  private JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
     JsonNode metadataJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getMetadataJson());
-    try {
-      metadataJson = FunctionEvaluation.evaluateFunctions(metadataJson, template, userId);
-    } catch (ValidationErrorException ex) {
-      ; // in the case we can't evaluate the Ref: or Fn::GetAtt, we leave the string raw
-    }
+    metadataJson = FunctionEvaluation.evaluateFunctionsPreResourceResolution(metadataJson, template, userId);
     return metadataJson;
   }
 
-  private JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
+  private JsonNode tryEvaluateFunctionsInProperties(Template template, String fieldName, String userId) throws CloudFormationException {
     JsonNode propertiesJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getPropertiesJson());
-    try {
-      propertiesJson = FunctionEvaluation.evaluateFunctions(propertiesJson, template, userId);
-    } catch (ValidationErrorException ex) {
-      ; // in the case we can't evaluate the Ref: or Fn::GetAtt, we leave the string raw
-    }
+    propertiesJson = FunctionEvaluation.evaluateFunctionsPreResourceResolution(propertiesJson, template, userId);
     return propertiesJson;
   }
 
