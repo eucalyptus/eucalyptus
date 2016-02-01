@@ -119,7 +119,8 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Bootstrap.isOperational( ) && ready.compareAndSet( true, false ) ) {
+    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Topology.isEnabled( Storage.class ) &&
+        Bootstrap.isOperational( ) && ready.compareAndSet( true, false ) ) {
       try {
         Threads.enqueue( Eucalyptus.class, Volumes.class, this );
       } catch ( final Exception ex ) {
@@ -293,8 +294,8 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
   }
 
   static Supplier<Map<String, StorageVolume>> updateVolumesInPartition( final String partition ) {
-    final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
     try {
+      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
       final CheckedListenableFuture<DescribeStorageVolumesResponseType> describeFuture =
           AsyncRequests.dispatch( scConfig, new DescribeStorageVolumesType( ) );
       return new Supplier<Map<String, StorageVolume>>( ) {
@@ -316,6 +317,8 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
           return idStorageVolumeMap;
         }
       };
+    } catch ( final NoSuchElementException ex ) {
+      Logs.extreme( ).error( ex, ex );
     } catch ( final Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
