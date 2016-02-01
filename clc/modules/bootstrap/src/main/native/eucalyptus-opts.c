@@ -45,7 +45,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --upgrade-old-dir=VERSION Upgrade from specified directory.",
   "      --upgrade-force           Skip version check to force upgrade to run \n                                  again.  (default=off)",
   "  -i, --bind-addr=HOSTNAME      Specifying this option causes eucalyptus-cloud \n                                  to only bind the specified local addresses.  \n                                  The default behaviour is to listen on the any \n                                  address while determining the user facing \n                                  local address based on default route and \n                                  netmask size.",
-  "      --mcast-addr=HOSTNAME     Multicast address to use for group memebership",
+  "      --mcast-addr=HOSTNAME     Multicast address to use for group membership",
   "  -b, --bootstrap-host=HOSTNAME Host to be used for bootstrapping group \n                                  membership.  Many can be provided.  Note this \n                                  should only be necessary when UDP multicast \n                                  is not available.",
   "      --force-remote-bootstrap  Force the system to boot as a remote component. \n                                   (default=off)",
   "  -D, --define=STRING           Set system properties.",
@@ -1584,7 +1584,7 @@ arguments_internal (
               goto failure;
           
           }
-          /* Multicast address to use for group memebership.  */
+          /* Multicast address to use for group membership.  */
           else if (strcmp (long_options[option_index].name, "mcast-addr") == 0)
           {
           

@@ -81,7 +81,7 @@ option "upgrade-old-version"   -   "Upgrade from specified version."            
 option "upgrade-old-dir"       -   "Upgrade from specified directory."                string   typestr="VERSION"                                 no      dependon="upgrade" hidden
 option "upgrade-force"         -   "Skip version check to force upgrade to run again." flag                               off                            dependon="upgrade" hidden
 option "bind-addr"             i   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size."  string  typestr="HOSTNAME"                            optional multiple
-option "mcast-addr"            -   "Multicast address to use for group memebership"   string   typestr="HOSTNAME"                              optional no
+option "mcast-addr"            -   "Multicast address to use for group membership"    string   typestr="HOSTNAME"                              optional no
 option "bootstrap-host"        b   "Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available." string  typestr="HOSTNAME"                            optional multiple
 option "force-remote-bootstrap" -  "Force the system to boot as a remote component."   flag                              off                   hidden
                                                                                        
