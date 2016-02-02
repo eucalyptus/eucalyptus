@@ -51,7 +51,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -D, --define=STRING           Set system properties.",
   "  -f, --fork                    Fork and daemonize Eucalyptus.  (default=off)",
   "  -k, --kill                    Kill a daemonized Eucalyptus.  (default=off)",
-  "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus-cloud.pid')",
+  "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus/eucalyptus-cloud.pid')",
   "      --db-home=DIRECTORY       Set path to database home directory  \n                                  (default=`')",
   "\nLogging Configuration:",
   "  -l, --log-level=LEVEL      Control the log level for console output.  \n                                  (default=`INFO')",
@@ -238,7 +238,7 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->define_orig = NULL;
   args_info->fork_flag = 0;
   args_info->kill_flag = 0;
-  args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus-cloud.pid");
+  args_info->pidfile_arg = gengetopt_strdup ("/var/run/eucalyptus/eucalyptus-cloud.pid");
   args_info->pidfile_orig = NULL;
   args_info->db_home_arg = gengetopt_strdup ("");
   args_info->db_home_orig = NULL;
@@ -1617,7 +1617,7 @@ arguments_internal (
           
             if (update_arg( (void *)&(args_info->pidfile_arg), 
                  &(args_info->pidfile_orig), &(args_info->pidfile_given),
-                &(local_args_info.pidfile_given), optarg, 0, "/var/run/eucalyptus-cloud.pid", ARG_STRING,
+                &(local_args_info.pidfile_given), optarg, 0, "/var/run/eucalyptus/eucalyptus-cloud.pid", ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "pidfile", '-',
                 additional_error))
