@@ -271,7 +271,8 @@ that describes a Eucalyptus instance to be launched.
                 <!-- network cards -->
 
                 <xsl:for-each select="/instance/nics/nic">
-                    <interface type="bridge">
+                    <xsl:call-template name="nic"/>
+                    <!-- <interface type="bridge">
                         <source>
                             <xsl:attribute name="bridge">
                                 <xsl:value-of select="@bridgeDeviceName"/>
@@ -300,12 +301,12 @@ that describes a Eucalyptus instance to be launched.
                         </xsl:choose>
                         <xsl:if test="/instance/hypervisor/@type = 'xen'">
                             <script path="/etc/xen/scripts/vif-bridge"/>
-                        </xsl:if>
+                        </xsl:if> -->
                         <!-- Directive to libvirt for ensuring that primary nic is eth0 interface in guest -->
-                        <xsl:if test="@device = '0'">
+                        <!--  <xsl:if test="@device = '0'">
                         	<address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
                         </xsl:if>
-                    </interface>
+                    </interface> -->
                 </xsl:for-each>
 
 		<!-- console -->
@@ -419,4 +420,43 @@ that describes a Eucalyptus instance to be launched.
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
+    
+    <xsl:template name="nic" match="/nic">
+      <interface type="bridge">
+        <source>
+          <xsl:attribute name="bridge">
+            <xsl:value-of select="@bridgeDeviceName" />
+          </xsl:attribute>
+        </source>
+        <mac>
+          <xsl:attribute name="address">
+            <xsl:value-of select="@mac" />
+          </xsl:attribute>
+        </mac>
+        <target>
+          <xsl:attribute name="dev">
+            <xsl:value-of select="@guestDeviceName" />
+          </xsl:attribute>
+        </target>
+        <xsl:choose>
+          <xsl:when test="(@hypervisorType='kvm' or @hypervisorType = 'qemu') and @osPlatform = 'windows'">
+            <model type="virtio" />
+          </xsl:when>
+          <xsl:when test="(@hypervisorType='kvm' or@hypervisorType = 'qemu') and @osVirtioNetwork = 'true'">
+            <model type="virtio" />
+          </xsl:when>
+          <xsl:when test="@hypervisorType = 'kvm' and @osPlatform = 'linux'">
+            <model type="e1000" />
+          </xsl:when>
+        </xsl:choose>
+        <xsl:if test="@hypervisorType = 'xen'">
+          <script path="/etc/xen/scripts/vif-bridge" />
+        </xsl:if>
+        <!-- Directive to libvirt for ensuring that primary nic is eth0 interface in guest -->
+        <xsl:if test="@device = '0'">
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0' />
+        </xsl:if>
+      </interface>
+    </xsl:template>
+    
 </xsl:transform>

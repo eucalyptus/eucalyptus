@@ -327,6 +327,7 @@ typedef struct netConfig_t {
     char privateIp[INET_ADDR_LEN];     //!< Private IP address
     int device;                        //!< indicates nic device; 0 is primary and everything else is secondary nic
     char interfaceId[ENI_ID_LEN];      //!< ENI in case of VPC
+    char stateName[CHAR_BUFFER_SIZE];  //!< Network interface state name string
 } netConfig;
 
 //! Structure defining NC Volumes
@@ -561,6 +562,14 @@ boolean is_volume_used(const ncVolume * pVolume);
 ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName,
                       const char *sStateName, const char *sXml);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
+//! @}
+
+//! @{
+//! @name Network Interface APIs
+boolean is_network_interface_used(const netConfig * pNetConfig);
+netConfig *save_network_interface(ncInstance * pInstance, const netConfig * pNetConfig, const char *sStateName);
+netConfig *free_network_interface(ncInstance * pInstance, const char *sInterfaceId);
+netConfig *find_network_interface(ncInstance * pInstance, const char *sInterfaceId);
 //! @}
 
 //! @{

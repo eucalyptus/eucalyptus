@@ -238,6 +238,8 @@ struct handlers {
     int (*doStartNetwork) (struct nc_state_t * nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
     int (*doAttachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
     int (*doDetachVolume) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
+    int (*doAttachNetworkInterface) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, netConfig * netConfig);
+    int (*doDetachNetworkInterface) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force);
     int (*doCreateImage) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
     int (*doBundleInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
                              char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
@@ -324,6 +326,8 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
+int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig * netCfg);
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *interfaceId, int force);
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
                      char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);

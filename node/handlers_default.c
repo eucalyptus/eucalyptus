@@ -212,6 +212,8 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta);
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
 static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
+static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, netConfig * netCfg);
+static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force);
 static void change_createImage_state(ncInstance * instance, createImage_progress state);
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result);
 static void *createImage_thread(void *arg);
@@ -254,6 +256,8 @@ struct handlers default_libvirt_handlers = {
     .doPowerDown = doPowerDown,
     .doAttachVolume = doAttachVolume,
     .doDetachVolume = doDetachVolume,
+    .doAttachNetworkInterface = doAttachNetworkInterface,
+    .doDetachNetworkInterface = doDetachNetworkInterface,
     .doCreateImage = doCreateImage,
     .doBundleInstance = doBundleInstance,
     .doBundleRestartInstance = doBundleRestartInstance,
@@ -1607,6 +1611,241 @@ disconnect:
         return (EUCA_OK);
     }
     return ret;
+}
+
+// create or update network interface record in the instance struct
+static int update_network_interface(char *instanceId, netConfig * netCfg, const char *state)
+{
+    int ret = EUCA_OK;
+
+    sem_p(inst_sem);
+    {
+        ncInstance *instance = find_instance(&global_instances, instanceId);
+        netConfig *pNetCfg = NULL;
+
+        if (instance) {
+            pNetCfg = save_network_interface(instance, netCfg, state);
+        } else {
+            LOGERROR("[%s][%s] failed to find instance for a network interface operation\n", instanceId, netCfg->interfaceId);
+            ret = EUCA_ERROR;
+        }
+        if (pNetCfg) {
+            save_instance_struct(instance);
+            copy_instances();
+//            if (do_update_aliases) {
+//                update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
+//            }
+        } else {
+            LOGERROR("[%s][%s] failed to update the network interface record\n", instanceId, netCfg->interfaceId);
+            ret = EUCA_ERROR;
+        }
+    }
+    sem_v(inst_sem);
+
+    return ret;
+}
+
+int attach_network_interface_instance(const char *instanceId, const char *interfaceId, const char *libvirt_xml)
+{
+    int ret = EUCA_OK;
+
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
+    LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, interfaceId);
+        return EUCA_HYPERVISOR_ERROR;
+    }
+
+    // find domain on hypervisor
+    virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+    if (dom == NULL) {
+        unlock_hypervisor_conn();
+        return EUCA_HYPERVISOR_ERROR;
+    }
+
+    int err = 0;
+    for (int i = 1; i <= VOL_RETRIES; i++) {
+        err = virDomainAttachDevice(dom, libvirt_xml);
+        if (err) {
+            LOGERROR("[%s][%s] failed to attach network interface on attempt %d of 3\n", instanceId, interfaceId, i);
+            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, interfaceId, err, libvirt_xml);
+            sleep(3);                  // sleep a bit and retry.
+        } else {
+            break;
+        }
+    }
+
+    if (err) {
+        LOGERROR("[%s][%s] failed to attach EBS guest device after %d tries\n", instanceId, interfaceId, VOL_RETRIES);
+        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, interfaceId, err, libvirt_xml);
+        ret = EUCA_ERROR;
+    }
+
+    virDomainFree(dom);                // release libvirt resource
+    unlock_hypervisor_conn();
+
+    return ret;
+}
+
+//!
+//! Attach a given network interface to an instance (VPC mode only)
+//!
+//! @param[in] nc a pointer to the NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netConfig a pointer to netConfig data structure
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_NOT_FOUND_ERROR and EUCA_HYPERVISOR_ERROR.
+//!
+static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, netConfig * netCfg)
+{
+    int ret = EUCA_OK;
+    char ipath[EUCA_MAX_PATH];
+    char lpath[EUCA_MAX_PATH];
+    char *libvirt_xml = NULL;
+
+    // Get the instance path
+    if ((ret = get_instance_path(instanceId, ipath, sizeof(ipath)))) {
+        LOGERROR("[%s][%s] failed to find instance for a network interface attach operation\n", instanceId, netCfg->interfaceId);
+        return EUCA_ERROR;
+    }
+
+    // Save network interface to instance structure, that should generate the network interface xml
+    if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHING))) {
+        LOGERROR("[%s][%s] Aborting network interface attach operation due to error creating network interface record\n", instanceId, netCfg->interfaceId)
+        // TODO is there any clean up to be done here?
+        return ret;
+    }
+
+    // Generate network interface libvirt xml
+    if((ret = gen_libvirt_nic_xml(ipath, netCfg->interfaceId))) {
+        LOGERROR("[%s][%s] Aborting attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
+        // TODO cleanup and update state
+        return ret;
+    }
+
+    // Read libvirt xml content into a string
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_NIC_LIBVIRT_XML_PATH_FORMAT, ipath, netCfg->interfaceId);
+    lpath[sizeof(lpath) - 1] = '\0';
+    libvirt_xml = file2str(lpath);
+    if (libvirt_xml == NULL) {
+        LOGERROR("[%s][%s] failed to read network interface libvirt XML from %s\n", instanceId, netCfg->interfaceId, lpath);
+        // TODO cleanup and update state
+        return ret;
+    }
+
+    // Invoke libvirt attach device from an xml
+    if ((ret = attach_network_interface_instance(instanceId, netCfg->interfaceId, libvirt_xml))) {
+        LOGERROR("[%s][%s] libvirt attach device failed\n", instanceId, netCfg->interfaceId)
+        // TODO cleanup and update state
+        return ret;
+    }
+
+    // Update network interface record in the instance structure
+    if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHED))) {
+        LOGERROR("[%s][%s] Aborting network interface attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
+        // TODO cleanup and update state
+        return ret;
+    }
+
+    return ret;
+}
+
+int detach_network_interface_instance(const char *instanceId, const char *interfaceId, const char *libvirt_xml)
+{
+    int ret = EUCA_OK;
+
+    // connect to hypervisor, find the domain, detach the volume
+    virConnectPtr conn = lock_hypervisor_conn();
+    if (conn == NULL) {
+        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, interfaceId);
+        ret = EUCA_HYPERVISOR_ERROR;
+    } else {
+        // find domain on hypervisor
+        virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+        int libvirt_err = 0;
+        if (dom != NULL) {
+            libvirt_err = virDomainDetachDevice(dom, libvirt_xml);
+            virDomainFree(dom);        // release libvirt resource
+        }
+        unlock_hypervisor_conn();
+
+        if (libvirt_err) {
+            LOGERROR("[%s][%s] failed to detach network interface device\n", instanceId, interfaceId);
+            LOGDEBUG("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n",
+                    instanceId, interfaceId, libvirt_err, libvirt_xml);
+            ret = EUCA_ERROR;
+        }
+    }
+
+    return ret;
+}
+
+//!
+//! Detach a given network interface from an instance.
+//!
+//! @param[in] nc a pointer to the NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netConfig a pointer to netConfig data structure
+//! @param[in] force if set to 1, this will force the volume to detach
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_NOT_FOUND_ERROR and EUCA_HYPERVISOR_ERROR.
+//!
+static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    int ret = EUCA_OK;
+    netConfig *netCfg = NULL;
+    char ipath[EUCA_MAX_PATH];
+    char lpath[EUCA_MAX_PATH];
+    char *libvirt_xml = NULL;
+
+    // Get the instance and netCfg path
+    ncInstance *instance = find_instance(&global_instances, instanceId);
+    netCfg = find_network_interface(instance, interfaceId);
+    assert(instance != NULL);
+    assert(netCfg != NULL);
+
+    euca_strncpy(ipath, instance->instancePath, EUCA_MAX_PATH);
+
+    // Update network interface record in the instance structure
+    if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_DETACHING))) {
+        LOGERROR("[%s][%s] Aborting network interface detach operation due to error updating network interface record\n", instanceId, interfaceId)
+        // TODO is there any clean up to be done here?
+        return ret;
+    }
+
+    // Read libvirt xml content into a string
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_NIC_LIBVIRT_XML_PATH_FORMAT, ipath, interfaceId);
+    lpath[sizeof(lpath) - 1] = '\0';
+    libvirt_xml = file2str(lpath);
+    if (libvirt_xml == NULL) {
+        LOGERROR("[%s][%s] failed to read network interface libvirt XML from %s\n", instanceId, interfaceId, lpath);
+        // TODO cleanup and update state
+        return ret;
+    }
+
+    // Invoke libvirt attach device from an xml
+    if ((ret = detach_network_interface_instance(instanceId, interfaceId, libvirt_xml))) {
+        LOGERROR("[%s][%s] libvirt detach device failed\n", instanceId, interfaceId)
+        // TODO cleanup and update state
+        return ret;
+    } else {
+        // Remove libvirt.xml file
+        if ((ret = (unlink(lpath) ? EUCA_ERROR : EUCA_OK))) {
+            LOGERROR("[%s][%s] failed to remove libvirt xml file %s\n", instanceId, interfaceId, lpath);
+        }
+    }
+
+    // Update network interface record in the instance structure
+    if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_DETACHED))) {
+        LOGERROR("[%s][%s] Aborting network interface detach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
+        // TODO is there any clean up to be done here?
+        return ret;
+    }
+
+    return EUCA_OK;
 }
 
 //!

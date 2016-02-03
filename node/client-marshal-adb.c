@@ -300,6 +300,8 @@ int ncStubDestroy(ncStub * pStub)
 //! @param[in]  expiryTime the reservation expiration time
 //! @param[in]  groupNames a list of group name string
 //! @param[in]  groupNamesSize the number of group name in the groupNames list
+//! @param[in]  secNetCfgs a list of secondary network interfaces
+//! @param[in]  secNetCfgsLen the number of network interfaces in the secNetCfgs list
 //! @param[out] outInstPtr the list of instances created by this request
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
@@ -1080,6 +1082,136 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
             response = adb_ncDetachVolumeResponse_get_ncDetachVolumeResponse(output, env);
             if (adb_ncDetachVolumeResponseType_get_return(response, env) == AXIS2_FALSE) {
                 LOGERROR("[%s][%s] returned an error\n", instanceId, volumeId);
+                status = 1;
+            }
+        }
+    }
+
+    return (status);
+}
+
+//!
+//! Marshals the client attach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netCfg a pointer to network interface
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, netConfig * netCfg)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncAttachNetworkInterface_t *input = NULL;
+    adb_ncAttachNetworkInterfaceType_t *request = NULL;
+    adb_ncAttachNetworkInterfaceResponse_t *output = NULL;
+    adb_ncAttachNetworkInterfaceResponseType_t *response = NULL;
+    char *correlation_id = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncAttachNetworkInterface_create(env);
+    request = adb_ncAttachNetworkInterfaceType_create(env);
+
+    // set standard input fields
+    adb_ncAttachNetworkInterfaceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        correlation_id = create_corrid(pMeta->correlationId);
+        EUCA_FREE(pMeta->correlationId);
+        EUCA_MESSAGE_MARSHAL(ncAttachNetworkInterfaceType, request, pMeta);
+    }
+    if (correlation_id != NULL)
+        adb_ncAttachNetworkInterfaceType_set_correlationId(request, env, correlation_id);
+
+    // set op-specific input fields
+    adb_ncAttachNetworkInterfaceType_set_instanceId(request, env, instanceId);
+
+    adb_netConfigType_t *netCfgType = adb_netConfigType_create(env);
+    adb_netConfigType_set_interfaceId(netCfgType, env, netCfg->interfaceId);
+    adb_netConfigType_set_device(netCfgType, env, netCfg->device);
+    adb_netConfigType_set_privateMacAddress(netCfgType, env, netCfg->privateMac);
+    adb_netConfigType_set_privateIp(netCfgType, env, netCfg->privateIp);
+    adb_netConfigType_set_publicIp(netCfgType, env, netCfg->publicIp);
+    adb_netConfigType_set_vlan(netCfgType, env, netCfg->vlan);
+    adb_netConfigType_set_networkIndex(netCfgType, env, netCfg->networkIndex);
+    adb_ncAttachNetworkInterfaceType_set_netConfig(request, env, netCfgType);
+
+    adb_ncAttachNetworkInterface_set_ncAttachNetworkInterface(input, env, request);
+
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncAttachNetworkInterface(stub, env, input)) == NULL) {
+        LOGERROR(NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncAttachNetworkInterfaceResponse_get_ncAttachNetworkInterfaceResponse(output, env);
+        if (adb_ncAttachNetworkInterfaceResponseType_get_return(response, env) == AXIS2_FALSE) {
+            LOGERROR("[%s][%s] returned an error\n", instanceId, netCfg->interfaceId);
+            status = 1;
+        }
+    }
+
+    return (status);
+}
+
+//!
+//! Marshals the client detach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] interfaceId the eni identifier string (eni-XXXXXXXX)
+//! @param[in] force if set to 1, this will force the network interface to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncDetachNetworkInterface_t *input = NULL;
+    adb_ncDetachNetworkInterfaceType_t *request = NULL;
+    adb_ncDetachNetworkInterfaceResponse_t *output = NULL;
+    adb_ncDetachNetworkInterfaceResponseType_t *response = NULL;
+    char *correlation_id = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncDetachNetworkInterface_create(env);
+    request = adb_ncDetachNetworkInterfaceType_create(env);
+
+    // set standard input fields
+    adb_ncDetachNetworkInterfaceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        correlation_id = create_corrid(pMeta->correlationId);
+        EUCA_FREE(pMeta->correlationId);
+        EUCA_MESSAGE_MARSHAL(ncDetachNetworkInterfaceType, request, pMeta);
+    }
+    if (correlation_id != NULL)
+        adb_ncDetachNetworkInterfaceType_set_correlationId(request, env, correlation_id);
+
+    // set op-specific input fields
+    adb_ncDetachNetworkInterfaceType_set_instanceId(request, env, instanceId);
+    adb_ncDetachNetworkInterfaceType_set_interfaceId(request, env, interfaceId);
+    if (force) {
+        adb_ncDetachNetworkInterfaceType_set_force(request, env, AXIS2_TRUE);
+    } else {
+        adb_ncDetachNetworkInterfaceType_set_force(request, env, AXIS2_FALSE);
+    }
+    adb_ncDetachNetworkInterface_set_ncDetachNetworkInterface(input, env, request);
+
+    {
+        // do it
+        if ((output = axis2_stub_op_EucalyptusNC_ncDetachNetworkInterface(stub, env, input)) == NULL) {
+            LOGERROR(NULL_ERROR_MSG);
+            status = -1;
+        } else {
+            response = adb_ncDetachNetworkInterfaceResponse_get_ncDetachNetworkInterfaceResponse(output, env);
+            if (adb_ncDetachNetworkInterfaceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                LOGERROR("[%s][%s] returned an error\n", instanceId, interfaceId);
                 status = 1;
             }
         }

@@ -1040,6 +1040,14 @@ void change_state(ncInstance * instance, instance_states state)
     switch (state) {                   /* mapping from NC's internal states into external ones */
     case STAGING:
     case CANCELED:
+        // Mark primary and secondary network interfaces as attached
+        euca_strncpy(instance->ncnet.stateName, VOL_STATE_ATTACHED, sizeof(instance->ncnet.stateName)); // primary nic
+        for (int i = 0; i < EUCA_MAX_NICS; i++) { // secondary nics in VPC mode only
+            if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
+               continue; // empty slot, move on
+            else
+               euca_strncpy(instance->secNetCfgs[i].stateName, VOL_STATE_ATTACHED, sizeof(instance->secNetCfgs[i].stateName));
+        }
         instance->stateCode = PENDING;
         break;
     case BOOTING:
@@ -1062,6 +1070,14 @@ void change_state(ncInstance * instance, instance_states state)
         instance->retries = LIBVIRT_QUERY_RETRIES;
         break;
     case TEARDOWN:
+        // Mark primary and secondary network interfaces as detached
+        euca_strncpy(instance->ncnet.stateName, VOL_STATE_DETACHED, sizeof(instance->ncnet.stateName)); // primary nic
+        for (int i = 0; i < EUCA_MAX_NICS; i++) { // secondary nics in VPC mode only
+            if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
+               continue; // empty slot, move on
+            else
+               euca_strncpy(instance->secNetCfgs[i].stateName, VOL_STATE_DETACHED, sizeof(instance->secNetCfgs[i].stateName));
+        }
         instance->stateCode = TEARDOWN;
         break;
     default:
@@ -3015,6 +3031,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     long long used_disk = 0;
     long long used_cores = 0;
     u_int vols_count = 0;
+    u_int nics_count = 0;
 
     if (init())
         return (EUCA_ERROR);
@@ -3033,6 +3050,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     for (i = 0; i < (*outInstsLen); i++) {
         char vols_str[128] = "";
         char vol_str[16] = "";
+        char nics_str[128] = "";
+        char nic_str[16] = "";
         char status_str[128] = "running";
         ncInstance *instance = (*outInsts)[i];
 
@@ -3064,6 +3083,35 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             }
         }
 
+        nics_count = 0;
+        for (j = 0; j < EUCA_MAX_NICS; ++j) {
+            netConfig *net = &instance->secNetCfgs[j];
+            if (strlen(net->interfaceId) == 0)
+                continue;
+            nics_count++;
+
+            s = "";
+            if (!strcmp(net->stateName, VOL_STATE_ATTACHING))
+                s = "a";
+            else if (!strcmp(net->stateName, VOL_STATE_ATTACHED))
+                s = "A";
+            else if (!strcmp(net->stateName, VOL_STATE_ATTACHING_FAILED))
+                s = "af";
+            else if (!strcmp(net->stateName, VOL_STATE_DETACHING))
+                s = "d";
+            else if (!strcmp(net->stateName, VOL_STATE_DETACHED))
+                s = "D";
+            else if (!strcmp(net->stateName, VOL_STATE_DETACHING_FAILED))
+                s = "df";
+            else
+                s = "U"; //unknown state
+
+            snprintf(nic_str, sizeof(nic_str), "%s%s:%s", (nics_count > 1) ? (",") : (""), net->interfaceId, s);
+            if ((strlen(nics_str) + strlen(nic_str)) < sizeof(nics_str)) {
+                strcat(nics_str, nic_str);
+            }
+        }
+
         if (instance->migration_state != NOT_MIGRATING) {   // construct migration status string
             char *peer = "?";
             char dir = '?';
@@ -3087,7 +3135,11 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             strncpy(status_str, "staging", sizeof(status_str));
         }                              // else it is "running"
 
-        LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
+        if (nics_count > 0) {
+            LOGDEBUG("[%s] %s (%s) pub=%s vols=%s nics=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str, nics_str);
+        } else {
+            LOGDEBUG("[%s] %s (%s) pub=%s vols=%s\n", instance->instanceId, instance->stateName, status_str, instance->ncnet.publicIp, vols_str);
+        }
     }
 
     // allocate enough memory
@@ -3500,6 +3552,64 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *a
         ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
     else
         ret = nc_state.D->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, attachmentToken, localDev, force);
+
+    return ret;
+}
+
+//!
+//! Attach a given network interface to an instance (VPC mode only)
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netConfig the pointer to netConfig structure
+//!
+//! @return EUCA_ERROR on failure or the result of the proper doAttachNetworkInterface() handler call.
+//!
+int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig *netCfg)
+{
+    int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+    DISABLED_CHECK;
+
+    LOGINFO("[%s][%s] attaching network interface\n", instanceId, netCfg->interfaceId);
+    LOGDEBUG("[%s][%s] network interface attaching (vlan=%d networkIndex=%d privateMac=%s publicIp=%s privateIp=%s device=%d)\n",
+            instanceId, netCfg->interfaceId, netCfg->vlan, netCfg->networkIndex, netCfg->privateMac, netCfg->publicIp,
+            netCfg->privateIp, netCfg->device);
+
+    if (nc_state.H->doAttachNetworkInterface)
+        ret = nc_state.H->doAttachNetworkInterface(&nc_state, pMeta, instanceId, netCfg);
+    else
+        ret = nc_state.D->doAttachNetworkInterface(&nc_state, pMeta, instanceId, netCfg);
+
+    return ret;
+}
+
+//!
+//! Detach a given network interface from an instance (VPC mode only)
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netConfig the pointer to netConfig structure
+//! @param[in] force if set to 1, this will force the network interface to detach
+//!
+//! @return EUCA_ERROR on failure or the result of the proper doDetachNetworkInterface() handler call.
+//!
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+    DISABLED_CHECK;
+
+    LOGINFO("[%s][%s] detaching network interface\n", instanceId, interfaceId);
+
+    if (nc_state.H->doDetachNetworkInterface)
+        ret = nc_state.H->doDetachNetworkInterface(&nc_state, pMeta, instanceId, interfaceId, force);
+    else
+        ret = nc_state.D->doDetachNetworkInterface(&nc_state, pMeta, instanceId, interfaceId, force);
 
     return ret;
 }

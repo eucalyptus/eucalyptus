@@ -170,6 +170,8 @@ static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char
 static int ncClientDescribeResources(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientAttachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice);
 static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice, boolean force);
+static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device);
+static int ncClientDetachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, boolean force);
 static int ncClientDescribeSensors(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientModifyNode(ncStub * pStub, ncMetadata * pMeta, char *psStateName);
 static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psSrcNodeName, char *psDstNodeName, char *psStateName, char *psMigrationCreds);
@@ -214,6 +216,8 @@ static void usage(void)
             "\t\tdescribeResource\n"
             "\t\tattachVolume\t\t[-i -V -R -L]\n"
             "\t\tdetachVolume\t\t[-i -V -R -L]\n"
+            "\t\tattachNetworkInterface\t[-i -E -a -P -Z]\n"
+            "\t\tdetachNetworkInterface\t[-i -E]\n"
             "\t\tbundleInstance\t\t[-i]\n"
             "\t\tbundleRestartInstance\t[-i]\n"
             "\t\tdescribeSensors\n"
@@ -248,6 +252,9 @@ static void usage(void)
             "\t\t-F \t\t- force VolumeDetach\n"
             "\t\t-U [string] \t- user data to store with instance\n" "\t\t-I [string] \t- launch index to store with instance\n"
             "\t\t-G [str:str: ] \t- group names to store with instance\n"
+            "\t\t-E [str] \t- eni ID of network interface\n"
+            "\t\t-P [str] \t- private IP of network interface\n"
+            "\t\t-Z [number] \t- device ID/number of network interface on guest\n"
             "\t\t-s [stateName] \t- name of state\n"
             "\t\t\t\tUse {enabled|disabled} for modifyNode operation\n"
             "\t\t\t\tUse {prepare|commit|rollback} for migrateInstances opration\n" "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
@@ -825,6 +832,80 @@ static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInst
 }
 
 //!
+//! Builds and execute the "AttachNetworkInterface" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psInterfaceId a pointer to the string containing the eni identifier (eni-XXXXXXXX)
+//! @param[in]  psMacAddr a pointer to the string containing mac address assigned to eni
+//! @param[in]  psPrivateIp a pointer to the string containing private IP assigned to eni
+//! @param[in]  device integer device ID identifier
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device)
+{
+    int rc = EUCA_OK;
+    netConfig netCfg = {0};
+    netCfg.vlan = -1;
+    netCfg.networkIndex = -1;
+    snprintf(netCfg.privateMac, ENET_ADDR_LEN, "%s", psMacAddr);
+    snprintf(netCfg.privateIp, INET_ADDR_LEN, "%s", psPrivateIp);
+    snprintf(netCfg.publicIp, INET_ADDR_LEN, "%s", "0.0.0.0");
+    snprintf(netCfg.interfaceId, ENI_ID_LEN, "%s", psInterfaceId);
+    netCfg.device = device;
+
+    if ((rc = ncAttachNetworkInterfaceStub(pStub, pMeta, psInstanceId, &netCfg)) != EUCA_OK) {
+        printf("ncAttachNetworkInterfaceStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncAttachNetworkInterfaceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and execute the "DetachNetworkInterface" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//! @param[in]  psInterfaceId a pointer to the string containing the eni identifier (eni-XXXXXXXX)
+//! @param[in]  force set to TRUE to force detach a network interface
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientDetachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, boolean force)
+{
+    int rc = EUCA_OK;
+
+    if ((rc = ncDetachNetworkInterfaceStub(pStub, pMeta, psInstanceId, psInterfaceId, force)) != EUCA_OK) {
+        printf("ncDetachNetworkInterfaceStub = %d\n", rc);
+        exit(1);
+    }
+
+    printf("ncDetachNetworkInterfaceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
 //! Builds and execute the "DescribeSensors" request
 //!
 //! @param[in]  pStub a pointer to the NC stub structure
@@ -1027,6 +1108,7 @@ int main(int argc, char *argv[])
     int useWSSEC = 0;
     int groupNameSize = 0;
     int nbInstances = 1;
+    int nbDevice = 1;
     char *psEucaHomePath = NULL;
     char *psTmpBuffer = NULL;
     char *psImageURL = NULL;
@@ -1046,6 +1128,8 @@ int main(int argc, char *argv[])
     char *psUUID = NULL;
     char *psMacAddr = strdup(DEFAULT_MAC_ADDR);
     char *psPublicIP = strdup(DEFAULT_PUBLIC_IP);
+    char *psPrivateIP = NULL;
+    char *psInterfaceId = NULL;
     char *psNetworkInfo = NULL;
     char *psVolumeId = NULL;
     char *psRemoteDevice = NULL;
@@ -1073,7 +1157,7 @@ int main(int argc, char *argv[])
     serviceInfoType *pServInfo = NULL;
     virtualMachine virtMachine = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
 
-    while ((ch = getopt(argc, argv, "lhdN:n:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B")) != -1) {
+    while ((ch = getopt(argc, argv, "lhdN:n:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B:P:E:Z")) != -1) {
         switch (ch) {
         case 'c':
             nbInstances = atoi(optarg);
@@ -1194,6 +1278,17 @@ int main(int argc, char *argv[])
             break;
         case 'B':
             psNcEndpoint = "/services/EucalyptusBroker";
+            break;
+        case 'P':
+            psPrivateIP = optarg;
+            break;
+        case 'E':
+            psInterfaceId = optarg;
+            break;
+        case 'Z':
+            printf("Parsing -Z option used for supplying device ID for AttachNetworkInterface\n");
+            nbDevice = atoi(optarg);
+            printf("Parsed -Z option, value=%d\n", nbDevice);
             break;
         case '?':
         default:
@@ -1322,6 +1417,17 @@ int main(int argc, char *argv[])
         CHECK_PARAM(psRemoteDevice, "remote dev");
         CHECK_PARAM(psLocalDevice, "local dev");
         ncClientDetachVolume(pStub, &meta, psInstanceId, psVolumeId, psRemoteDevice, psLocalDevice, force);
+    } else if (!strcmp(psCommand, "attachNetworkInterface")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        CHECK_PARAM(psInterfaceId, "eni ID");
+//        CHECK_PARAM(psMacAddr, "MAC address");
+        CHECK_PARAM(psPrivateIP, "private IP address");
+//        CHECK_PARAM(nbDevice, "device ID");
+        ncClientAttachNetworkInterface(pStub, &meta, psInstanceId, psInterfaceId, psMacAddr, psPrivateIP, nbDevice);
+    } else if (!strcmp(psCommand, "detachNetworkInterface")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        CHECK_PARAM(psInterfaceId, "eni ID");
+        ncClientDetachNetworkInterface(pStub, &meta, psInstanceId, psInterfaceId, force);
     } else if (!strcmp(psCommand, "describeSensors")) {
         ncClientDescribeSensors(pStub, &meta);
     } else if (!strcmp(psCommand, "modifyNode")) {

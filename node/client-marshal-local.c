@@ -417,6 +417,37 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 }
 
 //!
+//! Handles the client attach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netCfg a pointer to network interface
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, netConfig * netCfg)
+{
+    return doAttachNetworkInterface(pMeta, instanceId, netCfg);
+}
+
+//!
+//! Handles the client detach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] interfaceId the eni identifier string (eni-XXXXXXXX)
+//! @param[in] force if set to 1, this will force the network interface to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    return doDetachNetworkInterface(pMeta, instanceId, interfaceId, force);
+}
+
+//!
 //! Handles the client create image request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure

@@ -247,6 +247,47 @@
 	    </xs:extension>
 	  </xs:complexContent>
     </xs:complexType>
+    
+    <xs:complexType name="ncAttachNetworkInterfaceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="netConfig" type="tns:netConfigType"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncAttachNetworkInterfaceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDetachNetworkInterfaceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="interfaceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDetachNetworkInterfaceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
 
     <xs:complexType name="ncCreateImageType">
       <xs:complexContent>
@@ -760,6 +801,12 @@
     
     <xs:element name="ncDetachVolume" nillable="true" type="tns:ncDetachVolumeType"/>
     <xs:element name="ncDetachVolumeResponse" nillable="true" type="tns:ncDetachVolumeResponseType"/>
+    
+    <xs:element name="ncAttachNetworkInterface" nillable="true" type="tns:ncAttachNetworkInterfaceType"/>
+    <xs:element name="ncAttachNetworkInterfaceResponse" nillable="true" type="tns:ncAttachNetworkInterfaceResponseType"/>
+    
+    <xs:element name="ncDetachNetworkInterface" nillable="true" type="tns:ncDetachNetworkInterfaceType"/>
+    <xs:element name="ncDetachNetworkInterfaceResponse" nillable="true" type="tns:ncDetachNetworkInterfaceResponseType"/>
 
     <xs:element name="ncCreateImage" nillable="true" type="tns:ncCreateImageType"/>
     <xs:element name="ncCreateImageResponse" nillable="true" type="tns:ncCreateImageResponseType"/>
@@ -850,6 +897,16 @@
 
 <wsdl:message name="ncDetachVolumeResponse">
   <wsdl:part element="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncAttachNetworkInterfaceResponse">
+  <wsdl:part element="tns:ncAttachNetworkInterfaceResponse" name="ncAttachNetworkInterfaceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDetachNetworkInterfaceResponse">
+  <wsdl:part element="tns:ncDetachNetworkInterfaceResponse" name="ncDetachNetworkInterfaceResponse">
   </wsdl:part>
 </wsdl:message>
 
@@ -960,6 +1017,16 @@
 
 <wsdl:message name="ncDetachVolume">
   <wsdl:part element="tns:ncDetachVolume" name="ncDetachVolume">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncAttachNetworkInterface">
+  <wsdl:part element="tns:ncAttachNetworkInterface" name="ncAttachNetworkInterface">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDetachNetworkInterface">
+  <wsdl:part element="tns:ncDetachNetworkInterface" name="ncDetachNetworkInterface">
   </wsdl:part>
 </wsdl:message>
 
@@ -1092,6 +1159,20 @@
     <wsdl:input message="tns:ncDetachVolume" name="ncDetachVolume">
     </wsdl:input>
     <wsdl:output message="tns:ncDetachVolumeResponse" name="ncDetachVolumeResponse">
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncAttachNetworkInterface">
+    <wsdl:input message="tns:ncAttachNetworkInterface" name="ncAttachNetworkInterface">
+    </wsdl:input>
+    <wsdl:output message="tns:ncAttachNetworkInterfaceResponse" name="ncAttachNetworkInterfaceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncDetachNetworkInterface">
+    <wsdl:input message="tns:ncDetachNetworkInterface" name="ncDetachNetworkInterface">
+    </wsdl:input>
+    <wsdl:output message="tns:ncDetachNetworkInterfaceResponse" name="ncDetachNetworkInterfaceResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -1280,6 +1361,26 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncDetachVolumeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncAttachNetworkInterface">
+    <soap:operation soapAction="EucalyptusNC#ncAttachNetworkInterface" style="document"/>
+    <wsdl:input name="ncAttachNetworkInterface">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncAttachNetworkInterfaceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncDetachNetworkInterface">
+    <soap:operation soapAction="EucalyptusNC#ncDetachNetworkInterface" style="document"/>
+    <wsdl:input name="ncDetachNetworkInterface">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncDetachNetworkInterfaceResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>

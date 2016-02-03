@@ -1014,6 +1014,132 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
 }
 
 //!
+//! Unmarshals, executes, responds to the attach network interface request.
+//!
+//! @param[in] ncAttachNetworkInterface a pointer to the attach betwork interface request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncAttachNetworkInterfaceResponse_t *ncAttachNetworkInterfaceMarshal(adb_ncAttachNetworkInterface_t * ncAttachNetworkInterface, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    netConfig netConfig = { 0 };
+    axis2_char_t *instanceId = NULL;
+    adb_netConfigType_t *netConfigType = NULL;
+    adb_ncAttachNetworkInterfaceType_t *input = NULL;
+    adb_ncAttachNetworkInterfaceResponse_t *response = NULL;
+    adb_ncAttachNetworkInterfaceResponseType_t *output = NULL;
+    long long call_time = time_ms();
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncAttachNetworkInterface_get_ncAttachNetworkInterface(ncAttachNetworkInterface, env);
+        response = adb_ncAttachNetworkInterfaceResponse_create(env);
+        output = adb_ncAttachNetworkInterfaceResponseType_create(env);
+
+        // get operation-specific fields from input
+        instanceId = adb_ncAttachNetworkInterfaceType_get_instanceId(input, env);
+        netConfigType = adb_ncAttachNetworkInterfaceType_get_netConfig(input, env);
+        netConfig.vlan = adb_netConfigType_get_vlan(netConfigType, env);
+        netConfig.networkIndex = adb_netConfigType_get_networkIndex(netConfigType, env);
+        snprintf(netConfig.privateMac, ENET_ADDR_LEN, "%s", adb_netConfigType_get_privateMacAddress(netConfigType, env));
+        snprintf(netConfig.privateIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_privateIp(netConfigType, env));
+        snprintf(netConfig.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(netConfigType, env));
+        snprintf(netConfig.interfaceId, ENI_ID_LEN, "%s", adb_netConfigType_get_interfaceId(netConfigType, env));
+        netConfig.device = adb_netConfigType_get_device(netConfigType, env);
+
+        {
+            // do it
+            EUCA_MESSAGE_UNMARSHAL(ncAttachNetworkInterfaceType, input, (&meta));
+
+            threadCorrelationId *corr_id = set_corrid(meta.correlationId);
+            if ((error = doAttachNetworkInterface(&meta, instanceId, &netConfig)) != EUCA_OK) {
+                LOGERROR("[%s][%s] failed error=%d\n", instanceId, netConfig.interfaceId, error);
+                adb_ncAttachNetworkInterfaceResponseType_set_return(output, env, AXIS2_FALSE);
+                adb_ncAttachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncAttachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            } else {
+                // set standard fields in output
+                adb_ncAttachNetworkInterfaceResponseType_set_return(output, env, AXIS2_TRUE);
+                adb_ncAttachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+                adb_ncAttachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+                // no operation-specific fields in output
+            }
+            unset_corrid(corr_id);
+        }
+
+        // set response to output
+        adb_ncAttachNetworkInterfaceResponse_set_ncAttachNetworkInterfaceResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+    nc_update_message_stats("AttachNetworkInterface", (long)(time_ms() - call_time), error);
+    return (response);
+}
+
+//!
+//! Unmarshals, executes, responds to the detach network interface request.
+//!
+//! @param[in] ncNetworkInterfaceVolume a pointer to the detach network interface request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncDetachNetworkInterfaceResponse_t *ncDetachNetworkInterfaceMarshal(adb_ncDetachNetworkInterface_t * ncDetachNetworkInterface, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    boolean force = FALSE;
+    ncMetadata meta = { 0 };
+    axis2_char_t *instanceId = NULL;
+    axis2_char_t *interfaceId = NULL;
+    axis2_bool_t forceBool = AXIS2_FALSE;
+    adb_ncDetachNetworkInterfaceType_t *input = NULL;
+    adb_ncDetachNetworkInterfaceResponse_t *response = NULL;
+    adb_ncDetachNetworkInterfaceResponseType_t *output = NULL;
+    long long call_time = time_ms();
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncDetachNetworkInterface_get_ncDetachNetworkInterface(ncDetachNetworkInterface, env);
+        response = adb_ncDetachNetworkInterfaceResponse_create(env);
+        output = adb_ncDetachNetworkInterfaceResponseType_create(env);
+
+        // get operation-specific fields from input
+        instanceId = adb_ncDetachNetworkInterfaceType_get_instanceId(input, env);
+        interfaceId = adb_ncDetachNetworkInterfaceType_get_interfaceId(input, env);
+        forceBool = adb_ncDetachNetworkInterfaceType_get_force(input, env);
+        if (forceBool == AXIS2_TRUE) {
+            force = TRUE;
+        } else {
+            force = FALSE;
+        }
+
+        // do it
+        EUCA_MESSAGE_UNMARSHAL(ncDetachNetworkInterfaceType, input, (&meta));
+
+        threadCorrelationId *corr_id = set_corrid(meta.correlationId);
+        if ((error = doDetachNetworkInterface(&meta, instanceId, interfaceId, force)) != EUCA_OK) {
+            LOGERROR("[%s][%s] failed error=%d\n", instanceId, interfaceId, error);
+            adb_ncDetachNetworkInterfaceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncDetachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncDetachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+        } else {
+            // set standard fields in output
+            adb_ncDetachNetworkInterfaceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncDetachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncDetachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            // no operation-specific fields in output
+        }
+        unset_corrid(corr_id);
+        // set response to output
+        adb_ncDetachNetworkInterfaceResponse_set_ncDetachNetworkInterfaceResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+    nc_update_message_stats("DetachNetworkInterface", (long)(time_ms() - call_time), error);
+    return (response);
+}
+
+//!
 //! Unmarshals, executes, responds to the create image request.
 //!
 //! @param[in] ncCreateImage a pointer to the create image request parameters
