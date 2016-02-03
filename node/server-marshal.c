@@ -162,9 +162,6 @@ pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 //!
 void adb_InitService(void)
 {
-    if (getenv("EUCALYPTUS_NC") == NULL) {
-        return;
-    }
     pthread_mutex_lock(&ncHandlerLock);
     doInitNC();
     pthread_mutex_unlock(&ncHandlerLock);

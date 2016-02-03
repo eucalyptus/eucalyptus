@@ -131,4 +131,5 @@ tools/eucanetd
 tools/imaging/build/
 tools/imaging/setup.cfg
 tools/imaging/setup.cfg.template
-
+.tags
+.tags_sorted_by_file
