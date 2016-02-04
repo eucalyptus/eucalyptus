@@ -273,6 +273,8 @@ AC_CONFIG_FILES([Makedefs
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
+                 cluster/eucalyptus-cluster
+                 node/eucalyptus-node
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
