@@ -74,14 +74,15 @@ public class ObjectStorageOPTIONSBinding extends ObjectStorageRESTBinding {
   @Override
   protected Map<String, String> populateOperationMap() {
     Map<String, String> newMap = new HashMap<>();
+
+    // Cross-Origin Resource Sharing (cors)
+    newMap.put(OBJECT + HttpMethod.OPTIONS.toString(), "OPTIONS (preflight) request on object");
+
     return newMap;
   }
 
   protected Map<String, String> populateUnsupportedOperationMap() {
     Map<String, String> opsMap = new HashMap<>();
-
-    // Cross-Origin Resource Sharing (cors)
-    opsMap.put(OBJECT + HttpMethod.OPTIONS.toString(), "OPTIONS request on object");
     return opsMap;
   }
 }

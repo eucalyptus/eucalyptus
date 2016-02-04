@@ -843,6 +843,17 @@ public class DeleteBucketCorsType extends ObjectStorageRequestType {}
 
 public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 
+/* OPTIONS /bucket/object */
+@AdminOverrideAllowed
+// Does not require any specific permissions
+//@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+// Does not require any specific permissions
+//@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
+public class PreflightCheckCorsType extends ObjectStorageRequestType {}
+
+public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {}
+
 
 // AddObject not used yet
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}

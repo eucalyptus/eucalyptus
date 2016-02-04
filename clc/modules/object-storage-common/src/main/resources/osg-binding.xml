@@ -808,6 +808,18 @@
     <mapping name="DeleteBucketCorsResponse"
              class="com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType">
     </mapping>
+
+    <mapping name="PreflightCheckCors"
+             class="com.eucalyptus.objectstorage.msgs.PreflightCheckCorsType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="PreflightCheckCorsResponse"
+             class="com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType">
+    </mapping>
     
 
     <!-- multi-object-delete: POST bucket?delete -->

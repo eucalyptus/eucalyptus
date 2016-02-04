@@ -79,6 +79,8 @@ import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
@@ -184,6 +186,8 @@ public interface ObjectStorageService {
   public abstract SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception;
 
   public abstract DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception;
+
+  public abstract PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception;
 
   public abstract DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 }
