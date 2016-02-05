@@ -20,10 +20,14 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.auth.euare.AccessKeyMetadataType;
+import com.eucalyptus.auth.euare.GetGroupResponseType;
+import com.eucalyptus.auth.euare.GetGroupType;
 import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListAccessKeysResponseType;
 import com.eucalyptus.auth.euare.ListAccessKeysType;
+import com.eucalyptus.auth.euare.ListGroupsForUserResponseType;
+import com.eucalyptus.auth.euare.ListGroupsForUserType;
 import com.eucalyptus.auth.euare.ListGroupsResponseType;
 import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
@@ -32,6 +36,8 @@ import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.ListUsersResponseType;
 import com.eucalyptus.auth.euare.ListUsersType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.UserType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EmbeddedIAMPolicy;
@@ -41,6 +47,8 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -261,4 +269,138 @@ public class IAMHelper {
     }
     return realRoles;
   }
+
+  public static boolean roleExists(ServiceConfiguration configuration, String roleName, String effectiveUserId) throws Exception {
+    return getRole(configuration, roleName, effectiveUserId) != null;
+  }
+
+  private static RoleType getRole(ServiceConfiguration configuration, String roleName, String effectiveUserId) throws Exception {
+    RoleType retVal = null;
+    boolean seenAllRoles = false;
+    String RoleMarker = null;
+    while (!seenAllRoles && retVal == null) {
+      ListRolesType listRolesType = MessageHelper.createMessage(ListRolesType.class, effectiveUserId);
+      if (RoleMarker != null) {
+        listRolesType.setMarker(RoleMarker);
+      }
+      ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
+      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+        RoleMarker = listRolesResponseType.getListRolesResult().getMarker();
+      } else {
+        seenAllRoles = true;
+      }
+      if (listRolesResponseType.getListRolesResult().getRoles() != null && listRolesResponseType.getListRolesResult().getRoles().getMember() != null) {
+        for (RoleType roleType: listRolesResponseType.getListRolesResult().getRoles().getMember()) {
+          if (roleType.getRoleName().equals(roleName)) {
+            retVal = roleType;
+            break;
+          }
+        }
+      }
+    }
+    return retVal;
+  }
+
+  public static <T> Set<T> collectionToSetAndNullToEmpty(Collection<T> c) {
+    HashSet<T> set = Sets.newLinkedHashSet();
+    if (c != null) {
+      set.addAll(c);
+    }
+    return set;
+  }
+
+  public static Set<String> getGroupNamesForUser(ServiceConfiguration configuration, String userName, String effectiveUserId) throws Exception {
+    Set<String> groupSet = Sets.newLinkedHashSet();
+    boolean seenAllGroups = false;
+    String groupMarker = null;
+    while (!seenAllGroups) {
+      ListGroupsForUserType listGroupsForUserType = MessageHelper.createMessage(ListGroupsForUserType.class, effectiveUserId);
+      listGroupsForUserType.setUserName(userName);
+      if (groupMarker != null) {
+        listGroupsForUserType.setMarker(groupMarker);
+      }
+      ListGroupsForUserResponseType listGroupsForUserResponseType = AsyncRequests.<ListGroupsForUserType,ListGroupsForUserResponseType> sendSync(configuration, listGroupsForUserType);
+      if (listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated() == Boolean.TRUE) {
+        groupMarker = listGroupsForUserResponseType.getListGroupsForUserResult().getMarker();
+      } else {
+        seenAllGroups = true;
+      }
+      if (listGroupsForUserResponseType.getListGroupsForUserResult().getGroups() != null && listGroupsForUserResponseType.getListGroupsForUserResult().getGroups().getMemberList() != null) {
+        for (GroupType groupType: listGroupsForUserResponseType.getListGroupsForUserResult().getGroups().getMemberList()) {
+          groupSet.add(groupType.getGroupName());
+        }
+      }
+    }
+    return groupSet;
+  }
+
+  public static Collection<String> nonexistantUsers(ServiceConfiguration configuration, Collection<String> userNames, String effectiveUserId) throws Exception {
+    boolean seenAllUsers = false;
+    List<String> currentUsers = Lists.newArrayList();
+    String userMarker = null;
+    while (!seenAllUsers) {
+      ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, effectiveUserId);
+      if (userMarker != null) {
+        listUsersType.setMarker(userMarker);
+      }
+      ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
+      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = listUsersResponseType.getListUsersResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
+        for (UserType userType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
+          currentUsers.add(userType.getUserName());
+        }
+      }
+    }
+    List<String> nonexistantUsers = Lists.newArrayList();
+    for (String user: userNames) {
+      if (!currentUsers.contains(user)) {
+        nonexistantUsers.add(user);
+      }
+    }
+    return nonexistantUsers;
+  }
+
+  public static void removeUsersFromGroup(ServiceConfiguration configuration, Collection<String> userNames, String groupName, String effectiveUserId) throws Exception {
+    // if no group, bye...
+    if (!groupExists(configuration, groupName, effectiveUserId)) return;
+    Set<String> passedInUsers = userNames == null ? new HashSet<String>() : Sets.newHashSet(userNames);
+    Set<String> actualUsers = getUserNamesForGroup(configuration, groupName, effectiveUserId);
+    for (String user: Sets.intersection(passedInUsers, actualUsers)) {
+      RemoveUserFromGroupType removeUserFromGroupType = MessageHelper.createMessage(RemoveUserFromGroupType.class, effectiveUserId);
+      removeUserFromGroupType.setGroupName(groupName);
+      removeUserFromGroupType.setUserName(user);
+      AsyncRequests.<RemoveUserFromGroupType,RemoveUserFromGroupResponseType> sendSync(configuration, removeUserFromGroupType);
+    }
+
+  }
+
+  public static Set<String> getUserNamesForGroup(ServiceConfiguration configuration, String groupName, String effectiveUserId) throws Exception {
+    Set<String> users = Sets.newLinkedHashSet();
+    boolean seenAllUsers = false;
+    String userMarker = null;
+    while (!seenAllUsers) {
+      GetGroupType getGroupType = MessageHelper.createMessage(GetGroupType.class, effectiveUserId);
+      getGroupType.setGroupName(groupName);
+      if (userMarker != null) {
+        getGroupType.setMarker(userMarker);
+      }
+      GetGroupResponseType getGroupResponseType = AsyncRequests.<GetGroupType,GetGroupResponseType> sendSync(configuration, getGroupType);
+      if (getGroupResponseType.getGetGroupResult().getIsTruncated() == Boolean.TRUE) {
+        userMarker = getGroupResponseType.getGetGroupResult().getMarker();
+      } else {
+        seenAllUsers = true;
+      }
+      if (getGroupResponseType.getGetGroupResult() != null && getGroupResponseType.getGetGroupResult().getUsers().getMemberList() != null) {
+        for (UserType userType: getGroupResponseType.getGetGroupResult().getUsers().getMemberList()) {
+          users.add(userType.getUserName());
+        }
+      }
+    }
+    return users;
+  }
+
 }

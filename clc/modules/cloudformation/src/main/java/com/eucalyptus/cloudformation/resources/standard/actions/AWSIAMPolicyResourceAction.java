@@ -172,7 +172,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         // find all roles that still exist from the list and remove the policy
-        Set<String> passedInRoles = collectionToSetAndNullToEmpty(action.properties.getRoles());
+        Set<String> passedInRoles = IAMHelper.collectionToSetAndNullToEmpty(action.properties.getRoles());
         List<String> realRolesToRemovePolicyFrom = IAMHelper.getExistingRoles(configuration, passedInRoles, action.info.getEffectiveUserId());
         for (String role: realRolesToRemovePolicyFrom) {
           DeleteRolePolicyType deleteRolePolicyType = MessageHelper.createMessage(DeleteRolePolicyType.class, action.info.getEffectiveUserId());
@@ -192,7 +192,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         }
 
         // find all groups that still exist from the list and remove the policy
-        Set<String> passedInGroups = collectionToSetAndNullToEmpty(action.properties.getGroups());
+        Set<String> passedInGroups = IAMHelper.collectionToSetAndNullToEmpty(action.properties.getGroups());
         List<String> realGroupsToRemovePolicyFrom = IAMHelper.getExistingGroups(configuration, passedInGroups, action.info.getEffectiveUserId());
         for (String group: realGroupsToRemovePolicyFrom) {
           DeleteGroupPolicyType deleteGroupPolicyType = MessageHelper.createMessage(DeleteGroupPolicyType.class, action.info.getEffectiveUserId());
@@ -238,8 +238,8 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
         AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        Set<String> oldGroupNames = collectionToSetAndNullToEmpty(oldAction.properties.getGroups());
-        Set<String> newGroupNames = collectionToSetAndNullToEmpty(newAction.properties.getGroups());
+        Set<String> oldGroupNames = IAMHelper.collectionToSetAndNullToEmpty(oldAction.properties.getGroups());
+        Set<String> newGroupNames = IAMHelper.collectionToSetAndNullToEmpty(newAction.properties.getGroups());
         // add the policy to the new group
         for (String groupName : newGroupNames) {
           PutGroupPolicyType putGroupPolicyType = MessageHelper.createMessage(PutGroupPolicyType.class, newAction.info.getEffectiveUserId());
@@ -268,8 +268,8 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
         AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        Set<String> oldUserNames = collectionToSetAndNullToEmpty(oldAction.properties.getUsers());
-        Set<String> newUserNames = collectionToSetAndNullToEmpty(newAction.properties.getUsers());
+        Set<String> oldUserNames = IAMHelper.collectionToSetAndNullToEmpty(oldAction.properties.getUsers());
+        Set<String> newUserNames = IAMHelper.collectionToSetAndNullToEmpty(newAction.properties.getUsers());
         // add the policy to the new user
         for (String userName: newUserNames) {
           PutUserPolicyType putUserPolicyType = MessageHelper.createMessage(PutUserPolicyType.class, newAction.info.getEffectiveUserId());
@@ -298,8 +298,8 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         AWSIAMPolicyResourceAction oldAction = (AWSIAMPolicyResourceAction) oldResourceAction;
         AWSIAMPolicyResourceAction newAction = (AWSIAMPolicyResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        Set<String> oldRoleNames = collectionToSetAndNullToEmpty(oldAction.properties.getRoles());
-        Set<String> newRoleNames = collectionToSetAndNullToEmpty(newAction.properties.getRoles());
+        Set<String> oldRoleNames = IAMHelper.collectionToSetAndNullToEmpty(oldAction.properties.getRoles());
+        Set<String> newRoleNames = IAMHelper.collectionToSetAndNullToEmpty(newAction.properties.getRoles());
         // add the policy to the new role
         for (String roleName: newRoleNames) {
           PutRolePolicyType putRolePolicyType = MessageHelper.createMessage(PutRolePolicyType.class, newAction.info.getEffectiveUserId());
@@ -331,13 +331,6 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
   }
 
 
-  static <T> Set<T> collectionToSetAndNullToEmpty(Collection<T> c) {
-    HashSet<T> set = Sets.newLinkedHashSet();
-    if (c != null) {
-      set.addAll(c);
-    }
-    return set;
-  }
 }
 
 

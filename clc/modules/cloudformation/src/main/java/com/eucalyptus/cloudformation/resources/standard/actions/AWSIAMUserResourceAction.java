@@ -26,6 +26,8 @@ import com.eucalyptus.auth.euare.CreateLoginProfileResponseType;
 import com.eucalyptus.auth.euare.CreateLoginProfileType;
 import com.eucalyptus.auth.euare.CreateUserResponseType;
 import com.eucalyptus.auth.euare.CreateUserType;
+import com.eucalyptus.auth.euare.DeleteLoginProfileResponseType;
+import com.eucalyptus.auth.euare.DeleteLoginProfileType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyType;
 import com.eucalyptus.auth.euare.DeleteUserResponseType;
@@ -39,7 +41,12 @@ import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
 import com.eucalyptus.auth.euare.PutUserPolicyType;
 import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
 import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
+import com.eucalyptus.auth.euare.UpdateLoginProfileResponseType;
+import com.eucalyptus.auth.euare.UpdateLoginProfileType;
+import com.eucalyptus.auth.euare.UpdateUserResponseType;
+import com.eucalyptus.auth.euare.UpdateUserType;
 import com.eucalyptus.auth.euare.UserType;
+import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -50,26 +57,56 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
  */
 public class AWSIAMUserResourceAction extends StepBasedResourceAction {
-
+  private static final Logger LOG = Logger.getLogger(AWSIAMUserResourceAction.class);
   private AWSIAMUserProperties properties = new AWSIAMUserProperties();
   private AWSIAMUserResourceInfo info = new AWSIAMUserResourceInfo();
 
   public AWSIAMUserResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  private static final String DEFAULT_PATH = "/";
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSIAMUserResourceAction otherAction = (AWSIAMUserResourceAction) resourceAction;
+    if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getGroups(), otherAction.properties.getGroups())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getLoginProfile(), otherAction.properties.getLoginProfile())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -81,7 +118,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         String userName = action.getDefaultPhysicalResourceId();
         CreateUserType createUserType = MessageHelper.createMessage(CreateUserType.class, action.info.getEffectiveUserId());
         createUserType.setUserName(userName);
-        createUserType.setPath(action.properties.getPath());
+        createUserType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
         CreateUserResponseType createUserResponseType = AsyncRequests.<CreateUserType,CreateUserResponseType> sendSync(configuration, createUserType);
         String arn = createUserResponseType.getCreateUserResult().getUser().getArn();
         action.info.setPhysicalResourceId(userName);
@@ -154,30 +191,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         if (action.info.getPhysicalResourceId() == null) return action;
 
         // if no user, bye...
-        boolean seenAllUsers = false;
-        boolean foundUser = false;
-        String userMarker = null;
-        while (!seenAllUsers && !foundUser) {
-          ListUsersType listUsersType = MessageHelper.createMessage(ListUsersType.class, action.info.getEffectiveUserId());
-          if (userMarker != null) {
-            listUsersType.setMarker(userMarker);
-          }
-          ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-          if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
-            userMarker = listUsersResponseType.getListUsersResult().getMarker();
-          } else {
-            seenAllUsers = true;
-          }
-          if (listUsersResponseType.getListUsersResult().getUsers() != null && listUsersResponseType.getListUsersResult().getUsers().getMemberList() != null) {
-            for (UserType UserType: listUsersResponseType.getListUsersResult().getUsers().getMemberList()) {
-              if (UserType.getUserName().equals(action.info.getPhysicalResourceId())) {
-                foundUser = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!foundUser) return action;
+        if (!IAMHelper.userExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;
 
         // remove user from groups we added (if there)
         if (action.properties.getGroups() != null) {
@@ -256,6 +270,148 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSIAMUserResourceInfo) resourceInfo;
   }
+
+  private static Set<String> getPolicyNames(AWSIAMUserResourceAction action) {
+    Set<String> policyNames = Sets.newLinkedHashSet();
+    if (action.properties.getPolicies() != null) {
+      for (EmbeddedIAMPolicy policy : action.properties.getPolicies()) {
+        policyNames.add(policy.getPolicyName());
+      }
+    }
+    return policyNames;
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_USER {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String userName = newAction.info.getPhysicalResourceId();
+        UpdateUserType updateUserType = MessageHelper.createMessage(UpdateUserType.class, newAction.info.getEffectiveUserId());
+        updateUserType.setUserName(userName);
+        updateUserType.setNewPath(MoreObjects.firstNonNull(newAction.properties.getPath(), DEFAULT_PATH));
+        UpdateUserResponseType updateUserResponseType = AsyncRequests.<UpdateUserType,UpdateUserResponseType> sendSync(configuration, updateUserType);
+        return newAction;
+      }
+    },
+    UPDATE_LOGIN_PROFILE {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (newAction.properties.getLoginProfile() != null) {
+          UpdateLoginProfileType updateLoginProfileType = MessageHelper.createMessage(UpdateLoginProfileType.class, newAction.info.getEffectiveUserId());
+          updateLoginProfileType.setPassword(newAction.properties.getLoginProfile().getPassword());
+          updateLoginProfileType.setUserName(newAction.info.getPhysicalResourceId());
+          try {
+            AsyncRequests.<UpdateLoginProfileType, UpdateLoginProfileResponseType>sendSync(configuration, updateLoginProfileType);
+          } catch ( final Exception e ) {
+            final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+            if (error.isPresent() && Strings.nullToEmpty(error.get().getCode()).equals("NoSuchEntity")) {
+              CreateLoginProfileType createLoginProfileType = MessageHelper.createMessage(CreateLoginProfileType.class, newAction.info.getEffectiveUserId());
+              createLoginProfileType.setPassword(newAction.properties.getLoginProfile().getPassword());
+              createLoginProfileType.setUserName(newAction.info.getPhysicalResourceId());
+              AsyncRequests.<CreateLoginProfileType,CreateLoginProfileResponseType> sendSync(configuration, createLoginProfileType);
+            } else throw e;
+          }
+        } else {
+          DeleteLoginProfileType deleteLoginProfileType = MessageHelper.createMessage(DeleteLoginProfileType.class, newAction.info.getEffectiveUserId());
+          deleteLoginProfileType.setUserName(newAction.info.getPhysicalResourceId());
+          try {
+            AsyncRequests.<DeleteLoginProfileType,DeleteLoginProfileResponseType> sendSync(configuration, deleteLoginProfileType);
+          } catch ( final Exception e ) {
+            final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+            if (error.isPresent() && Strings.nullToEmpty(error.get().getCode()).equals("NoSuchEntity")) {
+              // we don't care.  (already deleted or never there)
+            } else throw e;
+          }
+        }
+        return newAction;
+      }
+    },
+    UPDATE_POLICIES {
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldPolicyNames = getPolicyNames(oldAction);
+        Set<String> newPolicyNames = getPolicyNames(newAction);
+        if (newAction.properties.getPolicies() != null) {
+          for (EmbeddedIAMPolicy policy: newAction.properties.getPolicies()) {
+            PutUserPolicyType putUserPolicyType = MessageHelper.createMessage(PutUserPolicyType.class, newAction.info.getEffectiveUserId());
+            putUserPolicyType.setUserName(newAction.info.getPhysicalResourceId());
+            putUserPolicyType.setPolicyName(policy.getPolicyName());
+            putUserPolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
+            AsyncRequests.<PutUserPolicyType,PutUserPolicyResponseType> sendSync(configuration, putUserPolicyType);
+          }
+        }
+        // delete all the old policies not in the new set (deleting policies is idempotent thankfully)
+        for (String oldPolicyName : Sets.difference(oldPolicyNames, newPolicyNames)) {
+          DeleteUserPolicyType deleteUserPolicyType = MessageHelper.createMessage(DeleteUserPolicyType.class, newAction.info.getEffectiveUserId());
+          deleteUserPolicyType.setUserName(newAction.info.getPhysicalResourceId());
+          deleteUserPolicyType.setPolicyName(oldPolicyName);
+          AsyncRequests.<DeleteUserPolicyType,DeleteUserPolicyResponseType> sendSync(configuration, deleteUserPolicyType);
+        }
+        return newAction;
+      }
+
+    },
+    UPDATE_GROUPS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldGroupNames = IAMHelper.collectionToSetAndNullToEmpty(oldAction.properties.getGroups());
+        Set<String> newGroupNames = IAMHelper.collectionToSetAndNullToEmpty(newAction.properties.getGroups());
+        // only add groups not already added (due to conflict error if double adding)
+        Set<String> existingGroupsForUser = IAMHelper.getGroupNamesForUser(configuration, newAction.info.getPhysicalResourceId(), newAction.info.getEffectiveUserId());
+        for (String groupName: Sets.difference(newGroupNames, existingGroupsForUser)) {
+          AddUserToGroupType addUserToGroupType = MessageHelper.createMessage(AddUserToGroupType.class, newAction.info.getEffectiveUserId());
+          addUserToGroupType.setGroupName(groupName);
+          addUserToGroupType.setUserName(newAction.info.getPhysicalResourceId());
+          AsyncRequests.<AddUserToGroupType,AddUserToGroupResponseType> sendSync(configuration, addUserToGroupType);
+        }
+        for (String groupName: Sets.difference(oldGroupNames, newGroupNames)) {
+          RemoveUserFromGroupType removeUserFromGroupType = MessageHelper.createMessage(RemoveUserFromGroupType.class, oldAction.info.getEffectiveUserId());
+          removeUserFromGroupType.setGroupName(groupName);
+          removeUserFromGroupType.setUserName(oldAction.info.getPhysicalResourceId());
+          try {
+            AsyncRequests.<RemoveUserFromGroupType,RemoveUserFromGroupResponseType> sendSync(configuration, removeUserFromGroupType);
+          } catch ( final Exception e ) {
+            final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+            if (error.isPresent() && Strings.nullToEmpty(error.get().getCode()).equals("NoSuchEntity")) {
+              // we don't care.  (already deleted or never there)
+            } else throw e;
+          }
+        }
+        return newAction;
+      }
+    },
+    UPDATE_ARN {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String userName = newAction.info.getPhysicalResourceId();
+        UserType user = IAMHelper.getUser(configuration, userName, newAction.info.getEffectiveUserId());
+        newAction.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(user.getArn())));
+        return newAction;
+      }
+    };
+
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
 
 
 
