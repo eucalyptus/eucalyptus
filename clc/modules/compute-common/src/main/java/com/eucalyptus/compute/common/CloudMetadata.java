@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,60 +79,63 @@ import com.eucalyptus.auth.type.RestrictedType;
 public interface CloudMetadata extends RestrictedType {
   
   @PolicyResourceType( "availabilityzone" )
-  public interface AvailabilityZoneMetadata extends CloudMetadata {}
+  interface AvailabilityZoneMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "key-pair" )
-  public interface KeyPairMetadata extends CloudMetadata {}
+  interface KeyPairMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "security-group" )
-  public interface NetworkGroupMetadata extends CloudMetadata {}
+  interface NetworkGroupMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "address" )
-  public interface AddressMetadata extends CloudMetadata {}
+  interface AddressMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "volume" )
-  public interface VolumeMetadata extends CloudMetadata {}
+  interface VolumeMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "snapshot" )
-  public interface SnapshotMetadata extends CloudMetadata {
+  interface SnapshotMetadata extends CloudMetadata {
   }
   
   @PolicyResourceType( VmInstanceMetadata.POLICY_RESOURCE_TYPE )
-  public interface VmInstanceMetadata extends CloudMetadata {
-    public static String POLICY_RESOURCE_TYPE = "instance";
+  interface VmInstanceMetadata extends CloudMetadata {
+    String POLICY_RESOURCE_TYPE = "instance";
   }
 
   @PolicyResourceType( "vmtype" )
-  public interface VmTypeMetadata extends CloudMetadata {
-    public abstract Integer getMemory( );
+  interface VmTypeMetadata extends CloudMetadata {
+    Integer getMemory( );
     
-    public abstract Integer getCpu( );
+    Integer getCpu( );
     
-    public abstract Integer getDisk( );
+    Integer getDisk( );
     
   }
 
   @PolicyResourceType( "tag" )
-  public interface TagMetadata extends CloudMetadata {}
+  interface TagMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "dhcp-options" )
-  public interface DhcpOptionSetMetadata extends CloudMetadata {}
+  interface DhcpOptionSetMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "internet-gateway" )
-  public interface InternetGatewayMetadata extends CloudMetadata {}
+  interface InternetGatewayMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "nat-gateway" )
+  interface NatGatewayMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "network-acl" )
-  public interface NetworkAclMetadata extends CloudMetadata {}
+  interface NetworkAclMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "network-interface" )
-  public interface NetworkInterfaceMetadata extends CloudMetadata {}
+  interface NetworkInterfaceMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "route-table" )
-  public interface RouteTableMetadata extends CloudMetadata {}
+  interface RouteTableMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "subnet" )
-  public interface SubnetMetadata extends CloudMetadata {}
+  interface SubnetMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "vpc" )
-  public interface VpcMetadata extends CloudMetadata {}
+  interface VpcMetadata extends CloudMetadata {}
 }

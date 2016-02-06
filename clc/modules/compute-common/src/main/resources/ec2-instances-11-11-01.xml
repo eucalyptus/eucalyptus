@@ -106,8 +106,8 @@
         </structure>
         <value name="subnetId" field="subnetId" usage="optional" />
         <value name="vpcId" field="vpcId" usage="optional" />
-        <value name="privateIpAddress" field="privateIpAddress" usage="required" />
-        <value name="ipAddress" field="ipAddress" usage="required" />
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
+        <value name="ipAddress" field="ipAddress" usage="optional" />
         <value name="sourceDestCheck" field="sourceDestCheck" usage="optional" />
         <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>

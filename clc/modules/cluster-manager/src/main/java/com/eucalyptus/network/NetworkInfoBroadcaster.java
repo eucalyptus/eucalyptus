@@ -30,6 +30,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateway;
+import com.eucalyptus.compute.common.internal.vpc.NatGateway;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcl;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.RouteTable;
@@ -41,6 +42,7 @@ import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.network.NetworkInfoBroadcasts.NatGatewayNetworkView;
 import com.eucalyptus.network.config.NetworkConfiguration;
 import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.network.NetworkInfoBroadcasts.VmInstanceNetworkView;
@@ -140,6 +142,8 @@ public class NetworkInfoBroadcaster {
       new EntityCache<>( InternetGateway.exampleWithOwner( null ), TypeMappers.lookup( InternetGateway.class, InternetGatewayNetworkView.class )  );
   private static final EntityCache<NetworkInterface,NetworkInterfaceNetworkView> networkInterfaceCache =
       new EntityCache<>( NetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( NetworkInterface.class, NetworkInterfaceNetworkView.class )  );
+  private static final EntityCache<NatGateway,NatGatewayNetworkView> natGatewayCache =
+      new EntityCache<>( NatGateway.exampleWithOwner( null ), TypeMappers.lookup( NatGateway.class, NatGatewayNetworkView.class )  );
 
   private static final class LastBroadcastInfo {
     private final int version;
@@ -173,6 +177,7 @@ public class NetworkInfoBroadcaster {
     final Supplier<Iterable<RouteTableNetworkView>> routeTableSupplier = Suppliers.memoize( routeTableCache );
     final Supplier<Iterable<InternetGatewayNetworkView>> internetGatewaySupplier = Suppliers.memoize( internetGatewayCache );
     final Supplier<Iterable<NetworkInterfaceNetworkView>> networkInterfaceSupplier = Suppliers.memoize( networkInterfaceCache );
+    final Supplier<Iterable<NatGatewayNetworkView>> natGatewaySupplier = Suppliers.memoize( natGatewayCache );
     return new NetworkInfoSource( ) {
       @Override public Iterable<VmInstanceNetworkView> getInstances( ) { return instanceSupplier.get( ); }
       @Override public Iterable<NetworkGroupNetworkView> getSecurityGroups( ) { return securityGroupSupplier.get( ); }
@@ -183,6 +188,7 @@ public class NetworkInfoBroadcaster {
       @Override public Iterable<RouteTableNetworkView> getRouteTables( ) { return routeTableSupplier.get( ); }
       @Override public Iterable<InternetGatewayNetworkView> getInternetGateways( ) { return internetGatewaySupplier.get( ); }
       @Override public Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( ) { return networkInterfaceSupplier.get( ); }
+      @Override public Iterable<NatGatewayNetworkView> getNatGateways( ) { return natGatewaySupplier.get( ); }
       @Override public Map<String, Iterable<? extends VersionedNetworkView>> getView() {
         return ImmutableMap.<String, Iterable<? extends VersionedNetworkView>>builder( )
             .put( "instance", getInstances( ) )
@@ -194,6 +200,7 @@ public class NetworkInfoBroadcaster {
             .put( "route-table", getRouteTables( ) )
             .put( "internet-gateway", getInternetGateways( ) )
             .put( "network-interface", getNetworkInterfaces( ) )
+            .put( "nat-gateway", getNatGateways( ) )
             .build( );
       }
     };

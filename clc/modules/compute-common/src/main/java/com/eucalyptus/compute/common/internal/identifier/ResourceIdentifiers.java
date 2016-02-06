@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ import com.google.common.collect.Maps;
 public class ResourceIdentifiers {
 
   private static final ConcurrentMap<String,ResourceIdentifierCanonicalizer> canonicalizers = Maps.newConcurrentMap();
-  private static final Pattern resourcePattern = Pattern.compile( "[0-9a-fA-F]{8}" );
+  private static final Pattern resourcePattern = Pattern.compile( "[0-9a-fA-F]{8}|[0-9a-fA-F]{17}" );
   private static final AtomicReference<ResourceIdentifierCanonicalizer> defaultCanonicalizer =
       new AtomicReference<ResourceIdentifierCanonicalizer>( new LowerResourceIdentifierCanonicalizer( ) );
   @ConfigurableField(
@@ -73,8 +73,16 @@ public class ResourceIdentifiers {
     return parse( Crypto.generateId( prefix ) );
   }
 
+  public static ResourceIdentifier generateLong( final String prefix ) {
+    return parse( Crypto.generateLongId( prefix ) );
+  }
+
   public static String generateString( final String prefix ) {
     return generate( prefix ).getIdentifier( );
+  }
+
+  public static String generateLongString( final String prefix ) {
+    return generateLong( prefix ).getIdentifier( );
   }
 
   public static ResourceIdentifier parse( final String expectedPrefix,

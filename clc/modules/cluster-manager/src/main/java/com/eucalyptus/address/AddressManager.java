@@ -384,6 +384,11 @@ public class AddressManager {
       } else { // VPC
         final NetworkInterface networkInterface =
             RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
+        if ( NetworkInterface.Type.NatGateway == networkInterface.getType( ) ) {
+          throw new ClientComputeException(
+              "InvalidIPAddress.InUse",
+              "Address ("+address.getName( )+") in use for NAT gateway interface ("+address.getNetworkInterfaceId( )+")" );
+        }
         try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
           final NetworkInterface eni = Entities.merge( networkInterface );
           if ( addresses.unassign( address, associationId ) ) {

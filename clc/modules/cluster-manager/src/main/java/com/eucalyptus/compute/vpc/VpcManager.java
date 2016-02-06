@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
-import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -37,6 +37,7 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.compute.common.NatGatewayType;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -62,6 +63,8 @@ import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSets;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateway;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
+import com.eucalyptus.compute.common.internal.vpc.NatGateway;
+import com.eucalyptus.compute.common.internal.vpc.NatGateways;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcl;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry;
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls;
@@ -107,6 +110,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -129,6 +133,7 @@ public class VpcManager {
 
   private final DhcpOptionSets dhcpOptionSets;
   private final InternetGateways internetGateways;
+  private final NatGateways natGateways;
   private final NetworkAcls networkAcls;
   private final NetworkInterfaces networkInterfaces;
   private final RouteTables routeTables;
@@ -140,6 +145,7 @@ public class VpcManager {
   @Inject
   public VpcManager( final DhcpOptionSets dhcpOptionSets,
                      final InternetGateways internetGateways,
+                     final NatGateways natGateways,
                      final NetworkAcls networkAcls,
                      final NetworkInterfaces networkInterfaces,
                      final RouteTables routeTables,
@@ -149,6 +155,7 @@ public class VpcManager {
                      final VpcInvalidator vpcInvalidator ) {
     this.dhcpOptionSets = dhcpOptionSets;
     this.internetGateways = internetGateways;
+    this.natGateways = natGateways;
     this.networkAcls = networkAcls;
     this.networkInterfaces = networkInterfaces;
     this.routeTables = routeTables;
@@ -442,6 +449,49 @@ public class VpcManager {
     return reply;
   }
 
+  public CreateNatGatewayResponseType createNatGateway(
+      final CreateNatGatewayType request
+  ) throws EucalyptusCloudException {
+    final CreateNatGatewayResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup();
+    final String allocationId = Identifier.eipalloc.normalize( request.getAllocationId( ) );
+    final String subnetId = Identifier.subnet.normalize( request.getSubnetId( ) );
+    final String clientToken = Strings.emptyToNull( request.getClientToken( ) );
+    final Supplier<NatGateway> allocator = new Supplier<NatGateway>( ) {
+      @Override
+      public NatGateway get( ) {
+        try {
+          final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+          if ( clientToken != null ) try {
+            return natGateways.lookupByClientToken( accountFullName, clientToken, Functions.<NatGateway>identity( ) );
+          } catch ( final VpcMetadataNotFoundException e ) {
+            // create new NAT gateway with the given client token
+          }
+
+          final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity( ) );
+          final long natGatewayCount = natGateways.countByZone( accountFullName, subnet.getAvailabilityZone( ) );
+          if ( natGatewayCount >= VpcConfiguration.getNatGatewaysPerAvailabilityZone( ) ) {
+            throw new ClientComputeException( "NatGatewayLimitExceeded",
+                "NAT gateway limit exceeded for availability zone " + subnet.getAvailabilityZone( ) );
+          }
+
+          final String natGatewayId = Identifier.nat.generate( );
+          final Vpc vpc = subnet.getVpc( );
+          return natGateways.save(
+              NatGateway.create( ctx.getUserFullName( ), vpc, subnet, natGatewayId, clientToken, allocationId ) );
+        } catch ( final VpcMetadataNotFoundException e ) {
+          throw Exceptions.toUndeclared(
+              new ClientComputeException( "InvalidSubnetID.NotFound",  "Subnet not found '" + subnetId + "'" ) );
+        } catch ( final Exception ex ) {
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+    };
+    reply.setClientToken( clientToken );
+    reply.setNatGateway( allocate( allocator, NatGateway.class, NatGatewayType.class ) );
+    return reply;
+  }
+
   public CreateNetworkAclResponseType createNetworkAcl( final CreateNetworkAclType request ) throws EucalyptusCloudException {
     final CreateNetworkAclResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -651,6 +701,8 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String gatewayId = request.getGatewayId( ) == null ?
         null : Identifier.igw.normalize( request.getGatewayId( ) );
+    final String natGatewayId = request.getNatGatewayId( ) == null ?
+        null : Identifier.nat.normalize( request.getNatGatewayId( ) );
     final String instanceId = request.getInstanceId( ) == null ?
         null : Identifier.i.normalize( request.getInstanceId( ) );
     final String networkInterfaceId = request.getNetworkInterfaceId( ) == null ?
@@ -661,7 +713,7 @@ public class VpcManager {
     if ( !destinationCidrOption.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
     }
-    if ( gatewayId == null && instanceId == null && networkInterfaceId == null ) {
+    if ( gatewayId == null && natGatewayId == null && instanceId == null && networkInterfaceId == null ) {
       throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
     }
     final Supplier<Route> allocator = transactional( new Supplier<Route>( ) {
@@ -674,6 +726,8 @@ public class VpcManager {
               VmInstances.lookup( instanceId );
           final InternetGateway internetGateway = gatewayId == null ? null :
               internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
+          final NatGateway natGateway = natGatewayId == null ? null :
+              natGateways.lookupByName( accountFullName, natGatewayId, Functions.<NatGateway>identity() );
           routeTables.updateByExample(
               RouteTable.exampleWithName( accountFullName, routeTableId ),
               accountFullName,
@@ -720,6 +774,14 @@ public class VpcManager {
                               "Network interface invalid: " + targetNetworkInterface.getDisplayName( ) );
                         }
                         route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, targetNetworkInterface );
+                      } else if ( natGateway != null ) {
+                        if ( !RestrictedTypes.filterPrivileged( ).apply( natGateway ) ||
+                            !natGateway.getVpcId( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+                          throw new ClientComputeException(
+                              "InvalidParameterValue",
+                              "NAT gateway invalid: " + natGateway.getDisplayName( ) );
+                        }
+                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, natGateway );
                       } else {
                         if ( internetGateway== null || internetGateway.getVpc( )==null ||
                             !internetGateway.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
@@ -1056,6 +1118,53 @@ public class VpcManager {
     return reply;
   }
 
+  public DeleteNatGatewayResponseType deleteNatGateway( final DeleteNatGatewayType request ) throws EucalyptusCloudException {
+    final DeleteNatGatewayResponseType reply = request.getReply( );
+    final String natGatewayId = Identifier.nat.normalize( request.getNatGatewayId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      natGateways.updateByExample(
+          NatGateway.exampleWithName( accountFullName, natGatewayId ),
+          accountFullName,
+          natGatewayId,
+          new Callback<NatGateway>( ) {
+            @Override
+            public void fire( final NatGateway natGateway ) {
+              if ( RestrictedTypes.filterPrivileged( ).apply( natGateway ) ) {
+                try {
+                  if ( natGateway.getState( ) == NatGateway.State.available ||
+                      natGateway.getState( ) == NatGateway.State.pending ) {
+                    natGateway.setState( NatGateway.State.deleting );
+                    natGateway.markDeletion( );
+                  } else { // failed, deleted or deleting
+                    if ( ctx.isAdministrator( ) ) {
+                      // allow administrator to force immediate deletion of NAT gateway
+                      final Optional<NetworkInterface> networkInterface = NatGatewayHelper.cleanupResources( natGateway );
+                      if ( networkInterface.isPresent( ) ) {
+                        networkInterfaces.delete( networkInterface.get( ) );
+                      }
+                      natGateways.delete( natGateway );
+                    }
+                  }
+                } catch ( Exception e ) {
+                  throw Exceptions.toUndeclared( e );
+                }
+              } else {
+                throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete nat gateway" ) );
+              }
+            }
+          }
+      );
+    } catch ( final Exception e ) {
+      if ( !Exceptions.isCausedBy( e, VpcMetadataNotFoundException.class ) ) {
+        throw handleException( e );
+      } // else ignore missing on delete?
+    }
+    reply.setNatGatewayId( request.getNatGatewayId( ) );
+    return reply;
+  }
+
   public DeleteNetworkAclResponseType deleteNetworkAcl( final DeleteNetworkAclType request ) throws EucalyptusCloudException {
     final DeleteNetworkAclResponseType reply = request.getReply( );
     delete( Identifier.acl, request.getNetworkAclId( ), new Function<Pair<Optional<AccountFullName>,String>,NetworkAcl>( ) {
@@ -1380,6 +1489,10 @@ public class VpcManager {
                   throw new ClientComputeException( "OperationNotPermitted",
                       "Primary network interface cannot be detached" );
                 }
+                if ( networkInterface.getType( ) == NetworkInterface.Type.NatGateway ) {
+                  throw Exceptions.toUndeclared( new ClientComputeException(
+                      "OperationNotPermitted", "NAT gateway network interface cannot be detached" ) );
+                }
                 vpcId[0] = networkInterface.getVpc( ).getDisplayName( );
                 networkInterface.detach( );
               } catch ( Exception e ) {
@@ -1469,6 +1582,10 @@ public class VpcManager {
             @Override
             public void fire( final NetworkInterface networkInterface ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
+                if ( networkInterface.getType( ) == NetworkInterface.Type.NatGateway ) {
+                  throw Exceptions.toUndeclared( new ClientComputeException(
+                      "OperationNotPermitted", "NAT gateway network interface attribute modification not permitted" ) );
+                }
                 if ( request.getAttachment( ) != null ) {
                   if ( networkInterface.isAttached( ) &&
                       networkInterface.getAttachment( ).getAttachmentId( ).equals( request.getAttachment().getAttachmentId( ) ) ) {
@@ -1864,10 +1981,13 @@ public class VpcManager {
     acl( "networkAcl" ),
     aclassoc( "networkAclAssociation" ),
     dopt( "DHCPOption" ),
+    eipalloc( "allocation" ),
+    ela_attach( "networkInterfaceAttachment" ),
     eni( "networkInterface" ),
     eni_attach( "networkInterfaceAttachment" ),
     i( "instance" ),
     igw( "internetGateway" ),
+    nat( "natGateway", true ),
     rtb( "routeTable" ),
     rtbassoc( "routeTableAssociation" ),
     sg( "securityGroup" ),
@@ -1876,17 +1996,19 @@ public class VpcManager {
     ;
 
     private final String code;
+    private final boolean longIdentifier;
     private final String defaultParameter;
     private final String defaultListParameter;
 
     Identifier( final String defaultParameter ) {
-      this( defaultParameter, defaultParameter + "s" );
+      this( defaultParameter, false );
     }
 
-    Identifier( final String defaultParameter, final String defaultListParameter ) {
+    Identifier( final String defaultParameter, final boolean longIdentifier ) {
       this.code = "InvalidParameterValue";
+      this.longIdentifier = longIdentifier;
       this.defaultParameter = defaultParameter;
-      this.defaultListParameter = defaultListParameter;
+      this.defaultListParameter = defaultParameter + "s";
     }
 
     private String prefix( ) {
@@ -1894,7 +2016,9 @@ public class VpcManager {
     }
 
     public String generate( ) {
-      return ResourceIdentifiers.generateString( prefix( ) );
+      return longIdentifier ?
+          ResourceIdentifiers.generateLongString( prefix( ) ) :
+          ResourceIdentifiers.generateString( prefix( ) );
     }
 
     public String normalize( final String identifier ) throws EucalyptusCloudException {

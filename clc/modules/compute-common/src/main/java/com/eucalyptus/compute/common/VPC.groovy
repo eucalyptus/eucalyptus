@@ -30,7 +30,6 @@ import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation
-import groovy.transform.Canonical
 
 import javax.annotation.Nonnull
 
@@ -209,6 +208,12 @@ class RouteTableIdSetType extends EucalyptusData {
 class DeleteInternetGatewayType extends VpcMessage {
   String internetGatewayId;
   DeleteInternetGatewayType() {  }
+}
+class DeleteNatGatewayType extends VpcMessage {
+  String natGatewayId
+}
+class DeleteNatGatewayResponseType extends VpcMessage {
+  String natGatewayId
 }
 class VpcType extends EucalyptusData implements VpcTagged {
   String vpcId;
@@ -629,6 +634,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
   String privateIpAddress;
   String privateDnsName;
   Boolean sourceDestCheck;
+  String interfaceType // does not appear to be in responses as of 2015-10-01
   GroupSetType groupSet = new GroupSetType();
   NetworkInterfaceAttachmentType attachment;
   NetworkInterfaceAssociationType association;
@@ -650,6 +656,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
       final String privateIpAddress,
       final String privateDnsName,
       final Boolean sourceDestCheck,
+      final String interfaceType,
       final NetworkInterfaceAssociationType association,
       final NetworkInterfaceAttachmentType attachment,
       final Collection<GroupItemType> securityGroups ) {
@@ -666,6 +673,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
     this.privateIpAddress = privateIpAddress
     this.privateDnsName = privateDnsName
     this.sourceDestCheck = sourceDestCheck
+    this.interfaceType = interfaceType
     this.association = association
     this.attachment = attachment;
     this.privateIpAddressesSet = new NetworkInterfacePrivateIpAddressesSetType(
@@ -1311,6 +1319,98 @@ class AccountAttributeNameSetItemType extends EucalyptusData {
   String attributeName;
   AccountAttributeNameSetItemType() {  }
 }
+class NatGatewayAddressSetItemType extends EucalyptusData {
+  String networkInterfaceId
+  String privateIp
+  String allocationId
+  String publicIp
+  NatGatewayAddressSetItemType( ) { }
+  NatGatewayAddressSetItemType( final String allocationId ) {
+    this.allocationId = allocationId
+  }
+  NatGatewayAddressSetItemType( final String networkInterfaceId,
+                                final String privateIp,
+                                final String allocationId,
+                                final String publicIp ) {
+    this( allocationId )
+    this.networkInterfaceId = networkInterfaceId
+    this.privateIp = privateIp
+    this.publicIp = publicIp
+  }
+}
+class NatGatewayAddressSetType extends EucalyptusData {
+  ArrayList<NatGatewayAddressSetItemType> item = Lists.newArrayList( )
+}
+class NatGatewayType extends EucalyptusData {
+  Date createTime
+  Date deleteTime
+  String failureCode
+  String failureMessage
+  String natGatewayId
+  String vpcId
+  String subnetId
+  String state
+  NatGatewayAddressSetType natGatewayAddressSet = new NatGatewayAddressSetType( );
+  NatGatewayType() {  }
+
+  NatGatewayType( final String natGatewayId,
+                  final Date createTime,
+                  final String failureCode,
+                  final String failureMessage,
+                  final String vpcId,
+                  final String subnetId,
+                  final String state,
+                  final NatGatewayAddressSetItemType address ) {
+    this.natGatewayId = natGatewayId
+    this.createTime = createTime
+    this.failureCode = failureCode
+    this.failureMessage = failureMessage
+    this.deleteTime = deleteTime
+    this.vpcId = vpcId
+    this.subnetId = subnetId
+    this.state = state
+    if ( address ) {
+      natGatewayAddressSet.item.add( address )
+    }
+  }
+
+  NatGatewayType( final String natGatewayId,
+                  final Date createTime,
+                  final Date deleteTime,
+                  final String vpcId,
+                  final String subnetId,
+                  final String state,
+                  final NatGatewayAddressSetItemType address ) {
+    this.natGatewayId = natGatewayId
+    this.createTime = createTime
+    this.deleteTime = deleteTime
+    this.vpcId = vpcId
+    this.subnetId = subnetId
+    this.state = state
+    if ( address ) {
+      natGatewayAddressSet.item.add( address )
+    }
+  }
+}
+
+class NatGatewaySetType extends EucalyptusData {
+  ArrayList<NatGatewayType> item = new ArrayList<NatGatewayType>()
+}
+class DescribeNatGatewaysType extends VpcMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>()
+  ArrayList<String> natGatewayId = new ArrayList<String>()
+  Integer maxResults
+  String nextToken
+
+  Collection<String> natGatewayIds( ) {
+    natGatewayId
+  }
+}
+class DescribeNatGatewaysResponseType extends VpcMessage {
+  NatGatewaySetType natGatewaySet = new NatGatewaySetType()
+}
 class DescribeNetworkAclsResponseType extends VpcMessage {
   NetworkAclSetType networkAclSet = new NetworkAclSetType();
   DescribeNetworkAclsResponseType() {  }
@@ -1356,6 +1456,15 @@ class AttachVpnGatewayResponseType extends VpcMessage {
 }
 class CreateInternetGatewayType extends VpcMessage {
   CreateInternetGatewayType() {  }
+}
+class CreateNatGatewayType extends VpcMessage {
+  String allocationId
+  String clientToken
+  String subnetId
+}
+class CreateNatGatewayResponseType extends VpcMessage {
+  String clientToken
+  NatGatewayType natGateway
 }
 class DescribeCustomerGatewaysResponseType extends VpcMessage {
   CustomerGatewaySetType customerGatewaySet = new CustomerGatewaySetType();
@@ -1482,6 +1591,7 @@ class CreateRouteType extends VpcMessage {
   String destinationCidrBlock;
   String gatewayId;
   String instanceId;
+  String natGatewayId
   String networkInterfaceId;
   String vpcPeeringConnectionId;
   CreateRouteType() {  }
@@ -1617,6 +1727,7 @@ class RouteType extends EucalyptusData {
   String gatewayId;
   String instanceId;
   String instanceOwnerId;
+  String natGatewayId
   String networkInterfaceId;
   String vpcPeeringConnectionId;
   String state;
@@ -1624,7 +1735,6 @@ class RouteType extends EucalyptusData {
   RouteType() {  }
 
   RouteType(final String destinationCidrBlock,
-            final String gatewayId,
             final String state,
             final String origin) {
     this.destinationCidrBlock = destinationCidrBlock
@@ -1645,6 +1755,16 @@ class RouteType extends EucalyptusData {
     this.networkInterfaceId = networkInterfaceId
     this.state = state
     this.origin = origin
+  }
+
+  RouteType withGatewayId( String gatewayId ) {
+    setGatewayId( gatewayId )
+    this
+  }
+
+  RouteType withNatGatewayId( String natGatewayId ) {
+    setNatGatewayId( natGatewayId )
+    this
   }
 }
 class ValueSetType extends EucalyptusData {

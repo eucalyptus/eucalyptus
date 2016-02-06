@@ -633,6 +633,7 @@
     <value name="gatewayId" field="gatewayId" usage="optional"/>
     <value name="instanceId" field="instanceId" usage="optional"/>
     <value name="instanceOwnerId" field="instanceOwnerId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
     <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
     <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
     <value name="state" field="state" usage="required"/>
@@ -751,6 +752,7 @@
     <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
     <value name="gatewayId" field="gatewayId" usage="optional"/>
     <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
     <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
     <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
   </mapping>
@@ -911,6 +913,76 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
+  <mapping name="CreateNatGateway" class="com.eucalyptus.compute.common.CreateNatGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="clientToken" field="clientToken" usage="optional"/>
+    <value name="subnetId" field="subnetId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateNatGatewayResponse" class="com.eucalyptus.compute.common.CreateNatGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="natGateway" field="natGateway" usage="required" type="com.eucalyptus.compute.common.NatGatewayType"/>
+  </mapping>
+  <mapping name="DescribeNatGateways" class="com.eucalyptus.compute.common.DescribeNatGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayAddressSetItemType" abstract="true">
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="publicIp" field="publicIp" usage="optional"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="privateIp" field="privateIp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayAddressSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NatGatewayAddressSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayType" abstract="true">
+    <value name="subnetId" field="subnetId" usage="optional"/>
+    <structure name="natGatewayAddressSet" field="natGatewayAddressSet" usage="optional" type="com.eucalyptus.compute.common.NatGatewayAddressSetType"/>
+    <value name="createTime" field="createTime" usage="optional"/>
+    <value name="deleteTime" field="deleteTime" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="required"/>
+    <value name="state" field="state" usage="optional"/>
+    <value name="failureCode" field="failureCode" usage="optional"/>
+    <value name="failureMessage" field="failureMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewaySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NatGatewayType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeNatGatewaysResponse" class="com.eucalyptus.compute.common.DescribeNatGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="natGatewaySet" field="natGatewaySet" usage="required" type="com.eucalyptus.compute.common.NatGatewaySetType"/>
+  </mapping>
+  <mapping name="DescribeNetworkInterfaces" class="com.eucalyptus.compute.common.DescribeNetworkInterfacesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkInterfaceIdSet" field="networkInterfaceIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DeleteNatGateway" class="com.eucalyptus.compute.common.DeleteNatGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteNatGatewayResponse" class="com.eucalyptus.compute.common.DeleteNatGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+  </mapping>
   <mapping name="CreateNetworkInterface" class="com.eucalyptus.compute.common.CreateNetworkInterfaceType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="subnetId" field="subnetId" usage="required"/>
@@ -931,15 +1003,6 @@
   </mapping>
   <mapping class="com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType" abstract="true">
     <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
-  </mapping>
-  <mapping name="DescribeNetworkInterfaces" class="com.eucalyptus.compute.common.DescribeNetworkInterfacesType" extends="com.eucalyptus.compute.common.ComputeMessage">
-    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure name="networkInterfaceIdSet" field="networkInterfaceIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceIdSetType"/>
-    <structure name="filterSet" usage="optional">
-      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
-        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
-      </collection>
-    </structure>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.NetworkInterfaceType" abstract="true">
     <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>

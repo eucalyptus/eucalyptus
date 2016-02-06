@@ -141,6 +141,9 @@ class NetworkInfoBroadcasterTest {
         @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
           []
         }
+        @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+          []
+        }
         @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
           [:]
         }
@@ -254,6 +257,9 @@ class NetworkInfoBroadcasterTest {
             []
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
             []
           }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
@@ -432,6 +438,9 @@ class NetworkInfoBroadcasterTest {
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             [ networkInterface( 'eni-00000001', '000000000002', 'i-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
           }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+            []
+          }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
             [:]
           }
@@ -590,6 +599,9 @@ class NetworkInfoBroadcasterTest {
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
             []
           }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+            []
+          }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
             [:]
           }
@@ -741,6 +753,7 @@ class NetworkInfoBroadcasterTest {
         true,
         cidr,
         internetGatewayId,
+        null,
         null,
         null
     )

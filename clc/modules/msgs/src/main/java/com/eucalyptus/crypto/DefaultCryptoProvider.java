@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,6 +94,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
 
 public final class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
@@ -342,6 +343,13 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     final byte[] idBytes = new byte[4];
     Crypto.getSecureRandomSupplier( ).get( ).nextBytes( idBytes );
     return String.format( "%s-%08x", prefix, Ints.fromByteArray( idBytes ) );
+  }
+
+  @Override
+  public String generateLongId( final String prefix ) {
+    final byte[] idBytes = new byte[9];
+    Crypto.getSecureRandomSupplier( ).get( ).nextBytes( idBytes );
+    return String.format( "%s-%s", prefix, BaseEncoding.base16( ).encode( idBytes ).substring( 1 ) );
   }
 
   @Override

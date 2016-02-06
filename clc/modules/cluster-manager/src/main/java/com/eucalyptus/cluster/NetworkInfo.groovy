@@ -184,6 +184,7 @@ class NIVpc {
   @XmlElementWrapper @XmlElement(name="subnet") List<NIVpcSubnet> subnets = Lists.newArrayList( )
   @XmlElementWrapper @XmlElement(name="networkAcl") List<NINetworkAcl> networkAcls = Lists.newArrayList( )
   @XmlElementWrapper @XmlElement(name="routeTable") List<NIRouteTable> routeTables = Lists.newArrayList( )
+  @XmlElementWrapper @XmlElement(name="natGateway") List<NINatGateway> natGateways = Lists.newArrayList( )
   @XmlElementWrapper @XmlElement(name="value") List<String> internetGateways = Lists.newArrayList( )
 }
 
@@ -255,6 +256,7 @@ class NIRoute {
   @XmlElement String destinationCidr
   @XmlElement String gatewayId
   @XmlElement String networkInterfaceId
+  @XmlElement String natGatewayId
 }
 
 @Canonical
@@ -272,6 +274,19 @@ class NIDhcpOptionSet {
 class NIInternetGateway {
   @XmlAttribute String name
   @XmlElement String ownerId
+}
+
+@Canonical
+@CompileStatic
+@XmlAccessorType( XmlAccessType.NONE )
+class NINatGateway {
+  @XmlAttribute String name
+  @XmlElement String ownerId
+  @XmlElement String macAddress
+  @XmlElement String publicIp
+  @XmlElement String privateIp
+  @XmlElement String vpc
+  @XmlElement String subnet
 }
 
 @Canonical

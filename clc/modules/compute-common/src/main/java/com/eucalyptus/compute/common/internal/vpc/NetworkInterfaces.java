@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,6 +113,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               networkInterface.getPrivateIpAddress( ),
               networkInterface.getPrivateDnsName(),
               networkInterface.getSourceDestCheck( ),
+              Objects.toString( networkInterface.getType( ), NetworkInterface.Type.Interface.toString( ) ),
               networkInterface.getAssociation( ) == null ?
                   null :
                   TypeMappers.transform( networkInterface.getAssociation( ), NetworkInterfaceAssociationType.class ),
@@ -181,6 +182,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "attachment.attachment-id", FilterStringFunctions.ATTACHMENT_ATTACHMENT_ID )
               .withStringProperty( "attachment.instance-id", FilterStringFunctions.ATTACHMENT_INSTANCE_ID )
               .withStringProperty( "attachment.instance-owner-id", FilterStringFunctions.ATTACHMENT_INSTANCE_OWNER_ID )
+              .withStringProperty( "attachment.nat-gateway-id", FilterStringFunctions.ATTACHMENT_NAT_GATEWAY_ID )
               .withIntegerProperty( "attachment.device-index", FilterIntegerFunctions.ATTACHMENT_DEVICE_INDEX )
               .withStringProperty( "attachment.status", FilterStringFunctions.ATTACHMENT_STATUS )
               .withDateProperty( "attachment.attach.time", FilterDateFunctions.ATTACHMENT_ATTACH_TIME )
@@ -214,6 +216,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withPersistenceFilter( "attachment.attachment-id", "attachment.attachmentId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-id", "attachment.instanceId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.instance-owner-id", "attachment.instanceOwnerId", Collections.<String>emptySet() )
+              .withPersistenceFilter( "attachment.nat-gateway-id", "attachment.natGatewayId", Collections.<String>emptySet() )
               .withPersistenceFilter( "attachment.device-index", "attachment.deviceIndex", Collections.<String>emptySet(), Type.Integer )
               .withPersistenceFilter( "attachment.status", "attachment.status", Collections.<String>emptySet(), FUtils.valueOfFunction( NetworkInterfaceAttachment.Status.class ) )
               .withPersistenceFilter( "attachment.attach.time", "attachment.attachTime", Collections.<String>emptySet(), Type.Date )
@@ -284,6 +287,12 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
       @Override
       public String apply( final NetworkInterface networkInterface ){
         return networkInterface.getAttachment( ) == null ? null : networkInterface.getAttachment( ).getInstanceOwnerId( );
+      }
+    },
+    ATTACHMENT_NAT_GATEWAY_ID {
+      @Override
+      public String apply( final NetworkInterface networkInterface ){
+        return networkInterface.getAttachment( ) == null ? null : networkInterface.getAttachment( ).getNatGatewayId( );
       }
     },
     ATTACHMENT_STATUS {
