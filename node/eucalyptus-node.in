@@ -55,16 +55,6 @@ elif grep -q 'flags.* svm' /proc/cpuinfo && ! lsmod | grep -q kvm_amd; then
     modprobe kvm_amd
 fi
 
-# Ensure any previously authorized migration credentials have been removed from libvirtd.conf
-# and that it defaults to not allowing client connections.
-#
-# Restarts libvirtd (synchronously) as a side-effect.
-#
-# FIXME:  see if we can go without this
-#
-# See also https://eucalyptus.atlassian.net/browse/EUCA-11961
-$EUCALYPTUS/usr/share/eucalyptus/authorize-migration-keys.pl -D -r
-
 export EUCALYPTUS
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 # See https://eucalyptus.atlassian.net/browse/EUCA-11970
