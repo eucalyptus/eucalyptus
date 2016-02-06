@@ -64,6 +64,4 @@ rm -f "$EUCALYPTUS"/var/lib/eucalyptus/CC/*
 
 export EUCALYPTUS
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
-# See https://eucalyptus.atlassian.net/browse/EUCA-11970
-export EUCALYPTUS_CC="Y"
 exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND

@@ -57,6 +57,4 @@ fi
 
 export EUCALYPTUS
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
-# See https://eucalyptus.atlassian.net/browse/EUCA-11970
-export EUCALYPTUS_NC="Y"
 exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND
