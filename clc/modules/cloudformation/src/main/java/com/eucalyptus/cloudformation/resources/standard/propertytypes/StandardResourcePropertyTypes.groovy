@@ -349,7 +349,7 @@ public class ElasticLoadBalancingPolicyTypeAttribute {
 public class S3CorsConfiguration {
   @Required
   @Property
-  List<S3CorsConfigurationRule> corsRule = Lists.newArrayList();
+  List<S3CorsConfigurationRule> corsRules = Lists.newArrayList();
 }
 
 @EqualsAndHashCode
@@ -412,6 +412,43 @@ public class S3NotificationConfiguration{
   @Required
   @Property
   List<S3NotificationTopicConfiguration> topicConfigurations = Lists.newArrayList();
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfiguration{
+  @Required
+  @Property
+  String role;
+  @Required
+  @Property
+  List<S3ReplicationConfigurationRule> rules = Lists.newArrayList();
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfigurationRule {
+  @Required
+  @Property
+  S3ReplicationConfigurationRulesDestination destination;
+  @Property
+  String id;
+  @Required
+  @Property
+  String prefix;
+  @Required
+  @Property
+  String status;
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfigurationRulesDestination {
+  @Required
+  @Property
+  String bucket;
+  @Property
+  String storageClass;
 }
 
 @EqualsAndHashCode

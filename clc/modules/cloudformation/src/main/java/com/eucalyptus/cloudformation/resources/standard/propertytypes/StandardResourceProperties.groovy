@@ -660,6 +660,8 @@ public class AWSS3BucketProperties implements ResourceProperties {
   @Property
   S3NotificationConfiguration notificationConfiguration;
   @Property
+  S3ReplicationConfiguration replicationConfiguration;
+  @Property
   List<CloudFormationResourceTag> tags = Lists.newArrayList();
   @Property
   S3VersioningConfiguration versioningConfiguration;
