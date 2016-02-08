@@ -75,6 +75,7 @@ public class StackResourceEntityManager {
     destEntity.setDescription(sourceEntity.getDescription());
     destEntity.setLogicalResourceId(sourceEntity.getLogicalResourceId());
     destEntity.setPhysicalResourceId(sourceEntity.getPhysicalResourceId());
+    destEntity.setInternalPhysicalResourceUuid(sourceEntity.getInternalPhysicalResourceUuid());
     destEntity.setResourceStatus(sourceEntity.getResourceStatus());
     destEntity.setResourceStatusReason(sourceEntity.getResourceStatusReason());
     destEntity.setResourceType(sourceEntity.getResourceType());

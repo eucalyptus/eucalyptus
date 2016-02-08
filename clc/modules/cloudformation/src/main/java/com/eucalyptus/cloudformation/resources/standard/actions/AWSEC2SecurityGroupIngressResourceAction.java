@@ -30,6 +30,7 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
@@ -51,6 +52,7 @@ import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 
 /**
@@ -62,8 +64,52 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
   private AWSEC2SecurityGroupIngressResourceInfo info = new AWSEC2SecurityGroupIngressResourceInfo();
 
   public AWSEC2SecurityGroupIngressResourceAction() {
+    // only replacement update options
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SecurityGroupIngressResourceAction otherAction = (AWSEC2SecurityGroupIngressResourceAction) resourceAction;
+    if (!Objects.equals(properties.getGroupName(), otherAction.properties.getGroupName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getGroupId(), otherAction.properties.getGroupId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getIpProtocol(), otherAction.properties.getIpProtocol())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getCidrIp(), otherAction.properties.getCidrIp())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getSourceSecurityGroupName(), otherAction.properties.getSourceSecurityGroupName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getSourceSecurityGroupId(), otherAction.properties.getSourceSecurityGroupId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getSourceSecurityGroupOwnerId(), otherAction.properties.getSourceSecurityGroupOwnerId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getFromPort(), otherAction.properties.getFromPort())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getToPort(), otherAction.properties.getToPort())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
+  }
+
 
   private enum CreateSteps implements Step {
     CREATE_INGRESS_RULE {

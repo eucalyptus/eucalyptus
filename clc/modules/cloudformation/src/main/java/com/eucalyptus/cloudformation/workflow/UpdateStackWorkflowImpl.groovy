@@ -107,7 +107,7 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
           UpdateStackWorkflowImpl.LOG.error(t);
           UpdateStackWorkflowImpl.LOG.debug(t, t);
           Throwable cause = Throwables.getRootCause(t);
-          String originalCause = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
+          String originalCause = ((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
           Promise<String> createFailurePromise = activities.determineCreateResourceFailures(stackId, accountId, updatedStackVersion);
           waitFor(createFailurePromise) { String createCause ->
             Promise<String> updateFailurePromise = activities.determineUpdateResourceFailures(stackId, accountId, updatedStackVersion);

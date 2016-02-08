@@ -21,6 +21,8 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import java.util.List;
+import java.util.Objects;
+
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -32,6 +34,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AddressInfoType;
@@ -66,7 +70,19 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
 
   public AWSEC2EIPResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2EIPResourceAction otherAction = (AWSEC2EIPResourceAction) resourceAction;
+    if (!Objects.equals(properties.getDomain(), otherAction.properties.getDomain())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -190,22 +206,6 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
     public Integer getTimeout() {
       return null;
     }
-
-    private static DescribeAddressesResponseType describeAddresses(
-        final AWSEC2EIPResourceAction action,
-        final ServiceConfiguration configuration
-    ) throws Exception {
-      final DescribeAddressesType describeAddressesType =
-          MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
-      if (action.properties.getDomain() != null) {
-        describeAddressesType.setAllocationIds(
-            Lists.newArrayList( JsonHelper.getJsonNodeFromString( action.info.getAllocationId( ) ).asText( ) )
-        );
-      } else {
-        describeAddressesType.setPublicIpsSet( Lists.newArrayList( action.info.getPhysicalResourceId( ) ) );
-      }
-      return AsyncRequests.sendSync( configuration, describeAddressesType );
-    }
   }
 
 
@@ -230,6 +230,93 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
     info = (AWSEC2EIPResourceInfo) resourceInfo;
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_INSTANCE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2EIPResourceAction oldAction = (AWSEC2EIPResourceAction) oldResourceAction;
+        AWSEC2EIPResourceAction newAction = (AWSEC2EIPResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+
+        // In theory newAction and oldAction should have same items for allocationId, domain, and ip address (otherwise we would be in replacement)
+        // As such we will use the "new action" to see if there is an instance association.
+        String oldInstanceId = null;
+        final List<AddressInfoType> addresses = describeAddresses(newAction, configuration).getAddressesSet();
+        if (addresses != null && !addresses.isEmpty() &&
+          (addresses.get(0).getInstanceId() != null)) {
+          oldInstanceId = addresses.get(0).getInstanceId();
+        }
+
+
+        if (!Objects.equals(oldInstanceId, newAction.properties.getInstanceId())) {
+          if (newAction.properties.getInstanceId() != null) {
+            DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
+            describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.properties.getInstanceId()));
+            DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
+            if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+              throw new ValidationErrorException("No such instance " + newAction.properties.getInstanceId());
+            }
+          }
+          if (oldInstanceId != null) {
+            // disassociate from old instance
+
+            final DisassociateAddressType disassociateAddressType =
+              MessageHelper.createMessage(DisassociateAddressType.class, newAction.info.getEffectiveUserId());
+            if (newAction.properties.getDomain() != null) {
+              disassociateAddressType.setAssociationId(addresses.get(0).getAssociationId());
+            } else {
+              disassociateAddressType.setPublicIp(newAction.info.getPhysicalResourceId());
+            }
+            AsyncRequests.<DisassociateAddressType, DisassociateAddressResponseType>sendSync(
+              configuration,
+              disassociateAddressType
+            );
+
+            // refresh old instance attributes... (TODO: see if this 'takes') (not sure if the stack version is correct
+            EC2Helper.refreshInstanceAttributes(newAction.getStackEntity(), oldInstanceId,
+              newAction.info.getEffectiveUserId(), newAction.getStackEntity().getStackVersion());
+          }
+          if (newAction.properties.getInstanceId() != null) {
+            AssociateAddressType associateAddressType = MessageHelper.createMessage(AssociateAddressType.class, newAction.info.getEffectiveUserId());
+            if (newAction.properties.getDomain() != null) {
+              associateAddressType.setAllocationId(JsonHelper.getJsonNodeFromString(newAction.info.getAllocationId()).asText());
+            } else {
+              associateAddressType.setPublicIp(newAction.info.getPhysicalResourceId());
+            }
+            associateAddressType.setInstanceId(newAction.properties.getInstanceId());
+            AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+
+            // Update the instance info
+            if (newAction.properties.getInstanceId() != null) {
+              EC2Helper.refreshInstanceAttributes(newAction.getStackEntity(), newAction.properties.getInstanceId(), newAction.info.getEffectiveUserId(), newAction.getStackEntity().getStackVersion());
+            }
+          }
+        }
+        return newAction;
+      }
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
+    }
+  }
+
+  private static DescribeAddressesResponseType describeAddresses(
+    final AWSEC2EIPResourceAction action,
+    final ServiceConfiguration configuration
+  ) throws Exception {
+    final DescribeAddressesType describeAddressesType =
+      MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
+    if (action.properties.getDomain() != null) {
+      describeAddressesType.setAllocationIds(
+        Lists.newArrayList( JsonHelper.getJsonNodeFromString( action.info.getAllocationId( ) ).asText( ) )
+      );
+    } else {
+      describeAddressesType.setPublicIpsSet( Lists.newArrayList( action.info.getPhysicalResourceId( ) ) );
+    }
+    return AsyncRequests.sendSync( configuration, describeAddressesType );
+  }
 
 }
 

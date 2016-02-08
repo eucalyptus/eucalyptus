@@ -54,6 +54,10 @@ public class StackResourceEntity extends AbstractPersistent {
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String physicalResourceId;
+  @Column(name = "internal_physical_resource_uuid" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String internalPhysicalResourceUuid;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
   Status resourceStatus;
@@ -130,6 +134,14 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setPhysicalResourceId(String physicalResourceId) {
     this.physicalResourceId = physicalResourceId;
+  }
+
+  public String getInternalPhysicalResourceUuid() {
+    return internalPhysicalResourceUuid;
+  }
+
+  public void setInternalPhysicalResourceUuid(String internalPhysicalResourceUuid) {
+    this.internalPhysicalResourceUuid = internalPhysicalResourceUuid;
   }
 
   public Status getResourceStatus() {
@@ -260,6 +272,7 @@ public class StackResourceEntity extends AbstractPersistent {
       ", logicalResourceId='" + logicalResourceId + '\'' +
       ", metadataJson='" + metadataJson + '\'' +
       ", physicalResourceId='" + physicalResourceId + '\'' +
+      ", internalPhysicalResourceUuid='" + internalPhysicalResourceUuid + '\'' +
       ", resourceStatus=" + resourceStatus +
       ", resourceStatusReason='" + resourceStatusReason + '\'' +
       ", resourceType='" + resourceType + '\'' +
