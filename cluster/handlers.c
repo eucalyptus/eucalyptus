@@ -3300,6 +3300,7 @@ out:
     if (ret) {
         LOGERROR("[%s] migration scheduler could not schedule destination node\n", instance->instanceId);
         *outresid = -1;
+        *replyString = strdup("scheduler could not find needed capacity for migration");
     }
 
     LOGDEBUG("done\n");
