@@ -253,11 +253,18 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
     }
 
-    try {
-      ospClient.initialize();
-    } catch (S3Exception ex) {
-      LOG.error("Error initializing Object Storage Gateway", ex);
-      SystemUtil.shutdownWithError(ex.getMessage());
+    if (ospClient != null) {
+      try {
+        ospClient.initialize();
+      } catch (S3Exception ex) {
+        LOG.error("Error initializing Object Storage Gateway", ex);
+        SystemUtil.shutdownWithError(ex.getMessage());
+      } 
+    } else {
+      String errMsg = "In initializing ospClient, expected a valid reference " 
+          + "to Object Storage Provider Client, but found none (null)";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
     }
 
     // Disable torrents
@@ -270,29 +277,61 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (S3Exception ex) {
       LOG.error("Error starting storage backend: " + ex);
     }
+    
+    // The ospClient should be configured by now.
+    if (ospClient == null) {
+      String errMsg = "Error starting storage backend, ospClient is still null at the end of configure().";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    } else {
+      LOG.debug("Configuring ObjectStorageGateway complete");
+    }
   }
 
   public static void enable() throws EucalyptusCloudException {
     LOG.debug("Enabling ObjectStorageGateway");
-    ospClient.enable();
+    if (ospClient != null) {
+      ospClient.enable();
+    } else {
+      String errMsg = "ospClient is null in enable(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.debug("Enabling ObjectStorageGateway complete");
   }
 
   public static void disable() throws EucalyptusCloudException {
     LOG.debug("Disabling ObjectStorageGateway");
-    ospClient.disable();
+    if (ospClient != null) {
+      ospClient.disable();
+    } else {
+      String errMsg = "ospClient is null in disable(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.debug("Disabling ObjectStorageGateway complete");
   }
 
   public static void check() throws EucalyptusCloudException {
     LOG.trace("Checking ObjectStorageGateway");
-    ospClient.check();
+    if (ospClient != null) {
+      ospClient.check();
+    } else {
+      String errMsg = "ospClient is null in check(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.trace("Checking ObjectStorageGateway complete");
   }
 
   public static void stop() throws EucalyptusCloudException {
-    LOG.debug("Checking ObjectStorageGateway preconditions");
-    ospClient.stop();
+    LOG.debug("Stopping ObjectStorageGateway");
+    if (ospClient != null) {
+      ospClient.stop();
+    } else {
+      LOG.warn("ospClient is null in stop(), OSG apparently not configured.");
+      // Keep going, tear down the rest even if we didn't stop()
+    }
     synchronized (ObjectStorageGateway.class) {
       ospClient = null;
     }
