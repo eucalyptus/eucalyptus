@@ -5,7 +5,6 @@ Wants=chronyd.service eucalyptus-node-keygen.service libvirtd.service
 
 [Service]
 Type=simple
-ExecStartPre=/usr/sbin/euca_test_nc kvm
 ExecStart=/usr/sbin/eucalyptus-node
 ExecStop=/bin/kill -WINCH ${MAINPID}
 # We want systemd to give httpd some time to finish gracefully, but still
