@@ -468,11 +468,17 @@ public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProp
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeProperties implements ResourceProperties {
+  @Property
+  Boolean autoEnableIO;
   @Required
   @Property
   String availabilityZone;
   @Property
+  Boolean encrypted;
+  @Property
   Integer iops;
+  @Property
+  String kmsKeyId;
   @Property
   String size;
   @Property

@@ -33,6 +33,7 @@ import com.eucalyptus.util.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -145,7 +146,7 @@ public class TagHelper {
     }
   }
 
-  public static void checkReservedEC2TemplateTags(List<EC2Tag> tags) throws ValidationErrorException {
+  public static void checkReservedEC2TemplateTags(Collection<EC2Tag> tags) throws ValidationErrorException {
     if (tags == null) return;
     List<String> tagNames = Lists.newArrayList();
     for (EC2Tag tag: tags) {
