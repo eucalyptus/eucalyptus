@@ -11362,7 +11362,7 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/eucanetd:tools/eucanetd.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in storage/imager/euca-vmdk-wrapper:storage/imager/euca-vmdk-wrapper.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
+ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/eucanetd:tools/eucanetd.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
 
 
 
@@ -12006,7 +12006,6 @@ do
     "tools/eucanetd") CONFIG_FILES="$CONFIG_FILES tools/eucanetd:tools/eucanetd.in" ;;
     "tools/imaging/setup.cfg.template") CONFIG_FILES="$CONFIG_FILES tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in" ;;
     "tools/imaging/eucatoolkit/__init__.py") CONFIG_FILES="$CONFIG_FILES tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in" ;;
-    "storage/imager/euca-vmdk-wrapper") CONFIG_FILES="$CONFIG_FILES storage/imager/euca-vmdk-wrapper:storage/imager/euca-vmdk-wrapper.in" ;;
     "clc/modules/bootstrap/src/main/resources/version.properties") CONFIG_FILES="$CONFIG_FILES clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
