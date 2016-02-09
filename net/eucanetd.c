@@ -166,7 +166,7 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_BROADCAST", NULL}
     ,
-    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd41"}
+    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd"}
     ,
     {"VNET_DHCPUSER", "root"}
     ,
