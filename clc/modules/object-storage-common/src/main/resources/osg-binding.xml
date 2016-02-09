@@ -779,7 +779,7 @@
                 usage="optional"/>
     </mapping>
 
-    <mapping name="GetBucketCorsResponse"
+    <mapping
             class="com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType"
             abstract="true">
         <structure field="corsConfiguration" usage="optional"
