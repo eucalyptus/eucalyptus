@@ -1,0 +1,8 @@
+[Unit]
+Description=Eucalyptus cloud java service upgrade
+ConditionPathExists=|!/etc/eucalyptus/.upgrade
+PartOf=eucalyptus-cloud.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/eucalyptus/euca-upgrade --db

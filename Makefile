@@ -64,6 +64,7 @@ include Makedefs
 
 # notes: storage has to preceed node and node has to preceed cluster
 SUBDIRS			=	tools \
+				systemd \
 				util \
 				admin-tools \
 				net \

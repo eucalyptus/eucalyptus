@@ -1,0 +1,16 @@
+[Unit]
+Description=Eucalyptus cloud web services
+After=network.target
+Wants=chronyd.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/eucalyptus/eucalyptus.conf
+ExecStart=/usr/sbin/eucalyptus-cloud $CLOUD_OPTS
+LimitNOFILE=4096
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+# vim: set syntax=dosini:
