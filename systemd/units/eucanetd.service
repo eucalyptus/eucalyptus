@@ -1,6 +1,6 @@
 [Unit]
 Description=Eucalyptus network daemon
-After=network.target
+After=midolman.service network.target
 
 [Service]
 Type=forking
