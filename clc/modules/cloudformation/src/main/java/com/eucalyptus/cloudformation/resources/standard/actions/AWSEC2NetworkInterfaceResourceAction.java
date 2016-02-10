@@ -109,6 +109,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         }
         CreateNetworkInterfaceResponseType createNetworkInterfaceResponseType = AsyncRequests.<CreateNetworkInterfaceType, CreateNetworkInterfaceResponseType>sendSync(configuration, createNetworkInterfaceType);
         action.info.setPhysicalResourceId(createNetworkInterfaceResponseType.getNetworkInterface().getNetworkInterfaceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -215,7 +216,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if (checkDeleted(action, configuration)) return action;
         DeleteNetworkInterfaceType deleteNetworkInterfaceType = MessageHelper.createMessage(DeleteNetworkInterfaceType.class, action.info.getEffectiveUserId());
         deleteNetworkInterfaceType.setNetworkInterfaceId(action.info.getPhysicalResourceId());
@@ -228,7 +229,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if (checkDeleted(action, configuration)) return action;
         throw new RetryAfterConditionCheckFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
       }

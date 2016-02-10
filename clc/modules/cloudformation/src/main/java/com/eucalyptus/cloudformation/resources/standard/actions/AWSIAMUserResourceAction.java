@@ -122,6 +122,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         CreateUserResponseType createUserResponseType = AsyncRequests.<CreateUserType,CreateUserResponseType> sendSync(configuration, createUserType);
         String arn = createUserResponseType.getCreateUserResult().getUser().getArn();
         action.info.setPhysicalResourceId(userName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -188,7 +189,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserResourceAction action = (AWSIAMUserResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // if no user, bye...
         if (!IAMHelper.userExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;

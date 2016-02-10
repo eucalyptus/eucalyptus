@@ -73,6 +73,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
         action.checkSubnetExists(configuration);
         String associationId = action.associateRouteTable(configuration, action.properties.getSubnetId(), action.properties.getRouteTableId());
         action.info.setPhysicalResourceId(associationId);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -91,7 +92,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetRouteTableAssociationResourceAction action = (AWSEC2SubnetRouteTableAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         if (!action.associationIdExistsForDelete(configuration)) return action;
         if (!action.routeTableExistsForDelete(configuration)) return action;

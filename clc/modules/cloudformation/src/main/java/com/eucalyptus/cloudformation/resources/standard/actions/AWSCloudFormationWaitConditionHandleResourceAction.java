@@ -95,6 +95,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
           s3c.refreshEndpoint( true );
           String url = s3c.generatePresignedUrl( bucketName, keyName, action.in12Hours(), HttpMethod.PUT ).toString();
           action.info.setPhysicalResourceId( url );
+          action.info.setCreatedEnoughToDelete(true);
         }
         return action;
       }
@@ -126,7 +127,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
           if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");

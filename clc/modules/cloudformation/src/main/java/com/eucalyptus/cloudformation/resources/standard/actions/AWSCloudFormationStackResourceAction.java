@@ -115,6 +115,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         createStackType.setCapabilities(capabilities);
         CreateStackResponseType createStackResponseType = AsyncRequests.<CreateStackType, CreateStackResponseType>sendSync(configuration, createStackType);
         action.info.setPhysicalResourceId(createStackResponseType.getCreateStackResult().getStackId());
+        action.info.setCreatedEnoughToDelete(true);
 
         return action;
       }
@@ -195,7 +196,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // First see if stack exists or has been deleted
         DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
         describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
@@ -227,7 +228,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // First see if stack exists or has been deleted
         DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
         describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...

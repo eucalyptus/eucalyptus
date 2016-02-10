@@ -191,6 +191,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
           }
           action.info.setData(JsonHelper.getStringFromJsonNode(dataNode));
           action.info.setPhysicalResourceId(keyName);
+          action.info.setCreatedEnoughToDelete(true);
           action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
           return action;
         } else {

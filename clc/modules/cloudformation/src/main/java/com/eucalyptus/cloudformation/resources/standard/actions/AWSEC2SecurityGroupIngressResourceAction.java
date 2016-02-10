@@ -182,6 +182,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
         authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
         AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
         action.info.setPhysicalResourceId(action.info.getLogicalResourceId()); // Strange, but this is what AWS does in this particular case...
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -200,7 +201,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SecurityGroupIngressResourceAction action = (AWSEC2SecurityGroupIngressResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // property validation
         action.validateProperties();

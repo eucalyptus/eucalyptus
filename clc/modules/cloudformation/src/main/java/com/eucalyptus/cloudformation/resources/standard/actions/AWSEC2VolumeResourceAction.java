@@ -167,6 +167,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
 
         CreateVolumeResponseType createVolumeResponseType = AsyncRequests.<CreateVolumeType,CreateVolumeResponseType> sendSync(configuration, createVolumeType);
         action.info.setPhysicalResourceId(createVolumeResponseType.getVolume().getVolumeId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -359,7 +360,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
     }
 
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
-      if (action.info.getPhysicalResourceId() == null) return true;
+      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
       describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;

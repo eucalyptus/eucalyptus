@@ -136,9 +136,6 @@ public class StackActivityImpl implements StackActivity {
     stackResourceEntity.setResourceStatus(Status.CREATE_IN_PROGRESS);
     stackResourceEntity.setResourceStatusReason(null);
     stackResourceEntity.setDescription(""); // deal later
-    // internal physical resource uuid is set during resource creation or 'update with replacement'.  It is used whenever a new physical resource id
-    // is created.  New physical resource ids are not necessarily unique, so this is used as an extra check.
-    stackResourceEntity.setInternalPhysicalResourceUuid(UUID.randomUUID( ).toString( ));
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     StackEventEntityManager.addStackEvent(stackResourceEntity);
@@ -346,7 +343,7 @@ public class StackActivityImpl implements StackActivity {
     LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, createdResourceVersion);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, createdResourceVersion);
-    String oldPhysicalResourceId = stackResourceEntity.getPhysicalResourceId();
+    Boolean oldValueForCreatedEnoughToDelete = stackResourceEntity.getCreatedEnoughToDelete();
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     try {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -362,7 +359,7 @@ public class StackActivityImpl implements StackActivity {
       resourceInfo = resourceAction.getResourceInfo();
       stackResourceEntity.setDescription(""); // deal later
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      if (!Objects.equals(stackResourceEntity.getPhysicalResourceId(), oldPhysicalResourceId)) {
+      if (!Objects.equals(stackResourceEntity.getCreatedEnoughToDelete(), oldValueForCreatedEnoughToDelete)) {
         stackResourceEntity.setResourceStatus(Status.CREATE_IN_PROGRESS);
         stackResourceEntity.setResourceStatusReason("Resource creation Initiated");
         StackEventEntityManager.addStackEvent(stackResourceEntity);
@@ -746,6 +743,7 @@ public class StackActivityImpl implements StackActivity {
     if (nothingOutsidePropertiesChanged && !propertiesChanged) {
       // nothing has changed, so copy the old values to the new one.
       StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
       nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
@@ -758,8 +756,8 @@ public class StackActivityImpl implements StackActivity {
     nextStackResourceEntity.setResourceAttributesJson(previousStackResourceEntity.getResourceAttributesJson());
     nextStackResourceEntity.setResourceStatus(previousStackResourceEntity.getResourceStatus());
     nextStackResourceEntity.setResourceStatusReason(previousStackResourceEntity.getResourceStatusReason());
-    // until we hear otherwise this is the same resource as the previous one... use the same unique id
-    nextStackResourceEntity.setInternalPhysicalResourceUuid(previousStackResourceEntity.getInternalPhysicalResourceUuid());
+    // presumably we won't need to create something unless we are in the update with replacement case...
+    nextStackResourceEntity.setCreatedEnoughToDelete(previousStackResourceEntity.getCreatedEnoughToDelete());
     StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
 
     if (!propertiesChanged) {
@@ -785,9 +783,8 @@ public class StackActivityImpl implements StackActivity {
     } else if (updateType == UpdateType.NEEDS_REPLACEMENT) {
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
       nextStackResourceEntity.setResourceStatusReason("Requested update requires the creation of a new physical resource; hence creating one.");
-      // internal physical resource uuid is set any time a new physical resource id would be created.  (During create and update with replacement).  This is done
-      // as physical resource ids do not always change (i.e. AWS::EC2::SecurityGroupIngress)
-      nextStackResourceEntity.setInternalPhysicalResourceUuid(UUID.randomUUID( ).toString( ));
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.TRUE);
+      nextStackResourceEntity.setCreatedEnoughToDelete(Boolean.FALSE); // just in case it was set before...
       StackEventEntityManager.addStackEvent(nextStackResourceEntity);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
     } else if (updateType == UpdateType.NONE) { // This really shouldn't happen, as we have already shown properties have
@@ -795,6 +792,7 @@ public class StackActivityImpl implements StackActivity {
       // nothing has changed, so copy the old values to the new one.
       LOG.warn("Resource " + nextStackResourceEntity.getLogicalResourceId() + " on stack " + nextStackResourceEntity.getStackId() + " has changed properties, but the resource update type is NONE.  Copying the previous value");
       StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
       nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
@@ -894,19 +892,19 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
     StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
     // Delete if:
-    // previous entity exists, in something other than a DELETE_COMPLETE or NOT_STARTED state, and has a different
-    // physical resource id than the next one (next physical resource id = null if it doesn't exist).
-    // There are actually some instances where the physical resource id is the same, so we have created an
+    // previous entity exists, in something other than a DELETE_COMPLETE or NOT_STARTED state, and
+    // the next entity either does not exist, is in state NOT_STARTED, or was updated via replacement.
     // internal physical resource uuid that is different in the needs update case...
     boolean previousEntityExists = previousStackResourceEntity != null;
     boolean previousEntityState = previousStackResourceEntity == null ? null : previousStackResourceEntity.getResourceStatus();
     boolean previousEntityInAppropriateState = (previousEntityState != Status.DELETE_COMPLETE) && (previousEntityState != Status.NOT_STARTED);
-    String nextPhysicalResourceId = (nextStackResourceEntity == null || nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) ? null : nextStackResourceEntity.getPhysicalResourceId();
-    String nextInternalPhysicalResourceUuid = (nextStackResourceEntity == null || nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) ? null : nextStackResourceEntity.getInternalPhysicalResourceUuid();
+    boolean nextEntityExists = nextStackResourceEntity != null;
+    boolean nextEntityState = nextStackResourceEntity == null ? null : nextStackResourceEntity.getResourceStatus();
+    boolean nextEntityNotStarted = (nextEntityState == Status.NOT_STARTED);
+    boolean nextEntityFromResourceReplacement = (nextEntityExists  && nextStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+
     if (previousEntityExists && previousEntityInAppropriateState &&
-      (!Objects.equals(previousStackResourceEntity.getPhysicalResourceId(), nextPhysicalResourceId) ||
-       !Objects.equals(previousStackResourceEntity.getInternalPhysicalResourceUuid(), nextInternalPhysicalResourceUuid)
-      )
+      (!nextEntityExists || nextEntityNotStarted || nextEntityFromResourceReplacement)
     ) {
       previousStackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
       previousStackResourceEntity.setResourceStatusReason(null);
@@ -1075,21 +1073,25 @@ public class StackActivityImpl implements StackActivity {
     LOG.info("Determining if resource " + resourceId + " needs deleting during cleanup");
     StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
     StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
-    // Delete if:
-    // previous entity exists, in something other than a DELETE_COMPLETE or NOT_STARTED state, and has a different
-    // physical resource id than the next one (next physical resource id = null if it doesn't exist)
-    // There are actually some instances where the physical resource id is the same, so we have created an
-    // internal physical resource uuid that is different in the needs update case...
-    boolean previousEntityExists = previousStackResourceEntity != null;
-    boolean previousEntityState = previousStackResourceEntity == null ? null : previousStackResourceEntity.getResourceStatus();
-    boolean previousEntityInAppropriateState = (previousEntityState != Status.DELETE_COMPLETE) && (previousEntityState != Status.NOT_STARTED);
-    String nextPhysicalResourceId = (nextStackResourceEntity == null || nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) ? null : nextStackResourceEntity.getPhysicalResourceId();
-    String nextInternalPhysicalResourceUuid = (nextStackResourceEntity == null || nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) ? null : nextStackResourceEntity.getInternalPhysicalResourceUuid();
-    if (previousEntityExists && previousEntityInAppropriateState &&
-      (!Objects.equals(previousStackResourceEntity.getPhysicalResourceId(), nextPhysicalResourceId) ||
-        !Objects.equals(previousStackResourceEntity.getInternalPhysicalResourceUuid(), nextInternalPhysicalResourceUuid)
-      )
-    ) {
+    // Delete cases:
+    // 1) Previous entity was Updated With Replacement:  Both entities exist, not in DELETE_COMPLETE or NOT_STARTED.  Previous entity is 'updateWithReplacement'
+    // 2) Previous entity was created.  Previous entity exists, is not in DELETE_COMPLETE or NOT_STARTED and not 'updateWithReplacement'.  Next entity does not exist or is in
+    //    NOT_STARTED or DELETE_COMPLETE state.
+    boolean updateWithReplacementCase = (previousStackResourceEntity != null) && (nextStackResourceEntity != null)
+      (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (nextStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (nextStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (previousStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+
+    boolean createdCase = (previousStackResourceEntity != null) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (previousStackResourceEntity.getFromUpdateReplacement() != Boolean.TRUE) &&
+      (nextStackResourceEntity == null ||
+        nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED ||
+        nextStackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE);
+    if (updateWithReplacementCase || createdCase) {
       previousStackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
       previousStackResourceEntity.setResourceStatusReason(null);
       StackResourceEntityManager.updateStackResource(previousStackResourceEntity);

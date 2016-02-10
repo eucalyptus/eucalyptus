@@ -114,6 +114,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         } else {
           action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
         }
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
 
         // Update the instance info
@@ -157,7 +158,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2EIPAssociationResourceAction action = (AWSEC2EIPAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if (action.properties.getAllocationId() != null) {
           DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
           describeAddressesType.setAllocationIds(Lists.newArrayList(action.properties.getAllocationId()));

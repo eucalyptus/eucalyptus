@@ -74,6 +74,7 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
         createRouteTableType.setVpcId(action.properties.getVpcId());
         CreateRouteTableResponseType createRouteTableResponseType = AsyncRequests.<CreateRouteTableType, CreateRouteTableResponseType> sendSync(configuration, createRouteTableType);
         action.info.setPhysicalResourceId(createRouteTableResponseType.getRouteTable().getRouteTableId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -118,7 +119,7 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2RouteTableResourceAction action = (AWSEC2RouteTableResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // See if route table is there
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());

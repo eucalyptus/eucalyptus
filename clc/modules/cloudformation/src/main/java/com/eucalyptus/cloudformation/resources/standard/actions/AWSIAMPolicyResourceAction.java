@@ -100,6 +100,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
         // just get fields
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -169,7 +170,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMPolicyResourceAction action = (AWSIAMPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // find all roles that still exist from the list and remove the policy
         Set<String> passedInRoles = IAMHelper.collectionToSetAndNullToEmpty(action.properties.getRoles());

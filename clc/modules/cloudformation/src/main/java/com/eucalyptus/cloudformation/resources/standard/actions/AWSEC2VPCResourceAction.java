@@ -90,6 +90,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         CreateVpcResponseType createVpcResponseType = AsyncRequests.<CreateVpcType,CreateVpcResponseType> sendSync(configuration, createVpcType);
         action.info.setPhysicalResourceId(createVpcResponseType.getVpc().getVpcId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setCidrBlock(JsonHelper.getStringFromJsonNode(new TextNode( createVpcResponseType.getVpc( ).getCidrBlock( ))));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -187,7 +188,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
         describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );

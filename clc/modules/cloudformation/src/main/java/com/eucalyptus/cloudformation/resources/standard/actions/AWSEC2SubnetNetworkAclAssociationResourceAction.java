@@ -78,6 +78,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
         }
         String newAssociationId = action.replaceAssociation(configuration, associationId, action.properties.getNetworkAclId());
         action.info.setPhysicalResourceId(newAssociationId);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         action.info.setAssociationId(JsonHelper.getStringFromJsonNode(new TextNode(newAssociationId)));
         return action;
@@ -97,7 +98,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetNetworkAclAssociationResourceAction action = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // First see if association id is there...
         if (!action.associationIdExistsForDelete(configuration)) return action;

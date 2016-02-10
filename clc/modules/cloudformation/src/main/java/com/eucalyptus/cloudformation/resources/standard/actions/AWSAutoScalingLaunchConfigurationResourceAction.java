@@ -97,6 +97,7 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
         createLaunchConfigurationType.setLaunchConfigurationName(launchConfigurationName);
         AsyncRequests.<CreateLaunchConfigurationType,CreateLaunchConfigurationResponseType> sendSync(configuration, createLaunchConfigurationType);
         action.info.setPhysicalResourceId(launchConfigurationName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -115,7 +116,7 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSAutoScalingLaunchConfigurationResourceAction action = (AWSAutoScalingLaunchConfigurationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         DeleteLaunchConfigurationType deleteLaunchConfigurationType = MessageHelper.createMessage(DeleteLaunchConfigurationType.class, action.info.getEffectiveUserId());
         deleteLaunchConfigurationType.setLaunchConfigurationName(action.info.getPhysicalResourceId());
         AsyncRequests.<DeleteLaunchConfigurationType,DeleteLaunchConfigurationResponseType> sendSync(configuration, deleteLaunchConfigurationType);

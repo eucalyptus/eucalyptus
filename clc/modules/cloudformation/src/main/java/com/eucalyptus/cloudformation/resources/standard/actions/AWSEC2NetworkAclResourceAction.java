@@ -73,6 +73,7 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         createNetworkAclType.setVpcId(action.properties.getVpcId());
         CreateNetworkAclResponseType createNetworkAclResponseType = AsyncRequests.<CreateNetworkAclType, CreateNetworkAclResponseType> sendSync(configuration, createNetworkAclType);
         action.info.setPhysicalResourceId(createNetworkAclResponseType.getNetworkAcl().getNetworkAclId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -117,7 +118,7 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkAclResourceAction action = (AWSEC2NetworkAclResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());

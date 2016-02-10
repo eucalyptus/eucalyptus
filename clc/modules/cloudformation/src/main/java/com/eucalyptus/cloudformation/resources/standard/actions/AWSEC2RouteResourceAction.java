@@ -98,6 +98,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         createRouteType.setDestinationCidrBlock(action.properties.getDestinationCidrBlock());
         CreateRouteResponseType createRouteResponseType = AsyncRequests.<CreateRouteType, CreateRouteResponseType>sendSync(configuration, createRouteType);
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -116,7 +117,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2RouteResourceAction action = (AWSEC2RouteResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
         describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
