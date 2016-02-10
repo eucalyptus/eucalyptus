@@ -49,12 +49,6 @@ for mod in authn_core authz_core authz_host mpm_prefork unixd; do
     fi
 done
 
-if grep -q 'flags.* vmx' /proc/cpuinfo && ! lsmod | grep -q kvm_intel; then
-    modprobe kvm_intel
-elif grep -q 'flags.* svm' /proc/cpuinfo && ! lsmod | grep -q kvm_amd; then
-    modprobe kvm_amd
-fi
-
 export EUCALYPTUS
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND
