@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,30 +60,44 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.binding;
+package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Date;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-public class ObjectStorageOPTIONSBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStorageOPTIONSBinding.class);
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.google.common.base.Strings;
+
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+
+@ChannelPipelineCoverage("one")
+public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger(ObjectStorageOPTIONSOutboundHandler.class);
 
   @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
-
-    // Object operations
-    // Cross-Origin Resource Sharing (CORS) pre-flight request
-    newMap.put(OBJECT + HttpMethod.OPTIONS.toString(), "OptionsObjectCors");
-
-    return newMap;
-  }
-
-  protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-    return opsMap;
+  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpResponse) {
+      MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+      BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+      httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
+      if (msg instanceof PreflightCheckCorsResponseType) {
+        PreflightCheckCorsResponseType preflightResponse = (PreflightCheckCorsResponseType) msg;
+      }
+      // Since an OPTIONS response, never include a body
+      httpResponse.setMessage(null);
+    }
   }
 }

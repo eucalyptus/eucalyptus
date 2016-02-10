@@ -88,7 +88,6 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.marker.toString(), "ListBucket");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.delimiter.toString(), "ListBucket");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.location.toString(), "GetBucketLocation");
-
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
@@ -96,8 +95,6 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GetBucketTagging");
     // Cross-Origin Resource Sharing (cors)
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GetBucketCors");
-
-
     // Multipart uploads
     newMap.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
 
@@ -106,7 +103,6 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     newMap.put(OBJECT + HttpMethod.GET.toString(), "GetObject");
     newMap.put(OBJECT + HttpMethod.GET.toString() + ObjectStorageProperties.ObjectParameter.torrent.toString(), "GetObject");
     newMap.put(OBJECT + HttpMethod.GET.toString() + "extended", "GetObjectExtended");
-
     // Multipart Uploads
     newMap.put(OBJECT + HttpMethod.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "ListParts");
 

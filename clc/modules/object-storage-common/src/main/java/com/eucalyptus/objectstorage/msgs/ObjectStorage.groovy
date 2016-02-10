@@ -51,9 +51,11 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.PreflightResponse
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
+
 import com.google.common.collect.Maps
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -852,7 +854,9 @@ public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 //@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class PreflightCheckCorsType extends ObjectStorageRequestType {}
 
-public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {}
+public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
+  PreflightResponse preflightResponse;
+}
 
 
 // AddObject not used yet

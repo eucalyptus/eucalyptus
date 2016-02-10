@@ -267,6 +267,19 @@ public class CorsRule {
   String[] exposeHeaders;
 }
 
+public class PreflightRequest {
+  String origin;
+  String method;
+  String[] requestHeaders;
+}
+
+public class PreflightResponse {
+  String origin;
+  String method;
+  String[] allowedHeaders;
+  int maxAgeSeconds;
+  String[] exposeHeaders;
+}
 /*
  * --------------------
  * BUCKET WEBSITE

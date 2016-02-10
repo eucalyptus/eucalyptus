@@ -149,6 +149,8 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.PreflightRequest;
+import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
@@ -605,6 +607,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
         && params.containsKey(ObjectStorageProperties.BucketParameter.cors.toString())) {
       operationParams.put("corsConfiguration", getCors(httpRequest));
+    }
+
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
+      operationParams.put("corsPreflight", processPreflightRequest(httpRequest));
     }
 
     ArrayList paramsToRemove = new ArrayList();
@@ -1541,7 +1547,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   private CorsRule extractCorsRule(XMLParser parser, Node node) throws S3Exception {
     CorsRule corsRule = new CorsRule();
 
-    LOG.debug("In extractCorsRule"); //LPT
+    LOG.debug("In extractCorsRule");
 
     try {
 
@@ -1598,15 +1604,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         throw new MalformedXMLException("/CORSConfiguration/CORSRule/" + element);
       }
       int elementNodesSize = elementNodes.getLength();
-      LOG.debug("elementNodes list size is " + elementNodesSize); //LPT
 
       if (elementNodesSize > 0) {
         elementArray = new String[elementNodesSize];
         for (int idx = 0; idx < elementNodes.getLength(); idx++) {
           Node elementNode = elementNodes.item(idx);
-          LOG.debug("Node value is <" + elementNode.getNodeValue() + ">"); //LPT
           elementArray[idx] = elementNode.getFirstChild().getNodeValue();
-          LOG.debug("Node first child value is <" + elementArray[idx] + ">"); //LPT
         }
       }
     } catch (S3Exception e) {
@@ -1620,6 +1623,24 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return elementArray;
   }
 
+  private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
+    PreflightRequest preflightRequest = new PreflightRequest();
+    String message = getMessageString(httpRequest);
+    if (message.length() > 0) {
+      try {
+        //TODO LPT Do the needful here, including setting objectName for catch blocks below.
+        Exception e = new Exception();
+        LOG.warn("Here I am in processPreflightRequest", e);
+      /*} catch (S3Exception s3e) {
+        throw s3e;
+        */
+      } catch (Exception e) {
+        throw e;
+      }
+    }
+    return preflightRequest;
+  }
+  
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
     DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
     String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);

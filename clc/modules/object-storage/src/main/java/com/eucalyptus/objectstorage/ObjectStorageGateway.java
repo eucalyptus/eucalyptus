@@ -2155,7 +2155,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
       bucketName = request.getBucket();
       response = (PreflightCheckCorsResponseType) request.getReply();
       
-      //TODO Do the needful here, including setting objectName for catch blocks below.
+      //TODO LPT Do the needful here, including setting objectName for catch blocks below.
+      Exception e = new Exception();
+      LOG.warn("Here I am in the preflight check Gateway", e);
       
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
