@@ -1270,6 +1270,7 @@ public class VpcManager {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
+    final String cidr = request.getDestinationCidrBlock( );
     try {
       routeTables.withRetries( ).updateByExample(
           RouteTable.exampleWithName( accountFullName, routeTableId ),
@@ -1280,18 +1281,19 @@ public class VpcManager {
             public void fire( final RouteTable routeTable ) {
               try {
                 if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
-                  final Optional<Route> route = Iterables.tryFind(
+                  final Optional<Route> routeOption = Iterables.tryFind(
                       routeTable.getRoutes( ),
-                      CollectionUtils.propertyPredicate(
-                          request.getDestinationCidrBlock( ),
-                          RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
-                  if ( route.isPresent( ) ) {
-                    routeTable.getRoutes( ).remove( route.get( ) );
+                      CollectionUtils.propertyPredicate( cidr, RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+                  if ( routeOption.isPresent( ) ) {
+                    final Route route = routeOption.get( );
+                    if ( route.getDestinationCidr( ).equals( routeTable.getVpc( ).getCidr( ) ) ) {
+                      throw new ClientComputeException(
+                          "InvalidParameterValue", "Cannot remove local route "+cidr+" in route table " + routeTableId );
+                    }
+                    routeTable.getRoutes( ).remove( route );
                     routeTable.updateTimeStamps( ); // ensure version of table increments also
                   } else {
-                    throw new ClientComputeException(
-                        "InvalidRoute.NotFound",
-                        "Route not found for cidr: " + request.getDestinationCidrBlock( ) );
+                    throw new ClientComputeException( "InvalidRoute.NotFound", "Route not found for cidr: " + cidr );
                   }
                 } else {
                   throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete route" ) );
