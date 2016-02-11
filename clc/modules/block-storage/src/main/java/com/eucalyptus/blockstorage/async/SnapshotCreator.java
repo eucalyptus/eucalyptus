@@ -81,6 +81,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
 
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
@@ -242,7 +244,6 @@ public class SnapshotCreator implements Runnable {
 
   private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
     Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
       @Override
       public SnapshotInfo apply(String arg0) {
         SnapshotInfo snap;
@@ -260,6 +261,7 @@ public class SnapshotCreator implements Runnable {
     };
 
     Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
+    ThruputMetrics.endOperation(MonitoredAction.CREATE_SNAPSHOT, snapshotId, System.currentTimeMillis());
   }
 
   private void markSnapshotFailed() throws TransactionException, NoSuchElementException {

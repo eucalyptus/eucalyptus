@@ -86,6 +86,8 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
@@ -338,6 +340,8 @@ public class VolumeCreator implements Runnable {
       if (foundVolumeInfo != null) {
         if (success) {
           foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+          ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME,
+              volumeId, System.currentTimeMillis());
         } else {
           foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
         }

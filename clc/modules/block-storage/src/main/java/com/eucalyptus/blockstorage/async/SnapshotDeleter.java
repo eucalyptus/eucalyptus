@@ -79,7 +79,8 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
-
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 /**
  * Checker task for removing snapshots marked in deleting status
  * 
@@ -152,6 +153,8 @@ public class SnapshotDeleter extends CheckerTask {
               snapshotTransfer.delete();
             } catch (Exception e) {
               LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+            } finally {
+              ThruputMetrics.endOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, System.currentTimeMillis());
             }
           } else {
             LOG.debug("Snapshot location missing for " + snapshotId + ". Skipping deletion from ObjectStorageGateway");
