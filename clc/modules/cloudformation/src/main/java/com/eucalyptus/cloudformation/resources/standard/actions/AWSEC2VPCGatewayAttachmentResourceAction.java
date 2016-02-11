@@ -93,6 +93,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
           AsyncRequests.<AttachVpnGatewayType,AttachVpnGatewayResponseType> sendSync(configuration, attachVpnGatewayType);
         }
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -111,7 +112,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCGatewayAttachmentResourceAction action = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // Check gateway (return if gone)
         DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());

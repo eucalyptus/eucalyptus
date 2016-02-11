@@ -99,6 +99,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         createDhcpOptionsType.setDhcpConfigurationSet(dhcpConfigurationSet);
         CreateDhcpOptionsResponseType createDhcpOptionsResponseType = AsyncRequests.<CreateDhcpOptionsType, CreateDhcpOptionsResponseType> sendSync(configuration, createDhcpOptionsType);
         action.info.setPhysicalResourceId(createDhcpOptionsResponseType.getDhcpOptions().getDhcpOptionsId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -144,7 +145,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2DHCPOptionsResourceAction action = (AWSEC2DHCPOptionsResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // Check dhcp options (return if gone)
         DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
         describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.info.getPhysicalResourceId() ) );

@@ -84,6 +84,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
               AsyncRequests.sendSync( configuration, attachNetworkInterfaceType );
           final String attachmentId = attachNetworkInterfaceResponseType.getAttachmentId( );
           action.info.setPhysicalResourceId( attachmentId );
+          action.info.setCreatedEnoughToDelete(true);
           action.info.setReferenceValueJson( JsonHelper.getStringFromJsonNode( new TextNode( attachmentId ) ) );
         } catch ( final Exception e ) {
           final Optional<AsyncWebServiceError> error = AsyncExceptions.asWebServiceError( e );
@@ -216,7 +217,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
 //    },
     ;
 //    private static boolean notCreatedOrNoInstanceOrNoNetworkInterface(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
-//      if (action.info.getPhysicalResourceId() == null) return true;
+//      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
 //      DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
 //      describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
 //      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);

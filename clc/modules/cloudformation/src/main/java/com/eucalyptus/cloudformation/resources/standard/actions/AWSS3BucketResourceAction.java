@@ -149,6 +149,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
           }
           s3c.createBucket(bucketName);
           action.info.setPhysicalResourceId(bucketName);
+          action.info.setCreatedEnoughToDelete(true);
         }
         return action;
       }
@@ -228,7 +229,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           s3c.deleteBucket(action.info.getPhysicalResourceId());

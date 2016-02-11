@@ -96,6 +96,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         CreateRoleResponseType createRoleResponseType = AsyncRequests.<CreateRoleType,CreateRoleResponseType> sendSync(configuration, createRoleType);
         String arn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
         action.info.setPhysicalResourceId(roleName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -132,7 +133,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // if no role, bye...
         if (!IAMHelper.roleExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;

@@ -97,6 +97,7 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         CreateInstanceProfileResponseType createInstanceProfileResponseType = AsyncRequests.<CreateInstanceProfileType,CreateInstanceProfileResponseType> sendSync(configuration, createInstanceProfileType);
         String arn = createInstanceProfileResponseType.getCreateInstanceProfileResult().getInstanceProfile().getArn();
         action.info.setPhysicalResourceId(instanceProfileName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -134,7 +135,7 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMInstanceProfileResourceAction action = (AWSIAMInstanceProfileResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         if (!IAMHelper.instanceProfileExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;
 

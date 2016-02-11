@@ -143,6 +143,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         }
         CreateLoadBalancerResponseType createLoadBalancerResponseType = AsyncRequests.<CreateLoadBalancerType,CreateLoadBalancerResponseType> sendSync(configuration, createLoadBalancerType);
         action.info.setPhysicalResourceId(createLoadBalancerType.getLoadBalancerName());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setDnsName(JsonHelper.getStringFromJsonNode(new TextNode(createLoadBalancerResponseType.getCreateLoadBalancerResult().getDnsName())));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -369,7 +370,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         DescribeLoadBalancersType describeLoadBalancersType = MessageHelper.createMessage(DescribeLoadBalancersType.class, action.info.getEffectiveUserId());
         LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
         ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());

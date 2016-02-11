@@ -116,6 +116,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         }
 
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -134,7 +135,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SecurityGroupEgressResourceAction action = (AWSEC2SecurityGroupEgressResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // property validation
         action.validateProperties();

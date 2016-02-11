@@ -72,6 +72,7 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         CreateInternetGatewayType createInternetGatewayType = MessageHelper.createMessage(CreateInternetGatewayType.class, action.info.getEffectiveUserId());
         CreateInternetGatewayResponseType createInternetGatewayResponseType = AsyncRequests.<CreateInternetGatewayType,CreateInternetGatewayResponseType> sendSync(configuration, createInternetGatewayType);
         action.info.setPhysicalResourceId(createInternetGatewayResponseType.getInternetGateway().getInternetGatewayId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -115,7 +116,7 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2InternetGatewayResourceAction action = (AWSEC2InternetGatewayResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // Check gateway (return if gone)
         DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
         describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.info.getPhysicalResourceId() ) );

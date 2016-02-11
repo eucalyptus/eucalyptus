@@ -101,6 +101,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
           AsyncRequests.<AddUserToGroupType,AddUserToGroupResponseType> sendSync(configuration, addUserToGroupType);
         }
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -119,7 +120,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserToGroupAdditionResourceAction action = (AWSIAMUserToGroupAdditionResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         IAMHelper.removeUsersFromGroup(configuration, action.properties.getUsers(), action.properties.getGroupName(), action.info.getEffectiveUserId());
         return action;
       }

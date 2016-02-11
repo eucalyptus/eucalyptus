@@ -95,6 +95,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         CreateGroupResponseType createGroupResponseType = AsyncRequests.<CreateGroupType,CreateGroupResponseType> sendSync(configuration, createGroupType);
         String arn = createGroupResponseType.getCreateGroupResult().getGroup().getArn();
         action.info.setPhysicalResourceId(groupName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -131,7 +132,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMGroupResourceAction action = (AWSIAMGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // if no group, bye...
         if (!IAMHelper.groupExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) {

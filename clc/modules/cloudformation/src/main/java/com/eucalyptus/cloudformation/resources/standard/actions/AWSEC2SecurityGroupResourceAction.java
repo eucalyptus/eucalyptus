@@ -166,6 +166,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         } else {
           action.info.setPhysicalResourceId(groupName);
         }
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         action.info.setGroupId(JsonHelper.getStringFromJsonNode(new TextNode(groupId)));
         return action;
@@ -310,7 +311,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         AWSEC2SecurityGroupResourceAction action = (AWSEC2SecurityGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // See if group was ever populated
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // See if group exists now
         String groupId = JsonHelper.getJsonNodeFromString(action.info.getGroupId()).asText();
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());

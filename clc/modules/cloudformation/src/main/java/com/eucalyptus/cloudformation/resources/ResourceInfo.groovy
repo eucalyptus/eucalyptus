@@ -45,6 +45,7 @@ public abstract class ResourceInfo {
   String type;
   String logicalResourceId;
   String physicalResourceId;
+  Boolean createdEnoughToDelete = false;
   Boolean allowedByCondition;
   String referenceValueJson;
   String description;

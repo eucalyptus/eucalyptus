@@ -130,6 +130,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         putMetricAlarmType.setUnit(action.properties.getUnit());
         AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
         action.info.setPhysicalResourceId(action.properties.getAlarmName());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -148,7 +149,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudWatchAlarmResourceAction action = (AWSCloudWatchAlarmResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudWatch.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         DescribeAlarmsType describeAlarmsType = MessageHelper.createMessage(DescribeAlarmsType.class, action.info.getEffectiveUserId());
         AlarmNames alarmNames = new AlarmNames();
         alarmNames.setMember(Lists.newArrayList(action.info.getPhysicalResourceId()));

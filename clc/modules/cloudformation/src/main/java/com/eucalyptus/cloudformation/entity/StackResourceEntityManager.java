@@ -29,6 +29,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
@@ -43,7 +44,6 @@ import java.util.Map;
  * Created by ethomas on 12/19/13.
  */
 public class StackResourceEntityManager {
-
   public static void addStackResource(StackResourceEntity stackResourceEntity) {
     try ( TransactionResource db =
             Entities.transactionFor( stackResourceEntity.getClass() ) ) {
@@ -57,6 +57,7 @@ public class StackResourceEntityManager {
     stackResourceEntity.setAccountId(resourceInfo.getAccountId());
     stackResourceEntity.setResourceType(resourceInfo.getType());
     stackResourceEntity.setAllowedByCondition(resourceInfo.getAllowedByCondition());
+    stackResourceEntity.setCreatedEnoughToDelete(resourceInfo.getCreatedEnoughToDelete());
     stackResourceEntity.setDeletionPolicy(resourceInfo.getDeletionPolicy());
     stackResourceEntity.setDescription(resourceInfo.getDescription());
     stackResourceEntity.setLogicalResourceId(resourceInfo.getLogicalResourceId());
@@ -72,10 +73,11 @@ public class StackResourceEntityManager {
 
   public static void copyStackResourceEntityData(StackResourceEntity sourceEntity, StackResourceEntity destEntity) {
     destEntity.setRecordDeleted(sourceEntity.getRecordDeleted());
+    destEntity.setCreatedEnoughToDelete(sourceEntity.getCreatedEnoughToDelete());
+    destEntity.setFromUpdateReplacement(sourceEntity.getFromUpdateReplacement());
     destEntity.setDescription(sourceEntity.getDescription());
     destEntity.setLogicalResourceId(sourceEntity.getLogicalResourceId());
     destEntity.setPhysicalResourceId(sourceEntity.getPhysicalResourceId());
-    destEntity.setInternalPhysicalResourceUuid(sourceEntity.getInternalPhysicalResourceUuid());
     destEntity.setResourceStatus(sourceEntity.getResourceStatus());
     destEntity.setResourceStatusReason(sourceEntity.getResourceStatusReason());
     destEntity.setResourceType(sourceEntity.getResourceType());
@@ -200,6 +202,7 @@ public class StackResourceEntityManager {
     ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(stackResourceEntity.getResourceType());
     resourceInfo.setAccountId(stackResourceEntity.getAccountId());
     resourceInfo.setAllowedByCondition(stackResourceEntity.getAllowedByCondition());
+    resourceInfo.setCreatedEnoughToDelete(stackResourceEntity.getCreatedEnoughToDelete());
     resourceInfo.setDescription(stackResourceEntity.getDescription());
     resourceInfo.setDeletionPolicy(stackResourceEntity.getDeletionPolicy());
     resourceInfo.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
