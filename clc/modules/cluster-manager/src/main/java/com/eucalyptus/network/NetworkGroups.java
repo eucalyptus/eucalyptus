@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -142,6 +142,8 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
   public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
+  @ConfigurableField( description = "Minutes before a pending system public address allocation timesout and is released.", initial = "35" )
+  public static Integer       ADDRESS_PENDING_TIMEOUT = 35;
   @ConfigurableField(
       description = "Network configuration document.",
       changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
