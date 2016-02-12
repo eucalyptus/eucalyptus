@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -273,7 +273,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < intitialReportTimeoutMillis ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
         return;
-      } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+      } else if ( vm.isBlockStorage( ) && ( VmInstances.Timeout.UNREPORTED.apply( vm ) || VmInstances.Timeout.PENDING.apply( vm ) ) ) {
         VmInstances.stopped( vm );
       } else if ( VmState.STOPPING.apply( vm ) ) {
         VmInstances.stopped( vm );
@@ -283,11 +283,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         VmInstances.buried( vm );
       } else if ( VmInstances.Timeout.BURIED.apply( vm ) ) {
         VmInstances.delete( vm );
-      } else if ( VmInstances.Timeout.SHUTTING_DOWN.apply( vm ) ) {
-        VmInstances.terminated( vm );
-      } else if ( VmInstances.Timeout.STOPPING.apply( vm ) ) {
-        VmInstances.stopped( vm );
-      } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
+      } else if ( !vm.isBlockStorage( ) && ( VmInstances.Timeout.UNREPORTED.apply( vm ) || VmInstances.Timeout.PENDING.apply( vm ) ) ) {
         VmInstances.terminated( vm );
       } else if ( VmStateSet.RUN.apply( vm ) && VmRuntimeState.InstanceStatus.Ok.apply( vm ) ) {
         VmInstances.unreachable( vm );
