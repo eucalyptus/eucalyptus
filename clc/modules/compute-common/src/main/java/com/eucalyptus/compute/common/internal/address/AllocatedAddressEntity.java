@@ -24,6 +24,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -57,6 +58,7 @@ import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
@@ -198,6 +200,15 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
     return this.getOwner( ).getUserId( );
   }
 
+  /**
+   * Some address states
+   */
+  @Nonnull
+  public AddressDomain domainWithDefault( ) {
+    return Objects.firstNonNull( getDomain( ), AddressDomain.standard );
+  }
+
+  @Nullable
   public AddressDomain getDomain( ) {
     return domain;
   }
@@ -332,7 +343,7 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
     ALLOCATION_ID {
       @Nullable
       @Override
-      public String apply( @Nullable final AddressI address ) {
+      public String apply( final AddressI address ) {
         return address.getAllocationId( );
       }
     },
@@ -446,6 +457,9 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
             }
           } catch ( NoSuchElementException e ) {
             entity.setState( AddressState.allocated );
+            if ( entity.getDomain( ) == null ) {
+              entity.setDomain( AddressDomain.standard );
+            }
           }
         }
 
@@ -456,7 +470,6 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
               final AllocatedAddressEntity entity = AllocatedAddressEntity.create( );
               entity.setDisplayName( instance.getPublicAddress( ) );
               entity.setState( AddressState.assigned );
-              entity.setDomain( AddressDomain.standard );
               entity.setOwner( Principals.systemFullName( ) );
               entity.setInstanceId( instance.getDisplayName( ) );
               entity.setInstanceUuid( instance.getInstanceUuid( ) );
@@ -468,7 +481,6 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
                   final AllocatedAddressEntity entity = AllocatedAddressEntity.create( );
                   entity.setDisplayName( networkInterface.getAssociation( ).getPublicIp( ) );
                   entity.setState( AddressState.assigned );
-                  entity.setDomain( AddressDomain.vpc );
                   entity.setOwner( Principals.systemFullName( ) );
                   entity.setAllocationId( networkInterface.getAssociation( ).getAllocationId( ) );
                   entity.setAssociationId( networkInterface.getAssociation( ).getAssociationId( ) );
