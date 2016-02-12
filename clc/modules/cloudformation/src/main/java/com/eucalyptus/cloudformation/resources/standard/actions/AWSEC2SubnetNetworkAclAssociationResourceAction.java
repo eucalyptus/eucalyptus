@@ -30,6 +30,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -48,6 +50,7 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -59,6 +62,19 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
 
   public AWSEC2SubnetNetworkAclAssociationResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SubnetNetworkAclAssociationResourceAction otherAction = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
+    if (!Objects.equals(properties.getNetworkAclId(), otherAction.properties.getNetworkAclId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getSubnetId(), otherAction.properties.getSubnetId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {

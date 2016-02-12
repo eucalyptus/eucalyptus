@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -30,6 +31,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateRouteTableResponseType;
@@ -42,12 +45,15 @@ import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DisassociateRouteTableResponseType;
 import com.eucalyptus.compute.common.DisassociateRouteTableType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.ReplaceRouteTableAssociationResponseType;
+import com.eucalyptus.compute.common.ReplaceRouteTableAssociationType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -58,7 +64,20 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
   private AWSEC2SubnetRouteTableAssociationResourceInfo info = new AWSEC2SubnetRouteTableAssociationResourceInfo();
 
   public AWSEC2SubnetRouteTableAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SubnetRouteTableAssociationResourceAction otherAction = (AWSEC2SubnetRouteTableAssociationResourceAction) resourceAction;
+    if (!Objects.equals(properties.getRouteTableId(), otherAction.properties.getRouteTableId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getSubnetId(), otherAction.properties.getSubnetId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -109,6 +128,36 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ASSOCIATION {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2SubnetRouteTableAssociationResourceAction oldAction = (AWSEC2SubnetRouteTableAssociationResourceAction) oldResourceAction;
+        AWSEC2SubnetRouteTableAssociationResourceAction newAction = (AWSEC2SubnetRouteTableAssociationResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        String newAssociationId = newAction.replaceAssociation(configuration, oldAction.info.getPhysicalResourceId(), newAction.properties.getRouteTableId());
+        newAction.info.setPhysicalResourceId(newAssociationId);
+        newAction.info.setCreatedEnoughToDelete(true);
+        newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
+        return newAction;
+      }
+    },
+    ;
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private String replaceAssociation(ServiceConfiguration configuration, String oldAssociationId, String routeTableId) throws Exception {
+    ReplaceRouteTableAssociationType replaceRouteTableAssociationType = MessageHelper.createMessage(ReplaceRouteTableAssociationType.class, info.getEffectiveUserId());
+    replaceRouteTableAssociationType.setRouteTableId(routeTableId);
+    replaceRouteTableAssociationType.setAssociationId(oldAssociationId);
+    ReplaceRouteTableAssociationResponseType replaceRouteTableAssociationResponseType = AsyncRequests.<ReplaceRouteTableAssociationType, ReplaceRouteTableAssociationResponseType> sendSync(configuration, replaceRouteTableAssociationType);
+    return replaceRouteTableAssociationResponseType.getNewAssociationId();
+  }
 
   @Override
   public ResourceProperties getResourceProperties() {

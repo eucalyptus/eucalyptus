@@ -1077,7 +1077,7 @@ public class StackActivityImpl implements StackActivity {
     // 1) Previous entity was Updated With Replacement:  Both entities exist, not in DELETE_COMPLETE or NOT_STARTED.  Previous entity is 'updateWithReplacement'
     // 2) Previous entity was created.  Previous entity exists, is not in DELETE_COMPLETE or NOT_STARTED and not 'updateWithReplacement'.  Next entity does not exist or is in
     //    NOT_STARTED or DELETE_COMPLETE state.
-    boolean updateWithReplacementCase = (previousStackResourceEntity != null) && (nextStackResourceEntity != null)
+    boolean updateWithReplacementCase = (previousStackResourceEntity != null) && (nextStackResourceEntity != null) &&
       (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
       (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
       (nextStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
@@ -1091,6 +1091,7 @@ public class StackActivityImpl implements StackActivity {
       (nextStackResourceEntity == null ||
         nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED ||
         nextStackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE);
+
     if (updateWithReplacementCase || createdCase) {
       previousStackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
       previousStackResourceEntity.setResourceStatusReason(null);

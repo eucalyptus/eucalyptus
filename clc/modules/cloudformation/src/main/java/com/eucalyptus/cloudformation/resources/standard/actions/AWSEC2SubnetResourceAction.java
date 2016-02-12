@@ -34,6 +34,8 @@ import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
@@ -44,22 +46,30 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteSubnetResponseType;
 import com.eucalyptus.compute.common.DeleteSubnetType;
+import com.eucalyptus.compute.common.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifySubnetAttributeResponseType;
 import com.eucalyptus.compute.common.ModifySubnetAttributeType;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -73,11 +83,33 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
   private AWSEC2SubnetResourceInfo info = new AWSEC2SubnetResourceInfo();
 
   public AWSEC2SubnetResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SubnetResourceAction otherAction = (AWSEC2SubnetResourceAction) resourceAction;
+    if (!Objects.equals(properties.getAvailabilityZone(), otherAction.properties.getAvailabilityZone())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getCidrBlock(), otherAction.properties.getCidrBlock())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getMapPublicIpOnLaunch(), otherAction.properties.getMapPublicIpOnLaunch())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getVpcId(), otherAction.properties.getVpcId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
-    CREATE_ROUTE_TABLE {
+    CREATE_SUBNET {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
@@ -148,7 +180,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
   }
 
   private enum DeleteSteps implements Step {
-    DELETE_ROUTE_TABLE {
+    DELETE_SUBNET {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
@@ -188,6 +220,87 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
     @Override
     public Integer getTimeout( ) {
       return SUBNET_MAX_DELETE_RETRY_SECS;
+    }
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2SubnetResourceAction oldAction = (AWSEC2SubnetResourceAction) oldResourceAction;
+        AWSEC2SubnetResourceAction newAction = (AWSEC2SubnetResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        final ModifySubnetAttributeType modifySubnet =
+        MessageHelper.createMessage(ModifySubnetAttributeType.class, newAction.info.getEffectiveUserId());
+        final AttributeBooleanValueType value = new AttributeBooleanValueType( );
+        value.setValue( newAction.properties.getMapPublicIpOnLaunch( ) == Boolean.TRUE);
+        modifySubnet.setMapPublicIpOnLaunch( value );
+        modifySubnet.setSubnetId( newAction.info.getPhysicalResourceId( ) );
+        AsyncRequests.<ModifySubnetAttributeType,ModifySubnetAttributeResponseType>sendSync( configuration, modifySubnet );
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2SubnetResourceAction oldAction = (AWSEC2SubnetResourceAction) oldResourceAction;
+        AWSEC2SubnetResourceAction newAction = (AWSEC2SubnetResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
+        Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+          for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+            EC2Tag tag = new EC2Tag();
+            tag.setKey(tagInfo.getKey());
+            tag.setValue(tagInfo.getValue());
+            existingTags.add(tag);
+          }
+        }
+        Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+        if (newAction.properties.getTags() != null) {
+          newTags.addAll(newAction.properties.getTags());
+        }
+        List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+        if (newStackTags != null) {
+          newTags.addAll(newStackTags);
+        }
+        TagHelper.checkReservedEC2TemplateTags(newTags);
+        // add only 'new' tags
+        Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+        if (!onlyNewTags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        //  Get old tags...
+        Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+        if (oldAction.properties.getTags() != null) {
+          oldTags.addAll(oldAction.properties.getTags());
+        }
+        List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+        if (oldStackTags != null) {
+          oldTags.addAll(oldStackTags);
+        }
+
+        // remove only the old tags that are not new and that exist
+        Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+        if (!tagsToRemove.isEmpty()) {
+          DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+          deleteTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
     }
   }
 

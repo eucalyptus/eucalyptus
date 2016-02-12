@@ -30,13 +30,19 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AssociateDhcpOptionsResponseType;
+import com.eucalyptus.compute.common.AssociateDhcpOptionsType;
 import com.eucalyptus.compute.common.AttachInternetGatewayResponseType;
 import com.eucalyptus.compute.common.AttachInternetGatewayType;
 import com.eucalyptus.compute.common.AttachVpnGatewayResponseType;
 import com.eucalyptus.compute.common.AttachVpnGatewayType;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
+import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
@@ -56,6 +62,7 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -66,7 +73,23 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
   private AWSEC2VPCGatewayAttachmentResourceInfo info = new AWSEC2VPCGatewayAttachmentResourceInfo();
 
   public AWSEC2VPCGatewayAttachmentResourceAction() {
-   super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2VPCGatewayAttachmentResourceAction otherAction = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
+    if (!Objects.equals(properties.getInternetGatewayId(), otherAction.properties.getInternetGatewayId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getVpnGatewayId(), otherAction.properties.getVpnGatewayId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getVpcId(), otherAction.properties.getVpcId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -75,13 +98,13 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCGatewayAttachmentResourceAction action = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.properties.getVpcId() != null && action.properties.getVpnGatewayId() != null) {
-          throw new ValidationErrorException("Both VpcId and VpnGatewayId can not be set.");
+        if (action.properties.getInternetGatewayId() != null && action.properties.getVpnGatewayId() != null) {
+          throw new ValidationErrorException("Both InternetGatewayId and VpnGatewayId can not be set.");
         }
-        if (action.properties.getVpcId() == null && action.properties.getVpnGatewayId() == null) {
-          throw new ValidationErrorException("One of VpcId or VpnGatewayId must be set.");
+        if (action.properties.getInternetGatewayId() == null && action.properties.getVpnGatewayId() == null) {
+          throw new ValidationErrorException("One of InternetGatewayId or VpnGatewayId must be set.");
         }
-        if (action.properties.getVpcId() != null) {
+        if (action.properties.getInternetGatewayId() != null) {
           AttachInternetGatewayType attachInternetGatewayType = MessageHelper.createMessage(AttachInternetGatewayType.class, action.info.getEffectiveUserId());
           attachInternetGatewayType.setInternetGatewayId(action.properties.getInternetGatewayId());
           attachInternetGatewayType.setVpcId(action.properties.getVpcId());
@@ -90,6 +113,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
           // TODO: we don't support this right now so maybe log an error if they try to go this way.
           AttachVpnGatewayType attachVpnGatewayType = MessageHelper.createMessage(AttachVpnGatewayType.class, action.info.getEffectiveUserId());
           attachVpnGatewayType.setVpnGatewayId(action.properties.getVpnGatewayId());
+          attachVpnGatewayType.setVpcId(action.properties.getVpcId());
           AsyncRequests.<AttachVpnGatewayType,AttachVpnGatewayResponseType> sendSync(configuration, attachVpnGatewayType);
         }
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
@@ -114,21 +138,21 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
-        // Check gateway (return if gone)
-        DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
-        describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.properties.getInternetGatewayId( ) ) );
-        DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
-        if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
+        // Check vpc (return if gone)
+        DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
+        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
+        if (describeVpcsResponseType.getVpcSet() == null ||
+          describeVpcsResponseType.getVpcSet().getItem() == null ||
+          describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
           return action; // already deleted
         }
-        if (action.properties.getVpcId() != null) {
-          // Check vpc (return if gone)
-          DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-          describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
-          DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
-          if (describeVpcsResponseType.getVpcSet() == null ||
-              describeVpcsResponseType.getVpcSet().getItem() == null ||
-              describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
+        if (action.properties.getInternetGatewayId() != null) {
+          // Check gateway (return if gone)
+          DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
+          describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.properties.getInternetGatewayId( ) ) );
+          DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
+          if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
             return action; // already deleted
           }
           DetachInternetGatewayType detachInternetGatewayType = MessageHelper.createMessage(DetachInternetGatewayType.class, action.info.getEffectiveUserId());
@@ -158,6 +182,56 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
       return null;
     }
   }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ATTACHMENT {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VPCGatewayAttachmentResourceAction oldAction = (AWSEC2VPCGatewayAttachmentResourceAction) oldResourceAction;
+        AWSEC2VPCGatewayAttachmentResourceAction newAction = (AWSEC2VPCGatewayAttachmentResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (newAction.properties.getInternetGatewayId() != null && newAction.properties.getVpnGatewayId() != null) {
+          throw new ValidationErrorException("Both InternetGatewayId and VpnGatewayId can not be set.");
+        }
+        if (newAction.properties.getInternetGatewayId() == null && newAction.properties.getVpnGatewayId() == null) {
+          throw new ValidationErrorException("One of InternetGatewayId or VpnGatewayId must be set.");
+        }
+        // detach old items (TODO: error checking if not there)
+        if (oldAction.properties.getInternetGatewayId() != null) {
+          DetachInternetGatewayType detachInternetGatewayType = MessageHelper.createMessage(DetachInternetGatewayType.class, oldAction.info.getEffectiveUserId());
+          detachInternetGatewayType.setVpcId(oldAction.properties.getVpcId());
+          detachInternetGatewayType.setInternetGatewayId(oldAction.properties.getInternetGatewayId());
+          AsyncRequests.<DetachInternetGatewayType, DetachInternetGatewayResponseType>sendSync(configuration, detachInternetGatewayType);
+        } else {
+          DetachVpnGatewayType detachVpnGatewayType = MessageHelper.createMessage(DetachVpnGatewayType.class, oldAction.info.getEffectiveUserId());
+          detachVpnGatewayType.setVpcId(oldAction.properties.getVpcId());
+          detachVpnGatewayType.setVpnGatewayId(oldAction.properties.getVpnGatewayId());
+          AsyncRequests.<DetachVpnGatewayType, DetachVpnGatewayResponseType>sendSync(configuration, detachVpnGatewayType);
+        }
+        if (newAction.properties.getInternetGatewayId() != null) {
+          AttachInternetGatewayType attachInternetGatewayType = MessageHelper.createMessage(AttachInternetGatewayType.class, newAction.info.getEffectiveUserId());
+          attachInternetGatewayType.setInternetGatewayId(newAction.properties.getInternetGatewayId());
+          attachInternetGatewayType.setVpcId(newAction.properties.getVpcId());
+          AsyncRequests.<AttachInternetGatewayType,AttachInternetGatewayResponseType> sendSync(configuration, attachInternetGatewayType);
+        } else {
+          // TODO: we don't support this right now so maybe log an error if they try to go this way.
+          AttachVpnGatewayType attachVpnGatewayType = MessageHelper.createMessage(AttachVpnGatewayType.class, newAction.info.getEffectiveUserId());
+          attachVpnGatewayType.setVpnGatewayId(newAction.properties.getVpnGatewayId());
+          attachVpnGatewayType.setVpcId(newAction.properties.getVpcId());
+          AsyncRequests.<AttachVpnGatewayType,AttachVpnGatewayResponseType> sendSync(configuration, attachVpnGatewayType);
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+
 
   @Override
   public ResourceProperties getResourceProperties() {
