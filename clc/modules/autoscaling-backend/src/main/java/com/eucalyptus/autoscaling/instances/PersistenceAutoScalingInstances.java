@@ -298,7 +298,9 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
       }
     };
 
-    persistenceSupport.transactionWithRetry( AutoScalingInstance.class, updateCallback );
+    if ( !instanceIds.isEmpty( ) ) {
+      persistenceSupport.transactionWithRetry( AutoScalingInstance.class, updateCallback );
+    }
   }
 
   private static class PersistenceSupport extends AbstractOwnedPersistents<AutoScalingInstance> {
