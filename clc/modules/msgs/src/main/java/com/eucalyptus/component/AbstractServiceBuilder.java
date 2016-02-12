@@ -118,7 +118,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       ServiceConfiguration maybeIdenticalConfig = existingName;
       if ( existingName.equals( existingHost )
            && maybeIdenticalConfig.getName( ).equals( name )
-           && maybeIdenticalConfig.getPartition( ).equals( partition )
+           && (!maybeIdenticalConfig.getComponentId( ).isPartitioned( ) ||
+               maybeIdenticalConfig.getPartition( ).equals( partition ) )
            && maybeIdenticalConfig.getHostName( ).equals( host )
            && maybeIdenticalConfig.getPort( ).equals( port ) ) {
         return false;
