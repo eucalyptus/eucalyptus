@@ -388,6 +388,10 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
         if (pMidoConfig) {
             if ((rc = do_midonet_teardown(pMidoConfig)) != 0) {
                 ret = 1;
+            } else {
+                EUCA_FREE(pMidoConfig);
+                pMidoConfig = NULL;
+                gInitialized = FALSE;
             }
         }
         //    }

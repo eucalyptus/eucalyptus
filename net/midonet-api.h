@@ -83,7 +83,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 #define VPCMIDO_TENANT     "euca_tenant_1"
-#define VPCMIDO_TUNNELZONE "mido-tz"
+#define VPCMIDO_TUNNELZONE "mido-tz midotz euca-tz eucatz"
 // Maximum number of active VPCs (mido routers)
 // Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
 // 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
@@ -152,10 +152,19 @@ enum {
     EUCABR,
     EUCART_BRPORT,
     EUCABR_RTPORT,
-    //EUCART_GWPORT,
     METADATA_IPADDRGROUP,
     GWPORTGROUP,
     MIDOCOREEND
+};
+
+enum vpc_route_entry_target_t {
+    VPC_TARGET_LOCAL,
+    VPC_TARGET_INTERNET_GATEWAY,
+    VPC_TARGET_VPRIVATE_GATEWAY,
+    VPC_TARGET_ENI,
+    VPC_TARGET_PEERING,
+    VPC_TARGET_NAT_GATEWAY,
+    VPC_TARGET_INVALID
 };
 
 /*----------------------------------------------------------------------------*\
@@ -175,6 +184,18 @@ typedef struct midoname_t {
     char *uri;
     int init;
 } midoname;
+
+typedef struct mido_parsed_route_t {
+    midoname router;
+    midoname rport;
+    char *src_net;
+    char *src_length;
+    char *dst_net;
+    char *dst_length;
+    char *next_hop_ip;
+    char *weight;
+    int mido_present;
+} mido_parsed_route;
 
 typedef struct mido_resource_router_t {
     midoname resc;
@@ -263,10 +284,12 @@ typedef struct mido_vpc_subnet_t {
     midoname midos[VPCSUBNETEND];
     midoname *brports;
     midoname *dhcphosts;
+    midoname **routes;
     mido_vpc_instance *instances;
     int max_brports;
     int max_dhcphosts;
     int max_instances;
+    int max_routes;
     int gnipresent;
 } mido_vpc_subnet;
 
@@ -369,6 +392,9 @@ extern int http_deletes;
 void mido_info_http_count();
 void mido_info_http_count_total();
 
+void mido_free_mido_parsed_route(mido_parsed_route *route);
+void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes);
+
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname * name);
 void mido_free_midoname_list(midoname * name, int max_name);
@@ -403,6 +429,7 @@ int mido_delete_router(midoname * name);
 int mido_print_router(midoname * name);
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max);
 
+int find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx);
 int mido_create_route(mido_config *mido, midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 //int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 int mido_delete_route(midoname * name);

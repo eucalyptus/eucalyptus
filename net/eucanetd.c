@@ -644,7 +644,7 @@ int main(int argc, char **argv)
 
         eucanetd_timer_usec(&tv_maint);
         polling_sleep_adjusted = config->polling_frequency * 1000000;
-        if ((update_globalnet_failed == FALSE) && (update_globalnet == FALSE)) {
+        if ((update_globalnet_failed == FALSE) && (update_globalnet == FALSE) && (gIsRunning == TRUE)) {
             if (pDriverHandler->system_maint) {
                 rc = pDriverHandler->system_maint(globalnetworkinfo, pLni);
                 if (rc != 0) {
@@ -1520,7 +1520,7 @@ static int eucanetd_read_latest_network(boolean *update_globalnet)
       // regardless, if the last successfully applied version matches the current GNI version, skip the update
       if ( ( strlen(globalnetworkinfo->version) && strlen(config->lastAppliedVersion) ) ) {
           if (!strcmp(globalnetworkinfo->version, config->lastAppliedVersion) ) {
-              LOGDEBUG("global network version (%s) matches last successfully applied version (%s), skipping update\n", globalnetworkinfo->version, config->lastAppliedVersion);
+              LOGINFO("global network version (%s) already applied, skipping update\n", globalnetworkinfo->version);
               *update_globalnet = FALSE;
           } else {
               LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", globalnetworkinfo->version, config->lastAppliedVersion);

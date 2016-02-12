@@ -209,6 +209,40 @@ void mido_info_http_count_total()
 }
 
 //!
+//! Clears the mido_parsed_route structure in the argument. Allocated memory is released.
+//!
+//! @param[in] route parsed route entry of interest
+//!
+void mido_free_mido_parsed_route(mido_parsed_route *route) {
+    if (!route) {
+        return;
+    }
+    mido_free_midoname(&(route->router));
+    mido_free_midoname(&(route->rport));
+    EUCA_FREE(route->src_net);
+    EUCA_FREE(route->src_length);
+    EUCA_FREE(route->dst_net);
+    EUCA_FREE(route->dst_length);
+    EUCA_FREE(route->next_hop_ip);
+    EUCA_FREE(route->weight);
+    bzero(route, sizeof(mido_parsed_route));
+}
+
+//!
+//! Clears the list of mido_parsed_route structures in the argument.
+//!
+//! @param[in] routes array of mido_parsed_route structures
+//! @param[in] max_routes number of array elements
+//!
+void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes) {
+    int i = 0;
+    if (!routes) return;
+    for (i = 0; i < max_routes; i++) {
+        mido_free_mido_parsed_route(&(routes[i]));
+    }
+}
+
+//!
 //!
 //!
 //! @param[in] name
@@ -3075,6 +3109,73 @@ int midonet_http_delete(char *url)
 }
 
 //!
+//! Searches for a mido router route specified in the arguments from a list (also
+//! specified in the arguments). 
+//!
+//! @param[in]  routes list of routes to look for a matching route entry.
+//! @param[in]  max_routes number of routes in the list.
+//! @param[in]  rport router port to be routed.
+//! @param[in]  src source subnet.
+//! @param[in]  src_slashnet source slash net.
+//! @param[in]  dst destination subnet.
+//! @param[in]  dst_slashnet destination slash net.
+//! @param[in]  next_hop_ip next hop.
+//! @param[in]  weight route weight.
+//! @param[out] index at which the route was found. -1 if the route was not found.
+//! @return 0 if the route was found. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx)
+{
+    int rc = 0, found = 0, ret = 0;
+    midoname myname;
+    int i = 0;
+
+    bzero(&myname, sizeof(midoname));
+
+    myname.tenant = strdup(VPCMIDO_TENANT);
+    myname.resource_type = strdup("routes");
+    myname.content_type = NULL;
+
+    found = 0;
+    for (i = 0; i < max_routes && !found; i++) {
+        if (routes[i].init == 0) {
+            continue;
+        }
+        if (strcmp(next_hop_ip, "UNSET")) {
+            rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
+                    "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
+            if (!rc) {
+                found = 1;
+            }
+        } else {
+            rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
+                    "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
+            if (!rc) {
+                found = 1;
+            }
+        }
+    }
+    if (found) {
+        if (foundidx) {
+            *foundidx = i;
+        }
+        ret = 0;
+    } else {
+        ret = 1;
+    }
+    mido_free_midoname(&myname);
+    return (ret);
+}
+
+//!
 //! Creates a new router route as specified in the argument. 
 //!
 //! @param[in]  mido data structure holding all discovered MidoNet resources.
@@ -3102,7 +3203,7 @@ int mido_create_route(mido_config *mido, midoname *router, midoname *rport, char
     int rc = 0, found = 0, ret = 0;
     midoname myname;
     midoname *routes = NULL;
-    int max_routes = 0, i = 0;
+    int max_routes = 0;
 
     bzero(&myname, sizeof(midoname));
 
@@ -3120,33 +3221,11 @@ int mido_create_route(mido_config *mido, midoname *router, midoname *rport, char
         routes = crouter->routes;
         max_routes = crouter->max_routes;
     }
-    //rc = mido_get_routes(router, &routes, &max_routes);
-    if (!rc) {
-        found = 0;
-        for (i = 0; i < max_routes && !found; i++) {
-            if (routes[i].init == 0) {
-                continue;
-            }
-            if (strcmp(next_hop_ip, "UNSET")) {
-                rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
-                        "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
-                if (!rc) {
-                    found = 1;
-                }
-            } else {
-                rc = mido_cmp_midoname_to_input(&(routes[i]), "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
-                        "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
-                if (!rc) {
-                    found = 1;
-                }
-            }
-        }
-    }
-    //if (routes && max_routes > 0) {
-    //    mido_free_midoname_list(routes, max_routes);
-    //    EUCA_FREE(routes);
-    //}
 
+    rc = find_route_from_list(routes, max_routes, rport, src, src_slashnet, dst, dst_slashnet, next_hop_ip, weight, NULL);
+    if (rc == 0) {
+        found = 1;
+    }
     // route doesn't already exist, create it
     if (!found) {
         // delete old resource, if present
@@ -3412,6 +3491,7 @@ int mido_cmp_midoname_to_input(midoname * name, ...)
         if (!rc) {
             if (strcmp(dstval, srcval)) {
                 EUCA_FREE(srcval);
+                va_end(al);
                 return (1);
             }
             EUCA_FREE(srcval);
@@ -3419,6 +3499,7 @@ int mido_cmp_midoname_to_input(midoname * name, ...)
             // skip
         } else {
             EUCA_FREE(srcval);
+            va_end(al);
             return (1);
         }
         key = va_arg(al, char *);

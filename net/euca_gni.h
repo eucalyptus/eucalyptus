@@ -154,6 +154,7 @@ typedef struct gni_secgroup_t {
 //! GNI Instance Information structure
 typedef struct gni_instance_t {
     char name[INTERFACE_ID_LEN];       //!< Instance ID string
+    char ifname[INTERFACE_ID_LEN];     //!< Interface ID string
     char accountId[128];               //!< Instance Account ID string
     u8 macAddress[ENET_BUF_SIZE];      //!< Associated MAC address
     u32 publicIp;                      //!< Assigned public IP address
@@ -209,10 +210,21 @@ typedef struct gni_cluster_t {
 typedef struct gni_network_acl_t {
 } gni_network_acl;
 
+typedef struct gni_route_entry_t {
+    char destCidr[16];
+    char target[16];
+} gni_route_entry;
+
 typedef struct gni_route_table_t {
+    char name[16];
+    char accountId[128];
+    gni_route_entry *entries;
+    int max_entries;
 } gni_route_table;
 
 typedef struct gni_internet_gateway_t {
+    char name[16];
+    char accountId[128];
 } gni_internet_gateway;
 
 typedef struct gni_vpcsubnet_t {
@@ -235,8 +247,8 @@ typedef struct gni_vpc_t {
     int max_networkAcls;
     gni_route_table *routeTables;
     int max_routeTables;
-    gni_internet_gateway *internetGateways;
-    int max_internetGateways;
+    gni_name *internetGatewayNames;
+    int max_internetGatewayNames;
 } gni_vpc;
 
 typedef struct gni_hostname_t {
@@ -282,8 +294,10 @@ typedef struct globalNetworkInfo_t {
     int max_interfaces;                //!< Number of interfaces in the list
     gni_secgroup *secgroups;           //!< List of security group information
     int max_secgroups;                 //!< Number of security groups in the list
-    gni_vpc *vpcs;
-    int max_vpcs;
+    gni_vpc *vpcs;                     //!< List of VPC information
+    int max_vpcs;                      //!< Number of VPCs
+    gni_internet_gateway *vpcIgws;     //!< List of VPC Internet Gateways
+    int max_vpcIgws;                   //!< Number of VPC Internet Gateways
 } globalNetworkInfo;
 
 /*----------------------------------------------------------------------------*\
@@ -348,6 +362,8 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         char **interface_names, int max_interface_names, char ***out_interface_names,
         int *out_max_interface_names, gni_instance ** out_interfaces, int *out_max_interfaces);
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname);
+gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName);
+int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance ***out_interfaces, int *max_out_interfaces);
 
 int gni_validate(globalNetworkInfo * gni);
 int gni_netmode_validate(const char *psMode);

@@ -79,6 +79,8 @@
 
 #include <midonet-api.h>
 #include <eucanetd_config.h>
+
+#include "euca_gni.h"
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -138,7 +140,8 @@ int set_router_id(mido_config * mido, int id);
 int clear_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
-int isMidoVpcPlusTwo(mido_config *mido, char *iptocheck);
+int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
+enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target);
 
 int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
                     char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
@@ -171,6 +174,13 @@ int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * subnet);
 int find_mido_vpc_subnet(mido_vpc * vpc, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
 int find_mido_vpc_subnet_global(mido_config * mido, char *subnetname, mido_vpc_subnet ** outvpcsubnet);
 
+int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet,
+        char *subnetNetaddr, char *subnetSlashnet, gni_route_table *rtable, gni_vpc *gnivpc,
+        gni_instance **gniinterfaces, int max_gniinterfaces, mido_parsed_route **proutes, int *max_proutes);
+int create_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet,
+        char *subnetNetaddr, char *subnetSlashnet, gni_route_table *rtable, gni_vpc *gnivpc,
+        gni_instance **gniinterfaces, int max_gniinterfaces);
+
 int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance);
 int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname);
 int delete_mido_vpc_instance(mido_config *mido, mido_vpc_instance * vpcinstance);
@@ -183,6 +193,7 @@ mido_resource_router *find_mido_router(mido_config *mido, char *rtname);
 mido_resource_bridge *find_mido_bridge(mido_config *mido, char *brname);
 mido_resource_chain *find_mido_chain(mido_config *mido, char *chainname);
 mido_resource_ipaddrgroup *find_mido_ipaddrgroup(mido_config *mido, char *ipagname);
+midoname *find_mido_ipaddrgroup_ip(mido_config *mido, mido_resource_ipaddrgroup *ipag, char *ip);
 mido_resource_portgroup *find_mido_portgroup(mido_config *mido, char *pgname);
 mido_resource_host *find_mido_host(mido_config *mido, char *name);
 mido_resource_host *find_mido_host_byuuid(mido_config *mido, char *uuid);
@@ -192,6 +203,9 @@ midoname *find_mido_bridge_port_byinterface(mido_resource_bridge *br, char *name
 int find_mido_device_ports(midoname *ports, int max_ports, midoname *device, midoname ***outports, int *outports_max);
 int find_mido_host_ports(midoname *ports, int max_ports, midoname *host, midoname ***outports, int *outports_max);
 int find_mido_portgroup_ports(midoname *ports, int max_ports, midoname *portgroup, midoname ***outports, int *outports_max);
+int parse_mido_vpc_subnet_cidr(mido_vpc_subnet *vpcsubnet, char **net, char **length);
+int parse_mido_vpc_route_addr(midoname *route, char **srcnet, char **srclength, char **dstnet, char **dstlength);
+int find_mido_vpc_subnet_routes(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, midoname ***croutes, int *croutes_max);
 
 int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
 int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
