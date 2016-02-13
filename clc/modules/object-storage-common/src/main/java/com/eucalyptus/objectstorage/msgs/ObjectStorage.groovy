@@ -51,6 +51,7 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.PreflightRequest
 import com.eucalyptus.storage.msgs.s3.PreflightResponse
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
@@ -467,7 +468,7 @@ public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
 }
 
-/* PUT /bucket/object with x-amz-copy-src header */
+/* PUT /bucket/object with x-amz-copy-source header */
 
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_GETOBJECT])
@@ -852,10 +853,16 @@ public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 // Does not require any specific permissions
 //@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
-public class PreflightCheckCorsType extends ObjectStorageRequestType {}
+public class PreflightCheckCorsType extends ObjectStorageRequestType {
+  String origin;
+  String method;
+}
 
 public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
-  PreflightResponse preflightResponse;
+//  String contentLength;
+//  String origin;
+//  String method;
+//  int maxAgeSeconds;
 }
 
 

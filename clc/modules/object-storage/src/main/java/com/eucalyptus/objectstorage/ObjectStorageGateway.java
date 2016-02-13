@@ -2159,6 +2159,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
       Exception e = new Exception();
       LOG.warn("Here I am in the preflight check Gateway", e);
       
+      response.setStatus(HttpResponseStatus.ACCEPTED);
+      response.setStatusMessage("AcceptedWooHoo");
+      //response.setContentLength("0");
+      //response.setHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
+
+      
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
           bucketName + "> and object name <" + ""/*objectName*/ + 

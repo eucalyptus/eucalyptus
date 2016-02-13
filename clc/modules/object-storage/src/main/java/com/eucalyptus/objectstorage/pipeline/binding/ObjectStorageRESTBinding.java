@@ -609,9 +609,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("corsConfiguration", getCors(httpRequest));
     }
 
-    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
-      operationParams.put("corsPreflight", processPreflightRequest(httpRequest));
-    }
+//    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
+//      operationParams.put("corsPreflight", processPreflightRequest(httpRequest));
+//    }
 
     ArrayList paramsToRemove = new ArrayList();
 

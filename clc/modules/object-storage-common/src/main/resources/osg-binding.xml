@@ -812,6 +812,8 @@
     <mapping name="PreflightCheckCors"
              class="com.eucalyptus.objectstorage.msgs.PreflightCheckCorsType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <value name="Origin" field="origin" />
+        <value name="Method" field="method" />
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
@@ -819,6 +821,7 @@
 
     <mapping name="PreflightCheckCorsResponse"
              class="com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType">
+<!-- <value name="ContentLength" field="contentLength" usage="optional" /> -->
     </mapping>
     
 
