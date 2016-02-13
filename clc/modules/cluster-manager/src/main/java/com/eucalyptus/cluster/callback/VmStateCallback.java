@@ -86,6 +86,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState.ReachabilityStatus;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -98,7 +99,6 @@ import com.eucalyptus.util.Either;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.Functions;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -331,7 +331,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                           Iterables.transform( runVm.getVolumes( ), TypeMappers.lookup( AttachedVolume.class, VmStateVolumeAttachmentView.class ) ),
                           Maps.<String,VmStateVolumeAttachmentView>newHashMap( ),
                           HasName.GET_NAME,
-                          Functions.<VmStateVolumeAttachmentView>identity( ) ) ) );
+                          Functions.<VmStateVolumeAttachmentView>identity( ) ) ) ) ||
+                  ( vmView.getState( ) == VmState.RUNNING && !vmView.getNetworkInterfaces( ).equals(
+                      CollectionUtils.putAll(
+                          Iterables.transform(
+                              runVm.getSecondaryNetConfigList( ),
+                              TypeMappers.lookup( NetworkConfigType.class, VmStateNetworkInterfaceAttachmentView.class ) ),
+                          Maps.<String,VmStateNetworkInterfaceAttachmentView>newHashMap( ),
+                          HasName.GET_NAME,
+                          Functions.<VmStateNetworkInterfaceAttachmentView>identity( ) ) ) )
+          ;
         }
       }
       if ( updateRequired ) try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
@@ -620,6 +629,47 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
 
+  public static final class VmStateNetworkInterfaceAttachmentView implements HasName<VmStateNetworkInterfaceAttachmentView> {
+    private final String id;
+    private final Integer device;
+
+    public VmStateNetworkInterfaceAttachmentView(
+        final String id,
+        final Integer device
+    ) {
+      this.id = id;
+      this.device = device;
+    }
+
+    public String getId( ) {
+      return id;
+    }
+
+    @Override
+    public String getName( ) {
+      return id;
+    }
+
+    @Override
+    public int compareTo( final VmStateNetworkInterfaceAttachmentView o ) {
+      return id.compareTo( o.id );
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final VmStateNetworkInterfaceAttachmentView that = (VmStateNetworkInterfaceAttachmentView) o;
+      return Objects.equals( id, that.id ) &&
+          Objects.equals( device, that.device );
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( id, device );
+    }
+  }
+
   public static final class VmStateView implements HasName<VmStateView> {
     private final String id;
     private final int version;
@@ -630,6 +680,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     private final ReachabilityStatus reachabilityStatus;
     private final VmInstance.Reason reason;
     private final Map<String,VmStateVolumeAttachmentView> volumeAttachments;
+    private final Map<String,VmStateNetworkInterfaceAttachmentView> networkInterfaces;
     private final long lastUpdated;
     private final long expires;
     private final boolean bundling;
@@ -645,6 +696,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         final ReachabilityStatus reachabilityStatus,
         final VmInstance.Reason reason,
         final Map<String, VmStateVolumeAttachmentView> volumeAttachments,
+        final Map<String, VmStateNetworkInterfaceAttachmentView> networkInterfaces,
         final long lastUpdated,
         final long expires,
         final boolean bundling,
@@ -659,6 +711,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       this.reachabilityStatus = reachabilityStatus;
       this.reason = reason;
       this.volumeAttachments = volumeAttachments;
+      this.networkInterfaces = networkInterfaces;
       this.lastUpdated = lastUpdated;
       this.expires = expires;
       this.bundling = bundling;
@@ -699,6 +752,10 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
 
     public Map<String, VmStateVolumeAttachmentView> getVolumeAttachments( ) {
       return volumeAttachments;
+    }
+
+    public Map<String, VmStateNetworkInterfaceAttachmentView> getNetworkInterfaces( ) {
+      return networkInterfaces;
     }
 
     public long getLastUpdated( ) {
@@ -748,6 +805,14 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           volumes,
           HasName.GET_NAME,
           Functions.<VmStateVolumeAttachmentView>identity( ) );
+      final Map<String,VmStateNetworkInterfaceAttachmentView> networkInterfaces = Maps.newHashMap( );
+      CollectionUtils.putAll(
+          Iterables.transform(
+              vmInstance.getNetworkInterfaces( ),
+              TypeMappers.lookup( NetworkInterface.class, VmStateNetworkInterfaceAttachmentView.class ) ),
+          networkInterfaces,
+          HasName.GET_NAME,
+          Functions.<VmStateNetworkInterfaceAttachmentView>identity( ) );
       return new VmStateView(
           vmInstance.getInstanceId( ),
           vmInstance.getVersion( ),
@@ -758,6 +823,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           vmInstance.getRuntimeState( ).getReachabilityStatus( ),
           vmInstance.getRuntimeState( ).getReason( ),
           ImmutableMap.copyOf( volumes ),
+          ImmutableMap.copyOf( networkInterfaces ),
           vmInstance.getLastUpdateTimestamp( ).getTime( ),
           vmInstance.getExpiration( ) == null ? Long.MAX_VALUE : vmInstance.getExpiration( ).getTime( ),
           vmInstance.getRuntimeState( ).isBundling( ),
@@ -823,6 +889,32 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
           volumeAttachment.getRemoteDevice( ),
           volumeAttachment.getStatus( ),
           volumeAttachment.getAttachTime( ) == null ? null : volumeAttachment.getAttachTime( ).getTime( )
+      );
+    }
+  }
+
+  @TypeMapper
+  public enum NetworkConfigTypeToVmStateNetworkInterfaceAttachmentView implements Function<NetworkConfigType,VmStateNetworkInterfaceAttachmentView> {
+    INSTANCE;
+
+    @Override
+    public VmStateNetworkInterfaceAttachmentView apply( final NetworkConfigType networkConfigType ) {
+      return new VmStateNetworkInterfaceAttachmentView(
+          networkConfigType.getInterfaceId( ),
+          networkConfigType.getDevice( )
+      );
+    }
+  }
+
+  @TypeMapper
+  public enum NetworkInterfaceToVmStateNetworkInterfaceAttachmentView implements Function<NetworkInterface,VmStateNetworkInterfaceAttachmentView> {
+    INSTANCE;
+
+    @Override
+    public VmStateNetworkInterfaceAttachmentView apply( final NetworkInterface networkInterface ) {
+      return new VmStateNetworkInterfaceAttachmentView(
+          networkInterface.getDisplayName( ),
+          networkInterface.getAttachment( ).getDeviceIndex( )
       );
     }
   }

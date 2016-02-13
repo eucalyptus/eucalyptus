@@ -102,13 +102,14 @@ class NetworkInterfaceAttachmentType extends EucalyptusData {
       final String instanceId,
       final String instanceOwnerId,
       final Integer deviceIndex,
+      final String status,
       final Date attachTime,
       final Boolean deleteOnTermination) {
     this.attachmentId = attachmentId
     this.instanceId = instanceId
     this.instanceOwnerId = instanceOwnerId
     this.deviceIndex = deviceIndex
-    this.status = 'attached'
+    this.status = status
     this.attachTime = attachTime
     this.deleteOnTermination = deleteOnTermination
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -207,6 +207,7 @@ class NINetworkInterface {
   @XmlAttribute String name
   @XmlElement String ownerId
   @XmlElement Integer deviceIndex
+  @XmlElement String attachmentId
   @XmlElement String macAddress
   @XmlElement String privateIp
   @XmlElement String publicIp

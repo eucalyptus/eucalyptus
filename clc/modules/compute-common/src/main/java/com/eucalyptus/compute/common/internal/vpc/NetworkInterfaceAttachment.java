@@ -135,11 +135,21 @@ public class NetworkInterfaceAttachment implements Serializable {
   @Column( name = "metadata_att_status" )
   private Status status;
 
+  @Column( name = "metadata_att_last_status" )
+  private Status lastStatus;
+
   @Column( name = "metadata_att_time" )
   private Date attachTime;
 
   @Column( name = "metadata_att_delete_on_term" )
   private Boolean deleteOnTerminate;
+
+  public void transitionStatus( final Status status ) {
+    if ( status != getStatus( ) ) {
+      setLastStatus( getStatus( ) );
+      setStatus( status );
+    }
+  }
 
   protected NetworkInterface getNetworkInterface() {
     return networkInterface;
@@ -203,6 +213,14 @@ public class NetworkInterfaceAttachment implements Serializable {
 
   public void setStatus( final Status status ) {
     this.status = status;
+  }
+
+  public Status getLastStatus( ) {
+    return lastStatus;
+  }
+
+  public void setLastStatus( final Status lastStatus ) {
+    this.lastStatus = lastStatus;
   }
 
   public Date getAttachTime() {

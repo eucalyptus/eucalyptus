@@ -236,6 +236,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.StartInstanceType;
 import edu.ucsb.eucalyptus.msgs.StopInstanceType;
 
@@ -1357,6 +1358,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           }
           if ( VmState.RUNNING.apply( vm ) ) {
             updateVolumeAttachments( runVm.getVolumes() );
+            updateNetworkInterfaces( runVm.getSecondaryNetConfigList( ) );
             setMigrationState(
                 vm,
                 runVm.getMigrationStateName(),
@@ -1465,9 +1467,35 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           Logs.extreme( ).error( ex, ex );
         }
       }
+
+      private void updateNetworkInterfaces( final List<NetworkConfigType> networkConfigs ) {
+        final Set<Pair<String,Integer>> reportedAttachment = Sets.newHashSet( );
+        if ( networkConfigs != null ) for ( final NetworkConfigType networkConfig : networkConfigs ) {
+          reportedAttachment.add( Pair.pair( networkConfig.getInterfaceId( ), networkConfig.getDevice( ) ) );
+        }
+        for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+          if ( !networkInterface.isAttached( ) || networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+            continue;
+          }
+          final NetworkInterfaceAttachment attachment = networkInterface.getAttachment( );
+          final Pair<String,Integer> eniPair =
+              Pair.pair( networkInterface.getDisplayName( ), attachment.getDeviceIndex( ) );
+          if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.attaching ) {
+            if ( reportedAttachment.contains( eniPair ) ) {
+              attachment.transitionStatus( NetworkInterfaceAttachment.Status.attached );
+            }
+          } else if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.detaching ) {
+            if ( !reportedAttachment.contains( eniPair ) &&
+                ( attachment.getLastStatus( ) == NetworkInterfaceAttachment.Status.attached ||
+                  ( networkInterface.lastUpdateMillis( ) > TimeUnit.MINUTES.toMillis( 1 ) ) )
+            ) {
+              networkInterface.detach( );
+            }
+          }
+        }
+      }
     };
   }
-
 
   public static void addTransientVolume( final VmInstance vm, final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {

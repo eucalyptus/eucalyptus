@@ -338,14 +338,23 @@ public class VpcManager {
                     throw new ClientComputeException( "InvalidParameterValue", "Device index in use" );
                   }
                 }
-                vmRef[0] = vm;
+                final NetworkInterfaceAttachment.Status initialState;
+                if ( VmInstance.VmState.RUNNING.apply( vm ) ) {
+                  vmRef[0] = vm;
+                  initialState = NetworkInterfaceAttachment.Status.attaching;
+                } else if ( VmInstance.VmState.STOPPED.apply( vm ) ) {
+                  initialState = NetworkInterfaceAttachment.Status.attached;
+                } else {
+                  throw new ClientComputeException(
+                      "IncorrectState", "Instance '"+instanceId+"' is not 'running' or 'stopped'" );
+                }
                 networkInterface.attach( NetworkInterfaceAttachment.create(
                     Identifier.eni_attach.generate( ),
                     vm,
                     vm.getDisplayName( ),
                     vm.getOwnerAccountNumber( ),
                     deviceIndex,
-                    NetworkInterfaceAttachment.Status.attached,
+                    initialState,
                     new Date( ),
                     false
                 )  );
@@ -1495,8 +1504,19 @@ public class VpcManager {
                   throw Exceptions.toUndeclared( new ClientComputeException(
                       "OperationNotPermitted", "NAT gateway network interface cannot be detached" ) );
                 }
-                vpcId[0] = networkInterface.getVpc( ).getDisplayName( );
-                networkInterface.detach( );
+                if ( networkInterface.isAttached( ) &&
+                    ( networkInterface.getAttachment( ).getStatus( ) == NetworkInterfaceAttachment.Status.attached ||
+                      networkInterface.getAttachment( ).getStatus( ) == NetworkInterfaceAttachment.Status.attaching ) ) {
+                  if ( VmInstance.VmState.PENDING.apply( networkInterface.getInstance( ) ) ) {
+                    throw new ClientComputeException(
+                        "IncorrectState", "The instance is not in a valid state for this operation" );
+                  } else if ( VmInstance.VmStateSet.TORNDOWN.apply( networkInterface.getInstance( ) ) ) {
+                    networkInterface.detach( );
+                  } else { // mark detaching and process on vm state callback
+                    vpcId[0] = networkInterface.getVpc( ).getDisplayName( );
+                    networkInterface.getAttachment( ).transitionStatus( NetworkInterfaceAttachment.Status.detaching );
+                  }
+                }
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
               } else {

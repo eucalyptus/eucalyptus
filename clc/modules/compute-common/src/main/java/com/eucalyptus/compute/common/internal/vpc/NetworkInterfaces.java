@@ -159,6 +159,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               networkInterfaceAttachment.getInstanceId( ),
               networkInterfaceAttachment.getInstanceOwnerId( ),
               networkInterfaceAttachment.getDeviceIndex( ),
+              networkInterfaceAttachment.getStatus( ).toString( ),
               networkInterfaceAttachment.getAttachTime( ),
               networkInterfaceAttachment.getDeleteOnTerminate( )
           );

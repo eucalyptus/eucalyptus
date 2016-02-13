@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +75,9 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public enum State {
     available,
-    attaching,
     in_use("in-use"),
-    detaching,
+    attaching, // incorrect state, do not use
+    detaching, // incorrect state, do not use
     ;
 
     private final String value;
@@ -488,6 +488,9 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
           if ( entity.getType( ) == null ) {
             logger.info( "Updating type for network interface " + entity.getDisplayName( ) );
             entity.setType( Type.Interface );
+            if ( entity.getState( ) == State.attaching || entity.getState( ) == State.detaching ) {
+              entity.setState( State.in_use );
+            }
           }
         }
         tx.commit( );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkAcl
 import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.common.internal.vpc.Route
 import com.eucalyptus.compute.common.internal.vpc.RouteTable
 import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
@@ -287,7 +288,13 @@ class NetworkInfoBroadcasts {
     // populate instances
     Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
       ListMultimap<String,NetworkInterfaceNetworkView> map, NetworkInterfaceNetworkView networkInterface ->
-        if ( networkInterface.instanceId ) map.put( networkInterface.instanceId, networkInterface )
+        if ( networkInterface.instanceId &&
+            networkInterface.state != NetworkInterface.State.available &&
+            networkInterface.attachmentStatus != NetworkInterfaceAttachment.Status.detaching &&
+            networkInterface.attachmentStatus != NetworkInterfaceAttachment.Status.detached
+        ) {
+          map.put( networkInterface.instanceId, networkInterface )
+        }
         map
     }).asMap( )
     info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
@@ -305,6 +312,7 @@ class NetworkInfoBroadcasts {
                 name: networkInterface.id,
                 ownerId: networkInterface.ownerAccountNumber,
                 deviceIndex: networkInterface.deviceIndex,
+                attachmentId: networkInterface.attachmentId,
                 macAddress: networkInterface.macAddress,
                 privateIp: networkInterface.privateIp,
                 publicIp: dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp,
@@ -1016,8 +1024,11 @@ class NetworkInfoBroadcasts {
   static class NetworkInterfaceNetworkView implements Comparable<NetworkInterfaceNetworkView>, VersionedNetworkView {
     String id
     int version
+    NetworkInterface.State state
+    NetworkInterfaceAttachment.Status attachmentStatus
     String ownerAccountNumber
     String instanceId
+    String attachmentId
     Integer deviceIndex
     String macAddress
     String privateIp
@@ -1041,8 +1052,11 @@ class NetworkInfoBroadcasts {
       new NetworkInterfaceNetworkView(
           networkInterface.displayName,
           networkInterface.version,
+          networkInterface.state,
+          networkInterface?.attachment?.status ?: NetworkInterfaceAttachment.Status.detached,
           networkInterface.ownerAccountNumber,
           networkInterface.attachment?.instanceId,
+          networkInterface.attachment?.attachmentId,
           networkInterface.attachment?.deviceIndex,
           networkInterface.macAddress,
           networkInterface.privateIpAddress,
