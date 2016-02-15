@@ -429,7 +429,7 @@ int mido_delete_router(midoname * name);
 int mido_print_router(midoname * name);
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max);
 
-int find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx);
+int mido_find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx);
 int mido_create_route(mido_config *mido, midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 //int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 int mido_delete_route(midoname * name);
@@ -483,6 +483,7 @@ int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int * next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
+int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, ...);
 int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
 int mido_delete_rule(midoname * name);

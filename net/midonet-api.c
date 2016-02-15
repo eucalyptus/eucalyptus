@@ -1478,6 +1478,66 @@ int mido_allocate_midorule(char *position, char *type, char *action, char *proto
 */
 
 //!
+//! Searches a list of chain rules in the argument for a rule matching the fields
+//! specified in the variable argument section.
+//!
+//! @param[in]  rules pointer to a list of midoname structures containing chain rules.
+//! @param[in]  max_rules number of chain rules in the list.
+//! @param[out] outrule copy of the matching rule, if found. The init field is cleared if not found.
+//! @param[in]  ... variable argument section
+//!
+//! @return 0 if the search is successful. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, ...)
+{
+    int rc = 0, ret = 0, found = 0, i = 0;
+    midoname myname;
+    va_list ap = {{0}}, ap1 = {{0}};
+
+    if (!outrule) {
+        LOGWARN("Invalid argument: NULL pointer\n");
+        return (1);
+    }
+    va_start(ap, outrule);
+
+    bzero(&myname, sizeof(midoname));
+
+    myname.tenant = strdup(VPCMIDO_TENANT);
+    myname.resource_type = strdup("rules");
+    myname.content_type = strdup("Rule");
+    myname.vers = strdup("v2");
+
+    found = 0;
+    for (i = 0; i < max_rules && !found; i++) {
+        if (rules[i].init == 0) {
+            continue;
+        }
+        va_copy(ap1, ap);
+        rc = mido_cmp_midoname_to_input_json_v(&(rules[i]), &ap1);
+        va_end(ap1);
+        if (!rc) {
+            mido_copy_midoname(outrule, &(rules[i]));
+            found = 1;
+        }
+    }
+    if (!found) {
+        outrule->init = 0;
+    }
+
+    mido_free_midoname(&myname);
+    va_end(ap);
+    return (ret);
+}
+
+//!
 //!
 //!
 //! @param[in]  chain
@@ -1499,6 +1559,7 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
     midoname myname, *rules = NULL;
     va_list ap = {{0}}, ap1 = {{0}}, ap2 = {{0}};
+    boolean gotrules = FALSE;
 
     va_start(ap, next_position);
     //va_copy(ap1, ap);
@@ -1511,15 +1572,17 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
     myname.content_type = strdup("Rule");
     myname.vers = strdup("v2");
 
-    if (memorules != NULL) {
+    if ((midonet_api_dirty_cache == 0) && (memorules != NULL)) {
         LOGTRACE("Checking %d rules in memory.\n", max_memorules);
         rules = memorules;
         max_rules = max_memorules;
         rc = 0;
     } else {
-        rc = mido_get_rules(chain, &rules, &max_rules);
+        if (midonet_api_dirty_cache == 1) {
+            rc = mido_get_rules(chain, &rules, &max_rules);
+            gotrules = TRUE;
+        }
     }    
-    // check if host already has a rule in place
 
     if (!rc) {
         found = 0;
@@ -1540,7 +1603,7 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
         }
     }
     
-    if (memorules == NULL) {
+    if (gotrules) {
         mido_free_midoname_list(rules, max_rules);
         EUCA_FREE(rules);
     }
@@ -3132,7 +3195,7 @@ int midonet_http_delete(char *url)
 //!
 //! @note
 //!
-int find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx)
+int mido_find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx)
 {
     int rc = 0, found = 0, ret = 0;
     midoname myname;
@@ -3222,7 +3285,7 @@ int mido_create_route(mido_config *mido, midoname *router, midoname *rport, char
         max_routes = crouter->max_routes;
     }
 
-    rc = find_route_from_list(routes, max_routes, rport, src, src_slashnet, dst, dst_slashnet, next_hop_ip, weight, NULL);
+    rc = mido_find_route_from_list(routes, max_routes, rport, src, src_slashnet, dst, dst_slashnet, next_hop_ip, weight, NULL);
     if (rc == 0) {
         found = 1;
     }

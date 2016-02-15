@@ -1781,6 +1781,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     int in_rulepos = 1, eg_rulepos = 1;
                     char tmp_name3[32], *instMac = NULL, *instIp = NULL;
                     midoname *pre_rules = NULL, *post_rules = NULL;
+                    midoname tmpmn;
                     int max_pre_rules = 0, max_post_rules = 0;
                     mido_resource_chain *rchain = NULL;
 
@@ -1801,11 +1802,66 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
 
                     // for egress
-                    eg_rulepos = 1;
+                    eg_rulepos = max_pre_rules + 1;
                     // for ingress
-                    in_rulepos = 1;
+                    in_rulepos = max_post_rules + 1;
+                    hex2mac(gniinstance->macAddress, &instMac);
+                    instIp = hex2dot(gniinstance->privateIp);
+                    for (int i = 0; i < strlen(instMac); i++) {
+                        instMac[i] = tolower(instMac[i]);
+                    }
+                    snprintf(tmp_name3, 32, "%d", 1);
 
                     // anti-spoof
+                    bzero(&tmpmn, sizeof (midoname));
+                    // block any source mac that isn't the registered instance mac
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &tmpmn,
+                            "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting l2 rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete src mac check rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating l2 rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                                NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src mac check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
+                    
+                    // block any outgoing IP traffic that isn't from the VM private IP
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &tmpmn,
+                            "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting l3 rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete src IP check rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating l3 rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                                NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2048", "nwSrcAddress",
+                                instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
+                    
+/*
                     if (!mido->disable_l2_isolation) {
                         // block any source mac that isn't the registered instance mac
                         hex2mac(gniinstance->macAddress, &instMac);
@@ -1828,8 +1884,118 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         }
                         EUCA_FREE(instIp);
                     }
+*/
+                    // anti arp poisoning
+                    // block any outgoing ARP that does not have sender hardware address set to the registered MAC
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &tmpmn,
+                            "type", "drop", "dlSrc", instMac, "invDlSrc", "true",
+                            "dlType", "2054", "invDlType", "false", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting ARP_SHA rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete ARP_SHA rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                                NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true",
+                                "dlType", "2054", "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create ARP_SHA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
+
+                    // block any outgoing ARP that does not have sender protocol address set to the VM private IP
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &tmpmn,
+                            "type", "drop", "dlType", "2054", "nwSrcAddress",
+                            instIp, "nwSrcLength", "32", "invNwSrc", "true",
+                            "invDlType", "false", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting ARP_SPA rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete ARP_SPA rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating ARP_SPA rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                                NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2054", "nwSrcAddress",
+                                instIp, "nwSrcLength", "32", "invNwSrc", "true",
+                                "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
+
+                    // block any incoming ARP replies that does not have target hardware address set to the registered MAC
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(post_rules, max_post_rules, &tmpmn,
+                            "type", "drop", "dlDst", instMac, "invDlDst", "true",
+                            "dlType", "2054", "invDlType", "false", "nwProto", "2",
+                            "invNwProto", "false", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting ARP_THA rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete ARP_THA rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]),
+                                NULL, post_rules, max_post_rules, &in_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlDst", instMac, "invDlDst", "true",
+                                "dlType", "2054", "invDlType", "false", "nwProto", "2",
+                                "invNwProto", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create ARP_THA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
+
+                    // block any incoming ARP that does not have target protocol address set to the VM private IP
+                    // Check if the rule is already in place
+                    rc = mido_find_rule_from_list(post_rules, max_post_rules, &tmpmn,
+                            "type", "drop", "dlType", "2054", "nwDstAddress",
+                            instIp, "nwDstLength", "32", "invNwDst", "true",
+                            "invDlType", "false", NULL);
+                    if ((rc == 0) && (tmpmn.init == 1)) {
+                        if (mido->disable_l2_isolation) {
+                            LOGDEBUG("Deleting ARP_TPA rule for %s\n", gniinstance->name);
+                            rc = mido_delete_rule(&tmpmn);
+                            if (rc) {
+                                LOGWARN("Failed to delete ARP_TPA rule for %s\n", gniinstance->name);
+                            }
+                        }
+                    } else {
+                        LOGDEBUG("Creating ARP_TPA rule for %s\n", gniinstance->name);
+                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]),
+                                NULL, post_rules, max_post_rules, &in_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2054", "nwDstAddress",
+                                instIp, "nwDstLength", "32", "invNwDst", "true",
+                                "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                    mido_free_midoname(&tmpmn);
 
 
+                    EUCA_FREE(instMac);
+                    EUCA_FREE(instIp);
+                    
                     // metadata
                     {
                         // metadata redirect egress
@@ -2389,7 +2555,7 @@ int create_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vp
         }
         found = 0;
         for (j = 0; j < max_rt_entries && !found; j++) {
-            rc = find_route_from_list(vpcsubnet->routes[i], 1, &(rt_entries[j].rport),
+            rc = mido_find_route_from_list(vpcsubnet->routes[i], 1, &(rt_entries[j].rport),
                     rt_entries[j].src_net, rt_entries[j].src_length, rt_entries[j].dst_net,
                     rt_entries[j].dst_length, rt_entries[j].next_hop_ip, rt_entries[j].weight,
                     NULL);
