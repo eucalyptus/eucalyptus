@@ -3366,19 +3366,6 @@ int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath,
         EUCA_FREE(results);
     }
     if (!is_instance) {
-        snprintf(expression, 2048, "%s[@name='%s']/deviceIndex", xmlpath, instance->name);
-        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-        for (i = 0; i < max_results; i++) {
-            instance->deviceidx = atoi(results[i]);
-            EUCA_FREE(results[i]);
-        }
-        EUCA_FREE(results);
-        // Use the instance name for primary interfaces
-        snprintf(instance->ifname, INTERFACE_ID_LEN, "%s", instance->name);
-        if (instance->deviceidx == 0) {
-            snprintf(instance->name, INTERFACE_ID_LEN, "%s", instance->instance_name.name);
-        }
-
         snprintf(expression, 2048, "%s[@name='%s']/sourceDestCheck", xmlpath, instance->name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
@@ -3392,6 +3379,19 @@ int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath,
             EUCA_FREE(results[i]);
         }
         EUCA_FREE(results);
+
+        snprintf(expression, 2048, "%s[@name='%s']/deviceIndex", xmlpath, instance->name);
+        rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+        for (i = 0; i < max_results; i++) {
+            instance->deviceidx = atoi(results[i]);
+            EUCA_FREE(results[i]);
+        }
+        EUCA_FREE(results);
+        // Use the instance name for primary interfaces
+        snprintf(instance->ifname, INTERFACE_ID_LEN, "%s", instance->name);
+        if (instance->deviceidx == 0) {
+            snprintf(instance->name, INTERFACE_ID_LEN, "%s", instance->instance_name.name);
+        }
     }
     return (0);
 }
