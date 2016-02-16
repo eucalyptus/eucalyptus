@@ -693,7 +693,21 @@ public class VmControl {
     
     try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
-      if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+      if ( "sourceDestCheck".equals( request.getAttribute( ) ) ) {
+        if ( vm.getNetworkInterfaces( ) != null ) {
+          for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+            if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+              networkInterface.setSourceDestCheck( true );
+              tx.commit( );
+              NetworkGroups.flushRules( );
+              break;
+            }
+          }
+        }
+      } else if ( "disableApiTermination".equals( request.getAttribute( ) ) ) {
+        vm.setDisableApiTermination( false );
+        tx.commit( );
+      } else if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
         if ( request.getAttribute( ).equals( "kernel" ) ) {
           String kernelId = vm.getKernelId( );
           if ( kernelId == null ) {
@@ -720,7 +734,7 @@ public class VmControl {
           }
           Entities.merge( vm );
           tx.commit( );
-        } // SourceDestCheck not implemented
+        }
         reply.set_return( true );
       } else {
         throw new EucalyptusCloudException( "IncorrectInstanceState: The instance '" + instanceId + "' is not in the 'stopped' state." );
@@ -860,7 +874,16 @@ public class VmControl {
       } else if ( request.getInstanceInitiatedShutdownBehavior( ) != null ) {
         // not currently supported
       } else if ( request.getSourceDestCheck( ) != null ) {
-        // not currently supported
+        if ( vm.getNetworkInterfaces( ) != null ) {
+          for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+            if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+              networkInterface.setSourceDestCheck( request.getSourceDestCheck( ).getValue( ) );
+              tx.commit();
+              NetworkGroups.flushRules( );
+              break;
+            }
+          }
+        }
       } else if ( request.getSriovNetSupport( ) != null ) {
         // not currently supported
       } else {
@@ -917,7 +940,7 @@ public class VmControl {
           vm.getBootRecord( ).setUserData( userData );
           tx.commit( );
         } else {
-          // InstanceInitiatedShutdownBehavior, SourceDestCheck, GroupId [EC2-VPC], EbsOptimized are not supported yet.
+          // InstanceInitiatedShutdownBehavior, GroupId [EC2-VPC], EbsOptimized are not supported yet.
         }
       }
       reply.set_return( true );

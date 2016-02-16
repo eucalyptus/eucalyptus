@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -581,6 +581,14 @@ public class ComputeService implements Callable {
           break;
         case "sourceDestCheck":
           reply.setSourceDestCheck( true );
+          if ( vm.getNetworkInterfaces( ) != null ) {
+            for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+              if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+                reply.setSourceDestCheck( networkInterface.getSourceDestCheck( ) );
+                break;
+              }
+            }
+          }
           break;
         case "sriovNetSupport":
           reply.setSriovNetSupport( false );
