@@ -35,6 +35,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFo
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.crypto.Crypto;
@@ -47,6 +48,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -59,6 +61,10 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
   public static volatile String WAIT_CONDITION_BUCKET_PREFIX = "cf-waitcondition";
   private AWSCloudFormationWaitConditionHandleProperties properties = new AWSCloudFormationWaitConditionHandleProperties();
   private AWSCloudFormationWaitConditionHandleResourceInfo info = new AWSCloudFormationWaitConditionHandleResourceInfo();
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    return UpdateType.UNSUPPORTED;
+  }
 
   public AWSCloudFormationWaitConditionHandleResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
