@@ -43,6 +43,7 @@ import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -87,6 +88,11 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSCloudFormationWaitConditionResourceInfo) resourceInfo;
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    return UpdateType.UNSUPPORTED;
   }
 
   private enum CreateSteps implements Step {
