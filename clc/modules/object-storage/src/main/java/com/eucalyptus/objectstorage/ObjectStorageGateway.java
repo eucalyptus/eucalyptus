@@ -2050,8 +2050,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
       NoSuchCorsConfigurationException nscc = new NoSuchCorsConfigurationException(bucketName);
       throw nscc;    	
     }
-
+    Exception e = new Exception();
+    LOG.debug("LPT: Here I am in ObjectStorageGateway.getBucketCors()", e);
     return response;
+
   }
 
   @Override
@@ -2153,17 +2155,18 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       Bucket bucket = getBucketAndCheckAuthorization(request);
       bucketName = request.getBucket();
-      response = (PreflightCheckCorsResponseType) request.getReply();
-      
+      response = request.getReply();
+
       //TODO LPT Do the needful here, including setting objectName for catch blocks below.
       Exception e = new Exception();
-      LOG.warn("Here I am in the preflight check Gateway", e);
+      LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()", e);
       
-      response.setStatus(HttpResponseStatus.ACCEPTED);
-      response.setStatusMessage("AcceptedWooHoo");
+      response.setStatus(HttpResponseStatus.NO_CONTENT);
+      response.setStatusMessage("204WooHoo");
+      
+      LOG.debug("LPT: Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
       //response.setContentLength("0");
-      //response.setHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
-
+      //response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "PUT");
       
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
@@ -2178,6 +2181,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
           ", responding to client with 500 InternalError because of: ", ex);
       throw new InternalErrorException(bucketName, ex);
     }
+    LOG.debug("LPT: About to return response. Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
     return response;
   }
 

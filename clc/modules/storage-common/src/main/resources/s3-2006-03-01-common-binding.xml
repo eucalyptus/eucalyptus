@@ -257,17 +257,37 @@
     <mapping class="com.eucalyptus.storage.msgs.s3.CorsRule" abstract="true">
         <value name="ID" field="id" usage="optional"/>
         <collection field="allowedOrigins" usage="optional">
-        	<value name="AllowedOrigin"/>
+            <value name="AllowedOrigins"/>
         </collection>
         <collection field="allowedMethods" usage="optional">
-        	<value name="AllowedMethod"/>
+        <value name="AllowedMethods"/>
         </collection>
         <collection field="allowedHeaders" usage="optional">
-        	<value name="AllowedHeader"/>
+            <value name="AllowedHeaders"/>
         </collection>
         <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
         <collection field="exposeHeaders" usage="optional">
-        	<value name="ExposeHeader"/>
+            <value name="ExposeHeaders"/>
+        </collection>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.PreflightRequest" abstract="true">
+        <value name="Origin" field="origin" usage="optional"/>
+        <value name="Method" field="method" usage="optional"/>
+        <collection field="requestHeaders" usage="optional">
+            <value name="RequestHeaders"/>
+        </collection>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.PreflightResponse" abstract="true">
+        <value name="Origin" field="origin" usage="optional"/>
+        <value name="Method" field="method" usage="optional"/>
+        <collection field="allowedHeaders" usage="optional">
+            <value name="AllowedHeaders"/>
+        </collection>
+        <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
+        <collection field="exposeHeaders" usage="optional">
+            <value name="ExposeHeaders"/>
         </collection>
     </mapping>
 

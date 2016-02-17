@@ -609,8 +609,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("corsConfiguration", getCors(httpRequest));
     }
 
+    //LPT: Not needed?
 //    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
-//      operationParams.put("corsPreflight", processPreflightRequest(httpRequest));
+//      operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
 //    }
 
     ArrayList paramsToRemove = new ArrayList();
@@ -1623,24 +1624,24 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return elementArray;
   }
 
-  private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
-    PreflightRequest preflightRequest = new PreflightRequest();
-    String message = getMessageString(httpRequest);
-    if (message.length() > 0) {
-      try {
-        //TODO LPT Do the needful here, including setting objectName for catch blocks below.
-        Exception e = new Exception();
-        LOG.warn("Here I am in processPreflightRequest", e);
-      /*} catch (S3Exception s3e) {
-        throw s3e;
-        */
-      } catch (Exception e) {
-        throw e;
-      }
-    }
-    return preflightRequest;
-  }
-  
+//  private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
+//    PreflightRequest preflightRequest = new PreflightRequest();
+//    String message = getMessageString(httpRequest);
+//    if (message.length() > 0) {
+//      try {
+//        //TODO LPT Do the needful here, including setting objectName for catch blocks below.
+//        Exception e = new Exception();
+//        LOG.warn("LPT: Here I am in processPreflightRequest", e);
+//      /*} catch (S3Exception s3e) {
+//        throw s3e;
+//        */
+//      } catch (Exception e) {
+//        throw e;
+//      }
+//    }
+//    return preflightRequest;
+//  }
+//  
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
     DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
     String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);

@@ -88,13 +88,19 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    Exception e = new Exception();
+    LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()", e);
+
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
       httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
       if (msg instanceof PreflightCheckCorsResponseType) {
-        PreflightCheckCorsResponseType preflightResponse = (PreflightCheckCorsResponseType) msg;
+        e = new Exception();
+        LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my status code is " + 
+            httpResponse.getStatus(), e);
+        PreflightCheckCorsResponseType preflightCors = (PreflightCheckCorsResponseType) msg;
       }
       // Since an OPTIONS response, never include a body
       httpResponse.setMessage(null);
