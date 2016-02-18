@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -111,7 +111,7 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -135,7 +135,7 @@ public class VmInstanceMetadata {
       CacheBuilder.newBuilder().expireAfterWrite( 5, TimeUnit.MINUTES ).maximumSize( 1000 ).build( );
 
   public static String getByKey( final VmInstance vm, final String pathArg ) {
-    final String path = Objects.firstNonNull( pathArg, "" );
+    final String path = MoreObjects.firstNonNull( pathArg, "" );
     final String pathNoSlash;
     LOG.debug( "Servicing metadata request:" + path );
     if ( path.endsWith( "/" ) ) {
@@ -215,13 +215,17 @@ public class VmInstanceMetadata {
             prefix + "ipv4-associations/" + networkInterface.getAssociation( ).getPublicIp( ),
             networkInterface.getPrivateIpAddress( ) );
       }
-      m.put( prefix + "local-hostname", networkInterface.getPrivateDnsName( ) );
-      m.put( prefix + "local-ipv4s", networkInterface.getPrivateIpAddress( ) );
+      final String privateIp = networkInterface.getPrivateIpAddress( );
+      m.put( prefix + "local-hostname", VmInstances.dnsName( privateIp, DomainNames.internalSubdomain( ) ) );
+      m.put( prefix + "local-ipv4s", privateIp );
       m.put( prefix + "mac", networkInterface.getMacAddress( ) );
       m.put( prefix + "owner-id", networkInterface.getOwnerAccountNumber( ) );
       if ( networkInterface.isAssociated( ) ) {
-        m.put( prefix + "public-hostname", networkInterface.getAssociation( ).getPublicDnsName( ) );
+        m.put( prefix + "public-hostname", Strings.nullToEmpty( networkInterface.getAssociation( ).getPublicDnsName( ) ) );
         m.put( prefix + "public-ipv4s", networkInterface.getAssociation( ).getPublicIp( ) );
+      } else {
+        m.put( prefix + "public-hostname", "" );
+        m.put( prefix + "public-ipv4s", "" );
       }
       m.put( prefix + "security-groups", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), RestrictedTypes.toDisplayName( ) ) ) );
       m.put( prefix + "security-group-ids", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroup.groupId( ) ) ) );
