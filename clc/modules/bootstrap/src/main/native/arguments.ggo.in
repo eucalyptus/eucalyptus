@@ -88,7 +88,7 @@ option "force-remote-bootstrap" -  "Force the system to boot as a remote compone
 option "define"                D   "Set system properties."                            string                                                  optional multiple
 option "fork"                  f   "Fork and daemonize Eucalyptus."                    flag                              off
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
-option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="@prefix@/var/run/eucalyptus-cloud.pid" no
+option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="@prefix@/var/run/eucalyptus/eucalyptus-cloud.pid" no
 option "db-home"               -   "Set path to database home directory"               string  typestr="DIRECTORY"       default="" 	        no     hidden # DEPRRECATED
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 

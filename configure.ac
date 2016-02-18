@@ -16,7 +16,7 @@
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
         esyscmd([cat VERSION | tr -d '\n']),
-        community@lists.eucalyptus.com)
+        euca-users@eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
@@ -37,9 +37,6 @@ AXIS2C_HOME="${AXIS2C_HOME}"
 AXIS2_HOME="${AXIS2_HOME}"
 AXIS2C_SERVICES=""
 LIBVIRT_HOME="${LIBVIRT_HOME}"
-VDDK_HOME="${VDDK_HOME}"
-INTERFACE_THEME="eucalyptus"
-EXTENSIONS=""
 ANT=""
 JAVA=""
 WSDL2C=""
@@ -56,6 +53,14 @@ CFLAGS="${CFLAGS} -Wall -fPIC -DHAVE_CONFIG_H -std=gnu99"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net -I${TOP}/util/stats"
 
 # Arguments checking
+AC_ARG_ENABLE([sysvinit],
+        AS_HELP_STRING([--enable-sysvinit], [install System V init artifacts]),
+        [USE_SYSVINIT=$enableval],
+        [USE_SYSVINIT=no])
+AC_ARG_ENABLE([systemd],
+        AS_HELP_STRING([--enable-systemd], [install systemd artifacts]),
+        [USE_SYSTEMD=$enableval],
+        [USE_SYSTEMD=no])
 AC_ARG_WITH(apache2-module-dir,
         [  --with-apache2-module-dir=<dir>      where Apache modules are installed],
         [APACHE2_MODULE_DIR="${withval}"])
@@ -74,17 +79,6 @@ AC_ARG_WITH(libvirt,
 AC_ARG_WITH(wsdl2c-sh,
         [  --with-wsdl2c-sh=<file>              where WSDL2C.sh is installed],
         [WSDL2C="${withval}"])
-AC_ARG_WITH(vddk,
-        [  --with-vddk=<dir>                    where VMware's VDDK is installed],
-        [VDDK_HOME="${withval}"])
-AC_ARG_WITH(interface-theme,
-        [  --with-interface-theme=<name>        the theme to be used],
-        [INTERFACE_THEME="${withval}"])
-AC_ARG_ENABLE(appliance-store,
-        [  --enable-appliance-store             enable the store tab],
-        [if test "${enableval}" != "no"; then
-                EXTENSIONS="store"
-        fi])
 AC_ARG_WITH(db-home,
         [  --with-db-home=<dir>                 where postgresql is installed],
         [EUCA_DB_HOME="${withval}"])
@@ -149,18 +143,6 @@ if test -n "${LIBVIRT_HOME}" ; then
                 LDFLAGS="-L${LIBVIRT_HOME}/lib ${LDFLAGS}"
         fi
 fi
-if test -n "${VDDK_HOME}" ; then
-        if test -d "${VDDK_HOME}"/include/ ; then
-                # Using tarball direct from VMware
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/include/"
-                AS_IF([test "x$build_cpu" = "xx86_64"], [LDFLAGS="-L${VDDK_HOME}/lib64 ${LDFLAGS}"],
-                      [LDFLAGS="-L${VDDK_HOME}/lib32 ${LDFLAGS}"])
-        elif test -d "${VDDK_HOME}"/lib/vmware-vix-disklib/include/ ; then
-                # Using installed tarball
-                INCLUDES="${INCLUDES} -I${VDDK_HOME}/lib/vmware-vix-disklib/include/"
-                LDFLAGS="-L${VDDK_HOME}/lib ${LDFLAGS}"
-        fi
-fi
 
 # Checks for programs.
 AC_PROG_AWK
@@ -174,8 +156,8 @@ if test -z "$WSDL2C"; then
         # let's search for WSDL2C.sh
         AC_PATH_PROG([WSDL2C], WSDL2C.sh,,${AXIS2C_HOME}/bin/tools/wsdl2c:$PATH)
 fi
-## HACK:  Sometimes WSDL2C.sh isn't executable for some reason.  We call sh on
-## it directly, so look for a non-executable file just in case.
+# HACK:  Sometimes WSDL2C.sh isn't executable for some reason.  We call sh on
+# it directly, so look for a non-executable file just in case.
 if test -z "$WSDL2C" && test -f ${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh; then
         WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 fi
@@ -291,6 +273,8 @@ AC_CONFIG_FILES([Makedefs
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
+                 cluster/eucalyptus-cluster
+                 node/eucalyptus-node
                  tools/eucalyptus-cc:tools/eucalyptus-cc.in
                  tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
@@ -313,7 +297,6 @@ AC_SUBST(EUCA_DB_SUFFIX)
 AC_SUBST(EUCA_DB_OLD_HOME)
 AC_SUBST(EUCA_DB_OLD_SUFFIX)
 AC_SUBST(EUCA_VERSION)
-AC_SUBST(EXTENSIONS)
 AC_SUBST(EXTRA_VERSION)
 AC_SUBST(INCLUDES)
 AC_SUBST(INTERFACE_THEME)
@@ -324,7 +307,8 @@ AC_SUBST(LIBVIRT_HOME)
 AC_SUBST(PYTHON)
 AC_SUBST(RM)
 AC_SUBST(TOP)
-AC_SUBST(VDDK_HOME)
+AC_SUBST(USE_SYSTEMD)
+AC_SUBST(USE_SYSVINIT)
 AC_SUBST(WSDL2C)
 
 
@@ -340,6 +324,8 @@ echo "    CFLAGS..............: ${CFLAGS}"
 echo "    LDFLAGS.............: ${LDFLAGS}"
 echo "    LIBS................: ${LIBS}"
 echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
+echo "    Use sysvinit........: ${USE_SYSVINIT}"
+echo "    Use systemd.........: ${USE_SYSTEMD}"
 echo ""
 echo "  Build Tools:"
 echo "    ANT.................: ${ANT} (${ant_version})"
@@ -359,6 +345,5 @@ echo "    EUCA_DB_OLD_HOME....: ${EUCA_DB_OLD_HOME:-Not Set}"
 echo "    EUCA_DB_OLD_SUFFIX..: ${EUCA_DB_OLD_SUFFIX:-Not Set}"
 echo "    JAVA_HOME...........: ${JAVA_HOME:-Not Set}"
 echo "    LIBVIRT_HOME........: ${LIBVIRT_HOME:-Not Set}"
-echo "    VDDK_HOME...........: ${VDDK_HOME:-Not Set}"
 echo ""
 

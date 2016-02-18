@@ -95,7 +95,7 @@ struct eucalyptus_opts
   const char *fork_help; /**< @brief Fork and daemonize Eucalyptus. help description.  */
   int kill_flag;	/**< @brief Kill a daemonized Eucalyptus. (default=off).  */
   const char *kill_help; /**< @brief Kill a daemonized Eucalyptus. help description.  */
-  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus-cloud.pid').  */
+  char * pidfile_arg;	/**< @brief Location for the pidfile. (default='/var/run/eucalyptus/eucalyptus-cloud.pid').  */
   char * pidfile_orig;	/**< @brief Location for the pidfile. original value given at command line.  */
   const char *pidfile_help; /**< @brief Location for the pidfile. help description.  */
   char * db_home_arg;	/**< @brief Set path to database home directory (default='').  */
