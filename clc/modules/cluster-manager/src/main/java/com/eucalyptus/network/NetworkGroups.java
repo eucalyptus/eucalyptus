@@ -62,7 +62,6 @@
 
 package com.eucalyptus.network;
 
-import java.net.Inet4Address;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -103,6 +102,7 @@ import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.FUtils;
@@ -118,7 +118,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.net.InetAddresses;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
@@ -543,14 +542,13 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
     }
   }
 
-  public enum IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
-    CLASSIC( false ),
-    VPC( true );
-
+  private static class IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
     private final boolean anyProtocolAllowed;
+    private final boolean forRevoke;
 
-    private IpPermissionTypeAsNetworkRule( boolean anyProtocolAllowed ) {
+    private IpPermissionTypeAsNetworkRule( boolean anyProtocolAllowed, boolean forRevoke ) {
       this.anyProtocolAllowed = anyProtocolAllowed;
+      this.forRevoke = forRevoke;
     }
     
     /**
@@ -583,13 +581,18 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
         }
       } else if ( !ipPerm.getCidrIpRanges().isEmpty( ) ) {
         List<String> ipRanges = Lists.newArrayList( );
-        for ( String range : ipPerm.getCidrIpRanges() ) {
-          String[] rangeParts = range.split( "/" );
+        List<String> literalIpRanges = Lists.newArrayList( ipPerm.getCidrIpRanges( ) );
+        for ( final String range : ipPerm.getCidrIpRanges( ) ) {
           try {
-            if ( rangeParts.length != 2 ) throw new IllegalArgumentException( );
-            if ( Integer.parseInt( rangeParts[1] ) > 32 || Integer.parseInt( rangeParts[1] ) < 0 ) throw new IllegalArgumentException( );
-            if ( InetAddresses.forString( rangeParts[0] ) instanceof Inet4Address ) {
-              ipRanges.add( range );
+            if ( range.indexOf( '/' ) < 0 ) throw new IllegalArgumentException( );
+            try {
+              ipRanges.add( Cidr.parse( range, true ).toString( ) );
+            } catch ( IllegalArgumentException e ) {
+              if ( forRevoke ) {
+                ipRanges.add( range );
+              } else {
+                throw e;
+              }
             }
           } catch ( IllegalArgumentException e ) {
             throw new IllegalArgumentException( "Invalid IP range: '"+range+"'" );
@@ -598,6 +601,12 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
         NetworkRule rule = NetworkRule.create( ipPerm.getIpProtocol( ), anyProtocolAllowed, ipPerm.getFromPort( ), ipPerm.getToPort( ),
                                                IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), ipRanges );
         ruleList.add( rule );
+        if ( forRevoke && !ipRanges.equals( literalIpRanges ) ) {
+          // When removing rules we must allow removal of rules that were created before we
+          // fully validated CIDRs so create an additional network rule for matching if needed
+          ruleList.add( NetworkRule.create( ipPerm.getIpProtocol( ), anyProtocolAllowed, ipPerm.getFromPort( ), ipPerm.getToPort( ),
+              IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), literalIpRanges ) );
+        }
       } else {
         throw new IllegalArgumentException( "Invalid Ip Permissions:  must specify either a source cidr or user" );
       }
@@ -606,19 +615,18 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   }
 
   static List<NetworkRule> ipPermissionAsNetworkRules( final IpPermissionType ipPermission,
-                                                       final boolean vpc ) {
-    return ipPermissionsAsNetworkRules( Collections.singletonList( ipPermission ), vpc );
+                                                       final boolean vpc,
+                                                       final boolean forRevoke ) {
+    return ipPermissionsAsNetworkRules( Collections.singletonList( ipPermission ), vpc, forRevoke );
   }
 
   static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions,
-                                                        final boolean vpc ) {
-    final List<NetworkRule> ruleList = Lists.newArrayList( );
-    for ( final IpPermissionType ipPerm : ipPermissions ) {
-      ruleList.addAll(
-          ( vpc ? IpPermissionTypeAsNetworkRule.VPC : IpPermissionTypeAsNetworkRule.CLASSIC ).apply( ipPerm )
-      );
-    }
-    return ruleList;
+                                                        final boolean vpc,
+                                                        final boolean forRevoke ) {
+    return Lists.newArrayList( Iterables.concat( Iterables.transform(
+        ipPermissions,
+        new IpPermissionTypeAsNetworkRule( vpc, forRevoke )
+    ) ) );
   }
 
   @RestrictedTypes.Resolver( NetworkGroup.class )
@@ -634,7 +642,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       }
     }
   }
-
 
   public static class NetworkGroupFilterSupport extends FilterSupport<NetworkGroup> {
     public NetworkGroupFilterSupport() {
