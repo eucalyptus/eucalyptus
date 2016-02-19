@@ -88,18 +88,25 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    Exception e = new Exception();
-    LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()", e);
+    //LPT Exception e = new Exception();
+    LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()");
 
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
+      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
+      // If there is no body, just HTTP headers, then set the content length 
+      // to zero or else the client is likely to hang waiting for the rest 
+      // of the response.
+      // If there is a body (XML response details), then do not set the
+      // content length, to match AWS's behavior.
+      httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
+
       if (msg instanceof PreflightCheckCorsResponseType) {
-        e = new Exception();
+        //LPT e = new Exception();
         LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my status code is " + 
-            httpResponse.getStatus(), e);
+            httpResponse.getStatus());
         PreflightCheckCorsResponseType preflightCors = (PreflightCheckCorsResponseType) msg;
       }
       // Since an OPTIONS response, never include a body

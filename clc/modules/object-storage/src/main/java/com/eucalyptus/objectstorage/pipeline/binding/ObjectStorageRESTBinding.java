@@ -137,6 +137,7 @@ import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
+import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
@@ -609,10 +610,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("corsConfiguration", getCors(httpRequest));
     }
 
-    //LPT: Not needed?
-//    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
-//      operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
-//    }
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
+      operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
+    }
 
     ArrayList paramsToRemove = new ArrayList();
 
@@ -1624,24 +1624,24 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return elementArray;
   }
 
-//  private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
-//    PreflightRequest preflightRequest = new PreflightRequest();
-//    String message = getMessageString(httpRequest);
-//    if (message.length() > 0) {
-//      try {
-//        //TODO LPT Do the needful here, including setting objectName for catch blocks below.
-//        Exception e = new Exception();
-//        LOG.warn("LPT: Here I am in processPreflightRequest", e);
-//      /*} catch (S3Exception s3e) {
-//        throw s3e;
-//        */
-//      } catch (Exception e) {
-//        throw e;
-//      }
-//    }
-//    return preflightRequest;
-//  }
-//  
+  private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
+    PreflightRequest preflightRequest = new PreflightRequest();
+    LOG.debug("LPT: Here I am in processPreflightRequest");
+    
+    preflightRequest.setOrigin(httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+    preflightRequest.setMethod(httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD));
+    List<String> requestHeadersFromRequest = httpRequest.getHeaders(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
+    List<CorsHeader> requestHeaders = new ArrayList<CorsHeader>(requestHeadersFromRequest.size());
+    for (String requestHeaderFromRequest : requestHeadersFromRequest) {
+      CorsHeader requestHeader = new CorsHeader();
+      requestHeader.setCorsHeader(requestHeaderFromRequest);
+      requestHeaders.add(requestHeader);
+    }
+    preflightRequest.setRequestHeaders(requestHeaders);
+    LOG.debug("LPT: ...and my request fields are:\n" + preflightRequest);
+    return preflightRequest;
+  }
+  
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
     DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
     String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);

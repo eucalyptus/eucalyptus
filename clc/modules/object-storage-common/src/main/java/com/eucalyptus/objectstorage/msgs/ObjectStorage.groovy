@@ -854,15 +854,11 @@ public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 // Does not require any specific permissions
 //@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class PreflightCheckCorsType extends ObjectStorageRequestType {
-  String origin;
-  String method;
+  PreflightRequest preflightRequest;
 }
 
 public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
-//  String contentLength;
-//  String origin;
-//  String method;
-//  int maxAgeSeconds;
+  PreflightResponse preflightResponse;
 }
 
 

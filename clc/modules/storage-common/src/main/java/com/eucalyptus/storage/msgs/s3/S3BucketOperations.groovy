@@ -21,6 +21,9 @@
 @GroovyAddClassUUID
 package com.eucalyptus.storage.msgs.s3
 
+import java.util.ArrayList;
+
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 
@@ -267,18 +270,61 @@ public class CorsRule {
   String[] exposeHeaders;
 }
 
+public class CorsHeader {
+  String corsHeader;
+}
+
 public class PreflightRequest {
   String origin;
   String method;
-  String[] requestHeaders;
+  List<CorsHeader> requestHeaders;
+  
+  public String toString() {
+    StringBuffer output = new StringBuffer();
+    output.append(
+      "Origin: " + origin + 
+      "\nMethod: " + method + 
+      "\nRequest Headers:");
+    for (CorsHeader requestHeader : requestHeaders) {
+      output.append("\n  " + requestHeader.getCorsHeader());
+    }
+    if (requestHeaders == null || requestHeaders.size() == 0) {
+      output.append(" null");
+    }
+    return output;
+  }
 }
 
 public class PreflightResponse {
   String origin;
   String method;
-  String[] allowedHeaders;
   int maxAgeSeconds;
-  String[] exposeHeaders;
+  List<CorsHeader> allowedHeaders;
+  List<CorsHeader> exposeHeaders;
+
+  public String toString() {
+    StringBuffer output = new StringBuffer();
+    output.append(
+        "Origin: " + origin +
+        "\nMethod: " + method +
+        "\nMax Age, Seconds: " + maxAgeSeconds +
+        "\nAllowed Headers:");
+    for (CorsHeader allowedHeader : allowedHeaders) {
+      output.append("\n  " + allowedHeader.getCorsHeader());
+    }
+    if (allowedHeaders == null || allowedHeaders.size() == 0) {
+      output.append(" null");
+    }
+    output.append(
+        "\nExpose Headers:");
+    for (CorsHeader exposeHeader : exposeHeaders) {
+      output.append("\n  " + exposeHeader.getCorsHeader());
+    }
+    if (exposeHeaders == null || exposeHeaders.size() == 0) {
+      output.append(" null");
+    }
+    return output;
+  }
 }
 /*
  * --------------------

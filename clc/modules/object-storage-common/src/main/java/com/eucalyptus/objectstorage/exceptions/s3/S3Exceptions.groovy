@@ -81,7 +81,7 @@ class S3ErrorCodeStrings {
   public static final String MissingSecurityHeader = "MissingSecurityHeader"
   public static final String NoLoggingStatusForKey = "NoLoggingStatusForKey"
   public static final String NoSuchBucket = "NoSuchBucket"
-  public static final String NoSuchCorsConfiguration = "NoSuchCorsConfiguration"
+  public static final String NoSuchCORSConfiguration = "NoSuchCORSConfiguration"
   public static final String NoSuchKey = "NoSuchKey"
   public static final String NoSuchLifecycleConfiguration = "NoSuchLifecycleConfiguration"
   public static final String NoSuchUpload = "NoSuchUpload"
@@ -761,7 +761,7 @@ class NoSuchLifecycleConfigurationException extends S3Exception {
 // error code "NoSuchCORSConfiguration" and the following message.
 class NoSuchCorsConfigurationException extends S3Exception {
   def NoSuchCorsConfigurationException() {
-    super(S3ErrorCodeStrings.NoSuchCorsConfiguration, "The CORS configuration does not exist.", HttpResponseStatus.NOT_FOUND);
+    super(S3ErrorCodeStrings.NoSuchCORSConfiguration, "The CORS configuration does not exist.", HttpResponseStatus.NOT_FOUND);
   }
 
   def NoSuchCorsConfigurationException(String resource) {

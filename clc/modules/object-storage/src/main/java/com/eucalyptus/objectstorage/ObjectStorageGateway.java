@@ -2050,8 +2050,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       NoSuchCorsConfigurationException nscc = new NoSuchCorsConfigurationException(bucketName);
       throw nscc;    	
     }
-    Exception e = new Exception();
-    LOG.debug("LPT: Here I am in ObjectStorageGateway.getBucketCors()", e);
     return response;
 
   }
@@ -2158,8 +2156,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       response = request.getReply();
 
       //TODO LPT Do the needful here, including setting objectName for catch blocks below.
-      Exception e = new Exception();
-      LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()", e);
+      //LPT Exception e = new Exception();
+      LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()");
       
       response.setStatus(HttpResponseStatus.NO_CONTENT);
       response.setStatusMessage("204WooHoo");
