@@ -2,28 +2,23 @@
 #
 # Script to authorize/deauthorize remote libvirtd clients for TLS migration of instances between NC nodes.
 #
-# Copyright 2013 Eucalyptus Systems, Inc.
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
 #
-# This Program Is Free Software: You Can Redistribute It And/Or Modify
-# It Under The Terms Of The Gnu General Public License As Published By
-# The Free Software Foundation; Version 3 Of The License.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
 #
-# This Program Is Distributed In The Hope That It Will Be Useful,
-# But Without Any Warranty; Without Even The Implied Warranty Of
-# Merchantability Or Fitness For A Particular Purpose.  See The
-# Gnu General Public License For More Details.
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# You Should Have Received A Copy Of The Gnu General Public License
-# Along With This Program.  If Not, See Http://Www.Gnu.Org/Licenses/.
-#
-# Please Contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
-# Ca 93117, Usa Or Visit Http://Www.Eucalyptus.Com/Licenses/ If You Need
-# Additional Information Or Have Any Questions.
-#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
 #
 # Run on NC. Usage:
 #
-# authorize-migration-keys.pl [-v] [-r] [-c config-file] [-a client secret | -A client secret | -d client | -D]
+# authorize-migration-keys.pl [-v] [-r] [-c config-file] [-a client secret | -D]
 #
 # Where:
 #
@@ -32,16 +27,8 @@
 #   'secret' as the shared secret and overwriting any previously saved
 #   shared secret for this client.
 #
-# authorize-migration-keys.pl -A client secret
-#   ...will authorize the specified migration client (IP address) using
-#   'secret' as the shared secret. If a shared secret was previously
-#   saved for this client, it will left in place and NOT overwritten.
-#
 # authorize-migration-keys.pl -D
 #   ...will deauthorize all migration clients.
-#
-# authorize-migration-keys.pl -d client
-#   ...will deauthorize only the specified migration client (IP address).
 #
 # All usage cases accept [-c config-file] to specify a fully-qualified path
 # to the libvirtd.conf file. If this is not specified, the default path of
@@ -57,8 +44,8 @@ $config_file = "/etc/libvirt/libvirtd.conf";
 $keypath = "$ENV{'EUCALYPTUS'}/var/lib/eucalyptus/keys/node-cert.pem";
 $certtool = "certtool -i --infile";
 
-#%DNs = ();
-@DN_order = ('C', 'O', 'L', 'CN');
+@DN_order_1 = ('C', 'O', 'L', 'CN');
+@DN_order_2 = ('CN', 'O', 'L', 'C');
 
 # printf for debug (verbose) output.
 sub dprint
@@ -68,7 +55,7 @@ sub dprint
 
 sub usage
 {
-  print STDERR "$0 [-v] [-r] [-c config-file] [-a client secret | -A client secret | -d client | -D]\n";
+  print STDERR "$0 [-v] [-r] [-c config-file] [-a client secret | -D]\n";
 }
 
 sub generate_new_dn
@@ -102,19 +89,23 @@ sub generate_new_dn
     exit 1;
   }
 
-  foreach (@DN_order) {
-    $DN .= "$_=$DN{$_},";
+  foreach (@DN_order_1) {
+    $DN_1 .= "$_=$DN{$_},";
   }
-  $DN =~ s/,$//;
+  $DN_1 =~ s/,$//;
+  foreach (@DN_order_2) {
+    $DN_2 .= "$_=$DN{$_},";
+  }
+  $DN_2 =~ s/,$//;
 
-  return ($DN{CN}, $DN);
+  return ($DN{CN}, $DN_1, $DN_2);
+
 }
 
 sub process_dn_list
 {
   chomp @_;
 
-  my %DNs = ();
   my $dn_list = join (' ', @_);
 
   $dn_list =~ /\[(.*)\]/;
@@ -127,31 +118,15 @@ sub process_dn_list
     s/",*\s*$//;
   }
 
-  foreach (@dn_list) {
-    my $dn;
-    my @dn_fields;
-    my @dn = split (',');
-    foreach (@dn) {
-      if (/^CN=.*/) {
-	$dn = $_;
-	push @dn_fields, $_;
-      } else {
-	push @dn_fields, $_;
-      }
-    }
-    if ($dn) {
-      $DNs{$dn} = join (',', @dn_fields);
-    }
-  }
-
-  return %DNs;
+  return @dn_list;
 }
 
 sub save_new_dn_list
 {
   my $header_printed = 0;
   my $hash_line = 0;
-  my (%DNs) = @_;
+  my @existing_dn = @{$_[0]};
+  my @new_dn;
 
   if ($opt_D) {
     dprint "Removing ALL entries from tls_allowed_dn_list\n";
@@ -159,53 +134,44 @@ sub save_new_dn_list
     return;
   }
 
-  if ($opt_d) {
-    my $val = delete $DNs{"CN=" . $opt_d};
-    if (!$val) {
-      print STDERR "Did not find key '$opt_d' in tls_allowed_dn_list\n";
-    } else {
-      dprint "Removed '$opt_d' from tls_allowed_dn_list\n";
-    }
-  } elsif ($opt_a) {
-    my ($dn_key, $dn) = generate_new_dn($opt_a, $ARGV[0]);
+  if ($opt_a) {
+    my ($dn_key, $dn1, $dn2) = generate_new_dn($opt_a, $ARGV[0]);
 
-    if ($DNs{"CN=$dn_key"}) {
-      dprint "Existing entry for '$dn_key' -- replacing it with '$dn'\n";
-      $DNs{"CN=$dn_key"} = $dn;
-    } else {
-      dprint "New entry '$dn' added\n";
-      $DNs{"_"} = $dn;
+    foreach my $element (@existing_dn) {
+      dprint "Processing $element\n";
+      if ($element =~ /CN=([\d\.]*)/) {
+        if ($1 ne $dn_key) {
+          push(@new_dn, $element);
+        } else {
+          dprint "Existing entry for '$dn_key' -- replacing it\n";
+        }
+      }
     }
-  } elsif ($opt_A) {
-    my ($dn_key, $dn) = generate_new_dn($opt_A, $ARGV[0]);
 
-    if ($DNs{"CN=$dn_key"}) {
-      print STDERR "Existing entry for '$dn_key' -- not adding\n";
-    } else {
-      dprint "New entry '$dn' added\n";
-      $DNs{"_"} = $dn;
-    }
+    dprint "New entry '$dn1' added\n";
+    push(@new_dn, $dn1);
+    dprint "New entry '$dn2' added\n";
+    push(@new_dn, $dn2);
   }
 
-  my $hash_size = keys %DNs;
-
-  if ($hash_size == 0) {
+  $new_size = scalar @new_dn;
+  if ($new_size == 0) {
     print CONFIG_OUT "tls_allowed_dn_list = []\n";
     return;
   }
 
-  foreach (keys %DNs) {
+  foreach (@new_dn) {
     if (!$header_printed) {
-      print CONFIG_OUT "tls_allowed_dn_list = [\"$DNs{$_}\",";
+      print CONFIG_OUT "tls_allowed_dn_list = [\"$_\",";
       ++$header_printed;
-      if (++$hash_line == $hash_size) {
+      if (++$hash_line == $new_size) {
 	print CONFIG_OUT "]\n";
       } else {
 	print CONFIG_OUT "\n";
       }
     } else {
-      print CONFIG_OUT "                       \"$DNs{$_}\",";
-      if (++$hash_line == $hash_size) {
+      print CONFIG_OUT "                       \"$_\",";
+      if (++$hash_line == $new_size) {
 	print CONFIG_OUT "]\n";
       } else {
 	print CONFIG_OUT "\n";
@@ -216,16 +182,9 @@ sub save_new_dn_list
 
 # Main program begins here.
 
-getopts ('a:A:vDd:c:r');
+getopts ('a:vDc:r');
 
-$opts = 0;
-
-++$opts if $opt_a;
-++$opts if $opt_A;
-++$opts if $opt_D;
-++$opts if $opt_d;
-
-if (($opts != 1) or ((($opt_a ne '') or ($opt_A ne '')) and ($ARGV[0] eq '')) or ($ARGV[0] and (($opt_a eq '') and ($opt_A eq '')))) {
+if ( ($opt_D != 1) and ($ARGV[0] and ($opt_a eq '')) ) {
   usage();
   exit 1;
 }
@@ -263,8 +222,8 @@ while (<CONFIG_IN>) {
       # Dealing with only a single line--easy.
       my @dn_list;
       push @dn_list, $_;
-      my (%DNs) = process_dn_list(@dn_list);
-      save_new_dn_list(%DNs);
+      my (@DNs) = process_dn_list(@dn_list);
+      save_new_dn_list(\@DNs);
       ++$dn_list_found;
     } else {
       # Entries spread over multiple lines--not as easy.
@@ -280,8 +239,8 @@ while (<CONFIG_IN>) {
     # Check for terminating bracket.
     if (/.*\]/) {
       # Found. Multi-line entry complete--finish & process.
-      my (%DNs) = process_dn_list(@dn_list);
-      save_new_dn_list(%DNs);
+      my (@DNs) = process_dn_list(@dn_list);
+      save_new_dn_list(\@DNs);
       undef @dn_list;
       ++$dn_list_found;
       $in_dn_list = 0;
