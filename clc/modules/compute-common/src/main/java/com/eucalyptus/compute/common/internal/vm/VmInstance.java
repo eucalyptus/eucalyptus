@@ -671,7 +671,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public void addNetworkInterface( final NetworkInterface networkInterface ) {
-    this.getNetworkConfig( ).getNetworkInterfaces( ).add( networkInterface );
+    final List<NetworkInterface> networkInterfaces = this.getNetworkConfig( ).getNetworkInterfaces( );
+    final int index = networkInterface.getAttachment( ).getDeviceIndex( );
+    if ( networkInterfaces.size( ) > index ) {
+      networkInterfaces.set( index, networkInterface );
+    } else {
+      while ( networkInterfaces.size( ) < index ) networkInterfaces.add( null );
+      networkInterfaces.add( networkInterface );
+    }
   }
 
   public String getPasswordData( ) {

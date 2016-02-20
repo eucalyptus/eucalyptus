@@ -309,8 +309,9 @@ class VmInstanceLifecycleHelpers {
     static Iterable<InstanceNetworkInterfaceSetItemRequestType> getSecondaryNetworkInterfaces(
         final RunInstancesType runInstancesType
     ) {
+      final InstanceNetworkInterfaceSetItemRequestType primary = getPrimaryNetworkInterface( runInstancesType )
       runInstancesType?.networkInterfaceSet?.item?.findAll{ InstanceNetworkInterfaceSetItemRequestType item ->
-        item.deviceIndex != 0
+        item != primary // check against primary in case multiple interfaces with device index 0
       } ?: []
     }
 
@@ -923,8 +924,8 @@ class VmInstanceLifecycleHelpers {
               throw new InvalidMetadataException("Network interface device index required" )
             } else if ( !deviceIndexes.add( networkInterfaceDeviceIndex ) ) {
               throw new InvalidMetadataException("Network interface duplicate device index (${networkInterfaceDeviceIndex})" )
-            } else if ( networkInterfaceDeviceIndex < 1 || networkInterfaceDeviceIndex >= maxInterfaces ) {
-              throw new InvalidMetadataException("Network interface device index (${networkInterfaceDeviceIndex}) invalid for instance type")
+            } else if ( networkInterfaceDeviceIndex < 1 || networkInterfaceDeviceIndex > 31 ) {
+              throw new InvalidMetadataException("Network interface device index invalid ${networkInterfaceDeviceIndex}")
             }
 
             Subnet secondarySubnet = null
@@ -979,6 +980,10 @@ class VmInstanceLifecycleHelpers {
             if ( secondaryGroups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
               throw new SecurityGroupLimitMetadataException( );
             }
+          }
+          if ( deviceIndexes.size( ) > maxInterfaces ) {
+            throw new InvalidMetadataException(
+                "Interface count ${deviceIndexes.size( )} exceeds the limit for ${allocation.getVmType( )?.name}" );
           }
         }
 
