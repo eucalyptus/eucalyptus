@@ -214,8 +214,6 @@
 		</chmod>
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
-		<mkdir dir="${DESTDIR}${euca.conf.dir}/conf" />
-		<chmod dir="${DESTDIR}${euca.conf.dir}/conf" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />

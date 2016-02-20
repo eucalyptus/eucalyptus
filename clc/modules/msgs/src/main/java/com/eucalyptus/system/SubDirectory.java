@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -110,8 +110,6 @@ public enum SubDirectory {
     }
   },
   CLASSCACHE( BaseDirectory.RUN, "/classcache" ),
-  WWW( BaseDirectory.CONF, "www" ),
-  WEBAPPS( BaseDirectory.STATE, "webapps" ),
   KEYS( BaseDirectory.STATE, "keys" ) {
     @Override
     protected void assertPermissions( ) {
@@ -126,8 +124,8 @@ public enum SubDirectory {
       }
     }
   },
-  SCRIPTS( BaseDirectory.CONF, "scripts" ),
-  MANAGEMENT( BaseDirectory.CONF, "jmx" ),
+  SCRIPTS( BaseDirectory.CONF, "scripts", false ),
+  MANAGEMENT( BaseDirectory.CONF, "jmx", false ),
   STATUS( BaseDirectory.RUN, "status") {
     @Override
     protected void assertPermissions () {
@@ -142,8 +140,6 @@ public enum SubDirectory {
     }
   },
   UPGRADE( BaseDirectory.VAR, "upgrade" ),
-  REPORTS( BaseDirectory.CONF, "reports" ),
-  CONF( BaseDirectory.CONF, "conf" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
   LIB( BaseDirectory.LIB, "" ),
   RUNDB( BaseDirectory.RUN, "/db" ) {
@@ -163,12 +159,18 @@ public enum SubDirectory {
   };
   
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
-  BaseDirectory         parent;
-  String                dir;
-  
+  private final BaseDirectory         parent;
+  private final String                dir;
+  private final boolean               check;
+
   SubDirectory( final BaseDirectory parent, final String dir ) {
+    this( parent, dir, true );
+  }
+
+  SubDirectory( final BaseDirectory parent, final String dir, final boolean check ) {
     this.parent = parent;
     this.dir = dir;
+    this.check = check;
   }
   
   @Override
@@ -179,7 +181,11 @@ public enum SubDirectory {
   public File getFile( ) {
     return new File( this.toString( ) );
   }
-  
+
+  public void perhapsCheck( ) {
+    if ( check ) check( );
+  }
+
   public void check( ) {
     final File dir = new File( this.toString( ) );
     if ( dir.exists( ) ) {
