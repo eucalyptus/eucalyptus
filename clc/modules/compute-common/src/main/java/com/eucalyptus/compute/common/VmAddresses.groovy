@@ -87,7 +87,7 @@ public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-
   String allocationId
   String networkInterfaceId
   String privateIpAddress
-  Boolean allowReassociation = Boolean.FALSE
+  Boolean allowReassociation = Boolean.TRUE
   
   def AssociateAddressType(final publicIp, final instanceId) {
     this.publicIp = publicIp;
