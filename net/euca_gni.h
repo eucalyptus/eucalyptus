@@ -227,6 +227,16 @@ typedef struct gni_internet_gateway_t {
     char accountId[128];
 } gni_internet_gateway;
 
+typedef struct gni_nat_gateway_t {
+    char name[32];
+    char accountId[128];
+    u8 macAddress[ENET_BUF_SIZE];
+    u32 publicIp;
+    u32 privateIp;
+    char vpc[16];
+    char subnet[16];
+} gni_nat_gateway;
+
 typedef struct gni_vpcsubnet_t {
     char name[16];
     char accountId[128];
@@ -247,6 +257,8 @@ typedef struct gni_vpc_t {
     int max_networkAcls;
     gni_route_table *routeTables;
     int max_routeTables;
+    gni_nat_gateway *natGateways;
+    int max_natGateways;
     gni_name *internetGatewayNames;
     int max_internetGatewayNames;
 } gni_vpc;
@@ -363,6 +375,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         int *out_max_interface_names, gni_instance ** out_interfaces, int *out_max_interfaces);
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname);
 gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName);
+gni_vpcsubnet *gni_vpc_get_vpcsubnet(gni_vpc *vpc, const char *vpcsubnetName);
 int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance ***out_interfaces, int *max_out_interfaces);
 
 int gni_validate(globalNetworkInfo * gni);

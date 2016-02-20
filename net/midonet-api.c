@@ -1695,6 +1695,7 @@ int mido_delete_rule(midoname * name)
 //! @param[in] ip
 //! @param[in] nw
 //! @param[in] slashnet
+//! @param[in] mac
 //! @param[in] outname
 //!
 //! @return
@@ -1707,7 +1708,7 @@ int mido_delete_rule(midoname * name)
 //!
 //! @note
 //!
-int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, midoname * outname)
+int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, char *mac, midoname * outname)
 {
     int rc;
     midoname myname;
@@ -1720,7 +1721,11 @@ int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, ch
     myname.vers = strdup("v2");
 
     if (ip && nw && slashnet) {
-        rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, NULL);
+        if (mac) {
+            rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, "portMac", mac, NULL);
+        } else {
+            rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, NULL);
+        }
     } else {
         rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, NULL);
     }

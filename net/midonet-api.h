@@ -66,6 +66,9 @@
 #ifndef _INCLUDE_MIDONET_API_H_
 #define _INCLUDE_MIDONET_API_H_
 
+#include "euca_gni.h"
+
+
 //!
 //! @file net/midonet-api.h
 //! Need definition
@@ -84,6 +87,8 @@
 \*----------------------------------------------------------------------------*/
 #define VPCMIDO_TENANT     "euca_tenant_1"
 #define VPCMIDO_TUNNELZONE "mido-tz midotz euca-tz eucatz"
+#define VPCMIDO_CORERT     "eucart"
+#define VPCMIDO_COREBR     "eucabr"
 // Maximum number of active VPCs (mido routers)
 // Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
 // 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
@@ -109,14 +114,26 @@ enum {
     VPCSG_END
 };
 
+enum vpc_nat_gateway_midos_t {
+    NATG_RT,
+    NATG_EUCABR_DOWNLINK,
+    NATG_RT_UPLINK,
+    NATG_RT_BRPORT,
+    NATG_VPCBR_RTPORT,
+    NATG_ELIP_PRE_IPADDRGROUP,
+    NATG_ELIP_PRE_IPADDRGROUP_IP,
+    NATG_ELIP_ROUTE,
+    NATG_RT_INCHAIN,
+    NATG_RT_OUTCHAIN,
+    NATG_END
+};
+
 enum {
     VPCBR_VMPORT,
     VPCBR_DHCPHOST,
     VMHOST,
     ELIP_PRE,
-    //    ELIP_PRE_PUB,
     ELIP_POST,
-    //    ELIP_POST_PRIV,
     ELIP_PRE_IPADDRGROUP,
     ELIP_POST_IPADDRGROUP,
     ELIP_PRE_IPADDRGROUP_IP,
@@ -141,9 +158,11 @@ enum {
     VPCRT,
     EUCABR_DOWNLINK,
     VPCRT_UPLINK,
-    VPCRT_PRECHAIN,
-    VPCRT_POSTCHAIN,
+    VPCRT_UPLINK_PRECHAIN,
+    VPCRT_UPLINK_POSTCHAIN,
     VPCRT_PREELIPCHAIN,
+    //VPCRT_RTINCHAIN,
+    //VPCRT_RTOUTCHAIN,
     VPCEND
 };
 
@@ -277,6 +296,15 @@ typedef struct mido_vpc_instance_t {
     int gnipresent;
 } mido_vpc_instance;
 
+typedef struct mido_vpc_natgateway_t {
+    gni_nat_gateway *gniNatGateway;
+    gni_vpcsubnet *gniVpcSubnet;
+    char name[32];
+    int rtid;
+    midoname midos[NATG_END];
+    int gnipresent;
+} mido_vpc_natgateway;
+
 typedef struct mido_vpc_subnet_t {
     gni_vpcsubnet *gniSubnet;
     char name[16];
@@ -302,10 +330,12 @@ typedef struct mido_vpc_t {
     midoname *rtpostchain_rules;
     midoname *rtpreelipchain_rules;
     mido_vpc_subnet *subnets;
+    mido_vpc_natgateway *natgateways;
     int max_rtports;
     int max_rtpostchain_rules;
     int max_rtpreelipchain_rules;
     int max_subnets;
+    int max_natgateways;
     int gnipresent;
 } mido_vpc;
 
@@ -457,7 +487,7 @@ int mido_delete_portgroup_port(midoname * name);
 int mido_get_portgroup_ports(midoname * portgroup, midoname ** outnames, int *outnames_max);
 
 
-int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, midoname * outname);
+int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, char *mac, midoname * outname);
 //int mido_read_port(midoname * name);
 int mido_update_port(midoname * name, ...);
 int mido_print_port(midoname * name);
