@@ -30,6 +30,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -40,6 +42,8 @@ import com.eucalyptus.compute.common.DeleteRouteType;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.ReplaceRouteResponseType;
+import com.eucalyptus.compute.common.ReplaceRouteType;
 import com.eucalyptus.compute.common.RouteTableType;
 import com.eucalyptus.compute.common.RouteType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -49,6 +53,7 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -59,9 +64,33 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
   private AWSEC2RouteResourceInfo info = new AWSEC2RouteResourceInfo();
 
   public AWSEC2RouteResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
 
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2RouteResourceAction otherAction = (AWSEC2RouteResourceAction) resourceAction;
+    if (!Objects.equals(properties.getDestinationCidrBlock(), otherAction.properties.getDestinationCidrBlock())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getGatewayId(), otherAction.properties.getGatewayId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getNetworkInterfaceId(), otherAction.properties.getNetworkInterfaceId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getRouteTableId(), otherAction.properties.getRouteTableId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getVpcPeeringConnectionId(), otherAction.properties.getVpcPeeringConnectionId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
+  }
   private enum CreateSteps implements Step {
     CREATE_ROUTE {
       @Override
@@ -157,6 +186,52 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ROUTE {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2RouteResourceAction oldAction = (AWSEC2RouteResourceAction) oldResourceAction;
+        AWSEC2RouteResourceAction newAction = (AWSEC2RouteResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // property validation
+        newAction.validateProperties();
+        // Make sure route table exists.
+        if (newAction.properties.getRouteTableId().isEmpty()) {
+          throw new ValidationErrorException("RouteTableId is a required field");
+        }
+        DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, newAction.info.getEffectiveUserId());
+        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", newAction.properties.getRouteTableId( ) ) );
+        DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
+        if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
+          describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
+          throw new ValidationErrorException("No such route table with id '" + newAction.properties.getRouteTableId());
+        }
+        ReplaceRouteType replaceRouteType = MessageHelper.createMessage(ReplaceRouteType.class, newAction.info.getEffectiveUserId());
+        replaceRouteType.setRouteTableId(newAction.properties.getRouteTableId());
+        if (!Strings.isNullOrEmpty(newAction.properties.getGatewayId())) {
+          replaceRouteType.setGatewayId(newAction.properties.getGatewayId());
+        }
+        if (!Strings.isNullOrEmpty(newAction.properties.getInstanceId())) {
+          replaceRouteType.setInstanceId(newAction.properties.getInstanceId());
+        }
+        if (!Strings.isNullOrEmpty(newAction.properties.getVpcPeeringConnectionId())) {
+          replaceRouteType.setVpcPeeringConnectionId(newAction.properties.getVpcPeeringConnectionId());
+        }
+        if (!Strings.isNullOrEmpty(newAction.properties.getNetworkInterfaceId())) {
+          replaceRouteType.setNetworkInterfaceId(newAction.properties.getNetworkInterfaceId());
+        }
+        replaceRouteType.setDestinationCidrBlock(newAction.properties.getDestinationCidrBlock());
+        ReplaceRouteResponseType replaceRouteResponseType = AsyncRequests.<ReplaceRouteType, ReplaceRouteResponseType>sendSync(configuration, replaceRouteType);
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
