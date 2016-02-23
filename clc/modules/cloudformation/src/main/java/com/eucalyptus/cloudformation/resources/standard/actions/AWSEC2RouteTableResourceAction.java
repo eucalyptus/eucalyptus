@@ -33,6 +33,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -42,15 +44,23 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteRouteTableResponseType;
 import com.eucalyptus.compute.common.DeleteRouteTableType;
+import com.eucalyptus.compute.common.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -61,7 +71,20 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
   private AWSEC2RouteTableResourceInfo info = new AWSEC2RouteTableResourceInfo();
 
   public AWSEC2RouteTableResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2RouteTableResourceAction otherAction = (AWSEC2RouteTableResourceAction) resourceAction;
+    if (!Objects.equals(properties.getVpcId(), otherAction.properties.getVpcId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -123,7 +146,7 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
 
         // See if route table is there
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.info.getPhysicalResourceId( ) ) );
+        describeRouteTablesType.getFilterSet( ).add(Filter.filter("route-table-id", action.info.getPhysicalResourceId()));
         DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
@@ -133,6 +156,71 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
         DeleteRouteTableType.setRouteTableId(action.info.getPhysicalResourceId());
         DeleteRouteTableResponseType DeleteRouteTableResponseType = AsyncRequests.<DeleteRouteTableType, DeleteRouteTableResponseType> sendSync(configuration, DeleteRouteTableType);
         return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2RouteTableResourceAction oldAction = (AWSEC2RouteTableResourceAction) oldResourceAction;
+        AWSEC2RouteTableResourceAction newAction = (AWSEC2RouteTableResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
+        Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+          for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+            EC2Tag tag = new EC2Tag();
+            tag.setKey(tagInfo.getKey());
+            tag.setValue(tagInfo.getValue());
+            existingTags.add(tag);
+          }
+        }
+        Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+        if (newAction.properties.getTags() != null) {
+          newTags.addAll(newAction.properties.getTags());
+        }
+        List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+        if (newStackTags != null) {
+          newTags.addAll(newStackTags);
+        }
+        TagHelper.checkReservedEC2TemplateTags(newTags);
+        // add only 'new' tags
+        Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+        if (!onlyNewTags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        //  Get old tags...
+        Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+        if (oldAction.properties.getTags() != null) {
+          oldTags.addAll(oldAction.properties.getTags());
+        }
+        List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+        if (oldStackTags != null) {
+          oldTags.addAll(oldStackTags);
+        }
+
+        // remove only the old tags that are not new and that exist
+        Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+        if (!tagsToRemove.isEmpty()) {
+          DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+          deleteTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+        }
+        return newAction;
       }
     };
 
