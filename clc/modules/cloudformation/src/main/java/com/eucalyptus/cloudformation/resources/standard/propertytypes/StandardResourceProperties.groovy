@@ -290,7 +290,6 @@ public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
   @Required
   @Property
   String cidrBlock;
-  // @Required -- documentation lies, claims required but experimentation shows otherwise.
   @Property
   Boolean egress;
   @Property
