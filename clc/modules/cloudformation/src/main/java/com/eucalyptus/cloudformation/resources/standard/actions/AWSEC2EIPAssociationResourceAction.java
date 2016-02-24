@@ -158,7 +158,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
           associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
         }
         if (action.properties.getPrivateIpAddress() != null) {
-          associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
+          associateAddressType.setPrivateIpAddress(action.properties.getPrivateIpAddress());
         }
         AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
         if (action.properties.getAllocationId() != null) {
@@ -310,7 +310,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
           associateAddressType.setNetworkInterfaceId(newAction.properties.getNetworkInterfaceId());
         }
         if (newAction.properties.getPrivateIpAddress() != null) {
-          associateAddressType.setNetworkInterfaceId(newAction.properties.getNetworkInterfaceId());
+          associateAddressType.setPrivateIpAddress(newAction.properties.getPrivateIpAddress());
         }
         AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
         if (newAction.properties.getAllocationId() != null) {
