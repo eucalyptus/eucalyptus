@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,16 +48,16 @@ public class CloudFormationProperties {
   public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
 
   @ConfigurableField(
-      initial = "",
+      initial = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
       description = "JSON configuration for the cloudformation simple workflow activity worker",
       changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "";
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }";
 
   @ConfigurableField(
-      initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8 }",
+      initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
       description = "JSON configuration for the cloudformation simple workflow decision worker",
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4 }";
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
 
   // In case we are using AWS SWF
   public static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));

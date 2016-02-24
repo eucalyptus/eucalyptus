@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,12 @@ package com.eucalyptus.simpleworkflow;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
@@ -39,7 +39,9 @@ import com.google.common.base.Objects;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
-@Table( name = "swf_workflow_history_event" )
+@Table( name = "swf_workflow_history_event", indexes = {
+    @Index( name = "swf_workflow_history_event_execution_id_idx", columnList = "workflow_execution_id" )
+} )
 public class WorkflowHistoryEvent extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
 
