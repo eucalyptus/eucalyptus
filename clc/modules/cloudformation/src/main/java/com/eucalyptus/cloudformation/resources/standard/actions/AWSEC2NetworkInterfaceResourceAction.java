@@ -366,6 +366,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
           !Objects.equals(oldAction.properties.getGroupSet(), newAction.properties.getGroupSet()) ||
           !Objects.equals(oldAction.properties.getSourceDestCheck(), newAction.properties.getSourceDestCheck())) {
           ModifyNetworkInterfaceAttributeType modifyNetworkInterfaceAttributeType = MessageHelper.createMessage(ModifyNetworkInterfaceAttributeType.class, newAction.info.getEffectiveUserId());
+          modifyNetworkInterfaceAttributeType.setNetworkInterfaceId(newAction.info.getPhysicalResourceId());
           if (!Objects.equals(oldAction.properties.getDescription(), newAction.properties.getDescription())) {
             modifyNetworkInterfaceAttributeType.setDescription(newAction.convertNullableAttributeValueType(newAction.properties.getDescription() != null ? newAction.properties.getDescription() : ""));
           }
@@ -376,8 +377,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
           if (!Objects.equals(oldAction.properties.getSourceDestCheck(), newAction.properties.getSourceDestCheck())) {
             modifyNetworkInterfaceAttributeType.setSourceDestCheck(newAction.convertAttributeBooleanValueType(newAction.properties.getSourceDestCheck() != null ? newAction.properties.getSourceDestCheck() : Boolean.TRUE));
           }
-
-//        modifyNetworkInterfaceAttributeType.setGroupSet(newAction....); // find a default group (blah)
+          ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttributeResponseType = AsyncRequests.sendSync(configuration, modifyNetworkInterfaceAttributeType);
         }
         return newAction;
       }
@@ -564,7 +564,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
     String vpcId = describeSubnetsResponseType.getSubnetSet().getItem().get(0).getVpcId();
     DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, info.getEffectiveUserId());
     describeSecurityGroupsType.getFilterSet().add(Filter.filter("vpc-id", vpcId));
-    describeSecurityGroupsType.getFilterSet().add(Filter.filter("groupName", "default"));
+    describeSecurityGroupsType.getFilterSet().add(Filter.filter("group-name", "default"));
     DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
     if (describeSecurityGroupsResponseType == null || describeSecurityGroupsResponseType.getSecurityGroupInfo() == null ||
       describeSecurityGroupsResponseType.getSecurityGroupInfo().size() != 1) {
