@@ -128,7 +128,6 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.walrus.WalrusBackend;
-import com.eucalyptus.walrus.WalrusBucketLogger;
 import com.eucalyptus.walrus.exceptions.NotImplementedException;
 import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
@@ -441,9 +440,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
       String operation = (String) bindingArguments.remove("Operation");
       if (operation != null) {
         WalrusRequestType request = (WalrusRequestType) eucaMsg;
-        BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
-        logData.setOperation("REST." + operation);
-        request.setLogData(logData);
       }
     }
   }

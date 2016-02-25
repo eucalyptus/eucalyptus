@@ -86,7 +86,6 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.walrus.exceptions.HeadExceptionInterface;
 import com.eucalyptus.walrus.msgs.CopyObjectResponseType;
 import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
-import com.eucalyptus.walrus.msgs.PostObjectResponseType;
 import com.eucalyptus.walrus.msgs.PutObjectResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
@@ -161,26 +160,6 @@ public class WalrusOutboundHandler extends MessageStackHandler {
         if (response.getVersionId() != null) {
           httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, response.getVersionId());
         }
-      } else if (msg instanceof PostObjectResponseType) {
-        PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
-        String redirectUrl = postObjectResponse.getRedirectUrl();
-        if (redirectUrl != null) {
-          httpResponse.addHeader(HttpHeaders.Names.LOCATION, redirectUrl);
-          httpResponse.setStatus(HttpResponseStatus.SEE_OTHER);
-          httpResponse.setMessage(null);
-        } else {
-          Integer successCode = postObjectResponse.getSuccessCode();
-          if (successCode != null) {
-            if (successCode != 201) {
-              httpResponse.setMessage(null);
-              httpResponse.setStatus(new HttpResponseStatus(successCode, "OK"));
-            } else {
-              httpResponse.setStatus(new HttpResponseStatus(successCode, "Created"));
-            }
-          }
-        }
-        // have to force a close for browsers
-        event.getFuture().addListener(ChannelFutureListener.CLOSE);
       } else if (msg instanceof CopyObjectResponseType) {
         CopyObjectResponseType copyResponse = (CopyObjectResponseType) msg;
         if (copyResponse.getVersionId() != null)

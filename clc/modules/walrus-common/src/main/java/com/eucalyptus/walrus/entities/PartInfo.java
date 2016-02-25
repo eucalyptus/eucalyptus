@@ -137,22 +137,6 @@ public class PartInfo extends AbstractPersistent {
   @Column(name = "cleanup")
   private Boolean cleanup;
 
-  @Column(name = "global_read")
-  private Boolean globalRead;
-
-  @Column(name = "global_write")
-  private Boolean globalWrite;
-
-  @Column(name = "global_read_acp")
-  private Boolean globalReadACP;
-
-  @Column(name = "global_write_acp")
-  private Boolean globalWriteACP;
-
-  @OneToMany(cascade = CascadeType.ALL)
-  @JoinTable(name = "part_has_grants", joinColumns = {@JoinColumn(name = "part_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  private List<GrantInfo> grants = new ArrayList<GrantInfo>();
-
   public String getOwnerId() {
     return ownerId;
   }
@@ -279,46 +263,6 @@ public class PartInfo extends AbstractPersistent {
 
   public void setCleanup(Boolean cleanup) {
     this.cleanup = cleanup;
-  }
-
-  public Boolean getGlobalRead() {
-    return globalRead;
-  }
-
-  public void setGlobalRead(Boolean globalRead) {
-    this.globalRead = globalRead;
-  }
-
-  public Boolean getGlobalWrite() {
-    return globalWrite;
-  }
-
-  public void setGlobalWrite(Boolean globalWrite) {
-    this.globalWrite = globalWrite;
-  }
-
-  public Boolean getGlobalReadACP() {
-    return globalReadACP;
-  }
-
-  public void setGlobalReadACP(Boolean globalReadACP) {
-    this.globalReadACP = globalReadACP;
-  }
-
-  public Boolean getGlobalWriteACP() {
-    return globalWriteACP;
-  }
-
-  public void setGlobalWriteACP(Boolean globalWriteACP) {
-    this.globalWriteACP = globalWriteACP;
-  }
-
-  public List<GrantInfo> getGrants() {
-    return grants;
-  }
-
-  public void setGrants(List<GrantInfo> grants) {
-    this.grants = grants;
   }
 
   public PartInfo() {}

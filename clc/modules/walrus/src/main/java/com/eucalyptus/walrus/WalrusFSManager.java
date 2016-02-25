@@ -62,33 +62,10 @@
 
 package com.eucalyptus.walrus;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.URL;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import com.google.common.base.Function;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
-import org.hibernate.criterion.Order;
-import org.hibernate.criterion.Restrictions;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.Hashes;
@@ -141,8 +118,6 @@ import com.eucalyptus.walrus.exceptions.PreconditionFailedException;
 import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.AbortMultipartUploadType;
-import com.eucalyptus.walrus.msgs.AddObjectResponseType;
-import com.eucalyptus.walrus.msgs.AddObjectType;
 import com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.walrus.msgs.CopyObjectResponseType;
@@ -153,16 +128,8 @@ import com.eucalyptus.walrus.msgs.DeleteBucketResponseType;
 import com.eucalyptus.walrus.msgs.DeleteBucketType;
 import com.eucalyptus.walrus.msgs.DeleteObjectResponseType;
 import com.eucalyptus.walrus.msgs.DeleteObjectType;
-import com.eucalyptus.walrus.msgs.DeleteVersionResponseType;
-import com.eucalyptus.walrus.msgs.DeleteVersionType;
 import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyType;
-import com.eucalyptus.walrus.msgs.GetBucketLocationResponseType;
-import com.eucalyptus.walrus.msgs.GetBucketLocationType;
-import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusResponseType;
-import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusType;
-import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusResponseType;
-import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusType;
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.GetObjectExtendedResponseType;
@@ -177,26 +144,10 @@ import com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.walrus.msgs.ListAllMyBucketsType;
 import com.eucalyptus.walrus.msgs.ListBucketResponseType;
 import com.eucalyptus.walrus.msgs.ListBucketType;
-import com.eucalyptus.walrus.msgs.ListVersionsResponseType;
-import com.eucalyptus.walrus.msgs.ListVersionsType;
-import com.eucalyptus.walrus.msgs.PostObjectResponseType;
-import com.eucalyptus.walrus.msgs.PostObjectType;
 import com.eucalyptus.walrus.msgs.PutObjectInlineResponseType;
 import com.eucalyptus.walrus.msgs.PutObjectInlineType;
 import com.eucalyptus.walrus.msgs.PutObjectResponseType;
 import com.eucalyptus.walrus.msgs.PutObjectType;
-import com.eucalyptus.walrus.msgs.SetBucketAccessControlPolicyResponseType;
-import com.eucalyptus.walrus.msgs.SetBucketAccessControlPolicyType;
-import com.eucalyptus.walrus.msgs.SetBucketLoggingStatusResponseType;
-import com.eucalyptus.walrus.msgs.SetBucketLoggingStatusType;
-import com.eucalyptus.walrus.msgs.SetBucketVersioningStatusResponseType;
-import com.eucalyptus.walrus.msgs.SetBucketVersioningStatusType;
-import com.eucalyptus.walrus.msgs.SetObjectAccessControlPolicyResponseType;
-import com.eucalyptus.walrus.msgs.SetObjectAccessControlPolicyType;
-import com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyResponseType;
-import com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyType;
-import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType;
-import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.UploadPartResponseType;
 import com.eucalyptus.walrus.msgs.UploadPartType;
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
@@ -205,9 +156,30 @@ import com.eucalyptus.walrus.msgs.WalrusDataQueue;
 import com.eucalyptus.walrus.msgs.WalrusMonitor;
 import com.eucalyptus.walrus.pipeline.WalrusRESTBinding;
 import com.eucalyptus.walrus.util.WalrusProperties;
-import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -332,7 +304,6 @@ public class WalrusFSManager extends WalrusManager {
       // create bucket and set its acl
       BucketInfo bucket = new BucketInfo(bucketName, new Date());
       bucket.setBucketSize(0L);
-      bucket.setLoggingEnabled(false);
       if (locationConstraint != null && locationConstraint.length() > 0) {
         bucket.setLocation(locationConstraint);
       } else {
@@ -622,71 +593,6 @@ public class WalrusFSManager extends WalrusManager {
   }
 
   @Override
-  public PostObjectResponseType postObject(PostObjectType request) throws WalrusException {
-    PostObjectResponseType reply = (PostObjectResponseType) request.getReply();
-
-    String bucketName = request.getBucket();
-    String key = request.getKey();
-
-    PutObjectType putObject = new PutObjectType();
-    putObject.setUserId(Contexts.lookup().getUserFullName().getUserId());
-    putObject.setBucket(bucketName);
-    putObject.setKey(key);
-    putObject.setRandomKey(request.getRandomKey());
-    putObject.setAccessControlList(request.getAccessControlList());
-    putObject.setContentType(request.getContentType());
-    putObject.setContentLength(request.getContentLength());
-    putObject.setAccessKeyID(request.getAccessKeyID());
-    putObject.setEffectiveUserId(request.getEffectiveUserId());
-    putObject.setCredential(request.getCredential());
-    putObject.setIsCompressed(request.getIsCompressed());
-    putObject.setMetaData(request.getMetaData());
-    putObject.setStorageClass(request.getStorageClass());
-
-    PutObjectResponseType putObjectResponse = putObject(putObject);
-
-    String etag = putObjectResponse.getEtag();
-    reply.setEtag(etag);
-    reply.setLastModified(putObjectResponse.getLastModified());
-    reply.set_return(putObjectResponse.get_return());
-    reply.setMetaData(putObjectResponse.getMetaData());
-    reply.setErrorCode(putObjectResponse.getErrorCode());
-    reply.setStatusMessage(putObjectResponse.getStatusMessage());
-    reply.setLogData(putObjectResponse.getLogData());
-    reply.setVersionId(WalrusProperties.NULL_VERSION_ID);
-
-    String successActionRedirect = request.getSuccessActionRedirect();
-    if (successActionRedirect != null) {
-      try {
-        java.net.URI addrUri = new URL(successActionRedirect).toURI();
-        InetAddress.getByName(addrUri.getHost());
-      } catch (Exception ex) {
-        LOG.warn(ex);
-      }
-      String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
-      reply.setRedirectUrl(successActionRedirect + "?" + paramString);
-    } else {
-      Integer successActionStatus = request.getSuccessActionStatus();
-      if (successActionStatus != null) {
-        if ((successActionStatus == 200) || (successActionStatus == 201)) {
-          reply.setSuccessCode(successActionStatus);
-          if (successActionStatus == 200) {
-            return reply;
-          } else {
-            reply.setBucket(bucketName);
-            reply.setKey(key);
-            reply.setLocation(Topology.lookup(WalrusBackend.class).getUri().getHost() + "/" + bucketName + "/" + key);
-          }
-        } else {
-          reply.setSuccessCode(204);
-          return reply;
-        }
-      }
-    }
-    return reply;
-  }
-
-  @Override
   public PutObjectInlineResponseType putObjectInline(PutObjectInlineType request) throws WalrusException {
     PutObjectInlineResponseType reply = (PutObjectInlineResponseType) request.getReply();
 
@@ -776,50 +682,6 @@ public class WalrusFSManager extends WalrusManager {
     reply.setEtag(md5);
     reply.setLastModified(lastModified);
     reply.setVersionId(WalrusProperties.NULL_VERSION_ID);
-    return reply;
-  }
-
-  // TODO Check if this is used
-  @Override
-  public AddObjectResponseType addObject(AddObjectType request) throws WalrusException {
-    AddObjectResponseType reply = (AddObjectResponseType) request.getReply();
-
-    String bucketName = request.getBucket();
-    String objectKey = request.getKey();
-    String objectName = request.getObjectName();
-
-    // Lookup bucket
-    try {
-      Transactions.find(new BucketInfo(bucketName));
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucketName, e);
-    }
-
-    ObjectInfo objectInfo = null;
-
-    // Lookup object and persist entity if it does not exist
-    try (TransactionResource tr = Entities.transactionFor(ObjectInfo.class)) {
-      try {
-        objectInfo = Entities.uniqueResult(new ObjectInfo(bucketName, objectKey));
-        throw new InternalErrorException("Object already exists " + objectKey);
-      } catch (NoSuchElementException e) {
-        objectInfo = new ObjectInfo(bucketName, objectKey);
-        objectInfo.setObjectName(objectName);
-        objectInfo.setSize(storageManager.getSize(bucketName, objectName));
-        objectInfo.setEtag(request.getEtag());
-        objectInfo.setLastModified(new Date());
-        objectInfo.setStorageClass("STANDARD");
-        objectInfo = Entities.persist(objectInfo);
-      }
-      tr.commit();
-    } catch (Exception e) {
-      LOG.error("Failed to process metadata for object-key=" + objectKey + ", bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to process metadata for object-key=" + objectKey + ", bucket=" + bucketName, e);
-    }
-
     return reply;
   }
 
@@ -1135,35 +997,6 @@ public class WalrusFSManager extends WalrusManager {
     return reply;
   }
 
-  public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws WalrusException {
-    throw new MethodNotAllowedException(
-        "PUT bucket access control policy is not supported by Walrus backend. Try issuing the request to objectstorage", "bucket",
-        request.getBucket() + "?acl");
-  }
-
-  @Override
-  public SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request)
-      throws WalrusException {
-    throw new MethodNotAllowedException(
-        "PUT bucket access control policy is not supported by Walrus backend. Try issuing the request to objectstorage", "bucket",
-        request.getBucket() + "?acl");
-  }
-
-  @Override
-  public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws WalrusException {
-    throw new MethodNotAllowedException(
-        "PUT object access control policy is not supported by Walrus backend. Try issuing the request to objectstorage", "object",
-        request.getBucket() + "/" + request.getKey() + "?acl");
-  }
-
-  @Override
-  public SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(SetRESTObjectAccessControlPolicyType request)
-      throws WalrusException {
-    throw new MethodNotAllowedException(
-        "PUT object access control policy is not supported by Walrus backend. Try issuing the request to objectstorage", "object",
-        request.getBucket() + "/" + request.getKey() + "?acl");
-  }
-
   @Override
   public GetObjectResponseType getObject(GetObjectType request) throws WalrusException {
     GetObjectResponseType reply = (GetObjectResponseType) request.getReply();
@@ -1470,29 +1303,6 @@ public class WalrusFSManager extends WalrusManager {
   }
 
   @Override
-  public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws WalrusException {
-    GetBucketLocationResponseType reply = (GetBucketLocationResponseType) request.getReply();
-    String bucketName = request.getBucket();
-
-    // Lookup bucket
-    try {
-      BucketInfo bucket = Transactions.find(new BucketInfo(bucketName));
-      String location = bucket.getLocation();
-      if (location == null || location.equalsIgnoreCase("US")) {
-        reply.setLocationConstraint(null);
-      } else {
-        reply.setLocationConstraint(location);
-      }
-      return reply;
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucketName, e);
-    }
-  }
-
-  @Override
   public CopyObjectResponseType copyObject(CopyObjectType request) throws WalrusException {
     CopyObjectResponseType reply = (CopyObjectResponseType) request.getReply();
     String srcBucketName = request.getSourceBucket();
@@ -1608,163 +1418,6 @@ public class WalrusFSManager extends WalrusManager {
     reply.setVersionId(WalrusProperties.NULL_VERSION_ID);
 
     return reply;
-  }
-
-  @Override
-  public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws WalrusException {
-    throw new MethodNotAllowedException("PUT bucket logging not supported by Walrus backend. Try issuing the request to objectstorage", "object",
-        request.getBucket() + "?logging");
-  }
-
-  @Override
-  public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws WalrusException {
-    GetBucketLoggingStatusResponseType reply = (GetBucketLoggingStatusResponseType) request.getReply();
-    String bucketName = request.getBucket();
-
-    // Lookup bucket
-    try {
-      Transactions.find(new BucketInfo(bucketName));
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucketName, e);
-    }
-
-    // logging status is disabled since set bucket logging is not implemented in Walrus
-    return reply;
-  }
-
-  @Override
-  public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws WalrusException {
-    GetBucketVersioningStatusResponseType reply = (GetBucketVersioningStatusResponseType) request.getReply();
-    String bucketName = request.getBucket();
-
-    // Lookup bucket
-    try {
-      Transactions.find(new BucketInfo(bucketName));
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucketName, e);
-    }
-
-    // Versioning is never enabled as the feature is not implemented in Walrus
-    return reply;
-  }
-
-  @Override
-  public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws WalrusException {
-    throw new MethodNotAllowedException("PUT bucket versioning is not supported by Walrus backend. Try issuing the request to objectstorage",
-        "object", request.getBucket() + "?versioning");
-  }
-
-  @Override
-  public ListVersionsResponseType listVersions(ListVersionsType request) throws WalrusException {
-    throw new MethodNotAllowedException("GET bucket object versions is not supported by Walrus backend. Try issuing the request to objectstorage",
-        "object", request.getBucket() + "?versions");
-  }
-
-  @Override
-  public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws WalrusException {
-    throw new MethodNotAllowedException("Delete object version is not supported by Walrus backend. Try issuing the request to objectstorage",
-        "object", request.getKey());
-  }
-
-  public static InetAddress getBucketIp(String bucket) throws WalrusException {
-    // Lookup bucket
-    try {
-      Transactions.find(new BucketInfo(bucket));
-      return WalrusProperties.getWalrusAddress(); // TODO copying logic from previous implementation, check if its accurate
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucket);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucket, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucket, e);
-    }
-  }
-
-  @Override
-  public void fastDeleteObject(DeleteObjectType request) throws WalrusException {
-    final String bucketName = request.getBucket();
-    final String objectKey = request.getKey();
-
-    // Lookup bucket
-    try {
-      Transactions.find(new BucketInfo(bucketName));
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to look up metadata for bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to lookup bucket " + bucketName, e);
-    }
-
-    // Lookup object and process deletion
-    Boolean deleted = Boolean.FALSE;
-    try {
-      Entities.asTransaction(ObjectInfo.class, new Function<Boolean, String>() {
-
-        @Override
-        public String apply(Boolean arg0) {
-          try {
-            ObjectInfo objectInfo = Entities.uniqueResult(new ObjectInfo(bucketName, objectKey));
-            if (!arg0) { // delete only once
-              try {
-                if (objectInfo.isMultipart()) {
-                  deleteParts(bucketName, objectKey, objectInfo.getUploadId(), false);
-                } else {
-                  storageManager.deleteObject(bucketName, objectInfo.getObjectName());
-                }
-              } catch (IOException e) {
-                LOG.warn("Failed to delete object-file=" + objectInfo.getObjectName() + ", bucket=" + bucketName + " on disk. Cause: "
-                    + e.getMessage());
-              }
-              arg0 = Boolean.TRUE;
-            }
-            Entities.delete(objectInfo);
-          } catch (NoSuchElementException e) {
-            LOG.debug("Metadata for object-key=" + objectKey + ", bucket=" + bucketName + " not found. Nothing to delete");
-          } catch (Exception e) {
-            Exceptions.toUndeclared(e);
-          }
-          return null;
-        }
-      }).apply(deleted);
-    } catch (Exception e) {
-      LOG.error("Failed to delete object-key=" + objectKey + ", bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to delete object-key=" + objectKey + ", bucket=" + bucketName, e);
-    }
-  }
-
-  // TODO whats the point of this method? Its the same as deleteBucket()
-  @Override
-  public void fastDeleteBucket(DeleteBucketType request) throws WalrusException {
-    String bucketName = request.getBucket();
-
-    try (TransactionResource tr = Entities.transactionFor(BucketInfo.class)) {
-      BucketInfo bucketInfo = Entities.uniqueResult(new BucketInfo(bucketName));
-
-      ObjectInfo searchObject = new ObjectInfo();
-      searchObject.setBucketName(bucketName);
-      List<ObjectInfo> objects = Transactions.findAll(searchObject);
-
-      if (objects != null && !objects.isEmpty()) {
-        tr.commit();
-        throw new BucketNotEmptyException(bucketName);
-      } else {
-        Entities.delete(bucketInfo);
-        tr.commit();
-        // Actually remove the bucket from the backing store
-        // share threadpool with object deleter
-        Threads.lookup(WalrusBackend.class, WalrusFSManager.ObjectDeleter.class).limitTo(10).submit(new BucketDeleter(bucketName));
-      }
-    } catch (NoSuchElementException e) {
-      throw new NoSuchBucketException(bucketName);
-    } catch (Exception e) {
-      LOG.error("Failed to delete bucket=" + bucketName, e);
-      throw new InternalErrorException("Failed to delete bucket=" + bucketName, e);
-    }
   }
 
   public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws WalrusException {

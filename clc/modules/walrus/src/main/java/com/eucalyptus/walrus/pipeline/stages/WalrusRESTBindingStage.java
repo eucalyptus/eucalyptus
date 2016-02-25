@@ -65,8 +65,6 @@ package com.eucalyptus.walrus.pipeline.stages;
 import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.walrus.pipeline.WalrusRESTBinding;
-import com.eucalyptus.walrus.pipeline.WalrusRESTLoggerInbound;
-import com.eucalyptus.walrus.pipeline.WalrusRESTLoggerOutbound;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class WalrusRESTBindingStage implements UnrollableStage {
@@ -83,9 +81,7 @@ public class WalrusRESTBindingStage implements UnrollableStage {
 
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast("walrus-rest-logger-outbound", new WalrusRESTLoggerOutbound());
     pipeline.addLast("walrus-rest-binding", new WalrusRESTBinding());
-    pipeline.addLast("walrus-rest-logger-inbound", new WalrusRESTLoggerInbound());
   }
 
 }

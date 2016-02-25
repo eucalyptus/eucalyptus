@@ -440,88 +440,42 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   @Override
   public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyType.class,
-          com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketLocationType.class,
-          com.eucalyptus.walrus.msgs.GetBucketLocationResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.SetBucketLoggingStatusType.class,
-          com.eucalyptus.walrus.msgs.SetBucketLoggingStatusResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketLoggingStatusType.class,
-          com.eucalyptus.walrus.msgs.GetBucketLoggingStatusResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketVersioningStatusType.class,
-          com.eucalyptus.walrus.msgs.GetBucketVersioningStatusResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.SetBucketVersioningStatusType.class,
-          com.eucalyptus.walrus.msgs.SetBucketVersioningStatusResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.ListVersionsType.class, com.eucalyptus.walrus.msgs.ListVersionsResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
   public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteVersionType.class, com.eucalyptus.walrus.msgs.DeleteVersionResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   /*
@@ -574,13 +528,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   @Override
   public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception {
-    try {
-      return proxyRequest(request, com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType.class,
-          com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType.class);
-    } catch (EucalyptusCloudException e) {
-      LOG.debug("Error response from WalrusBackend", e);
-      throw mapWalrusExceptionToS3Exception(e);
-    }
+    throw new InternalErrorException("Operation not supported by walrusbackend");
   }
 
   @Override
