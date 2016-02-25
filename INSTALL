@@ -333,16 +333,13 @@ Run the "configure" script to prepare the system to build:
 >>>>> Command 8a: 
 # cd $EUCAGIT/eucalyptus
 
-
-If you are building packages to install on RHEL 6, define 
 >>>>> Command 8b: 
 # ./configure --with-axis2==/usr/share/java/axis2 \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
 --with-db-home=/usr/pgsql-9.2 \
---with-wsdl2c-sh=/root/euca/git/eucalyptus/devel/euca-WSDL2C.sh \
+--with-wsdl2c-sh=$EUCAGIT/eucalyptus/devel/euca-WSDL2C.sh \
 $EUCASTART
-
 
 Run the "make" commands below. 
 
