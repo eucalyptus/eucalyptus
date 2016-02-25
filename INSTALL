@@ -164,30 +164,33 @@ source code, install it into a destination file tree, and create binary RPMs
 that can be installed on this system or any other system that has been
 prepared using steps 1-3 above.
 
-Link the files from the rpmspec repo in their proper places:
+Remove any artifacts from the previous rpmbuild:
 
->>>>> Commands 4a: 
-# ln -fs $EUCAGIT/eucalyptus-rpmspec/eucalyptus.spec $EUCARPM/SPECS && \
-ln -fs $EUCAGIT/eucalyptus-rpmspec/euca-WSDL2C.sh $EUCARPM/SOURCES
->>>>> (end of commands)
-(Note this 2nd command links into SOURCES, not SPECS!)
+BE CAREFUL: Make sure $EUCARPM is defined!
+>>>>> Command 4a: 
+# if [ -n "$EUCARPM" ]; then rm -Rf $EUCARPM/*/*; fi
+
+Link to the RPM spec file:
+
+>>>>> Command 4b: 
+# ln -fs $EUCAGIT/eucalyptus-rpmspec/eucalyptus.spec $EUCARPM/SPECS
 
 Create the tarballs of eucalyptus and the eucalyptus-cloud-libs that
 rpmbuild will un-tar and build:
 
->>>>> Commands 4b: 
+>>>>> Commands 4c: 
 # cd $EUCAGIT && \
 tar -cvJf $EUCARPM/SOURCES/eucalyptus.tar.xz --exclude .git --exclude eucalyptus/clc/lib --exclude build-info.properties eucalyptus
 >>>>> (end of commands)
 
->>>>> Commands 4c: 
+>>>>> Commands 4d: 
 # cd $EUCAGIT/eucalyptus-cloud-libs && \
 tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz --exclude .git --exclude HI --exclude tests --exclude README .
 >>>>> (end of commands)
 
 Now rpmbuild will do all of the build and packaging, in one command:
 
->>>>> Command 4d:
+>>>>> Command 4e:
 # rpmbuild --define "_topdir $EUCARPM" --define 'tarball_basedir eucalyptus' --define 'cloud_lib_tarball eucalyptus-cloud-libs.tar.xz' -bb $EUCARPM/SPECS/eucalyptus.spec
 
 
@@ -306,30 +309,51 @@ Do not use any other directory besides "/", or neither "make" nor "rpmbuild"
 will work. Future "rpmbuild"s will continue to work as long as it's defined
 this way.
 
+As of Eucalyptus v4.3 (in development), you will be able to choose whether
+to build packages to be installed on RHEL v6, or on RHEL v7. The only build
+difference is the service boot startup method.
+
+Depending on your choice, add the following environment variable to your
+.bashrc, or another file you can source before executing the commands that
+use them.
+
+To build for RHEL v6:
+
+export EUCASTART=--enable-sysvinit 
+
+To build for RHEL v7:
+
+export EUCASTART=--enable-systemd
+
 Log out and in again, or "source <this file>".
+
 
 Run the "configure" script to prepare the system to build:
 
 >>>>> Command 8a: 
 # cd $EUCAGIT/eucalyptus
 
+
+If you are building packages to install on RHEL 6, define 
 >>>>> Command 8b: 
 # ./configure --with-axis2==/usr/share/java/axis2 \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
 --with-db-home=/usr/pgsql-9.2 \
---with-wsdl2c-sh=$EUCAGIT/eucalyptus-rpmspec/euca-WSDL2C.sh
+--with-wsdl2c-sh=/root/euca/git/eucalyptus/devel/euca-WSDL2C.sh \
+$EUCASTART
+
 
 Run the "make" commands below. 
 
->>>>> Command 8c: 
+>>>>> Command 8b: 
 # make clean && make
 
 The "make clean" deletes the artifacts from any previous build. 
 
 The "make" builds the artifacts, in the $EUCAGIT/eucalyptus tree. 
 
->>>>> Command 8d: (optional)
+>>>>> Command 8c: (optional)
 # make install
 
 The "make install" copies the built artifacts into their runtime destination
@@ -349,10 +373,9 @@ NOTE: If you do a non-rpmbuild (option 2), and later wish to do an rpmbuild
 (option 1), remove all make artifacts from the non-rpmbuild before doing the
 rpmbuild:
 
->>>>> Commands 8e: 
+>>>>> Commands 8d: 
 # cd $EUCAGIT/eucalyptus
 # make distclean
-# rm -Rf $EUCAGIT/eucalyptus/clc/lib
 >>>>> (end of commands)
 
 (End)
