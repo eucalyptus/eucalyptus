@@ -122,9 +122,6 @@ enum {
     CP,
     DD,
     FILECMD,
-    GRUB,
-    GRUB_SETUP,
-    GRUB_INSTALL,
     LOSETUP,
     MKDIR,
     MKEXT3,
@@ -170,9 +167,6 @@ static char *helpers[LASTHELPER] = {
     "cp",
     "dd",
     "file",
-    "grub",
-    "grub-setup",
-    "grub-install",
     "losetup",
     "mkdir",
     "mkfs.ext3",
@@ -188,9 +182,8 @@ static char *helpers[LASTHELPER] = {
 static char *helpers_path[LASTHELPER] = { NULL };
 
 static char stage_files_dir[EUCA_MAX_PATH] = "";
-static int initialized = 0;
+static int initialized = FALSE;
 static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
-static unsigned char grub_version = 0;
 static char euca_home_path[EUCA_MAX_PATH] = "";
 static char cloud_cert_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/cloud-cert.pem";
 static char service_key_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/node-pk.pem";
@@ -288,64 +281,25 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int diskutil_init(boolean require_grub)
+int diskutil_init()
 {
-    int i = 0;
-    int ret = EUCA_OK;
-    int missing_handlers = 0;
-
-    // Just in case
-    if (require_grub > FALSE)
-        require_grub = TRUE;
-
-    // if init was called without grub requirement, it will run again if grub is needed now
-    if (initialized < (1 + require_grub)) {
-        bzero(helpers_path, sizeof(helpers_path));  //! @fixme: chuck - this does not reset the whole array
+   int ret = EUCA_OK;
+   int missing_handlers = 0;
+   if (!initialized) {
+        bzero(helpers_path, sizeof(helpers_path));
         missing_handlers = verify_helpers(helpers, helpers_path, LASTHELPER);
-        if (helpers_path[GRUB])
-            grub_version = 1;
-        else
-            missing_handlers--;
-
-        if (helpers_path[GRUB_SETUP]) {
-            // don't need it, but grub-setup only exists on v2
-            if (grub_version != 1) {
-                // prefer 1 until 2 is implemented
-                grub_version = 2;
-            }
-        } else
-            missing_handlers--;
-
-        if (require_grub && grub_version == 0) {
-            LOGERROR("cannot find either grub 1 or grub 2\n");
-            ret = EUCA_ERROR;
-        } else if (grub_version == 1) {
-            // grub 1 commands seem present, check for stage files, which we will be copying
-            if (!try_stage_dir("/usr/lib/grub/x86_64-pc") || !try_stage_dir("/usr/lib/grub/i386-pc") || !try_stage_dir("/usr/lib/grub")
-                || !try_stage_dir("/boot/grub")) {
-                LOGINFO("found grub 1 stage files in %s\n", stage_files_dir);
-            } else if (require_grub) {
-                LOGERROR("failed to find grub 1 stage files (in /boot/grub et al)\n");
-                ret = EUCA_ERROR;
-            }
-        } else if (grub_version == 2) {
-            LOGINFO("detected grub 2\n");
-        }
-        // flag missing handlers
         if (missing_handlers) {
-            for (i = 0; i < LASTHELPER; i++) {
-                if (helpers_path[i] == NULL && i != GRUB && i != GRUB_SETUP && i != GRUB_INSTALL) {
-                    LOGERROR("missing a required handler: %s\n", helpers[i]);
+            for (int i = 0; i < LASTHELPER; i++) {
+                if (helpers_path[i] == NULL) {
+                    LOGERROR("ERROR: missing a required handler: %s\n", helpers[i]);
                     ret = EUCA_ERROR;
                 }
             }
         }
-
-        if ((initialized < 1) && (loop_sem == NULL))
+        if (loop_sem == NULL)
             loop_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
-        initialized = 1 + require_grub;
+        initialized = 1;
     }
-
     return (ret);
 }
 
@@ -1184,303 +1138,6 @@ int diskutil_write2file(const char *file, const char *str)
 
     LOGERROR("failed to write to file. Bad params: file=%p, str=%p\n", file, str);
     return (EUCA_INVALID_ERROR);
-}
-
-//!
-//! combines functionalities of diskutil_grub_files() and diskutil_grub2_mbr(),
-//! performing them one after another
-//!
-//! @param[in] path
-//! @param[in] mnt_pt
-//! @param[in] part
-//! @param[in] kernel
-//! @param[in] ramdisk
-//!
-//! @return The result of either diskutil_grub_files() or diskutil_grub2_mbr().
-//!
-//! @see diskutil_grub2_mbr()
-//! @see diskutil_grub_files()
-//!
-//! @pre The path, mnt_pt and kernel parameters should not be NULL;
-//!
-//! @post
-//!
-int diskutil_grub(const char *path, const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
-{
-    int ret = EUCA_ERROR;
-
-    if ((ret = diskutil_grub_files(mnt_pt, part, kernel, ramdisk)) != EUCA_OK)
-        return (ret);
-
-    ret = diskutil_grub2_mbr(path, part, mnt_pt);
-    return (ret);
-}
-
-//!
-//!
-//!
-//! @param[in] mnt_pt
-//! @param[in] part
-//! @param[in] kernel
-//! @param[in] ramdisk
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if any error occured.
-//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions
-//!
-//! @pre Both mnt_pt and kernel parameters must not be NULL.
-//!
-//! @post
-//!
-int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
-{
-    char *output = NULL;
-    char *kfile = "euca-vmlinuz";
-    char *rfile = "euca-initrd";
-    char buf[1024] = { 0 };
-    char buf2[1024] = { 0 };
-    char initrd[1024] = { 0 };
-    char grub_conf_path[EUCA_MAX_PATH] = { 0 };
-    char menu_lst_path[EUCA_MAX_PATH] = { 0 };
-
-    if (mnt_pt && kernel) {
-        LOGINFO("installing kernel and ramdisk\n");
-        output = pruntf(TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
-        if (!output) {
-            LOGERROR("failed to create grub directory\n");
-            return (EUCA_ERROR);
-        }
-        EUCA_FREE(output);
-
-        if (grub_version == 1) {
-            output = pruntf(TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
-            if (!output) {
-                LOGERROR("failed to copy stage files into grub directory\n");
-                return (EUCA_ERROR);
-            }
-            EUCA_FREE(output);
-        }
-
-        output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
-        if (!output) {
-            LOGERROR("failed to copy the kernel to boot directory\n");
-            return (EUCA_ERROR);
-        }
-        EUCA_FREE(output);
-
-        if (ramdisk) {
-            output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
-            if (!output) {
-                LOGERROR("failed to copy the ramdisk to boot directory\n");
-                return (EUCA_ERROR);
-            }
-            EUCA_FREE(output);
-        }
-
-        if (grub_version == 1) {
-            snprintf(menu_lst_path, sizeof(menu_lst_path), "%s/boot/grub/menu.lst", mnt_pt);
-            snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
-
-            snprintf(buf, sizeof(buf), "default=0\n" "timeout=2\n\n" "title TheOS\n" "root (hd0,%d)\n" "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile); // grub 1 expects 0 for first partition
-            if (ramdisk) {
-                snprintf(buf2, sizeof(buf2), "initrd /boot/%s\n", rfile);
-                strncat(buf, buf2, sizeof(buf) - 1);
-            }
-
-            if (diskutil_write2file(menu_lst_path, buf) != EUCA_OK) {
-                return (EUCA_ERROR);
-            }
-
-        } else if (grub_version == 2) {
-            snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.cfg", mnt_pt);
-            if (ramdisk) {
-                snprintf(initrd, sizeof(initrd), "  initrd /boot/%s\n", rfile);
-            }
-            snprintf(buf, sizeof(buf), "set default=0\n" "set timeout=2\n" "insmod part_msdos\n" "insmod ext2\n" "set root='(hd0,%d)'\n" "menuentry 'TheOS' --class os {\n" "  linux /boot/%s root=/dev/sda1 ro\n" "%s" "}\n", part + 1, kfile, initrd);    // grub 2 expects 1 for first partition
-        }
-
-        if (diskutil_write2file(grub_conf_path, buf) != EUCA_OK) {
-            return (EUCA_ERROR);
-        }
-
-        return (EUCA_OK);
-    }
-
-    return (EUCA_INVALID_ERROR);
-}
-
-//!
-//!
-//!
-//! @param[in] path
-//! @param[in] part
-//!
-//! @return EUCA_ERROR if grub_version is not 1 or the result of the diskutil_grub2_mbr() call.
-//!
-//! @pre The path parameter should not be NULL.
-//!
-//! @post
-//!
-int diskutil_grub_mbr(const char *path, const int part)
-{
-    if (grub_version != 1) {
-        LOGERROR("grub 2 is not supported\n");
-        return (EUCA_ERROR);
-    }
-    return diskutil_grub2_mbr(path, part, NULL);
-}
-
-//!
-//!
-//!
-//! @param[in] path
-//! @param[in] part
-//! @param[in] mnt_pt
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if any error occured.
-//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
-//!         \li EUCA_PERMISSION_ERROR: if we fail to create the temporary file.
-//!
-//! @pre \li The path parameter must not be NULL.
-//!      \li If we use GRUB version 2, then the mnt_pt parameter must not be NULL.
-//!      \li GRUB must be installed on the system/
-//!
-//! @note
-//!
-int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
-{
-#define _PR()                         fprintf (fp, "%s", s);    // logprintfl (EUCADEBUG, "\t%s", s)
-
-    int rc = 1;
-    int tfd = -1;
-    int bytes_read = -1;
-    int read_bytes = -1;
-    FILE *fp = NULL;
-    char *output = NULL;
-    char s[EUCA_MAX_PATH] = { 0 };
-    char buf[1024] = { 0 };
-    char cmd[1024] = { 0 };
-    char part_path[EUCA_MAX_PATH] = { 0 };
-    char device_map_path[EUCA_MAX_PATH] = { 0 };
-    char device_map_buf[512] = { 0 };
-    char tmp_file[EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
-    boolean saw_done = FALSE;
-    boolean created_partition_softlink = FALSE;
-
-    if (path == NULL) {
-        LOGERROR("invocation of diskutil_grub2_mbr unknown path\n");
-        return (EUCA_INVALID_ERROR);
-    }
-
-    if ((grub_version != 1) && (grub_version != 2)) {
-        LOGERROR("invocation of diskutil_grub2_mbr without grub found\n");
-        return (EUCA_INVALID_ERROR);
-    }
-
-    if ((mnt_pt == NULL) && (grub_version != 1)) {
-        LOGERROR("invocation of diskutil_grub2_mbr with grub 1 params\n");
-        return (EUCA_INVALID_ERROR);
-    }
-
-    LOGINFO("installing grub in MBR\n");
-    if (grub_version == 1) {
-        if ((tfd = safe_mkstemp(tmp_file)) < 0) {
-            LOGERROR("mkstemp() failed: %s\n", strerror(errno));
-            return (EUCA_PERMISSION_ERROR);
-        }
-        // create a soft link of the first partition's device mapper entry in the
-        // form that grub is looking for (not DISKp1 but just DISK1)
-        created_partition_softlink = FALSE;
-        snprintf(part_path, sizeof(EUCA_MAX_PATH), "%s1", path);
-        if (check_path(part_path) != 0) {
-            if ((output = pruntf(TRUE, "%s /bin/ln -s %sp1 %s", helpers_path[ROOTWRAP], path, part_path)) == NULL) {
-                LOGINFO("warning: failed to create partition device soft-link (%s)\n", part_path);
-            } else {
-                created_partition_softlink = TRUE;
-                EUCA_FREE(output);
-            }
-        }
-        // we now invoke grub through euca_rootwrap because it may need to operate on
-        // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
-        snprintf(cmd, sizeof(cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
-        LOGDEBUG("running %s\n", cmd);
-        errno = 0;
-        if ((fp = popen(cmd, "w")) != NULL) {
-            snprintf(s, sizeof(s), "device (hd0) %s\n", path);
-            _PR();
-            snprintf(s, sizeof(s), "root (hd0,%d)\n", part);
-            _PR();
-            snprintf(s, sizeof(s), "setup (hd0)\n");
-            _PR();
-            snprintf(s, sizeof(s), "quit\n");
-            _PR();
-            rc = pclose(fp);           // base success on exit code of grub
-        }
-
-        if (rc) {
-            LOGERROR("failed to run grub 1 on disk '%s': %s\n", path, strerror(errno));
-        } else {
-            bzero(buf, sizeof(buf));
-            saw_done = FALSE;
-            do {
-                // read in a line
-                bytes_read = 0;
-                while ((sizeof(buf) - 2 - bytes_read) > 0   // there is space in buffer for \n and \0
-                       && ((read_bytes = read(tfd, buf + bytes_read, 1)) > 0))
-                    if (buf[bytes_read++] == '\n')
-                        break;
-                if (read_bytes < 0)    // possibly truncated output, ensure there is newline
-                    buf[bytes_read++] = '\n';
-                buf[bytes_read] = '\0';
-                LOGDEBUG("\t%s", buf); // log grub 1 prompts and our inputs
-                if (strstr(buf, "Done."))   // this indicates that grub 1 succeeded (the message has been there since 2000)
-                    saw_done = TRUE;
-            } while (read_bytes > 0);
-            close(tfd);
-
-            if (saw_done == FALSE) {
-                LOGERROR("failed to run grub 1 on disk '%s'\n", path);
-                rc = 1;
-            } else {
-                rc = 0;
-            }
-        }
-
-        // try to remove the partition device soft link that may have been created above
-        if (created_partition_softlink) {
-            if ((output = pruntf(TRUE, "%s /bin/rm %s", helpers_path[ROOTWRAP], part_path)) == NULL) {
-                LOGINFO("warning: failed to remove partition device soft-link\n");
-            } else {
-                EUCA_FREE(output);
-            }
-        }
-
-    } else if (grub_version == 2) {
-        // create device.map file
-        snprintf(device_map_path, sizeof(device_map_path), "%s/boot/grub/device.map", mnt_pt);
-        snprintf(device_map_buf, sizeof(device_map_buf), "(hd0) %s\n", path);
-        if (diskutil_write2file(device_map_path, device_map_buf) != EUCA_OK) {
-            LOGWARN("failed to create device.map file\n");
-        } else {
-            LOGINFO("wrote to '%s':\n", device_map_path);
-            LOGINFO("%s", device_map_buf);
-        }
-
-        output = pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
-        if (!output) {
-            LOGERROR("failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
-        } else {
-            EUCA_FREE(output);
-            rc = 0;
-        }
-    }
-
-    if (rc == 0)
-        return (EUCA_OK);
-    return (EUCA_ERROR);
-
-#undef _PR
 }
 
 //!
