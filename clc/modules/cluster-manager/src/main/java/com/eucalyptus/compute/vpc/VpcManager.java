@@ -28,6 +28,8 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
@@ -769,43 +771,8 @@ public class VpcManager {
                             "Route limit exceeded for " + request.getRouteTableId() );
                       }
 
-                      NetworkInterface targetNetworkInterface = networkInterface;
-                      if ( instance != null ) {
-                        final List<NetworkInterface> enis = instance.getNetworkInterfaces( );
-                        if ( enis.size() != 1 ) {
-                          throw new ClientComputeException(
-                              "InvalidInstanceID",
-                              "Network interface not found for " + request.getInstanceId( ) );
-                        }
-                        targetNetworkInterface = enis.get( 0 );
-                      }
-
-                      final Route route;
-                      if ( targetNetworkInterface != null ) {
-                        if ( !RestrictedTypes.filterPrivileged( ).apply( targetNetworkInterface ) ||
-                            !targetNetworkInterface.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
-                          throw new ClientComputeException(
-                              "InvalidParameterValue",
-                              "Network interface invalid: " + targetNetworkInterface.getDisplayName( ) );
-                        }
-                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, targetNetworkInterface );
-                      } else if ( natGateway != null ) {
-                        if ( !RestrictedTypes.filterPrivileged( ).apply( natGateway ) ||
-                            !natGateway.getVpcId( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
-                          throw new ClientComputeException(
-                              "InvalidParameterValue",
-                              "NAT gateway invalid: " + natGateway.getDisplayName( ) );
-                        }
-                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, natGateway );
-                      } else {
-                        if ( internetGateway== null || internetGateway.getVpc( )==null ||
-                            !internetGateway.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
-                          throw new ClientComputeException(
-                              "InvalidParameterValue",
-                              "Internet gateway invalid: " + gatewayId );
-                        }
-                        route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway );
-                      }
+                      final Route route = createRouteForTarget(
+                          routeTable, destinationCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
 
                       routeTable.getRoutes().add( route );
                       routeTable.updateTimeStamps( ); // ensure version of table increments also
@@ -1863,12 +1830,22 @@ public class VpcManager {
     final ReplaceRouteResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
-    final String gatewayId = Identifier.igw.normalize( request.getGatewayId( ) );
+    final String gatewayId = request.getGatewayId( ) == null ?
+        null : Identifier.igw.normalize( request.getGatewayId( ) );
+    final String natGatewayId = request.getNatGatewayId( ) == null ?
+        null : Identifier.nat.normalize( request.getNatGatewayId( ) );
+    final String instanceId = request.getInstanceId( ) == null ?
+        null : Identifier.i.normalize( request.getInstanceId( ) );
+    final String networkInterfaceId = request.getNetworkInterfaceId( ) == null ?
+        null : Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     final String destinationCidr = request.getDestinationCidrBlock( );
     final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
     if ( !destinationCidrOption.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
+    }
+    if ( gatewayId == null && natGatewayId == null && instanceId == null && networkInterfaceId == null ) {
+      throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
     }
     try {
       routeTables.updateByExample(
@@ -1879,8 +1856,14 @@ public class VpcManager {
             @Override
             public void fire( final RouteTable routeTable ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
-                final InternetGateway internetGateway =
+                final NetworkInterface networkInterface = networkInterfaceId == null ? null :
+                    networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.<NetworkInterface>identity( ) );
+                final VmInstance instance = instanceId == null ? null :
+                    VmInstances.lookup( instanceId );
+                final InternetGateway internetGateway = gatewayId == null ? null :
                     internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
+                final NatGateway natGateway = natGatewayId == null ? null :
+                    natGateways.lookupByName( accountFullName, natGatewayId, Functions.<NatGateway>identity() );
 
                 final List<Route> routes = routeTable.getRoutes( );
                 final Optional<Route> oldRoute =
@@ -1888,15 +1871,16 @@ public class VpcManager {
                         destinationCidr,
                         RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
 
+                final Route route = createRouteForTarget(
+                    routeTable, destinationCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
+
                 if ( !oldRoute.isPresent( ) ) {
                   throw new ClientComputeException(
                       "InvalidRoute.NotFound",
                       "Route not found for cidr: " + destinationCidr );
                 }
 
-                routes.set(
-                    routes.indexOf( oldRoute.get() ),
-                    Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway ) );
+                routes.set( routes.indexOf( oldRoute.get( ) ), route );
                 routeTable.updateTimeStamps( ); // ensure version of table increments also
               } catch ( Exception e ) {
                 throw Exceptions.toUndeclared( e );
@@ -2141,6 +2125,57 @@ public class VpcManager {
             egress,
             NetworkAcls.NetworkAclEntryFilterBooleanFunctions.EGRESS )
     );
+  }
+
+  @Nonnull
+  private static Route createRouteForTarget(
+      @Nonnull  final RouteTable routeTable,
+      @Nonnull  final String destinationCidr,
+      @Nullable final NetworkInterface networkInterface,
+      @Nullable final VmInstance instance,
+      @Nullable final NatGateway natGateway,
+      @Nullable final InternetGateway internetGateway,
+      @Nullable final String gatewayId
+  ) throws ClientComputeException {
+    NetworkInterface targetNetworkInterface = networkInterface;
+    if ( instance != null ) {
+      final List<NetworkInterface> enis = instance.getNetworkInterfaces( );
+      if ( enis.size() != 1 ) {
+        throw new ClientComputeException(
+            "InvalidInstanceID",
+            "Network interface not found for " + instance.getDisplayName( ) );
+      }
+      targetNetworkInterface = enis.get( 0 );
+    }
+
+    final Route route;
+    if ( targetNetworkInterface != null ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( targetNetworkInterface ) ||
+          !targetNetworkInterface.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+        throw new ClientComputeException(
+            "InvalidParameterValue",
+            "Network interface invalid: " + targetNetworkInterface.getDisplayName( ) );
+      }
+      route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, targetNetworkInterface );
+    } else if ( natGateway != null ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( natGateway ) ||
+          !natGateway.getVpcId( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+        throw new ClientComputeException(
+            "InvalidParameterValue",
+            "NAT gateway invalid: " + natGateway.getDisplayName( ) );
+      }
+      route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, natGateway );
+    } else {
+      if ( internetGateway== null || internetGateway.getVpc( )==null ||
+          !internetGateway.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
+        throw new ClientComputeException(
+            "InvalidParameterValue",
+            "Internet gateway invalid: " + gatewayId );
+      }
+      route = Route.create( routeTable, Route.RouteOrigin.CreateRoute, destinationCidr, internetGateway );
+    }
+
+    return route;
   }
 
   private void invalidate( final String resourceIdentifier ) {
