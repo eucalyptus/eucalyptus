@@ -251,6 +251,7 @@ install: deploy
 	$(INSTALL) -d $(DESTDIR)$(policiesdir)
 	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(policiesdir)
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
+	$(INSTALL) -m 0755 eucalyptus-node $(DESTDIR)$(sbindir)/eucalyptus-node
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(policiesdir)/nc-client-policy.xml

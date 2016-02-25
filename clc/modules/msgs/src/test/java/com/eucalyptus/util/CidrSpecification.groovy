@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,18 +46,17 @@ class CidrSpecification extends Specification {
     '1.1.1.1/32' | 16843009 | 32
   }
 
-  def 'should tolerate whitespace in cidr'() {
-    expect: 'parsed cidr equals specified cidr'
-    Groovyness.expandoMetaClass( parse( cidr ) ) == cidr( ip, prefix )
+  def 'should support lax parsing'() {
+    expect: 'parsed and normalized cidr equals specified cidr'
+    Groovyness.expandoMetaClass( parse( cidr, true ) ) == cidr( ip, prefix )
 
     where:
-    cidr            | ip       | prefix
-    ' 1.1.1.1/32'   | 16843009 | 32
-    '1.1.1.1/32 '   | 16843009 | 32
-    ' 1.1.1.1/32 '  | 16843009 | 32
-    '1.1.1.1 /32'   | 16843009 | 32
-    '1.1.1.1/ 32'   | 16843009 | 32
-    '1.1.1.1/\t32'  | 16843009 | 32
+    cidr                 | ip         | prefix
+    '255.255.255.255/0'  | 0          | 0
+    '10.0.0.0/0'         | 0          | 0
+    '127.255.255.255/16' | 2147418112 | 16
+    '1.1.1.1'            | 16843009   | 32
+    '1.1.1.1/32'         | 16843009   | 32
   }
 
   def 'should reject invalid cidrs with IllegalArgumentException'() {
@@ -81,7 +80,12 @@ class CidrSpecification extends Specification {
         '0.0.0.0/33',
         '-1.-1.-1.-1/1',
         '1.1.1.1/32/',
-        '1.1.1.1/31'
+        '1.1.1.1/31',
+        ' 1.1.1.1/32',
+        '1.1.1.1/32 ',
+        '1.1.1.1 / 32',
+        '1.1.1.1 /32',
+        '1.1.1.1/\t32'
     ]
   }
 
@@ -120,13 +124,28 @@ class CidrSpecification extends Specification {
 
   def 'should have a string representation'(){
     expect: 'parsed cidr string conversion check'
-    Groovyness.expandoMetaClass( parse( cidr ) ).toString( ) == result
+    Groovyness.expandoMetaClass( parse( cidr, true ) ).toString( ) == result
 
     where:
     cidr                | result
     '0.0.0.0/0'         | '0.0.0.0/0'
+    '10.0.0.0/0'        | '0.0.0.0/0'
     '10.1.0.0/32'       | '10.1.0.0/32'
-    '10.0.0.0 / 8'      | '10.0.0.0/8'
+    '10.0.0.0/8'        | '10.0.0.0/8'
+  }
+
+  def 'should fail for invalid prefix when not parsing as lax'(){
+    when: 'cidr with invalid prefix parsed'
+    parse( cidr )
+
+    then: 'an exception is thrown'
+    thrown IllegalArgumentException
+
+    where:
+    cidr << [
+      '10.0.0.0/0',
+      '255.255.255.255/31'
+    ]
   }
 
   def 'should allow use as a map key'(){
@@ -141,7 +160,7 @@ class CidrSpecification extends Specification {
     cidr                | value
     '0.0.0.0/0'         | '1'
     '10.1.0.0/32'       | '10.1.0.0/32'
-    '10.0.0.0 / 8'      | 'value'
+    '10.0.0.0/8'        | 'value'
   }
 
   def 'should be able to create CIDR for an address and prefix'(){

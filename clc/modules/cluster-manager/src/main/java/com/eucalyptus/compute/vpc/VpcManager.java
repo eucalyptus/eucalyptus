@@ -328,15 +328,21 @@ public class VpcManager {
                       "Network interface "+networkInterfaceId+" is already attached to instance " +
                           networkInterface.getAttachment( ).getInstanceId( ) ) );
                 }
-                //noinspection ConstantConditions
-                final int maxInterfaces = VmTypes.lookup( vm.getInstanceType( ) ).getNetworkInterfaces( );
-                if ( deviceIndex < 0 || deviceIndex >= maxInterfaces ) {
-                  throw new ClientComputeException( "InvalidParameterValue", "Device index invalid for instance type" );
+                if ( deviceIndex < 0 || deviceIndex > 31 ) {
+                  throw new ClientComputeException( "InvalidParameterValue", "Invalid network device index '"+deviceIndex+"'" );
                 }
+                //noinspection ConstantConditions
                 for ( final NetworkInterface eni : vm.getNetworkInterfaces( ) ) {
                   if ( eni.isAttached( ) && deviceIndex.equals( eni.getAttachment( ).getDeviceIndex( ) ) ) {
                     throw new ClientComputeException( "InvalidParameterValue", "Device index in use" );
                   }
+                }
+                final int interfaceCount = vm.getNetworkInterfaces( ).size( ) + 1;
+                final int maxInterfaces = VmTypes.lookup( vm.getInstanceType( ) ).getNetworkInterfaces( );
+                if ( interfaceCount > maxInterfaces ) {
+                  throw new ClientComputeException(
+                      "AttachmentLimitExceeded",
+                      "Interface count "+interfaceCount+" exceeds the limit for " + vm.getInstanceType( ) );
                 }
                 final NetworkInterfaceAttachment.Status initialState;
                 if ( VmInstance.VmState.RUNNING.apply( vm ) ) {

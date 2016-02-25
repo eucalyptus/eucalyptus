@@ -89,7 +89,7 @@ configEntry configKeysRestartCC[] = {
     ,
     {"VNET_BROADCAST", NULL}
     ,
-    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"}
+    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd"}
     ,
     {"VNET_DHCPUSER", "dhcpd"}
     ,

@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Eucalyptus cluster controller startup script
+#
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+
+[ -z "$EUCALYPTUS" ] && EUCALYPTUS=@prefix@
+if [ -f "$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf" ]; then
+    . "$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+fi
+[ "$EUCALYPTUS" = not_configured ] && EUCALYPTUS=@prefix@
+[ -z "$EUCALYPTUS" ]         && EUCALYPTUS=@prefix@
+[ -z "$EUCA_USER" ]          && EUCA_USER=eucalyptus
+[ -z "$CC_PORT" ]            && CC_PORT=8774
+[ -z "$AXIS2C_HOME" ]        && AXIS2C_HOME="@AXIS2C_HOME@"
+[ -z "$APACHE2_MODULE_DIR" ] && APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
+
+HTTPD_CONF="$EUCALYPTUS/run/eucalyptus/httpd-cc.conf"
+HTTPD_CONF_TEMPLATE="$EUCALYPTUS/etc/eucalyptus/httpd.conf"
+HTTPD_LOGFILE="$EUCALYPTUS/var/log/eucalyptus/httpd-cluster_error_log"
+PIDFILE="$EUCALYPTUS/run/eucalyptus/eucalyptus-cluster.pid"
+
+# Write httpd.conf
+sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+    -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
+    -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
+    -e "s|\(ServerRoot\).*|\1 /|" \
+    -e "s|EUCA_USER|$EUCA_USER|" \
+    -e "s|\(Listen\).*|\1 $CC_PORT|" \
+    -e "s|\(PidFile\).*|\1 $PIDFILE|" \
+    -e "s|\(Allow from\).*|\1 all|" \
+    -e "s|\(ErrorLog\).*|\1 $HTTPD_LOGFILE|" \
+    -e "s|\(StartServers\).*|\1 5|" \
+    -e "s|\(MinSpareServers\).*|\1 5|" \
+    -e "s|\(MaxSpareServers\).*|\1 10|" \
+    -e "s|\(MaxClients\).*|\1 8|" \
+    -e "s|\(MinSpareThreads\).*|\1 25|" \
+    -e "s|\(MaxSpareThreads\).*|\1 75|" \
+    -e "s|\(ThreadsPerChild\).*|\1 1|" \
+    -e "s|\(ThreadLimit\).*|\1 64|" \
+    $HTTPD_CONF_TEMPLATE > "$HTTPD_CONF"
+for mod in authn_core authz_core authz_host mpm_prefork unixd; do
+    if [ -e "$APACHE2_MODULE_DIR/mod_$mod.so" ]; then
+        sed -i "1iLoadModule ${mod}_module $APACHE2_MODULE_DIR/mod_$mod.so" "$HTTPD_CONF"
+    fi
+done
+
+# Clear semaphores and all other local state that may be left over from
+# previous runs
+rm -f /dev/shm/*eucalyptusCC*
+rm -f "$EUCALYPTUS"/var/lib/eucalyptus/CC/*
+
+export AXIS2C_HOME  # https://eucalyptus.atlassian.net/browse/EUCA-12046
+export EUCALYPTUS
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
+exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND

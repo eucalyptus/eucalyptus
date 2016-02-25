@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# Eucalyptus node controller startup script
+#
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+
+[ -z "$EUCALYPTUS" ] && EUCALYPTUS=@prefix@
+if [ -f "$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf" ]; then
+    . "$EUCALYPTUS/etc/eucalyptus/eucalyptus.conf"
+fi
+[ "$EUCALYPTUS" = not_configured ] && EUCALYPTUS=@prefix@
+[ -z "$EUCALYPTUS" ]         && EUCALYPTUS=@prefix@
+[ -z "$EUCA_USER" ]          && EUCA_USER=eucalyptus
+[ -z "$NC_PORT" ]            && NC_PORT=8775
+[ -z "$AXIS2C_HOME" ]        && AXIS2C_HOME="@AXIS2C_HOME@"
+[ -z "$APACHE2_MODULE_DIR" ] && APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
+
+HTTPD_CONF="$EUCALYPTUS/run/eucalyptus/httpd-nc.conf"
+HTTPD_CONF_TEMPLATE="$EUCALYPTUS/etc/eucalyptus/httpd.conf"
+HTTPD_LOGFILE="$EUCALYPTUS/var/log/eucalyptus/httpd-node_error_log"
+PIDFILE="$EUCALYPTUS/run/eucalyptus/eucalyptus-node.pid"
+
+# Write httpd.conf
+sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
+    -e "s|APACHE2_MODULE_DIR|$APACHE2_MODULE_DIR|" \
+    -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
+    -e "s|\(ServerRoot\).*|\1 /|" \
+    -e "s|EUCA_USER|$EUCA_USER|" \
+    -e "s|\(Listen\).*|\1 $NC_PORT|" \
+    -e "s|\(PidFile\).*|\1 $PIDFILE|" \
+    -e "s|\(Allow from\).*|\1 all|" \
+    -e "s|\(ErrorLog\).*|\1 $HTTPD_LOGFILE|" \
+    $HTTPD_CONF_TEMPLATE > "$HTTPD_CONF"
+for mod in authn_core authz_core authz_host mpm_prefork unixd; do
+    if [ -e "$APACHE2_MODULE_DIR/mod_$mod.so" ]; then
+        sed -i "1iLoadModule ${mod}_module $APACHE2_MODULE_DIR/mod_$mod.so" "$HTTPD_CONF"
+    fi
+done
+
+export EUCALYPTUS
+export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
+exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND

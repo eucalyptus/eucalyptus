@@ -79,16 +79,7 @@ distclean:
 	@make -C imaging distclean
 
 install: build
-	@if test -e /etc/init.d/eucalyptus ; then \
-		mv /etc/init.d/eucalyptus /etc/init.d/eucalyptus.old ; \
-		echo "Moving away old init.d script"; fi
-	@if test -e $(DESTDIR)$(etcdir)/init.d/eucalyptus ; then \
-		mv $(DESTDIR)$(etcdir)/init.d/eucalyptus $(DESTDIR)$(etcdir)/init.d/eucalyptus.old ; fi
-	@$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
-	@$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 eucalyptus-logrotate.conf $(DESTDIR)$(etcdir)/logrotate.d/eucalyptus
-	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(DESTDIR)$(etcdir)/eucalyptus
 	@if test -e $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
@@ -102,9 +93,6 @@ install: build
 	@$(INSTALL) -m 755 get_sys_info $(DESTDIR)$(datarootdir)/eucalyptus/get_sys_info
 	@$(INSTALL) -m 755 euca_ipt $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 populate_arp.pl $(DESTDIR)$(datarootdir)/eucalyptus
-#	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
-#	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
-#	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 connect_iscsitarget_sc.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 connect_iscsitarget_main.pl $(DESTDIR)$(datarootdir)/eucalyptus
@@ -143,6 +131,12 @@ install: build
 	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
 	@make -C status install
 	@make -C imaging install
+ifeq ($(USE_SYSVINIT), yes)
+	$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
+	$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
+	$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
+	$(INSTALL) -m 755 eucanetd $(DESTDIR)$(etcdir)/init.d
+endif
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud

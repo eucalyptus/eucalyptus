@@ -185,7 +185,7 @@ int init_emitter(const char *euca_home) {
         return EUCA_ERROR;
     }
     
-    if(diskutil_init(FALSE) != EUCA_OK) {
+    if(diskutil_init() != EUCA_OK) {
         LOGERROR("Diskutil init failed. Cannot initialize fs emitter\n");
         return EUCA_ERROR;
     }
