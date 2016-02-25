@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
@@ -53,6 +54,13 @@ import com.google.common.primitives.Longs;
 @ComponentNamed
 public class TaskTokenManager {
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
+  private static final Supplier<String> securityTokenPasswordSupplier = Suppliers.memoize(
+      new Supplier<String>( ) {
+        @Override
+        public String get() {
+          return SystemIds.securityTokenPassword( );
+        }
+      } );
 
   @Nonnull
   public String encryptTaskToken( @Nonnull final TaskToken taskToken ) {
@@ -72,7 +80,7 @@ public class TaskTokenManager {
   }
 
   protected String getTokenPassword() {
-    return SystemIds.securityTokenPassword( );
+    return securityTokenPasswordSupplier.get( );
   }
 
   private SecretKey getEncryptionKey( final String salt ) {

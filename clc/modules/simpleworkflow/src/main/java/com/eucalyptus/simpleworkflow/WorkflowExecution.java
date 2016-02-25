@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,7 +109,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @JoinColumn( name = "domain_id", nullable = false, updatable = false )
   private Domain domain;
 
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "workflow_type_id", nullable = false, updatable = false )
   private WorkflowType workflowType;
 
