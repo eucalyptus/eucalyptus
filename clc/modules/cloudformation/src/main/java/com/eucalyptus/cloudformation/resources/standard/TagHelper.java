@@ -29,6 +29,7 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoS
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.loadbalancing.common.msgs.TagList;
 import com.eucalyptus.util.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -154,5 +155,18 @@ public class TagHelper {
         throw new ValidationErrorException("Tag " + tag.getKey() + " uses a reserved prefix " + reservedPrefixes);
       }
     }
+  }
+
+  public static TagList convertToTagList(List<CloudFormationResourceTag> cloudFormationResourceTags) {
+    TagList tagList = new TagList();
+    if (cloudFormationResourceTags != null) {
+      for (CloudFormationResourceTag cloudFormationResourceTag: cloudFormationResourceTags) {
+        com.eucalyptus.loadbalancing.common.msgs.Tag tag = new com.eucalyptus.loadbalancing.common.msgs.Tag();
+        tag.setKey(cloudFormationResourceTag.getKey());
+        tag.setValue(cloudFormationResourceTag.getValue());
+        tagList.getMember().add(tag);
+      }
+    }
+    return tagList;
   }
 }

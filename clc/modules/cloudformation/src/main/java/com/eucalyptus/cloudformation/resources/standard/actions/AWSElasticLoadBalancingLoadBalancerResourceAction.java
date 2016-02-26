@@ -20,11 +20,14 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingLoadBalancerResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingLoadBalancerProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingAccessLoggingPolicy;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingListener;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyType;
@@ -33,9 +36,12 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.loadbalancing.common.msgs.AddTagsResponseType;
+import com.eucalyptus.loadbalancing.common.msgs.AddTagsType;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.ConfigureHealthCheckResponseType;
@@ -79,6 +85,8 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -148,6 +156,33 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
+    },
+    ADD_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        // Create 'system' tags as admin user
+        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber(Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber()).getUserId();
+        AddTagsType addSystemTagsType = MessageHelper.createPrivilegedMessage(AddTagsType.class, effectiveAdminUserId);
+        addSystemTagsType.setLoadBalancerNames(getLoadBalancerNames(action));
+        addSystemTagsType.setTags(TagHelper.convertToTagList(TagHelper.getCloudFormationResourceSystemTags(action.info, action.getStackEntity())));
+        AsyncRequests.<AddTagsType, AddTagsResponseType>sendSync(configuration, addSystemTagsType);
+        // Create non-system tags as regular user
+        List<CloudFormationResourceTag> tags = TagHelper.getCloudFormationResourceStackTags(action.getStackEntity());
+        if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
+          TagHelper.checkReservedCloudFormationResourceTemplateTags(action.properties.getTags());
+          tags.addAll(action.properties.getTags());
+        }
+        if (!tags.isEmpty()) {
+          AddTagsType addTagsType = MessageHelper.createMessage(AddTagsType.class, action.info.getEffectiveUserId());
+          addTagsType.setLoadBalancerNames(getLoadBalancerNames(action));
+          addTagsType.setTags(TagHelper.convertToTagList(tags));
+          AsyncRequests.<AddTagsType, AddTagsResponseType>sendSync(configuration, addTagsType);
+        }
+        return action;
+      }
+
     },
     ADD_INSTANCES_TO_LOAD_BALANCER {
       @Override
@@ -364,6 +399,12 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
     }
   }
 
+  private static LoadBalancerNames getLoadBalancerNames(AWSElasticLoadBalancingLoadBalancerResourceAction action) {
+    LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
+    loadBalancerNames.setMember(Lists.newArrayList(action.info.getPhysicalResourceId()));
+    return loadBalancerNames;
+  }
+
   private enum DeleteSteps implements Step {
     DELETE_LOAD_BALANCER {
       @Override
@@ -395,7 +436,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
       return null;
     }
   }
-
 
   @Override
   public ResourceProperties getResourceProperties() {

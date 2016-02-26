@@ -570,6 +570,8 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   List<String> securityGroups = Lists.newArrayList();
   @Property
   List<String> subnets = Lists.newArrayList();
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
 }
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
