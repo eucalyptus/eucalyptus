@@ -744,7 +744,7 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
       final String ownerAccountNumber,
       final String ownerUserId,
       final String ownerUserName,
-      final AddressDomain domain,
+      @Nonnull final AddressDomain domain,
       final String allocationId
   ) {
     final AddressStateMetadataSupport initialState = stateMetadata.get( );
@@ -1115,7 +1115,7 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
   }
 
   @Override
-  public int compareTo( AddressMetadata that ) {
+  public int compareTo( @Nonnull AddressMetadata that ) {
     return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
 

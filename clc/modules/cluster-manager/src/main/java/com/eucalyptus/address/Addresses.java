@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -693,25 +693,24 @@ public class Addresses {
               allocatedAddressPersistence.delete( addr, Predicates.alwaysTrue( ) );
               continue; // do not register
             } else if ( addr.getState( ) == AddressState.allocated ) {
-              address.allocate( addr.getOwnerAccountNumber( ), addr.getOwnerUserId( ), addr.getOwnerUserName( ), addr.getDomain( ), addr.getAllocationId( ) );
+              address.allocate( addr.getOwnerAccountNumber( ), addr.getOwnerUserId( ), addr.getOwnerUserName( ), addr.domainWithDefault( ), addr.getAllocationId( ) );
             } else if ( addr.getState( ) == AddressState.impending ) {
               address.pendingAssignment( );
-            } else if ( addr.getState( ) == AddressState.assigned ) {
+            } else if ( addr.getState( ) == AddressState.assigned || addr.getState( ) == AddressState.started ) {
               if ( addr.getOwnerAccountNumber( ) == null ||
                   addr.getOwnerAccountNumber( ).equals( Principals.systemAccount( ).getAccountNumber( ) ) ) {
                 address.pendingAssignment( );
               } else {
-                address.allocate( addr.getOwnerAccountNumber( ), addr.getOwnerUserId( ), addr.getOwnerUserName( ), addr.getDomain( ), addr.getAllocationId( )  );
+                address.allocate( addr.getOwnerAccountNumber( ), addr.getOwnerUserId( ), addr.getOwnerUserName( ), addr.domainWithDefault( ), addr.getAllocationId( )  );
               }
               if ( addr.getNetworkInterfaceId( ) == null ) {
                 address.assignClassic( addr.getInstanceId( ), addr.getInstanceUuid( ), addr.getPrivateAddress( ) );
               } else {
                 address.assignVpc( addr.getNetworkInterfaceId( ), addr.getNetworkInterfaceOwnerId( ), addr.getPrivateAddress( ), addr.getAssociationId( ) );
+                if ( addr.getState( ) == AddressState.started ) {
+                  address.start( addr.getInstanceId( ), addr.getInstanceUuid( ) );
+                }
               }
-            } else if ( addr.getState( ) == AddressState.started ) {
-              address.allocate( addr.getOwnerAccountNumber( ), addr.getOwnerUserId( ), addr.getOwnerUserName( ), addr.getDomain( ), addr.getAllocationId( )  );
-              address.assignVpc( addr.getNetworkInterfaceId( ), addr.getNetworkInterfaceOwnerId( ), addr.getPrivateAddress( ), addr.getAssociationId( ) );
-              address.start( addr.getInstanceId( ), addr.getInstanceUuid( ) );
             }
             addressRegistry.register( address );
           } catch ( Exception ex ) {
