@@ -542,7 +542,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy;
   @Property
-  ElasticLoadBalancingAppCookieStickinessPolicy appCookieStickinessPolicy;
+  List<ElasticLoadBalancingAppCookieStickinessPolicy> appCookieStickinessPolicy = Lists.newArrayList();
   @Property
   List<String> availabilityZones = Lists.newArrayList();
   @Property
@@ -556,7 +556,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   List<String> instances = Lists.newArrayList();
   @Property(name="LBCookieStickinessPolicy")
-  ElasticLoadBalancingLBCookieStickinessPolicyType lbCookieStickinessPolicy;
+  List<ElasticLoadBalancingLBCookieStickinessPolicyType> lbCookieStickinessPolicy = Lists.newArrayList();
   @Property
   String loadBalancerName;
   @Required
