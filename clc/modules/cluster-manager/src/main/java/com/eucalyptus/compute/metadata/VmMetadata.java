@@ -101,7 +101,17 @@ public class VmMetadata {
   private static//
   Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                            return ByteArray.newInstance( "" );
+                                                                                            try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+                                                                                              final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId() );
+                                                                                              final String res = VmInstanceMetadata.getDynamicByKey( instance, arg0.getLocalPath() );
+                                                                                              if ( res != null ) {
+                                                                                                return ByteArray.newInstance( res );
+                                                                                              }
+                                                                                            } catch ( NoSuchElementException e ) {
+                                                                                              // fall through and throw
+                                                                                            }
+                                                                                            throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+
                                                                                           }
                                                                                         };
   private static//
@@ -160,7 +170,7 @@ public class VmMetadata {
                                                                                                   return ByteArray.newInstance( listing );
                                                                                                 }
                                                                                               } );
-                                                                                            put( "dynamic", dynamicFunc );
+                                                                                            put( "dynamic", cache( dynamicFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                             put( "user-data", cache( userDataFunc, VmInstances.VM_METADATA_USER_DATA_CACHE ) );
                                                                                             put( "meta-data", cache( metaDataFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                           }
