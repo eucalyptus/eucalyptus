@@ -212,7 +212,7 @@ typedef struct gni_network_acl_t {
 
 typedef struct gni_route_entry_t {
     char destCidr[16];
-    char target[16];
+    char target[32];
 } gni_route_entry;
 
 typedef struct gni_route_table_t {

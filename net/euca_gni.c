@@ -2741,7 +2741,7 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
                 rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("after function: %d: %s\n", i, results[i]);
-                    snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 16, "%s", results[i]);
+                    snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 32, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
@@ -2751,7 +2751,7 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
                     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
                     for (i = 0; i < max_results; i++) {
                         LOGTRACE("after function: %d: %s\n", i, results[i]);
-                        snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 16, "%s", results[i]);
+                        snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 32, "%s", results[i]);
                         EUCA_FREE(results[i]);
                     }
                     EUCA_FREE(results);
@@ -2762,7 +2762,7 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
                     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
                     for (i = 0; i < max_results; i++) {
                         LOGTRACE("after function: %d: %s\n", i, results[i]);
-                        snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 16, "%s", results[i]);
+                        snprintf(gni->vpcs[j].routeTables[k].entries[l].target, 32, "%s", results[i]);
                         EUCA_FREE(results[i]);
                     }
                     EUCA_FREE(results);
