@@ -284,7 +284,7 @@ public class ElasticLoadBalancingListener {
   @Property
   Integer loadBalancerPort;
   @Property
-  List<String> policyNames;
+  List<String> policyNames = Lists.newArrayList();
   @Required
   @Property
   String protocol;
@@ -294,11 +294,12 @@ public class ElasticLoadBalancingListener {
 
 @ToString(includeNames=true)
 public class ElasticLoadBalancingPolicyType {
+  @Property
   List<ElasticLoadBalancingPolicyTypeAttribute> attributes = Lists.newArrayList();
   @Property
-  List<String> instancePorts = Lists.newArrayList();
+  List<Integer> instancePorts = Lists.newArrayList();
   @Property
-  List<String> loadBalancerPorts = Lists.newArrayList();
+  List<Integer> loadBalancerPorts = Lists.newArrayList();
   @Required
   @Property
   String policyName;
