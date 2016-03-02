@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 
 /**
@@ -49,6 +51,7 @@ public class NetworkInterfaceAttachment implements Serializable {
                                         final VmInstance instance,
                                         final String instanceId,
                                         final String instanceOwnerId,
+                                        final String natGatewayId,
                                         final Integer deviceIndex,
                                         final Status status,
                                         final Date attachTime,
@@ -57,12 +60,16 @@ public class NetworkInterfaceAttachment implements Serializable {
     this.instance = instance;
     this.instanceId = instanceId;
     this.instanceOwnerId = instanceOwnerId;
+    this.natGatewayId = natGatewayId;
     this.deviceIndex = deviceIndex;
     this.status = status;
     this.attachTime = attachTime;
     this.deleteOnTerminate = deleteOnTerminate;
   }
 
+  /**
+   * Create an attachment for an instance
+   */
   public static NetworkInterfaceAttachment create( final String attachmentId,
                                                    final VmInstance instance,
                                                    final String instanceId,
@@ -76,10 +83,30 @@ public class NetworkInterfaceAttachment implements Serializable {
         instance,
         instanceId,
         instanceOwnerId,
+        null,
         deviceIndex,
         status,
         attachTime,
         deleteOnTerminate
+    );
+  }
+
+  /**
+   * Create an attachment for a NAT gateway
+   */
+  public static NetworkInterfaceAttachment create( final String attachmentId,
+                                                   final String natGatewayId,
+                                                   final Status status ) {
+    return new NetworkInterfaceAttachment(
+        attachmentId,
+        null,
+        null,
+        AccountIdentifiers.SYSTEM_ACCOUNT,
+        natGatewayId,
+        1,
+        status,
+        null,
+        false
     );
   }
 
@@ -99,17 +126,30 @@ public class NetworkInterfaceAttachment implements Serializable {
   @Column( name = "metadata_att_instance_owner_id" )
   private String instanceOwnerId;
 
+  @Column( name = "metadata_att_nat_gateway_id" )
+  private String natGatewayId;
+
   @Column( name = "metadata_att_device_index" )
   private Integer deviceIndex;
 
   @Column( name = "metadata_att_status" )
   private Status status;
 
+  @Column( name = "metadata_att_last_status" )
+  private Status lastStatus;
+
   @Column( name = "metadata_att_time" )
   private Date attachTime;
 
   @Column( name = "metadata_att_delete_on_term" )
   private Boolean deleteOnTerminate;
+
+  public void transitionStatus( final Status status ) {
+    if ( status != getStatus( ) ) {
+      setLastStatus( getStatus( ) );
+      setStatus( status );
+    }
+  }
 
   protected NetworkInterface getNetworkInterface() {
     return networkInterface;
@@ -151,6 +191,14 @@ public class NetworkInterfaceAttachment implements Serializable {
     this.instanceOwnerId = instanceOwnerId;
   }
 
+  public String getNatGatewayId( ) {
+    return natGatewayId;
+  }
+
+  public void setNatGatewayId( final String natGatewayId ) {
+    this.natGatewayId = natGatewayId;
+  }
+
   public Integer getDeviceIndex() {
     return deviceIndex;
   }
@@ -165,6 +213,14 @@ public class NetworkInterfaceAttachment implements Serializable {
 
   public void setStatus( final Status status ) {
     this.status = status;
+  }
+
+  public Status getLastStatus( ) {
+    return lastStatus;
+  }
+
+  public void setLastStatus( final Status lastStatus ) {
+    this.lastStatus = lastStatus;
   }
 
   public Date getAttachTime() {

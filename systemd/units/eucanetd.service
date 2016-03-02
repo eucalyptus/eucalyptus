@@ -1,0 +1,16 @@
+[Unit]
+Description=Eucalyptus network daemon
+After=midolman.service network.target
+
+[Service]
+Type=forking
+PIDFile=/run/eucalyptus/eucanetd.pid
+ExecStart=/usr/sbin/eucanetd
+LimitNOFILE=10000
+LimitNPROC=100000
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+# vim: set syntax=dosini:

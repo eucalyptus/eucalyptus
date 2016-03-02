@@ -111,6 +111,7 @@
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="volumes" type="tns:volumeType"/>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
 	</xs:sequence>
       </xs:complexType>
      
@@ -716,6 +717,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="ownerId" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	      <xs:element minOccurs="0" name="rootDirective" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -723,6 +725,8 @@
       
       <xs:complexType name="netConfigType">
 	<xs:sequence>
+	  <xs:element name="interfaceId" type="xs:string"/>
+	  <xs:element name="device" type="xs:int"/>
 	  <xs:element name="privateMacAddress" type="xs:string"/>
 	  <xs:element name="privateIp" type="xs:string"/>
 	  <xs:element name="publicIp" type="xs:string"/>

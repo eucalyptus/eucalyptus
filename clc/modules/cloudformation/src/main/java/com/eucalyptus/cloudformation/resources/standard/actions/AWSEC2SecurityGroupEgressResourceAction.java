@@ -30,6 +30,7 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
@@ -50,6 +51,7 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -60,8 +62,41 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
   private AWSEC2SecurityGroupEgressResourceInfo info = new AWSEC2SecurityGroupEgressResourceInfo();
 
   public AWSEC2SecurityGroupEgressResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    // only replacement update options
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SecurityGroupEgressResourceAction otherAction = (AWSEC2SecurityGroupEgressResourceAction) resourceAction;
+
+    if (!Objects.equals(properties.getGroupId(), otherAction.properties.getGroupId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getIpProtocol(), otherAction.properties.getIpProtocol())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getCidrIp(), otherAction.properties.getCidrIp())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getDestinationSecurityGroupId(), otherAction.properties.getDestinationSecurityGroupId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getFromPort(), otherAction.properties.getFromPort())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+
+    if (!Objects.equals(properties.getToPort(), otherAction.properties.getToPort())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
+  }
+
 
   private enum CreateSteps implements Step {
     CREATE_EGRESS_RULE {
@@ -116,6 +151,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         }
 
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -134,7 +170,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SecurityGroupEgressResourceAction action = (AWSEC2SecurityGroupEgressResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // property validation
         action.validateProperties();

@@ -275,6 +275,9 @@ typedef struct instance_t {
     long long blkbytes;
     long long netbytes;
     boolean hasFloppy;
+
+    netConfig secNetCfgs[EUCA_MAX_NICS];
+    int secNetCfgsSize;
 } ccInstance;
 
 typedef struct resource_t {
@@ -419,7 +422,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    int instIdsLen, char **netNames, int netNamesLen, char **netIds, int netIdsLen, char **macAddrs, int macAddrsLen, int *networkIndexList,
                    int networkIndexListLen, char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId,
                    char *ownerId, char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
-                   char *platform, int expiryTime, char *targetNode, char *rootDirective, ccInstance ** outInsts, int *outInstsLen);
+                   char *platform, int expiryTime, char *targetNode, char *rootDirective, netConfig * secNetCfgs, int secNetCfgsLen, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);
@@ -458,7 +461,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
                         char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet, netConfig * ncnet,
                         virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex, char *platform,
                         char *guestStateName, char *bundleTaskStateName, char groupNames[][64], char groupIds[][64], ncVolume * volumes, int volumesSize,
-                        double bundleTaskProgress);
+                        double bundleTaskProgress, netConfig * secNetCfgs, int secNetCfgsSize);
 int pubIpCmp(ccInstance * inst, void *ip);
 int privIpCmp(ccInstance * inst, void *ip);
 int privIpSet(ccInstance * inst, void *ip);

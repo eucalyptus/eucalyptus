@@ -135,12 +135,13 @@ public class VmInfo extends EucalyptusData {
   String migrationStateName;
   String migrationSource;
   String migrationDestination;
+  List<NetworkConfigType> secondaryNetConfigList = new ArrayList<NetworkConfigType>();
   
   ArrayList<String> productCodes = new ArrayList<String>();
   
   @Override
   public String toString( ) {
-    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes} ${migrationStateName}";
+    return "VmInfo ${reservationId} ${instanceId} ${ownerId} ${stateName} ${instanceType} ${imageId} ${kernelId} ${ramdiskId} ${launchIndex} ${serviceTag} ${netParams} ${volumes} ${migrationStateName} ${secondaryNetConfigList}";
   }
 }
 

@@ -29,7 +29,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
@@ -63,7 +63,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
   private AWSCloudWatchAlarmResourceInfo info = new AWSCloudWatchAlarmResourceInfo();
 
   public AWSCloudWatchAlarmResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null, createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
 
   private enum CreateSteps implements Step {
@@ -130,6 +130,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         putMetricAlarmType.setUnit(action.properties.getUnit());
         AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
         action.info.setPhysicalResourceId(action.properties.getAlarmName());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -148,7 +149,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudWatchAlarmResourceAction action = (AWSCloudWatchAlarmResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudWatch.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         DescribeAlarmsType describeAlarmsType = MessageHelper.createMessage(DescribeAlarmsType.class, action.info.getEffectiveUserId());
         AlarmNames alarmNames = new AlarmNames();
         alarmNames.setMember(Lists.newArrayList(action.info.getPhysicalResourceId()));
@@ -223,8 +224,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         putMetricAlarmType.setThreshold(newAction.properties.getThreshold());
         putMetricAlarmType.setUnit(newAction.properties.getUnit());
         AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
-        oldAction.info.setPropertiesJson(newAction.info.getPropertiesJson()); // TODO: consider what happens in the multistep case
-        return oldAction;
+        return newAction;
       }
     };
 

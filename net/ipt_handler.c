@@ -186,7 +186,7 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
     int fd = 0;
     char sCommand[EUCA_MAX_PATH] = "";
     char sTempFileName[EUCA_MAX_PATH] = "";  // Used to temporarily hold name while we zero out the struct
-    
+
     // Make sure our pointers are valid
     if (!pIpt) {
         return (1);
@@ -227,7 +227,7 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
         LOGDEBUG("Using newly created temporary filename: %s\n", sTempFileName);
         close(fd);
     }
-    
+
     // Empty this structure
     bzero(pIpt, sizeof(ipt_handler));
 
@@ -459,8 +459,10 @@ int ipt_handler_repopulate(ipt_handler * ipth)
     char policyname[64] = "";
     char counters[64] = "";
     char counterstr[256] = "";
+    struct timeval tv = { 0 };
     //  long long int countersa, countersb;
 
+    eucanetd_timer_usec(&tv);
     if (!ipth || !ipth->init) {
         return (1);
     }
@@ -521,6 +523,7 @@ int ipt_handler_repopulate(ipt_handler * ipth)
     }
     fclose(FH);
 
+    LOGINFO("ipt populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
@@ -1164,6 +1167,42 @@ int ipt_handler_free(ipt_handler * ipth)
     unlink(ipth->ipt_file);
 
     return (ipt_handler_init(ipth, saved_cmdprefix, saved_preloadPath));
+}
+
+//!
+//! Release all resources associated with the given ipt_handler.
+//!
+//! @param[in] ipth pointer to the IP table handler structure
+//!
+//! @return 0 on success or 1 if any failure occurred
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int ipt_handler_close(ipt_handler *ipth)
+{
+    int i = 0;
+    int j = 0;
+
+    if (!ipth || !ipth->init) {
+        LOGDEBUG("Invalid argument. NULL or uninitialized ipt_handler.\n");
+        return (1);
+    }
+
+    for (i = 0; i < ipth->max_tables; i++) {
+        for (j = 0; j < ipth->tables[i].max_chains; j++) {
+            EUCA_FREE(ipth->tables[i].chains[j].rules);
+        }
+        EUCA_FREE(ipth->tables[i].chains);
+    }
+    EUCA_FREE(ipth->tables);
+    unlink(ipth->ipt_file);
+    return (0);
 }
 
 //!

@@ -48,6 +48,7 @@ public class ResourceInfoHelper {
     ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
     resourceInfo.setAccountId(resourceNode.get("accountId").asText());
     resourceInfo.setAllowedByCondition(resourceNode.get("allowedByCondition").booleanValue());
+    resourceInfo.setCreatedEnoughToDelete(resourceNode.get("createdEnoughToDelete").booleanValue());
     resourceInfo.setDescription(resourceNode.get("description").asText());
     resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").asText());
     resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").asText());
@@ -77,6 +78,7 @@ public class ResourceInfoHelper {
       resourceNode.put("accountId", resourceInfo.getAccountId());
       resourceNode.put("type", resourceInfo.getType());
       resourceNode.put("allowedByCondition", resourceInfo.getAllowedByCondition());
+      resourceNode.put("createdEnoughToDelete", resourceInfo.getCreatedEnoughToDelete());
       resourceNode.put("deletionPolicy", resourceInfo.getDeletionPolicy());
       resourceNode.put("description", resourceInfo.getDescription());
       resourceNode.put("effectiveUserId", resourceInfo.getEffectiveUserId());
@@ -109,31 +111,4 @@ public class ResourceInfoHelper {
     return JsonHelper.getStringFromJsonNode(attributesNode);
   }
 
-  public static String resourceInfoMapToJson(Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
-    try {
-      Map<String, String> resourceInfoJsonMap = Maps.newLinkedHashMap();
-      if (resourceInfoMap != null) {
-        for (String key: resourceInfoMap.keySet()) {
-          resourceInfoJsonMap.put(key, resourceInfoToJson(resourceInfoMap.get(key)));
-        }
-      }
-      return mapper.writeValueAsString(resourceInfoMap);
-    } catch (JsonProcessingException e) {
-      throw new ValidationErrorException(e.getMessage());
-    }
-  }
-
-  public static Map<String, ResourceInfo> jsonToResourceInfoMap(String resourceInfoMapJson) throws CloudFormationException {
-    try {
-      Map<String, String> resourceInfoJsonMap = (resourceInfoMapJson == null ? Maps.<String, String>newLinkedHashMap() :
-        (Map<String, String>) mapper.readValue(resourceInfoMapJson, new TypeReference<LinkedHashMap<String, String>>(){}));
-      Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-      for (String key: resourceInfoJsonMap.keySet()) {
-        resourceInfoMap.put(key, jsonToResourceInfo(resourceInfoJsonMap.get(key)));
-      }
-      return resourceInfoMap;
-    } catch (IOException e) {
-      throw new ValidationErrorException(e.getMessage());
-    }
-  }
 }

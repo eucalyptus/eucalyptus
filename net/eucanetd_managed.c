@@ -293,6 +293,7 @@ struct driver_handler_t managedDriverHandler = {
     .cleanup = network_driver_cleanup,
     .upgrade = network_driver_upgrade,
     .system_flush = network_driver_system_flush,
+    .system_maint = NULL,
     .system_scrub = network_driver_system_scrub,
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
@@ -310,7 +311,7 @@ struct driver_handler_t managedDriverHandler = {
 //!
 //! @param[in] pConfig a pointer to our application configuration
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -406,7 +407,7 @@ static int network_driver_init(eucanetdConfig * pConfig) {
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] forceFlush set to TRUE if a network flush needs to be performed
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see network_driver_system_flush()
 //!
@@ -599,7 +600,7 @@ static int network_driver_upgrade(globalNetworkInfo * pGni) {
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -608,7 +609,7 @@ static int network_driver_upgrade(globalNetworkInfo * pGni) {
 //!
 //! @post
 //!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occured. The system is left in a non-deterministic state and a subsequent
+//!     failure occurred. The system is left in a non-deterministic state and a subsequent
 //!     call to this API may resolve the remaining issues.
 //!
 //! @note
@@ -787,7 +788,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni) {
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see managed_setup_bridges(), managed_setup_metadata_ip()
 //!
@@ -862,7 +863,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see managed_setup_sg_filters()
 //!
@@ -908,7 +909,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see managed_generate_dhcpd_config(), eucanetd_kick_dhcpd_server(), managed_setup_addressing(), managed_setup_elastic_ips()
 //!
@@ -1431,7 +1432,7 @@ boolean managed_has_addressing_changed(globalNetworkInfo * pGni, lni_t * pLni) {
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] psDevName a constant string pointer to the device name we need to work with
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see network_driver_implement_network()
 //!
@@ -1488,7 +1489,7 @@ int managed_setup_metadata_ip(globalNetworkInfo * pGni, const char *psDevName) {
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see network_driver_implement_sg()
 //!
@@ -1714,7 +1715,7 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni) {
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see network_driver_implement_addressing()
 //!
@@ -1867,7 +1868,7 @@ int managed_setup_addressing(globalNetworkInfo * pGni) {
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see network_driver_implement_addressing()
 //!
@@ -1964,7 +1965,7 @@ int managed_setup_elastic_ips(globalNetworkInfo * pGni) {
 //!
 //! @param[in] pGni a pointer to our Global Network Information configuration structure.
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see managed_find_subnet_idx(), managed_find_subnet_idx_from_gateway(), managed_find_subnet()
 //!
@@ -2159,7 +2160,7 @@ managed_subnet *managed_find_subnet(globalNetworkInfo * pGni, gni_secgroup * pSe
 //!
 //! @param[in] pConfig a pointer to eucanetd configuration structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see managed_cleanup_tunnels()
 //! @see managed_setup_tunnels(), managed_unset_tunnels()
@@ -2260,7 +2261,7 @@ int managed_initialize_tunnels(eucanetdConfig * pConfig) {
 //!
 //! @param[in] pGni a pointer to our GNI structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see managed_initialize_tunnels()
 //! @see managed_setup_tunnels(), managed_unset_tunnels()
@@ -2382,7 +2383,7 @@ boolean managed_has_tunnel_changed(globalNetworkInfo * pGni, gni_secgroup * pSec
 //!
 //! @param tunnelId the tunnel index to save
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see managed_get_current_tunnel_id()
 //!
@@ -2426,7 +2427,7 @@ int managed_save_tunnel_id(int tunnelId) {
 //!
 //! This function retrieves the current cluster ID saved on the system
 //!
-//! @return The index of the cluster in the cluster list or -1 if any error (not found) occured.
+//! @return The index of the cluster in the cluster list or -1 if any error (not found) occurred.
 //!
 //! @see managed_save_tunnel_id()
 //!
@@ -2466,7 +2467,7 @@ int managed_get_current_tunnel_id(void) {
 //! @param[in] pGni a pointer to the global network view which contains the AZs information
 //! @param[in] pCluster a pointer to the local cluster structure
 //!
-//! @return The index of the cluster in the cluster list or -1 if any error (not found) occured.
+//! @return The index of the cluster in the cluster list or -1 if any error (not found) occurred.
 //!
 //! @see
 //!
@@ -2505,7 +2506,7 @@ int managed_get_new_tunnel_id(globalNetworkInfo * pGni, gni_cluster * pCluster) 
 //! @param[in] localId tunnel local endpoint index
 //! @param[in] remoteId tunnel remote endpoint index
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -3381,7 +3382,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
 //!
 //! @param[in] pBridge a pointer to the bridge device to validate
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -3452,7 +3453,7 @@ static boolean managed_is_bridge_setup(dev_entry * pBridge) {
 //!
 //! @param[in] pBridge a pointer to our bridge device information to remove
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!
@@ -3548,7 +3549,7 @@ static int managed_remove_bridge(dev_entry * pBridge) {
 //! @param[in] psBridgeName a constant string pointer to the bridge device name to create.
 //! @param[in] pSubnet a pointer to the security-group managed subnet structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -3652,7 +3653,7 @@ static int managed_create_bridge(const char *psBridgeName, managed_subnet * pSub
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -3796,7 +3797,7 @@ static int managed_setup_bridges(globalNetworkInfo * pGni) {
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured
+//! @return 0 on success or 1 if any failure occurred
 //!
 //! @see
 //!

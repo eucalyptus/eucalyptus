@@ -20,19 +20,26 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 /**
  * Created by ethomas on 12/18/13.
  */
-@MappedSuperclass
-public abstract class StackResourceEntity extends AbstractPersistent {
+@Entity
+@PersistenceContext( name = "eucalyptus_cloudformation" )
+@Table( name = "stack_resources" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
   @Column(name = "description", length =  4000)
@@ -70,10 +77,21 @@ public abstract class StackResourceEntity extends AbstractPersistent {
   String deletionPolicy = "Delete";
   @Column(name = "is_allowed_by_condition", nullable = false)
   Boolean allowedByCondition;
+  @Column(name = "is_created_enough_to_delete", nullable = false)
+  Boolean createdEnoughToDelete;
   @Column(name = "reference_value_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String referenceValueJson;
+
+  public Boolean getFromUpdateReplacement() {
+    return fromUpdateReplacement;
+  }
+
+  public void setFromUpdateReplacement(Boolean fromUpdateReplacement) {
+    this.fromUpdateReplacement = fromUpdateReplacement;
+  }
+
   @Column(name = "resource_attributes_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
@@ -91,8 +109,15 @@ public abstract class StackResourceEntity extends AbstractPersistent {
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
+  @Column(name = "resource_version")
+  Integer resourceVersion;
+
+
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
+
+  @Column(name="from_update_replacement", nullable = false)
+  Boolean fromUpdateReplacement = false;
 
   public StackResourceEntity() {
   }
@@ -233,6 +258,22 @@ public abstract class StackResourceEntity extends AbstractPersistent {
     this.resourceAttributesJson = resourceAttributesJson;
   }
 
+  public Integer getResourceVersion() {
+    return resourceVersion;
+  }
+
+  public Boolean getCreatedEnoughToDelete() {
+    return createdEnoughToDelete;
+  }
+
+  public void setCreatedEnoughToDelete(Boolean createdEnoughToDelete) {
+    this.createdEnoughToDelete = createdEnoughToDelete;
+  }
+
+  public void setResourceVersion(Integer resourceVersion) {
+    this.resourceVersion = resourceVersion;
+  }
+
   @Override
   public String toString() {
     return "StackResourceEntity{" +
@@ -245,6 +286,7 @@ public abstract class StackResourceEntity extends AbstractPersistent {
       ", resourceStatusReason='" + resourceStatusReason + '\'' +
       ", resourceType='" + resourceType + '\'' +
       ", ready=" + ready +
+      ", createdEnoughToDelete=" + createdEnoughToDelete +
       ", propertiesJson='" + propertiesJson + '\'' +
       ", updatePolicyJson='" + updatePolicyJson + '\'' +
       ", deletionPolicy='" + deletionPolicy + '\'' +
@@ -253,6 +295,7 @@ public abstract class StackResourceEntity extends AbstractPersistent {
       ", resourceAttributesJson='" + resourceAttributesJson + '\'' +
       ", stackId='" + stackId + '\'' +
       ", stackName='" + stackName + '\'' +
+      ", fromUpdateReplacement='" + fromUpdateReplacement + '\'' +
       ", recordDeleted=" + recordDeleted +
       '}';
   }

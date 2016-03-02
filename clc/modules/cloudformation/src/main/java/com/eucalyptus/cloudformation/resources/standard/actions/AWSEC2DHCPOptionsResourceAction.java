@@ -34,6 +34,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -43,21 +45,29 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.DeleteDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DeleteDhcpOptionsType;
+import com.eucalyptus.compute.common.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DhcpConfigurationItemSetType;
 import com.eucalyptus.compute.common.DhcpConfigurationItemType;
 import com.eucalyptus.compute.common.DhcpValueSetType;
 import com.eucalyptus.compute.common.DhcpValueType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -68,8 +78,34 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
   private AWSEC2DHCPOptionsResourceInfo info = new AWSEC2DHCPOptionsResourceInfo();
 
   public AWSEC2DHCPOptionsResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2DHCPOptionsResourceAction otherAction = (AWSEC2DHCPOptionsResourceAction) resourceAction;
+    if (!Objects.equals(properties.getDomainName(), otherAction.properties.getDomainName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getDomainNameServers(), otherAction.properties.getDomainNameServers())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getNetbiosNameServers(), otherAction.properties.getNetbiosNameServers())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getNetbiosNodeType(), otherAction.properties.getNetbiosNodeType())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getNtpServers(), otherAction.properties.getNtpServers())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
+  }
+
   private enum CreateSteps implements Step {
     CREATE_DHCP_OPTIONS {
       @Override
@@ -99,6 +135,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         createDhcpOptionsType.setDhcpConfigurationSet(dhcpConfigurationSet);
         CreateDhcpOptionsResponseType createDhcpOptionsResponseType = AsyncRequests.<CreateDhcpOptionsType, CreateDhcpOptionsResponseType> sendSync(configuration, createDhcpOptionsType);
         action.info.setPhysicalResourceId(createDhcpOptionsResponseType.getDhcpOptions().getDhcpOptionsId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -144,10 +181,10 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2DHCPOptionsResourceAction action = (AWSEC2DHCPOptionsResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         // Check dhcp options (return if gone)
         DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-        describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.info.getPhysicalResourceId() ) );
+        describeDhcpOptionsType.getFilterSet( ).add(Filter.filter("dhcp-options-id", action.info.getPhysicalResourceId()));
         DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync(configuration, describeDhcpOptionsType);
         if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
             describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
@@ -158,6 +195,71 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         deleteDhcpOptionsType.setDhcpOptionsId(action.info.getPhysicalResourceId());
         AsyncRequests.<DeleteDhcpOptionsType,DeleteDhcpOptionsResponseType> sendSync(configuration, deleteDhcpOptionsType);
         return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2DHCPOptionsResourceAction oldAction = (AWSEC2DHCPOptionsResourceAction) oldResourceAction;
+        AWSEC2DHCPOptionsResourceAction newAction = (AWSEC2DHCPOptionsResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
+        Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+          for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+            EC2Tag tag = new EC2Tag();
+            tag.setKey(tagInfo.getKey());
+            tag.setValue(tagInfo.getValue());
+            existingTags.add(tag);
+          }
+        }
+        Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+        if (newAction.properties.getTags() != null) {
+          newTags.addAll(newAction.properties.getTags());
+        }
+        List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+        if (newStackTags != null) {
+          newTags.addAll(newStackTags);
+        }
+        TagHelper.checkReservedEC2TemplateTags(newTags);
+        // add only 'new' tags
+        Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+        if (!onlyNewTags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        //  Get old tags...
+        Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+        if (oldAction.properties.getTags() != null) {
+          oldTags.addAll(oldAction.properties.getTags());
+        }
+        List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+        if (oldStackTags != null) {
+          oldTags.addAll(oldStackTags);
+        }
+
+        // remove only the old tags that are not new and that exist
+        Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+        if (!tagsToRemove.isEmpty()) {
+          DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+          deleteTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+        }
+        return newAction;
       }
     };
 

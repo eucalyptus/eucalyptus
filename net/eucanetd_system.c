@@ -233,6 +233,7 @@ struct driver_handler_t systemDriverHandler = {
     .cleanup = network_driver_cleanup,
     .upgrade = NULL,
     .system_flush = network_driver_system_flush,
+    .system_maint = NULL,
     .system_scrub = network_driver_system_scrub,
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
@@ -250,7 +251,7 @@ struct driver_handler_t systemDriverHandler = {
 //!
 //! @param[in] pConfig a pointer to our application configuration
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -299,7 +300,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] forceFlush set to TRUE if a network flush needs to be performed
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -333,7 +334,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -342,7 +343,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @post
 //!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occured. The system is left in a non-deterministic state and a subsequent
+//!     failure occurred. The system is left in a non-deterministic state and a subsequent
 //!     call to this API may resolve the remaining issues.
 //!
 static int network_driver_system_flush(globalNetworkInfo * pGni)
@@ -418,7 +419,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -464,7 +465,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -509,7 +510,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see update_private_ips(), update_elastic_ips(), update_l2_addressing()
 //!

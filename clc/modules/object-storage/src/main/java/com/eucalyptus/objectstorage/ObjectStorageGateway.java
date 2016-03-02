@@ -101,6 +101,8 @@ import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
@@ -115,6 +117,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
@@ -157,6 +161,8 @@ import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
@@ -188,6 +194,8 @@ import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
+import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
@@ -201,6 +209,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
@@ -244,11 +253,18 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
     }
 
-    try {
-      ospClient.initialize();
-    } catch (S3Exception ex) {
-      LOG.error("Error initializing Object Storage Gateway", ex);
-      SystemUtil.shutdownWithError(ex.getMessage());
+    if (ospClient != null) {
+      try {
+        ospClient.initialize();
+      } catch (S3Exception ex) {
+        LOG.error("Error initializing Object Storage Gateway", ex);
+        SystemUtil.shutdownWithError(ex.getMessage());
+      } 
+    } else {
+      String errMsg = "In initializing ospClient, expected a valid reference " 
+          + "to Object Storage Provider Client, but found none (null)";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
     }
 
     // Disable torrents
@@ -261,29 +277,61 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (S3Exception ex) {
       LOG.error("Error starting storage backend: " + ex);
     }
+    
+    // The ospClient should be configured by now.
+    if (ospClient == null) {
+      String errMsg = "Error starting storage backend, ospClient is still null at the end of configure().";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    } else {
+      LOG.debug("Configuring ObjectStorageGateway complete");
+    }
   }
 
   public static void enable() throws EucalyptusCloudException {
     LOG.debug("Enabling ObjectStorageGateway");
-    ospClient.enable();
+    if (ospClient != null) {
+      ospClient.enable();
+    } else {
+      String errMsg = "ospClient is null in enable(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.debug("Enabling ObjectStorageGateway complete");
   }
 
   public static void disable() throws EucalyptusCloudException {
     LOG.debug("Disabling ObjectStorageGateway");
-    ospClient.disable();
+    if (ospClient != null) {
+      ospClient.disable();
+    } else {
+      String errMsg = "ospClient is null in disable(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.debug("Disabling ObjectStorageGateway complete");
   }
 
   public static void check() throws EucalyptusCloudException {
     LOG.trace("Checking ObjectStorageGateway");
-    ospClient.check();
+    if (ospClient != null) {
+      ospClient.check();
+    } else {
+      String errMsg = "ospClient is null in check(), OSG apparently not configured.";
+      LOG.error(errMsg);
+      throw new EucalyptusCloudException(errMsg);
+    }
     LOG.trace("Checking ObjectStorageGateway complete");
   }
 
   public static void stop() throws EucalyptusCloudException {
-    LOG.debug("Checking ObjectStorageGateway preconditions");
-    ospClient.stop();
+    LOG.debug("Stopping ObjectStorageGateway");
+    if (ospClient != null) {
+      ospClient.stop();
+    } else {
+      LOG.warn("ospClient is null in stop(), OSG apparently not configured.");
+      // Keep going, tear down the rest even if we didn't stop()
+    }
     synchronized (ObjectStorageGateway.class) {
       ospClient = null;
     }
@@ -1942,6 +1990,115 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
 
     return reply;
+  }
+
+  @Override
+  public GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception {
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+
+    // Get the CORS configuration from the back-end and copy results in.
+    GetBucketCorsResponseType reply = (GetBucketCorsResponseType) request.getReply();
+
+    Boolean isEmpty = false;
+
+    try {
+      CorsConfiguration corsConfiguration = new CorsConfiguration();
+      List<CorsRule> responseRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
+      isEmpty = responseRules.isEmpty();
+      if (!isEmpty) {
+        corsConfiguration.setRules(responseRules);
+        reply.setCorsConfiguration(corsConfiguration);
+      }
+    } catch (Exception ex) {
+      LOG.error("Caught exception while getting the CORS configuration for bucket <" + request.getBucket() + ">, error: " + ex.getMessage());
+      throw new InternalErrorException(request.getBucket());
+    }
+
+    if (isEmpty) {
+      // No CORS configuration exists. To match AWS, return 404 NotFound with 
+      // error code "NoSuchCORSConfiguration" and the following message.
+      S3Exception s3ex = new S3Exception("NoSuchCORSConfiguration", 
+          "The CORS configuration does not exist",
+          HttpResponseStatus.NOT_FOUND);
+      throw s3ex;    	
+    }
+
+    return reply;
+
+  }
+
+  @Override
+  public SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception {
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+
+    LOG.debug("In setBucketCors");
+    SetBucketCorsResponseType response = request.getReply();
+    String bucketName = request.getBucket();
+
+    List<CorsRule> goodRules = new ArrayList<>();
+
+    // Per AWS docs, max 100 CORS config rules.
+    // TODO: Validate by testing against AWS, gets checked prior to CORS config checking?
+    final int MAX_CORS_RULES = 100;
+    if (request.getCorsConfiguration() != null && 
+        request.getCorsConfiguration().getRules() != null &&
+        request.getCorsConfiguration().getRules().size() > MAX_CORS_RULES) {
+
+      MalformedXMLException ex = new MalformedXMLException(bucketName);
+      ex.setMessage("More than " + MAX_CORS_RULES + " rules in CORS configuration not allowed");
+      throw ex;
+    }
+
+    // Make sure names are unique and <= 255 chars.
+    List<String> savedRuleIds = new ArrayList<>();
+    String ruleId = null;
+    InvalidArgumentException invArgEx = null;
+    for (CorsRule rule : request.getCorsConfiguration().getRules()) {
+      if (rule == null) {
+        break;
+      }
+      ruleId = rule.getId();
+      if (ruleId != null && ruleId.length() > 0) {
+        for (String savedRuleId : savedRuleIds) {
+          if (ruleId.equals(savedRuleId)) {
+            invArgEx = new InvalidArgumentException(ruleId);
+            invArgEx.setMessage("RuleId must be unique. Found same ID for more than one rule");
+            throw invArgEx;
+          }
+          if (ruleId.length() > 255) {
+            invArgEx = new InvalidArgumentException(ruleId);
+            invArgEx.setMessage("RuleId > 255 characters");
+            throw invArgEx;
+          }
+        }
+        savedRuleIds.add(ruleId);
+      }
+      goodRules.add(rule);
+    }
+
+    try {
+      BucketCorsManagers.getInstance().addCorsRules(goodRules, bucket.getBucketUuid());
+    } catch (Exception ex) {
+      LOG.error("Caught exception while setting the CORS configuration for bucket <" + bucketName + ">, error: " + ex.getMessage());
+      throw new InternalErrorException(bucketName);
+    }
+
+    return response;
+
+  }
+
+  @Override
+  public DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception {
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+    DeleteBucketCorsResponseType response = request.getReply();
+    try {
+      BucketCorsManagers.getInstance().deleteCorsRules(bucket.getBucketUuid());
+    } catch (Exception e) {
+      InternalErrorException ex = new InternalErrorException(bucket.getBucketName() + "?cors");
+      ex.setMessage("An exception was caught while deleting the CORS configuration for bucket <" + bucket.getBucketName()+ ">, error: " + ex.getMessage());
+      throw ex;
+    }
+    return response;
   }
 
   private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {

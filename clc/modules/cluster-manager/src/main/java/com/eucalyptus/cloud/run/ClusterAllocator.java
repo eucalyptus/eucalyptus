@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -84,6 +84,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
@@ -91,6 +92,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.StartInstancesType;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -164,6 +167,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -453,16 +457,36 @@ public class ClusterAllocator implements Runnable {
                   }else
                     volumeSize = rootVolSizeInGb;
                 }
+                final AuthContextSupplier authContextSupplier;
+                try {
+                  authContextSupplier = this.allocInfo.getAuthContext( );
+                } catch ( AuthException e ) {
+                  throw new ExecutionException( e );
+                }
                 final UserFullName fullName = this.allocInfo.getOwnerFullName();
                 final String snapshotId = ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() );
                 final int volSize = volumeSize;
                 final BaseMessage request = this.allocInfo.getRequest();
                 final Callable<Volume> createVolume = new Callable<Volume>( ) {
                     public Volume call( ) throws Exception {
-                      return Volumes.createStorageVolume(sc, fullName, snapshotId, volSize, request);
+                      final Function<Long, Volume> allocator = new Function<Long, Volume>( ) {
+                        @Override
+                        public Volume apply( Long size ) {
+                          try {
+                            return Volumes.createStorageVolume( sc, fullName, snapshotId, Ints.checkedCast( size ), request );
+                          } catch ( ExecutionException ex ) {
+                            throw Exceptions.toUndeclared( ex );
+                          }
+                        }
+                      };
+                      return RestrictedTypes.allocateMeasurableResource(
+                          authContextSupplier,
+                          fullName,
+                          RestrictedTypes.getIamActionByMessageType( request ),
+                          (long) volSize,
+                          allocator );
                     }
                 };
-
                 final Volume volume; // allocate in separate transaction to ensure metadata matches back-end
                 try {
                   volume = Threads.enqueue( Eucalyptus.class, ClusterAllocator.class, createVolume ).get( );
@@ -730,6 +754,7 @@ public class ClusterAllocator implements Runnable {
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .rootDirective( this.allocInfo.getRootDirective() )
                                    .create( );
+    LOG.debug("Run instance request: " + run);
     return new VmRunCallback( run, childToken );
   }
   

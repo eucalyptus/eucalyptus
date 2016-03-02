@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ import com.eucalyptus.simpleworkflow.Domain;
 import com.eucalyptus.simpleworkflow.Domains;
 import com.eucalyptus.simpleworkflow.NotifyClient;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
+import com.eucalyptus.simpleworkflow.SwfMetadataNotFoundException;
 import com.eucalyptus.simpleworkflow.Timer;
 import com.eucalyptus.simpleworkflow.Timers;
 import com.eucalyptus.simpleworkflow.WorkflowExecution;
@@ -249,7 +250,11 @@ public class TimeoutManager {
           } );
         } catch ( SwfMetadataException e ) {
           if ( !handleException( e ) ) {
-            logger.error( "Error processing activity task timeout: " + task.getWorkflowRunId() + "/" + task.getScheduledEventId(), e );
+            if ( Exceptions.isCausedBy( e, SwfMetadataNotFoundException.class ) ) {
+              logger.debug( "Activity task not found for timeout: " + task.getWorkflowRunId( ) + "/" + task.getScheduledEventId( ) );
+            } else {
+              logger.error( "Error processing activity task timeout: " + task.getWorkflowRunId( ) + "/" + task.getScheduledEventId( ), e );
+            }
           }
         }
       }

@@ -290,7 +290,6 @@ public class AWSEC2NetworkAclEntryProperties implements ResourceProperties {
   @Required
   @Property
   String cidrBlock;
-  // @Required -- documentation lies, claims required but experimentation shows otherwise.
   @Property
   Boolean egress;
   @Property
@@ -331,21 +330,21 @@ public class AWSEC2NetworkInterfaceProperties implements ResourceProperties {
   @Property
   List<EC2Tag> tags = Lists.newArrayList();
 }
-// Can't do this one until we allow more than one network interface on an instance
-//@ToString(includeNames=true)
-//public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
-//  @Property
-//  Boolean deleteOnTermination;
-//  @Required
-//  @Property
-//  Integer deviceIndex;
-//  @Required
-//  @Property
-//  String instanceId;
-//  @Required
-//  @Property
-//  String networkInterfaceId;
-//}
+
+@ToString(includeNames=true)
+public class AWSEC2NetworkInterfaceAttachmentProperties implements ResourceProperties {
+  @Property
+  Boolean deleteOnTermination
+  @Required
+  @Property
+  Integer deviceIndex
+  @Required
+  @Property
+  String instanceId
+  @Required
+  @Property
+  String networkInterfaceId
+}
 
 @ToString(includeNames=true)
 public class AWSEC2RouteProperties implements ResourceProperties {
@@ -468,11 +467,17 @@ public class AWSEC2SubnetRouteTableAssociationProperties implements ResourceProp
 
 @ToString(includeNames=true)
 public class AWSEC2VolumeProperties implements ResourceProperties {
+  @Property
+  Boolean autoEnableIO;
   @Required
   @Property
   String availabilityZone;
   @Property
+  Boolean encrypted;
+  @Property
   Integer iops;
+  @Property
+  String kmsKeyId;
   @Property
   String size;
   @Property
@@ -537,7 +542,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy;
   @Property
-  ElasticLoadBalancingAppCookieStickinessPolicy appCookieStickinessPolicy;
+  List<ElasticLoadBalancingAppCookieStickinessPolicy> appCookieStickinessPolicy = Lists.newArrayList();
   @Property
   List<String> availabilityZones = Lists.newArrayList();
   @Property
@@ -551,7 +556,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   List<String> instances = Lists.newArrayList();
   @Property(name="LBCookieStickinessPolicy")
-  ElasticLoadBalancingLBCookieStickinessPolicyType lbCookieStickinessPolicy;
+  List<ElasticLoadBalancingLBCookieStickinessPolicyType> lbCookieStickinessPolicy = Lists.newArrayList();
   @Property
   String loadBalancerName;
   @Required
@@ -565,6 +570,8 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   List<String> securityGroups = Lists.newArrayList();
   @Property
   List<String> subnets = Lists.newArrayList();
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
 }
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {
@@ -659,6 +666,8 @@ public class AWSS3BucketProperties implements ResourceProperties {
   S3LoggingConfiguration loggingConfiguration;
   @Property
   S3NotificationConfiguration notificationConfiguration;
+  @Property
+  S3ReplicationConfiguration replicationConfiguration;
   @Property
   List<CloudFormationResourceTag> tags = Lists.newArrayList();
   @Property

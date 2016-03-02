@@ -42,6 +42,7 @@ import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NIVpc
 import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.EdgeSubnet
 import com.eucalyptus.network.config.ManagedSubnet
@@ -50,6 +51,7 @@ import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Supplier
@@ -139,6 +141,9 @@ class NetworkInfoBroadcasterTest {
           []
         }
         @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
           []
         }
         @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
@@ -254,6 +259,9 @@ class NetworkInfoBroadcasterTest {
             []
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
             []
           }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
@@ -430,7 +438,10 @@ class NetworkInfoBroadcasterTest {
             [ internetGateway( 'igw-00000001', '000000000002', 'vpc-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
-            [ networkInterface( 'eni-00000001', '000000000002', 'i-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
+            [ networkInterface( 'eni-00000001', '000000000002', 'i-00000001', 'eni-attach-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+            []
           }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
             [:]
@@ -527,6 +538,7 @@ class NetworkInfoBroadcasterTest {
                         name: 'eni-00000001',
                         ownerId: '000000000002',
                         deviceIndex: 0,
+                        attachmentId: 'eni-attach-00000001',
                         macAddress: '00:00:00:00:00:00',
                         publicIp: '2.0.0.0',
                         privateIp: '10.0.0.0',
@@ -588,6 +600,9 @@ class NetworkInfoBroadcasterTest {
             []
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
             []
           }
           @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
@@ -676,12 +691,15 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcasts.NetworkInterfaceNetworkView networkInterface( String id, String ownerAccountNumber, String instanceId, String mac, String publicAddress, String privateAddress, String vpcId, String subnetId ) {
+  private static NetworkInfoBroadcasts.NetworkInterfaceNetworkView networkInterface( String id, String ownerAccountNumber, String instanceId, String attachmentId, String mac, String publicAddress, String privateAddress, String vpcId, String subnetId ) {
     new NetworkInfoBroadcasts.NetworkInterfaceNetworkView(
         id,
         1,
+        NetworkInterface.State.in_use,
+        NetworkInterfaceAttachment.Status.attached,
         ownerAccountNumber,
         instanceId,
+        attachmentId,
         0,
         mac,
         privateAddress,
@@ -741,6 +759,7 @@ class NetworkInfoBroadcasterTest {
         true,
         cidr,
         internetGatewayId,
+        null,
         null,
         null
     )

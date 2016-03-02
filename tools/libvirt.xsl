@@ -301,6 +301,10 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/hypervisor/@type = 'xen'">
                             <script path="/etc/xen/scripts/vif-bridge"/>
                         </xsl:if>
+                        <!-- Directive to libvirt for ensuring that primary nic is eth0 interface in guest -->
+                        <xsl:if test="@device = '0'">
+                        	<address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+                        </xsl:if>
                     </interface>
                 </xsl:for-each>
 

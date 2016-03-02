@@ -124,7 +124,6 @@ typedef struct _artifact {
     int (*creator) (struct _artifact * a);  //!< function that can create this artifact based on info in this struct (must be NULL for a sentinel)
     long long size_bytes;              //!< size of the artifact, in bytes (OPTIONAL for some types)
     virtualBootRecord *vbr;            //!< VBR associated with the artifact (OPTIONAL for some types)
-    boolean do_make_bootable;          //!< tells 'disk_creator' whether to make the disk bootable
     boolean do_tune_fs;                //!< tells 'copy_creator' whether to tune the file system
     boolean is_partition;              //!< this artifact is a partition for a disk to be constructed
     char sshkey[MAX_SSHKEY_SIZE];      //!< the key to inject into the artifact (OPTIONAL for all except keyed_disk_creator)
@@ -177,7 +176,7 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
                     int (*creator) (artifact * a), virtualBootRecord * vbr);
 
 void art_set_instanceId(const char *instanceId);
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
                          const char *instanceId);
 int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, long long timeout_usec);
 

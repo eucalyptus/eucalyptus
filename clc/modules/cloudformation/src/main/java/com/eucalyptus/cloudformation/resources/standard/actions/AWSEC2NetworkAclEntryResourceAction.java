@@ -32,6 +32,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -46,10 +48,13 @@ import com.eucalyptus.compute.common.IcmpTypeCodeType;
 import com.eucalyptus.compute.common.NetworkAclEntryType;
 import com.eucalyptus.compute.common.NetworkAclType;
 import com.eucalyptus.compute.common.PortRangeType;
+import com.eucalyptus.compute.common.ReplaceNetworkAclEntryResponseType;
+import com.eucalyptus.compute.common.ReplaceNetworkAclEntryType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -60,7 +65,38 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
   private AWSEC2NetworkAclEntryResourceInfo info = new AWSEC2NetworkAclEntryResourceInfo();
 
   public AWSEC2NetworkAclEntryResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2NetworkAclEntryResourceAction otherAction = (AWSEC2NetworkAclEntryResourceAction) resourceAction;
+    if (!Objects.equals(properties.getCidrBlock(), otherAction.properties.getCidrBlock())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getEgress(), otherAction.properties.getEgress())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getIcmp(), otherAction.properties.getIcmp())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getNetworkAclId(), otherAction.properties.getNetworkAclId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getPortRange(), otherAction.properties.getPortRange())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getProtocol(), otherAction.properties.getProtocol())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getRuleAction(), otherAction.properties.getRuleAction())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getRuleNumber(), otherAction.properties.getRuleNumber())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -93,6 +129,7 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         createNetworkAclEntryType.setRuleNumber(action.properties.getRuleNumber());
         CreateNetworkAclEntryResponseType CreateNetworkAclEntryResponseType = AsyncRequests.<CreateNetworkAclEntryType, CreateNetworkAclEntryResponseType>sendSync(configuration, createNetworkAclEntryType);
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -111,7 +148,7 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkAclEntryResourceAction action = (AWSEC2NetworkAclEntryResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
@@ -139,6 +176,36 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         deleteNetworkAclEntryType.setRuleNumber(action.properties.getRuleNumber());
         DeleteNetworkAclEntryResponseType deleteNetworkAclEntryResponseType = AsyncRequests.<DeleteNetworkAclEntryType, DeleteNetworkAclEntryResponseType> sendSync(configuration, deleteNetworkAclEntryType);
         return action;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    REPLACE_NETWORK_ACL_ENTRY {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2NetworkAclEntryResourceAction oldAction = (AWSEC2NetworkAclEntryResourceAction) oldResourceAction;
+        AWSEC2NetworkAclEntryResourceAction newAction = (AWSEC2NetworkAclEntryResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        ReplaceNetworkAclEntryType replaceNetworkAclEntryType = MessageHelper.createMessage(ReplaceNetworkAclEntryType.class, newAction.info.getEffectiveUserId());
+        replaceNetworkAclEntryType.setCidrBlock(newAction.properties.getCidrBlock());
+        if (newAction.properties.getEgress() != null){
+          replaceNetworkAclEntryType.setEgress(newAction.properties.getEgress());
+        }
+        replaceNetworkAclEntryType.setIcmpTypeCode(newAction.convertIcmpTypeCode(newAction.properties.getIcmp()));
+        replaceNetworkAclEntryType.setNetworkAclId(newAction.properties.getNetworkAclId());
+        replaceNetworkAclEntryType.setPortRange(newAction.convertPortRange(newAction.properties.getPortRange()));
+        replaceNetworkAclEntryType.setProtocol(newAction.properties.getProtocol() == null ? null : String.valueOf(newAction.properties.getProtocol()));
+        replaceNetworkAclEntryType.setRuleAction(newAction.properties.getRuleAction());
+        replaceNetworkAclEntryType.setRuleNumber(newAction.properties.getRuleNumber());
+        ReplaceNetworkAclEntryResponseType replaceNetworkAclEntryResponseType = AsyncRequests.<ReplaceNetworkAclEntryType, ReplaceNetworkAclEntryResponseType>sendSync(configuration, replaceNetworkAclEntryType);
+        return newAction;
       }
     };
 

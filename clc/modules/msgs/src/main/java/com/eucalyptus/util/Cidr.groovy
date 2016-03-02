@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2013-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,9 +52,21 @@ class Cidr implements Predicate<InetAddress> {
    * @return The Cidr representation
    * @throws IllegalArgumentException If the CIDR text is invalid
    */
-  static Cidr parse( final String cidr ) {
+  static Cidr parse( String cidr ) {
+    parse( cidr, false )
+  }
+
+  /**
+   * Parse the given CIDR notation.
+   *
+   * @param cidr The CIDR string
+   * @param lax True to normalize the CIDR on parse (allow mismatched ip/prefix)
+   * @return The Cidr representation
+   * @throws IllegalArgumentException If the CIDR text is invalid
+   */
+  static Cidr parse( final String cidr, final boolean lax ) {
     Parameters.checkParam( "cidr", cidr, notNullValue( ) )
-    final Iterable<String> parts = Splitter.on('/').trimResults().omitEmptyStrings().limit(2).split( cidr )
+    final Iterable<String> parts = Splitter.on('/').limit(2).split( cidr )
     final String ipPart = parts.getAt( 0 )
     if ( ipPart == null ) {
       throw new IllegalArgumentException( "Invalid cidr: ${cidr}" )
@@ -75,7 +87,10 @@ class Cidr implements Predicate<InetAddress> {
     if ( prefix < 0 || prefix > 32 ) {
       throw new IllegalArgumentException( "Invalid prefix in cidr: ${cidr}" )
     }
-    final BigInteger ipBigInteger = new BigInteger( InetAddresses.forString( ipPart ).address )
+    if ( lax ) { // clear any excessive ip bits for the prefix
+      ip = ip & prefixMask( prefix )
+    }
+    final BigInteger ipBigInteger = new BigInteger( Ints.toByteArray( ip ) )
     for ( int i=0; i < 32 - prefix; i++ ) {
       if ( ipBigInteger.testBit( i ) ) {
         Cidr suggestion = new Cidr( ip & prefixMask( prefix ), prefix )

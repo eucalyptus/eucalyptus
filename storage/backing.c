@@ -829,7 +829,6 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
 
     // compute tree of dependencies
     sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
-                              FALSE,   // if image had to be made bootable, that was done above
                               TRUE,    // make working copy of runtime-modifiable files
                               is_migration_dest,    // tree of an instance on the migration destination
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key

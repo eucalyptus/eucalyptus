@@ -97,6 +97,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <pwd.h>
 #include <dirent.h>
 #include <errno.h>
@@ -183,6 +184,8 @@
  |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+static struct timeval gtv;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -586,13 +589,15 @@ int truncate_file(char *filename) {
 }
 
 //!
-//! Function description.
+//! Splits an input CIDR into network address and network mask (slashnet) parts.
+//! If netmask is not found, /32 is assumed. Input is not validated (whether it
+//! is a CIDR).
 //!
-//! @param[in]  ipname pointer to the IP set handler structure
-//! @param[out] ippart
-//! @param[out] nmpart
+//! @param[in]  ipname a CIDR string (assumed to be in network address/slashnet)
+//! @param[out] ippart Network address of the given CIDR.
+//! @param[out] nmpart Slashnet of the given CIDR
 //!
-//! @return
+//! @return 0 on success, 1 otherwise.
 //!
 //! @see
 //!
@@ -605,6 +610,7 @@ int truncate_file(char *filename) {
 int cidrsplit(char *ipname, char **ippart, int *nmpart)
 {
     char *idx = NULL;
+    char *ipname_dup = NULL;
     if (!ipname || !ippart || !nmpart) {
         LOGERROR("invalid input\n");
         return (1);
@@ -612,8 +618,8 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart)
 
     *ippart = NULL;
     *nmpart = 0;
-
-    idx = strchr(ipname, '/');
+    ipname_dup = strdup(ipname);
+    idx = strchr(ipname_dup, '/');
     if (idx) {
         //nm part is present
         *idx = '\0';
@@ -625,10 +631,11 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart)
         }
         *ippart = strdup(ipname);
     } else {
-        // nm part is not present, use \32
+        // nm part is not present, use /32
         *nmpart = 32;
         *ippart = strdup(ipname);
     }
+    EUCA_FREE(ipname_dup);
     return (0);
 }
 
@@ -697,4 +704,126 @@ int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
     freeifaddrs(ifaddr);
     *len = count;
     return (EUCA_OK);
+}
+
+//!
+//! Computes the time difference between the time values in the argument (te - ts).
+//!
+//! @param[in] ts - start time.
+//! @param[in] te - end time.
+//!
+//! @return time difference in milliseconds. If input argument is invalid, return 0.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+long int timer_get_interval_millis(struct timeval *ts, struct timeval *te)
+{
+    if ((!ts) || (!te)) {
+        return 0;
+    }
+    return (((te->tv_sec - ts->tv_sec) * 1000) + ((te->tv_usec - ts->tv_usec) / 1000));
+}
+
+//!
+//! Computes the time difference between the time values in the argument (te - ts).
+//!
+//! @param[in] ts - start time.
+//! @param[in] te - end time.
+//!
+//! @return time difference in microseconds. If input argument is invalid, return 0.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+long int timer_get_interval_usec(struct timeval *ts, struct timeval *te)
+{
+    if ((!ts) || (!te)) {
+        return 0;
+    }
+    return (((te->tv_sec - ts->tv_sec) * 1000000) + (te->tv_usec - ts->tv_usec));
+}
+
+//!
+//! Reads the time since Epoch, and compute the difference with the time in
+//! the argument. The timeval structure in the argument is updated for future
+//! or subsequent calls.
+//!
+//! @param[in] t - the time since Epoch (start time). If NULL, the value 
+//! stored in a static/global variable is used.
+//! Be careful when using this - can lead to wrong results.
+//! t will be updated with the current time.
+//!
+//! @return time difference in milliseconds.
+//!
+//! @see
+//!
+//! @pre start time must have been set with a call to start_timer().
+//!
+//! @post
+//!
+//! @note
+//!
+long int eucanetd_timer(struct timeval *t)
+{
+    struct timeval cur;
+    gettimeofday(&cur, NULL);
+    long int ret = 0;
+    if (!t) {
+        ret = timer_get_interval_millis(&gtv, &cur);
+        gtv.tv_sec = cur.tv_sec;
+        gtv.tv_usec = cur.tv_usec;
+    } else {
+        ret = timer_get_interval_millis(t, &cur);
+        t->tv_sec = cur.tv_sec;
+        t->tv_usec = cur.tv_usec;
+    }
+    return ret;
+}
+
+//!
+//! Reads the time since Epoch, and compute the difference with the time in
+//! the argument. The timeval structure in the argument is updated for future
+//! or subsequent calls.
+//!
+//! @param[in] t - the time since Epoch (start time). If NULL, the value 
+//! stored in a static/global variable is used.
+//! Be careful when using this - can lead to wrong results.
+//! t will be updated with the current time.
+//!
+//! @return time difference in microseconds.
+//!
+//! @see
+//!
+//! @pre start time must have been set with a call to start_timer().
+//!
+//! @post
+//!
+//! @note
+//!
+long int eucanetd_timer_usec(struct timeval *t)
+{
+    struct timeval cur;
+    gettimeofday(&cur, NULL);
+    long int ret = 0;
+    if (!t) {
+        ret = timer_get_interval_usec(&gtv, &cur);
+        gtv.tv_sec = cur.tv_sec;
+        gtv.tv_usec = cur.tv_usec;
+    } else {
+        ret = timer_get_interval_usec(t, &cur);
+        t->tv_sec = cur.tv_sec;
+        t->tv_usec = cur.tv_usec;
+    }
+    return ret;
 }

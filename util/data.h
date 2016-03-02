@@ -97,14 +97,16 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
-#define VERY_BIG_CHAR_BUFFER_SIZE				 4096   //!< Extra large string buffer size
+#define VERY_BIG_CHAR_BUFFER_SIZE		 4096   //!< Extra large string buffer size
 #define HOSTNAME_SIZE                             256   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
 
 #define KEY_STRING_SIZE                          4096   //! Buffer to hold RSA pub/private keys
 #define INSTANCE_ID_LEN                            11   //! Length of the instance ID string (i-xxxxxxxx\0)
+#define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
+#define ENI_ID_LEN                                 13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 //! @}
 
 //! @{
@@ -323,6 +325,8 @@ typedef struct netConfig_t {
     char privateMac[ENET_ADDR_LEN];    //!< Private MAC address
     char publicIp[INET_ADDR_LEN];      //!< Public IP address
     char privateIp[INET_ADDR_LEN];     //!< Private IP address
+    int device;                        //!< indicates nic device; 0 is primary and everything else is secondary nic
+    char interfaceId[ENI_ID_LEN];      //!< ENI in case of VPC
 } netConfig;
 
 //! Structure defining NC Volumes
@@ -452,6 +456,11 @@ typedef struct ncInstance_t {
     boolean bail_flag;                 //!< instance termination was requested
     //! @}
     char rootDirective[SMALL_CHAR_BUFFER_SIZE]; //!< root directive provided by user in the instance manifest
+
+    //! @{
+    //! @name updated by NC upon Attach/Detach ENI in VPC mode
+    netConfig secNetCfgs[EUCA_MAX_NICS]; //!< Instance's attached secondary ENIs
+    //! @}
 } ncInstance;
 
 //! Structure defining NC resource information
@@ -514,7 +523,7 @@ extern const char *ncResourceFormatTypeNames[];
 \*----------------------------------------------------------------------------*/
 
 int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn);
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
 
 //! @{
 //! @name Metadata APIs
@@ -527,7 +536,8 @@ void free_metadata(ncMetadata ** ppMeta);
 ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
-                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize) _attribute_wur_;
+                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize,
+                              netConfig * aSecNetCfgs, int secNetCfgsLen) _attribute_wur_;
 ncInstance *clone_instance(const ncInstance * old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);

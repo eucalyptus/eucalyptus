@@ -193,6 +193,7 @@ install: deploy
 	@$(INSTALL) -m 0555 $(SHUTDOWNCC) $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
 	@$(INSTALL) cc-client-policy.xml $(DESTDIR)$(policiesdir)
+	$(INSTALL) eucalyptus-cluster $(DESTDIR)$(sbindir)/eucalyptus-cluster
 
 uninstall:
 #	@$(RM) -f $(DESTDIR)$(sbindir)/$(SHUTDOWNCC)

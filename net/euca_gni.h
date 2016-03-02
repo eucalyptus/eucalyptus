@@ -147,21 +147,29 @@ typedef struct gni_secgroup_t {
     int max_egress_rules;
     gni_name *instance_names;          //!< List of instance names
     int max_instance_names;            //!< Number of instance names in the list
+    gni_name *interface_names;         //!< List of interface names
+    int max_interface_names;           //!< Number of interface names in the list
 } gni_secgroup;
 
 //! GNI Instance Information structure
 typedef struct gni_instance_t {
-    char name[INSTANCE_ID_LEN];        //!< Instance ID string
+    char name[INTERFACE_ID_LEN];       //!< Instance ID string
+    char ifname[INTERFACE_ID_LEN];     //!< Interface ID string
     char accountId[128];               //!< Instance Account ID string
     u8 macAddress[ENET_BUF_SIZE];      //!< Associated MAC address
     u32 publicIp;                      //!< Assigned public IP address
     u32 privateIp;                     //!< Assigned private IP address
-    char vpc[16];
-    char subnet[16];
+    char vpc[16];                      //!< VPC ID associated with this interface
+    char subnet[16];                   //!< subnet ID associated with this interface
     char node[HOSTNAME_LEN];
     char nodehostname[HOSTNAME_LEN];
+    boolean srcdstcheck;               //!< Source/Destination Check flag (only for interfaces)
+    int deviceidx;                     //!< NIC device index (only for interfaces)
+    gni_name instance_name;            //!< Instance name associated
     gni_name *secgroup_names;          //!< List of associated security group names
     int max_secgroup_names;            //!< Number of security group names in the list
+    gni_name *interface_names;         //!< List of associated interface names (only for instances)
+    int max_interface_names;           //!< Number of interface names in the list
 } gni_instance;
 
 //! GNI Subnet Information Structure
@@ -202,10 +210,21 @@ typedef struct gni_cluster_t {
 typedef struct gni_network_acl_t {
 } gni_network_acl;
 
+typedef struct gni_route_entry_t {
+    char destCidr[16];
+    char target[16];
+} gni_route_entry;
+
 typedef struct gni_route_table_t {
+    char name[16];
+    char accountId[128];
+    gni_route_entry *entries;
+    int max_entries;
 } gni_route_table;
 
 typedef struct gni_internet_gateway_t {
+    char name[16];
+    char accountId[128];
 } gni_internet_gateway;
 
 typedef struct gni_vpcsubnet_t {
@@ -228,8 +247,8 @@ typedef struct gni_vpc_t {
     int max_networkAcls;
     gni_route_table *routeTables;
     int max_routeTables;
-    gni_internet_gateway *internetGateways;
-    int max_internetGateways;
+    gni_name *internetGatewayNames;
+    int max_internetGatewayNames;
 } gni_vpc;
 
 typedef struct gni_hostname_t {
@@ -244,12 +263,13 @@ typedef struct gni_hostname_info_t {
 
 //! Global GNI Information Structure
 typedef struct globalNetworkInfo_t {
-    boolean init;                      //!< has the structure been initialized successfully?
+    boolean init;                           //!< has the structure been initialized successfully?
     char networkInfo[MAX_NETWORK_INFO_LEN]; //!< XML content used to build this structure
-    char version[32];                  //! latest version ID of the document
-    char appliedVersion[32];          //! latest known applied version ID of the document
-    char sMode[NETMODE_LEN];           //! The network mode string passed in the GNI
-    u32 enabledCLCIp;                  //!< IP address of the enabled CLC
+    char version[32];                       //!< latest version ID of the document
+    char appliedVersion[32];                //!< latest known applied version ID of the document
+    char sMode[NETMODE_LEN];                //!< The network mode string passed in the GNI
+    euca_netmode nmCode;                    //!< The network mode code (see euca_netmode_t)
+    u32 enabledCLCIp;                       //!< IP address of the enabled CLC
     char EucanetdHost[HOSTNAME_LEN];
     char GatewayHosts[HOSTNAME_LEN*3*33];
     char PublicNetworkCidr[HOSTNAME_LEN];
@@ -270,10 +290,14 @@ typedef struct globalNetworkInfo_t {
     int max_clusters;                  //!< Number of clusters in the list
     gni_instance *instances;           //!< List of instances information
     int max_instances;                 //!< Number of instances in the list
+    gni_instance *interfaces;          //!< List of interfaces information
+    int max_interfaces;                //!< Number of interfaces in the list
     gni_secgroup *secgroups;           //!< List of security group information
     int max_secgroups;                 //!< Number of security groups in the list
-    gni_vpc *vpcs;
-    int max_vpcs;
+    gni_vpc *vpcs;                     //!< List of VPC information
+    int max_vpcs;                      //!< Number of VPCs
+    gni_internet_gateway *vpcIgws;     //!< List of VPC Internet Gateways
+    int max_vpcIgws;                   //!< Number of VPC Internet Gateways
 } globalNetworkInfo;
 
 /*----------------------------------------------------------------------------*\
@@ -294,14 +318,22 @@ int gni_clear(globalNetworkInfo * gni);
 int gni_print(globalNetworkInfo * gni);
 int gni_iterate(globalNetworkInfo * gni, int mode);
 int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath);
+int gni_populate_instances(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
+int gni_populate_interfaces(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
+int gni_populate_sgs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
+int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
+int gni_populate_gnidata(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
+int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_info, xmlXPathContextPtr ctxptr);
+
+int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath, xmlXPathContextPtr ctxptr);
 
 int gni_is_self(const char *test_ip);
 
-int gni_cluster_clear(gni_cluster * cluster);
-int gni_node_clear(gni_node * node);
-int gni_instance_clear(gni_instance * instance);
-int gni_secgroup_clear(gni_secgroup * secgroup);
-int gni_vpc_clear(gni_vpc * vpc);
+int gni_cluster_clear(gni_cluster *cluster);
+int gni_node_clear(gni_node *node);
+int gni_instance_clear(gni_instance *instance);
+int gni_secgroup_clear(gni_secgroup *secgroup);
+int gni_vpc_clear(gni_vpc *vpc);
 
 int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr);
@@ -326,7 +358,12 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
                                int *out_max_secgroup_names, gni_secgroup ** out_secgroups, int *out_max_secgroups);
 int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
                                int *out_max_instance_names, gni_instance ** out_instances, int *out_max_instances);
+int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup,
+        char **interface_names, int max_interface_names, char ***out_interface_names,
+        int *out_max_interface_names, gni_instance ** out_interfaces, int *out_max_interfaces);
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname);
+gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName);
+int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance ***out_interfaces, int *max_out_interfaces);
 
 int gni_validate(globalNetworkInfo * gni);
 int gni_netmode_validate(const char *psMode);
@@ -335,11 +372,15 @@ int gni_managed_subnet_validate(gni_managedsubnet * pSubnet);
 int gni_cluster_validate(gni_cluster * cluster, boolean isManaged);
 int gni_node_validate(gni_node * node);
 int gni_instance_validate(gni_instance * instance);
+int gni_interface_validate(gni_instance * interface);
 int gni_secgroup_validate(gni_secgroup * secgroup);
 
 int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
+
+void gni_instance_interface_print(gni_instance *inst, int loglevel);
+void gni_sg_print(gni_secgroup *sg, int loglevel);
 
 gni_hostname_info *gni_init_hostname_info(void);
 int gni_hostnames_print(gni_hostname_info *host_info);

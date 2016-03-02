@@ -3,12 +3,14 @@ package com.eucalyptus.cloudformation.workflow.steps;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.netflix.glisten.WorkflowOperations;
 
 import javax.annotation.Nullable;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +20,6 @@ import java.util.Map;
 public abstract class StepBasedResourceAction extends ResourceAction {
 
   protected Map<String, Step> createSteps = Maps.newLinkedHashMap();
-
   public final Step getCreateStep(String stepId) {
     return createSteps.get(stepId);
   }
@@ -29,35 +30,44 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     return deleteSteps.get(stepId);
   }
 
-  protected Map<String, UpdateStep> updateNoInterruptionSteps = Maps.newLinkedHashMap();
-
-  public final UpdateStep getUpdateNoInterruptionStep(String stepId) {
-    return updateNoInterruptionSteps.get(stepId);
+  protected EnumMap<UpdateTypeAndDirection, Map<String, UpdateStep>> updateStepEnumMap = Maps.newEnumMap(UpdateTypeAndDirection.class);
+  public final UpdateStep getUpdateStep(UpdateTypeAndDirection updateTypeAndDirection, String stepId) {
+    return updateStepEnumMap.get(updateTypeAndDirection).get(stepId);
   }
 
-  protected Map<String, UpdateStep> updateSomeInterruptionSteps = Maps.newLinkedHashMap();
-
-  public final UpdateStep getUpdateSomeInterruptionStep(String stepId) {
-    return updateSomeInterruptionSteps.get(stepId);
-  }
-  protected Map<String, UpdateStep> updateWithReplacementSteps = Maps.newLinkedHashMap();
-
-  public final UpdateStep getUpdateWithReplacementStep(String stepId) {
-    return updateWithReplacementSteps.get(stepId);
-  }
 
   public StepBasedResourceAction(Map<String, Step> addedCreateSteps, Map<String, Step> addedDeleteSteps,
                                  Map<String, UpdateStep> addedUpdateNoInterruptionSteps,
-                                 Map<String, UpdateStep> addedUpdateSomeInterruptionSteps,
-                                 Map<String, UpdateStep> addedUpdateWithReplacementSteps) {
-    putIfNotNull(createSteps, addedCreateSteps);
-    putIfNotNull(deleteSteps, addedDeleteSteps);
-    putIfNotNull(updateNoInterruptionSteps, addedUpdateNoInterruptionSteps);
-    putIfNotNull(updateSomeInterruptionSteps, addedUpdateSomeInterruptionSteps);
-    putIfNotNull(updateWithReplacementSteps, addedUpdateWithReplacementSteps);
+                                 Map<String, UpdateStep> addedUpdateSomeInterruptionSteps) {
+    for (UpdateTypeAndDirection updateTypeAndDirection : UpdateTypeAndDirection.values()) {
+      updateStepEnumMap.put(updateTypeAndDirection, Maps.<String, UpdateStep>newLinkedHashMap());
+    }
+    clearAndPutIfNotNull(createSteps, addedCreateSteps);
+    clearAndPutIfNotNull(deleteSteps, addedDeleteSteps);
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_NO_INTERRUPTION), addedUpdateNoInterruptionSteps);
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_SOME_INTERRUPTION), addedUpdateSomeInterruptionSteps);
+    // defaults for the rest
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT), createStepsToUpdateWithReplacementSteps(addedCreateSteps));
+
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION), addedUpdateNoInterruptionSteps);
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_SOME_INTERRUPTION), addedUpdateSomeInterruptionSteps);
+    clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_WITH_REPLACEMENT), Maps.<String, UpdateStep>newHashMap()); // by default, nothing to do.  (Cleanup will take care of it)
   }
 
-  private static <T> void putIfNotNull(Map<String, T> map, Map<String, T> addedMap){
+  public void setCreateSteps(Map<String, Step> addedCreateSteps) {
+    clearAndPutIfNotNull(createSteps, addedCreateSteps);
+  }
+
+  public void setDeleteSteps(Map<String, Step> addedDeleteSteps) {
+    clearAndPutIfNotNull(deleteSteps, addedDeleteSteps);
+  }
+
+  public void setUpdateSteps(UpdateTypeAndDirection updateTypeAndDirection, Map<String, UpdateStep> addedUpdateSteps) {
+    clearAndPutIfNotNull(updateStepEnumMap.get(updateTypeAndDirection), addedUpdateSteps);
+  }
+
+  private static <T> void clearAndPutIfNotNull(Map<String, T> map, Map<String, T> addedMap){
+    map.clear();
     if (addedMap != null) map.putAll(addedMap);
   }
 
@@ -111,40 +121,32 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     });
   }
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
     List<String> stepIds = Lists.newArrayList(createSteps.keySet());
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
   }
 
   @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId);
+    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
 
   @Override
-  public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new UpdateCleanupMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupPromise(resourceId, stackId, accountId, effectiveUserId);
+    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
 
   @Override
-  public Promise<String> getUpdateNoInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.newArrayList(updateNoInterruptionSteps.keySet());
-    return new UpdateNoInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateNoInterruptionPromise(resourceId, stackId, accountId, effectiveUserId);
+  public Promise<String> getUpdateRollbackCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
+    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
+    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
   }
-  
+
   @Override
-  public Promise<String> getUpdateSomeInterruptionPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.newArrayList(updateSomeInterruptionSteps.keySet());
-    return new UpdateSomeInterruptionMultiStepPromise(workflowOperations, stepIds, this).getUpdateSomeInterruptionPromise(resourceId, stackId, accountId, effectiveUserId);
+  public Promise<String> getUpdatePromise(UpdateTypeAndDirection updateTypeAndDirection, WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    List<String> stepIds = Lists.newArrayList(updateStepEnumMap.get(updateTypeAndDirection).keySet());
+    return new UpdateMultiStepPromise(workflowOperations, stepIds, this, updateTypeAndDirection).getUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
-  @Override
-  public Promise<String> getUpdateWithReplacementPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    List<String> stepIds = Lists.newArrayList(updateWithReplacementSteps.keySet());
-    return new UpdateWithReplacementMultiStepPromise(workflowOperations, stepIds, this).getUpdateWithReplacementPromise(resourceId, stackId, accountId, effectiveUserId);
-  }
-
-
-
 }

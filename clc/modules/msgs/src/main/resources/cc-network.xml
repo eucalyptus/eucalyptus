@@ -64,6 +64,8 @@
 <binding force-classes="true" add-constructors="true">
 
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkConfigType" abstract="true">
+    <value name="interfaceId" field="interfaceId" />
+  	<value name="device" field="device" />
     <value name="privateMacAddress" field="macAddress" />
     <value name="privateIp" field="ipAddress" />
     <value name="publicIp" field="ignoredPublicIp" />

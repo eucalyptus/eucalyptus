@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -744,7 +744,7 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
       final String ownerAccountNumber,
       final String ownerUserId,
       final String ownerUserName,
-      final AddressDomain domain,
+      @Nonnull final AddressDomain domain,
       final String allocationId
   ) {
     final AddressStateMetadataSupport initialState = stateMetadata.get( );
@@ -1074,6 +1074,10 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
     return addressInfo.getStateVersion( );
   }
 
+  public AddressState getState( ) {
+    return addressInfo.getState( );
+  }
+
   @Override
   public String toString( ) {
     return "Address " + this.getDisplayName( ) + " " + ( this.isAllocated( )
@@ -1111,7 +1115,7 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
   }
 
   @Override
-  public int compareTo( AddressMetadata that ) {
+  public int compareTo( @Nonnull AddressMetadata that ) {
     return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
   }
 

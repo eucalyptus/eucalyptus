@@ -82,6 +82,12 @@
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+#define VPCMIDO_TENANT     "euca_tenant_1"
+#define VPCMIDO_TUNNELZONE "mido-tz midotz euca-tz eucatz"
+// Maximum number of active VPCs (mido routers)
+// Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
+// 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
+#define MAX_RTID 8192
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -94,6 +100,72 @@
  |                                ENUMERATIONS                                |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+enum {
+    VPCSG_INGRESS,
+    VPCSG_EGRESS,
+    VPCSG_IAGPRIV,
+    VPCSG_IAGPUB,
+    VPCSG_IAGALL,
+    VPCSG_END
+};
+
+enum {
+    VPCBR_VMPORT,
+    VPCBR_DHCPHOST,
+    VMHOST,
+    ELIP_PRE,
+    //    ELIP_PRE_PUB,
+    ELIP_POST,
+    //    ELIP_POST_PRIV,
+    ELIP_PRE_IPADDRGROUP,
+    ELIP_POST_IPADDRGROUP,
+    ELIP_PRE_IPADDRGROUP_IP,
+    ELIP_POST_IPADDRGROUP_IP,
+    ELIP_ROUTE,
+    INST_PRECHAIN,
+    INST_POSTCHAIN,
+    VPCINSTANCEEND
+};
+
+enum {
+    VPCBR,
+    VPCBR_RTPORT,
+    VPCRT_BRPORT,
+    VPCBR_DHCP,
+    VPCBR_METAPORT,
+    VPCBR_METAHOST,
+    VPCSUBNETEND
+};
+
+enum {
+    VPCRT,
+    EUCABR_DOWNLINK,
+    VPCRT_UPLINK,
+    VPCRT_PRECHAIN,
+    VPCRT_POSTCHAIN,
+    VPCRT_PREELIPCHAIN,
+    VPCEND
+};
+
+enum {
+    EUCART,
+    EUCABR,
+    EUCART_BRPORT,
+    EUCABR_RTPORT,
+    METADATA_IPADDRGROUP,
+    GWPORTGROUP,
+    MIDOCOREEND
+};
+
+enum vpc_route_entry_target_t {
+    VPC_TARGET_LOCAL,
+    VPC_TARGET_INTERNET_GATEWAY,
+    VPC_TARGET_VPRIVATE_GATEWAY,
+    VPC_TARGET_ENI,
+    VPC_TARGET_PEERING,
+    VPC_TARGET_NAT_GATEWAY,
+    VPC_TARGET_INVALID
+};
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -113,11 +185,201 @@ typedef struct midoname_t {
     int init;
 } midoname;
 
+typedef struct mido_parsed_route_t {
+    midoname router;
+    midoname rport;
+    char *src_net;
+    char *src_length;
+    char *dst_net;
+    char *dst_length;
+    char *next_hop_ip;
+    char *weight;
+    int mido_present;
+} mido_parsed_route;
+
+typedef struct mido_resource_router_t {
+    midoname resc;
+    midoname **ports;
+    midoname *routes;
+    int max_ports;
+    int max_routes;
+} mido_resource_router;
+
+typedef struct mido_resource_dhcp_t {
+    midoname resc;
+    midoname *dhcphosts;
+    int max_dhcphosts;
+} mido_resource_dhcp;
+
+typedef struct mido_resource_bridge_t {
+    midoname resc;
+    midoname **ports;
+    mido_resource_dhcp *dhcps;
+    int max_ports;
+    int max_dhcps;
+} mido_resource_bridge;
+
+typedef struct mido_resource_chain_t {
+    midoname resc;
+    midoname *rules;
+    int max_rules;
+} mido_resource_chain;
+
+typedef struct mido_resource_host_t {
+    midoname resc;
+    midoname **ports;
+    int max_ports;
+} mido_resource_host;
+
+typedef struct mido_resource_ipaddrgroup_t {
+    midoname resc;
+    midoname *ips;
+    int max_ips;
+} mido_resource_ipaddrgroup;
+
+typedef struct mido_resource_portgroup_t {
+    midoname resc;
+    midoname **ports;
+    int max_ports;
+} mido_resource_portgroup;
+
+typedef struct mido_resources_t {
+    midoname *ports;
+    mido_resource_router *routers;
+    mido_resource_bridge *bridges;
+    mido_resource_chain *chains;
+    mido_resource_host *hosts;
+    mido_resource_ipaddrgroup *ipaddrgroups;
+    mido_resource_portgroup *portgroups;
+    int max_ports;
+    int max_routers;
+    int max_bridges;
+    int max_chains;
+    int max_hosts;
+    int max_ipaddrgroups;
+    int max_portgroups;
+} mido_resources;
+
+typedef struct mido_vpc_secgroup_t {
+    gni_secgroup *gniSecgroup;
+    char name[16];
+    midoname midos[VPCSG_END];
+    midoname *ingress_rules, *egress_rules;
+    int max_ingress_rules, max_egress_rules;
+    int gnipresent;
+
+} mido_vpc_secgroup;
+
+typedef struct mido_vpc_instance_t {
+    gni_instance *gniInst;
+    char name[16];
+    midoname midos[VPCINSTANCEEND];
+    int gnipresent;
+} mido_vpc_instance;
+
+typedef struct mido_vpc_subnet_t {
+    gni_vpcsubnet *gniSubnet;
+    char name[16];
+    char vpcname[16];
+    midoname midos[VPCSUBNETEND];
+    midoname *brports;
+    midoname *dhcphosts;
+    midoname **routes;
+    mido_vpc_instance *instances;
+    int max_brports;
+    int max_dhcphosts;
+    int max_instances;
+    int max_routes;
+    int gnipresent;
+} mido_vpc_subnet;
+
+typedef struct mido_vpc_t {
+    gni_vpc *gniVpc;
+    char name[16];
+    int rtid;
+    midoname midos[VPCEND];
+    midoname *rtports;
+    midoname *rtpostchain_rules;
+    midoname *rtpreelipchain_rules;
+    mido_vpc_subnet *subnets;
+    int max_rtports;
+    int max_rtpostchain_rules;
+    int max_rtpreelipchain_rules;
+    int max_subnets;
+    int gnipresent;
+} mido_vpc;
+
+typedef struct mido_core_t {
+    midoname midos[MIDOCOREEND];
+
+    midoname *brports;
+    int max_brports;
+
+    midoname *rtports;
+    int max_rtports;
+
+    midoname gwhosts[32];
+    midoname gwports[32];
+    int max_gws;
+} mido_core;
+
+typedef struct mido_config_t {
+    char *ext_eucanetdhostname;
+
+    char *ext_rthostnamearr[32];
+    char *ext_rthostaddrarr[32];
+    char *ext_rthostifacearr[32];
+    int ext_rthostarrmax;
+
+    char *ext_pubnw;
+    char *ext_pubgwip;
+    char *eucahome;
+    u32 int_rtnw;
+    u32 int_rtaddr;
+    u32 enabledCLCIp;
+    int int_rtsn;
+    int flushmode;
+    int disable_l2_isolation;
+
+//    midoname *hosts;
+//    midoname *routers;
+//    midoname *bridges;
+//    midoname *chains;
+//    midoname *brports;
+//    midoname *rtports;
+//    midoname *ipaddrgroups;
+//    midoname *portgroups;
+//
+//    int max_hosts;
+//    int max_routers;
+//    int max_bridges;
+//    int max_chains;
+//    int max_brports;
+//    int max_rtports;
+//    int max_ipaddrgroups;
+//    int max_portgroups;
+
+    mido_resources *resources;
+    mido_core *midocore;
+
+    mido_vpc *vpcs;
+    int max_vpcs;
+
+    mido_vpc_secgroup *vpcsecgroups;
+    int max_vpcsecgroups;
+
+    int router_ids[MAX_RTID];
+} mido_config;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+extern int http_gets;
+extern int http_posts;
+extern int http_puts;
+extern int http_deletes;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -126,6 +388,12 @@ typedef struct midoname_t {
 \*----------------------------------------------------------------------------*/
 
 //int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min, char *src_port_max,  char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule);
+
+void mido_info_http_count();
+void mido_info_http_count_total();
+
+void mido_free_mido_parsed_route(mido_parsed_route *route);
+void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes);
 
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname * name);
@@ -144,6 +412,9 @@ int mido_create_tenant(char *name, midoname * outname);
 int mido_update_tenant(midoname * name);
 int mido_delete_tenant(midoname * name);
 
+int mido_get_tunnelzones(char *tenant, midoname **outnames, int *outnames_max);
+int mido_get_tunnelzone_hosts(midoname *tzone, midoname **outnames, int *outnames_max);
+
 int mido_create_bridge(char *tenant, char *name, midoname * outname);
 //int mido_read_bridge(midoname * name);
 int mido_update_bridge(midoname * name, ...);
@@ -158,7 +429,9 @@ int mido_delete_router(midoname * name);
 int mido_print_router(midoname * name);
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
+int mido_find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx);
+int mido_create_route(mido_config *mido, midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
+//int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 int mido_delete_route(midoname * name);
 int mido_get_routes(midoname * router, midoname ** outnames, int *outnames_max);
 
@@ -179,7 +452,7 @@ int mido_delete_portgroup(midoname * name);
 int mido_print_portgroup(midoname * name);
 int mido_get_portgroups(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_portgroup_port(midoname * portgroup, char * portId, midoname * outname);
+int mido_create_portgroup_port(mido_config *mido, midoname * portgroup, char * portId, midoname * outname);
 int mido_delete_portgroup_port(midoname * name);
 int mido_get_portgroup_ports(midoname * portgroup, midoname ** outnames, int *outnames_max);
 
@@ -206,9 +479,11 @@ int mido_print_chain(midoname * name);
 int mido_delete_chain(midoname * name);
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int *next_position, ...);
+//int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int *next_position, ...);
+int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int * next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
+int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, ...);
 int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
 int mido_delete_rule(midoname * name);
@@ -221,7 +496,8 @@ int mido_delete_ipaddrgroup(midoname * name);
 int mido_print_ipaddrgroup(midoname * name);
 int mido_get_ipaddrgroups(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outname);
+int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *ip, midoname *outname);
+//int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outname);
 int mido_delete_ipaddrgroup_ip(midoname * ipaddrgroup, midoname * ipaddrgroup_ip);
 int mido_get_ipaddrgroup_ips(midoname * ipaddrgroup, midoname ** outnames, int *outnames_max);
 

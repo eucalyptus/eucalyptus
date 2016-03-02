@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -249,6 +249,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   public static Criterion nullNodeCriterion( ) {
     return Restrictions.isNull( "runtimeState.serviceTag" );
+  }
+
+  public static Criterion lastUpdatedCriterion( final long timestamp ) {
+    return Restrictions.lt( "lastUpdateTimestamp", new Date( timestamp ) );
   }
 
   public static Projection instanceIdProjection( ) {
@@ -667,7 +671,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public void addNetworkInterface( final NetworkInterface networkInterface ) {
-    this.getNetworkConfig( ).getNetworkInterfaces( ).add( networkInterface );
+    final List<NetworkInterface> networkInterfaces = this.getNetworkConfig( ).getNetworkInterfaces( );
+    final int index = networkInterface.getAttachment( ).getDeviceIndex( );
+    if ( networkInterfaces.size( ) > index ) {
+      networkInterfaces.set( index, networkInterface );
+    } else {
+      while ( networkInterfaces.size( ) < index ) networkInterfaces.add( null );
+      networkInterfaces.add( networkInterface );
+    }
   }
 
   public String getPasswordData( ) {

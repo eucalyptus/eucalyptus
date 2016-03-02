@@ -245,35 +245,26 @@ public class SetRESTBucketAccessControlPolicyResponse extends S3Response {
  * --------------------
  * BUCKET CORS
  * --------------------
+ * 
+ * See ObjectStorageGroovy.java for get/set/delete handlers
  */
 
 /*
- * GET /bucket/?cors
+ * Data types
  */
-public class GetBucketCorsRequest extends S3Request {}
-public class GetBucketCorsResponse extends S3Response {
-  CORSConfiguration corsConfig;
+public class CorsConfiguration {
+  List<CorsRule> rules;
 }
 
-/*
- * PUT /bucket/?cors
- */
-public class SetBucketCorsRequest extends S3Request {
-  CORSConfiguration corsConfig;
-}
-public class SetBucketCorsResponse extends S3Response {}
-
-public class CORSConfiguration {
-  ArrayList<CORSRule> rules;
-}
-
-public class CORSRule {
+public class CorsRule {
   String id;
-  ArrayList<String> allowedMethods;
-  ArrayList<String> allowedOrigins;
-  ArrayList<String> allowedHeaders;
+	//TODO: Change these String arrays to List<String> which didn't work 
+	//  with JiBX bindings for some reason.
+  String[] allowedOrigins;
+  String[] allowedMethods;
+  String[] allowedHeaders;
   int maxAgeSeconds;
-  ArrayList<String> exposeHeaders;
+  String[] exposeHeaders;
 }
 
 /*
@@ -445,10 +436,10 @@ public class Transition extends Expiration {
  */
 /*
  * DELETE /bucket/?lifecycle
- */
+ *//*
 public class DeleteBucketLifecycleRequest extends S3Request {}
 public class DeleteBucketLifecycleResponse extends S3Response {}
-
+*/
 
 /* 
  * --------------------

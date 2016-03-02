@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,8 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vpc.NatGateway;
+import com.eucalyptus.compute.common.internal.vpc.NatGateways;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet;
@@ -109,6 +111,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -119,6 +122,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
@@ -153,6 +157,7 @@ public class ComputeService implements Callable {
 
   private final DhcpOptionSets dhcpOptionSets;
   private final InternetGateways internetGateways;
+  private final NatGateways natGateways;
   private final NetworkAcls networkAcls;
   private final NetworkInterfaces networkInterfaces;
   private final RouteTables routeTables;
@@ -162,6 +167,7 @@ public class ComputeService implements Callable {
   @Inject
   public ComputeService( final DhcpOptionSets dhcpOptionSets,
                          final InternetGateways internetGateways,
+                         final NatGateways natGateways,
                          final NetworkAcls networkAcls,
                          final NetworkInterfaces networkInterfaces,
                          final RouteTables routeTables,
@@ -169,6 +175,7 @@ public class ComputeService implements Callable {
                          final Vpcs vpcs ) {
     this.dhcpOptionSets = dhcpOptionSets;
     this.internetGateways = internetGateways;
+    this.natGateways = natGateways;
     this.networkAcls = networkAcls;
     this.networkInterfaces = networkInterfaces;
     this.routeTables = routeTables;
@@ -574,6 +581,14 @@ public class ComputeService implements Callable {
           break;
         case "sourceDestCheck":
           reply.setSourceDestCheck( true );
+          if ( vm.getNetworkInterfaces( ) != null ) {
+            for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+              if ( networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+                reply.setSourceDestCheck( networkInterface.getSourceDestCheck( ) );
+                break;
+              }
+            }
+          }
           break;
         case "sriovNetSupport":
           reply.setSriovNetSupport( false );
@@ -1068,6 +1083,19 @@ public class ComputeService implements Callable {
     return reply;
   }
 
+  public DescribeNatGatewaysResponseType describeNatGateways( final DescribeNatGatewaysType request ) throws EucalyptusCloudException {
+    final DescribeNatGatewaysResponseType reply = request.getReply( );
+    describe(
+        Identifier.nat,
+        request.natGatewayIds( ),
+        request.getFilterSet( ),
+        NatGateway.class,
+        NatGatewayType.class,
+        reply.getNatGatewaySet( ).getItem( ),
+        natGateways );
+    return reply;
+  }
+
   public DescribeNetworkAclsResponseType describeNetworkAcls( final DescribeNetworkAclsType request ) throws EucalyptusCloudException {
     final DescribeNetworkAclsResponseType reply = request.getReply( );
     describe(
@@ -1321,14 +1349,25 @@ public class ComputeService implements Callable {
     }
   }
 
-  private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
+  private static <AP extends AbstractPersistent & CloudMetadata, AT> void describe(
       final Identifier identifier,
       final Collection<String> ids,
       final Collection<com.eucalyptus.compute.common.Filter> filters,
       final Class<AP> persistent,
       final Class<AT> api,
       final List<AT> results,
-      final Function<AT,String> idFunction,
+      final Lister<AP> lister ) throws EucalyptusCloudException {
+    describe( identifier, ids, filters, persistent, api, results, Callbacks.<AccountFullName>noop( ), lister );
+  }
+
+  private static <AP extends AbstractPersistent & CloudMetadata, AT> void describe(
+      final Identifier identifier,
+      final Collection<String> ids,
+      final Collection<com.eucalyptus.compute.common.Filter> filters,
+      final Class<AP> persistent,
+      final Class<AT> api,
+      final List<AT> results,
+      final Callback<AccountFullName> resultsDecorator,
       final Lister<AP> lister ) throws EucalyptusCloudException {
     final boolean showAll = ids.remove( "verbose" );
     final List<String> normalizedIds = identifier.normalize( ids );
@@ -1356,10 +1395,27 @@ public class ComputeService implements Callable {
 
       identifier.errorIfNotFound( normalizedIds );
 
-      populateTags( accountFullName, persistent, results, idFunction );
+      resultsDecorator.fire( accountFullName );
     } catch ( Exception e ) {
       throw handleException( e );
     }
+  }
+
+  private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
+      final Identifier identifier,
+      final Collection<String> ids,
+      final Collection<com.eucalyptus.compute.common.Filter> filters,
+      final Class<AP> persistent,
+      final Class<AT> api,
+      final List<AT> results,
+      final Function<AT,String> idFunction,
+      final Lister<AP> lister ) throws EucalyptusCloudException {
+    describe( identifier, ids, filters, persistent, api, results, new Callback<AccountFullName>( ) {
+      @Override
+      public void fire( final AccountFullName accountFullName ) {
+        populateTags( accountFullName, persistent, results, idFunction );
+      }
+    }, lister );
   }
 
   private static <AP extends AbstractPersistent> Filter getPersistenceFilter(
@@ -1495,6 +1551,7 @@ public class ComputeService implements Callable {
     dopt( "DHCPOption", "dhcp-options-id", "InvalidDhcpOptionID.NotFound" ),
     eni( "networkInterface", "network-interface-id", "InvalidNetworkInterfaceID.NotFound" ),
     igw( "internetGateway", "internet-gateway-id", "InvalidInternetGatewayID.NotFound" ),
+    nat( "natGateway", "natGateways", "nat-gateway-id", "NatGatewayNotFound", "NatGatewayMalformed" ),
     rtb( "routeTable", "route-table-id", "InvalidRouteTableID.NotFound" ),
     subnet( "subnet", "subnet-id", "InvalidSubnetID.NotFound" ),
     vpc( "vpc", "vpc-id", "InvalidVpcID.NotFound" ),
@@ -1516,11 +1573,21 @@ public class ComputeService implements Callable {
         final String filterName,
         final String notFoundErrorCode
     ) {
-      this.code = "InvalidParameterValue";
+      this( defaultParameter, defaultListParameter, filterName, notFoundErrorCode, "InvalidParameterValue" );
+    }
+
+    Identifier(
+        final String defaultParameter,
+        final String defaultListParameter,
+        final String filterName,
+        final String notFoundErrorCode,
+        final String malformedErrorCode
+    ) {
       this.defaultParameter = defaultParameter;
       this.defaultListParameter = defaultListParameter;
       this.filterName = filterName;
       this.notFoundErrorCode = notFoundErrorCode;
+      this.code = malformedErrorCode;
     }
 
     public String getFilterName( ) {

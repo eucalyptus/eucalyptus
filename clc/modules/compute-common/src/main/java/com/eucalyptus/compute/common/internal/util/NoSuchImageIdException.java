@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,12 +61,12 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.util;
 
-import com.eucalyptus.compute.common.internal.util.MetadataException;
-
 /**
  * Created by ethomas on 4/16/14.
  */
-public class NoSuchImageIdException extends MetadataException {
+public class NoSuchImageIdException extends NoSuchMetadataException {
+  private static final long serialVersionUID = 1L;
+
   public NoSuchImageIdException() {
   }
 

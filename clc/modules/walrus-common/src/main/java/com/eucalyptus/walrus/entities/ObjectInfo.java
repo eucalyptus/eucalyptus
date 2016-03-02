@@ -103,22 +103,6 @@ public class ObjectInfo extends AbstractPersistent {
   @Column(name = "object_name")
   private String objectName;
 
-  @Column(name = "global_read")
-  private Boolean globalRead;
-
-  @Column(name = "global_write")
-  private Boolean globalWrite;
-
-  @Column(name = "global_read_acp")
-  private Boolean globalReadACP;
-
-  @Column(name = "global_write_acp")
-  private Boolean globalWriteACP;
-
-  @OneToMany(cascade = CascadeType.ALL)
-  @JoinTable(name = "object_has_grants", joinColumns = {@JoinColumn(name = "object_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  private List<GrantInfo> grants = new ArrayList<GrantInfo>();
-
   @Column(name = "etag")
   private String etag;
 
@@ -202,46 +186,6 @@ public class ObjectInfo extends AbstractPersistent {
 
   public void setObjectName(String objectName) {
     this.objectName = objectName;
-  }
-
-  public boolean isGlobalRead() {
-    return globalRead;
-  }
-
-  public void setGlobalRead(Boolean globalRead) {
-    this.globalRead = globalRead;
-  }
-
-  public boolean isGlobalWrite() {
-    return globalWrite;
-  }
-
-  public void setGlobalWrite(Boolean globalWrite) {
-    this.globalWrite = globalWrite;
-  }
-
-  public boolean isGlobalReadACP() {
-    return globalReadACP;
-  }
-
-  public void setGlobalReadACP(Boolean globalReadACP) {
-    this.globalReadACP = globalReadACP;
-  }
-
-  public boolean isGlobalWriteACP() {
-    return globalWriteACP;
-  }
-
-  public void setGlobalWriteACP(Boolean globalWriteACP) {
-    this.globalWriteACP = globalWriteACP;
-  }
-
-  public List<GrantInfo> getGrants() {
-    return grants;
-  }
-
-  public void setGrants(List<GrantInfo> grants) {
-    this.grants = grants;
   }
 
   public String getEtag() {
@@ -377,29 +321,6 @@ public class ObjectInfo extends AbstractPersistent {
   public ObjectInfo(String bucketName, String objectKey) {
     this.bucketName = bucketName;
     this.objectKey = objectKey;
-  }
-
-  public void resetGlobalGrants() {
-    globalRead = globalWrite = globalReadACP = globalWriteACP = false;
-  }
-
-  public void readPermissions(List<Grant> grants) {
-    if (globalRead && globalReadACP && globalWrite && globalWriteACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
-      return;
-    }
-    if (globalRead) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
-    }
-    if (globalReadACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
-    }
-    if (globalWrite) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
-    }
-    if (globalWriteACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
-    }
   }
 
   public void replaceMetaData(List<MetaDataEntry> metaDataEntries) {

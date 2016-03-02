@@ -31,6 +31,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateAddressResponseType;
@@ -52,6 +54,7 @@ import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -62,8 +65,56 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
   private AWSEC2EIPAssociationResourceInfo info = new AWSEC2EIPAssociationResourceInfo();
 
   public AWSEC2EIPAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2EIPAssociationResourceAction otherAction = (AWSEC2EIPAssociationResourceAction) resourceAction;
+    if (!Objects.equals(properties.getAllocationId(), otherAction.properties.getAllocationId())) {
+      // Update requires: Replacement if you also change the InstanceId or NetworkInterfaceId property. If not, update requires No interruption.
+      if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId()) ||
+        !Objects.equals(properties.getNetworkInterfaceId(), otherAction.properties.getNetworkInterfaceId())) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      } else {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    if (!Objects.equals(properties.getEip(), otherAction.properties.getEip())) {
+      // Update requires: Replacement if you also change the InstanceId or NetworkInterfaceId property. If not, update requires No interruption.
+      if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId()) ||
+        !Objects.equals(properties.getNetworkInterfaceId(), otherAction.properties.getNetworkInterfaceId())) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      } else {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    // Might be a little redundancy here, but trying to adhere to the instructions exactly rather than optimize
+    if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
+      // Update requires: Replacement if you also change the AllocationId or EIP property. If not, update requires No interruption.
+      if (!Objects.equals(properties.getAllocationId(), otherAction.properties.getAllocationId()) ||
+        !Objects.equals(properties.getEip(), otherAction.properties.getEip())) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      } else {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    if (!Objects.equals(properties.getNetworkInterfaceId(), otherAction.properties.getNetworkInterfaceId())) {
+      // Update requires: Replacement if you also change the AllocationId or EIP property. If not, update requires No interruption.
+      if (!Objects.equals(properties.getAllocationId(), otherAction.properties.getAllocationId()) ||
+        !Objects.equals(properties.getEip(), otherAction.properties.getEip())) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      } else {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    if (!Objects.equals(properties.getPrivateIpAddress(), otherAction.properties.getPrivateIpAddress())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
+  }
+
 
   private enum CreateSteps implements Step {
     CREATE_EIP_ASSOCIATION {
@@ -72,6 +123,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         AWSEC2EIPAssociationResourceAction action = (AWSEC2EIPAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         AssociateAddressType associateAddressType = MessageHelper.createMessage(AssociateAddressType.class, action.info.getEffectiveUserId());
+        associateAddressType.setAllowReassociation(true); // to allow for no-interruption update
         if (action.properties.getInstanceId() == null && action.properties.getNetworkInterfaceId() == null) {
           throw new ValidationErrorException("Either instance ID or network interface id must be specified");
         }
@@ -106,7 +158,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
           associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
         }
         if (action.properties.getPrivateIpAddress() != null) {
-          associateAddressType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
+          associateAddressType.setPrivateIpAddress(action.properties.getPrivateIpAddress());
         }
         AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
         if (action.properties.getAllocationId() != null) {
@@ -114,11 +166,12 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         } else {
           action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
         }
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getStackVersion());
         }
 
         // Update the instance info (if network id exists)
@@ -133,7 +186,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
                 networkInterfaceType.getAttachment().getInstanceId() != null) {
-                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId());
+                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getStackVersion());
               }
             }
           }
@@ -157,7 +210,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2EIPAssociationResourceAction action = (AWSEC2EIPAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if (action.properties.getAllocationId() != null) {
           DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
           describeAddressesType.setAllocationIds(Lists.newArrayList(action.properties.getAllocationId()));
@@ -181,7 +234,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
 
         // Update the instance info
         if (action.properties.getInstanceId() != null) {
-          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId());
+          EC2Helper.refreshInstanceAttributes(action.getStackEntity(), action.properties.getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getStackVersion());
         }
 
         // Update the instance info (if network id exists)
@@ -196,7 +249,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
               if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
                 networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
                 networkInterfaceType.getAttachment().getInstanceId() != null) {
-                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId());
+                EC2Helper.refreshInstanceAttributes(action.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), action.info.getEffectiveUserId(), action.getStackEntity().getStackVersion());
               }
             }
           }
@@ -213,6 +266,94 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
       return null;
     }
   }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    CREATE_EIP_ASSOCIATION {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2EIPAssociationResourceAction oldAction = (AWSEC2EIPAssociationResourceAction) oldResourceAction;
+        AWSEC2EIPAssociationResourceAction newAction = (AWSEC2EIPAssociationResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        AssociateAddressType associateAddressType = MessageHelper.createMessage(AssociateAddressType.class, newAction.info.getEffectiveUserId());
+        associateAddressType.setAllowReassociation(true); // to allow for no-interruption update
+        if (newAction.properties.getInstanceId() == null && newAction.properties.getNetworkInterfaceId() == null) {
+          throw new ValidationErrorException("Either instance ID or network interface id must be specified");
+        }
+        if (newAction.properties.getInstanceId() != null) {
+          DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
+          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", newAction.properties.getInstanceId() ) );
+          DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
+          if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+            throw new ValidationErrorException("No such instance " + newAction.properties.getInstanceId());
+          }
+          associateAddressType.setInstanceId(newAction.properties.getInstanceId());
+        }
+        if (newAction.properties.getEip() != null) {
+          DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, newAction.info.getEffectiveUserId());
+          describeAddressesType.setPublicIpsSet(Lists.newArrayList(newAction.properties.getEip()));
+          DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+          if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
+            throw new ValidationErrorException("No such EIP " + newAction.properties.getEip());
+          }
+          associateAddressType.setPublicIp(newAction.properties.getEip());
+        }
+        if (newAction.properties.getAllocationId() != null) {
+          DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, newAction.info.getEffectiveUserId());
+          describeAddressesType.setAllocationIds(Lists.newArrayList(newAction.properties.getAllocationId()));
+          DescribeAddressesResponseType describeAddressesResponseType = AsyncRequests.<DescribeAddressesType, DescribeAddressesResponseType> sendSync(configuration, describeAddressesType);
+          if (describeAddressesResponseType.getAddressesSet() == null || describeAddressesResponseType.getAddressesSet().isEmpty()) {
+            throw new ValidationErrorException("No such allocation-id " + newAction.properties.getAllocationId());
+          }
+          associateAddressType.setAllocationId(newAction.properties.getAllocationId());
+        }
+        if (newAction.properties.getNetworkInterfaceId() != null) {
+          associateAddressType.setNetworkInterfaceId(newAction.properties.getNetworkInterfaceId());
+        }
+        if (newAction.properties.getPrivateIpAddress() != null) {
+          associateAddressType.setPrivateIpAddress(newAction.properties.getPrivateIpAddress());
+        }
+        AssociateAddressResponseType associateAddressResponseType = AsyncRequests.<AssociateAddressType, AssociateAddressResponseType> sendSync(configuration, associateAddressType);
+        if (newAction.properties.getAllocationId() != null) {
+          newAction.info.setPhysicalResourceId(associateAddressResponseType.getAssociationId());
+        } else {
+          newAction.info.setPhysicalResourceId(newAction.getDefaultPhysicalResourceId());
+        }
+        newAction.info.setCreatedEnoughToDelete(true);
+        newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
+
+        // Update the instance info
+        if (newAction.properties.getInstanceId() != null) {
+          EC2Helper.refreshInstanceAttributes(newAction.getStackEntity(), newAction.properties.getInstanceId(), newAction.info.getEffectiveUserId(), newAction.getStackEntity().getStackVersion());
+        }
+
+        // Update the instance info (if network id exists)
+        if (newAction.properties.getNetworkInterfaceId() != null) {
+          DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, newAction.info.getEffectiveUserId());
+          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", newAction.properties.getNetworkInterfaceId() ) );
+          DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType);
+          if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
+            describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
+            !describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+            for (NetworkInterfaceType networkInterfaceType: describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem()) {
+              if (networkInterfaceType != null && networkInterfaceType.getAttachment() != null &&
+                networkInterfaceType.getAttachment().getDeviceIndex() == 0 &&
+                networkInterfaceType.getAttachment().getInstanceId() != null) {
+                EC2Helper.refreshInstanceAttributes(newAction.getStackEntity(), networkInterfaceType.getAttachment().getInstanceId(), newAction.info.getEffectiveUserId(), newAction.getStackEntity().getStackVersion());
+              }
+            }
+          }
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
 
 
   @Override

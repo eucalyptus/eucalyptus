@@ -264,7 +264,7 @@ public class Permissions {
 			policyEngine.evaluateQuota( context, resourceName, quantity );
 			return true;
 		} catch ( AuthException e ) {
-			LOG.debug( "Denied resource allocation of " + context.describe( resourceName, quantity ), e );
+			LOG.debug( "Denied resource allocation of " + context.describe( resourceName, quantity ) );
 		}
 		return false;
 	}
@@ -284,7 +284,7 @@ public class Permissions {
 		try {
 			Contexts.lookup().setContracts( contracts );
 		} catch ( IllegalContextAccessException e ) {
-			LOG.debug( "Not in a request context", e );
+			LOG.debug( "Not in a request context, contracts not exported to context" );
 		}
 	}
 }

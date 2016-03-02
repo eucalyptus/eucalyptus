@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ public interface RouteTables extends Lister<RouteTable> {
   AbstractPersistentSupport<RouteTableMetadata,RouteTable,VpcMetadataException> withRetries( );
 
   @TypeMapper
-  public enum RouteTableToRouteTableTypeTransform implements Function<RouteTable, RouteTableType> {
+  enum RouteTableToRouteTableTypeTransform implements Function<RouteTable, RouteTableType> {
     INSTANCE;
 
     @Nullable
@@ -100,7 +100,7 @@ public interface RouteTables extends Lister<RouteTable> {
   }
 
   @TypeMapper
-  public enum RouteToRouteType implements Function<Route,RouteType> {
+  enum RouteToRouteType implements Function<Route,RouteType> {
     INSTANCE;
 
     @Nullable
@@ -110,24 +110,29 @@ public interface RouteTables extends Lister<RouteTable> {
           null :
           route.getNetworkInterfaceId( ) != null ?
               new RouteType(
-                  route.getDestinationCidr(),
+                  route.getDestinationCidr( ),
                   Objects.toString( route.getInstanceId( ), null ),
                   Objects.toString( route.getInstanceAccountNumber( ), null ),
                   Objects.toString( route.getNetworkInterfaceId( ) ),
                   Objects.toString( route.getState(), null ),
                   Objects.toString( route.getOrigin(), null )
               ) :
-              new RouteType(
-                route.getDestinationCidr(),
-                Optional.fromNullable( route.getInternetGatewayId( ) ).or( "local" ),
-                Objects.toString( route.getState(), null ),
-                Objects.toString( route.getOrigin(), null )
-              );
+              route.getNatGatewayId( ) != null ?
+                  new RouteType(
+                      route.getDestinationCidr( ),
+                      Objects.toString( route.getState(), null ),
+                      Objects.toString( route.getOrigin(), null )
+                  ).withNatGatewayId( route.getNatGatewayId( ) ) :
+                  new RouteType(
+                    route.getDestinationCidr( ),
+                    Objects.toString( route.getState(), null ),
+                    Objects.toString( route.getOrigin(), null )
+                  ).withGatewayId( Optional.fromNullable( route.getInternetGatewayId( ) ).or( "local" ) );
     }
   }
 
   @TypeMapper
-  public enum RouteTableAssociationToAssociationType implements Function<RouteTableAssociation,RouteTableAssociationType> {
+  enum RouteTableAssociationToAssociationType implements Function<RouteTableAssociation,RouteTableAssociationType> {
     INSTANCE;
 
     @Nullable
@@ -144,7 +149,7 @@ public interface RouteTables extends Lister<RouteTable> {
     }
   }
 
-  public static class RouteTableFilterSupport extends FilterSupport<RouteTable> {
+  class RouteTableFilterSupport extends FilterSupport<RouteTable> {
     public RouteTableFilterSupport() {
       super( builderFor( RouteTable.class )
               .withTagFiltering( RouteTableTag.class, "routeTable" )
@@ -153,8 +158,10 @@ public interface RouteTables extends Lister<RouteTable> {
               .withStringSetProperty( "association.subnet-id", FilterStringSetFunctions.ASSOCIATION_SUBNET_ID )
               .withBooleanSetProperty( "association.main", FilterBooleanSetFunctions.ASSOCIATION_MAIN )
               .withStringSetProperty( "route.destination-cidr-block", FilterStringSetFunctions.ROUTE_DESTINATION_CIDR )
+              .withUnsupportedProperty( "route.destination-prefix-list-id" )
               .withStringSetProperty( "route.gateway-id", FilterStringSetFunctions.ROUTE_GATEWAY_ID )
               .withStringSetProperty( "route.instance-id", FilterStringSetFunctions.ROUTE_INSTANCE_ID )
+              .withStringSetProperty( "route.nat-gateway-id", FilterStringSetFunctions.ROUTE_NAT_GATEWAY_ID )
               .withUnsupportedProperty( "route.vpc-peering-connection-id" )
               .withStringSetProperty( "route.origin", FilterStringSetFunctions.ROUTE_ORIGIN )
               .withStringSetProperty( "route.state", FilterStringSetFunctions.ROUTE_STATE )
@@ -178,7 +185,7 @@ public interface RouteTables extends Lister<RouteTable> {
     }
   }
 
-  public enum FilterStringFunctions implements Function<RouteTable, String> {
+  enum FilterStringFunctions implements Function<RouteTable, String> {
     VPC_ID {
       @Override
       public String apply( final RouteTable routeTable ) {
@@ -187,7 +194,7 @@ public interface RouteTables extends Lister<RouteTable> {
     },
   }
 
-  public enum RouteFilterStringFunctions implements Function<Route,String> {
+  enum RouteFilterStringFunctions implements Function<Route,String> {
     DESTINATION_CIDR {
       @Override
       public String apply( final Route route ) {
@@ -206,6 +213,12 @@ public interface RouteTables extends Lister<RouteTable> {
         return route.getInstanceId( );
       }
     },
+    NAT_GATEWAY_ID {
+      @Override
+      public String apply( final Route route ) {
+        return route.getNatGatewayId( );
+      }
+    },
     ORIGIN {
       @Override
       public String apply( final Route route ) {
@@ -220,7 +233,7 @@ public interface RouteTables extends Lister<RouteTable> {
     },
   }
 
-  public enum FilterStringSetFunctions implements Function<RouteTable, Set<String>> {
+  enum FilterStringSetFunctions implements Function<RouteTable, Set<String>> {
     ASSOCIATION_ID {
       @Override
       public Set<String> apply( final RouteTable routeTable ) {
@@ -257,6 +270,12 @@ public interface RouteTables extends Lister<RouteTable> {
         return routePropertySet( routeTable, RouteFilterStringFunctions.INSTANCE_ID );
       }
     },
+    ROUTE_NAT_GATEWAY_ID {
+      @Override
+      public Set<String> apply( final RouteTable routeTable ) {
+        return routePropertySet( routeTable, RouteFilterStringFunctions.NAT_GATEWAY_ID );
+      }
+    },
     ROUTE_ORIGIN {
       @Override
       public Set<String> apply( final RouteTable routeTable ) {
@@ -284,7 +303,7 @@ public interface RouteTables extends Lister<RouteTable> {
     }
   }
 
-  public enum FilterBooleanSetFunctions implements Function<RouteTable, Set<Boolean>> {
+  enum FilterBooleanSetFunctions implements Function<RouteTable, Set<Boolean>> {
     ASSOCIATION_MAIN {
       @Override
       public Set<Boolean> apply( final RouteTable routeTable ) {
@@ -293,7 +312,7 @@ public interface RouteTables extends Lister<RouteTable> {
     },
   }
 
-  public enum AssociationFilterStringFunctions implements Function<RouteTableAssociation, String> {
+  enum AssociationFilterStringFunctions implements Function<RouteTableAssociation, String> {
     ASSOCIATION_ID {
       @Override
       public String apply( final RouteTableAssociation association ) {
@@ -314,7 +333,7 @@ public interface RouteTables extends Lister<RouteTable> {
     },
   }
 
-  public enum AssociationFilterBooleanFunctions implements Function<RouteTableAssociation, Boolean> {
+  enum AssociationFilterBooleanFunctions implements Function<RouteTableAssociation, Boolean> {
     MAIN {
       @Override
       public Boolean apply( final RouteTableAssociation association ) {

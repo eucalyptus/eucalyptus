@@ -38,10 +38,14 @@ import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.TagSet;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
+import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.InternalFailureException;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -62,6 +66,8 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.S3WebsiteC
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.objectstorage.ObjectStorage;
@@ -74,6 +80,7 @@ import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -84,7 +91,45 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
   private AWSS3BucketResourceInfo info = new AWSS3BucketResourceInfo();
 
   public AWSS3BucketResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSS3BucketResourceAction otherAction = (AWSS3BucketResourceAction) resourceAction;
+    if (!Objects.equals(properties.getAccessControl(), otherAction.properties.getAccessControl())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getBucketName(), otherAction.properties.getBucketName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getCorsConfiguration(), otherAction.properties.getCorsConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getLifecycleConfiguration(), otherAction.properties.getLifecycleConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getLoggingConfiguration(), otherAction.properties.getLoggingConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getNotificationConfiguration(), otherAction.properties.getNotificationConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getVersioningConfiguration(), otherAction.properties.getVersioningConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getWebsiteConfiguration(), otherAction.properties.getWebsiteConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getReplicationConfiguration(), otherAction.properties.getReplicationConfiguration())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -93,6 +138,10 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
         User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
+        if ( action.properties.getVersioningConfiguration() != null && action.properties.getLifecycleConfiguration() != null) {
+          throw new ValidationErrorException("Unable to set both lifecycle configuration and versioning configuration for buckets");
+        }
+
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           String bucketName = action.properties.getBucketName() != null ? action.properties.getBucketName() : action.getDefaultPhysicalResourceId(63).toLowerCase();
           if (s3c.doesBucketExist(bucketName)) {
@@ -100,6 +149,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
           }
           s3c.createBucket(bucketName);
           action.info.setPhysicalResourceId(bucketName);
+          action.info.setCreatedEnoughToDelete(true);
         }
         return action;
       }
@@ -116,46 +166,42 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
             s3c.setBucketAcl( bucketName, CannedAccessControlList.valueOf( action.properties.getAccessControl() ) );
           }
           if ( action.properties.getCorsConfiguration() != null ) {
-            s3c.setBucketCrossOriginConfiguration( bucketName, action.convertCrossOriginConfiguration( action.properties.getCorsConfiguration() ) );
+            s3c.setBucketCrossOriginConfiguration(bucketName, convertCrossOriginConfiguration(action.properties.getCorsConfiguration()));
           }
           if ( action.properties.getLifecycleConfiguration() != null ) {
-            s3c.setBucketLifecycleConfiguration( bucketName, action.convertLifecycleConfiguration( action.properties.getLifecycleConfiguration() ) );
+            // only allow lifecycle configuration if no versioning exists
+            BucketVersioningConfiguration bucketVersioningConfiguration = s3c.getBucketVersioningConfiguration(bucketName);
+            if (!"Off".equals(bucketVersioningConfiguration.getStatus())) {
+              throw new ValidationErrorException("Unable to set lifecycle configuration on bucket " + bucketName + ", versioning is not Off, it is " + bucketVersioningConfiguration.getStatus());
+            }
+            s3c.setBucketLifecycleConfiguration(bucketName, convertLifecycleConfiguration(action.properties.getLifecycleConfiguration()));
           }
           if ( action.properties.getLoggingConfiguration() != null ) {
-            s3c.setBucketLoggingConfiguration( action.convertLoggingConfiguration( bucketName, action.properties.getLoggingConfiguration() ) );
+            throw new InternalFailureException("LoggingConfiguration not yet implemented");
+//            s3c.setBucketLoggingConfiguration(convertLoggingConfiguration(bucketName, action.properties.getLoggingConfiguration()));
           }
           if ( action.properties.getNotificationConfiguration() != null ) {
-            s3c.setBucketNotificationConfiguration( bucketName, action.convertNotificationConfiguration( action.properties.getNotificationConfiguration() ) );
+            throw new InternalFailureException("NotificationConfiguration not yet implemented");
+//            s3c.setBucketNotificationConfiguration(bucketName, convertNotificationConfiguration(action.properties.getNotificationConfiguration()));
           }
-          // Dealing with tags has to be done differently than with other resources.
-          // 1) there is only the s3c.setBucketTaggingConfiguration(), tags can not be "added", they can only be replaced wholesale.
-          //    This means that the user must have the ability to add tags even to use system tags.
-          // 2) There is no (current) verification of aws: or euca: prefixes
-          // Given the above, and given that we have a few system tags that must be added, we will add tags all at once either as the admin
-          // (if no non-system tags exist) or as the user (if non system-tags exist).  If the user version fails due to IAM, it would have done so anyway.
-          List<CloudFormationResourceTag> systemTags = TagHelper.getCloudFormationResourceSystemTags( action.info, action.getStackEntity() );
-          List<CloudFormationResourceTag> nonSystemTags = TagHelper.getCloudFormationResourceStackTags( action.getStackEntity() );
-          if ( action.properties.getTags() != null && !action.properties.getTags().isEmpty() ) {
-            TagHelper.checkReservedCloudFormationResourceTemplateTags( action.properties.getTags() );
-            nonSystemTags.addAll(action.properties.getTags()); // TODO: can we do aws: tags?
+          if ( action.properties.getReplicationConfiguration() != null ) {
+            throw new InternalFailureException("ReplicationConfiguration not yet implemented");
+//            s3c.setBucketReplicationConfiguration(bucketName, convertReplicationConfiguration(action.properties.getReplicationConfiguration()));
           }
-          if (!nonSystemTags.isEmpty()) { // add as user
-            List<CloudFormationResourceTag> allTags = Lists.newArrayList();
-            allTags.addAll(systemTags);
-            allTags.addAll(nonSystemTags);
-            s3c.setBucketTaggingConfiguration( bucketName, action.convertTags( allTags ) );
-
-          } else { // add as admin
-            EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(AccountFullName.getInstance(user.getAccountNumber())));
-            s3cAdmin.setBucketTaggingConfiguration( bucketName, action.convertTags( systemTags ));
-          }
+          setBucketTags(action, user, bucketName, s3c);
 
           if ( action.properties.getVersioningConfiguration() != null ) {
-            s3c.setBucketVersioningConfiguration( action.convertVersioningConfiguration( bucketName, action.properties.getVersioningConfiguration() ) );
+            // only allow versioning if no lifecycle configuration exists
+            BucketLifecycleConfiguration bucketLifecycleConfiguration = s3c.getBucketLifecycleConfiguration(bucketName);
+            if (bucketLifecycleConfiguration.getRules().size() > 0) {
+              throw new ValidationErrorException("Unable to set versioning configuration bucket " + bucketName + ".  Lifecycle configuration has been set.");
+            }
+            s3c.setBucketVersioningConfiguration(convertVersioningConfiguration(bucketName, action.properties.getVersioningConfiguration()));
           }
           // TODO: website configuration throws an error if called (currently)
           if ( action.properties.getWebsiteConfiguration() != null ) {
-            s3c.setBucketWebsiteConfiguration( bucketName, action.convertWebsiteConfiguration( action.properties.getWebsiteConfiguration() ) );
+            throw new InternalFailureException("WebsiteConfiguration not yet implemented");
+//            s3c.setBucketWebsiteConfiguration(bucketName, convertWebsiteConfiguration(action.properties.getWebsiteConfiguration()));
           }
         }
         String domainName = null;
@@ -183,7 +229,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSS3BucketResourceAction action = (AWSS3BucketResourceAction) resourceAction;
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         User user = Accounts.lookupPrincipalByUserId(action.getResourceInfo().getEffectiveUserId());
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
           s3c.deleteBucket(action.info.getPhysicalResourceId());
@@ -225,7 +271,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     info = (AWSS3BucketResourceInfo) resourceInfo;
   }
 
-  private BucketWebsiteConfiguration convertWebsiteConfiguration(S3WebsiteConfiguration websiteConfiguration) {
+  private static BucketWebsiteConfiguration convertWebsiteConfiguration(S3WebsiteConfiguration websiteConfiguration) {
     BucketWebsiteConfiguration bucketWebsiteConfiguration = new BucketWebsiteConfiguration();
     bucketWebsiteConfiguration.setErrorDocument(websiteConfiguration.getErrorDocument());
     bucketWebsiteConfiguration.setIndexDocumentSuffix(websiteConfiguration.getIndexDocument());
@@ -261,12 +307,12 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     return bucketWebsiteConfiguration;
   }
 
-  private SetBucketVersioningConfigurationRequest convertVersioningConfiguration(String bucketName, S3VersioningConfiguration versioningConfiguration) {
+  private static SetBucketVersioningConfigurationRequest convertVersioningConfiguration(String bucketName, S3VersioningConfiguration versioningConfiguration) {
     BucketVersioningConfiguration bucketVersioningConfiguration = new BucketVersioningConfiguration(versioningConfiguration.getStatus());
     return new SetBucketVersioningConfigurationRequest(bucketName, bucketVersioningConfiguration);
   }
 
-  private BucketTaggingConfiguration convertTags(List<CloudFormationResourceTag> tags) {
+  private static BucketTaggingConfiguration convertTags(List<CloudFormationResourceTag> tags) {
     BucketTaggingConfiguration bucketTaggingConfiguration = new BucketTaggingConfiguration();
     // In theory BucketTaggingConfiguration
     Collection<TagSet> tagSets = Lists.newArrayList();
@@ -279,7 +325,7 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     return bucketTaggingConfiguration;
   }
 
-  private BucketNotificationConfiguration convertNotificationConfiguration(S3NotificationConfiguration notificationConfiguration) {
+  private static BucketNotificationConfiguration convertNotificationConfiguration(S3NotificationConfiguration notificationConfiguration) {
     BucketNotificationConfiguration bucketNotificationConfiguration = new BucketNotificationConfiguration();
     if (notificationConfiguration.getTopicConfigurations() != null) {
       Collection<BucketNotificationConfiguration.TopicConfiguration> topicConfigurations = Lists.newArrayList();
@@ -291,14 +337,14 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     return bucketNotificationConfiguration;
   }
 
-  private SetBucketLoggingConfigurationRequest convertLoggingConfiguration(String bucketName, S3LoggingConfiguration loggingConfiguration) {
+  private static SetBucketLoggingConfigurationRequest convertLoggingConfiguration(String bucketName, S3LoggingConfiguration loggingConfiguration) {
     BucketLoggingConfiguration bucketLoggingConfiguration = new BucketLoggingConfiguration();
     bucketLoggingConfiguration.setDestinationBucketName(loggingConfiguration.getDestinationBucketName());
     bucketLoggingConfiguration.setLogFilePrefix(loggingConfiguration.getLogFilePrefix());
     return new SetBucketLoggingConfigurationRequest(bucketName, bucketLoggingConfiguration);
   }
 
-  private BucketLifecycleConfiguration convertLifecycleConfiguration(S3LifecycleConfiguration lifecycleConfiguration) throws AuthenticationException {
+  private static BucketLifecycleConfiguration convertLifecycleConfiguration(S3LifecycleConfiguration lifecycleConfiguration) throws AuthenticationException {
     BucketLifecycleConfiguration bucketLifecycleConfiguration = new BucketLifecycleConfiguration();
     if (lifecycleConfiguration.getRules() != null) {
       List<BucketLifecycleConfiguration.Rule> rules = Lists.newArrayList();
@@ -333,11 +379,11 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     return bucketLifecycleConfiguration;
   }
 
-  private BucketCrossOriginConfiguration convertCrossOriginConfiguration(S3CorsConfiguration corsConfiguration) {
+  private static BucketCrossOriginConfiguration convertCrossOriginConfiguration(S3CorsConfiguration corsConfiguration) {
     BucketCrossOriginConfiguration bucketCrossOriginConfiguration = new BucketCrossOriginConfiguration();
-    if (corsConfiguration.getCorsRule() != null) {
+    if (corsConfiguration.getCorsRules() != null) {
       List<CORSRule> rules = Lists.newArrayList();
-      for (S3CorsConfigurationRule s3CorsConfigurationRule: corsConfiguration.getCorsRule()) {
+      for (S3CorsConfigurationRule s3CorsConfigurationRule: corsConfiguration.getCorsRules()) {
         CORSRule rule = new CORSRule();
         rule.setAllowedHeaders(s3CorsConfigurationRule.getAllowedHeaders());
         if (s3CorsConfigurationRule.getAllowedMethods() != null) {
@@ -358,8 +404,129 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
     return bucketCrossOriginConfiguration;
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_BUCKET_STUFF {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSS3BucketResourceAction oldAction = (AWSS3BucketResourceAction) oldResourceAction;
+        AWSS3BucketResourceAction newAction = (AWSS3BucketResourceAction) newResourceAction;
+        if ( newAction.properties.getVersioningConfiguration() != null && newAction.properties.getLifecycleConfiguration() != null) {
+          throw new ValidationErrorException("Unable to set both lifecycle configuration and versioning configuration for buckets");
+        }
+        URI serviceURI = ServiceUris.remotePublicify(ObjectStorage.class);
+        User user = Accounts.lookupPrincipalByUserId(oldAction.getResourceInfo().getEffectiveUserId());
+        String bucketName = oldAction.info.getPhysicalResourceId();
+        try (final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(user))) {
+          if (newAction.properties.getAccessControl() != null) {
+            s3c.setBucketAcl(bucketName, CannedAccessControlList.valueOf(newAction.properties.getAccessControl()));
+          } else {
+            s3c.setBucketAcl(bucketName, CannedAccessControlList.BucketOwnerFullControl);
+          }
+          if (newAction.properties.getCorsConfiguration() != null) {
+            s3c.setBucketCrossOriginConfiguration(bucketName, convertCrossOriginConfiguration(newAction.properties.getCorsConfiguration()));
+          } else {
+            s3c.deleteBucketCrossOriginConfiguration(bucketName);
+          }
+          if (newAction.properties.getLifecycleConfiguration() != null) {
+            // only set if versioning off
+            BucketVersioningConfiguration bucketVersioningConfiguration = s3c.getBucketVersioningConfiguration(bucketName);
+            if (!"Off".equals(bucketVersioningConfiguration.getStatus())) {
+              throw new ValidationErrorException("Unable to set lifecycle configuration on bucket " + bucketName + ", versioning is not Off, it is " + bucketVersioningConfiguration.getStatus());
+            }
+            s3c.setBucketLifecycleConfiguration(bucketName, convertLifecycleConfiguration(newAction.properties.getLifecycleConfiguration()));
+          } else {
+            s3c.deleteBucketLifecycleConfiguration(bucketName);
+          }
+          if (newAction.properties.getLoggingConfiguration() != null) {
+            throw new InternalFailureException("LoggingConfiguration not yet implemented");
+//            s3c.setBucketLoggingConfiguration(convertLoggingConfiguration(bucketName, newAction.properties.getLoggingConfiguration()));
+//          } else {
+//            s3c.setBucketLoggingConfiguration(new SetBucketLoggingConfigurationRequest(bucketName, new BucketLoggingConfiguration()));
+          }
+          if (newAction.properties.getNotificationConfiguration() != null) {
+            throw new InternalFailureException("NotificationConfiguration not yet implemented");
+//            s3c.setBucketNotificationConfiguration(bucketName, convertNotificationConfiguration(newAction.properties.getNotificationConfiguration()));
+//          } else {
+//            s3c.setBucketNotificationConfiguration(bucketName, new BucketNotificationConfiguration());
+          }
+          if (newAction.properties.getReplicationConfiguration() != null) {
+            throw new InternalFailureException("ReplicationConfiguration not yet implemented");
+//            s3c.setBucketReplicationConfiguration(bucketName, convertReplicationConfiguration(newAction.properties.getReplicationConfiguration()));
+//          } else {
+//            s3c.setBucketReplicationConfiguration(bucketName, new BucketReplicationConfiguration());
+          }
+          setBucketTags(newAction, user, bucketName, s3c);
+          if (newAction.properties.getVersioningConfiguration() != null) {
+            BucketLifecycleConfiguration bucketLifecycleConfiguration = s3c.getBucketLifecycleConfiguration(bucketName);
+            if (bucketLifecycleConfiguration.getRules().size() > 0) {
+              throw new ValidationErrorException("Unable to set versioning configuration bucket " + bucketName + ".  Lifecycle configuration has been set.");
+            }
+            s3c.setBucketVersioningConfiguration(convertVersioningConfiguration(bucketName, newAction.properties.getVersioningConfiguration()));
+          } else {
+            BucketVersioningConfiguration bucketVersioningConfiguration = s3c.getBucketVersioningConfiguration(bucketName);
+            if (bucketVersioningConfiguration == null) {
+              throw new InternalFailureException("Unable to get bucketVersioningConfiguration for " + bucketName + " , does bucket exist?");
+            }
+            // Once a bucket is versioned, Off is never a valid status again, so if the current value is not "Off", and there is no configuration option,
+            // use suspended instead.
+            if (!bucketVersioningConfiguration.getStatus().equals("Off")) {
+              s3c.setBucketVersioningConfiguration(new SetBucketVersioningConfigurationRequest(bucketName, new BucketVersioningConfiguration("Suspended")));
+            }
+          }
 
+          // TODO: website configuration throws an error if called (currently)
+          if (newAction.properties.getWebsiteConfiguration() != null) {
+            throw new InternalFailureException("WebsiteConfiguration not yet implemented");
+//            s3c.setBucketWebsiteConfiguration(bucketName, convertWebsiteConfiguration(newAction.properties.getWebsiteConfiguration()));
+//          } else {
+//            s3c.deleteBucketWebsiteConfiguration(bucketName);
+          }
+          String domainName = null;
+          if ((serviceURI.getPath() == null || serviceURI.getPath().replace("/", "").isEmpty())) {
+            domainName = bucketName + "." + serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "");
+          } else {
+            domainName = serviceURI.getHost() + (serviceURI.getPort() != -1 ? ":" + serviceURI.getPort() : "") + serviceURI.getPath() + "/" + bucketName;
+          }
+          newAction.info.setDomainName(JsonHelper.getStringFromJsonNode(new TextNode(domainName)));
+          newAction.info.setWebsiteURL(JsonHelper.getStringFromJsonNode(new TextNode("http://" + domainName)));
+          newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
+          return newAction;
+        }
+      }
 
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
+    }
+  }
+
+  private static void setBucketTags(AWSS3BucketResourceAction newAction, User user, String bucketName, EucaS3Client s3c) throws CloudFormationException, AuthException {
+    // Dealing with tags has to be done differently than with other resources.
+    // 1) there is only the s3c.setBucketTaggingConfiguration(), tags can not be "added", they can only be replaced wholesale.
+    //    This means that the user must have the ability to add tags even to use system tags.
+    // 2) There is no (current) verification of aws: or euca: prefixes
+    // Given the above, and given that we have a few system tags that must be added, we will add tags all at once either as the admin
+    // (if no non-system tags exist) or as the user (if non system-tags exist).  If the user version fails due to IAM, it would have done so anyway.
+    List<CloudFormationResourceTag> systemTags = TagHelper.getCloudFormationResourceSystemTags(newAction.info, newAction.getStackEntity());
+    List<CloudFormationResourceTag> nonSystemTags = TagHelper.getCloudFormationResourceStackTags( newAction.getStackEntity() );
+    if ( newAction.properties.getTags() != null && !newAction.properties.getTags().isEmpty() ) {
+      TagHelper.checkReservedCloudFormationResourceTemplateTags( newAction.properties.getTags() );
+      nonSystemTags.addAll(newAction.properties.getTags());
+    }
+    if (!nonSystemTags.isEmpty()) { // add as user
+      List<CloudFormationResourceTag> allTags = Lists.newArrayList();
+      allTags.addAll(systemTags);
+      allTags.addAll(nonSystemTags);
+      s3c.setBucketTaggingConfiguration( bucketName, convertTags( allTags ) );
+
+    } else { // add as admin
+      EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(AccountFullName.getInstance(user.getAccountNumber())));
+      s3cAdmin.setBucketTaggingConfiguration( bucketName, newAction.convertTags( systemTags ));
+    }
+  }
 }
+
 
 

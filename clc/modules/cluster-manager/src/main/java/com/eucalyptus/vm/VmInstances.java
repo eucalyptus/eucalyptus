@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -144,7 +144,6 @@ import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
-import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
@@ -202,6 +201,7 @@ import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
@@ -236,6 +236,7 @@ import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.StartInstanceType;
 import edu.ucsb.eucalyptus.msgs.StopInstanceType;
 
@@ -269,6 +270,12 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         return (int) TimeUnit.MINUTES.convert(
             Intervals.parse( INSTANCE_TIMEOUT, TimeUnit.MINUTES, TimeUnit.DAYS.toMillis( 180 ) ),
             TimeUnit.MILLISECONDS );
+      }
+    },
+    PENDING( VmState.PENDING ) {
+      @Override
+      public Integer getMinutes( ) {
+        return PENDING_TIME;
       }
     },
     SHUTTING_DOWN( VmState.SHUTTING_DOWN ) {
@@ -346,16 +353,26 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       public VmInstance apply( final VmInstance v ) {
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
-          if ( VmStateSet.RUN.apply( vm ) ) {
-            VmInstance.Reason reason = Timeout.UNREPORTED.apply( vm ) ? VmInstance.Reason.EXPIRED : VmInstance.Reason.USER_TERMINATED;
-            setState( vm, VmState.SHUTTING_DOWN, reason );
+          final boolean pendingTimeout = Timeout.PENDING.apply( vm );
+          final boolean unreportedTimeout = Timeout.UNREPORTED.apply( vm );
+          final Pair<VmState,VmInstance.Reason> stateAndReason;
+          if ( VmStateSet.RUN.apply( vm ) && unreportedTimeout ) {
+            stateAndReason = Pair.pair( VmState.SHUTTING_DOWN, VmInstance.Reason.EXPIRED );
+          } else if ( VmStateSet.RUN.apply( vm ) && pendingTimeout ) {
+            stateAndReason = Pair.pair( VmState.TERMINATED, VmInstance.Reason.FAILED );
+          } else if ( VmStateSet.RUN.apply( vm ) ) {
+            stateAndReason = Pair.pair( VmState.SHUTTING_DOWN, VmInstance.Reason.USER_TERMINATED );
+          } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) && ( Timeout.SHUTTING_DOWN.apply( vm ) || VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
+            stateAndReason = Pair.pair( VmState.TERMINATED, VmInstance.Reason.EXPIRED );
           } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
-            VmInstance.Reason reason = Timeout.SHUTTING_DOWN.apply( vm ) || VmInstance.Reason.EXPIRED.apply( vm ) ?
-                VmInstance.Reason.EXPIRED :
-                VmInstance.Reason.USER_TERMINATED;
-            setState( vm, VmState.TERMINATED, reason );
+            stateAndReason = Pair.pair( VmState.TERMINATED, VmInstance.Reason.USER_TERMINATED );
           } else if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
-            setState( vm, VmState.TERMINATED, VmInstance.Reason.USER_TERMINATED );
+            stateAndReason = Pair.pair( VmState.TERMINATED, VmInstance.Reason.USER_TERMINATED );
+          } else {
+            stateAndReason = null;
+          }
+          if ( stateAndReason != null ) {
+            setState( vm, stateAndReason.getLeft( ), stateAndReason.getRight( ) );
           }
           return vm;
         } catch ( final Exception ex ) {
@@ -527,11 +544,15 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                       initial = "15" )
   public static Integer   INSTANCE_TOUCH_INTERVAL       = 15;
 
+  @ConfigurableField( description = "Amount of time (in minutes) before a pending VM will be terminated.",
+      initial = "60" )
+  public static Integer   PENDING_TIME                  = 60;
+
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   SHUT_DOWN_TIME                = 10;
 
-  @ConfigurableField( description = "Amount of time (in minutes) before a stopping VM which is not reported by a cluster will be marked as terminated.",
+  @ConfigurableField( description = "Amount of time (in minutes) before a stopping VM which is not reported by a cluster will be marked as stopped.",
                       initial = "10" )
   public static Integer   STOPPING_TIME                 = 10;
 
@@ -1337,6 +1358,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           }
           if ( VmState.RUNNING.apply( vm ) ) {
             updateVolumeAttachments( runVm.getVolumes() );
+            updateNetworkInterfaces( runVm.getSecondaryNetConfigList( ) );
             setMigrationState(
                 vm,
                 runVm.getMigrationStateName(),
@@ -1445,9 +1467,35 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           Logs.extreme( ).error( ex, ex );
         }
       }
+
+      private void updateNetworkInterfaces( final List<NetworkConfigType> networkConfigs ) {
+        final Set<Pair<String,Integer>> reportedAttachment = Sets.newHashSet( );
+        if ( networkConfigs != null ) for ( final NetworkConfigType networkConfig : networkConfigs ) {
+          reportedAttachment.add( Pair.pair( networkConfig.getInterfaceId( ), networkConfig.getDevice( ) ) );
+        }
+        for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
+          if ( !networkInterface.isAttached( ) || networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
+            continue;
+          }
+          final NetworkInterfaceAttachment attachment = networkInterface.getAttachment( );
+          final Pair<String,Integer> eniPair =
+              Pair.pair( networkInterface.getDisplayName( ), attachment.getDeviceIndex( ) );
+          if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.attaching ) {
+            if ( reportedAttachment.contains( eniPair ) ) {
+              attachment.transitionStatus( NetworkInterfaceAttachment.Status.attached );
+            }
+          } else if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.detaching ) {
+            if ( !reportedAttachment.contains( eniPair ) &&
+                ( attachment.getLastStatus( ) == NetworkInterfaceAttachment.Status.attached ||
+                  ( networkInterface.lastUpdateMillis( ) > TimeUnit.MINUTES.toMillis( 1 ) ) )
+            ) {
+              networkInterface.detach( );
+            }
+          }
+        }
+      }
     };
   }
-
 
   public static void addTransientVolume( final VmInstance vm, final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
@@ -2328,7 +2376,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       Emis.BootableSet bootSet;
       try {
         bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-      } catch ( final NoSuchMetadataException | NoSuchImageIdException e ) {
+      } catch ( final NoSuchMetadataException e ) {
         LOG.error( "Using transient bootset in place of imageId " + imageId
             + ", kernelId " + kernelId
             + ", ramdiskId " + ramdiskId

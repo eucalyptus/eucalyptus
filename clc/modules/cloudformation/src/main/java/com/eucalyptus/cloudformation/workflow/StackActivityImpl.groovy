@@ -33,13 +33,11 @@ import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
-import com.eucalyptus.cloudformation.entity.StackResourceEntityForCleanup
-import com.eucalyptus.cloudformation.entity.StackResourceEntityInUse
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
-import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
 import com.eucalyptus.cloudformation.entity.Status
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
@@ -54,6 +52,8 @@ import com.eucalyptus.cloudformation.template.TemplateParser
 import com.eucalyptus.cloudformation.workflow.steps.Step
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.component.annotation.ComponentPart
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
@@ -80,9 +80,9 @@ public class StackActivityImpl implements StackActivity {
   private static final Logger LOG = Logger.getLogger(StackActivityImpl.class);
 
   @Override
-  public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason) {
+  public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason, int stackVersion) {
     LOG.info("Creating global stack event: " + resourceStatus);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     String stackName = stackEntity.getStackName();
     String eventId = UUID.randomUUID().toString(); //TODO: AWS has a value related to stack id. (I think)
     String logicalResourceId = stackName;
@@ -110,16 +110,16 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int stackVersion) {
     LOG.info("Creating resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, stackVersion);
     ArrayList<String> reverseDependentResourceIds = (reverseDependentResourcesJson == null) ? new ArrayList<String>()
       : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>() {
     })
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
     for (String reverseDependentResourceId : reverseDependentResourceIds) {
-      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId));
+      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId, stackVersion));
     }
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     if (!resourceInfo.getAllowedByCondition()) {
@@ -142,7 +142,7 @@ public class StackActivityImpl implements StackActivity {
     return "";
   }
 
-  private void updateResourceInfoFields(ResourceInfo resourceInfo, StackEntity stackEntity, LinkedHashMap<String, ResourceInfo> resourceInfoMap, String effectiveUserId) {
+  private void updateResourceInfoFields(ResourceInfo resourceInfo, VersionedStackEntity stackEntity, LinkedHashMap<String, ResourceInfo> resourceInfoMap, String effectiveUserId) {
     // Evaluate all properties
     if (resourceInfo.getPropertiesJson() != null) {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
@@ -188,21 +188,16 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String getResourceType(String stackId, String accountId, String resourceId) {
-    return StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId).getResourceType();
+  public String getResourceType(String stackId, String accountId, String resourceId, int resourceVersion) {
+    return StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, resourceVersion).getResourceType();
   }
 
   @Override
-  public String getResourceTypeForUpdate(String stackId, String accountId, String resourceId) {
-    return StackResourceEntityManager.getStackResourceForUpdate(stackId, accountId, resourceId).getResourceType();
-  }
-
-  @Override
-  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion) {
     LOG.info("Deleting resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, deletedResourceVersion);
     String stackName = stackEntity.getStackName();
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, deletedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE
@@ -232,10 +227,10 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String determineCreateResourceFailures(String stackId, String accountId) {
+  public String determineCreateResourceFailures(String stackId, String accountId, int createdResourceVersion) {
     Collection<String> failedResources = Lists.newArrayList();
     Collection<StackResourceEntity> cancelledResources = Lists.newArrayList();
-    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId, createdResourceVersion)) {
       if (stackResourceEntity.getResourceStatus() == Status.CREATE_FAILED) {
         failedResources.add(stackResourceEntity.getLogicalResourceId());
       } else if (stackResourceEntity.getResourceStatus() == Status.CREATE_IN_PROGRESS) {
@@ -248,14 +243,35 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity.setResourceStatusReason("Resource creation cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
     }
-    return "The following resource(s) failed to create: " + failedResources + ".";
+    return failedResources.isEmpty() ? "" : "The following resource(s) failed to create: " + failedResources + ".";
   }
 
   @Override
-  public String determineDeleteResourceFailures(String stackId, String accountId) {
+  public String determineUpdateResourceFailures(String stackId, String accountId, int updatedResourceVersion) {
     Collection<String> failedResources = Lists.newArrayList();
     Collection<StackResourceEntity> cancelledResources = Lists.newArrayList();
-    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId, updatedResourceVersion)) {
+      if (stackResourceEntity.getResourceStatus() == Status.UPDATE_FAILED) {
+        failedResources.add(stackResourceEntity.getLogicalResourceId());
+      } else if (stackResourceEntity.getResourceStatus() == Status.UPDATE_IN_PROGRESS) {
+        cancelledResources.add(stackResourceEntity);
+        failedResources.add(stackResourceEntity.getLogicalResourceId());
+      }
+    }
+    for (StackResourceEntity stackResourceEntity : cancelledResources) {
+      stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
+      stackResourceEntity.setResourceStatusReason("Resource update cancelled");
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+    }
+    return failedResources.isEmpty() ? "" : "The following resource(s) failed to update: " + failedResources + ".";
+  }
+
+
+  @Override
+  public String determineDeleteResourceFailures(String stackId, String accountId, int deletedResourceVersion) {
+    Collection<String> failedResources = Lists.newArrayList();
+    Collection<StackResourceEntity> cancelledResources = Lists.newArrayList();
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId, deletedResourceVersion)) {
       if (stackResourceEntity.getResourceStatus() == Status.DELETE_FAILED) {
         failedResources.add(stackResourceEntity.getLogicalResourceId());
       } else if (stackResourceEntity.getResourceStatus() == Status.DELETE_IN_PROGRESS) {
@@ -268,14 +284,14 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity.setResourceStatusReason("Resource deletion cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
     }
-    return "The following resource(s) failed to delete: " + failedResources + ".";
+    return failedResources.isEmpty() ? "" : "The following resource(s) failed to delete: " + failedResources + ".";
   }
 
   @Override
-  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId) {
+  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId, int createdStackVersion) {
     LOG.info("Finalizing create stack");
     try {
-      setOutputs(stackId, accountId, effectiveUserId, Status.CREATE_COMPLETE)
+      setOutputs(stackId, accountId, effectiveUserId, Status.CREATE_COMPLETE, createdStackVersion)
     } catch (Exception e) {
       LOG.error(e, e);
       throw e;
@@ -284,10 +300,10 @@ public class StackActivityImpl implements StackActivity {
     return ""; // promiseFor() doesn't work on void return types
   }
 
-  private void setOutputs(String stackId, String accountId, String effectiveUserId, Status status) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+  private void setOutputs(String stackId, String accountId, String effectiveUserId, Status status, int stackVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId)) {
+    for (StackResourceEntity stackResourceEntity : StackResourceEntityManager.getStackResources(stackId, accountId, stackVersion)) {
       resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
     }
     List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getWorkingOutputsJson());
@@ -310,10 +326,10 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId) {
+  public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId, int updatedStackVersion) {
     LOG.info("Finalizing update stack");
     try {
-      setOutputs(stackId, accountId, effectiveUserId, Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)
+      setOutputs(stackId, accountId, effectiveUserId, Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, updatedStackVersion)
     } catch (Exception e) {
       LOG.error(e, e);
       throw e;
@@ -322,14 +338,12 @@ public class StackActivityImpl implements StackActivity {
     return ""; // promiseFor() doesn't work on void return types
   }
 
-
-
   @Override
-  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
     LOG.info("Performing creation step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    String oldPhysicalResourceId = stackResourceEntity.getPhysicalResourceId();
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, createdResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, createdResourceVersion);
+    Boolean oldValueForCreatedEnoughToDelete = stackResourceEntity.getCreatedEnoughToDelete();
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     try {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -345,7 +359,7 @@ public class StackActivityImpl implements StackActivity {
       resourceInfo = resourceAction.getResourceInfo();
       stackResourceEntity.setDescription(""); // deal later
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      if (!Objects.equals(stackResourceEntity.getPhysicalResourceId(), oldPhysicalResourceId)) {
+      if (!Objects.equals(stackResourceEntity.getCreatedEnoughToDelete(), oldValueForCreatedEnoughToDelete)) {
         stackResourceEntity.setResourceStatus(Status.CREATE_IN_PROGRESS);
         stackResourceEntity.setResourceStatusReason("Resource creation Initiated");
         StackEventEntityManager.addStackEvent(stackResourceEntity);
@@ -370,22 +384,10 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion) {
     LOG.info("Performing delete step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    return performDeleteStepOnStackResourceEntity(stackResourceEntity, stackEntity, effectiveUserId, stepId, resourceId)
-  }
-
-  @Override
-  public Boolean performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.info("Performing delete step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    return performDeleteStepOnStackResourceEntity(stackResourceEntity, stackEntity, effectiveUserId, stepId, resourceId)
-  }
-
-  private boolean performDeleteStepOnStackResourceEntity(StackResourceEntity stackResourceEntity, StackEntity stackEntity, String effectiveUserId, String stepId, String resourceId) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, deletedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, deletedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     try {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -427,9 +429,9 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, createdResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, createdResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
     ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
@@ -448,9 +450,9 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
@@ -463,11 +465,11 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage) {
+  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int deletedResourceVersion) {
     LOG.info("Error deleting resource " + resourceId);
     LOG.error(errorMessage);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, deletedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, deletedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
@@ -481,21 +483,18 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String deleteAllStackRecords(String stackId, String accountId) {
     LOG.info("Deleting all stack records");
-    StackResourceEntityManager.deleteStackResourcesInUse(stackId, accountId);
-    StackResourceEntityManager.deleteStackResourcesForUpdate(stackId, accountId);
-    StackResourceEntityManager.deleteStackResourcesForCleanup(stackId, accountId);
+    StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
-    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
     LOG.info("Finished deleting all stack records");
     return ""; // promiseFor() doesn't work on void return types
   }
 
   @Override
-  public String getCreateWorkflowExecutionCloseStatus( final String stackId ) {
+  public String getCreateWorkflowExecutionCloseStatus(final String stackId) {
     final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
     final List<StackWorkflowEntity> createStackWorkflowEntities =
-        StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
+      StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
     // TODO: is it really appropriate to fail if no workflows exist
     if ( createStackWorkflowEntities == null || createStackWorkflowEntities.empty ) {
       throw new InternalFailureException( "There is no create stack workflow for stack id ${stackId}" );
@@ -505,13 +504,13 @@ public class StackActivityImpl implements StackActivity {
     }
     createStackWorkflowEntities.get( 0 ).with{
       simpleWorkflowClient.describeWorkflowExecution(
-          new DescribeWorkflowExecutionRequest(
-              domain: domain,
-              execution: new WorkflowExecution(
-                  runId: runId,
-                  workflowId: workflowId
-              )
+        new DescribeWorkflowExecutionRequest(
+          domain: domain,
+          execution: new WorkflowExecution(
+            runId: runId,
+            workflowId: workflowId
           )
+        )
       ).with{
         executionInfo.closeStatus
       }
@@ -519,7 +518,7 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String getUpdateWorkflowExecutionCloseStatus( final String stackId ) {
+  public String getUpdateWorkflowExecutionCloseStatus(final String stackId) {
     LOG.debug("Getting update execution close status for stack " + stackId);
     final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
     final List<StackWorkflowEntity> updateStackWorkflowEntities =
@@ -544,21 +543,23 @@ public class StackActivityImpl implements StackActivity {
         executionInfo.closeStatus
       }
     }
-    LOG.debug("Update stack status = " + status);
+    LOG.info("Update stack status = " + status);
     return status;
   }
 
   @Override
-  public String getStackStatus(String stackId, String accountId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+  public String getStackStatus(String stackId, String accountId, int stackVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     if (stackEntity == null) {
       throw new ValidationErrorException("No stack found with id " + stackId);
     }
-    return stackEntity.getStackStatus().toString();
+    String status = stackEntity.getStackStatus().toString();
+    LOG.info("status = " + status);
+    return status;
   }
 
-  public String setStackStatus(String stackId, String accountId, String status, String statusReason) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+  public String setStackStatus(String stackId, String accountId, String status, String statusReason, int stackVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     if (stackEntity == null) {
       throw new ValidationErrorException("No stack found with id " + stackId);
     }
@@ -631,10 +632,10 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion) {
     try {
-      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-      StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+      VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, resourceVersion);
+      StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, resourceVersion);
       ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
       resourceAction.setStackEntity(stackEntity);
@@ -644,16 +645,16 @@ public class StackActivityImpl implements StackActivity {
       Integer timeout = ((AWSCloudFormationWaitConditionProperties) resourceAction.getResourceProperties()).getTimeout(); // not proud of this hard coding.
       return timeout
     } catch (Exception ex) {
-        Throwable rootCause = Throwables.getRootCause(ex);
-        LOG.info("Error getting timeout for resource " + resourceId);
-        LOG.error(ex, ex);
-        throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
+      Throwable rootCause = Throwables.getRootCause(ex);
+      LOG.info("Error getting timeout for resource " + resourceId);
+      LOG.error(ex, ex);
+      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
   }
   @Override
-  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId) {
+  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId, int stackVersion) {
     try {
-      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
+      VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
       Map<String, ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
       for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
         AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
@@ -666,8 +667,8 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage) {
-    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId);
+  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage, int createdResourceVersion) {
+    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId, createdResourceVersion);
     for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
       if (stackResourceEntity.getResourceStatus() == Status.CREATE_IN_PROGRESS) {
         stackResourceEntity.setResourceStatus(Status.CREATE_FAILED);
@@ -680,8 +681,8 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage) {
-    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId);
+  public String cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage, int updatedResourceVersion) {
+    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId, updatedResourceVersion);
     for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
       if (stackResourceEntity.getResourceStatus() == Status.UPDATE_IN_PROGRESS) {
         stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
@@ -694,130 +695,116 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+  public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int updatedResourceVersion) {
     LOG.info("Determining if resource " + resourceId + " needs update");
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity oldStackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    VersionedStackEntity previousStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion - 1);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
 
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceForUpdate(stackId, accountId, resourceId);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
     ArrayList<String> reverseDependentResourceIds = (reverseDependentResourcesJson == null) ? new ArrayList<String>()
       : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>() {
     })
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
     for (String reverseDependentResourceId : reverseDependentResourceIds) {
-      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId));
+      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId, updatedResourceVersion));
     }
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    if (!resourceInfo.getAllowedByCondition()) {
+    ResourceInfo nextResourceInfo = StackResourceEntityManager.getResourceInfo(nextStackResourceEntity);
+    if (!nextResourceInfo.getAllowedByCondition()) {
       LOG.info("Resource " + resourceId + " not allowed by condition, skipping");
       return "SKIP"; //TODO: codify this somewhere...
     };
-    updateResourceInfoFields(resourceInfo, stackEntity, resourceInfoMap, effectiveUserId);
-    stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-    StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    if (oldStackResourceEntity == null) {
-      // copy to the other table
-      StackResourceEntity stackResourceEntityInUse = new StackResourceEntityInUse();
-      StackResourceEntityManager.copyStackResourceEntityData(stackResourceEntity, stackResourceEntityInUse);
-      StackResourceEntityManager.addStackResource(stackResourceEntityInUse);
-      // delete from the update table
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      return "CREATE";
-    }
-    if (oldStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) {
-      // also copy to the other table
-      StackResourceEntityManager.copyStackResourceEntityData(stackResourceEntity, oldStackResourceEntity);
-      StackResourceEntityManager.updateStackResource(oldStackResourceEntity);
-      // delete from the update table
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+    updateResourceInfoFields(nextResourceInfo, nextStackEntity, resourceInfoMap, effectiveUserId);
+    nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+    StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+    if (previousStackResourceEntity == null || previousStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) {
       return "CREATE";
     }
     boolean nothingOutsidePropertiesChanged = true;
-    if (!Objects.equals(oldStackResourceEntity.getDeletionPolicy(), stackResourceEntity.getDeletionPolicy())) {
+    if (!Objects.equals(previousStackResourceEntity.getDeletionPolicy(), nextStackResourceEntity.getDeletionPolicy())) {
       nothingOutsidePropertiesChanged = false;
     }
-    if (!Objects.equals(oldStackResourceEntity.getDescription(), stackResourceEntity.getDescription())) {
+    if (!Objects.equals(previousStackResourceEntity.getDescription(), nextStackResourceEntity.getDescription())) {
       nothingOutsidePropertiesChanged = false;
     }
-    JsonNode oldMetadata = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getPropertiesJson());
-    JsonNode metadata = JsonHelper.getJsonNodeFromString(stackResourceEntity.getPropertiesJson());
-    if (!Objects.equals(oldMetadata, metadata)) {
+    JsonNode previousMetadata = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getPropertiesJson());
+    JsonNode nextMetadata = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getPropertiesJson());
+    if (!Objects.equals(previousMetadata, nextMetadata)) {
       nothingOutsidePropertiesChanged = false;
     }
-    JsonNode oldUpdatePolicy = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getUpdatePolicyJson());
-    JsonNode updatePolicy = JsonHelper.getJsonNodeFromString(stackResourceEntity.getUpdatePolicyJson());
-    if (!Objects.equals(oldUpdatePolicy, updatePolicy)) {
+    JsonNode previousUpdatePolicy = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getUpdatePolicyJson());
+    JsonNode nextUpdatePolicy = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getUpdatePolicyJson());
+    if (!Objects.equals(previousUpdatePolicy, nextUpdatePolicy)) {
       nothingOutsidePropertiesChanged = false;
     }
-    JsonNode oldProperties = JsonHelper.getJsonNodeFromString(oldStackResourceEntity.getPropertiesJson());
-    JsonNode properties = JsonHelper.getJsonNodeFromString(stackResourceEntity.getPropertiesJson());
-    boolean propertiesChanged = !Objects.equals(oldProperties, properties);
+    JsonNode previousProperties = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getPropertiesJson());
+    JsonNode nextProperties = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getPropertiesJson());
+    boolean propertiesChanged = !Objects.equals(previousProperties, nextProperties);
     if (nothingOutsidePropertiesChanged && !propertiesChanged) {
-      // nothing changed, just remove the new one
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      // nothing has changed, so copy the old values to the new one.
+      StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
+      nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
     }
-    if (!nothingOutsidePropertiesChanged) {
-      // change all the non-properties items in the old stack.  (We can always change them back later)
-      oldStackResourceEntity.setDeletionPolicy(stackResourceEntity.getDeletionPolicy());
-      oldStackResourceEntity.setDescription(stackResourceEntity.getDescription());
-      oldStackResourceEntity.setMetadataJson(stackResourceEntity.getMetadataJson());
-      oldStackResourceEntity.setUpdatePolicyJson(stackResourceEntity.getUpdatePolicyJson());
-      StackResourceEntityManager.updateStackResource(oldStackResourceEntity);
-    }
+
+    // at this point something has changed -- copy the values from the old stack resource that are determined from
+    // the previous run, rather than the parsed template
+    nextStackResourceEntity.setPhysicalResourceId(previousStackResourceEntity.getPhysicalResourceId());
+    nextStackResourceEntity.setReferenceValueJson(previousStackResourceEntity.getReferenceValueJson());
+    nextStackResourceEntity.setResourceAttributesJson(previousStackResourceEntity.getResourceAttributesJson());
+    nextStackResourceEntity.setResourceStatus(previousStackResourceEntity.getResourceStatus());
+    nextStackResourceEntity.setResourceStatusReason(previousStackResourceEntity.getResourceStatusReason());
+    // presumably we won't need to create something unless we are in the update with replacement case...
+    nextStackResourceEntity.setCreatedEnoughToDelete(previousStackResourceEntity.getCreatedEnoughToDelete());
+    StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+
     if (!propertiesChanged) {
-      // we are essentially done in this case, remove the new one
-      // nothing changed, just remove the new one
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
       return "NO_PROPERTIES";
     }
-    ResourceInfo oldResourceInfo = StackResourceEntityManager.getResourceInfo(oldStackResourceEntity);
-    ResourceAction oldResourceAction = new ResourceResolverManager().resolveResourceAction(oldResourceInfo.getType());
-    oldResourceAction.setStackEntity(stackEntity); // NOTE: stack entity has been changed with new values but nothing (yet) is used from it
-    oldResourceInfo.setEffectiveUserId(effectiveUserId);
-    oldResourceAction.setResourceInfo(resourceInfo);
-    ResourcePropertyResolver.populateResourceProperties(oldResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(oldResourceInfo.getPropertiesJson()));
-    ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-    resourceAction.setStackEntity(stackEntity);
-    resourceInfo.setEffectiveUserId(effectiveUserId);
-    resourceAction.setResourceInfo(resourceInfo);
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-    UpdateType updateType = oldResourceAction.getUpdateType(resourceAction);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
+    previousResourceAction.setStackEntity(previousStackEntity); // NOTE: stack entity has been changed with new values but nothing (yet) is used from it
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousResourceAction.setResourceInfo(previousResourceInfo);
+    ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
+    ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(nextResourceInfo.getType());
+    resourceAction.setStackEntity(nextStackEntity);
+    nextResourceInfo.setEffectiveUserId(effectiveUserId);
+    resourceAction.setResourceInfo(nextResourceInfo);
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+    UpdateType updateType = previousResourceAction.getUpdateType(resourceAction);
     if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
-      oldStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-      oldStackResourceEntity.setResourceStatusReason(null);
-      stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-      stackResourceEntity.setResourceStatusReason(null);
-      StackResourceEntityManager.updateStackResource(oldStackResourceEntity);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
+      nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+      nextStackResourceEntity.setResourceStatusReason(null);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+      StackEventEntityManager.addStackEvent(nextStackResourceEntity);
     } else if (updateType == UpdateType.NEEDS_REPLACEMENT) {
-      // put the old one in the cleanup pile
-      StackResourceEntity cleanupEntity = new StackResourceEntityForCleanup();
-      StackResourceEntityManager.copyStackResourceEntityData(oldStackResourceEntity, cleanupEntity);
-      StackResourceEntityManager.addStackResource(cleanupEntity);
-      // move the new one to the old one and update the status (and physical resource id for now)
-      stackResourceEntity.setPhysicalResourceId(oldStackResourceEntity.getPhysicalResourceId());
-      stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-      stackResourceEntity.setResourceStatusReason("Requested update requires the creation of a new physical resource; hence creating one.");
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
-      StackResourceEntityManager.copyStackResourceEntityData(stackResourceEntity, oldStackResourceEntity);
-      StackResourceEntityManager.updateStackResource(oldStackResourceEntity);
-      // remove the new one from the update table
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+      nextStackResourceEntity.setResourceStatusReason("Requested update requires the creation of a new physical resource; hence creating one.");
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.TRUE);
+      nextStackResourceEntity.setCreatedEnoughToDelete(Boolean.FALSE); // just in case it was set before...
+      StackEventEntityManager.addStackEvent(nextStackResourceEntity);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+    } else if (updateType == UpdateType.NONE) { // This really shouldn't happen, as we have already shown properties have
+      // changed.  copy everything and log it for now.
+      // nothing has changed, so copy the old values to the new one.
+      LOG.warn("Resource " + nextStackResourceEntity.getLogicalResourceId() + " on stack " + nextStackResourceEntity.getStackId() + " has changed properties, but the resource update type is NONE.  Copying the previous value");
+      StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
+      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
+      nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+      return "NONE";
+
     }
     return updateType.toString();
   }
 
   @Override
-  public String finalizeUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
+  public String finalizeUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
     ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
@@ -835,39 +822,40 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public Boolean performUpdateNoInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.info("Performing update with no interruption step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    // This time we still modify the stack entity that is in use but our other one is in the update table.  We will call it new.
-    StackResourceEntity newResourceEntity = StackResourceEntityManager.getStackResourceForUpdate(stackId, accountId, resourceId);
-    ResourceInfo newResourceInfo = StackResourceEntityManager.getResourceInfo(newResourceEntity);
+  public Boolean performUpdateStep(String updateTypeAndDirectionStr, String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    UpdateTypeAndDirection updateTypeAndDirection = UpdateTypeAndDirection.valueOf(updateTypeAndDirectionStr);
+    LOG.info("Performing " + updateTypeAndDirection + " step " + stepId + " on resource " + resourceId);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo nextResourceInfo = StackResourceEntityManager.getResourceInfo(nextStackResourceEntity);
 
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    VersionedStackEntity previousStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion - 1);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
     try {
-      ResourceAction newResourceAction = new ResourceResolverManager().resolveResourceAction(newResourceInfo.getType());
-      newResourceAction.setStackEntity(stackEntity);
-      newResourceInfo.setEffectiveUserId(effectiveUserId);
-      newResourceAction.setResourceInfo(newResourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(newResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(newResourceInfo.getPropertiesJson()));
-      if (!(newResourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateNoInterruptionStep against a resource action that does not extend StepBasedResourceAction: " + newResourceAction.getClass().getName());
+      ResourceAction nextResourceAction = new ResourceResolverManager().resolveResourceAction(nextResourceInfo.getType());
+      nextResourceAction.setStackEntity(nextStackEntity);
+      nextResourceInfo.setEffectiveUserId(effectiveUserId);
+      nextResourceAction.setResourceInfo(nextResourceInfo);
+      ResourcePropertyResolver.populateResourceProperties(nextResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+      if (!(nextResourceAction instanceof StepBasedResourceAction)) {
+        throw new ClassCastException("Calling performUpdateStep against a resource action that does not extend StepBasedResourceAction: " + nextResourceAction.getClass().getName());
       }
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      if (!(resourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateNoInterruptionStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
+      ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
+      previousResourceAction.setStackEntity(previousStackEntity);
+      previousResourceInfo.setEffectiveUserId(effectiveUserId);
+      previousResourceAction.setResourceInfo(previousResourceInfo);
+      ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
+      if (!(previousResourceAction instanceof StepBasedResourceAction)) {
+        throw new ClassCastException("Calling performUpdateStep against a resource action that does not extend StepBasedResourceAction: " + previousResourceAction.getClass().getName());
       }
 
-      UpdateStep updateStep = ((StepBasedResourceAction) resourceAction).getUpdateNoInterruptionStep(stepId);
-      resourceAction = updateStep.perform(resourceAction, newResourceAction);
-      resourceInfo = resourceAction.getResourceInfo();
-      stackResourceEntity.setDescription(""); // deal later
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      UpdateStep updateStep = ((StepBasedResourceAction) previousResourceAction).getUpdateStep(updateTypeAndDirection, stepId);
+      nextResourceAction = updateStep.perform(previousResourceAction, nextResourceAction);
+      nextResourceInfo = nextResourceAction.getResourceInfo();
+      nextStackResourceEntity.setDescription(""); // deal later
+      nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
     } catch (NotAResourceFailureException ex) {
       LOG.info( "Update step not yet complete: ${ex.message}" );
       LOG.debug(ex, ex);
@@ -875,136 +863,23 @@ public class StackActivityImpl implements StackActivity {
     } catch (Exception ex) {
       LOG.info("Error updating resource " + resourceId);
       LOG.error(ex, ex);
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
+      nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+      nextStackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
       Throwable rootCause = Throwables.getRootCause(ex);
-      stackResourceEntity.setResourceStatusReason("" + rootCause.getMessage());
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
+      nextStackResourceEntity.setResourceStatusReason("" + rootCause.getMessage());
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+      StackEventEntityManager.addStackEvent(nextStackResourceEntity);
       throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
     return true;
   }
 
   @Override
-  public Boolean performUpdateSomeInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.info("Performing update with some interruption step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    // This time we still modify the stack entity that is in use but our other one is in the update table.  We will call it new.
-    StackResourceEntity newResourceEntity = StackResourceEntityManager.getStackResourceForUpdate(stackId, accountId, resourceId);
-    ResourceInfo newResourceInfo = StackResourceEntityManager.getResourceInfo(newResourceEntity);
-
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    try {
-      ResourceAction newResourceAction = new ResourceResolverManager().resolveResourceAction(newResourceInfo.getType());
-      newResourceAction.setStackEntity(stackEntity);
-      newResourceInfo.setEffectiveUserId(effectiveUserId);
-      newResourceAction.setResourceInfo(newResourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(newResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(newResourceInfo.getPropertiesJson()));
-      if (!(newResourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateSomeInterruptionStep against a resource action that does not extend StepBasedResourceAction: " + newResourceAction.getClass().getName());
-      }
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      if (!(resourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateSomeInterruptionStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
-      }
-
-      UpdateStep updateStep = ((StepBasedResourceAction) resourceAction).getUpdateSomeInterruptionStep(stepId);
-      resourceAction = updateStep.perform(resourceAction, newResourceAction);
-      resourceInfo = resourceAction.getResourceInfo();
-      stackResourceEntity.setDescription(""); // deal later
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    } catch (NotAResourceFailureException ex) {
-      LOG.info( "Update step not yet complete: ${ex.message}" );
-      LOG.debug(ex, ex);
-      return false;
-    } catch (Exception ex) {
-      LOG.info("Error updating resource " + resourceId);
-      LOG.error(ex, ex);
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
-      Throwable rootCause = Throwables.getRootCause(ex);
-      stackResourceEntity.setResourceStatusReason("" + rootCause.getMessage());
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
-      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
-    }
-    return true;
-  }
-
-  @Override
-  public Boolean performUpdateWithReplacementStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    LOG.info("Performing update with replacement step " + stepId + " on resource " + resourceId);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    // This time we still modify the stack entity that is in use but our other one is in the cleanup table.  We will call it old.
-    StackResourceEntity oldResourceEntity = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    ResourceInfo oldResourceInfo = StackResourceEntityManager.getResourceInfo(oldResourceEntity);
-
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    String oldPhysicalResourceId = stackResourceEntity.getPhysicalResourceId();
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    try {
-      ResourceAction oldResourceAction = new ResourceResolverManager().resolveResourceAction(oldResourceInfo.getType());
-      oldResourceAction.setStackEntity(stackEntity);
-      oldResourceInfo.setEffectiveUserId(effectiveUserId);
-      oldResourceAction.setResourceInfo(oldResourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(oldResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(oldResourceInfo.getPropertiesJson()));
-      if (!(oldResourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateWithReplacementStep against a resource action that does not extend StepBasedResourceAction: " + oldResourceAction.getClass().getName());
-      }
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      if (!(resourceAction instanceof StepBasedResourceAction)) {
-        throw new ClassCastException("Calling performUpdateWithReplacementStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
-      }
-
-      UpdateStep updateStep = ((StepBasedResourceAction) resourceAction).getUpdateWithReplacementStep(stepId);
-      resourceAction = updateStep.perform(oldResourceAction, resourceAction);
-      resourceInfo = resourceAction.getResourceInfo();
-      stackResourceEntity.setDescription(""); // deal later
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      if (!Objects.equals(stackResourceEntity.getPhysicalResourceId(), oldPhysicalResourceId)) {
-        stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-        stackResourceEntity.setResourceStatusReason("Resource creation Initiated");
-        StackEventEntityManager.addStackEvent(stackResourceEntity);
-      }
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    } catch (NotAResourceFailureException ex) {
-      LOG.info( "Update step not yet complete: ${ex.message}" );
-      LOG.debug(ex, ex);
-      return false;
-    } catch (Exception ex) {
-      LOG.info("Error updating resource " + resourceId);
-      LOG.error(ex, ex);
-      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-      stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
-      Throwable rootCause = Throwables.getRootCause(ex);
-      stackResourceEntity.setResourceStatusReason("" + rootCause.getMessage());
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
-      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
-    }
-    return true;
-
-  }
-
-  @Override
-  public String finalizeUpdateCleanupStack(String stackId, String accountId, String statusMessage) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    // remove all items from non-in-use stacks
-    StackResourceEntityManager.deleteStackResourcesForCleanup(stackId, accountId);
-    StackResourceEntityManager.deleteStackResourcesForUpdate(stackId, accountId);
-
-    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
+  public String finalizeUpdateCleanupStack(String stackId, String accountId, String statusMessage, int updatedStackVersion) {
+    // get rid of all non-current stack versions and resources
+    StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, updatedStackVersion)
+    StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, updatedStackVersion)
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedStackVersion);
     stackEntity.setStackStatus(Status.UPDATE_COMPLETE);
     stackEntity.setStackStatusReason(statusMessage);
     StackEntityManager.updateStack(stackEntity);
@@ -1012,70 +887,250 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+  public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     LOG.info("Determining if resource " + resourceId + " needs deleting during cleanup");
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    String stackName = stackEntity.getStackName();
-    // check that it is in the cleanup pile
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE
-      && stackResourceEntity.getResourceStatus() != Status.NOT_STARTED) {
-      stackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
-      stackResourceEntity.setResourceStatusReason(null);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      StackEventEntityManager.addStackEvent(stackResourceEntity);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    // Delete if:
+    // previous entity exists, in something other than a DELETE_COMPLETE or NOT_STARTED state, and
+    // the next entity either does not exist, is in state NOT_STARTED, or was updated via replacement.
+    // internal physical resource uuid that is different in the needs update case...
+    boolean previousEntityExists = previousStackResourceEntity != null;
+    boolean previousEntityState = previousStackResourceEntity == null ? null : previousStackResourceEntity.getResourceStatus();
+    boolean previousEntityInAppropriateState = (previousEntityState != Status.DELETE_COMPLETE) && (previousEntityState != Status.NOT_STARTED);
+    boolean nextEntityExists = nextStackResourceEntity != null;
+    boolean nextEntityState = nextStackResourceEntity == null ? null : nextStackResourceEntity.getResourceStatus();
+    boolean nextEntityNotStarted = (nextEntityState == Status.NOT_STARTED);
+    boolean nextEntityFromResourceReplacement = (nextEntityExists  && nextStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+
+    if (previousEntityExists && previousEntityInAppropriateState &&
+      (!nextEntityExists || nextEntityNotStarted || nextEntityFromResourceReplacement)
+    ) {
+      previousStackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
+      previousStackResourceEntity.setResourceStatusReason(null);
+      StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+      StackEventEntityManager.addStackEvent(previousStackResourceEntity);
       return "";
     }
     return "SKIP";
   }
 
   @Override
-  public String failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage) {
+  public String failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int updatedResourceVersion) {
     LOG.info("Error deleting resource " + resourceId);
     LOG.error(errorMessage);
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    resourceInfo.setEffectiveUserId(effectiveUserId);
-    stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-    stackResourceEntity.setResourceStatus(Status.DELETE_FAILED);
-    stackResourceEntity.setResourceStatusReason(errorMessage);
-    StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    StackEventEntityManager.addStackEvent(stackResourceEntity);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.DELETE_FAILED);
+    previousStackResourceEntity.setResourceStatusReason(errorMessage);
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
     return "FAILURE";
   }
 
   @Override
-  public String finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-    resourceInfo.setEffectiveUserId(effectiveUserId);
-    stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-    stackResourceEntity.setResourceStatus(Status.DELETE_COMPLETE);
-    stackResourceEntity.setResourceStatusReason("");
-    StackResourceEntityManager.updateStackResource(stackResourceEntity);
-    StackEventEntityManager.addStackEvent(stackResourceEntity);
+  public String finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.DELETE_COMPLETE);
+    previousStackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
     LOG.info("Finished deleting resource " + resourceId);
     return "SUCCESS";
   }
 
   @Override
-  public String removeUpdateCleanupResourceIfAppropriateFromStack(String resourceId, String stackId, String accountId) {
-    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceInUse(stackId, accountId, resourceId);
-    StackResourceEntity stackResourceEntityCleanup = StackResourceEntityManager.getStackResourceForCleanup(stackId, accountId, resourceId);
-    // remove the cleanup one regardless
-    if (stackResourceEntityCleanup != null) {
-      stackResourceEntityCleanup.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntityCleanup);
+  public String initUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
+    int updatedStackVersion = rolledBackResourceVersion - 1;
+    LOG.info("Determining if resource " + resourceId + " needs update rollback");
+    VersionedStackEntity updatedStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedStackVersion);
+    StackResourceEntity updatedStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedStackVersion);
+
+    VersionedStackEntity rolledbackStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackResourceVersion);
+    // stack resource entity for rollback is still "behind" the updated version
+    StackResourceEntity rolledbackStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedStackVersion - 1);
+    if (updatedStackResourceEntity != null && updatedStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) {
+      rolledbackStackResourceEntity.setResourceStatus(updatedStackResourceEntity.getResourceStatus());
+      rolledbackStackResourceEntity.setResourceStatusReason(updatedStackResourceEntity.getResourceStatusReason());
     }
-    // remove the original one if it is the same resource (i.e. same physical resource id, i.e. with replacement)
-    if (stackResourceEntity != null && stackResourceEntityCleanup != null
-      && Objects.equals(stackResourceEntity.getPhysicalResourceId(), stackResourceEntityCleanup.getPhysicalResourceId())) {
-      stackResourceEntity.setRecordDeleted(Boolean.TRUE);
-      StackResourceEntityManager.updateStackResource(stackResourceEntity);
+    rolledbackStackResourceEntity.setResourceVersion(rolledBackResourceVersion);
+    StackResourceEntityManager.updateStackResource(rolledbackStackResourceEntity);
+
+    ResourceInfo rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
+    if (!rolledbackResourceInfo.getAllowedByCondition()) {
+      LOG.info("Resource " + resourceId + " not allowed by condition, skipping");
+      return "SKIP"; //TODO: codify this somewhere...
+    };
+    if (updatedStackResourceEntity == null || updatedStackResourceEntity.getResourceStatus() == Status.NOT_STARTED) {
+      return "CREATE";
     }
+    boolean nothingOutsidePropertiesChanged = true;
+    if (!Objects.equals(rolledbackStackResourceEntity.getDeletionPolicy(), updatedStackResourceEntity.getDeletionPolicy())) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    if (!Objects.equals(rolledbackStackResourceEntity.getDescription(), updatedStackResourceEntity.getDescription())) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    JsonNode previousMetadata = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getPropertiesJson());
+    JsonNode nextMetadata = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getPropertiesJson());
+    if (!Objects.equals(previousMetadata, nextMetadata)) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    JsonNode previousUpdatePolicy = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getUpdatePolicyJson());
+    JsonNode nextUpdatePolicy = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getUpdatePolicyJson());
+    if (!Objects.equals(previousUpdatePolicy, nextUpdatePolicy)) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    JsonNode previousProperties = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getPropertiesJson());
+    JsonNode nextProperties = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getPropertiesJson());
+
+    boolean propertiesChanged = !Objects.equals(previousProperties, nextProperties);
+    if (nothingOutsidePropertiesChanged && !propertiesChanged) {
+      // nothing has changed, values should be the same (or correct)
+      return "NONE";
+    }
+
+    if (!propertiesChanged) {
+      return "NO_PROPERTIES";
+    }
+
+    // Update the resource info.
+    rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
+    ResourceAction rolledbackResourceAction = new ResourceResolverManager().resolveResourceAction(rolledbackResourceInfo.getType());
+    rolledbackResourceAction.setStackEntity(rolledbackStackEntity);
+    rolledbackResourceInfo.setEffectiveUserId(effectiveUserId);
+    rolledbackResourceAction.setResourceInfo(rolledbackResourceInfo);
+    boolean errorWithProperties = false;
+    try {
+      ResourcePropertyResolver.populateResourceProperties(rolledbackResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(rolledbackResourceInfo.getPropertiesJson()));
+    } catch (Exception ex) {
+      errorWithProperties = true;
+    }
+    ResourceInfo updatedResourceInfo = StackResourceEntityManager.getResourceInfo(updatedStackResourceEntity);
+    ResourceAction updatedResourceAction = new ResourceResolverManager().resolveResourceAction(updatedResourceInfo.getType());
+    updatedResourceAction.setStackEntity(updatedStackEntity);
+    updatedResourceInfo.setEffectiveUserId(effectiveUserId);
+    updatedResourceAction.setResourceInfo(updatedResourceInfo);
+    try {
+      ResourcePropertyResolver.populateResourceProperties(updatedResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(updatedResourceInfo.getPropertiesJson()));
+    } catch (Exception ex) {
+      errorWithProperties = true;
+    }
+    if (errorWithProperties) {
+      return UpdateType.UNSUPPORTED; // (We can't check the update type, so there was obviously an error on the way "in", so treat it as if it were unsupported (same logic)
+    }
+    // We check the update type going the original way (sometimes going backwards has a different value, such as IAM Access key with serial, needing the new number to be higher.)
+    UpdateType updateType = rolledbackResourceAction.getUpdateType(updatedResourceAction);
+    if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
+      updatedStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+      updatedStackResourceEntity.setResourceStatusReason(null);
+      StackResourceEntityManager.updateStackResource(updatedStackResourceEntity);
+      StackEventEntityManager.addStackEvent(updatedStackResourceEntity);
+    }
+    // Unsupported update types or "needs replacement" ones don't need status updates
+    return updateType.toString();
+  }
+
+  public String finalizeUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
+    stackResourceEntity.setResourceStatus(Status.UPDATE_COMPLETE);
+    stackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(stackResourceEntity);
+    StackEventEntityManager.addStackEvent(stackResourceEntity);
+    LOG.info("Finished updating resource " + resourceId);
+    return "";
+  }
+
+
+  public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
+    createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString(), "", rolledBackStackVersion);
+    return "SUCCESS";
+  }
+
+  public String failUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion, String errorMessage) {
+    StackResourceEntityManager.flattenResources(stackId, accountId, rolledBackStackVersion);
+    StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, rolledBackStackVersion);
+    createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_FAILED.toString(), "", rolledBackStackVersion);
+    return "FAILURE";
+  }
+
+  public String finalizeUpdateRollbackCleanupStack(String stackId, String accountId, String statusMessage, int rolledBackStackVersion) {
+    // get rid of all non-current stack versions and resources
+    StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, rolledBackStackVersion)
+    StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, rolledBackStackVersion)
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackStackVersion);
+    stackEntity.setStackStatus(Status.UPDATE_ROLLBACK_COMPLETE);
+    stackEntity.setStackStatusReason(statusMessage);
+    StackEntityManager.updateStack(stackEntity);
+    return "";
+  }
+  public String initUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
+    LOG.info("Determining if resource " + resourceId + " needs deleting during cleanup");
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
+    // Delete cases:
+    // 1) Previous entity was Updated With Replacement:  Both entities exist, not in DELETE_COMPLETE or NOT_STARTED.  Previous entity is 'updateWithReplacement'
+    // 2) Previous entity was created.  Previous entity exists, is not in DELETE_COMPLETE or NOT_STARTED and not 'updateWithReplacement'.  Next entity does not exist or is in
+    //    NOT_STARTED or DELETE_COMPLETE state.
+    boolean updateWithReplacementCase = (previousStackResourceEntity != null) && (nextStackResourceEntity != null) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (nextStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (nextStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (previousStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+
+    boolean createdCase = (previousStackResourceEntity != null) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
+      (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
+      (previousStackResourceEntity.getFromUpdateReplacement() != Boolean.TRUE) &&
+      (nextStackResourceEntity == null ||
+        nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED ||
+        nextStackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE);
+
+    if (updateWithReplacementCase || createdCase) {
+      previousStackResourceEntity.setResourceStatus(Status.DELETE_IN_PROGRESS);
+      previousStackResourceEntity.setResourceStatusReason(null);
+      StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+      StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+      return "";
+    }
+    return "SKIP";
+  }
+  public String failUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int rolledBackResourceVersion){
+    LOG.info("Error deleting resource " + resourceId);
+    LOG.error(errorMessage);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.DELETE_FAILED);
+    previousStackResourceEntity.setResourceStatusReason(errorMessage);
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+    return "FAILURE";
+  }
+
+  public String finalizeUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion){
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.DELETE_COMPLETE);
+    previousStackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+    LOG.info("Finished deleting resource " + resourceId);
+    return "SUCCESS";
+  }
+
+  public String rollbackStackState(String stackId, String accountId, int rolledBackStackVersion) {
+    StackEntityManager.rollbackUpdateStack(stackId, accountId, rolledBackStackVersion);
+    return "";
   }
 
 }

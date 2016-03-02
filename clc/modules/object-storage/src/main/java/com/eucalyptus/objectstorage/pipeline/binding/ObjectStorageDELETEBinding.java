@@ -82,6 +82,9 @@ public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
     newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
     newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
 
+    // Cross-Origin Resource Sharing (cors)
+    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
+
     // Object operations
     newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
     newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
@@ -97,8 +100,7 @@ public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
     Map<String, String> opsMap = new HashMap<>();
 
     // Bucket operations
-    // Cross-Origin Resource Sharing (cors)
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
+
     // Policy
     opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
 

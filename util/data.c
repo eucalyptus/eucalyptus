@@ -363,10 +363,13 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //!
 //! @post The network configuration structure is updated with the provided information
 //!
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex)
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex)
 {
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
+        if (sPvInterfaceId)
+            euca_strncpy(pNetCfg->interfaceId, sPvInterfaceId, ENI_ID_LEN);
+
         if (sPvMac)
             euca_strncpy(pNetCfg->privateMac, sPvMac, ENET_ADDR_LEN);
 
@@ -376,6 +379,7 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvI
         if (sPbIp)
             euca_strncpy(pNetCfg->publicIp, sPbIp, INET_ADDR_LEN);
 
+        pNetCfg->device = device;
         pNetCfg->networkIndex = networkIndex;
         pNetCfg->vlan = vlan;
         return (EUCA_OK);
@@ -472,7 +476,8 @@ void free_metadata(ncMetadata ** ppMeta)
 ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const char *sReservationId, virtualMachine * pVirtMachine,
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
-                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize)
+                              int expiryTime, char **asGroupNames, int groupNamesSize, char **asGroupIds, int groupIdsSize,
+                              netConfig * aSecNetCfgs, int secNetCfgsLen)
 {
     u32 i = 0;
     ncInstance *pInstance = NULL;
@@ -504,6 +509,12 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
 
     if (pNetCfg != NULL)
         memcpy(&(pInstance->ncnet), pNetCfg, sizeof(netConfig));
+
+    if (aSecNetCfgs != NULL && secNetCfgsLen > 0) {
+       for (i=0; (i < secNetCfgsLen && i < EUCA_MAX_NICS); i++) {
+           memcpy(&(pInstance->secNetCfgs[i]), &(aSecNetCfgs[i]), sizeof(netConfig));
+       }
+    }
 
     if (sUUID)
         euca_strncpy(pInstance->uuid, sUUID, CHAR_BUFFER_SIZE);

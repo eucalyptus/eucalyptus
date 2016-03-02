@@ -692,7 +692,7 @@
         </collection>
     </mapping>
 
-    <mapping name="GetLifecycle"
+    <mapping name="GetBucketLifecycle"
              class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
         <structure
@@ -768,6 +768,47 @@
     <mapping name="DeleteBucketTaggingResponse"
              class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType">
     </mapping>
+
+    <!-- BUCKET CORS CONFIGURATION -->
+
+    <mapping name="GetBucketCors"
+             class="com.eucalyptus.objectstorage.msgs.GetBucketCorsType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping
+            class="com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType"
+            abstract="true">
+        <structure field="corsConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.CorsConfiguration"/>
+    </mapping>
+
+    <mapping name="SetBucketCors"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketCorsType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure field="corsConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.CorsConfiguration"/>
+    </mapping>
+
+    <mapping name="SetBucketCorsResponse"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType">
+    </mapping>
+
+    <mapping name="DeleteBucketCors"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketCorsType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional"/>
+    </mapping>
+
+    <mapping name="DeleteBucketCorsResponse"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType">
+    </mapping>
+    
 
     <!-- multi-object-delete: POST bucket?delete -->
     <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">

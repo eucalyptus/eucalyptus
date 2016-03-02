@@ -85,7 +85,7 @@ import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.walrus.entities.WalrusSnapshotInfo;
+
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 
@@ -302,120 +302,5 @@ public class SnapshotInfo extends AbstractPersistent {
     } else if (!snapshotId.equals(other.snapshotId))
       return false;
     return true;
-  }
-
-  @EntityUpgrade(entities = {SnapshotInfo.class}, since = Upgrades.Version.v3_4_0, value = Storage.class)
-  public enum SnapshotEntityUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(SnapshotInfo.SnapshotEntityUpgrade.class);
-
-    @Override
-    public boolean apply(@Nullable Class aClass) {
-      EntityTransaction db = Entities.get(SnapshotInfo.class);
-      try {
-        SnapshotInfo example = new SnapshotInfo();
-        List<SnapshotInfo> snaps = Entities.query(example);
-        if (snaps != null && snaps.size() > 0) {
-          for (SnapshotInfo snapshot : snaps) {
-            if (snapshot.getSizeGb() == null) {
-              // Do lookup for source volume
-              EntityTransaction volDb = Entities.get(VolumeInfo.class);
-              try {
-                VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(snapshot.getVolumeId()));
-                if (vol != null) {
-                  snapshot.setSizeGb(vol.getSize());
-                  LOG.debug("Setting snapshot size on entity: " + snapshot.getScName() + snapshot.getSnapshotId() + " to : " + snapshot.getSizeGb());
-                  db.commit();
-                } else {
-                  // No volume record found. May have been deleted. Only source of data now is the snapshot backend record.
-                  LOG.debug("No volume record found for snapshot " + snapshot.getScName() + ", " + snapshot.getSnapshotId()
-                      + " will have size set on upgrade of the backend snapshot entity");
-                }
-
-              } finally {
-                volDb.rollback();
-                volDb = null;
-              }
-            } else {
-              // Already set, do nothing.
-            }
-          }
-        }
-        db.commit();
-      } catch (Exception ex) {
-        LOG.error("caught exception during upgrade, while attempting to set snapshot size");
-        throw Exceptions.toUndeclared(ex);
-      } finally {
-        db.rollback();
-      }
-      return true;
-    }
-  }
-
-  @EntityUpgrade(entities = {SnapshotInfo.class}, since = Upgrades.Version.v4_0_0, value = Storage.class)
-  public enum SnapshotEntity400Upgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(SnapshotInfo.SnapshotEntity400Upgrade.class);
-
-    @Override
-    public boolean apply(@Nullable Class arg0) {
-
-      EntityTransaction db = Entities.get(SnapshotInfo.class);
-      try {
-        SnapshotInfo example = new SnapshotInfo();
-        example.setScName(null); // neccessary as it defaults to the SC name
-        List<SnapshotInfo> snaps = Entities.query(example);
-
-        if (snaps != null & !snaps.isEmpty()) {
-          Map<String, String> snapIDBucketNameMap = Maps.newHashMap();
-          Map<String, Integer> snapIDSizeMap = Maps.newHashMap();
-
-          // Populate snapshot IDs and buckets into a map
-          EntityTransaction walrusSnapshotsdb = Entities.get(WalrusSnapshotInfo.class);
-          try {
-            List<WalrusSnapshotInfo> walrusSnapshots = Entities.query(new WalrusSnapshotInfo(), Boolean.TRUE);
-            for (WalrusSnapshotInfo walrusSnapshot : walrusSnapshots) {
-              snapIDBucketNameMap.put(walrusSnapshot.getSnapshotId(), walrusSnapshot.getNaturalId());
-              snapIDSizeMap.put(walrusSnapshot.getSnapshotId(), walrusSnapshot.getSize());
-            }
-          } catch (Exception e) {
-            walrusSnapshotsdb.rollback();
-            return false;
-          } finally {
-            if (walrusSnapshotsdb.isActive()) {
-              walrusSnapshotsdb.commit();
-            }
-          }
-
-          // Populate the snapshot location and size if they are not already populated
-          for (SnapshotInfo snap : snaps) {
-            String snapId = snap.getSnapshotId();
-            if (snapIDBucketNameMap.containsKey(snapId)) {
-              if (snap.getSnapshotLocation() == null) {
-                snap.setSnapshotLocation(SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, snapIDBucketNameMap.get(snapId),
-                    snapId));
-              }
-
-              if (snap.getSizeGb() == null) {
-                snap.setSizeGb(snapIDSizeMap.get(snapId));
-              }
-            }
-          }
-        } else {
-          // nothing to upgrade
-        }
-        db.commit();
-      } catch (Exception e) {
-        LOG.error("Failed to upgrade location/size during SnapshotInfo entity upgrade", e);
-        db.rollback();
-        return false;
-      } finally {
-        if (db.isActive()) {
-          db.commit();
-        }
-      }
-
-      return true;
-    }
   }
 }

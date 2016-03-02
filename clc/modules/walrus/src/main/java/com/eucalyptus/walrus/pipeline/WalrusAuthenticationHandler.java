@@ -203,9 +203,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         //Consolidate duplicates, etc.
 
         canonicalizeHeaders(httpRequest);
-        if (httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
-          checkUploadPolicy(httpRequest);
-        }
         handle(httpRequest);
       } catch (Exception ex) {
         Channels.fireExceptionCaught(ctx, ex);
@@ -252,44 +249,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
     }
 
     return authMap;
-  }
-
-  /*
-   * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
-   * Simply verifies the policy and signature of the policy.
-   */
-  private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AccessDeniedException {
-    Map<String, String> fields = new HashMap<String, String>();
-    String policy = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
-    fields.put(WalrusProperties.FormField.policy.toString(), policy);
-    String policySignature = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
-    if (policySignature == null) {
-      throw new AccessDeniedException("Policy signature must be specified with policy.");
-    }
-    String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
-    if (awsAccessKeyId == null) {
-      throw new AccessDeniedException("AWSAccessKeyID must be specified.");
-    }
-    fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
-    fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
-    String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
-    if (acl != null) {
-      fields.put(WalrusProperties.FormField.acl.toString(), acl);
-    }
-    String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
-    String[] target = WalrusUtil.getTarget(operationPath);
-    if (target != null) {
-      fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
-      if (target.length > 1) {
-        fields.put(WalrusProperties.FormField.key.toString(), target[1]);
-      }
-    }
-    try {
-      UploadPolicyChecker.checkPolicy(httpRequest, fields);
-    } catch (AuthenticationException aex) {
-      throw new AccessDeniedException(aex.getMessage());
-    }
-
   }
 
   private static class S3Authentication {

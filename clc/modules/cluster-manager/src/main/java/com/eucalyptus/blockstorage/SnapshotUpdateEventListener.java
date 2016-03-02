@@ -66,6 +66,7 @@ import static java.util.EnumSet.of;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -119,7 +120,8 @@ public class SnapshotUpdateEventListener implements EventListener<ClockTick>, Ca
 
   @Override
   public void fireEvent( ClockTick event ) {
-    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Bootstrap.isOperational( ) && ready.compareAndSet( true, false ) ) {
+    if ( Topology.isEnabledLocally( Eucalyptus.class ) && Topology.isEnabled( Storage.class ) &&
+        Bootstrap.isOperational( ) && ready.compareAndSet( true, false ) ) {
       try {
         Threads.enqueue( Eucalyptus.class, Snapshots.class, this );
       } catch ( Exception ex ) {
@@ -167,14 +169,14 @@ public class SnapshotUpdateEventListener implements EventListener<ClockTick>, Ca
   }
 
   private static Supplier<Map<String, StorageSnapshot>> getSnapshotsInPartition( final String partition ) {
-    final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
     try {
+      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
       final CheckedListenableFuture<DescribeStorageSnapshotsResponseType> describeFuture =
           AsyncRequests.dispatch( scConfig, new DescribeStorageSnapshotsType( ) );
       return new Supplier<Map<String, StorageSnapshot>>( ) {
         @Override
-        public Map<String, StorageSnapshot> get( ) {
-          final Map<String, StorageSnapshot> storageSnapshots = Maps.newHashMap();
+        public Map<String, StorageSnapshot> get() {
+          final Map<String, StorageSnapshot> storageSnapshots = Maps.newHashMap( );
           try {
             final DescribeStorageSnapshotsResponseType snapshotInfo = describeFuture.get( );
             for ( final StorageSnapshot storageSnapshot : snapshotInfo.getSnapshotSet( ) ) {
@@ -187,6 +189,8 @@ public class SnapshotUpdateEventListener implements EventListener<ClockTick>, Ca
           return storageSnapshots;
         }
       };
+    } catch ( final NoSuchElementException ex ) {
+      Logs.extreme( ).error( ex, ex );
     } catch ( final Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );

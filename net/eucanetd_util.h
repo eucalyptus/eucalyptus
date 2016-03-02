@@ -151,6 +151,11 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart);
 //! TODO: For EDGE mode, replace with proper API from dev_handler.h
 int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
 
+long int timer_get_interval_millis(struct timeval *ts, struct timeval *te);
+long int timer_get_interval_usec(struct timeval *ts, struct timeval *te);
+long int eucanetd_timer(struct timeval *t);
+long int eucanetd_timer_usec(struct timeval *t);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

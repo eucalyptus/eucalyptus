@@ -29,6 +29,8 @@ import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
@@ -43,6 +45,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
@@ -79,6 +83,8 @@ import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
@@ -172,6 +178,12 @@ public interface ObjectStorageService {
   public abstract SetBucketTaggingResponseType setBucketTagging(SetBucketTaggingType request) throws S3Exception;
 
   public abstract DeleteBucketTaggingResponseType deleteBucketTagging(DeleteBucketTaggingType request) throws S3Exception;
+
+  public abstract GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception;
+
+  public abstract SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception;
+
+  public abstract DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception;
 
   public abstract DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 }

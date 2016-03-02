@@ -30,6 +30,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
@@ -48,6 +50,7 @@ import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -58,7 +61,20 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
   private AWSEC2SubnetNetworkAclAssociationResourceInfo info = new AWSEC2SubnetNetworkAclAssociationResourceInfo();
 
   public AWSEC2SubnetNetworkAclAssociationResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2SubnetNetworkAclAssociationResourceAction otherAction = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
+    if (!Objects.equals(properties.getNetworkAclId(), otherAction.properties.getNetworkAclId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getSubnetId(), otherAction.properties.getSubnetId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -78,6 +94,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
         }
         String newAssociationId = action.replaceAssociation(configuration, associationId, action.properties.getNetworkAclId());
         action.info.setPhysicalResourceId(newAssociationId);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         action.info.setAssociationId(JsonHelper.getStringFromJsonNode(new TextNode(newAssociationId)));
         return action;
@@ -97,7 +114,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetNetworkAclAssociationResourceAction action = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // First see if association id is there...
         if (!action.associationIdExistsForDelete(configuration)) return action;

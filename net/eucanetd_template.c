@@ -202,6 +202,7 @@ static boolean gInitialized = FALSE;
 static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
+static int network_driver_system_maint(globalNetworkInfo * pGni, lni_t * pLni);
 static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
@@ -232,6 +233,7 @@ struct driver_handler_t templateDriverHandler = {
     .init = network_driver_init,
     .cleanup = network_driver_cleanup,
     .system_flush = network_driver_system_flush,
+    .system_maint = NULL,
     .system_scrub = network_driver_system_scrub,
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
@@ -249,7 +251,7 @@ struct driver_handler_t templateDriverHandler = {
 //!
 //! @param[in] pConfig a pointer to our application configuration
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -298,7 +300,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] forceFlush set to TRUE if a network flush needs to be performed
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -332,7 +334,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -341,7 +343,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @post
 //!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occured. The system is left in a non-deterministic state and a subsequent
+//!     failure occurred. The system is left in a non-deterministic state and a subsequent
 //!     call to this API may resolve the remaining issues.
 //!
 static int network_driver_system_flush(globalNetworkInfo * pGni)
@@ -358,6 +360,45 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 
     } else if (PEER_IS_CC(eucanetdPeer)) {
 
+    }
+
+    return (0);
+}
+
+//!
+//! This API is invoked when eucanetd will potentially be idle. For example, after
+//! populating the global network state, eucanetd detects that no action needs to
+//! be taken. Good for pre-populating cache, or flushing dirty cache - so these
+//! actions are not necessary in the regular iteration.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//! @param[in] pLni a pointer to the Local Network Information structure
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!     - Both pGni and pLni must not be NULL
+//!     - The driver must be initialized prior to calling this API.
+//!
+//! @post
+//!
+//! @note
+//!
+static int network_driver_system_maint(globalNetworkInfo * pGni, lni_t * pLni)
+{
+    LOGINFO("Maintenance activities for '%s' network driver.\n", DRIVER_NAME());
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to run maintenance. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Are the global and local network view structures NULL?
+    if (!pGni || !pLni) {
+        LOGERROR("Failed to run maintenance activities for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        return (EUCANETD_RUN_NO_API);
     }
 
     return (0);
@@ -392,12 +433,12 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to scub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
+        LOGERROR("Failed to scrub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
         return (EUCANETD_RUN_NO_API);
     }
     // Are the global and local network view structures NULL?
     if (!pGni || !pLni) {
-        LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        LOGERROR("Failed to scrub '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
         return (EUCANETD_RUN_NO_API);
     }
 
@@ -417,7 +458,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -463,7 +504,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -509,7 +550,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] pLni a pointer to the Local Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see update_private_ips(), update_elastic_ips(), update_l2_addressing()
 //!

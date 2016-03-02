@@ -79,9 +79,5 @@ public class NotEnoughResourcesException extends ResourceAllocationException {
   public NotEnoughResourcesException( String string ) {
     super( string );
   }
-  
-  public NotEnoughResourcesException( String message, Exception e ) {
-    super( message, e );
-  }
-  
+
 }

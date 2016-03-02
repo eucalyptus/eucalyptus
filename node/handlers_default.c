@@ -200,7 +200,7 @@ static int doInitialize(struct nc_state_t *nc);
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInst);
+                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInst);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
@@ -344,7 +344,8 @@ static int doInitialize(struct nc_state_t *nc)
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
                          char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
-                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
+                         char **groupNames, int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize,
+                         netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInstPtr)
 {
     int ret = EUCA_OK;
     ncInstance *instance = NULL;
@@ -370,7 +371,8 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     }
 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
-                                 &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize);
+                                 &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, groupIds, groupIdsSize,
+                                 secNetCfgs, secNetCfgsLen);
 
     if (kernelId)
         euca_strncpy(instance->kernelId, kernelId, sizeof(instance->kernelId));
@@ -736,11 +738,31 @@ int find_and_start_instance(char *psInstanceId)
                 // If this device does not have a 'brport' path, this isn't a bridge device
                 snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
                 if (!check_directory(sPath)) {
+                    LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
                     snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
                     rc = timeshell(cmd, obuf, ebuf, 256, 10);
                     if (rc) {
                         LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
                     }
+                }
+
+                // Repeat process for secondary interfaces as well
+                for (int i=0; i < EUCA_MAX_NICS; i++) {
+                   if (strlen(pInstance->secNetCfgs[i].interfaceId) == 0)
+                       continue;
+
+                   snprintf(iface, 16, "vn_%s", pInstance->secNetCfgs[i].interfaceId);
+
+                   // If this device does not have a 'brport' path, this isn't a bridge device
+                   snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+                   if (!check_directory(sPath)) {
+                       LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
+                       snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
+                       rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                       if (rc) {
+                           LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
+                       }
+                   }
                 }
             }
         }

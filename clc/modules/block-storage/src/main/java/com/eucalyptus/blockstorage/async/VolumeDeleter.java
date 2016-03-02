@@ -78,6 +78,8 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -159,6 +161,8 @@ public class VolumeDeleter extends CheckerTask {
           } catch (Exception e) {
             LOG.error("Error deleting volume " + vol.getVolumeId() + ": " + e.getMessage());
             LOG.debug("Exception during deleting volume " + vol.getVolumeId() + ".", e);
+          } finally {
+            ThruputMetrics.endOperation(MonitoredAction.DELETE_VOLUME, vol.getVolumeId(), System.currentTimeMillis());
           }
         }
       } else {

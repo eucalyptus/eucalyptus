@@ -306,8 +306,7 @@ int main(int argc, char *argv[])
     add_euca_to_path(eucahome);
 
     fprintf(stderr, "looking for system utilities...\n");
-    if (diskutil_init(FALSE)) {
-        // NC does not require GRUB for now
+    if (diskutil_init()) {
         EUCA_FREE(eucahome);
         exit(1);
     }

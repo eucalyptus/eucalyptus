@@ -27,10 +27,11 @@ import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
 import com.eucalyptus.auth.euare.DeleteGroupResponseType;
 import com.eucalyptus.auth.euare.DeleteGroupType;
 import com.eucalyptus.auth.euare.GroupType;
-import com.eucalyptus.auth.euare.ListGroupsResponseType;
-import com.eucalyptus.auth.euare.ListGroupsType;
 import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.PutGroupPolicyType;
+import com.eucalyptus.auth.euare.UpdateGroupResponseType;
+import com.eucalyptus.auth.euare.UpdateGroupType;
+import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -41,13 +42,19 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -58,7 +65,21 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
   private AWSIAMGroupResourceInfo info = new AWSIAMGroupResourceInfo();
 
   public AWSIAMGroupResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  private static final String DEFAULT_PATH = "/";
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSIAMGroupResourceAction otherAction = (AWSIAMGroupResourceAction) resourceAction;
+    if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -70,10 +91,11 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         String groupName = action.getDefaultPhysicalResourceId();
         CreateGroupType createGroupType = MessageHelper.createMessage(CreateGroupType.class, action.info.getEffectiveUserId());
         createGroupType.setGroupName(groupName);
-        createGroupType.setPath(action.properties.getPath());
+        createGroupType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
         CreateGroupResponseType createGroupResponseType = AsyncRequests.<CreateGroupType,CreateGroupResponseType> sendSync(configuration, createGroupType);
         String arn = createGroupResponseType.getCreateGroupResult().getGroup().getArn();
         action.info.setPhysicalResourceId(groupName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(arn)));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -110,34 +132,12 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMGroupResourceAction action = (AWSIAMGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         // if no group, bye...
-        boolean seenAllGroups = false;
-        boolean foundGroup = false;
-        String groupMarker = null;
-        while (!seenAllGroups && !foundGroup) {
-          ListGroupsType listGroupsType = MessageHelper.createMessage(ListGroupsType.class, action.info.getEffectiveUserId());
-          if (groupMarker != null) {
-            listGroupsType.setMarker(groupMarker);
-          }
-          ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
-          if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
-            groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
-          } else {
-            seenAllGroups = true;
-          }
-          if (listGroupsResponseType.getListGroupsResult().getGroups() != null && listGroupsResponseType.getListGroupsResult().getGroups().getMemberList() != null) {
-            for (GroupType groupType: listGroupsResponseType.getListGroupsResult().getGroups().getMemberList()) {
-              if (groupType.getGroupName().equals(action.info.getPhysicalResourceId())) {
-                foundGroup = true;
-                break;
-              }
-            }
-          }
-
+        if (!IAMHelper.groupExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) {
+          return action;
         }
-        if (!foundGroup) return action;
         // remove all policies added by us.  (Note: this could cause issues if an admin added some, but we delete what we create)
         // Note: deleting a non-existing policy doesn't do anything so we just delete them all...
         if (action.properties.getPolicies() != null) {
@@ -182,6 +182,68 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
     info = (AWSIAMGroupResourceInfo) resourceInfo;
   }
 
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_GROUP {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMGroupResourceAction oldAction = (AWSIAMGroupResourceAction) oldResourceAction;
+        AWSIAMGroupResourceAction newAction = (AWSIAMGroupResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String groupName = newAction.info.getPhysicalResourceId();
+        UpdateGroupType updateGroupType = MessageHelper.createMessage(UpdateGroupType.class, newAction.info.getEffectiveUserId());
+        updateGroupType.setGroupName(groupName);
+        updateGroupType.setNewPath(MoreObjects.firstNonNull(newAction.properties.getPath(), DEFAULT_PATH));
+        AsyncRequests.<UpdateGroupType, UpdateGroupResponseType>sendSync(configuration, updateGroupType);
+        return newAction;
+      }
+    },
+    UPDATE_ARN {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMGroupResourceAction oldAction = (AWSIAMGroupResourceAction) oldResourceAction;
+        AWSIAMGroupResourceAction newAction = (AWSIAMGroupResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        String groupName = newAction.info.getPhysicalResourceId();
+        GroupType group = IAMHelper.getGroup(configuration, groupName, newAction.info.getEffectiveUserId());
+        newAction.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(group.getArn())));
+        return newAction;
+      }
+    },
+    UPDATE_POLICIES {
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMGroupResourceAction oldAction = (AWSIAMGroupResourceAction) oldResourceAction;
+        AWSIAMGroupResourceAction newAction = (AWSIAMGroupResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldPolicyNames = IAMHelper.getPolicyNames(oldAction.properties.getPolicies());
+        Set<String> newPolicyNames = IAMHelper.getPolicyNames(newAction.properties.getPolicies());
+        if (newAction.properties.getPolicies() != null) {
+          for (EmbeddedIAMPolicy policy : newAction.properties.getPolicies()) {
+            PutGroupPolicyType putGroupPolicyType = MessageHelper.createMessage(PutGroupPolicyType.class, newAction.info.getEffectiveUserId());
+            putGroupPolicyType.setGroupName(newAction.info.getPhysicalResourceId());
+            putGroupPolicyType.setPolicyName(policy.getPolicyName());
+            putGroupPolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
+            AsyncRequests.<PutGroupPolicyType, PutGroupPolicyResponseType>sendSync(configuration, putGroupPolicyType);
+          }
+        }
+        // delete all the old policies not in the new set (remember deleting policies that don't exist doesn't do anything)
+        for (String oldPolicyName : Sets.difference(oldPolicyNames, newPolicyNames)) {
+          DeleteGroupPolicyType deleteGroupPolicyType = MessageHelper.createMessage(DeleteGroupPolicyType.class, newAction.info.getEffectiveUserId());
+          deleteGroupPolicyType.setGroupName(newAction.info.getPhysicalResourceId());
+          deleteGroupPolicyType.setPolicyName(oldPolicyName);
+          AsyncRequests.<DeleteGroupPolicyType, DeleteGroupPolicyResponseType>sendSync(configuration, deleteGroupPolicyType);
+        }
+        return newAction;
+      }
+
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
 
 
 }

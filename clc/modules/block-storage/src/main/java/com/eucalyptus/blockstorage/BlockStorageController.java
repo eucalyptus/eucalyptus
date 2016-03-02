@@ -144,6 +144,8 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -406,6 +408,7 @@ public class BlockStorageController {
    * @throws EucalyptusCloudException
    */
   public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
+    final long startTime = System.currentTimeMillis();
     UnexportVolumeResponseType reply = request.getReply();
     final String token = request.getToken();
     final String volumeId = request.getVolumeId();
@@ -472,6 +475,7 @@ public class BlockStorageController {
       LOG.error("Failed UnexportVolume due to: " + e.getMessage(), e);
       throw new EucalyptusCloudException(e);
     }
+    ThruputMetrics.addDataPoint(MonitoredAction.UNEXPORT_VOLUME, System.currentTimeMillis() - startTime);
     return reply;
   }
 
@@ -487,6 +491,7 @@ public class BlockStorageController {
    * @throws EucalyptusCloudException
    */
   public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
+    final long startTime = System.currentTimeMillis();
     final ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();
     final String volumeId = request.getVolumeId();
     final String token = request.getToken();
@@ -588,6 +593,7 @@ public class BlockStorageController {
       LOG.error("Failed ExportVolume transaction due to: " + e.getMessage(), e);
       throw new EucalyptusCloudException("Failed to add export", e);
     }
+    ThruputMetrics.addDataPoint(MonitoredAction.EXPORT_VOLUME, System.currentTimeMillis() - startTime);
     return reply;
   }
 
@@ -625,12 +631,12 @@ public class BlockStorageController {
   }
 
   public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
+    final long startTime = System.currentTimeMillis();
     DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
     if (!StorageProperties.enableStorage) {
       LOG.error("BlockStorage has been disabled. Please check your setup");
       return reply;
     }
-
     String volumeId = request.getVolumeId();
     LOG.info("Processing DeleteStorageVolume request for volume " + volumeId);
 
@@ -645,6 +651,7 @@ public class BlockStorageController {
       } else if (status.equals(StorageProperties.Status.available.toString())) {
         // Set status, for cleanup thread to find.
         LOG.trace("Marking volume " + volumeId + " for deletion");
+        ThruputMetrics.startOperation(MonitoredAction.DELETE_VOLUME, volumeId, startTime);
         foundVolume.setStatus(StorageProperties.Status.deleting.toString());
       } else if (status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString())
           || status.equals(StorageProperties.Status.failed.toString())) {
@@ -708,6 +715,7 @@ public class BlockStorageController {
   }
 
   public CreateStorageSnapshotResponseType CreateStorageSnapshot(CreateStorageSnapshotType request) throws EucalyptusCloudException {
+    final long actionStart = System.currentTimeMillis();
     CreateStorageSnapshotResponseType reply = (CreateStorageSnapshotResponseType) request.getReply();
 
     StorageProperties.updateWalrusUrl();
@@ -741,6 +749,7 @@ public class BlockStorageController {
       if (!sourceVolumeInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
         throw new VolumeNotReadyException(volumeId);
       } else {
+        ThruputMetrics.startOperation(MonitoredAction.CREATE_SNAPSHOT, snapshotId, actionStart);
         // create snapshot
         if (StorageProperties.shouldEnforceUsageLimits) {
           int maxSize = -1;
@@ -918,6 +927,7 @@ public class BlockStorageController {
    * @throws EucalyptusCloudException
    */
   public DeleteStorageSnapshotResponseType DeleteStorageSnapshot(DeleteStorageSnapshotType request) throws EucalyptusCloudException {
+    final long startTime = System.currentTimeMillis();
     DeleteStorageSnapshotResponseType reply = (DeleteStorageSnapshotResponseType) request.getReply();
 
     StorageProperties.updateWalrusUrl();
@@ -934,6 +944,7 @@ public class BlockStorageController {
       String status = snapshotInfo.getStatus();
       if (status.equals(StorageProperties.Status.available.toString())) {
         snapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
+        ThruputMetrics.startOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, startTime);
       } else if (status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString())
           || status.equals(StorageProperties.Status.failed.toString())) {
         LOG.debug("Snapshot " + snapshotId + " already in deleting/deleted/failed. No-op for delete request.");
@@ -973,13 +984,13 @@ public class BlockStorageController {
    */
 
   public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
+    final long actionStart = System.currentTimeMillis();
     CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
     if (!StorageProperties.enableStorage) {
       LOG.error("BlockStorage has been disabled. Please check your setup");
       return reply;
     }
-
     String snapshotId = request.getSnapshotId();
     String parentVolumeId = request.getParentVolumeId();
     String userId = request.getUserId();
@@ -1049,6 +1060,8 @@ public class BlockStorageController {
     try {
       // create volume asynchronously
       VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, parentVolumeId, sizeAsInt, blockManager);
+      ThruputMetrics.startOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME,
+          volumeId, actionStart);
       VolumeThreadPool.add(volumeCreator);
     } catch (Exception e) {
       LOG.warn("Failed to add creation task for " + volumeId + " to asynchronous thread pool", e);

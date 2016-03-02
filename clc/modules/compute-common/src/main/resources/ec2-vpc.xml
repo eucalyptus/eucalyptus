@@ -910,7 +910,7 @@
         <value name="instanceOwnerId" field="instanceOwnerId" usage="optional"/>
         <value name="deviceIndex" field="deviceIndex" usage="required"/>
         <value name="status" field="status" usage="required"/>
-        <value name="attachTime" field="attachTime" usage="required"/>
+        <value name="attachTime" field="attachTime" usage="optional"/>
         <value name="deleteOnTermination" field="deleteOnTermination" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.compute.common.NetworkInterfaceAssociationType" abstract="true">

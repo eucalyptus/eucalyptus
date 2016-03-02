@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -34,6 +35,8 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
@@ -42,24 +45,31 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.CreateVpcResponseType;
 import com.eucalyptus.compute.common.CreateVpcType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DeleteVpcResponseType;
 import com.eucalyptus.compute.common.DeleteVpcType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyVpcAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeType;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -70,7 +80,29 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
   private AWSEC2VPCResourceInfo info = new AWSEC2VPCResourceInfo();
 
   public AWSEC2VPCResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2VPCResourceAction otherAction = (AWSEC2VPCResourceAction) resourceAction;
+    if (!Objects.equals(properties.getCidrBlock(), otherAction.properties.getCidrBlock())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getEnableDnsHostnames(), otherAction.properties.getEnableDnsHostnames())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getEnableDnsSupport(), otherAction.properties.getEnableDnsSupport())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getInstanceTenancy(), otherAction.properties.getInstanceTenancy())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -90,6 +122,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         CreateVpcResponseType createVpcResponseType = AsyncRequests.<CreateVpcType,CreateVpcResponseType> sendSync(configuration, createVpcType);
         action.info.setPhysicalResourceId(createVpcResponseType.getVpc().getVpcId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setCidrBlock(JsonHelper.getStringFromJsonNode(new TextNode( createVpcResponseType.getVpc( ).getCidrBlock( ))));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
@@ -171,8 +204,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    },
-    ;
+    };
 
     @Nullable
     @Override
@@ -187,7 +219,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
 
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
         describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );
@@ -211,6 +243,123 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_DNS_ENTRIES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VPCResourceAction oldAction = (AWSEC2VPCResourceAction) oldResourceAction;
+        AWSEC2VPCResourceAction newAction = (AWSEC2VPCResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        ModifyVpcAttributeType modifyVpcAttributeType = MessageHelper.createMessage(ModifyVpcAttributeType.class, newAction.info.getEffectiveUserId());
+        boolean enableDnsSupport = true; // default value
+        boolean enableDnsHostnames = false; // default value
+        if (newAction.properties.getEnableDnsSupport() != null) {
+          enableDnsSupport = newAction.properties.getEnableDnsSupport();
+        }
+        if (newAction.properties.getEnableDnsHostnames() != null) {
+          enableDnsHostnames = newAction.properties.getEnableDnsHostnames();
+        }
+        modifyVpcAttributeType.setVpcId(newAction.info.getPhysicalResourceId());
+        modifyVpcAttributeType.setEnableDnsSupport(newAction.createAttributeBooleanValueType(enableDnsSupport));
+        modifyVpcAttributeType.setEnableDnsHostnames(newAction.createAttributeBooleanValueType(enableDnsHostnames));
+        // TODO: does the below return any errors?
+        AsyncRequests.<ModifyVpcAttributeType,ModifyVpcAttributeResponseType> sendSync(configuration, modifyVpcAttributeType);
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VPCResourceAction oldAction = (AWSEC2VPCResourceAction) oldResourceAction;
+        AWSEC2VPCResourceAction newAction = (AWSEC2VPCResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
+        Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+          for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+            EC2Tag tag = new EC2Tag();
+            tag.setKey(tagInfo.getKey());
+            tag.setValue(tagInfo.getValue());
+            existingTags.add(tag);
+          }
+        }
+        Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+        if (newAction.properties.getTags() != null) {
+          newTags.addAll(newAction.properties.getTags());
+        }
+        List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+        if (newStackTags != null) {
+          newTags.addAll(newStackTags);
+        }
+        TagHelper.checkReservedEC2TemplateTags(newTags);
+        // add only 'new' tags
+        Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+        if (!onlyNewTags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        //  Get old tags...
+        Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+        if (oldAction.properties.getTags() != null) {
+          oldTags.addAll(oldAction.properties.getTags());
+        }
+        List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+        if (oldStackTags != null) {
+          oldTags.addAll(oldStackTags);
+        }
+
+        // remove only the old tags that are not new and that exist
+        Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+        if (!tagsToRemove.isEmpty()) {
+          DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+          deleteTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+        }
+        return newAction;
+      }
+    },
+    DESCRIBE_VPC_RESOURCES_TO_UPDATE_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VPCResourceAction oldAction = (AWSEC2VPCResourceAction) oldResourceAction;
+        AWSEC2VPCResourceAction newAction = (AWSEC2VPCResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        // Describe groups to find the default
+        final DescribeSecurityGroupsType groupsRequest = MessageHelper.createMessage(DescribeSecurityGroupsType.class, newAction.info.getEffectiveUserId());
+        groupsRequest.setSecurityGroupSet(Lists.newArrayList("default"));
+        groupsRequest.setFilterSet(Lists.newArrayList(Filter.filter("vpc-id", newAction.info.getPhysicalResourceId())));
+        final CheckedListenableFuture<DescribeSecurityGroupsResponseType> groupsFuture =
+          AsyncRequests.dispatch(configuration, groupsRequest);
+        // Describe network acls to find the default
+        final DescribeNetworkAclsType networkAclsRequest = MessageHelper.createMessage(DescribeNetworkAclsType.class, newAction.info.getEffectiveUserId());
+        networkAclsRequest.setFilterSet(Lists.newArrayList(
+          Filter.filter("vpc-id", newAction.info.getPhysicalResourceId()),
+          Filter.filter("default", "true")
+        ));
+        final CheckedListenableFuture<DescribeNetworkAclsResponseType> networkAclsFuture =
+          AsyncRequests.dispatch(configuration, networkAclsRequest);
+        // Record attribute values
+        if (!groupsFuture.get().getSecurityGroupInfo().isEmpty()) {
+          newAction.info.setDefaultSecurityGroup(JsonHelper.getStringFromJsonNode(new TextNode(groupsFuture.get().getSecurityGroupInfo().get(0).getGroupId())));
+        }
+        if (!networkAclsFuture.get().getNetworkAclSet().getItem().isEmpty()) {
+          newAction.info.setDefaultNetworkAcl(JsonHelper.getStringFromJsonNode(new TextNode(networkAclsFuture.get().getNetworkAclSet().getItem().get(0).getNetworkAclId())));
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
 
   @Override
   public ResourceProperties getResourceProperties() {

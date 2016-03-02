@@ -143,16 +143,6 @@
 		</structure>
 	</mapping>
 
-	<mapping name="PostResponse"
-		class="com.eucalyptus.walrus.msgs.PostObjectResponseType">
-		<value name="Location" field="location" usage="optional" />
-		<value name="Bucket" field="bucket" usage="optional" />
-		<value name="Key" field="key" usage="optional" />
-		<structure map-as="com.eucalyptus.walrus.msgs.WalrusDataResponseType" />
-		<value name="RedirectUrl" field="redirectUrl" usage="optional" />
-		<value name="SuccessActionStatus" field="successCode" usage="optional" />
-	</mapping>
-
 	<mapping name="PutObject" class="com.eucalyptus.walrus.msgs.PutObjectType">
 		<structure map-as="com.eucalyptus.walrus.msgs.WalrusDataRequestType" />
 		<collection field="metaData"
@@ -167,25 +157,6 @@
 		<value name="ContentDisposition" field="contentDisposition"
 			usage="optional" />
 		<value name="ContentMD5" field="contentMD5" usage="optional" />
-		<structure map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
-			usage="optional" />
-	</mapping>
-
-	<mapping name="PostObject" class="com.eucalyptus.walrus.msgs.PostObjectType">
-		<structure map-as="com.eucalyptus.walrus.msgs.WalrusDataRequestType" />
-		<collection field="metaData"
-			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry" />
-		</collection>
-		<value name="ContentLength" field="contentLength" />
-		<structure field="accessControlList"
-			map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
-		<value name="StorageClass" field="storageClass" usage="optional" />
-		<value name="SuccessActionRedirect" field="successActionRedirect"
-			usage="optional" />
-		<value name="SuccessActionStatus" field="successActionStatus"
-			usage="optional" />
-		<value name="ContentType" field="contentType" usage="optional" />
 		<structure map-as="com.eucalyptus.walrus.msgs.WalrusRequestType"
 			usage="optional" />
 	</mapping>

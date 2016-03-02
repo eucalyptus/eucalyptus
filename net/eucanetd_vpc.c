@@ -205,10 +205,11 @@ mido_config *pMidoConfig = NULL;
 
 //! @{
 //! @name MIDONET VPC Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig * pConfig);
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
-static int network_driver_system_flush(globalNetworkInfo * pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
+static int network_driver_system_flush(globalNetworkInfo *pGni);
+static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -235,6 +236,7 @@ struct driver_handler_t midoVpcDriverHandler = {
     .init = network_driver_init,
     .cleanup = network_driver_cleanup,
     .system_flush = network_driver_system_flush,
+    .system_maint = network_driver_system_maint,
     .system_scrub = network_driver_system_scrub,
     .implement_network = NULL,
     .implement_sg = NULL,
@@ -252,7 +254,7 @@ struct driver_handler_t midoVpcDriverHandler = {
 //!
 //! @param[in] pConfig a pointer to our application configuration
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -285,21 +287,33 @@ static int network_driver_init(eucanetdConfig * pConfig)
         return (0);
     }
 
-    //    if (PEER_IS_NC(eucanetdPeer)) {
-        if ((pMidoConfig = EUCA_ZALLOC(1, sizeof(mido_config))) == NULL) {
-            LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
-            return (1);
-        }
+    if ((pMidoConfig = EUCA_ZALLOC(1, sizeof (mido_config))) == NULL) {
+        LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
+        return (1);
+    }
 
-        rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
-                             pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
-        if (rc) {
-            LOGERROR("could not initialize mido: please ensure that all required config options for MIDOVPC mode are set in eucalyptus.conf\n");
-            return (1);
-        }
-        //    }
-    // We are now initialize
+    rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
+            pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
+    if (rc) {
+        LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set in eucalyptus.conf\n");
+        EUCA_FREE(pMidoConfig);
+        return (1);
+    }
+    
+    // Release unnecessary handlers
+    if (pConfig->ipt) {
+        ipt_handler_close(pConfig->ipt);
+    }
+    if (pConfig->ips) {
+        ips_handler_close(pConfig->ips);
+    }
+    if (pConfig->ebt) {
+        ebt_handler_close(pConfig->ebt);
+    }
+
+    // We are now initialized
     gInitialized = TRUE;
+
     return (0);
 }
 
@@ -311,7 +325,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //! @param[in] pGni a pointer to the Global Network Information structure
 //! @param[in] forceFlush set to TRUE if a network flush needs to be performed
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -345,7 +359,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @param[in] pGni a pointer to the Global Network Information structure
 //!
-//! @return 0 on success or 1 if any failure occured.
+//! @return 0 on success or 1 if any failure occurred.
 //!
 //! @see
 //!
@@ -354,10 +368,10 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
 //!
 //! @post
 //!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occured. The system is left in a non-deterministic state and a subsequent
+//!     failure occurred. The system is left in a non-deterministic state and a subsequent
 //!     call to this API may resolve the remaining issues.
 //!
-static int network_driver_system_flush(globalNetworkInfo * pGni)
+static int network_driver_system_flush(globalNetworkInfo *pGni)
 {
     int rc = 0;
     int ret = 0;
@@ -374,11 +388,59 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         if (pMidoConfig) {
             if ((rc = do_midonet_teardown(pMidoConfig)) != 0) {
                 ret = 1;
+            } else {
+                EUCA_FREE(pMidoConfig);
+                pMidoConfig = NULL;
+                gInitialized = FALSE;
             }
         }
         //    }
 
     return (0);
+}
+
+//!
+//! Maintenance activities to be executed when eucanetd is idle between polls.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//! @param[in] pLni a pointer to the Local Network Information structure
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!     - pGni must not be NULL. pLni is ignored.
+//!     - The driver must be initialized prior to calling this API.
+//!
+//! @post
+//!
+//! @note
+//!
+static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
+{
+    int rc = 0;
+    struct timeval tv;
+    
+    LOGDEBUG("Running maintenance for '%s' network driver.\n", DRIVER_NAME());
+    eucanetd_timer(&tv);
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to run maintenance activities. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Need a valid global network view
+    if (!pGni) {
+        LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        return (1);
+    }
+
+    if (midonet_api_dirty_cache == 1) {
+        // Cache is invalid. Let's pre-populate mido.
+        rc = do_midonet_maint(pMidoConfig);
+    }
+    return (rc);
 }
 
 //!
@@ -399,60 +461,34 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
 {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
     char versionFile[EUCA_MAX_PATH];
+    struct timeval tv;
     
     LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
-
+    eucanetd_timer(&tv);
     bzero(versionFile, EUCA_MAX_PATH);
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to scub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
+        LOGERROR("Failed to scrub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
         return (ret);
     }
-    // Are the global and local network view structures NULL?
-    if (!pGni || !pLni) {
-        LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+    // Need a valid global network view
+    if (!pGni) {
+        LOGERROR("Failed to scrub the system for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
         return (ret);
     }
 
-    //    if (PEER_IS_NC(eucanetdPeer)) {
-        if (0) {
-            if (pMidoConfig) {
-                free_mido_config(pMidoConfig);
-                bzero(pMidoConfig, sizeof(mido_config));
-            }
-
-            rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode, config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
-                                 config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
-        } else {
-            LOGDEBUG("WTF: pMidoConfig->eucanetdhost: %s\n", pMidoConfig->ext_eucanetdhostname);
-            rc = 0;
-        }
-        if (rc) {
-            LOGERROR("could not initialize mido config\n");
-            ret = EUCANETD_RUN_ERROR_API;
-        } else {
-            LOGDEBUG("HELLO: dirty cache: %d\n", midonet_api_dirty_cache);
-            if ((rc = do_midonet_update(pGni, pMidoConfig)) != 0) {
-                LOGERROR("could not update midonet: check log for details\n");
-                ret = EUCANETD_RUN_ERROR_API;
-            } else {
-                LOGINFO("new Eucalyptus/Midonet networking state sync: updated successfully\n");
-                /*
-                snprintf(versionFile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.version", config->eucahome);
-                if (!strlen(pGni->version) || (str2file(pGni->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
-                    LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
-                }
-                */
-            }
-        }
-        //    }
-
-        //    return (EUCANETD_RUN_NO_API);
-        return (ret);
+    LOGDEBUG("midonet_api cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
+    if ((rc = do_midonet_update(pGni, pMidoConfig)) != 0) {
+        LOGERROR("could not update midonet: check log for details\n");
+        ret = EUCANETD_RUN_ERROR_API;
+    } else {
+        LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
+    }
+    return (ret);
 }

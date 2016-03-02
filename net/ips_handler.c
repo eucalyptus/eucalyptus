@@ -314,7 +314,9 @@ int ips_handler_repopulate(ips_handler * ipsh)
     char *strptr = NULL;
     char setname[64] = "";
     char ipname[64] = "", *ip = NULL;
+    struct timeval tv = { 0 };
 
+    eucanetd_timer_usec(&tv);
     if (!ipsh || !ipsh->init) {
         return (1);
     }
@@ -372,6 +374,7 @@ int ips_handler_repopulate(ips_handler * ipsh)
     }
     fclose(FH);
 
+    LOGINFO("ips populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
@@ -756,6 +759,38 @@ int ips_handler_free(ips_handler * ipsh)
     unlink(ipsh->ips_file);
 
     return (ips_handler_init(ipsh, saved_cmdprefix));
+}
+
+//!
+//! Release all resources of the given ips_handler.
+//!
+//! @param[in] ipsh pointer to the IP set handler structure
+//!
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int ips_handler_close(ips_handler * ipsh)
+{
+    int i = 0;
+    if (!ipsh || !ipsh->init) {
+        LOGDEBUG("Invalid argument. NULL or uninitialized ips_handler.\n");
+        return (1);
+    }
+    for (i = 0; i < ipsh->max_sets; i++) {
+        EUCA_FREE(ipsh->sets[i].member_ips);
+        EUCA_FREE(ipsh->sets[i].member_nms);
+    }
+    EUCA_FREE(ipsh->sets);
+
+    unlink(ipsh->ips_file);
+    return (0);
 }
 
 //!

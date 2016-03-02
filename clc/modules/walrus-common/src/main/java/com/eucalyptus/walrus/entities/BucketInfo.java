@@ -62,27 +62,17 @@
 
 package com.eucalyptus.walrus.entities;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.OneToMany;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
+import com.eucalyptus.entities.AbstractPersistent;
 
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 
-import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.storage.msgs.s3.Grant;
-import com.eucalyptus.storage.msgs.s3.Grantee;
-import com.eucalyptus.storage.msgs.s3.Group;
-import com.eucalyptus.walrus.util.WalrusProperties;
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
@@ -102,18 +92,6 @@ public class BucketInfo extends AbstractPersistent {
   @Column(name = "bucket_creation_date")
   private Date creationDate;
 
-  @Column(name = "global_read")
-  private Boolean globalRead;
-
-  @Column(name = "global_write")
-  private Boolean globalWrite;
-
-  @Column(name = "global_read_acp")
-  private Boolean globalReadACP;
-
-  @Column(name = "global_write_acp")
-  private Boolean globalWriteACP;
-
   @Column(name = "bucket_size")
   private Long bucketSize;
 
@@ -122,22 +100,6 @@ public class BucketInfo extends AbstractPersistent {
 
   @Column(name = "hidden")
   private Boolean hidden;
-
-  @Column(name = "logging_enabled")
-  private Boolean loggingEnabled;
-
-  @Column(name = "target_bucket")
-  private String targetBucket;
-
-  @Column(name = "target_prefix")
-  private String targetPrefix;
-
-  @Column(name = "versioning")
-  private String versioning;
-
-  @OneToMany(cascade = CascadeType.ALL)
-  @JoinTable(name = "bucket_has_grants", joinColumns = {@JoinColumn(name = "bucket_id")}, inverseJoinColumns = @JoinColumn(name = "grant_id"))
-  private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
   public String getOwnerId() {
     return ownerId;
@@ -171,38 +133,6 @@ public class BucketInfo extends AbstractPersistent {
     this.creationDate = date;
   }
 
-  public boolean isGlobalRead() {
-    return globalRead;
-  }
-
-  public void setGlobalRead(Boolean globalRead) {
-    this.globalRead = globalRead;
-  }
-
-  public boolean isGlobalWrite() {
-    return globalWrite;
-  }
-
-  public void setGlobalWrite(Boolean globalWrite) {
-    this.globalWrite = globalWrite;
-  }
-
-  public boolean isGlobalReadACP() {
-    return globalReadACP;
-  }
-
-  public void setGlobalReadACP(Boolean globalReadACP) {
-    this.globalReadACP = globalReadACP;
-  }
-
-  public boolean isGlobalWriteACP() {
-    return globalWriteACP;
-  }
-
-  public void setGlobalWriteACP(Boolean globalWriteACP) {
-    this.globalWriteACP = globalWriteACP;
-  }
-
   public Long getBucketSize() {
     return bucketSize;
   }
@@ -227,46 +157,6 @@ public class BucketInfo extends AbstractPersistent {
     this.hidden = hidden;
   }
 
-  public Boolean getLoggingEnabled() {
-    return loggingEnabled;
-  }
-
-  public void setLoggingEnabled(Boolean loggingEnabled) {
-    this.loggingEnabled = loggingEnabled;
-  }
-
-  public String getTargetBucket() {
-    return targetBucket;
-  }
-
-  public void setTargetBucket(String targetBucket) {
-    this.targetBucket = targetBucket;
-  }
-
-  public String getTargetPrefix() {
-    return targetPrefix;
-  }
-
-  public void setTargetPrefix(String targetPrefix) {
-    this.targetPrefix = targetPrefix;
-  }
-
-  public String getVersioning() {
-    return versioning;
-  }
-
-  public void setVersioning(String versioning) {
-    this.versioning = versioning;
-  }
-
-  public List<GrantInfo> getGrants() {
-    return grants;
-  }
-
-  public void setGrants(List<GrantInfo> grants) {
-    this.grants = grants;
-  }
-
   public BucketInfo() {}
 
   public BucketInfo(String bucketName) {
@@ -283,41 +173,6 @@ public class BucketInfo extends AbstractPersistent {
   public BucketInfo(String bucketName, Date creationDate) {
     this.bucketName = bucketName;
     this.creationDate = creationDate;
-  }
-
-  public void resetGlobalGrants() {
-    globalRead = globalWrite = globalReadACP = globalWriteACP = false;
-  }
-
-  public void readPermissions(List<Grant> grants) {
-    if (globalRead && globalReadACP && globalWrite && globalWriteACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
-      return;
-    }
-    if (globalRead) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
-    }
-    if (globalReadACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
-    }
-    if (globalWrite) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
-    }
-    if (globalWriteACP) {
-      grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
-    }
-  }
-
-  public boolean isVersioningEnabled() {
-    return WalrusProperties.VersioningStatus.Enabled.toString().equals(versioning);
-  }
-
-  public boolean isVersioningDisabled() {
-    return WalrusProperties.VersioningStatus.Disabled.toString().equals(versioning);
-  }
-
-  public boolean isVersioningSuspended() {
-    return WalrusProperties.VersioningStatus.Suspended.toString().equals(versioning);
   }
 
   @Override

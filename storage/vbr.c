@@ -239,7 +239,7 @@ static void convert_id(const char *src, char *dst, unsigned int size);
 static char *url_get_digest(const char *url, boolean * bail_flag);
 static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean is_migration_dest, boolean must_be_file, const char *sshkey, boolean * bail_flag);
 static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], int num_prereqs, artifact * parts[], int num_parts,
-                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest);
+                                artifact * emi_disk, boolean do_make_work_copy, boolean is_migration_dest);
 static int find_or_create_blob(int flags, blobstore * bs, const char *id, long long size_bytes, const char *sig, blockblob ** bbp);
 static int find_or_create_artifact(int do_create, artifact * a, blobstore * work_bs, blobstore * cache_bs, const char *work_prefix, blockblob ** bbp);
 
@@ -1282,9 +1282,6 @@ static int disk_creator(artifact * a)
     const char *dest_dev = blockblob_get_dev(a->bb);
 
     assert(dest_dev);
-    if (a->do_make_bootable) {
-        a->size_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
-    }
 
     blockmap_relation_t mbr_op = BLOBSTORE_SNAPSHOT;
     blockmap_relation_t part_op = BLOBSTORE_MAP;    // use map by default as it is faster
@@ -1309,11 +1306,6 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     const char *kernel_path = NULL;
     const char *ramdisk_path = NULL;
     long long offset_bytes = SECTOR_SIZE * MBR_BLOCKS;  // first partition begins after MBR
-
-    // Actually, after /boot if we're bootable
-    if (a->do_make_bootable) {
-        offset_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
-    }
 
     LOGDEBUG("[%s] offset for the first partition will be %llu bytes\n", a->instanceId, offset_bytes);
 
@@ -1352,15 +1344,6 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     }
     assert(p1);
 
-    if (a->do_make_bootable) {
-        map[map_entries - 1].first_block_dst = MBR_BLOCKS;
-        map[map_entries - 1].len_blocks = BOOT_BLOCKS;
-        boot_entry = map_entries - 1;
-        boot_part = boot_entry - 1;
-        LOGDEBUG("[%s] re-mapping partition %d from %s [%lld-%lld] %lld blocks\n", a->instanceId, boot_entry,
-                 blockblob_get_dev(map[map_entries - 1].source.blob), map[map_entries - 1].first_block_dst,
-                 (map[map_entries - 1].first_block_dst + map[map_entries - 1].len_blocks - 1), map[map_entries - 1].len_blocks);
-    }
     // set fields in vbr that are needed for
     // xml.c:gen_instance_xml() to generate correct disk entries
     disk->guestDeviceType = p1->guestDeviceType;
@@ -1397,106 +1380,6 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
             goto cleanup;
         }
-    }
-
-    //  make disk bootable if necessary
-    if (a->do_make_bootable) {
-        boolean bootification_failed = 1;
-
-        LOGINFO("[%s] making disk bootable\n", a->instanceId);
-        if (boot_entry < 1 || boot_part < 0) {
-            LOGERROR("[%s] cannot make bootable a disk without an image\n", a->instanceId);
-            goto cleanup;
-        }
-        if (kernel_path == NULL) {
-            LOGERROR("[%s] no kernel found among the VBRs\n", a->instanceId);
-            goto cleanup;
-        }
-        if (ramdisk_path == NULL) {
-            LOGERROR("[%s] no ramdisk found among the VBRs\n", a->instanceId);
-            goto cleanup;
-        }
-        // `parted mkpart` causes children devices for each partition to be created
-        // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 or ...X1 and so on)
-        // we mount such a device here so as to copy files to the boot partition
-        // (we cannot mount the dev of the partition's blob because it becomes
-        // 'busy' after the clone operation)
-        char *mapper_dev = NULL;
-        char dev_with_p[EUCA_MAX_PATH];
-        char dev_without_p[EUCA_MAX_PATH];  // on Ubuntu Precise, some dev names do not have 'p' in them
-        snprintf(dev_with_p, sizeof(dev_with_p), "%sp%d", blockblob_get_dev(a->bb), boot_entry);
-        snprintf(dev_without_p, sizeof(dev_without_p), "%s%d", blockblob_get_dev(a->bb), boot_entry);
-        if (check_path(dev_with_p) == 0) {
-            mapper_dev = dev_with_p;
-        } else if (check_path(dev_without_p) == 0) {
-            mapper_dev = dev_without_p;
-        } else {
-            LOGERROR("[%s] failed to stat partition device [%s]. errno=%d(%s)\n", a->instanceId, mapper_dev, errno, strerror(errno));
-            goto cleanup;
-        }
-        LOGINFO("[%s] found partition device %s\n", a->instanceId, mapper_dev);
-
-        // point a loopback device at the partition device because grub-probe on Ubuntu Precise
-        // sometimes does not grok boot partitions mounted from /dev/mapper/...
-        char loop_dev[EUCA_MAX_PATH];
-        if (diskutil_loop(mapper_dev, 0, loop_dev, sizeof(loop_dev)) != EUCA_OK) {
-            LOGINFO("[%s] failed to attach '%s' on a loopback device\n", a->instanceId, mapper_dev);
-            goto cleanup;
-        }
-        assert(strncmp(loop_dev, "/dev/loop", 9) == 0);
-
-        // mount the boot partition
-        char mnt_pt[EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
-        if (safe_mkdtemp(mnt_pt) == NULL) {
-            LOGINFO("[%s] mkdtemp() failed: %s\n", a->instanceId, strerror(errno));
-            goto unloop;
-        }
-        if (diskutil_mount(loop_dev, mnt_pt) != EUCA_OK) {
-            LOGINFO("[%s] failed to mount '%s' on '%s'\n", a->instanceId, loop_dev, mnt_pt);
-            goto unloop;
-        }
-        // copy in kernel and ramdisk and run grub over the boot partition and the MBR
-        LOGINFO("[%s] making partition %d bootable\n", a->instanceId, boot_part);
-        LOGINFO("[%s] with kernel %s\n", a->instanceId, kernel_path);
-        LOGINFO("[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub_files(mnt_pt, boot_part, kernel_path, ramdisk_path) != EUCA_OK) {
-            LOGERROR("[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId);
-            goto unmount;
-        }
-        if (blockblob_sync(mapper_dev, a->bb) != 0) {
-            LOGERROR("[%s] failed to flush I/O on disk\n", a->instanceId);
-            goto unmount;
-        }
-        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), boot_part, mnt_pt) != EUCA_OK) {
-            LOGERROR("[%s] failed to make disk bootable (could not install grub)\n", a->instanceId);
-            goto unmount;
-        }
-        // change user of the blob device back to 'eucalyptus' (grub sets it to 'boot')
-        sleep(1);                      // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
-        if (diskutil_ch(blockblob_get_dev(a->bb), get_username(), NULL, 0) != EUCA_OK) {
-            LOGINFO("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), get_username());
-        }
-        bootification_failed = 0;
-
-unmount:
-
-        // unmount partition and delete the mount point
-        if (diskutil_umount(mnt_pt) != EUCA_OK) {
-            LOGINFO("[%s] failed to unmount %s (there may be a resource leak)\n", a->instanceId, mnt_pt);
-            bootification_failed = 1;
-        }
-        if (rmdir(mnt_pt) != 0) {
-            LOGINFO("[%s] failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
-            bootification_failed = 1;
-        }
-
-unloop:
-        if (diskutil_unloop(loop_dev) != EUCA_OK) {
-            LOGINFO("[%s] failed to remove %s (there may be a resource leak): %s\n", a->instanceId, loop_dev, strerror(errno));
-            bootification_failed = 1;
-        }
-        if (bootification_failed)
-            goto cleanup;
     }
 
     ret = EUCA_OK;
@@ -2368,7 +2251,6 @@ out:
 //! @param[in] parts OPTION A: partitions for constructing a 'raw' disk
 //! @param[in] num_parts number of items in parts list
 //! @param[in] emi_disk OPTION B: the artifact of the EMI that serves as a full disk
-//! @param[in] do_make_bootable kernel injection is requested (not needed on KVM and Xen)
 //! @param[in] do_make_work_copy generated disk should be a work copy
 //! @param[in] is_migration_dest
 //!
@@ -2380,7 +2262,7 @@ out:
 //!
 static artifact *art_alloc_disk(virtualBootRecord * vbr,
                                 artifact * prereqs[], int num_prereqs,
-                                artifact * parts[], int num_parts, artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
+                                artifact * parts[], int num_parts, artifact * emi_disk, boolean do_make_work_copy, boolean is_migration_dest)
 {
     char art_sig[ART_SIG_MAX] = "";
     char art_pref[EUCA_MAX_PATH] = "dsk";
@@ -2413,21 +2295,6 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr,
         convert_id(p->id, art_pref, sizeof(art_pref));
     }
 
-    // run through prerequisites (kernel and ramdisk), if any, adding up their signature
-    // (this will not happen on KVM and Xen where injecting kernel is not necessary)
-    for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
-        artifact *p = prereqs[i];
-
-        // construct signature for the disk, based on the sigs of underlying components
-        char part_sig[ART_SIG_MAX];
-        if ((snprintf(part_sig, sizeof(part_sig), "PREREQUISITE %s\n%s\n\n", p->id, p->sig) >= sizeof(part_sig))    // output truncated
-            || ((strlen(art_sig) + strlen(part_sig)) >= sizeof(art_sig))) { // overflow
-            LOGERROR("[%s] internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
-            return NULL;
-        }
-        strncat(art_sig, part_sig, sizeof(art_sig) - strlen(art_sig) - 1);
-    }
-
     artifact *disk;
 
     if (emi_disk) {                    //! we have a full disk (@TODO remove this unused if-condition)
@@ -2456,7 +2323,6 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr,
             LOGERROR("[%s] failed to allocate an artifact for raw disk\n", disk->instanceId);
             return NULL;
         }
-        disk->do_make_bootable = do_make_bootable;
         disk->do_not_download = is_migration_dest;
 
         // attach partitions as dependencies of the raw disk
@@ -2467,15 +2333,6 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr,
                 goto free;
             }
             p->is_partition = TRUE;
-        }
-
-        // optionally, attach prereqs as dependencies of the raw disk
-        for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
-            artifact *p = prereqs[i];
-            if (art_add_dep(disk, p) != EUCA_OK) {
-                LOGERROR("[%s] failed to add a prerequisite to an artifact\n", disk->instanceId);
-                goto free;
-            }
         }
     }
 
@@ -2494,7 +2351,6 @@ free:
 //! @param[in] parts OPTION A: partitions for constructing a 'raw' disk
 //! @param[in] num_parts number of items in parts list
 //! @param[in] emi_disk OPTION B: the artifact of the EMI that serves as a full disk
-//! @param[in] do_make_bootable kernel injection is requested (not needed on KVM and Xen)
 //! @param[in] do_make_work_copy generated disk should be a work copy
 //! @param[in] is_migration_dest
 //!
@@ -2506,7 +2362,7 @@ free:
 //!
 static artifact *art_realloc_disk(virtualBootRecord * vbr,
                                   artifact * prereqs[], int num_prereqs,
-                                  artifact * old_disk, artifact * parts[], int num_parts, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
+                                  artifact * old_disk, artifact * parts[], int num_parts, boolean do_make_work_copy, boolean is_migration_dest)
 {
     assert(old_disk);
     char art_sig[ART_SIG_MAX] = "";
@@ -2542,21 +2398,6 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
         convert_id(p->id, art_pref, sizeof(art_pref));
     }
 
-    // run through prerequisites (kernel and ramdisk), if any, adding up their signature
-    // (this will not happen on KVM and Xen where injecting kernel is not necessary)
-    for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
-        artifact *p = prereqs[i];
-
-        // construct signature for the disk, based on the sigs of underlying components
-        char part_sig[ART_SIG_MAX];
-        if ((snprintf(part_sig, sizeof(part_sig), "PREREQUISITE %s\n%s\n\n", p->id, p->sig) >= sizeof(part_sig))    // output truncated
-            || ((strlen(art_sig) + strlen(part_sig)) >= sizeof(art_sig))) { // overflow
-            LOGERROR("[%s] internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
-            return NULL;
-        }
-        strncat(art_sig, part_sig, sizeof(art_sig) - strlen(art_sig) - 1);
-    }
-
     char art_id[48];                   // ID of the artifact (append -##### hash of sig)
     if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
         return NULL;
@@ -2565,15 +2406,7 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
         LOGERROR("[%s] failed to allocate an artifact for raw disk\n", disk->instanceId);
         return NULL;
     }
-    disk->do_make_bootable = do_make_bootable;
     disk->do_not_download = is_migration_dest;
-
-    /* TODO: are these important?
-       a->may_be_cached = may_be_cached;
-       a->must_be_file = must_be_file;
-       a->must_be_hollow = must_be_hollow;
-       a->do_tune_fs = FALSE;
-     */
 
     // attach the smaller disk as a dependency
     if (art_add_dep(disk, old_disk) != EUCA_OK) {
@@ -2590,15 +2423,6 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
             goto free;
         }
         p->is_partition = TRUE;
-    }
-
-    // optionally, attach prereqs as dependencies of the raw disk
-    for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
-        artifact *p = prereqs[i];
-        if (art_add_dep(disk, p) != EUCA_OK) {
-            LOGERROR("[%s] failed to add a prerequisite to an artifact\n", disk->instanceId);
-            goto free;
-        }
     }
 
     return disk;
@@ -2626,7 +2450,6 @@ void art_set_instanceId(const char *instanceId)
 //! Creates a tree of artifacts for a given VBR (caller must free the tree)
 //!
 //! @param[in] vm pointer to virtual machine containing the VBR
-//! @param[in] do_make_bootable make the disk bootable by copying kernel and ramdisk into it and running grub
 //! @param[in] do_make_work_copy ensure that all components that get modified at run time have work copies
 //! @param[in] is_migration_dest
 //! @param[in] sshkey key to inject into the root partition or NULL if no key
@@ -2638,7 +2461,7 @@ void art_set_instanceId(const char *instanceId)
 //!
 //! @note
 //!
-artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
+artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_work_copy, boolean is_migration_dest, const char *sshkey, boolean * bail_flag,
                          const char *instanceId)
 {
     if (instanceId)
@@ -2679,11 +2502,8 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
             goto free;
         prereq_arts[total_prereq_arts++] = dep;
 
-        // if disk does not need to be bootable, we'll need
-        // kernel and ramdisk as top-level dependencies
-        if (!do_make_bootable)
-            if (art_add_dep(root, dep) != EUCA_OK)
-                goto free;
+        if (art_add_dep(root, dep) != EUCA_OK)
+          goto free;
     }
 
     // attach disks and partitions and attach them to the sentinel
@@ -2720,7 +2540,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]), prereq_arts, total_prereq_arts,   // the prereqs
                                                   disk_arts + 1, partitions,    // the partition artifacts
-                                                  NULL, do_make_bootable, do_make_work_copy, is_migration_dest);
+                                                  NULL, do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -2738,7 +2558,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     disk_arts[0] = art_realloc_disk(disk_arts[0]->vbr, prereq_arts, total_prereq_arts,  // the prereqs
                                                     disk_arts[0],   // the disk artifact
                                                     disk_arts + 2, partitions,  // the partition artifacts (2nd & maybe 3rd)
-                                                    do_make_bootable, do_make_work_copy, is_migration_dest);
+                                                    do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
@@ -3206,7 +3026,7 @@ static int provision_vm(const char *id, const char *sshkey, const char *eki, con
     add_vbr(vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP, NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
     euca_strncpy(current_instanceId, strstr(id, "/") + 1, sizeof(current_instanceId));
-    artifact *sentinel = vbr_alloc_tree(vm, FALSE, do_make_work_copy, FALSE, sshkey, NULL, id);
+    artifact *sentinel = vbr_alloc_tree(vm, do_make_work_copy, FALSE, sshkey, NULL, id);
     if (sentinel == NULL) {
         printf("error: vbr_alloc_tree failed id=%s\n", id);
         return (1);

@@ -100,7 +100,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
   private AWSEC2InstanceResourceInfo info = new AWSEC2InstanceResourceInfo();
 
   public AWSEC2InstanceResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {
@@ -209,6 +209,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           runInstancesType.setMaxCount(1);
           RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType, RunInstancesResponseType>sendSync(configuration, runInstancesType);
           action.info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
+          action.info.setCreatedEnoughToDelete(true);
           return action;
         }
       }
@@ -427,7 +428,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
           // See if instance was ever populated
-          if (action.info.getPhysicalResourceId() == null) return action;
+          if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
           // First see if instance exists or has been terminated
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
@@ -452,7 +453,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
           // See if instance was ever populated
-          if (action.info.getPhysicalResourceId() == null) return action;
+          if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
           describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
           DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );

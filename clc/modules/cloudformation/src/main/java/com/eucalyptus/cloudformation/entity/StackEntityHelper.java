@@ -199,7 +199,7 @@ public class StackEntityHelper {
     return resourceDependencyManager.toJson();
   }
 
-  public static void populateTemplateWithStackEntity(Template template, StackEntity stackEntity) throws CloudFormationException {
+  public static void populateTemplateWithStackEntity(Template template, VersionedStackEntity stackEntity) throws CloudFormationException {
     template.setDescription(stackEntity.getDescription());
     template.setPseudoParameterMap(jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson()));
     template.setTemplateFormatVersion(stackEntity.getTemplateFormatVersion());
@@ -210,7 +210,7 @@ public class StackEntityHelper {
     template.setWorkingOutputs(jsonToOutputs(stackEntity.getWorkingOutputsJson()));
   }
 
-  public static void populateStackEntityWithTemplate(StackEntity stackEntity, Template template) throws CloudFormationException {
+  public static void populateStackEntityWithTemplate(VersionedStackEntity stackEntity, Template template) throws CloudFormationException {
     stackEntity.setDescription(template.getDescription());
     stackEntity.setPseudoParameterMapJson(pseudoParameterMapToJson(template.getPseudoParameterMap()));
     stackEntity.setTemplateFormatVersion(template.getTemplateFormatVersion());

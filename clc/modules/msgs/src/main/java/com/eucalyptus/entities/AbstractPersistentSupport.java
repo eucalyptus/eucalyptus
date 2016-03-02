@@ -189,11 +189,11 @@ public abstract class AbstractPersistentSupport<RT extends RestrictedType, AP ex
     }
   }
 
-  public AP save( final AP metadata ) throws PE {
+  public AP save( final AP natGateway ) throws PE {
     try {
-      return Transactions.saveDirect( metadata );
+      return Transactions.saveDirect( natGateway );
     } catch ( Exception e ) {
-      throw metadataException( "Error creating "+typeDescription+" '"+metadata.getDisplayName()+"'", e );
+      throw metadataException( "Error creating "+typeDescription+" '"+ natGateway.getDisplayName()+"'", e );
     }
   }
 

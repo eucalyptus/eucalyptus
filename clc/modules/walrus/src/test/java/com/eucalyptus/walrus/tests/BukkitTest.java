@@ -104,12 +104,6 @@ public class BukkitTest {
     ListAllMyBucketsResponseType response = bukkit.ListAllMyBuckets(listBucketsRequest);
     System.out.println(response);
 
-    GetBucketAccessControlPolicyType acpRequest = new GetBucketAccessControlPolicyType();
-    acpRequest.setBucket(bucketName);
-    acpRequest.setUserId(userId);
-    GetBucketAccessControlPolicyResponseType acpResponse = bukkit.GetBucketAccessControlPolicy(acpRequest);
-    System.out.println(acpResponse);
-
     DeleteBucketType deleteRequest = new DeleteBucketType();
     deleteRequest.setUserId(userId);
     deleteRequest.setBucket(bucketName);

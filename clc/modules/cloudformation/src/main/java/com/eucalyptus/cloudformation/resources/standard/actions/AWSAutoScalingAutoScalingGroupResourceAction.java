@@ -84,7 +84,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
   private AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
 
   public AWSAutoScalingAutoScalingGroupResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {
@@ -122,6 +122,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         }
         AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
         action.info.setPhysicalResourceId(autoScalingGroupName);
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -268,7 +269,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
 
     private static boolean groupDoesNotExist(ServiceConfiguration configuration, AWSAutoScalingAutoScalingGroupResourceAction action) throws Exception {
       // See if resource was ever populated...
-      if (action.info.getPhysicalResourceId() == null) return true;
+      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
       // See if group still exists
       DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
       AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();

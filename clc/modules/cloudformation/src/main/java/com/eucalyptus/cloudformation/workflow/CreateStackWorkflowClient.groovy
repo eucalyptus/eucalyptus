@@ -38,8 +38,8 @@ class CreateStackWorkflowClient implements CreateStackWorkflow {
   }
 
   @Override
-  void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
-    workflow.createStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
+  void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
+    workflow.createStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, createdStackVersion);
   }
 
 

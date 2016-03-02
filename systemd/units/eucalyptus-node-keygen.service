@@ -1,0 +1,9 @@
+[Unit]
+Description=Eucalyptus node controller migration key generation
+ConditionPathExists=|!/etc/pki/libvirt/servercert.pem
+PartOf=eucalyptus-node.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/eucalyptus/generate-migration-keys.sh %H INACTIVE
+RemainAfterExit=yes

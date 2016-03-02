@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -232,7 +232,7 @@ public class NetworkGroupManager {
                 NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), ruleGroup.getVpcId( ), true );
                 if ( Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
                     ruleGroup.getNetworkRules( ).iterator( ),
-                    NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null ) ) ) {
+                    NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, ruleGroup.getVpcId( ) != null, true ) ) ) {
                   ruleGroup.updateTimeStamps( );
                 }
               } catch ( IllegalArgumentException e ) {
@@ -297,7 +297,7 @@ public class NetworkGroupManager {
               throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
             }
             try {
-              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
+              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null, false );
               ruleList.addAll( rules );
             } catch ( final IllegalArgumentException ex ) {
               throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
@@ -363,7 +363,7 @@ public class NetworkGroupManager {
               throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
             }
             try {
-              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null );
+              final List<NetworkRule> rules = NetworkGroups.ipPermissionAsNetworkRules( ipPerm, ruleGroup.getVpcId( ) != null, false );
               for ( final NetworkRule rule : rules ) rule.setEgress( true );
               ruleList.addAll( rules );
             } catch ( final IllegalArgumentException ex ) {
@@ -415,7 +415,7 @@ public class NetworkGroupManager {
               throw new ClientComputeException( "InvalidGroup.NotFound", "VPC security group ("+request.getGroupId()+") not found" );
             }
             try {
-              final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, true );
+              final List<NetworkRule> rules = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions, true, true );
               for ( final NetworkRule rule : rules ) rule.setEgress( true );
               NetworkGroups.resolvePermissions( ipPermissions, ctx.getUser( ).getAccountNumber( ), ruleGroup.getVpcId( ), true );
               if ( Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule

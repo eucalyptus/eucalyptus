@@ -43,6 +43,7 @@ import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.steps.AWSCloudFormationWaitConditionCreatePromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,7 +67,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   private AWSCloudFormationWaitConditionResourceInfo info = new AWSCloudFormationWaitConditionResourceInfo();
 
   public AWSCloudFormationWaitConditionResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   @Override
@@ -89,6 +90,11 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
     info = (AWSCloudFormationWaitConditionResourceInfo) resourceInfo;
   }
 
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    return UpdateType.UNSUPPORTED;
+  }
+
   private enum CreateSteps implements Step {
     CREATE_WAIT_CONDITION {
       @Override
@@ -102,7 +108,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
         }
         LOG.trace("Timeout = " + action.properties.getTimeout());
         LOG.trace("Looking for handle : " + action.properties.getHandle());
-        List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId());
+        List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(action.getStackEntity().getStackId(), action.info.getAccountId(), action.getStackEntity().getStackVersion());
         StackResourceEntity handleEntity = null;
         for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
           if (stackResourceEntity.getPhysicalResourceId() != null && stackResourceEntity.getPhysicalResourceId().equals(action.properties.getHandle())) {
@@ -191,6 +197,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
           }
           action.info.setData(JsonHelper.getStringFromJsonNode(dataNode));
           action.info.setPhysicalResourceId(keyName);
+          action.info.setCreatedEnoughToDelete(true);
           action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
           return action;
         } else {
@@ -221,8 +228,8 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   }
 
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId) {
-    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId);
+  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
+    return new AWSCloudFormationWaitConditionCreatePromise(workflowOperations, CreateSteps.CREATE_WAIT_CONDITION.name()).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
   }
 
 }

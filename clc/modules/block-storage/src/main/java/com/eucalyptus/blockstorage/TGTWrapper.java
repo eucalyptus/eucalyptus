@@ -98,6 +98,24 @@ public class TGTWrapper {
   final public static String TGT_SERVICE_NAME = "tgtd";
   final private static Logger LOG = Logger.getLogger(TGTWrapper.class);
   final private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
+  private static boolean systemctl;
+
+  static {
+    LOG.info("Checking is systemctl is present.");
+    try {
+      Runtime runtime = Runtime.getRuntime();
+      Process process = runtime.exec(new String[] {"systemctl", "--version"});
+      process.waitFor();
+      if (process.exitValue() == 0)
+        systemctl = true;
+      else
+        systemctl = false;
+    } catch (Exception e) {
+      LOG.info(e);
+      systemctl = false;
+    }
+    LOG.info("The systemctl is present: " + systemctl);
+  }
 
   private static final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
   private static ExecutorService service; // do not access directly, use getExecutor / getExecutorWithInit
@@ -365,16 +383,22 @@ public class TGTWrapper {
     if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
       LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
       LOG.info("Attempting to start tgtd ISCSI daemon");
-      output = execute(new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"}, timeout);
+      String ex[] = systemctl ? new String[] {ROOT_WRAP, "systemctl", "status", TGT_SERVICE_NAME} :
+        new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"};
+      output = execute(ex, timeout);
       if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-        output = execute(new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "start"}, timeout);
+        ex = systemctl ? new String[] {ROOT_WRAP, "systemctl", "start", TGT_SERVICE_NAME} :
+          new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "start"};
+        output = execute(ex, timeout);
         if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
           Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
               .withVar("operation", "service tgt start").withVar("error", output.error).log();
           throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
         }
       } else {
-        output = execute(new String[] {ROOT_WRAP, "service", "tgt", "start"}, timeout);
+        ex = systemctl ? new String[] {ROOT_WRAP, "systemctl", "start", TGT_SERVICE_NAME} :
+          new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "start"};
+        output = execute(ex, timeout);
         if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
           Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
               .withVar("operation", "service tgt start").withVar("error", output.error).log();
@@ -392,8 +416,10 @@ public class TGTWrapper {
    */
   public static void checkService(Long timeout) throws EucalyptusCloudException {
     try {
-      CommandOutput output = execute(new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"}, timeout);
-      if (StringUtils.isNotBlank(output.error)) {
+      String ex[] = systemctl ? new String[] {ROOT_WRAP, "systemctl", "status", TGT_SERVICE_NAME} :
+        new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"};
+      CommandOutput output = execute(ex, timeout);
+      if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
         Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
             .withVar("operation", "service tgt status").withVar("error", output.error).log();
         throw new EucalyptusCloudException("tgt service check failed with error: " + output.error);

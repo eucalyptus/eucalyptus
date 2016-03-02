@@ -33,6 +33,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.entities.Entities;
@@ -63,7 +64,8 @@ public class ImagingWorkers {
     @Override
     public void fireEvent(ClockTick event) {
       if (!( Bootstrap.isFinished() &&
-          Topology.isEnabledLocally( ImagingBackend.class ) ) )
+          Topology.isEnabledLocally( ImagingBackend.class ) &&
+          Topology.isEnabled( Compute.class) ) )
         return;
       if(!ImagingServiceProperties.HEALTHCHECK)
         return;

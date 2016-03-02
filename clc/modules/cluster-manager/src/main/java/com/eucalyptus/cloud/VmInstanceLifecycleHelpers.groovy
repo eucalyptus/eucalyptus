@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
+import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException
 import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException
@@ -44,6 +45,7 @@ import com.eucalyptus.compute.common.backend.RunInstancesType
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.NetworkingFeature
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PrivateIPResource
 import com.eucalyptus.compute.common.network.PrivateNetworkIndexResource
@@ -56,9 +58,13 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
+import com.eucalyptus.compute.vpc.NetworkInterfaceInUseMetadataException
+import com.eucalyptus.compute.vpc.NoSuchNetworkInterfaceMetadataException
 import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException
 import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.compute.common.internal.vpc.Subnets
+import com.eucalyptus.compute.vpc.NotEnoughPrivateAddressResourcesException
+import com.eucalyptus.compute.vpc.PrivateAddressResourceAllocationException
 import com.eucalyptus.compute.vpc.VpcConfiguration
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException
 import com.eucalyptus.compute.vpc.VpcRequiredMetadataException
@@ -69,6 +75,7 @@ import com.eucalyptus.compute.vpc.persist.PersistenceVpcs
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
+import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex
@@ -81,6 +88,7 @@ import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.LockResource
 import com.eucalyptus.util.Ordered
 import com.eucalyptus.auth.type.RestrictedType
+import com.eucalyptus.util.Pair
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.StatefulMessageSet
@@ -103,12 +111,14 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
 import edu.ucsb.eucalyptus.cloud.VmInfo
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
 import org.apache.log4j.Logger
 import org.springframework.core.OrderComparator
 
+import javax.annotation.Nonnull
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
 
@@ -120,7 +130,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import static com.google.common.base.Objects.firstNonNull
+import static com.google.common.base.MoreObjects.firstNonNull
 
 
 /**
@@ -184,6 +194,13 @@ class VmInstanceLifecycleHelpers {
     void prepareNetworkAllocation(
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType
+    ) {
+    }
+
+    @Override
+    void verifyNetworkAllocation(
+        final Allocation allocation,
+        final PrepareNetworkResourcesResultType prepareNetworkResourcesResultType
     ) {
     }
 
@@ -292,8 +309,9 @@ class VmInstanceLifecycleHelpers {
     static Iterable<InstanceNetworkInterfaceSetItemRequestType> getSecondaryNetworkInterfaces(
         final RunInstancesType runInstancesType
     ) {
+      final InstanceNetworkInterfaceSetItemRequestType primary = getPrimaryNetworkInterface( runInstancesType )
       runInstancesType?.networkInterfaceSet?.item?.findAll{ InstanceNetworkInterfaceSetItemRequestType item ->
-        item.deviceIndex != 0
+        item != primary // check against primary in case multiple interfaces with device index 0
       } ?: []
     }
 
@@ -311,7 +329,7 @@ class VmInstanceLifecycleHelpers {
     static Set<String> getSecurityGroupIds(
         final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface
     ) {
-      Sets.newLinkedHashSet( instanceNetworkInterface?.groupSet?.item*.groupId ?: [] )
+      normalizeIdentifiers( instanceNetworkInterface?.groupSet?.item*.groupId as Iterable<String> )
     }
 
     @Nullable
@@ -328,6 +346,31 @@ class VmInstanceLifecycleHelpers {
       }
       Strings.emptyToNull( defaultVpcId )
     }
+
+    static String normalizeIdentifier( final String identifier ) {
+      ResourceIdentifiers.tryNormalize( ).apply( identifier )
+    }
+
+    @Nonnull
+    static Set<String> normalizeIdentifiers( @Nullable final Iterable<String> identifiers ) {
+      final Set<String> normalizedIdentifiers = Sets.newLinkedHashSet( )
+      if ( identifiers ) {
+        Iterables.addAll(
+            normalizedIdentifiers,
+            Iterables.transform( identifiers, ResourceIdentifiers.tryNormalize( ) ) )
+      }
+      normalizedIdentifiers
+    }
+
+    @Nonnull
+    static <T extends RestrictedType> T lookup( final String typeDesc, final String id, final Class<T> type ) {
+      final T resource = RestrictedTypes.<T>resolver( type ).apply( normalizeIdentifier( id ) )
+      if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ) {
+        throw new IllegalMetadataAccessException( "Not authorized to use ${typeDesc} ${id}" )
+      }
+      resource
+    }
+
   }
 
   static final class PrivateIPVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
@@ -773,7 +816,7 @@ class VmInstanceLifecycleHelpers {
       final Iterable<InstanceNetworkInterfaceSetItemRequestType> secondaryNetworkInterfaces =
           getSecondaryNetworkInterfaces( runInstances )
       final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
-      final String subnetId = ResourceIdentifiers.tryNormalize( ).apply( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
+      final String subnetId = normalizeIdentifier( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
       final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
       if ( !Strings.isNullOrEmpty( subnetId ) || instanceNetworkInterface != null ) {
@@ -798,7 +841,7 @@ class VmInstanceLifecycleHelpers {
 
           if ( !Strings.isNullOrEmpty( runInstances.privateIpAddress ) ) {
             throw new InvalidParameterCombinationMetadataException(
-                "Network interfaces and an instance-level private IP address may not be specified on the same request" )
+                "Network interfaces and an instance-level private address may not be specified on the same request" )
           }
         } else if ( secondaryNetworkInterfaces ) {
           throw new InvalidParameterCombinationMetadataException(
@@ -811,7 +854,6 @@ class VmInstanceLifecycleHelpers {
           if ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) {
             throw new InvalidMetadataException( "Network interface can only be specified for a single instance" )
           }
-
           Entities.transaction( VpcNetworkInterface ){
             final VpcNetworkInterface networkInterface
             try {
@@ -819,45 +861,40 @@ class VmInstanceLifecycleHelpers {
                   lookup("network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface) as
                       VpcNetworkInterface
             } catch ( Exception e ) {
-              throw new InvalidMetadataException( "Network interface (${instanceNetworkInterface.networkInterfaceId}) not found", e )
+              throw new NoSuchNetworkInterfaceMetadataException( "Network interface (${instanceNetworkInterface.networkInterfaceId}) not found", e )
+            }
+            if ( networkInterface.attached ) {
+              throw new NetworkInterfaceInUseMetadataException( "Network interface (${instanceNetworkInterface.networkInterfaceId}) in use", )
             }
             networkInterfaceSubnetId = networkInterface.subnet.displayName
             networkInterfaceAvailabilityZone = networkInterface.availabilityZone
           }
         }
-        secondaryNetworkInterfaces.each { InstanceNetworkInterfaceSetItemRequestType networkInterfaceItem ->
-          if ( networkInterfaceItem.networkInterfaceId != null && ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) ) {
-            throw new InvalidMetadataException("Network interface can only be specified for a single instance")
-          }
-
-          //TODO:STEVE: verify other info (private address for subnet etc)
-          //TODO:STEVE: verify subnet matches instance zone
-          //TODO:STEVE: verify ENI not attached if using existing and check other ENI details are ok (subnet match, etc)
-        }
-
         final String resolveSubnetId = subnetId?:networkInterfaceSubnetId
         if ( !resolveSubnetId ) throw new InvalidMetadataException( "SubnetId required" )
-
         final Subnet subnet
         try {
-          subnet = lookup( "subnet", resolveSubnetId, Subnet ) as Subnet
+          subnet = lookup( "subnet", resolveSubnetId, Subnet )
         } catch ( NoSuchElementException e ) {
           throw new NoSuchSubnetMetadataException( "Subnet (${resolveSubnetId}) not found", e )
         }
-        if ( privateIp && !Cidr.parse( subnet.cidr ).contains( privateIp ) ) {
-          throw new InvalidMetadataException( "Private IP ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
+        if ( privateIp ) {
+          if ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) {
+            throw new InvalidMetadataException("Private address can only be specified for a single instance")
+          }
+          if ( !validPrivateIpForCidr( subnet.cidr, privateIp ) ) {
+            throw new InvalidMetadataException( "Private address ${privateIp} not valid for subnet ${subnetId} cidr ${subnet.cidr}" )
+          }
         }
-
         if ( networkInterfaceAvailabilityZone && networkInterfaceAvailabilityZone != subnet.availabilityZone ) {
           throw new InvalidMetadataException( "Network interface availability zone (${networkInterfaceAvailabilityZone}) not valid for subnet ${subnetId} zone ${subnet.availabilityZone}" )
         }
-
         final Set<NetworkGroup> groups = Sets.newHashSet( )
         for ( String groupId : networkIds ) {
           if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
-            groups.add( lookup( "security group", groupId, NetworkGroup  ) as NetworkGroup )
+            groups.add( lookup( "security group", groupId, NetworkGroup  ) )
           } catch ( Exception e ) {
-            throw new InvalidMetadataException( "Security group (${groupId}) not found", e )
+            throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e )
           }
         }
         if ( !groups.empty && !Collections.singleton( subnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
@@ -866,6 +903,90 @@ class VmInstanceLifecycleHelpers {
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
           throw new SecurityGroupLimitMetadataException( );
         }
+
+        if ( secondaryNetworkInterfaces ) Entities.transaction( VpcNetworkInterface ) {
+          final int maxInterfaces = allocation.getVmType( )?.getNetworkInterfaces( )?:1
+          final Set<Integer> deviceIndexes = [ 0 ] as Set<Integer>
+          final Set<String> networkInterfaceIds = [ ] as Set<String>
+          final Set<Pair<String,String>> subnetPrivateAddresses = Sets.newHashSet( )
+          if ( instanceNetworkInterface?.networkInterfaceId ) {
+            networkInterfaceIds.add( normalizeIdentifier( instanceNetworkInterface.networkInterfaceId ) )
+          }
+          if ( privateIp ) {
+            subnetPrivateAddresses.add( Pair.pair( subnet.displayName, privateIp ) )
+          }
+          secondaryNetworkInterfaces.each { InstanceNetworkInterfaceSetItemRequestType networkInterfaceItem ->
+            if ( networkInterfaceItem.networkInterfaceId != null && ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) ) {
+              throw new InvalidMetadataException("Network interface can only be specified for a single instance")
+            }
+            Integer networkInterfaceDeviceIndex = networkInterfaceItem.deviceIndex
+            if ( networkInterfaceDeviceIndex == null ) {
+              throw new InvalidMetadataException("Network interface device index required" )
+            } else if ( !deviceIndexes.add( networkInterfaceDeviceIndex ) ) {
+              throw new InvalidMetadataException("Network interface duplicate device index (${networkInterfaceDeviceIndex})" )
+            } else if ( networkInterfaceDeviceIndex < 1 || networkInterfaceDeviceIndex > 31 ) {
+              throw new InvalidMetadataException("Network interface device index invalid ${networkInterfaceDeviceIndex}")
+            }
+
+            Subnet secondarySubnet = null
+            if ( networkInterfaceItem.networkInterfaceId ) try {
+              final String secondaryNetworkInterfaceId = normalizeIdentifier( networkInterfaceItem.networkInterfaceId )
+              if ( !networkInterfaceIds.add( secondaryNetworkInterfaceId ) ) {
+                throw new InvalidMetadataException("Network interface duplicate (${networkInterfaceItem.networkInterfaceId})" )
+              }
+              final VpcNetworkInterface secondaryNetworkInterface =
+                  lookup("network interface", secondaryNetworkInterfaceId, VpcNetworkInterface)
+              if ( secondaryNetworkInterface.attached ) {
+                throw new NetworkInterfaceInUseMetadataException( "Network interface (${networkInterfaceItem.networkInterfaceId}) in use", )
+              }
+              secondarySubnet = secondaryNetworkInterface.subnet
+            } catch ( InvalidMetadataException e ) {
+              throw e
+            } catch ( Exception e ) {
+              throw new NoSuchNetworkInterfaceMetadataException( "Network interface (${networkInterfaceItem.networkInterfaceId}) not found", e )
+            }
+            if ( !secondarySubnet ) try {
+              secondarySubnet = lookup( "subnet", networkInterfaceItem.subnetId, Subnet )
+            } catch ( Exception e ) {
+              throw new NoSuchSubnetMetadataException( "Subnet (${networkInterfaceItem.subnetId}) not found", e )
+            }
+            final String secondaryPrivateIp = getPrimaryPrivateIp( networkInterfaceItem, null )
+            if ( secondaryPrivateIp ) {
+              if ( runInstances.minCount > 1 || runInstances.maxCount > 1 ) {
+                throw new InvalidMetadataException("Private address can only be specified for a single instance")
+              }
+              if ( !validPrivateIpForCidr( secondarySubnet.cidr, secondaryPrivateIp ) ) {
+                throw new InvalidMetadataException("Private address ${secondaryPrivateIp} not valid for subnet ${secondarySubnet.displayName} cidr ${secondarySubnet.cidr}")
+              }
+              if ( !subnetPrivateAddresses.add( Pair.pair( secondarySubnet.displayName, secondaryPrivateIp ) ) ) {
+                throw new InvalidMetadataException("Network interface duplicate private address (${secondaryPrivateIp})" )
+              }
+            }
+            if ( secondarySubnet.availabilityZone != subnet.availabilityZone ) {
+              throw new InvalidMetadataException( "Network interface availability zone (${secondarySubnet.availabilityZone}) for ${secondarySubnet.displayName} not valid for subnet ${subnet.displayName} zone ${subnet.availabilityZone}" )
+            }
+            final Set<String> secondaryNetworkIds = getSecurityGroupIds( networkInterfaceItem )
+            final Set<NetworkGroup> secondaryGroups = [] as Set<NetworkGroup>
+            for ( String groupId : secondaryNetworkIds ) {
+              if ( !Iterables.tryFind( secondaryGroups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
+                secondaryGroups.add( lookup( "security group", groupId, NetworkGroup ) )
+              } catch ( Exception e ) {
+                throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e );
+              }
+            }
+            if ( !secondaryGroups.empty && !Collections.singleton( secondarySubnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( secondaryGroups, NetworkGroup.vpcId( ) ) ) ) ) {
+              throw new InvalidMetadataException( "Invalid security groups for device ${networkInterfaceItem.deviceIndex} (inconsistent VPC)" );
+            }
+            if ( secondaryGroups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+              throw new SecurityGroupLimitMetadataException( );
+            }
+          }
+          if ( deviceIndexes.size( ) > maxInterfaces ) {
+            throw new InvalidMetadataException(
+                "Interface count ${deviceIndexes.size( )} exceeds the limit for ${allocation.getVmType( )?.name}" );
+          }
+        }
+
         allocation.subnet = subnet
 
         final Partition partition = Partitions.lookupByName( subnet.availabilityZone );
@@ -982,21 +1103,91 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
+    void verifyNetworkAllocation(
+        final Allocation allocation,
+        final PrepareNetworkResourcesResultType prepareNetworkResourcesResultType
+    ) {
+      final Set<Pair<String,Integer>> privateAddressDeviceIndexPairs = Sets.newHashSet( )
+
+      final RunInstancesType runInstances = (RunInstancesType) allocation.request
+      final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface =
+          getPrimaryNetworkInterface( runInstances )
+      if ( instanceNetworkInterface ) {
+        String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
+        if ( privateIp ) {
+          privateAddressDeviceIndexPairs << Pair.pair( privateIp, 0 )
+        }
+      }
+
+      final List<InstanceNetworkInterfaceSetItemRequestType> secondaryNetworkInterfaces =
+          allocation.getAttribute(secondaryNetworkInterfacesKey)
+      secondaryNetworkInterfaces.each { InstanceNetworkInterfaceSetItemRequestType secondaryNetworkInterface ->
+        String privateIp = getPrimaryPrivateIp( secondaryNetworkInterface, null )
+        if ( privateIp ) {
+          privateAddressDeviceIndexPairs << Pair.pair( privateIp, secondaryNetworkInterface.deviceIndex )
+        }
+      }
+
+      // check that there is a resource for each device index requested
+      allocation.allocationTokens.each { ResourceToken token ->
+        privateAddressDeviceIndexPairs.each{ final Pair<String,Integer> addressAndDeviceIndex ->
+          if ( token.getAttribute(NetworkResourcesKey).find{ NetworkResource networkResource ->
+            networkResource instanceof VpcNetworkInterfaceResource &&
+                ((VpcNetworkInterfaceResource)networkResource).device == addressAndDeviceIndex.right
+          } == null ) {
+            throw new PrivateAddressResourceAllocationException( "Private address not available (${addressAndDeviceIndex.left})" )
+          }
+        }
+
+        if ( instanceNetworkInterface ) {
+          if ( Iterables.size( token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource networkResource ->
+            networkResource instanceof VpcNetworkInterfaceResource } ) != ( secondaryNetworkInterfaces.size( ) + 1 ) ) {
+            throw new NotEnoughPrivateAddressResourcesException( "Insufficient private addresses" )
+          }
+        }
+      }
+    }
+
+    @Override
     void prepareVmRunType(
         final ResourceToken resourceToken,
         final VmRunBuilder builder
     ) {
-      VpcNetworkInterfaceResource resource = ( VpcNetworkInterfaceResource ) \
-          resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof VpcNetworkInterfaceResource }
-      resource?.with{
-        if ( resource.mac == null ) {
+      Iterable<NetworkResource> resources = resourceToken.getAttribute(NetworkResourcesKey).findAll{
+        it instanceof VpcNetworkInterfaceResource }
+      if ( !Iterables.isEmpty( resources ) ) {
+        // Handle primary interface
+        final VpcNetworkInterfaceResource primaryInterface = resources.find{ NetworkResource networkResource ->
+          networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device == 0
+        } as VpcNetworkInterfaceResource
+        
+        if ( primaryInterface.mac == null ) {
           VpcNetworkInterface networkInterface =
-              RestrictedTypes.resolver( VpcNetworkInterface ).apply( resource.value )
+              RestrictedTypes.resolver( VpcNetworkInterface ).apply( primaryInterface.value )
           builder.privateAddress( networkInterface.privateIpAddress )
           builder.macAddress( networkInterface.macAddress )
         } else {
-          builder.privateAddress( resource.privateIp )
-          builder.macAddress( resource.mac )
+          builder.privateAddress( primaryInterface.privateIp )
+          builder.macAddress( primaryInterface.mac )
+        }
+        
+        // Handle secondary interfaces
+        final List<VpcNetworkInterfaceResource> secondaryInterfaces = resources.findAll{ NetworkResource networkResource ->
+          networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device != 0
+        } as List<VpcNetworkInterfaceResource>
+      
+        secondaryInterfaces.each { VpcNetworkInterfaceResource secondaryInterface ->
+          NetworkConfigType netConfig = new NetworkConfigType(secondaryInterface.value, secondaryInterface.device)
+          if ( secondaryInterface.mac == null ) {
+            VpcNetworkInterface networkInterface =
+                RestrictedTypes.resolver( VpcNetworkInterface ).apply( secondaryInterface.value )
+            netConfig.macAddress = networkInterface.macAddress
+            netConfig.ipAddress = networkInterface.privateIpAddress
+          } else {
+            netConfig.macAddress = secondaryInterface.mac
+            netConfig.ipAddress = secondaryInterface.privateIp
+          }
+          builder.secondaryNetConfig(netConfig)
         }
       }
     }
@@ -1148,16 +1339,20 @@ class VmInstanceLifecycleHelpers {
       }
     }
 
-    // Generic parameter (type) hits https://jira.codehaus.org/browse/GROOVY-6556 so use ?
-    private static <T extends RestrictedType> T lookup( final String typeDesc, final String id, final Class<?> type ) {
-      final T resource = RestrictedTypes.<T>resolver( (Class<T>)type ).apply( id )
-      if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ) {
-        throw new IllegalMetadataAccessException( "Not authorized to use ${typeDesc} ${id}" )
+    /**
+     * The first four and last addresses are reserved in a subnet
+     */
+    private static boolean validPrivateIpForCidr( String cidrText, String privateIp ) {
+      boolean valid = true;
+      if ( privateIp ) {
+        final int addressAsInt = PrivateAddresses.asInteger( privateIp )
+        final Cidr cidr = Cidr.parse( cidrText )
+        final IPRange range = IPRange.fromCidr( cidr ); // range omits first and last
+        valid = range.contains( IPRange.fromCidr( Cidr.of( addressAsInt, 32 ) ) ) && //
+            !Iterables.contains( Iterables.limit( IPRange.fromCidr( cidr ), 3 ), addressAsInt )
       }
-      resource
+      valid
     }
-
-
   }
 
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Consumer;
 import com.eucalyptus.util.Consumers;
 import com.eucalyptus.ws.util.ReplyQueue;
+import com.google.common.base.Optional;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
@@ -86,6 +87,7 @@ import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import javax.annotation.Nonnull;
 
 public class Contexts {
   private static Logger                          LOG             = Logger.getLogger( Contexts.class );
@@ -214,40 +216,50 @@ public class Contexts {
     }
   }
   
-  public static final Context lookup( ) throws IllegalContextAccessException {
-    Context ctx;
-    if ( ( ctx = tlContext.get( ) ) != null ) {
+  public static Context lookup( ) throws IllegalContextAccessException {
+    final Context ctx = tlContext.get( );
+    if ( ctx != null ) {
       return maybeImpersonating( ctx );
     }
-    BaseMessage parent = null;
-    MuleMessage muleMsg = null;
+    final Optional<String> correlationId = lookupCorrelationId( );
+    if ( correlationId.isPresent( ) ) {
+      try {
+        return Contexts.lookup( correlationId.get( ) );
+      } catch ( final NoSuchContextException e ) {
+        Logs.exhaust( ).error( e, e );
+        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
+      }
+    } else if ( RequestContext.getEvent( ) != null || RequestContext.getEventContext( ) != null ) {
+      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) outside of a service." );
+    } else {
+      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
+    }
+  }
+
+  @Nonnull
+  public static Optional<String> lookupCorrelationId( ) {
+    Context ctx;
+    if ( ( ctx = tlContext.get( ) ) != null ) {
+      return Optional.fromNullable( ctx.getCorrelationId( ) );
+    }
+    MuleMessage muleMsg;
     if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {
       muleMsg = RequestContext.getEvent( ).getMessage( );
     } else if ( RequestContext.getEventContext( ) != null && RequestContext.getEventContext( ).getMessage( ) != null ) {
       muleMsg = RequestContext.getEventContext( ).getMessage( );
     } else {
-      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) outside of a service." );
+      muleMsg = null;
     }
-    Object o = muleMsg.getPayload( );
-    if ( o != null && o instanceof BaseMessage ) {
-      try {
-        return Contexts.lookup( ( ( BaseMessage ) o ).getCorrelationId( ) );
-      } catch ( NoSuchContextException e ) {
-        Logs.exhaust( ).error( e, e );
-        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
-      }
-    } else if ( o != null && o instanceof HasRequest ) {
-      try {
-        return Contexts.lookup( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
-      } catch ( NoSuchContextException e ) {
-        Logs.exhaust( ).error( e, e );
-        throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
-      }
-    } else {
-      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
+    final Object o = muleMsg==null ? null : muleMsg.getPayload( );
+    if ( o instanceof BaseMessage ) {
+      return Optional.fromNullable( ( ( BaseMessage ) o ).getCorrelationId( ) );
     }
+    if ( o instanceof HasRequest ) {
+      return Optional.fromNullable( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
+    }
+    return Optional.absent( );
   }
-  
+
   public static void clear( String corrId ) {
     checkParam( "BUG: correlationId is null.", corrId, notNullValue() );
     uuidImpContexts.remove( corrId );
@@ -333,10 +345,9 @@ public class Contexts {
       Context ctx = lookup( corrId );
       EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
-      if (cause.getCause() != null) {
-          Channel channel = ctx.getChannel( );
-          Channels.write( channel, new ExceptionResponseType( ctx.getRequest( ), cause.getCause( ).getMessage( ), cause.getCause( ) ) );
-      }
+      final Throwable errorThrowable = cause.getCause( ) != null ? cause.getCause( ) : cause;
+      Channel channel = ctx.getChannel( );
+      Channels.write( channel, new ExceptionResponseType( ctx.getRequest( ), errorThrowable.getMessage( ), errorThrowable ) );
       if ( !( cause instanceof BaseException ) ) {
         clear( ctx );
       }

@@ -36,8 +36,11 @@ import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.CreateSnapshotType;
@@ -45,21 +48,35 @@ import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
 import com.eucalyptus.compute.common.CreateVolumeResponseType;
 import com.eucalyptus.compute.common.CreateVolumeType;
+import com.eucalyptus.compute.common.DeleteTagsResponseType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DeleteVolumeResponseType;
 import com.eucalyptus.compute.common.DeleteVolumeType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
+import com.eucalyptus.compute.common.DescribeVolumeAttributeResponseType;
+import com.eucalyptus.compute.common.DescribeVolumeAttributeType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.ModifyVolumeAttributeType;
+import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncRequest;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
 
@@ -68,7 +85,6 @@ import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
-
   private AWSEC2VolumeProperties properties = new AWSEC2VolumeProperties();
   private AWSEC2VolumeResourceInfo info = new AWSEC2VolumeResourceInfo();
 
@@ -85,7 +101,41 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
 
 
   public AWSEC2VolumeResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2VolumeResourceAction otherAction = (AWSEC2VolumeResourceAction) resourceAction;
+    if (!Objects.equals(properties.getAutoEnableIO(), otherAction.properties.getAutoEnableIO())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
+    if (!Objects.equals(properties.getAvailabilityZone(), otherAction.properties.getAvailabilityZone())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getEncrypted(), otherAction.properties.getEncrypted())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getIops(), otherAction.properties.getIops())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getKmsKeyId(), otherAction.properties.getKmsKeyId())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getSize(), otherAction.properties.getSize())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getSnapshotId(), otherAction.properties.getSnapshotId())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION); // docs are wrong here, experimentation shows no interruption at AWS
+    }
+    if (!Objects.equals(properties.getVolumeType(), otherAction.properties.getVolumeType())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
@@ -96,6 +146,10 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         CreateVolumeType createVolumeType = MessageHelper.createMessage(CreateVolumeType.class, action.info.getEffectiveUserId());
         createVolumeType.setAvailabilityZone(action.properties.getAvailabilityZone());
+        if (action.properties.getEncrypted() != null) {
+          createVolumeType.setEncrypted(action.properties.getEncrypted());
+        }
+        // KmsKeyId not supported
         if (action.properties.getIops() != null) {
           createVolumeType.setIops(action.properties.getIops());
         }
@@ -113,7 +167,22 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
 
         CreateVolumeResponseType createVolumeResponseType = AsyncRequests.<CreateVolumeType,CreateVolumeResponseType> sendSync(configuration, createVolumeType);
         action.info.setPhysicalResourceId(createVolumeResponseType.getVolume().getVolumeId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    SET_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if (action.properties.getAutoEnableIO() != null) {
+          ModifyVolumeAttributeType modifyVolumeAttributeTypeType = MessageHelper.createMessage(ModifyVolumeAttributeType.class, action.info.getEffectiveUserId());
+          modifyVolumeAttributeTypeType.setVolumeId(action.info.getPhysicalResourceId());
+          modifyVolumeAttributeTypeType.setAutoEnableIO(action.properties.getAutoEnableIO());
+          AsyncRequests.sendSync(configuration, modifyVolumeAttributeTypeType);
+        }
         return action;
       }
     },
@@ -291,7 +360,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
     }
 
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
-      if (action.info.getPhysicalResourceId() == null) return true;
+      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
       describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
@@ -310,6 +379,93 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VolumeResourceAction oldAction = (AWSEC2VolumeResourceAction) oldResourceAction;
+        AWSEC2VolumeResourceAction newAction = (AWSEC2VolumeResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeVolumeAttributeType describeVolumeAttributeType = MessageHelper.createMessage(DescribeVolumeAttributeType.class, newAction.info.getEffectiveUserId());
+        describeVolumeAttributeType.setVolumeId(newAction.info.getPhysicalResourceId());
+        describeVolumeAttributeType.setAttribute("autoEnableIO");
+        DescribeVolumeAttributeResponseType describeVolumeAttributeResponseType = AsyncRequests.sendSync(configuration, describeVolumeAttributeType);
+        Boolean originalValue = null;
+        if (describeVolumeAttributeResponseType != null) {
+          originalValue = describeVolumeAttributeResponseType.getAutoEnableIO();
+        }
+        if (!Objects.equals(originalValue, newAction.properties.getAutoEnableIO())) {
+          ModifyVolumeAttributeType modifyVolumeAttributeTypeType = MessageHelper.createMessage(ModifyVolumeAttributeType.class, newAction.info.getEffectiveUserId());
+          modifyVolumeAttributeTypeType.setVolumeId(newAction.info.getPhysicalResourceId());
+          modifyVolumeAttributeTypeType.setAutoEnableIO(newAction.properties.getAutoEnableIO());
+          AsyncRequests.sendSync(configuration, modifyVolumeAttributeTypeType);
+        }
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSEC2VolumeResourceAction oldAction = (AWSEC2VolumeResourceAction) oldResourceAction;
+        AWSEC2VolumeResourceAction newAction = (AWSEC2VolumeResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
+        Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+          for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+            EC2Tag tag = new EC2Tag();
+            tag.setKey(tagInfo.getKey());
+            tag.setValue(tagInfo.getValue());
+            existingTags.add(tag);
+          }
+        }
+        Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+        if (newAction.properties.getTags() != null) {
+          newTags.addAll(newAction.properties.getTags());
+        }
+        List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+        if (newStackTags != null) {
+          newTags.addAll(newStackTags);
+        }
+        TagHelper.checkReservedEC2TemplateTags(newTags);
+        // add only 'new' tags
+        Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+        if (!onlyNewTags.isEmpty()) {
+          CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+          createTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+          AsyncRequests.<CreateTagsType, CreateTagsResponseType>sendSync(configuration, createTagsType);
+        }
+        //  Get old tags...
+        Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+        if (oldAction.properties.getTags() != null) {
+          oldTags.addAll(oldAction.properties.getTags());
+        }
+        List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+        if (oldStackTags != null) {
+          oldTags.addAll(oldStackTags);
+        }
+
+        // remove only the old tags that are not new and that exist
+        Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+        if (!tagsToRemove.isEmpty()) {
+          DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+          deleteTagsType.setResourcesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
+          deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+        }
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
 
   @Override
   public ResourceProperties getResourceProperties() {

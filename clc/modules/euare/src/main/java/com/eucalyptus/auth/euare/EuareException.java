@@ -63,9 +63,10 @@
 package com.eucalyptus.auth.euare;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.Role;
 
-public class EuareException extends EucalyptusCloudException {
+public class EuareException extends EucalyptusWebServiceException {
 
   private static final long serialVersionUID = 1L;
 
@@ -85,40 +86,35 @@ public class EuareException extends EucalyptusCloudException {
   public static final String INVALID_PATH = "InvalidPath";
   public static final String INVALID_VALUE = "InvalidValue";
   public static final String VALIDATION_ERROR = "ValidationError";
-  
+
   private HttpResponseStatus status;
-  private String error;
-  
+
   public EuareException( HttpResponseStatus status, String error ) {
-    super( );
-    this.status = status;
-    this.error = error;
+    this( status, error, "Internal error" );
   }
-  
+
   public EuareException( HttpResponseStatus status, String error, String message, Throwable cause ) {
-    super( message, cause );
+    super( error, statusAsRole( status ), message );
+    initCause( cause );
     this.status = status;
-    this.error = error;
   }
-  
+
   public EuareException( HttpResponseStatus status, String error, String message ) {
-    super( message );
+    super( error, statusAsRole( status ), message );
     this.status = status;
-    this.error = error;
   }
-  
-  public EuareException( HttpResponseStatus status, String error, Throwable cause ) {
-    super( cause );
-    this.status = status;
-    this.error = error;
-  }
-  
+
   public HttpResponseStatus getStatus( ) {
     return this.status;
   }
-  
+
   public String getError( ) {
-    return this.error;
+    return getCode( );
   }
-  
+
+  private static Role statusAsRole( final HttpResponseStatus status ) {
+    return status.getCode( ) >= 400 && status.getCode( ) < 500 ?
+        Role.Sender :
+        Role.Receiver;
+  }
 }

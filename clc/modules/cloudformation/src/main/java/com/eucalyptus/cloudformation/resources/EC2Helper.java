@@ -19,23 +19,33 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources;
 
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.amazonaws.services.ec2.model.UserIdGroupPair;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.compute.common.CidrIpType;
+import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.UserIdGroupPairType;
+import com.google.common.base.Equivalence;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Created by ethomas on 8/30/14.
  */
 public class EC2Helper {
 
-  public static ArrayList<ResourceTag> createTagSet(List<EC2Tag> tags) {
+  public static ArrayList<ResourceTag> createTagSet(Collection<EC2Tag> tags) {
     ArrayList<ResourceTag> resourceTags = Lists.newArrayList();
     for (EC2Tag tag: tags) {
       ResourceTag resourceTag = new ResourceTag();
@@ -46,11 +56,11 @@ public class EC2Helper {
     return resourceTags;
   }
 
-  public static void refreshInstanceAttributes(StackEntity stackEntity, String instanceId, String effectiveUserId) throws Exception {
+  public static void refreshInstanceAttributes(VersionedStackEntity stackEntity, String instanceId, String effectiveUserId, int resourceVersion) throws Exception {
     if (instanceId != null) {
       String stackId = stackEntity.getStackId();
       String accountId = stackEntity.getAccountId();
-      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceInUseByPhysicalResourceId(stackId, accountId, instanceId);
+      StackResourceEntity instanceStackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(stackId, accountId, instanceId, resourceVersion);
       if (instanceStackResourceEntity != null) {
         ResourceInfo instanceResourceInfo = StackResourceEntityManager.getResourceInfo(instanceStackResourceEntity);
         ResourceAction instanceResourceAction = new ResourceResolverManager().resolveResourceAction(instanceResourceInfo.getType());
@@ -65,4 +75,14 @@ public class EC2Helper {
     }
   }
 
+  public static ArrayList<DeleteResourceTag> deleteTagSet(Collection<EC2Tag> tagsToRemove) {
+    ArrayList<DeleteResourceTag> deleteResourceTags = Lists.newArrayList();
+    for (EC2Tag tag: tagsToRemove) {
+      DeleteResourceTag resourceTag = new DeleteResourceTag();
+      resourceTag.setKey(tag.getKey());
+      resourceTag.setValue(tag.getValue());
+      deleteResourceTags.add(resourceTag);
+    }
+    return deleteResourceTags;
+  }
 }

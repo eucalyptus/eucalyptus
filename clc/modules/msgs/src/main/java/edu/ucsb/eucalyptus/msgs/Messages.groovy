@@ -203,7 +203,7 @@ public class ExceptionResponseType extends BaseMessage {
     super( msg );
     this.httpStatus = httpStatus;
     this.source = exception.getClass( ).getCanonicalName( );
-    this.message = message?:exception.getMessage()?:exception.getClass()
+    this.message = message?:exception?.message?:exception?.class?.simpleName?:'Internal error'
     this.requestType = requestType
     this.exception = exception;
     if( this.exception != null ) {

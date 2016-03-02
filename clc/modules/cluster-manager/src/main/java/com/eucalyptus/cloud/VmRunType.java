@@ -73,6 +73,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
 import edu.ucsb.eucalyptus.msgs.CloudClusterMessage;
+import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class VmRunType extends CloudClusterMessage {
@@ -168,6 +169,11 @@ public class VmRunType extends CloudClusterMessage {
       this.buildit.setMacAddress( mac );
       return this;
     }
+    
+    public VmRunType.Builder secondaryNetConfig( final NetworkConfigType netConfig ) {
+      this.buildit.getSecondaryNetConfigList().add(netConfig);
+      return this;
+    }
 
     public VmRunType create( ) {
       /** GRZE:NOTE: Nullables: userData, keyInfo **/
@@ -224,6 +230,7 @@ public class VmRunType extends CloudClusterMessage {
   private List<String> networkIds = new ArrayList<String>( );
   private Long         networkIndex = -1l;
   private String       privateAddress;
+  private List<NetworkConfigType> secondaryNetConfigList = new ArrayList<NetworkConfigType>();
   
   protected VmRunType( ) {}
   
@@ -244,11 +251,11 @@ public class VmRunType extends CloudClusterMessage {
   @Override
   public String toString( ) {
     return String.format(
-                          "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, amount=%s, networkIndexList=%s, privateAddr=%s,"
-                          + "networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s, rootDirective=%s]",
+                          "VmRunType [instanceIds=%s, keyInfo=%s, launchIndex=%s, amount=%s, networkIndexList=%s, privateAddr=%s, "
+                          + "networkNames=%s, reservationId=%s, userData=%s, vlan=%s, vmTypeInfo=%s, rootDirective=%s, secondaryNetConfigList=%s]",
                           this.instanceId, this.keyInfo, this.launchIndex,
                           this.minCount, this.networkIndex, this.privateAddress, this.networkNames, this.reservationId,
-                          this.userData, this.vlan, this.vmTypeInfo, this.rootDirective );
+                          this.userData, this.vlan, this.vmTypeInfo, this.rootDirective, this.secondaryNetConfigList );
   }
   
   @Override
@@ -371,6 +378,10 @@ public class VmRunType extends CloudClusterMessage {
   }
 
   public String getPrivateAddress() { return privateAddress; }
+  
+  public List<NetworkConfigType> getSecondaryNetConfigList() {
+    return secondaryNetConfigList;
+  }
 
   void setVlan( final Integer vlan ) {
     this.vlan = vlan;
@@ -416,5 +427,9 @@ public class VmRunType extends CloudClusterMessage {
   
   public void setAccountId( String accountId ) {
     this.accountId = accountId;
+  }
+  
+  public void setSecondaryNetConfigList(List<NetworkConfigType> secondaryNetConfigList) {
+    this.secondaryNetConfigList = secondaryNetConfigList;
   }
 }

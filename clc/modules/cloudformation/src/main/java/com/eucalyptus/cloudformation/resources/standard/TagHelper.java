@@ -22,17 +22,19 @@ package com.eucalyptus.cloudformation.resources.standard;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.loadbalancing.common.msgs.TagList;
 import com.eucalyptus.util.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -40,7 +42,7 @@ import java.util.List;
  */
 public class TagHelper {
 
-  public static List<CloudFormationResourceTag> getCloudFormationResourceSystemTags(ResourceInfo resourceInfo, StackEntity stackEntity) throws CloudFormationException {
+  public static List<CloudFormationResourceTag> getCloudFormationResourceSystemTags(ResourceInfo resourceInfo, VersionedStackEntity stackEntity) throws CloudFormationException {
     List<CloudFormationResourceTag> tags = Lists.newArrayList();
 
     CloudFormationResourceTag logicalIdTag = new CloudFormationResourceTag();
@@ -60,7 +62,7 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(StackEntity stackEntity) throws CloudFormationException {
+  public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(VersionedStackEntity stackEntity) throws CloudFormationException {
     List<CloudFormationResourceTag> tags = Lists.newArrayList();
     if (stackEntity.getTagsJson() != null) {
       List<Tag> stackTags = StackEntityHelper.jsonToTags(stackEntity.getTagsJson());
@@ -74,7 +76,7 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<EC2Tag> getEC2StackTags(StackEntity stackEntity) throws CloudFormationException {
+  public static List<EC2Tag> getEC2StackTags(VersionedStackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<EC2Tag> tags = Lists.newArrayList();
     for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(stackEntity)) {
@@ -86,7 +88,7 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<EC2Tag> getEC2SystemTags(ResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+  public static List<EC2Tag> getEC2SystemTags(ResourceInfo info, VersionedStackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<EC2Tag> tags = Lists.newArrayList();
     for (CloudFormationResourceTag otherTag : getCloudFormationResourceSystemTags(info, stackEntity)) {
@@ -98,7 +100,7 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<AutoScalingTag> getAutoScalingStackTags(StackEntity stackEntity) throws CloudFormationException {
+  public static List<AutoScalingTag> getAutoScalingStackTags(VersionedStackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<AutoScalingTag> tags = Lists.newArrayList();
     for (CloudFormationResourceTag otherTag : getCloudFormationResourceStackTags(stackEntity)) {
@@ -111,7 +113,7 @@ public class TagHelper {
     return tags;
   }
 
-  public static List<AutoScalingTag> getAutoScalingSystemTags(AWSAutoScalingAutoScalingGroupResourceInfo info, StackEntity stackEntity) throws CloudFormationException {
+  public static List<AutoScalingTag> getAutoScalingSystemTags(AWSAutoScalingAutoScalingGroupResourceInfo info, VersionedStackEntity stackEntity) throws CloudFormationException {
     // TOO many tags
     List<AutoScalingTag> tags = Lists.newArrayList();
     for (CloudFormationResourceTag otherTag : getCloudFormationResourceSystemTags(info, stackEntity)) {
@@ -145,7 +147,7 @@ public class TagHelper {
     }
   }
 
-  public static void checkReservedEC2TemplateTags(List<EC2Tag> tags) throws ValidationErrorException {
+  public static void checkReservedEC2TemplateTags(Collection<EC2Tag> tags) throws ValidationErrorException {
     if (tags == null) return;
     List<String> tagNames = Lists.newArrayList();
     for (EC2Tag tag: tags) {
@@ -153,5 +155,18 @@ public class TagHelper {
         throw new ValidationErrorException("Tag " + tag.getKey() + " uses a reserved prefix " + reservedPrefixes);
       }
     }
+  }
+
+  public static TagList convertToTagList(List<CloudFormationResourceTag> cloudFormationResourceTags) {
+    TagList tagList = new TagList();
+    if (cloudFormationResourceTags != null) {
+      for (CloudFormationResourceTag cloudFormationResourceTag: cloudFormationResourceTags) {
+        com.eucalyptus.loadbalancing.common.msgs.Tag tag = new com.eucalyptus.loadbalancing.common.msgs.Tag();
+        tag.setKey(cloudFormationResourceTag.getKey());
+        tag.setValue(cloudFormationResourceTag.getValue());
+        tagList.getMember().add(tag);
+      }
+    }
+    return tagList;
   }
 }

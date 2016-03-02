@@ -308,7 +308,7 @@ public class ElasticLoadBalancingListener {
   @Property
   Integer loadBalancerPort;
   @Property
-  List<String> policyNames;
+  List<String> policyNames = Lists.newArrayList();
   @Required
   @Property
   String protocol;
@@ -319,11 +319,12 @@ public class ElasticLoadBalancingListener {
 @EqualsAndHashCode
 @ToString(includeNames=true)
 public class ElasticLoadBalancingPolicyType {
+  @Property
   List<ElasticLoadBalancingPolicyTypeAttribute> attributes = Lists.newArrayList();
   @Property
-  List<String> instancePorts = Lists.newArrayList();
+  List<Integer> instancePorts = Lists.newArrayList();
   @Property
-  List<String> loadBalancerPorts = Lists.newArrayList();
+  List<Integer> loadBalancerPorts = Lists.newArrayList();
   @Required
   @Property
   String policyName;
@@ -349,7 +350,7 @@ public class ElasticLoadBalancingPolicyTypeAttribute {
 public class S3CorsConfiguration {
   @Required
   @Property
-  List<S3CorsConfigurationRule> corsRule = Lists.newArrayList();
+  List<S3CorsConfigurationRule> corsRules = Lists.newArrayList();
 }
 
 @EqualsAndHashCode
@@ -412,6 +413,43 @@ public class S3NotificationConfiguration{
   @Required
   @Property
   List<S3NotificationTopicConfiguration> topicConfigurations = Lists.newArrayList();
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfiguration{
+  @Required
+  @Property
+  String role;
+  @Required
+  @Property
+  List<S3ReplicationConfigurationRule> rules = Lists.newArrayList();
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfigurationRule {
+  @Required
+  @Property
+  S3ReplicationConfigurationRulesDestination destination;
+  @Property
+  String id;
+  @Required
+  @Property
+  String prefix;
+  @Required
+  @Property
+  String status;
+}
+
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class S3ReplicationConfigurationRulesDestination {
+  @Required
+  @Property
+  String bucket;
+  @Property
+  String storageClass;
 }
 
 @EqualsAndHashCode

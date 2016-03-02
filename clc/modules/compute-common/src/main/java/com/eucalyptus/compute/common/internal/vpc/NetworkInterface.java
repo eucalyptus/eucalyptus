@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.vpc;
 
+import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.compute.common.CloudMetadata.NetworkInterfaceMetadata;
 import java.util.Collection;
 import java.util.List;
@@ -27,6 +28,8 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
@@ -51,6 +54,8 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Parameters;
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
@@ -70,9 +75,9 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   public enum State {
     available,
-    attaching,
     in_use("in-use"),
-    detaching,
+    attaching, // incorrect state, do not use
+    detaching, // incorrect state, do not use
     ;
 
     private final String value;
@@ -91,6 +96,23 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     }
   }
 
+  public enum Type {
+    NatGateway,
+    Interface,
+    ;
+
+    private final String value;
+
+    private Type( ) {
+      this.value = CaseFormat.UPPER_CAMEL.to( CaseFormat.LOWER_CAMEL, name( ) );
+    }
+
+    @Override
+    public String toString() {
+      return value;
+    }
+  }
+
   protected NetworkInterface( ) {
   }
 
@@ -98,6 +120,9 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     super( owner, displayName );
   }
 
+  /**
+   * Create a regular network interface.
+   */
   public static NetworkInterface create( final OwnerFullName owner,
                                          final Vpc vpc,
                                          final Subnet subnet,
@@ -107,10 +132,68 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
                                          final String privateIp,
                                          final String privateDnsName,
                                          final String description ) {
+    final NetworkInterface networkInterface = create(
+        owner,
+        vpc,
+        subnet,
+        Type.Interface,
+        displayName,
+        macAddress,
+        privateIp,
+        privateDnsName,
+        description );
+    networkInterface.setNetworkGroups( networkGroups );
+    return networkInterface;
+  }
+
+
+  /**
+   * Create a network interface for use with a NAT gateway
+   */
+  public static NetworkInterface create( final OwnerFullName owner,
+                                         final String requesterId,
+                                         final Vpc vpc,
+                                         final Subnet subnet,
+                                         final String displayName,
+                                         final String macAddress,
+                                         final String privateIp,
+                                         final String privateDnsName,
+                                         final String description ) {
+    Parameters.checkParam( "requesterId", requesterId, notNullValue( ) );
+    final NetworkInterface networkInterface = create(
+        owner,
+        vpc,
+        subnet,
+        Type.NatGateway,
+        displayName,
+        macAddress,
+        privateIp,
+        privateDnsName,
+        description );
+    networkInterface.setSourceDestCheck( false );
+    networkInterface.setRequesterId( requesterId );
+    networkInterface.setRequesterManaged( true );
+    return networkInterface;
+  }
+
+  private static NetworkInterface create( final OwnerFullName owner,
+                                          final Vpc vpc,
+                                          final Subnet subnet,
+                                          final Type type,
+                                          final String displayName,
+                                          final String macAddress,
+                                          final String privateIp,
+                                          final String privateDnsName,
+                                          final String description ) {
+    Parameters.checkParam( "owner", owner, notNullValue( ) );
+    Parameters.checkParam( "vpc", vpc, notNullValue( ) );
+    Parameters.checkParam( "subnet", subnet, notNullValue( ) );
+    Parameters.checkParam( "type", type, notNullValue( ) );
+    Parameters.checkParam( "displayName", displayName, notNullValue( ) );
     final NetworkInterface networkInterface = new NetworkInterface( owner, displayName );
     networkInterface.setVpc( vpc );
     networkInterface.setSubnet( subnet );
-    networkInterface.setNetworkGroups( networkGroups );
+    networkInterface.setType( type );
     networkInterface.setAvailabilityZone( subnet.getAvailabilityZone( ) );
     networkInterface.setDescription( description );
     networkInterface.setState( State.available );
@@ -181,6 +264,10 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
 
   @Column( name = "metadata_source_dest_check", nullable = false )
   private Boolean sourceDestCheck;
+
+  @Column( name = "metadata_type" )
+  @Enumerated( EnumType.STRING )
+  private Type type;
 
   @Embedded
   private NetworkInterfaceAttachment attachment;
@@ -296,6 +383,14 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     this.sourceDestCheck = sourceDestCheck;
   }
 
+  public Type getType( ) {
+    return type;
+  }
+
+  public void setType( final Type type ) {
+    this.type = type;
+  }
+
   public boolean isAttached( ) {
     return attachment != null;
   }
@@ -367,6 +462,35 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
                 "Updating security groups for network interface " + entity.getDisplayName( ) +
                 " with groups for " + entity.getAttachment( ).getInstanceId( ) );
             entity.setNetworkGroups( Sets.newHashSet( groups ) );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
+    }
+  }
+
+  @Upgrades.EntityUpgrade( entities = NetworkInterface.class,  since = Upgrades.Version.v4_3_0, value = Eucalyptus.class)
+  public enum NetworkInterfaceEntityUpgrade430 implements Predicate<Class> {
+    INSTANCE;
+
+    private static Logger logger = Logger.getLogger( NetworkInterfaceEntityUpgrade430.class );
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public boolean apply( final Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+        final List<NetworkInterface> entities = (List<NetworkInterface>)
+            Entities.createCriteria( NetworkInterface.class )
+                .add( Restrictions.isNull( "type" ) )
+                .list( );
+        for ( final NetworkInterface entity : entities ) {
+          if ( entity.getType( ) == null ) {
+            logger.info( "Updating type for network interface " + entity.getDisplayName( ) );
+            entity.setType( Type.Interface );
+            if ( entity.getState( ) == State.attaching || entity.getState( ) == State.detaching ) {
+              entity.setState( State.in_use );
+            }
           }
         }
         tx.commit( );

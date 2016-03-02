@@ -146,6 +146,7 @@ typedef struct ebt_handler_t {
 //! @name EB Tables API
 int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix);
 int ebt_handler_free(ebt_handler * ebth);
+int ebt_handler_close(ebt_handler * ebth);
 
 int ebt_system_save(ebt_handler * ebth);
 int ebt_system_restore(ebt_handler * ebth);

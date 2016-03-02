@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,8 @@ package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Strings.isPrefixOf;
 import static com.eucalyptus.util.Strings.upper;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -75,11 +77,13 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
@@ -87,7 +91,9 @@ import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
@@ -98,6 +104,8 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Pkcs7;
+import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
@@ -111,7 +119,7 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -122,6 +130,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
+import com.google.common.io.BaseEncoding;
+import net.sf.json.JSONNull;
 import net.sf.json.JSONObject;
 
 /**
@@ -134,8 +144,23 @@ public class VmInstanceMetadata {
   private static final com.google.common.cache.Cache<MetadataKey,ImmutableMap<String,String>> metadataCache =
       CacheBuilder.newBuilder().expireAfterWrite( 5, TimeUnit.MINUTES ).maximumSize( 1000 ).build( );
 
+  private static final BaseEncoding B64_76 = BaseEncoding.base64( ).withSeparator( "\n", 76 );
+
+  private enum Type {
+    Instance,
+    Dynamic
+  }
+
   public static String getByKey( final VmInstance vm, final String pathArg ) {
-    final String path = Objects.firstNonNull( pathArg, "" );
+    return getByKeyInternal( vm, pathArg, Type.Instance );
+  }
+
+  public static String getDynamicByKey( final VmInstance vm, final String pathArg ) {
+    return getByKeyInternal( vm, pathArg, Type.Dynamic );
+  }
+
+  private static String getByKeyInternal( final VmInstance vm, final String pathArg, final Type type ) {
+    final String path = MoreObjects.firstNonNull( pathArg, "" );
     final String pathNoSlash;
     LOG.debug( "Servicing metadata request:" + path );
     if ( path.endsWith( "/" ) ) {
@@ -146,12 +171,13 @@ public class VmInstanceMetadata {
 
     Optional<MetadataGroup> groupOption = Optional.absent();
     for ( final MetadataGroup metadataGroup : MetadataGroup.values() ) {
-      if ( metadataGroup.providesPath( pathNoSlash ) ||
-          metadataGroup.providesPath( path ) ) {
+      if ( metadataGroup.isType( type ) && (
+          metadataGroup.providesPath( pathNoSlash ) ||
+          metadataGroup.providesPath( path ) ) ) {
         groupOption = Optional.of( metadataGroup );
       }
     }
-    final MetadataGroup group = groupOption.or( MetadataGroup.Core );
+    final MetadataGroup group = groupOption.or( MetadataGroup.core( type ) );
     final Map<String,String> metadataMap =
         Optional.fromNullable( group.apply( vm ) ).or( Collections.<String, String>emptyMap() );
     final String value = metadataMap.get( path );
@@ -159,6 +185,7 @@ public class VmInstanceMetadata {
   }
 
   private static Map<String, String> getCoreMetadataMap( final VmInstance vm ) {
+    @SuppressWarnings( "deprecation" )
     final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = Maps.newHashMap();
     m.put( "ami-id", vm.getImageId() );
@@ -204,6 +231,50 @@ public class VmInstanceMetadata {
     return m;
   }
 
+  private static Map<String,String> getCoreDynamicMetadataMap( final VmInstance vm ) {
+    final Map<String, String> m = Maps.newHashMap( );
+    m.put( "fws/instance-monitoring", MoreObjects.firstNonNull( vm.getMonitoring( ), Boolean.FALSE ) ? "enabled" : "disabled" );
+    return m;
+  }
+
+  private static Map<String,String> getInstanceIdentityMetadataMap( final VmInstance vm ) {
+    final Map<String, String> m = Maps.newHashMap( );
+    final String identityDocument = new JSONObject( )
+        .element( "privateIp", vm.getPrivateAddress( ) )
+        .element( "devpayProductCodes", JSONNull.getInstance( ) )
+        .element( "availabilityZone", vm.getPartition( ) )
+        .element( "version", "2010-08-31" )
+        .element( "region", RegionConfigurations.getRegionNameOrDefault( ) )
+        .element( "instanceId", vm.getDisplayName( ) )
+        .element( "billingProducts", JSONNull.getInstance( ) )
+        .element( "instanceType", vm.getVmType( ).getName( ) )
+        .element( "accountId", vm.getOwnerAccountNumber( ) )
+        .element( "pendingTime", Timestamps.formatIso8601Timestamp( vm.getCreationTimestamp( ) ) )
+        .element( "imageId", vm.getImageId( ) )
+        .element( "architecture", vm.getBootRecord( ) == null || vm.getBootRecord( ).getArchitecture( ) == null ?
+            "x86_64" :
+            vm.getBootRecord( ).getArchitecture( ).toString( ) )
+        .element( "kernelId", vm.getKernelId( ) == null ? JSONNull.getInstance( ) : vm.getKernelId( ) )
+        .element( "ramdiskId", vm.getRamdiskId( ) == null ? JSONNull.getInstance( ) : vm.getRamdiskId( ) )
+        .toString( 2 );
+
+    final SystemCredentials.Credentials credentials = SystemCredentials.lookup( Eucalyptus.class );
+    m.put( "instance-identity/document", identityDocument );
+    try {
+      m.put( "instance-identity/pkcs7", B64_76.encode(
+          Pkcs7.sign( identityDocument, credentials.getPrivateKey( ), credentials.getCertificate( ) ) ) );
+    } catch ( Exception e ) {
+      LOG.error( "Error generating pkcs7 identity document signed data", e );
+    }
+    try {
+      m.put( "instance-identity/signature", B64_76.encode(
+          Signatures.SHA1WithRSA.signBinary( credentials.getPrivateKey( ), identityDocument.getBytes( StandardCharsets.UTF_8 ) ) ) );
+    } catch ( GeneralSecurityException e ) {
+      LOG.error( "Error generating identity document signature", e );
+    }
+    return m;
+  }
+
   private static Map<String, String> getNetworkMetadataMap( final VmInstance vm ) {
     final Map<String, String> m = Maps.newHashMap( );
     if ( !vm.getNetworkInterfaces( ).isEmpty( ) ) for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
@@ -215,13 +286,17 @@ public class VmInstanceMetadata {
             prefix + "ipv4-associations/" + networkInterface.getAssociation( ).getPublicIp( ),
             networkInterface.getPrivateIpAddress( ) );
       }
-      m.put( prefix + "local-hostname", networkInterface.getPrivateDnsName( ) );
-      m.put( prefix + "local-ipv4s", networkInterface.getPrivateIpAddress( ) );
+      final String privateIp = networkInterface.getPrivateIpAddress( );
+      m.put( prefix + "local-hostname", VmInstances.dnsName( privateIp, DomainNames.internalSubdomain( ) ) );
+      m.put( prefix + "local-ipv4s", privateIp );
       m.put( prefix + "mac", networkInterface.getMacAddress( ) );
       m.put( prefix + "owner-id", networkInterface.getOwnerAccountNumber( ) );
       if ( networkInterface.isAssociated( ) ) {
-        m.put( prefix + "public-hostname", networkInterface.getAssociation( ).getPublicDnsName( ) );
+        m.put( prefix + "public-hostname", Strings.nullToEmpty( networkInterface.getAssociation( ).getPublicDnsName( ) ) );
         m.put( prefix + "public-ipv4s", networkInterface.getAssociation( ).getPublicIp( ) );
+      } else {
+        m.put( prefix + "public-hostname", "" );
+        m.put( prefix + "public-ipv4s", "" );
       }
       m.put( prefix + "security-groups", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), RestrictedTypes.toDisplayName( ) ) ) );
       m.put( prefix + "security-group-ids", Joiner.on( '\n' ).join( Iterables.transform( networkInterface.getNetworkGroups( ), NetworkGroup.groupId( ) ) ) );
@@ -230,6 +305,7 @@ public class VmInstanceMetadata {
       m.put( prefix + "vpc-id", networkInterface.getVpc( ).getDisplayName( ) );
       m.put( prefix + "vpc-ipv4-cidr-block", networkInterface.getVpc( ).getCidr( ) );
     } else { // EC2-Classic instance
+      @SuppressWarnings( "deprecation" )
       final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
       final String prefix = "network/interfaces/macs/" + vm.getMacAddress( ) + "/";
       m.put( prefix + "device-number", "0" );
@@ -257,7 +333,7 @@ public class VmInstanceMetadata {
     // Fixes EUCA-4081, EUCA-3954 and implements EUCA-4786
     if( vm.getBootRecord().getMachine() instanceof BlockStorageImageInfo ) {
       // Get all the volume attachments and order them in some way (by device name for now)
-      Set<VmVolumeAttachment> volAttachments = new TreeSet<VmVolumeAttachment>(VolumeAttachmentComparator.INSTANCE);
+      Set<VmVolumeAttachment> volAttachments = new TreeSet<>(VolumeAttachmentComparator.INSTANCE);
       volAttachments.addAll(vm.getBootRecord().getPersistentVolumes());
 
       // Keep track of all ebs keys for populating block-device-mapping list
@@ -277,7 +353,7 @@ public class VmInstanceMetadata {
 
       // Using ephemeral attachments for bfebs instances only, can be extended to be used by all other instances
       // Get all the ephemeral attachments and order them in some way (by device name for now)
-      Set<VmEphemeralAttachment> ephemeralAttachments = new TreeSet<VmEphemeralAttachment>(vm.getBootRecord().getEphemeralStorage());
+      Set<VmEphemeralAttachment> ephemeralAttachments = new TreeSet<>(vm.getBootRecord().getEphemeralStorage());
 
       // Iterate through the list of ephemeral attachments and populate ephemeral mappings
       if (!ephemeralAttachments.isEmpty()) {
@@ -390,7 +466,7 @@ public class VmInstanceMetadata {
     return m;
   }
 
-  private static enum VolumeAttachmentComparator implements Comparator<VmVolumeAttachment> {
+  private enum VolumeAttachmentComparator implements Comparator<VmVolumeAttachment> {
     INSTANCE;
 
     @Override
@@ -400,10 +476,10 @@ public class VmInstanceMetadata {
   }
 
   private enum MetadataGroup implements Function<VmInstance,Map<String,String>> {
-    Core {
+    Core( Type.Instance ) {
       @Override
       public Map<String, String> apply( final VmInstance instance ) {
-        return addListingEntries( instance, getCoreMetadataMap( instance ), true );
+        return addListingEntries( instance, getCoreMetadataMap( instance ), true, Optional.of( Type.Instance ) );
       }
 
     },
@@ -449,16 +525,35 @@ public class VmInstanceMetadata {
       protected boolean isPresent( final VmInstance instance ) {
         return instance.getBootRecord( ).getSshKeyPair() != null;
       }
+    },
+    CoreDynamic( Type.Dynamic ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( instance, getCoreDynamicMetadataMap( instance ), true, Optional.of( Type.Dynamic )  );
+      }
+    },
+    InstanceIdentity( "instance-identity", Type.Dynamic ) {
+      @Override
+      public Map<String, String> apply( final VmInstance instance ) {
+        return addListingEntries( getInstanceIdentityMetadataMap( instance ) );
+      }
     };
 
     private final Optional<String> prefix;
+    private final Type type;
 
-    private MetadataGroup( ) {
+    MetadataGroup( final Type type ) {
       prefix = Optional.absent( );
+      this.type = type;
     }
 
-    private MetadataGroup( final String path ) {
-      prefix = Optional.of( path );
+    MetadataGroup( final String path ) {
+      this( path, Type.Instance );
+    }
+
+    MetadataGroup( final String path, final Type type ) {
+      this.prefix = Optional.of( path );
+      this.type = type;
     }
 
     public boolean providesPath( final String path ) {
@@ -467,17 +562,32 @@ public class VmInstanceMetadata {
               .or( Boolean.FALSE );
     }
 
+    public boolean isType( final Type type ) {
+      return this.type == type;
+    }
+
     protected boolean isPresent(  final VmInstance instance   ) {
       return true;
     }
 
+    @Nonnull
+    public static MetadataGroup core( final Type type ) {
+      for ( final MetadataGroup group : values( ) ) {
+        if ( !group.prefix.isPresent( ) && group.isType( type ) ) {
+          return group;
+        }
+      }
+      throw new IllegalStateException( "Core not found for type " + type );
+    }
+
     private static Map<String,String> addListingEntries( final Map<String,String> metadataMap ) {
-      return addListingEntries( null, metadataMap, false );
+      return addListingEntries( null, metadataMap, false, Optional.<Type>absent( ) );
     }
 
     private static Map<String,String> addListingEntries( @Nullable final VmInstance instance,
                                                          final Map<String,String> metadataMap,
-                                                         final boolean addRoots ) {
+                                                         final boolean addRoots,
+                                                         final Optional<Type> type ) {
       final TreeMultimap<String,String> listingMap = TreeMultimap.create( );
       final Splitter pathSplitter = Splitter.on( '/' );
       final Joiner pathJoiner = Joiner.on( '/' );
@@ -492,6 +602,7 @@ public class VmInstanceMetadata {
 
       if ( addRoots && instance != null ) {
         for ( MetadataGroup group : MetadataGroup.values() ) {
+          if ( !type.isPresent( ) || !group.isType( type.get( ) ) ) continue;
           if ( group.isPresent( instance ) && group.prefix.isPresent(  ) ) {
             listingMap.put( "", group.prefix.get() + "/" );
           }

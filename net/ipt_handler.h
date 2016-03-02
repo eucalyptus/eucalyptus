@@ -186,6 +186,7 @@ typedef struct ipt_handler_t {
 //! @name IP tables API
 int ipt_handler_init(ipt_handler * ipth, const char *cmdprefix, const char *preload);
 int ipt_handler_free(ipt_handler * ipth);
+int ipt_handler_close(ipt_handler * ipth);
 
 int ipt_system_save(ipt_handler * ipth);
 int ipt_system_restore(ipt_handler * ipth);

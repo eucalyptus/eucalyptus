@@ -22,7 +22,7 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -138,7 +138,47 @@ public class FunctionEvaluation {
     return objectCopy;
   }
 
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) throws CloudFormationException {
+  public static JsonNode evaluateFunctionsPreResourceResolution(JsonNode jsonNode, Template template, String effectiveUserId) throws CloudFormationException {
+    if (jsonNode == null) return jsonNode;
+    if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
+    ObjectMapper objectMapper = new ObjectMapper();
+    if (jsonNode.isArray()) {
+      ArrayNode arrayCopy = objectMapper.createArrayNode();
+      for (int i = 0;i < jsonNode.size(); i++) {
+        JsonNode arrayElement = evaluateFunctionsPreResourceResolution(jsonNode.get(i), template, effectiveUserId);
+        arrayCopy.add(arrayElement);
+      }
+      return arrayCopy;
+    }
+    // an object node
+    // Some functions require literal values for arguments, so don't recursively evaluate functions on
+    // values.  (Will do so within functions where appropriate)
+    for (IntrinsicFunction intrinsicFunction: IntrinsicFunctions.values()) {
+
+      IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
+      if (matchResult.isMatch()) {
+        IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
+        try {
+          return intrinsicFunction.evaluateFunction(validateResult, template, effectiveUserId);
+        } catch (ValidationErrorException ex) {
+          // for now if we get an error due to a Ref: or Fn::GetAtt call on a resource we can just return the original value
+          return jsonNode;
+        }
+      }
+    }
+    // Otherwise, not a function, so evaluate functions of values
+    ObjectNode objectCopy = objectMapper.createObjectNode();
+    List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
+    for (String key: fieldNames) {
+      JsonNode objectElement = evaluateFunctionsPreResourceResolution(jsonNode.get(key), template, effectiveUserId);
+      objectCopy.put(key, objectElement);
+    }
+    return objectCopy;
+  }
+
+
+
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, VersionedStackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(resourceInfoMap);
     StackEntityHelper.populateTemplateWithStackEntity(template, stackEntity);

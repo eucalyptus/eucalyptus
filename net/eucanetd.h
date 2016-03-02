@@ -136,15 +136,16 @@ typedef enum eucanetd_peer_t {
 
 //! Network Driver API
 typedef struct driver_handler_t {
-    char name[CHAR_BUFFER_SIZE];       //!< The name of the given network driver (e.g. EDGE, MANAGED, etc.)
-    int (*init) (eucanetdConfig * pConfig); //!< The driver initialization interface
-    int (*cleanup) (globalNetworkInfo * pGni, boolean doFlush); //!< The driver cleanup interface
-    int (*upgrade) (globalNetworkInfo * pGni);  //!< This is optional when upgrade tasks are required.
-    int (*system_flush) (globalNetworkInfo * pGni); //!< Responsible for the flushing of all euca networking artifacts
-     u32(*system_scrub) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Works on detecting what is changing
-    int (*implement_network) (globalNetworkInfo * pGni, lni_t * pLni);  //!< Takes care of network devices, tunnels, etc.
-    int (*implement_sg) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Takes care of security group implementations and membership
-    int (*implement_addressing) (globalNetworkInfo * pGni, lni_t * pLni);   //!< Takes care of IP addressing, Elastic IPs, etc.
+    char name[CHAR_BUFFER_SIZE];                                            //!< The name of the given network driver (e.g. EDGE, MANAGED, etc.)
+    int (*init) (eucanetdConfig *pConfig);                                  //!< The driver initialization interface
+    int (*cleanup) (globalNetworkInfo *pGni, boolean doFlush);              //!< The driver cleanup interface
+    int (*upgrade) (globalNetworkInfo *pGni);                               //!< This is optional when upgrade tasks are required.
+    int (*system_flush) (globalNetworkInfo *pGni);                          //!< Responsible for the flushing of all euca networking artifacts
+    int (*system_maint) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Maintenance actions when eucanetd is idle (e.g., no GNI changes)
+    u32 (*system_scrub) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Works on detecting what is changing
+    int (*implement_network) (globalNetworkInfo *pGni, lni_t *pLni);        //!< Takes care of network devices, tunnels, etc.
+    int (*implement_sg) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Takes care of security group implementations and membership
+    int (*implement_addressing) (globalNetworkInfo *pGni, lni_t *pLni);     //!< Takes care of IP addressing, Elastic IPs, etc.
 } driver_handler;
 
 /*----------------------------------------------------------------------------*\
@@ -155,12 +156,12 @@ typedef struct driver_handler_t {
 
 //! @{
 //! @name Network Driver Interfaces (NDIs)
-extern struct driver_handler_t edgeDriverHandler;   //!< EDGE network driver callback instance
-extern struct driver_handler_t managedDriverHandler;    //!< MANAGED network driver callback instance
+extern struct driver_handler_t edgeDriverHandler;           //!< EDGE network driver callback instance
+extern struct driver_handler_t managedDriverHandler;        //!< MANAGED network driver callback instance
 extern struct driver_handler_t managedNoVlanDriverHandler;  //!< MANAGED-NOVLAN network driver callback instance
-extern struct driver_handler_t midoVpcDriverHandler;    //!< MIDONET VPC network driver callback instance
-extern struct driver_handler_t systemDriverHandler; //!< SYSTEM network driver callback instance
-extern struct driver_handler_t staticDriverHandler; //!< STATIC network driver callback instance
+extern struct driver_handler_t midoVpcDriverHandler;        //!< MIDONET VPC network driver callback instance
+extern struct driver_handler_t systemDriverHandler;         //!< SYSTEM network driver callback instance
+extern struct driver_handler_t staticDriverHandler;         //!< STATIC network driver callback instance
 //! @}
 
 //! Global Network Information structure pointer.

@@ -541,7 +541,7 @@ int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *network
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInstPtr)
 {
     int i = 0;
     int foundidx = -1;
@@ -558,7 +558,8 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     loadNcStuff();
 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
-                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective, groupIds, groupIdsSize);
+                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, rootDirective,
+                                 groupIds, groupIdsSize, secNetCfgs, secNetCfgsLen);
 
     if (instance) {
         instance->launchTime = time(NULL);

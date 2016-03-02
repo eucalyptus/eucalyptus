@@ -262,6 +262,7 @@
 #define EUCA_MAX_PATH                                4096
 #define EUCA_MAX_PARTITIONS                            32   //!< partitions per disk
 #define EUCA_MAX_DISKS                                 26   //!< disks per bus: sd[a-z]
+#define EUCA_MAX_NICS                                   8   //!< nics per instance
 #define MAXBUNDLES                               MAXINSTANCES_PER_NC
 
 //! @}

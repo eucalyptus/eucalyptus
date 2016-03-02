@@ -32,6 +32,7 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.VpcNetworkInterfaceResource
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
 import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.util.Exceptions
 import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
@@ -62,25 +63,30 @@ class NetworkInterfaceHelper {
                           final String networkInterfaceId,
                           final String mac,
                           final String privateIp ) throws ResourceAllocationException {
-    PrepareNetworkResourcesResultType result = Networking.instance.prepare( new PrepareNetworkResourcesType(
-        vpc: vpcId,
-        subnet: subnetId,
-        resources: [
-            new VpcNetworkInterfaceResource(
-                ownerId: networkInterfaceId,
-                value: networkInterfaceId,
-                mac: mac,
-                privateIp: privateIp
-            )
-        ] as ArrayList<NetworkResource>
-    ) )
+    try {
+      PrepareNetworkResourcesResultType result = Networking.instance.prepare( new PrepareNetworkResourcesType(
+          vpc: vpcId,
+          subnet: subnetId,
+          resources: [
+              new VpcNetworkInterfaceResource(
+                  ownerId: networkInterfaceId,
+                  value: networkInterfaceId,
+                  mac: mac,
+                  privateIp: privateIp
+              )
+          ] as ArrayList<NetworkResource>
+      ) )
 
-    VpcNetworkInterfaceResource resource = result?.resources?.getAt( 0 ) as VpcNetworkInterfaceResource
-    String allocatedIp = resource?.privateIp
-    if ( !allocatedIp ) {
-      throw new ResourceAllocationException( "Address (${privateIp}) not available" )
+      VpcNetworkInterfaceResource resource = result?.resources?.getAt( 0 ) as VpcNetworkInterfaceResource
+      String allocatedIp = resource?.privateIp
+      if ( !allocatedIp ) {
+        throw new ResourceAllocationException( "Address (${privateIp}) not available" )
+      }
+      allocatedIp
+    } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ResourceAllocationException.class )
+      throw Exceptions.toUndeclared( e )
     }
-    allocatedIp
   }
 
   /**

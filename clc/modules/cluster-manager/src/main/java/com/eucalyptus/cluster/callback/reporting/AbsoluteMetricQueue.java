@@ -21,7 +21,6 @@ package com.eucalyptus.cluster.callback.reporting;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.cloudwatch.common.QueueThruput;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
@@ -35,6 +34,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -101,14 +102,14 @@ public class AbsoluteMetricQueue {
       try {
         List<AbsoluteMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_SIZE, dataBatch.size( ) );
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_SIZE, dataBatch.size( ) );
         final Predicate<AbsoluteMetricQueueItem> expired =
             AbsoluteMetricQueueItem.createdBefore( System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( 5 ) );
         int expiredQueueItems = CollectionUtils.reduce( dataBatch, 0, CollectionUtils.count( expired ) );
         if ( expiredQueueItems > 0 ) {
           LOG.error( "Dropping " + expiredQueueItems + " expired items from system metrics queue" );
         }
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_SIZE, dataBatch.size( ) );
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_SIZE, dataBatch.size( ) );
         long t1 = System.currentTimeMillis();
         if ( useScanningConverter ) {
           dataBatch = FullTableScanAbsoluteMetricConverter.dealWithAbsoluteMetrics(
@@ -118,23 +119,23 @@ public class AbsoluteMetricQueue {
               Iterables.filter( dataBatch, Predicates.not( expired ) ) );
         }
         long t2 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_DEAL_WITH_ABSOLUTE_METRICS, t2 - t1);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_DEAL_WITH_ABSOLUTE_METRICS, t2 - t1);
         dataBatch = foldMetrics(dataBatch);
         long t3 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_FOLD_METRICS, t3 - t2);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_FOLD_METRICS, t3 - t2);
         List<PutMetricDataType> putMetricDataTypeList =convertToPutMetricDataList(dataBatch);
         long t4 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_CONVERT_TO_PUT_METRIC_DATA_LIST, t4 - t3);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_CONVERT_TO_PUT_METRIC_DATA_LIST, t4 - t3);
         putMetricDataTypeList = CloudWatchHelper.consolidatePutMetricDataList(putMetricDataTypeList);
         long t5 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_CONSOLIDATE_PUT_METRIC_DATA_LIST, t5 - t4);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_CONSOLIDATE_PUT_METRIC_DATA_LIST, t5 - t4);
         callPutMetricData(putMetricDataTypeList);
         long t6 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_LIST_METRIC_MANAGER_CALL_PUT_METRIC_DATA, t6 - t5);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_LIST_METRIC_MANAGER_CALL_PUT_METRIC_DATA, t6 - t5);
       } catch (Throwable ex) {
         LOG.error(ex,ex);
       } finally {
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.CLUSTER_TIMING, System.currentTimeMillis() - before);
+        ThruputMetrics.addDataPoint(MonitoredAction.CLUSTER_TIMING, System.currentTimeMillis() - before);
       }
     }
   };

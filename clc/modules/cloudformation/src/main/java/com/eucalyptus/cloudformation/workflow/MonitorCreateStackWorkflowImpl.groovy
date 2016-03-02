@@ -45,19 +45,19 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
   WorkflowUtils workflowUtils = new WorkflowUtils( workflowOperations )
 
   @Override
-  void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+  void monitorCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
     try {
       Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout( (int)TimeUnit.DAYS.toSeconds( 365 ), 30 ) {
         retry( new ExponentialRetryPolicy( 2L ).withMaximumAttempts( 6 ) ){
-          activities.getCreateWorkflowExecutionCloseStatus( stackId )
+          activities.getCreateWorkflowExecutionCloseStatus(stackId)
         }
       }
       waitFor( closeStatusPromise ) { String closedStatus ->
         if ( !closedStatus ) {
           throw new InternalFailureException( "Stack create timeout stack id ${stackId}" );
         }
-        waitFor( activities.getStackStatus( stackId, accountId ) ) { String stackStatus ->
-          determineRollbackAction( closedStatus, stackStatus, stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure );
+        waitFor( activities.getStackStatus(stackId, accountId, createdStackVersion) ) { String stackStatus ->
+          determineRollbackAction( closedStatus, stackStatus, stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, createdStackVersion );
         }
       }
     } catch (Exception ex) {
@@ -67,7 +67,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
   }
 
   private Promise<String> determineRollbackAction(String closedStatus, String stackStatus, String stackId, String accountId,
-   String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+   String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
     if ("CREATE_COMPLETE".equals(stackStatus)) {
       return promiseFor(""); // just done...
     } else if ("CREATE_IN_PROGRESS".equals(stackStatus)) {
@@ -88,26 +88,26 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
       } else {
         throw new InternalFailureException("Unsupported close status for workflow " + closedStatus);
       }
-      Promise<String> cancelOutstandingResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled");
+      Promise<String> cancelOutstandingResources = activities.cancelOutstandingCreateResources(stackId, accountId, "Resource creation cancelled", createdStackVersion);
       Promise<String> setStackStatusPromise = waitFor(cancelOutstandingResources) {
         activities.setStackStatus(stackId, accountId,
-          Status.CREATE_FAILED.toString(), statusReason)
+          Status.CREATE_FAILED.toString(), statusReason, createdStackVersion)
       };
       return waitFor(setStackStatusPromise) {
         Promise<String> createGlobalStackEventPromise = activities.createGlobalStackEvent(stackId,
-          accountId, Status.CREATE_FAILED.toString(), statusReason);
+          accountId, Status.CREATE_FAILED.toString(), statusReason, createdStackVersion);
         waitFor(createGlobalStackEventPromise) {
-          performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
+          performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, createdStackVersion);
         }
       }
     } else if ("CREATE_FAILED".equals(stackStatus)) {
-      return performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure);
+      return performRollback(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, createdStackVersion);
     } else {
       throw new InternalFailureException("Unexpected stack status " + stackStatus + " during create monitoring");
     }
   }
 
-  private Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure) {
+  private Promise<String> performRollback(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
     if ("DO_NOTHING".equals(onFailure)) {
       return promiseFor("");
     } else if ("DELETE".equals(onFailure)) {
@@ -116,7 +116,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
         "Create stack failed.  Delete requested by user.",
         Status.DELETE_FAILED.toString(),
         Status.DELETE_COMPLETE.toString(),
-        true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
+        true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion);
 
     } else if ("ROLLBACK".equals(onFailure)) {
       return new CommonDeleteRollbackPromises(workflowOperations,
@@ -124,7 +124,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
         "Create stack failed.  Rollback requested by user.",
         Status.ROLLBACK_FAILED.toString(),
         Status.ROLLBACK_COMPLETE.toString(),
-        false).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId);
+        false).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion);
     } else {
       throw new InternalFailureException("Invalid onFailure value " + onFailure);
     }

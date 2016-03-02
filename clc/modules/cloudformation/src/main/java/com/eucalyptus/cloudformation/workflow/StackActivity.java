@@ -31,40 +31,54 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrati
 )
 @Activities(version="1.0")
 public interface StackActivity {
-  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
-  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId);
-  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public Boolean performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String determineCreateResourceFailures(String stackId, String accountId);
-  public String determineDeleteResourceFailures(String stackId, String accountId);
-  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason);
-  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId);
-  public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId);
+
+  public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int stackVersion);
+  public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId, int stackVersion);
+  public Boolean performCreateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion);
+  public Boolean performDeleteStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion);
+  public String determineCreateResourceFailures(String stackId, String accountId, int createdResourceVersion);
+  public String determineUpdateResourceFailures(String stackId, String accountId, int updatedResourceVersion);
+  public String determineDeleteResourceFailures(String stackId, String accountId, int deletedResourceVersion);
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion);
+  public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason, int stackVersion);
+  public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId, int createdStackVersion);
+  public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId, int updatedStackVersion);
   public String deleteAllStackRecords(String stackId, String accountId);
-  public String getResourceType(String stackId, String accountId, String resourceId);
-  public String getResourceTypeForUpdate(String stackId, String accountId, String resourceId);
-  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
+  public String getResourceType(String stackId, String accountId, String resourceId, int resourceVersion);
+  public String finalizeCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion);
+  public String finalizeDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String failDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int deletedResourceVersion);
   public String getCreateWorkflowExecutionCloseStatus(String stackId);
   public String getUpdateWorkflowExecutionCloseStatus(String stackId);
-  public String getStackStatus(String stackId, String accountId);
-  public String setStackStatus(String stackId, String accountId, String status, String statusReason);
+  public String getStackStatus(String stackId, String accountId, int stackVersion);
+  public String setStackStatus(String stackId, String accountId, String status, String statusReason, int stackVersion);
   public String cancelCreateAndMonitorWorkflows(String stackId);
   public String verifyCreateAndMonitorWorkflowsClosed(String stackId);
-  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage);
-  public String cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage);
-  public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson);
-  public String finalizeUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public Boolean performUpdateNoInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public Boolean performUpdateSomeInterruptionStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public Boolean performUpdateWithReplacementStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String finalizeUpdateCleanupStack(String stackId, String accountId, String statusMessage);
-  public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage);
-  public String finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId);
-  public String removeUpdateCleanupResourceIfAppropriateFromStack(String resourceId, String stackId, String accountId);
+  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion);
+  public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage, int createdResourceVersion);
+  public String cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage, int updatedResourceVersion);
+  public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int updatedResourceVersion);
+  public String finalizeUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public Boolean performUpdateStep(String updateTypeAndDirectionStr, String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String finalizeUpdateCleanupStack(String stackId, String accountId, String statusMessage, int updatedStackVersion);
+  public String initUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String failUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int updatedResourceVersion);
+  public String finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+
+  public String initUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
+  public String finalizeUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
+
+
+  public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion);
+  public String failUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion, String errorMessage);
+
+
+  public String finalizeUpdateRollbackCleanupStack(String stackId, String accountId, String statusMessage, int rolledBackStackVersion);
+  public String initUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
+  public String failUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int rolledBackResourceVersion);
+  public String finalizeUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
+
+  public String rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
+
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,9 @@ public class VpcConfiguration {
   @ConfigurableField( initial = "5", description = "Maximum number of associated security groups for each network interface ." )
   public static volatile int securityGroupsPerNetworkInterface = 5;
 
+  @ConfigurableField( initial = "5", description = "Maximum number of NAT gateways for each availability zone." )
+  public static volatile int natGatewaysPerAvailabilityZone = 5;
+
   @ConfigurableField( initial = "true", description = "Enable default VPC." )
   public static volatile boolean defaultVpc = true;
 
@@ -86,6 +89,8 @@ public class VpcConfiguration {
   public static int getSecurityGroupsPerNetworkInterface() {
     return securityGroupsPerNetworkInterface;
   }
+
+  public static int getNatGatewaysPerAvailabilityZone() { return natGatewaysPerAvailabilityZone; }
 
   public static boolean getDefaultVpc() { return defaultVpc; }
 }

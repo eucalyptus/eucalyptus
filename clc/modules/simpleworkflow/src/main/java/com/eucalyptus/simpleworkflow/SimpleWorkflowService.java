@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ import com.eucalyptus.ws.Role;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -125,7 +125,7 @@ public class SimpleWorkflowService {
               userFullName,
               request.getName( ),
               request.getDescription( ),
-              Objects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ), 0 ), 0 ) );
+              MoreObjects.firstNonNull( parsePeriod( request.getWorkflowExecutionRetentionPeriodInDays( ), 0 ), 0 ) );
           return domains.save( domain );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
@@ -312,7 +312,7 @@ public class SimpleWorkflowService {
           Ordering.natural( ).onResultOf( ActivityTypes.ActivityTypeInfoStringFunctions.NAME );
       Collections.sort(
           activityTypeInfos.getTypeInfos( ),
-          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
+          MoreObjects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -437,7 +437,7 @@ public class SimpleWorkflowService {
           Ordering.natural( ).onResultOf( WorkflowTypes.WorkflowTypeInfoStringFunctions.NAME );
       Collections.sort(
           workflowTypeInfos.getTypeInfos( ),
-          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
+          MoreObjects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -699,7 +699,7 @@ public class SimpleWorkflowService {
           Ordering.natural( ).onResultOf( WorkflowExecutions.WorkflowExecutionInfoDateFunctions.START_TIMESTAMP );
       Collections.sort(
           workflowExecutionInfos.getExecutionInfos( ),
-          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
+          MoreObjects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -729,7 +729,7 @@ public class SimpleWorkflowService {
           Ordering.natural( ).onResultOf( WorkflowExecutions.WorkflowExecutionInfoDateFunctions.START_TIMESTAMP );
       Collections.sort(
           workflowExecutionInfos.getExecutionInfos( ),
-          Objects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
+          MoreObjects.firstNonNull( request.getReverseOrder( ), Boolean.FALSE ) ? ordering.reverse() : ordering );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -785,7 +785,7 @@ public class SimpleWorkflowService {
           if ( request.getTaskList( ) == null && workflowType.getDefaultTaskList( ) == null ) {
             throw upClient( "DefaultUndefinedFault", "Default task list undefined" );
           }
-          final String childPolicy = Objects.firstNonNull(
+          final String childPolicy = MoreObjects.firstNonNull(
               request.getChildPolicy( ),
               workflowType.getDefaultChildPolicy( ) );
           final String taskList = request.getTaskList( ) == null ?
@@ -823,7 +823,7 @@ public class SimpleWorkflowService {
                       .withWorkflowType( request.getWorkflowType( ) ),
                   new DecisionTaskScheduledEventAttributes( )
                       .withStartToCloseTimeout( taskStartToCloseTimeoutStr )
-                      .withTaskList( request.getTaskList( ) )
+                      .withTaskList( new TaskList( ).withName( taskList ) )
               )
           );
           return workflowExecutions.save( workflowExecution );
@@ -1265,7 +1265,7 @@ public class SimpleWorkflowService {
                           .withStartedEventId( started.getEventId() )
                           .withPreviousStartedEventId( previousStarted.transform( WorkflowExecutions.WorkflowHistoryEventLongFunctions.EVENT_ID ).or( 0L ) )
                           .withEvents( Collections2.transform(
-                              Objects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
+                              MoreObjects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
                               TypeMappers.lookup( WorkflowHistoryEvent.class, HistoryEvent.class )
                           ) );
                     }
@@ -1444,13 +1444,124 @@ public class SimpleWorkflowService {
                       ) );
                       break;
                     case "ContinueAsNewWorkflowExecution":
-                      workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
-                          workflowExecution,
-                          new ContinueAsNewWorkflowExecutionFailedEventAttributes()
-                              .withCause( ContinueAsNewWorkflowExecutionFailedCause.OPERATION_NOT_PERMITTED )
-                              .withDecisionTaskCompletedEventId( completedId )
-                      ) );
-                      scheduleDecisionTask = true;
+                      final ContinueAsNewWorkflowExecutionDecisionAttributes continueAsNew =
+                          decision.getContinueAsNewWorkflowExecutionDecisionAttributes( );
+
+                      ContinueAsNewWorkflowExecutionFailedCause failedCause = null;
+                      if ( Pending == workflowExecution.getDecisionStatus( ) ) {
+                        failedCause = ContinueAsNewWorkflowExecutionFailedCause.UNHANDLED_DECISION;
+                      }
+
+                      WorkflowType workflowType = null;
+                      if ( failedCause == null ) try {
+                        workflowType = workflowTypes.lookupByExample(
+                            WorkflowType.exampleWithUniqueName(
+                                accountFullName,
+                                workflowExecution.getDomainName( ),
+                                workflowExecution.getWorkflowType( ).getName( ),
+                                MoreObjects.firstNonNull(
+                                    continueAsNew.getWorkflowTypeVersion( ),
+                                    workflowExecution.getWorkflowType( ).getWorkflowVersion( ) ) ),
+                            accountFullName,
+                            workflowExecution.getWorkflowType( ).getName( ),
+                            Predicates.<WorkflowType>alwaysTrue( ),
+                            Functions.<WorkflowType>identity( ) );
+
+                        if ( !WorkflowType.Status.Registered.apply( workflowType ) ) {
+                          failedCause = ContinueAsNewWorkflowExecutionFailedCause.WORKFLOW_TYPE_DEPRECATED;
+                        }
+                      } catch ( SwfMetadataNotFoundException e ) {
+                        failedCause = ContinueAsNewWorkflowExecutionFailedCause.WORKFLOW_TYPE_DOES_NOT_EXIST;
+                      } catch ( SwfMetadataException e ) {
+                        throw up( e );
+                      }
+
+                      if ( failedCause == null ) {
+                        final Integer requestedExecutionStartToCloseTimeout = parsePeriod( continueAsNew.getExecutionStartToCloseTimeout( ), -1 );
+                        final Integer requestedTaskStartToCloseTimeout = parsePeriod( continueAsNew.getTaskStartToCloseTimeout( ), -1 );
+                        if ( continueAsNew.getChildPolicy( ) == null && workflowType.getDefaultChildPolicy( ) == null ) {
+                          failedCause = ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_CHILD_POLICY_UNDEFINED;
+                        } else if ( requestedExecutionStartToCloseTimeout == null && workflowType.getDefaultExecutionStartToCloseTimeout( ) == null ) {
+                          failedCause = ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_EXECUTION_START_TO_CLOSE_TIMEOUT_UNDEFINED;
+                        } else if ( continueAsNew.getTaskList( ) == null && workflowType.getDefaultTaskList( ) == null ) {
+                          failedCause = ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_TASK_LIST_UNDEFINED;
+                        } else if ( requestedTaskStartToCloseTimeout == null && workflowType.getDefaultTaskStartToCloseTimeout( ) == null ) {
+                          failedCause = ContinueAsNewWorkflowExecutionFailedCause.DEFAULT_TASK_START_TO_CLOSE_TIMEOUT_UNDEFINED;
+                        } else {
+                          final String childPolicy = MoreObjects.firstNonNull(
+                              continueAsNew.getChildPolicy( ),
+                              workflowType.getDefaultChildPolicy( ) );
+                          final String taskList = continueAsNew.getTaskList( ) == null ?
+                              workflowType.getDefaultTaskList( ):
+                              continueAsNew.getTaskList( ).getName( );
+                          final Integer executionStartToCloseTimeout = MoreObjects.firstNonNull(
+                              requestedExecutionStartToCloseTimeout,
+                              workflowType.getDefaultExecutionStartToCloseTimeout( ) );
+                          final Integer taskStartToCloseTimeout = MoreObjects.firstNonNull(
+                              requestedTaskStartToCloseTimeout,
+                              workflowType.getDefaultTaskStartToCloseTimeout( ) );
+                          final String taskStartToCloseTimeoutStr = taskStartToCloseTimeout < 0
+                              ? "NONE" :
+                              String.valueOf( taskStartToCloseTimeout );
+                          final WorkflowExecution workflowExecutionContinued = WorkflowExecution.create(
+                              userFullName,
+                              UUID.randomUUID( ).toString( ),
+                              domain,
+                              workflowType,
+                              workflowExecution.getWorkflowId( ),
+                              childPolicy,
+                              taskList,
+                              executionStartToCloseTimeout,
+                              taskStartToCloseTimeout < 0 ? null : taskStartToCloseTimeout,
+                              continueAsNew.getTagList( ),
+                              Lists.newArrayList(
+                                  new WorkflowExecutionStartedEventAttributes( )
+                                      .withChildPolicy( childPolicy )
+                                      .withContinuedExecutionRunId( workflowExecution.getDisplayName( ) )
+                                      .withExecutionStartToCloseTimeout( String.valueOf( executionStartToCloseTimeout ) )
+                                      .withInput( continueAsNew.getInput( ) )
+                                      .withParentInitiatedEventId( 0L )
+                                      .withTaskList( new TaskList( ).withName( taskList ) )
+                                      .withTagList( continueAsNew.getTagList( ) )
+                                      .withTaskStartToCloseTimeout( taskStartToCloseTimeoutStr )
+                                      .withWorkflowType( new com.eucalyptus.simpleworkflow.common.model.WorkflowType( )
+                                        .withName( workflowType.getDisplayName( ) )
+                                        .withVersion( workflowType.getWorkflowVersion( ) )
+                                      ),
+                                  new DecisionTaskScheduledEventAttributes( )
+                                      .withStartToCloseTimeout( taskStartToCloseTimeoutStr )
+                                      .withTaskList( new TaskList( ).withName( taskList ) )
+                              )
+                          );
+                          try {
+                            workflowExecutions.save( workflowExecutionContinued );
+                          } catch ( SwfMetadataException e ) {
+                            throw up( e );
+                          }
+
+                          workflowExecution.closeWorkflow(
+                              WorkflowExecution.CloseStatus.Continued_As_New,
+                              WorkflowHistoryEvent.create(
+                                  workflowExecution,
+                                  new WorkflowExecutionCompletedEventAttributes( )
+                                      .withDecisionTaskCompletedEventId( completedId )
+                              ) );
+
+                          deleteActivities( activityTasks, accountFullName, workflowExecution );
+
+                          notificationTypeListPairs.add( Pair.pair( "decision", taskList ) );
+                        }
+                      }
+
+                      if ( failedCause != null ) {
+                        workflowExecution.addHistoryEvent( WorkflowHistoryEvent.create(
+                            workflowExecution,
+                            new ContinueAsNewWorkflowExecutionFailedEventAttributes( )
+                                .withCause( ContinueAsNewWorkflowExecutionFailedCause.OPERATION_NOT_PERMITTED )
+                                .withDecisionTaskCompletedEventId( completedId )
+                        ) );
+                        scheduleDecisionTask = true;
+                      }
                       break;
                     case "FailWorkflowExecution":
                       final FailWorkflowExecutionDecisionAttributes failed =
@@ -1952,7 +2063,7 @@ public class SimpleWorkflowService {
                       WorkflowHistoryEvent.create(
                           workflowExecution,
                           new WorkflowExecutionTerminatedEventAttributes()
-                              .withChildPolicy( Objects.firstNonNull(
+                              .withChildPolicy( MoreObjects.firstNonNull(
                                   request.getChildPolicy(),
                                   workflowExecution.getChildPolicy() ) )
                               .withDetails( request.getDetails() )
@@ -1999,7 +2110,7 @@ public class SimpleWorkflowService {
               final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
               return new History( )
                   .withEvents( Collections2.transform(
-                      Objects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
+                      MoreObjects.firstNonNull( request.isReverseOrder( ), Boolean.FALSE ) ? reverseEvents : events,
                       TypeMappers.lookup( WorkflowHistoryEvent.class, HistoryEvent.class )
                   ) );
             }
@@ -2190,7 +2301,7 @@ public class SimpleWorkflowService {
           "DefaultUndefinedFault" ,
           description + " is required" );
     }
-    return Objects.firstNonNull( value, defaultValue );
+    return MoreObjects.firstNonNull( value, defaultValue );
   }
 
   private static void notifyTaskList( final AccountFullName accountFullName,

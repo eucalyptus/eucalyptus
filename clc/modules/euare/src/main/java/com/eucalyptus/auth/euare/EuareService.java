@@ -468,6 +468,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
+        } else if ( AuthException.NO_SUCH_LOGIN_PROFILE.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Cannot find Login Profile for User " + userFound.getName( ) );
         }
       }
       LOG.error( e, e );
@@ -1069,8 +1071,6 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove user from group by " + ctx.getUser( ).getName( ) );
-        } else if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY, "User " + request.getUserName( ) + " is not in the group " + request.getGroupName( ) );
         }
       }
       LOG.error( e, e );
@@ -1279,8 +1279,6 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add user to group by " + ctx.getUser( ).getName( ) );
-        } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " is already in the group " + request.getGroupName( ) );
         }
       }
       LOG.error( e, e );

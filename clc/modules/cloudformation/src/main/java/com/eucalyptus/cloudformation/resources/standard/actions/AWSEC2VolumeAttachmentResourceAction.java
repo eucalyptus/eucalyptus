@@ -31,6 +31,7 @@ import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttachVolumeResponseType;
@@ -51,6 +52,8 @@ import com.fasterxml.jackson.databind.node.TextNode;
 
 import javax.annotation.Nullable;
 
+import java.util.Objects;
+
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
 
 /**
@@ -70,8 +73,28 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
 
 
   public AWSEC2VolumeAttachmentResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    // update not supported
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    UpdateType updateType = UpdateType.NONE;
+    AWSEC2VolumeAttachmentResourceAction otherAction = (AWSEC2VolumeAttachmentResourceAction) resourceAction;
+    if (!Objects.equals(properties.getDevice(), otherAction.properties.getDevice())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+
+    if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+
+    if (!Objects.equals(properties.getVolumeId(), otherAction.properties.getVolumeId())) {
+      updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);
+    }
+    return updateType;
+  }
+
 
   private enum CreateSteps implements Step {
     ATTACH_VOLUME {
@@ -153,6 +176,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         AWSEC2VolumeAttachmentResourceAction action = (AWSEC2VolumeAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
@@ -225,7 +249,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
     }
 
     private static boolean notCreatedOrNoInstanceOrNoVolume(AWSEC2VolumeAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
-      if (action.info.getPhysicalResourceId() == null) return true;
+      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
       DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
       describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );

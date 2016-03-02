@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIMidonet
 import com.eucalyptus.cluster.NIMidonetGateway
 import com.eucalyptus.cluster.NIMidonetGateways
+import com.eucalyptus.cluster.NINatGateway
 import com.eucalyptus.cluster.NINetworkAcl
 import com.eucalyptus.cluster.NINetworkAclEntry
 import com.eucalyptus.cluster.NINetworkInterface
@@ -54,10 +55,12 @@ import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.eucalyptus.compute.common.internal.vpc.DhcpOption
 import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet
 import com.eucalyptus.compute.common.internal.vpc.InternetGateway
+import com.eucalyptus.compute.common.internal.vpc.NatGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcl
 import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry
 import com.eucalyptus.compute.common.internal.vpc.NetworkAcls
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.common.internal.vpc.Route
 import com.eucalyptus.compute.common.internal.vpc.RouteTable
 import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
@@ -211,6 +214,7 @@ class NetworkInfoBroadcasts {
     Iterable<NetworkAclNetworkView> networkAcls = networkInfoSource.networkAcls
     Iterable<RouteTableNetworkView> routeTables = networkInfoSource.routeTables
     Iterable<InternetGatewayNetworkView> internetGateways = networkInfoSource.internetGateways
+    Iterable<NatGatewayNetworkView> natGateways = networkInfoSource.natGateways
     Iterable<NetworkInterfaceNetworkView> networkInterfaces = networkInfoSource.networkInterfaces
     Set<String> activeInstances = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 500 ) ) {
       Set<String> instanceIds, VmInstanceNetworkView inst -> instanceIds.add( inst.id ); instanceIds
@@ -227,7 +231,7 @@ class NetworkInfoBroadcasts {
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
         map
     }).asMap( )
-    Predicate<RouteNetworkView> activeRoutePredicate = activeRoutePredicate( internetGateways, instances )
+    Predicate<RouteNetworkView> activeRoutePredicate = activeRoutePredicate( internetGateways, natGateways, instances )
     info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
       final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
       new NIVpc(
@@ -265,6 +269,18 @@ class NetworkInfoBroadcasts {
                 routes: Lists.newArrayList( Iterables.transform( Iterables.filter( routeTable.routes, activeRoutePredicate ), TypeMappers.lookup( RouteNetworkView, NIRoute ) ) ) as List<NIRoute>
             )
           },
+          natGateways.findAll{ NatGatewayNetworkView natGateway -> natGateway.vpcId == vpc.id && natGateway.state == NatGateway.State.available }.collect{ Object natGatewayObj ->
+            NatGatewayNetworkView natGateway = natGatewayObj as NatGatewayNetworkView
+            new NINatGateway(
+                name: natGateway.id,
+                ownerId: natGateway.ownerAccountNumber,
+                vpc: natGateway.vpcId,
+                subnet: natGateway.subnetId,
+                macAddress: Strings.emptyToNull( natGateway.macAddress ),
+                publicIp: VmNetworkConfig.DEFAULT_IP==natGateway.publicIp||dirtyPublicAddresses.contains(natGateway.publicIp) ? null : natGateway.publicIp,
+                privateIp: natGateway.privateIp,
+            )
+          },
           vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
       )
     } )
@@ -272,7 +288,13 @@ class NetworkInfoBroadcasts {
     // populate instances
     Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
       ListMultimap<String,NetworkInterfaceNetworkView> map, NetworkInterfaceNetworkView networkInterface ->
-        if ( networkInterface.instanceId ) map.put( networkInterface.instanceId, networkInterface )
+        if ( networkInterface.instanceId &&
+            networkInterface.state != NetworkInterface.State.available &&
+            networkInterface.attachmentStatus != NetworkInterfaceAttachment.Status.detaching &&
+            networkInterface.attachmentStatus != NetworkInterfaceAttachment.Status.detached
+        ) {
+          map.put( networkInterface.instanceId, networkInterface )
+        }
         map
     }).asMap( )
     info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
@@ -290,6 +312,7 @@ class NetworkInfoBroadcasts {
                 name: networkInterface.id,
                 ownerId: networkInterface.ownerAccountNumber,
                 deviceIndex: networkInterface.deviceIndex,
+                attachmentId: networkInterface.attachmentId,
                 macAddress: networkInterface.macAddress,
                 privateIp: networkInterface.privateIp,
                 publicIp: dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp,
@@ -383,15 +406,20 @@ class NetworkInfoBroadcasts {
 
   private static Predicate<RouteNetworkView> activeRoutePredicate(
       final Iterable<InternetGatewayNetworkView> internetGateways,
+      final Iterable<NatGatewayNetworkView> natGateways,
       final Iterable<VmInstanceNetworkView> instances
   ) {
     final Set<String> instanceIds = Sets.newHashSet( instances.collect{ VmInstanceNetworkView vm -> vm.id } )
     final Set<String> internetGatewayIds = Sets.newHashSet( internetGateways
         .findAll{ InternetGatewayNetworkView ig -> ig.vpcId } // only attached gateways have active routes
         .collect{ Object ig -> ((InternetGatewayNetworkView)ig).id } )
+    final Set<String> natGatewayIds = Sets.newHashSet( natGateways
+        .findAll{ NatGatewayNetworkView ng -> ng.state == NatGateway.State.available }
+        .collect{ Object ng -> ((NatGatewayNetworkView)ng).id } )
     return { RouteNetworkView routeNetworkView ->
       (!routeNetworkView.gatewayId && !routeNetworkView.networkInterfaceId) || // local route
           internetGatewayIds.contains( routeNetworkView.gatewayId ) ||
+          natGatewayIds.contains( routeNetworkView.natGatewayId ) ||
           instanceIds.contains( routeNetworkView.instanceId )
     } as Predicate<RouteNetworkView>
   }
@@ -482,6 +510,7 @@ class NetworkInfoBroadcasts {
     Iterable<RouteTableNetworkView> getRouteTables( );
     Iterable<InternetGatewayNetworkView> getInternetGateways( );
     Iterable<NetworkInterfaceNetworkView> getNetworkInterfaces( );
+    Iterable<NatGatewayNetworkView> getNatGateways( );
     Map<String,Iterable<? extends VersionedNetworkView>> getView( );
   }
 
@@ -909,6 +938,7 @@ class NetworkInfoBroadcasts {
     boolean active
     String destinationCidr
     String gatewayId
+    String natGatewayId
     String networkInterfaceId
     String instanceId
   }
@@ -941,6 +971,7 @@ class NetworkInfoBroadcasts {
           route.state == Route.State.active,
           route.destinationCidr,
           route.internetGatewayId,
+          route.natGatewayId,
           route.networkInterfaceId,
           route.instanceId
       )
@@ -955,8 +986,9 @@ class NetworkInfoBroadcasts {
     NIRoute apply(@Nullable final RouteNetworkView routeNetworkView) {
       new NIRoute(
           routeNetworkView.destinationCidr,
-          routeNetworkView.gatewayId?:(routeNetworkView.networkInterfaceId?null:'local'),
-          routeNetworkView.networkInterfaceId
+          routeNetworkView.gatewayId?:(routeNetworkView.networkInterfaceId||routeNetworkView.natGatewayId?null:'local'),
+          routeNetworkView.networkInterfaceId,
+          routeNetworkView.natGatewayId
       )
     }
   }
@@ -992,8 +1024,11 @@ class NetworkInfoBroadcasts {
   static class NetworkInterfaceNetworkView implements Comparable<NetworkInterfaceNetworkView>, VersionedNetworkView {
     String id
     int version
+    NetworkInterface.State state
+    NetworkInterfaceAttachment.Status attachmentStatus
     String ownerAccountNumber
     String instanceId
+    String attachmentId
     Integer deviceIndex
     String macAddress
     String privateIp
@@ -1017,8 +1052,11 @@ class NetworkInfoBroadcasts {
       new NetworkInterfaceNetworkView(
           networkInterface.displayName,
           networkInterface.version,
+          networkInterface.state,
+          networkInterface?.attachment?.status ?: NetworkInterfaceAttachment.Status.detached,
           networkInterface.ownerAccountNumber,
           networkInterface.attachment?.instanceId,
+          networkInterface.attachment?.attachmentId,
           networkInterface.attachment?.deviceIndex,
           networkInterface.macAddress,
           networkInterface.privateIpAddress,
@@ -1027,6 +1065,43 @@ class NetworkInfoBroadcasts {
           networkInterface.vpc.displayName,
           networkInterface.subnet.displayName,
           networkInterface.networkGroups.collect{ NetworkGroup group -> group.groupId }
+      )
+    }
+  }
+
+  @Immutable
+  static class NatGatewayNetworkView implements Comparable<NatGatewayNetworkView>, VersionedNetworkView {
+    String id
+    int version
+    NatGateway.State state
+    String ownerAccountNumber
+    String macAddress
+    String privateIp
+    String publicIp
+    String vpcId
+    String subnetId
+
+    int compareTo( NatGatewayNetworkView o ) {
+      this.id <=> o.id
+    }
+  }
+
+  @TypeMapper
+  enum NatGatewayToNatGatewayNetworkView implements Function<NatGateway,NatGatewayNetworkView> {
+    INSTANCE;
+
+    @Override
+    NatGatewayNetworkView apply( final NatGateway natGateway ) {
+      new NatGatewayNetworkView(
+          natGateway.displayName,
+          natGateway.version,
+          natGateway.state,
+          natGateway.ownerAccountNumber,
+          natGateway.macAddress,
+          natGateway.privateIpAddress,
+          natGateway.publicIpAddress,
+          natGateway.vpcId,
+          natGateway.subnetId
       )
     }
   }

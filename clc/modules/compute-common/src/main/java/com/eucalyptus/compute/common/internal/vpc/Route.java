@@ -70,6 +70,9 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
   @Column( name = "metadata_internet_gateway", updatable = false )
   private String internetGatewayId;
 
+  @Column( name = "metadata_nat_gateway", updatable = false )
+  private String natGatewayId;
+
   @Column( name = "metadata_network_interface", updatable = false )
   private String networkInterfaceId;
 
@@ -102,6 +105,14 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
   protected Route( final RouteTable routeTable,
                    final RouteOrigin origin,
                    final String destinationCidr,
+                   final NatGateway natGateway ) {
+    this( routeTable, origin, destinationCidr );
+    setNatGatewayId( natGateway.getDisplayName( ) );
+  }
+
+  protected Route( final RouteTable routeTable,
+                   final RouteOrigin origin,
+                   final String destinationCidr,
                    final NetworkInterface networkInterface ) {
     this( routeTable, origin, destinationCidr );
     setNetworkInterfaceId( networkInterface.getDisplayName( ) );
@@ -118,6 +129,13 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
                               final String destinationCidr,
                               final InternetGateway internetGateway ) {
     return new Route( routeTable, origin, destinationCidr, internetGateway );
+  }
+
+  public static Route create( final RouteTable routeTable,
+                              final RouteOrigin origin,
+                              final String destinationCidr,
+                              final NatGateway natGateway ) {
+    return new Route( routeTable, origin, destinationCidr, natGateway );
   }
 
   public static Route create( final RouteTable routeTable,
@@ -165,6 +183,14 @@ public class Route extends AbstractStatefulPersistent<Route.State> {
 
   public void setInternetGatewayId( final String internetGatewayId ) {
     this.internetGatewayId = internetGatewayId;
+  }
+
+  public String getNatGatewayId( ) {
+    return natGatewayId;
+  }
+
+  public void setNatGatewayId( final String natGatewayId ) {
+    this.natGatewayId = natGatewayId;
   }
 
   public String getNetworkInterfaceId( ) {

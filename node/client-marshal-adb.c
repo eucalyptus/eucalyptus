@@ -307,7 +307,7 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, char *rootDirective, char **groupIds, int groupIdsSize, netConfig * secNetCfgs, int secNetCfgsLen, ncInstance ** outInstPtr)
 {
     int i = 0;
     int status = 0;
@@ -347,6 +347,8 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     adb_ncRunInstanceType_set_accountId(request, env, accountId);
     adb_ncRunInstanceType_set_keyName(request, env, keyName);
     adb_netConfigType_t *netConfig = adb_netConfigType_create(env);
+    adb_netConfigType_set_interfaceId(netConfig, env, netparams->interfaceId);
+    adb_netConfigType_set_device(netConfig, env, netparams->device);
     adb_netConfigType_set_privateMacAddress(netConfig, env, netparams->privateMac);
     adb_netConfigType_set_privateIp(netConfig, env, netparams->privateIp);
     adb_netConfigType_set_publicIp(netConfig, env, netparams->publicIp);
@@ -368,6 +370,18 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
 
     for (i = 0; i < groupIdsSize; i++) {
         adb_ncRunInstanceType_add_groupIds(request, env, groupIds[i]);
+    }
+
+    for (i = 0; i < secNetCfgsLen; i++) {
+        adb_netConfigType_t *secNetConfig = adb_netConfigType_create(env);
+        adb_netConfigType_set_interfaceId(secNetConfig, env, secNetCfgs[i].interfaceId);
+        adb_netConfigType_set_device(secNetConfig, env, secNetCfgs[i].device);
+        adb_netConfigType_set_privateMacAddress(secNetConfig, env, secNetCfgs[i].privateMac);
+        adb_netConfigType_set_privateIp(secNetConfig, env, secNetCfgs[i].privateIp);
+        adb_netConfigType_set_publicIp(secNetConfig, env, secNetCfgs[i].publicIp);
+        adb_netConfigType_set_vlan(secNetConfig, env, secNetCfgs[i].vlan);
+        adb_netConfigType_set_networkIndex(secNetConfig, env, secNetCfgs[i].networkIndex);
+        adb_ncRunInstanceType_add_secondaryNetConfig(request, env, secNetConfig);
     }
 
     adb_ncRunInstance_set_ncRunInstance(input, env, request);

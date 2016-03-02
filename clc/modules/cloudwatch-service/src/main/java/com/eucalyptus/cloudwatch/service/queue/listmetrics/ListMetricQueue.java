@@ -19,10 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.service.queue.listmetrics;
 
-import com.eucalyptus.cloudwatch.common.QueueThruput;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.SimpleMetricEntity;
+import com.eucalyptus.util.metrics.MonitoredAction;
+import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -93,23 +94,23 @@ public class ListMetricQueue {
       try {
         List<ListMetricQueueItem> dataBatch = Lists.newArrayList();
         dataQueue.drainTo(dataBatch);
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_SIZE, dataBatch.size( ));
+        ThruputMetrics.addDataPoint(MonitoredAction.LIST_METRIC_SIZE, dataBatch.size( ));
         long t2 = System.currentTimeMillis();
         dataBatch = prune(dataBatch);
         long t3 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_PRUNE, t3-t2);
+        ThruputMetrics.addDataPoint(MonitoredAction.LIST_METRIC_PRUNE, t3-t2);
         List<ListMetric> listMetrics = convertToListMetrics(dataBatch);
         long t4 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_CONVERT, t4-t3);
+        ThruputMetrics.addDataPoint(MonitoredAction.LIST_METRIC_CONVERT, t4-t3);
         ListMetricManager.addMetricBatch(listMetrics);
         long t5 = System.currentTimeMillis();
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_MERTIC_ADD_BATCH, t5-t4);
+        ThruputMetrics.addDataPoint(MonitoredAction.LIST_METRIC_MERTIC_ADD_BATCH, t5-t4);
       } catch (Throwable ex) {
         LOG.debug("ListMetricQueue:error");
         ex.printStackTrace();
         LOG.error(ex,ex);
       } finally {
-        QueueThruput.addDataPoint(QueueThruput.MonitoredAction.LIST_METRIC_TIMING, System.currentTimeMillis()-before);
+        ThruputMetrics.addDataPoint(MonitoredAction.LIST_METRIC_TIMING, System.currentTimeMillis()-before);
       }
     }
   };

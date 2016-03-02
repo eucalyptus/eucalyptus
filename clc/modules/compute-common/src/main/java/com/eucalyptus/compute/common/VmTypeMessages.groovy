@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,11 +27,8 @@
 package com.eucalyptus.compute.common
 
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.component.annotation.ComponentMessage
-import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.util.MessageValidation
 import com.google.common.collect.Maps
-import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -58,6 +55,7 @@ public class VmTypeDetails extends EucalyptusData {
   Integer cpu;
   Integer disk;
   Integer memory;
+  Integer networkInterfaces
   ArrayList<VmTypeZoneStatus> availability = new ArrayList<VmTypeZoneStatus>( );
   ArrayList<VmTypeEphemeralDisk> ephemeralDisk = new ArrayList<VmTypeEphemeralDisk>( );
 }
@@ -92,6 +90,8 @@ public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
   Integer disk;
   @FieldRange( min = 1l )
   Integer memory;
+  @FieldRange( min = 1l, max = 8l )
+  Integer networkInterfaces;
 }
 public class ModifyInstanceTypeAttributeResponseType extends VmTypeMessage {
   VmTypeDetails instanceType;

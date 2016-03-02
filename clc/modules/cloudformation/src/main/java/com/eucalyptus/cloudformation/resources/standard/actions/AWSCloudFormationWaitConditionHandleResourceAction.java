@@ -35,6 +35,7 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFo
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.crypto.Crypto;
@@ -47,6 +48,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -59,9 +61,13 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
   public static volatile String WAIT_CONDITION_BUCKET_PREFIX = "cf-waitcondition";
   private AWSCloudFormationWaitConditionHandleProperties properties = new AWSCloudFormationWaitConditionHandleProperties();
   private AWSCloudFormationWaitConditionHandleResourceInfo info = new AWSCloudFormationWaitConditionHandleResourceInfo();
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction) {
+    return UpdateType.UNSUPPORTED;
+  }
 
   public AWSCloudFormationWaitConditionHandleResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
 
   private enum CreateSteps implements Step {
@@ -95,6 +101,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
           s3c.refreshEndpoint( true );
           String url = s3c.generatePresignedUrl( bucketName, keyName, action.in12Hours(), HttpMethod.PUT ).toString();
           action.info.setPhysicalResourceId( url );
+          action.info.setCreatedEnoughToDelete(true);
         }
         return action;
       }
@@ -126,7 +133,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationWaitConditionHandleResourceAction action = (AWSCloudFormationWaitConditionHandleResourceAction) resourceAction;
-        if (action.info.getPhysicalResourceId() == null) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         try ( final EucaS3Client s3c = EucaS3ClientFactory.getEucaS3Client(new CloudFormationAWSCredentialsProvider()) ) {
           ObjectNode objectNode = (ObjectNode) JsonHelper.getJsonNodeFromString(action.info.getEucaParts());
           if (!"1.0".equals(objectNode.get("version").asText())) throw new Exception("Invalid version for eucaParts");
