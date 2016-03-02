@@ -91,6 +91,7 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
     //LPT Exception e = new Exception();
     LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()");
 
+    LOG.debug("LPT: event's message is of class " + event.getMessage().getClass());
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
@@ -103,14 +104,16 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
       // content length, to match AWS's behavior.
       httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
 
+      LOG.debug("LPT: msg is of class " + msg.getClass());
       if (msg instanceof PreflightCheckCorsResponseType) {
+        PreflightCheckCorsResponseType preflightCors = (PreflightCheckCorsResponseType) msg;
+        httpResponse.setStatus(preflightCors.getStatus());
         //LPT e = new Exception();
         LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my status code is " + 
             httpResponse.getStatus());
-        PreflightCheckCorsResponseType preflightCors = (PreflightCheckCorsResponseType) msg;
       }
-      // Since an OPTIONS response, never include a body
-      httpResponse.setMessage(null);
+      //LPT Not true in error responses!: Since an OPTIONS response, never include a body
+      //httpResponse.setMessage(null);
     }
   }
 }

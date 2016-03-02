@@ -35,6 +35,11 @@ class S3ErrorCodeStrings {
   public static final String BucketAlreadyExists = "BucketAlreadyExists"
   public static final String BucketAlreadyOwnedByYou = "BucketAlreadyOwnedByYou"
   public static final String BucketNotEmpty = "BucketNotEmpty"
+  public static final String CorsConfigUnsupportedMethod = "CorsConfigUnsupportedMethod"
+  public static final String CorsPreflightInvalidMethod = "CorsPreflightInvalidMethod"
+  public static final String CorsPreflightNoConfig = "CorsPreflightNoConfig"
+  public static final String CorsPreflightNoOrigin = "CorsPreflightNoOrigin"
+  public static final String CorsPreflightNotAllowed = "CorsPreflightNotAllowed"
   public static final String CredentialsNotSupported = "CredentialsNotSupported"
   public static final String CrossLocationLoggingProhibited = "CrossLocationLoggingProhibited"
   public static final String EntityTooSmall = "EntityTooSmall"
@@ -197,6 +202,92 @@ class BucketNotEmptyException extends S3Exception {
     this.resource = resource;
   }
 }
+
+// On a CORS PUT of a new CORS configuration, if a bad HTTP verb (e.g. "YUCK")
+// or an unsupported HTTP verb (e.g. "OPTIONS") is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsConfigUnsupportedMethodException extends S3Exception {
+  def CorsConfigUnsupportedMethodException() {
+    super(S3ErrorCodeStrings.CorsConfigUnsupportedMethod,
+    "Found unsupported HTTP method in CORS config.",
+    HttpResponseStatus.BAD_REQUEST);
+  }
+
+  def CorsConfigUnsupportedMethodException(String method) {
+    super(S3ErrorCodeStrings.CorsConfigUnsupportedMethod,
+    "Found unsupported HTTP method in CORS config. Unsupported method is " + method,
+    HttpResponseStatus.BAD_REQUEST);
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no HTTP verb (method) is provided,
+// or if a bad HTTP verb (e.g. "YUCK") or an unsupported HTTP verb
+// (e.g. "OPTIONS") is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsPreflightInvalidMethodException extends S3Exception {
+  def CorsPreflightInvalidMethodException() {
+    super(S3ErrorCodeStrings.CorsPreflightInvalidMethod,
+    "Invalid Access-Control-Request-Method.",
+    HttpResponseStatus.BAD_REQUEST);
+  }
+
+  def CorsPreflightInvalidMethodException(String method) {
+    super(S3ErrorCodeStrings.CorsPreflightInvalidMethod,
+    "Invalid Access-Control-Request-Method: " + method,
+    HttpResponseStatus.BAD_REQUEST);
+  }
+}
+
+// On a CORS preflight OPTIONS request, when no CORS configuration exists,
+// to match AWS's response, return 403 Forbidden with this error code
+// and message.
+class CorsPreflightNoConfigException extends S3Exception {
+  def CorsPreflightNoConfigException() {
+    super(S3ErrorCodeStrings.CorsPreflightNoConfig, "CORSResponse: CORS is not enabled for this bucket.", HttpResponseStatus.FORBIDDEN);
+  }
+
+  def CorsPreflightNoConfigException(String resource) {
+    this();
+    this.resource = resource;
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no origin is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsPreflightNoOriginException extends S3Exception {
+  def CorsPreflightNoOriginException() {
+    super(S3ErrorCodeStrings.CorsPreflightNoOrigin, "Insufficient information. Origin request header needed.", HttpResponseStatus.BAD_REQUEST);
+  }
+
+  def CorsPreflightNoOriginException(String resource) {
+    this();
+    this.resource = resource;
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no CORS rule matches the 
+// requested origin and HTTP verb (method),
+// to match AWS's response, return 403 Forbidden with this error code
+// and message.
+class CorsPreflightNotAllowedException extends S3Exception {
+  def CorsPreflightNotAllowedException() {
+    super(S3ErrorCodeStrings.CorsPreflightNotAllowed, 
+      "CORSResponse: This CORS request is not allowed. " + 
+      "This is usually because the evaluation of Origin, request method / " + 
+      "Access-Control-Request-Method or Access-Control-Request-Headers are " + 
+      "not whitelisted by the resource's CORS spec.", 
+      HttpResponseStatus.BAD_REQUEST);
+  }
+
+  def CorsPreflightNotAllowedException(String resource) {
+    this();
+    this.resource = resource;
+  }
+}
+
 
 class CredentialsNotSupportedException extends S3Exception {
   def CredentialsNotSupportedException() {
@@ -758,7 +849,7 @@ class NoSuchLifecycleConfigurationException extends S3Exception {
 }
 
 // When no CORS configuration exists, to match AWS's response, return 404 NotFound with
-// error code "NoSuchCORSConfiguration" and the following message.
+// this error code and message.
 class NoSuchCorsConfigurationException extends S3Exception {
   def NoSuchCorsConfigurationException() {
     super(S3ErrorCodeStrings.NoSuchCORSConfiguration, "The CORS configuration does not exist.", HttpResponseStatus.NOT_FOUND);

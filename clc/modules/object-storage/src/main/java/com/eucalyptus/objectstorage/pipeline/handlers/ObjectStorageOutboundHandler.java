@@ -83,6 +83,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
@@ -178,7 +179,8 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
         // Remove the content in response for certain operations
         if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
             || msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType) {
+            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType
+            || msg instanceof SetBucketCorsResponseType ) {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }

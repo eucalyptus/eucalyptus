@@ -254,20 +254,21 @@
         </collection>
     </mapping>
 
+    <!-- Java field names for arrays are plural, but XML values must be singular --> 
     <mapping class="com.eucalyptus.storage.msgs.s3.CorsRule" abstract="true">
         <value name="ID" field="id" usage="optional"/>
         <collection field="allowedOrigins" usage="optional">
-            <value name="AllowedOrigins"/>
+            <value name="AllowedOrigin"/>
         </collection>
         <collection field="allowedMethods" usage="optional">
-        <value name="AllowedMethods"/>
+        <value name="AllowedMethod"/>
         </collection>
         <collection field="allowedHeaders" usage="optional">
-            <value name="AllowedHeaders"/>
+            <value name="AllowedHeader"/>
         </collection>
         <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
         <collection field="exposeHeaders" usage="optional">
-            <value name="ExposeHeaders"/>
+            <value name="ExposeHeader"/>
         </collection>
     </mapping>
 

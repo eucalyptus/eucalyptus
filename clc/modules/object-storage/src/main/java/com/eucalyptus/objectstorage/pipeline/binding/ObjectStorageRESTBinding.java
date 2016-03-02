@@ -97,6 +97,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
@@ -110,6 +111,8 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsConfigUnsupportedMethodException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoOriginException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
@@ -133,6 +136,7 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -1571,19 +1575,29 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
 
-      String[] corsElementArray = null;
+      String[] corsAllowedMethodArray = null;
+      corsAllowedMethodArray = extractCorsElementArray(parser, node, "AllowedMethod");
+      if (corsAllowedMethodArray != null) {
+        for (int idx = 0; idx < corsAllowedMethodArray.length; idx++) {
+          if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethodArray[idx]))) {
+            CorsConfigUnsupportedMethodException s3e = new CorsConfigUnsupportedMethodException(corsAllowedMethodArray[idx]);
+            throw s3e;
+          }
+        }
+      }
+      corsRule.setAllowedMethods(corsAllowedMethodArray);
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedMethod");
-      corsRule.setAllowedMethods(corsElementArray);
+      String[] corsAllowedOriginArray = null;
+      corsAllowedOriginArray = extractCorsElementArray(parser, node, "AllowedOrigin");
+      corsRule.setAllowedOrigins(corsAllowedOriginArray);
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedOrigin");
-      corsRule.setAllowedOrigins(corsElementArray);
+      String[] corsAllowedHeaderArray = null;
+      corsAllowedHeaderArray = extractCorsElementArray(parser, node, "AllowedHeader");
+      corsRule.setAllowedHeaders(corsAllowedHeaderArray);
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedHeader");
-      corsRule.setAllowedHeaders(corsElementArray);
-
-      corsElementArray = extractCorsElementArray(parser, node, "ExposeHeader");
-      corsRule.setExposeHeaders(corsElementArray);
+      String[] corsExposeHeaderArray = null;
+      corsExposeHeaderArray = extractCorsElementArray(parser, node, "ExposeHeader");
+      corsRule.setExposeHeaders(corsExposeHeaderArray);
 
     } catch (S3Exception e) {
       throw e;
@@ -1627,17 +1641,20 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
     PreflightRequest preflightRequest = new PreflightRequest();
     LOG.debug("LPT: Here I am in processPreflightRequest");
-    
+
     preflightRequest.setOrigin(httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
     preflightRequest.setMethod(httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD));
-    List<String> requestHeadersFromRequest = httpRequest.getHeaders(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
-    List<CorsHeader> requestHeaders = new ArrayList<CorsHeader>(requestHeadersFromRequest.size());
-    for (String requestHeaderFromRequest : requestHeadersFromRequest) {
-      CorsHeader requestHeader = new CorsHeader();
-      requestHeader.setCorsHeader(requestHeaderFromRequest);
-      requestHeaders.add(requestHeader);
+    String requestHeadersFromRequest = httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
+    if (requestHeadersFromRequest != null) {
+      String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
+      List<CorsHeader> requestHeaders = new ArrayList<CorsHeader>();
+      for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
+        CorsHeader requestHeader = new CorsHeader();
+        requestHeader.setCorsHeader(requestHeadersArrayFromRequest[idx].trim());
+        requestHeaders.add(requestHeader);
+      }
+      preflightRequest.setRequestHeaders(requestHeaders);
     }
-    preflightRequest.setRequestHeaders(requestHeaders);
     LOG.debug("LPT: ...and my request fields are:\n" + preflightRequest);
     return preflightRequest;
   }

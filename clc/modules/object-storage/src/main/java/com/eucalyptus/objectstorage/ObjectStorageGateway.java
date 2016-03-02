@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -39,6 +41,7 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.DateTimeFieldType;
@@ -73,6 +76,10 @@ import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightInvalidMethodException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoConfigException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoOriginException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.IllegalVersioningConfigurationException;
 import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
@@ -193,6 +200,7 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
@@ -200,6 +208,7 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
+import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
@@ -215,6 +224,7 @@ import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -2147,38 +2157,133 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception {
+    //LPT Exception e = new Exception();
+    LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()");
+
     String bucketName = "nullBucket";
     PreflightCheckCorsResponseType response = null;
-    // Let most NullPointerExceptions be handled by the catch block.
+
     try {
       Bucket bucket = getBucketAndCheckAuthorization(request);
       bucketName = request.getBucket();
       response = request.getReply();
+      PreflightRequest preflightRequest = request.getPreflightRequest();
 
-      //TODO LPT Do the needful here, including setting objectName for catch blocks below.
-      //LPT Exception e = new Exception();
-      LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()");
+      String requestOrigin = preflightRequest.getOrigin();
+      if (requestOrigin == null || requestOrigin.isEmpty()) {
+        CorsPreflightNoOriginException s3e = new CorsPreflightNoOriginException(bucketName);
+        throw s3e;
+      }
+
+      String requestMethod = preflightRequest.getMethod();
+      boolean validMethod = false;
+      if (requestMethod == null ||
+          !AllowedCorsMethods.methodList.contains(requestMethod)) {
+        CorsPreflightInvalidMethodException s3e = new CorsPreflightInvalidMethodException(requestMethod);
+        throw s3e;
+      }
+
+      List<CorsRule> corsRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
+
+      if (corsRules == null || corsRules.isEmpty()) {
+        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(bucketName);
+        throw s3e;     
+      }
+
+      boolean found = false;
+      for (CorsRule corsRule : corsRules ) {
+
+        // Does the origin match any origin's regular expression in the rule?
+        String[] allowedOrigins = corsRule.getAllowedOrigins();
+        found = false;
+        for (int idx = 0; idx < allowedOrigins.length; idx++) {
+          Pattern p = Pattern.compile(allowedOrigins[idx]);
+          Matcher m = p.matcher(requestOrigin);
+          boolean match = m.matches();
+          if (match) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          break;
+        }
+        
+        // Does the HTTP verb match any verb in the rule?
+        String[] allowedMethods = corsRule.getAllowedMethods();
+        found = false;
+        for (int idx = 0; idx < allowedMethods.length; idx++) {
+          if (requestMethod.equals(allowedMethods[idx])) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          break;
+        }
+        
+        // If there are no Access-Control-Request-Headers, skip this check.
+        // We have matched the current CORS rule, 
+        // break out of checking more rules.
+        List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
+        if (requestHeaders == null || requestHeaders.size() == 0) {
+          break;
+        }
+        // Does every request header in the comma-delimited list in 
+        // Access-Control-Request-Headers have an entry in the allowed headers
+        // in the rule?
+        String[] allowedHeaders = corsRule.getAllowedHeaders();
+        found = false;
+        if (allowedHeaders == null) {
+          break;
+        }
+        for (CorsHeader requestHeader : requestHeaders) {
+          found = false;
+          for (int idx = 0; idx < allowedHeaders.length; idx++) {
+            if (requestHeader.getCorsHeader().equalsIgnoreCase(allowedHeaders[idx])) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            break;
+          }
+        }
+        
+        if (!found) {
+          // One of the requested headers is not in the allowed headers list
+          break;
+        }
+        
+      }  // end for each CORS rule
       
-      response.setStatus(HttpResponseStatus.NO_CONTENT);
-      response.setStatusMessage("204WooHoo");
+      if (!found) {
+        // No rule matched the request
+        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(bucketName);
+        throw s3e;     
+      }
       
-      LOG.debug("LPT: Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
+      
+      //LPT
+//      response.setStatus(HttpResponseStatus.NO_CONTENT);
+//      response.setStatusMessage("204WooHoo");
+//      
+//      LOG.debug("LPT: Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
       //response.setContentLength("0");
       //response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "PUT");
       
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
-          bucketName + "> and object name <" + ""/*objectName*/ + 
-          ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
           ", responding to client with: ", s3e);
       throw s3e;
     } catch (Exception ex) {
       LOG.warn("Caught general exception while processing the preflight CORS request for bucket <" + 
-          bucketName + "> and object name <" + ""/*objectName*/ + 
-          ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
           ", responding to client with 500 InternalError because of: ", ex);
       throw new InternalErrorException(bucketName, ex);
     }
+    
     LOG.debug("LPT: About to return response. Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
     return response;
   }
