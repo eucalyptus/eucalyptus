@@ -2803,7 +2803,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
                     retroutes[max_retroutes].dst_length = strdup(dstSlashnet);
                     retroutes[max_retroutes].next_hop_ip = strdup(eucartgw);
-                    retroutes[max_retroutes].weight = strdup("0");
+                    retroutes[max_retroutes].weight = strdup("10");
                     max_retroutes++;
                 } else {
                     LOGWARN("Invalid igw route target %s\n", rtable->entries[i].target);
@@ -2846,7 +2846,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
                     retroutes[max_retroutes].dst_length = strdup(dstSlashnet);
                     retroutes[max_retroutes].next_hop_ip = hex2dot(interface->privateIp);
-                    retroutes[max_retroutes].weight = strdup("0");
+                    retroutes[max_retroutes].weight = strdup("30");
                     max_retroutes++;
                 } else {
                     LOGWARN("Invalid eni route target %s\n", rtable->entries[i].target);
@@ -2894,7 +2894,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
                     retroutes[max_retroutes].dst_length = strdup(dstSlashnet);
                     retroutes[max_retroutes].next_hop_ip = strdup(natgw);
-                    retroutes[max_retroutes].weight = strdup("0");
+                    retroutes[max_retroutes].weight = strdup("20");
                     max_retroutes++;
                 } else {
                     LOGWARN("Invalid nat gateway route target %s\n", rtable->entries[i].target);
