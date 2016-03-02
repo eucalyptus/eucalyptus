@@ -141,6 +141,7 @@ int clear_router_id(mido_config * mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
+
 enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target);
 
 int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disable_l2_isolation, char *ext_eucanetdhostname, char *ext_rthosts, char *ext_pubnw,
@@ -187,6 +188,11 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc_instance * vpcinstance)
 int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido_vpc_instance ** outvpcinstance);
 int find_mido_vpc_instance_global(mido_config * mido, char *instancename, mido_vpc_instance ** outvpcinstance);
 
+int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_natgateway *vpcnatgateway);
+int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgateway *vpcnatgateway);
+int delete_mido_vpc_natgateway(mido_config *mido, mido_vpc_natgateway *vpcnatgateway);
+int find_mido_vpc_natgateway(mido_vpc *vpc, char *natgname, mido_vpc_natgateway **outvpcnatgateway);
+
 int find_mido_vpc_chain(mido_config *mido, char *chainname, midoname **outchain);
 int find_mido_vpc_ipaddrgroup(mido_config *mido, char *ipagname, midoname **outipag);
 mido_resource_router *find_mido_router(mido_config *mido, char *rtname);
@@ -227,6 +233,7 @@ int free_mido_core(mido_core * midocore);
 int free_mido_vpc(mido_vpc * vpc);
 int free_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet);
 int free_mido_vpc_instance(mido_vpc_instance * vpcinstance);
+int free_mido_vpc_natgateway(mido_vpc_natgateway *vpcnatgateway);
 int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup);
 
 void print_mido_vpc(mido_vpc * vpc);
