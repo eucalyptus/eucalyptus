@@ -21,12 +21,15 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingLoadBalancerResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingLoadBalancerProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingAccessLoggingPolicy;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingAppCookieStickinessPolicy;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingLBCookieStickinessPolicyType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingListener;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyType;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingPolicyTypeAttribute;
@@ -74,16 +77,22 @@ import com.eucalyptus.loadbalancing.common.msgs.PolicyNames;
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType;
 import com.eucalyptus.loadbalancing.common.msgs.SecurityGroups;
+import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesForBackendServerResponseType;
+import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesForBackendServerType;
 import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesOfListenerResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesOfListenerType;
 import com.eucalyptus.loadbalancing.common.msgs.Subnets;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.netflix.glisten.WorkflowOperations;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -234,39 +243,19 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         return action;
       }
     },
-    ADD_LOAD_BALANCER_POLICIES_TO_LISTENERS {
-      @Override
-      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-        if (action.properties.getListeners() != null) {
-          for (ElasticLoadBalancingListener elasticLoadBalancingListener: action.properties.getListeners()) {
-            if (elasticLoadBalancingListener.getPolicyNames() != null) {
-              SetLoadBalancerPoliciesOfListenerType setLoadBalancerPoliciesOfListenerType = MessageHelper.createMessage(SetLoadBalancerPoliciesOfListenerType.class, action.info.getEffectiveUserId());
-              setLoadBalancerPoliciesOfListenerType.setLoadBalancerName(action.info.getPhysicalResourceId());
-              setLoadBalancerPoliciesOfListenerType.setLoadBalancerPort(elasticLoadBalancingListener.getLoadBalancerPort());
-              PolicyNames policyNames = new PolicyNames();
-              ArrayList<String> member = Lists.newArrayList(elasticLoadBalancingListener.getPolicyNames());
-              policyNames.setMember(member);
-              setLoadBalancerPoliciesOfListenerType.setPolicyNames(policyNames);
-              AsyncRequests.<SetLoadBalancerPoliciesOfListenerType,SetLoadBalancerPoliciesOfListenerResponseType> sendSync(configuration, setLoadBalancerPoliciesOfListenerType);
-            }
-          }
-        }
-        return action;
-      }
-    },
     ADD_APP_STICKINESS_POLICY_TO_LOAD_BALANCER {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         if (action.properties.getAppCookieStickinessPolicy() != null) {
-          CreateAppCookieStickinessPolicyType createAppCookieStickinessPolicyType = MessageHelper.createMessage(CreateAppCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
-          createAppCookieStickinessPolicyType.setPolicyName(action.properties.getAppCookieStickinessPolicy().getPolicyName());
-          createAppCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
-          createAppCookieStickinessPolicyType.setCookieName(action.properties.getAppCookieStickinessPolicy().getCookieName());
-          AsyncRequests.<CreateAppCookieStickinessPolicyType,CreateAppCookieStickinessPolicyResponseType> sendSync(configuration, createAppCookieStickinessPolicyType);
+          for (ElasticLoadBalancingAppCookieStickinessPolicy elasticLoadBalancingAppCookieStickinessPolicy: action.properties.getAppCookieStickinessPolicy()) {
+            CreateAppCookieStickinessPolicyType createAppCookieStickinessPolicyType = MessageHelper.createMessage(CreateAppCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
+            createAppCookieStickinessPolicyType.setPolicyName(elasticLoadBalancingAppCookieStickinessPolicy.getPolicyName());
+            createAppCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
+            createAppCookieStickinessPolicyType.setCookieName(elasticLoadBalancingAppCookieStickinessPolicy.getCookieName());
+            AsyncRequests.<CreateAppCookieStickinessPolicyType, CreateAppCookieStickinessPolicyResponseType>sendSync(configuration, createAppCookieStickinessPolicyType);
+          }
         }
         return action;
       }
@@ -277,11 +266,72 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends ResourceA
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         if (action.properties.getLbCookieStickinessPolicy() != null) {
-          CreateLBCookieStickinessPolicyType createLBCookieStickinessPolicyType = MessageHelper.createMessage(CreateLBCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
-          createLBCookieStickinessPolicyType.setPolicyName(action.properties.getLbCookieStickinessPolicy().getPolicyName());
-          createLBCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
-          createLBCookieStickinessPolicyType.setCookieExpirationPeriod(action.properties.getLbCookieStickinessPolicy().getCookieExpirationPeriod());
-          AsyncRequests.<CreateLBCookieStickinessPolicyType,CreateLBCookieStickinessPolicyResponseType> sendSync(configuration, createLBCookieStickinessPolicyType);
+          for (ElasticLoadBalancingLBCookieStickinessPolicyType elasticLoadBalancingLbCookieStickinessPolicy: action.properties.getLbCookieStickinessPolicy()) {
+            CreateLBCookieStickinessPolicyType createLBCookieStickinessPolicyType = MessageHelper.createMessage(CreateLBCookieStickinessPolicyType.class, action.info.getEffectiveUserId());
+            createLBCookieStickinessPolicyType.setPolicyName(elasticLoadBalancingLbCookieStickinessPolicy.getPolicyName());
+            createLBCookieStickinessPolicyType.setLoadBalancerName(action.info.getPhysicalResourceId());
+            createLBCookieStickinessPolicyType.setCookieExpirationPeriod(elasticLoadBalancingLbCookieStickinessPolicy.getCookieExpirationPeriod());
+            AsyncRequests.<CreateLBCookieStickinessPolicyType, CreateLBCookieStickinessPolicyResponseType>sendSync(configuration, createLBCookieStickinessPolicyType);
+          }
+        }
+        return action;
+      }
+    },
+    ADD_LOAD_BALANCER_POLICIES_TO_LISTENERS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
+        Multimap<Integer, String> listenerPolicyMap = HashMultimap.create();
+        Multimap<Integer, String> backendPolicyMap = HashMultimap.create();
+        Set<Integer> listenerPorts = Sets.newHashSet();
+        // first add policies explicitly listed in the map.
+        if (action.properties.getListeners() != null) {
+          for (ElasticLoadBalancingListener elasticLoadBalancingListener : action.properties.getListeners()) {
+            listenerPorts.add(elasticLoadBalancingListener.getLoadBalancerPort());
+            if (elasticLoadBalancingListener.getPolicyNames() != null) {
+              listenerPolicyMap.putAll(elasticLoadBalancingListener.getLoadBalancerPort(), elasticLoadBalancingListener.getPolicyNames());
+            }
+          }
+        }
+        // now add policies by their load balancer port (assuming a proper listener exists) and backend by their instance ports
+        if (action.properties.getPolicies() != null) {
+          for (ElasticLoadBalancingPolicyType policyType : action.properties.getPolicies()) {
+            if (policyType.getLoadBalancerPorts() != null) {
+              for (Integer loadBalancerPort : policyType.getLoadBalancerPorts()) {
+                if (!listenerPorts.contains(loadBalancerPort)) {
+                  throw new ValidationErrorException("Policy " + policyType.getPolicyName() + " has a load balancer port of " + loadBalancerPort + ", which has no listener defined");
+                } else {
+                  listenerPolicyMap.put(loadBalancerPort, policyType.getPolicyName());
+                }
+              }
+            }
+            if (policyType.getInstancePorts() != null) {
+              for (Integer instancePort : policyType.getInstancePorts()) {
+                backendPolicyMap.put(instancePort, policyType.getPolicyName());
+              }
+            }
+          }
+        }
+        for (Integer listenerLBPort: listenerPolicyMap.keySet()) {
+          ArrayList<String> policyNamesStr = Lists.newArrayList(listenerPolicyMap.get(listenerLBPort));
+          SetLoadBalancerPoliciesOfListenerType setLoadBalancerPoliciesOfListenerType = MessageHelper.createMessage(SetLoadBalancerPoliciesOfListenerType.class, action.info.getEffectiveUserId());
+          setLoadBalancerPoliciesOfListenerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          setLoadBalancerPoliciesOfListenerType.setLoadBalancerPort(listenerLBPort);
+          PolicyNames policyNames = new PolicyNames();
+          policyNames.setMember(policyNamesStr);
+          setLoadBalancerPoliciesOfListenerType.setPolicyNames(policyNames);
+          AsyncRequests.<SetLoadBalancerPoliciesOfListenerType,SetLoadBalancerPoliciesOfListenerResponseType> sendSync(configuration, setLoadBalancerPoliciesOfListenerType);
+        }
+        for (Integer backendInstancePort: backendPolicyMap.keySet()) {
+          ArrayList<String> policyNamesStr = Lists.newArrayList(backendPolicyMap.get(backendInstancePort));
+          SetLoadBalancerPoliciesForBackendServerType setLoadBalancerPoliciesForBackendServerType = MessageHelper.createMessage(SetLoadBalancerPoliciesForBackendServerType.class, action.info.getEffectiveUserId());
+          setLoadBalancerPoliciesForBackendServerType.setLoadBalancerName(action.info.getPhysicalResourceId());
+          setLoadBalancerPoliciesForBackendServerType.setInstancePort(backendInstancePort);
+          PolicyNames policyNames = new PolicyNames();
+          policyNames.setMember(policyNamesStr);
+          setLoadBalancerPoliciesForBackendServerType.setPolicyNames(policyNames);
+          AsyncRequests.<SetLoadBalancerPoliciesForBackendServerType,SetLoadBalancerPoliciesForBackendServerResponseType> sendSync(configuration, setLoadBalancerPoliciesForBackendServerType);
         }
         return action;
       }
