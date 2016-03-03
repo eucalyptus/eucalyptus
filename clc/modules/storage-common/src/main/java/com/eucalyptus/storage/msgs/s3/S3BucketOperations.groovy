@@ -279,6 +279,7 @@ public class CorsConfiguration {
 
 public class CorsRule {
   String id;
+  int sequence;
   //TODO: Change these String arrays to List<String> which didn't work
   //  with JiBX bindings for some reason.
   String[] allowedOrigins;

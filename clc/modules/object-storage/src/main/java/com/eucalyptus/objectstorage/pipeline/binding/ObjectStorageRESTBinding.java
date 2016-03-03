@@ -1536,6 +1536,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
         for (int idx = 0; idx < rules.getLength(); idx++) {
           CorsRule extractedCorsRule = extractCorsRule(xmlParser, rules.item(idx));
+          extractedCorsRule.setSequence(idx);
           corsConfigurationType.getRules().add(extractedCorsRule);
         }
       } catch (S3Exception e) {
@@ -1551,8 +1552,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   private CorsRule extractCorsRule(XMLParser parser, Node node) throws S3Exception {
     CorsRule corsRule = new CorsRule();
-
-    LOG.debug("In extractCorsRule");
 
     try {
 

@@ -2166,19 +2166,20 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       Bucket bucket = getBucketAndCheckAuthorization(request);
       bucketName = request.getBucket();
+      String key = request.getKey();
+      LOG.debug("LPT: Key is <" + key + ">");
       response = request.getReply();
       PreflightRequest preflightRequest = request.getPreflightRequest();
 
       String requestOrigin = preflightRequest.getOrigin();
       if (requestOrigin == null || requestOrigin.isEmpty()) {
-        CorsPreflightNoOriginException s3e = new CorsPreflightNoOriginException(bucketName);
+        CorsPreflightNoOriginException s3e = new CorsPreflightNoOriginException();
         throw s3e;
       }
 
       String requestMethod = preflightRequest.getMethod();
-      boolean validMethod = false;
       if (requestMethod == null ||
-          !AllowedCorsMethods.methodList.contains(requestMethod)) {
+          !AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(requestMethod))) {
         CorsPreflightInvalidMethodException s3e = new CorsPreflightInvalidMethodException(requestMethod);
         throw s3e;
       }
@@ -2186,7 +2187,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       List<CorsRule> corsRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
 
       if (corsRules == null || corsRules.isEmpty()) {
-        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(bucketName);
+        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(requestMethod);
         throw s3e;     
       }
 
@@ -2197,7 +2198,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         String[] allowedOrigins = corsRule.getAllowedOrigins();
         found = false;
         for (int idx = 0; idx < allowedOrigins.length; idx++) {
-          Pattern p = Pattern.compile(allowedOrigins[idx]);
+          String allowedOriginRegex = "\\Q" + allowedOrigins[idx].replace("*", "\\E.*?\\Q") + "\\E";
+          Pattern p = Pattern.compile(allowedOriginRegex);
           Matcher m = p.matcher(requestOrigin);
           boolean match = m.matches();
           if (match) {
@@ -2259,7 +2261,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       
       if (!found) {
         // No rule matched the request
-        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(bucketName);
+        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(requestMethod);
         throw s3e;     
       }
       

@@ -133,8 +133,6 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
   public void addCorsRules(@Nonnull List<com.eucalyptus.storage.msgs.s3.CorsRule> rules, @Nonnull String bucketUuid)
       throws ObjectStorageException {
 
-    LOG.debug("In addCorsRule");
-
     try (TransactionResource tran = Entities.transactionFor(CorsRule.class)) {
       // first get rid of existing rules
       BucketCorsManagers.getInstance().deleteCorsRules(bucketUuid, tran);
@@ -151,14 +149,10 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
       throw new ObjectStorageException("InternalServerError", "An exception was caught while adding CORS rules for bucket "
           + bucketUuid, "Bucket", bucketUuid, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
-    LOG.debug("Finished addCorsRule");
-
   }
 
   @Override
   public List<com.eucalyptus.storage.msgs.s3.CorsRule> getCorsRules(@Nonnull String bucketUuid) throws Exception {
-
-    List<com.eucalyptus.storage.msgs.s3.CorsRule> responseRules = Lists.newArrayList();
 
     List<CorsRule> rulesFromDb = null;
 
@@ -173,9 +167,19 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
       LOG.error("Exception caught while retrieving CORS rules for bucket " + bucketUuid + ": ", ex);
     }
 
+    List<com.eucalyptus.storage.msgs.s3.CorsRule> responseRules = null;
+
     if (rulesFromDb != null) {
+      responseRules = new ArrayList<com.eucalyptus.storage.msgs.s3.CorsRule>(rulesFromDb.size());
       for (CorsRule fromDb : rulesFromDb) {
-        responseRules.add(convertCorsRule(fromDb));
+        int sequence = fromDb.getSequence();
+        if (responseRules.size() <= sequence) {
+          com.eucalyptus.storage.msgs.s3.CorsRule dummyRule = null;
+          for (int idx = responseRules.size(); idx < sequence+1; idx++) {
+            responseRules.add(dummyRule);
+          }
+        }
+        responseRules.set(sequence, convertCorsRule(fromDb));
       }
     }
 
@@ -184,11 +188,10 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
 
   private CorsRule convertCorsRule(com.eucalyptus.storage.msgs.s3.CorsRule rule, String bucketUuid) {
 
-    LOG.debug("In convertCorsRule from message to DB entity");
-
     CorsRule entity = new CorsRule();
     entity.setBucketUuid(bucketUuid);
     entity.setRuleId(rule.getId());
+    entity.setSequence(rule.getSequence());
     entity.setMaxAgeSeconds(rule.getMaxAgeSeconds());
 
     entity.setAllowedMethodsJSON(convertCorsArrayToJSON(rule.getAllowedMethods()));
@@ -196,7 +199,6 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
     entity.setAllowedHeadersJSON(convertCorsArrayToJSON(rule.getAllowedHeaders()));
     entity.setExposeHeadersJSON(convertCorsArrayToJSON(rule.getExposeHeaders()));
 
-    LOG.debug("Finished convertCorsRule from message to DB entity");
     return entity;
   }
 
@@ -212,17 +214,15 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
 
   private com.eucalyptus.storage.msgs.s3.CorsRule convertCorsRule(CorsRule entity) {
 
-    LOG.debug("In convertCorsRule from DB entity to message");
     com.eucalyptus.storage.msgs.s3.CorsRule ruleResponse = new com.eucalyptus.storage.msgs.s3.CorsRule();
     ruleResponse.setId(entity.getRuleId());
+    ruleResponse.setSequence(entity.getSequence());
     ruleResponse.setMaxAgeSeconds(entity.getMaxAgeSeconds());
 
     ruleResponse.setAllowedMethods(convertCorsJSONToArray(entity.getAllowedMethodsJSON()));
     ruleResponse.setAllowedOrigins(convertCorsJSONToArray(entity.getAllowedOriginsJSON()));
     ruleResponse.setAllowedHeaders(convertCorsJSONToArray(entity.getAllowedHeadersJSON()));
     ruleResponse.setExposeHeaders(convertCorsJSONToArray(entity.getExposeHeadersJSON()));
-
-    LOG.debug("Finished convertCorsRule from DB entity to message");
 
     return ruleResponse;
   }
