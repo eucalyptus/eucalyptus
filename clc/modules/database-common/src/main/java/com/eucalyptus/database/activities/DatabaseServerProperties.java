@@ -69,7 +69,8 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-@ConfigurableClass(root = "services.database.worker", description = "Parameters controlling database information.", singleton = true)
+// Configuration properties disabled for EUCA-12016
+//@ConfigurableClass(root = "services.database.worker", description = "Parameters controlling database information.", singleton = true)
 public class DatabaseServerProperties {
   private static Logger LOG = Logger.getLogger(DatabaseServerProperties.class);
   @ConfigurableField(displayName = "configured", description = "Configure DB service so a VM can be launched."
