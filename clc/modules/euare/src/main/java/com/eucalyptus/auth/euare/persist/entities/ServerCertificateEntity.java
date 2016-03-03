@@ -34,6 +34,8 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityRestriction;
 
 /**
  * @author Sang-Min Park
@@ -88,16 +90,26 @@ public class ServerCertificateEntity extends AbstractOwnedPersistent implements 
     super(user, certName);
   }
   
-  public static ServerCertificateEntity named(final OwnerFullName user){
-    return new ServerCertificateEntity(user);
+  public static EntityRestriction<ServerCertificateEntity> named(final OwnerFullName user){
+    return Entities.restriction( ServerCertificateEntity.class )
+        .equalIfNonNull( ServerCertificateEntity_.ownerAccountNumber, user == null ? null : user.getAccountNumber( ) )
+        .equalIfNonNull( ServerCertificateEntity_.ownerUserId, user == null ? null : user.getUserId( ) )
+        .equalIfNonNull( ServerCertificateEntity_.ownerUserName, user == null ? null : user.getUserName( ) )
+        .build( );
   }
 
-  public static ServerCertificateEntity named(final OwnerFullName user,
-      final String certName) {
-    final ServerCertificateEntity entity = new ServerCertificateEntity(user,
-        certName);
-    entity.setUniqueName(entity.createUniqueName());
-    return entity;
+  public static EntityRestriction<ServerCertificateEntity> named(
+      final OwnerFullName user,
+      final String certName
+  ) {
+    final ServerCertificateEntity entity = new ServerCertificateEntity(user, certName );
+    return Entities.restriction( ServerCertificateEntity.class )
+        .equalIfNonNull( ServerCertificateEntity_.ownerAccountNumber, user == null ? null : user.getAccountNumber( ) )
+        .equalIfNonNull( ServerCertificateEntity_.ownerUserId, user == null ? null : user.getUserId( ) )
+        .equalIfNonNull( ServerCertificateEntity_.ownerUserName, user == null ? null : user.getUserName( ) )
+        .equalIfNonNull( ServerCertificateEntity_.displayName, certName )
+        .equalIfNonNull( ServerCertificateEntity_.uniqueName, entity.createUniqueName( ) )
+        .build( );
   }
 
   public void setCertName(final String certName) {

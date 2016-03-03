@@ -69,6 +69,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.UserPrincipalImpl;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -97,7 +98,7 @@ public class DatabaseAccessKeyProxy implements EuareAccessKey {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
           t.setActive( active );
         }
@@ -116,7 +117,7 @@ public class DatabaseAccessKeyProxy implements EuareAccessKey {
 //  @Override
   public void setSecretKey( final String key ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
           t.setSecretKey( key );
         }

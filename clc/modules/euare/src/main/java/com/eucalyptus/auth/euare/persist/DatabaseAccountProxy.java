@@ -76,7 +76,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -89,13 +88,17 @@ import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
-import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
@@ -120,7 +123,7 @@ import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -214,7 +217,7 @@ public class DatabaseAccountProxy implements EuareAccount {
     } catch ( AuthException ae ) {
       try {
         // not found
-        DatabaseAuthUtils.invokeUnique( AccountEntity.class, "accountNumber", this.delegate.getAccountNumber( ), new Tx<AccountEntity>( ) {
+        DatabaseAuthUtils.invokeUnique( AccountEntity.class, AccountEntity_.accountNumber, this.delegate.getAccountNumber( ), new Tx<AccountEntity>( ) {
           public void fire( AccountEntity t ) {
             t.setName( name );
           }
@@ -233,11 +236,10 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareUser> getUsers( ) throws AuthException {
     List<EuareUser> results = Lists.newArrayList();
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+      List<UserEntity> users = Entities
+          .criteriaQuery( UserEntity.class )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       db.commit();
       for ( UserEntity u : users ) {
@@ -254,10 +256,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareGroup> getGroups( ) throws AuthException {
     List<EuareGroup> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-          .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "userGroup", false ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName() ) )
+      List<GroupEntity> groups = Entities
+          .criteriaQuery( GroupEntity.class ).whereEqual( GroupEntity_.userGroup, Boolean.FALSE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       db.commit( );
       for ( GroupEntity g : groups ) {
@@ -274,11 +275,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareRole> getRoles( ) throws AuthException {
     final List<EuareRole> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<RoleEntity> roles = ( List<RoleEntity> ) Entities
-          .createCriteria( RoleEntity.class )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName() ) )
-          .setCacheable( true )
+      List<RoleEntity> roles = Entities
+          .criteriaQuery( RoleEntity.class )
+          .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       for ( final RoleEntity role : roles ) {
         results.add( new DatabaseRoleProxy( role ) );
@@ -294,11 +293,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
     final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities
-          .createCriteria( InstanceProfileEntity.class )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
-          .setCacheable( true )
+      List<InstanceProfileEntity> instanceProfiles = Entities
+          .criteriaQuery( InstanceProfileEntity.class )
+          .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {
         results.add( new DatabaseInstanceProfileProxy( instanceProfile  ) );
@@ -340,7 +337,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       GroupEntity newGroup = new GroupEntity( this.getAccountNumber(), DatabaseAuthUtils.getUserGroupName( userName ) );
       newGroup.setUserGroup( true );
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
+        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
         newGroup = Entities.mergeDirect( newGroup );
         newUser = Entities.mergeDirect( newUser );
         newGroup.setAccount( account );
@@ -435,7 +432,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       final PolicyPolicy policyPolicy = PolicyParser.getResourceInstance( ).parse( assumeRolePolicy );
       final PolicyEntity parsedPolicy = PolicyEntity.create( null, policyPolicy.getPolicyVersion( ), assumeRolePolicy );
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
+        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
         final RoleEntity newRole = new RoleEntity( roleName );
         newRole.setRoleId( Identifiers.generateIdentifier( "ARO" ) );
         newRole.setPath( path );
@@ -492,7 +489,7 @@ public class DatabaseAccountProxy implements EuareAccount {
         throw new AuthException( AuthException.GROUP_ALREADY_EXISTS );
       }
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
+        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
         GroupEntity group = new GroupEntity( this.getAccountNumber(), groupName );
         group.setPath( path );
         group.setUserGroup( false );
@@ -563,7 +560,7 @@ public class DatabaseAccountProxy implements EuareAccount {
         throw new AuthException( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS );
       }
       try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
+        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
         final InstanceProfileEntity newInstanceProfile = new InstanceProfileEntity( instanceProfileName );
         newInstanceProfile.setPath( path );
         newInstanceProfile.setAccount( account );
@@ -749,77 +746,69 @@ public class DatabaseAccountProxy implements EuareAccount {
   public ServerCertificate deleteServerCertificate(String certName)
       throws AuthException {
     synchronized(getLock()) {
-      ServerCertificateEntity found = null;
       try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-        found = 
-            Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName));
-        Entities.delete(found);
+        final ServerCertificateEntity found = Entities.criteriaQuery(
+            ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ), certName )
+        ).uniqueResult( );
+        Entities.delete( found );
         db.commit();
+        return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
       } catch(final NoSuchElementException ex){
         throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
       } catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
       }
-      if(found!=null)
-        return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
-      else
-        return null;
     }
   }
 
   @Override
-  public ServerCertificate lookupServerCertificate(String certName)
-      throws AuthException {
-    ServerCertificateEntity found = null;
+  public ServerCertificate lookupServerCertificate(final String certName) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      final List<ServerCertificateEntity> result = 
-          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName), true);
-      if(result==null || result.size()<=0)
-        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
-      found=result.get(0);
+      final ServerCertificateEntity serverCertificateEntity = Entities.criteriaQuery(
+          ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ), certName )
+      ).readonly( ).uniqueResult( );
       db.rollback();
-      return ServerCertificates.ToServerCertificateWithSecrets.INSTANCE.apply(found);
-    } catch(final NoSuchElementException ex){
-      throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
-    } catch(final AuthException ex){
+      return ServerCertificates.ToServerCertificateWithSecrets.INSTANCE.apply( serverCertificateEntity );
+    } catch( final NoSuchElementException ex ){
+      throw new AuthException( AuthException.SERVER_CERT_NO_SUCH_ENTITY );
+    } catch( final AuthException ex ){
       throw ex;
-    } catch(final Exception ex){
+    } catch( final Exception ex ){
       throw Exceptions.toUndeclared(ex);
     }
   }
 
   @Override
-  public List<ServerCertificate> listServerCertificates(String pathPrefix)
-      throws AuthException {
-    List<ServerCertificateEntity> result = null;
+  public List<ServerCertificate> listServerCertificates(final String pathPrefix) throws AuthException {
+    final List<ServerCertificateEntity> result;
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      result =
-          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin())), true);
+      result = Entities.criteriaQuery(
+          ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ) )
+      ).readonly( ).list( );
       db.rollback();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
     
     final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
-    List<ServerCertificateEntity> filtered = null;
-    
-    if(prefix.equals("/")){
+    final Iterable<ServerCertificateEntity> filtered;
+    if ( prefix.equals("/") ) {
       filtered = result;
-    }else{
-      filtered  = Lists.newArrayList(Collections2.filter(result, new Predicate<ServerCertificateEntity>(){
+    } else {
+      filtered = Iterables.filter( result, new Predicate<ServerCertificateEntity>(){
       @Override
       public boolean apply(ServerCertificateEntity entity) {
         final String path = entity.getCertPath();
         return path.startsWith(prefix) && (path.length()==prefix.length() || path.charAt(prefix.length()) == '/');
-      }}));
+      }});
     }
     
-    return Lists.transform(filtered, new Function<ServerCertificateEntity, ServerCertificate>(){
+    return Lists.newArrayList( Iterables.transform( filtered, new Function<ServerCertificateEntity, ServerCertificate>(){
       @Override
       public ServerCertificate apply(ServerCertificateEntity entity) {
         return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
       }
-    });
+    }));
   }
   
   @Override

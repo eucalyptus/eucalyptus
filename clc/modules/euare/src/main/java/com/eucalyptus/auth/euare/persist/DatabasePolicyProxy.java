@@ -67,8 +67,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
@@ -107,7 +110,10 @@ public class DatabasePolicyProxy implements Policy {
   public EuareGroup getGroup( ) throws AuthException {
     final List<EuareGroup> results = Lists.newArrayList( );
     try {
-      Transactions.one( PolicyEntity.newInstanceWithId( this.delegate.getPolicyId( ) ), new Tx<PolicyEntity>( ) {
+      final EntityRestriction<PolicyEntity> restriction = Entities.restriction( PolicyEntity.class )
+          .equal( PolicyEntity_.id, this.delegate.getPolicyId( ) )
+          .build( );
+      Transactions.one( restriction, new Tx<PolicyEntity>( ) {
         public void fire( PolicyEntity t ) {
           results.add( new DatabaseGroupProxy( t.getGroup( ) ) );
         }

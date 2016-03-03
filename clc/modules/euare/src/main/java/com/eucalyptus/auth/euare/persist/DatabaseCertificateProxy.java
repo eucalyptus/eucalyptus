@@ -69,8 +69,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
-import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.X509CertHelper;
 import java.util.concurrent.ExecutionException;
@@ -94,7 +94,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, CertificateEntity_.certificateId, this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           sb.append( t.toString( ) );
         }
@@ -118,7 +118,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   @Override
   public void setActive( final Boolean active ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, CertificateEntity_.certificateId, this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setActive( active );
         }
@@ -136,7 +136,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   
   public void setCreateDate( final Date createDate ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, CertificateEntity_.certificateId, this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setCreateDate( createDate );
         }
@@ -151,7 +151,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
   public UserPrincipal getPrincipal( ) throws AuthException {
     final List<UserPrincipal> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, CertificateEntity_.certificateId, this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           try {
             results.add( com.eucalyptus.auth.euare.Accounts.userAsPrincipal( new DatabaseUserProxy( t.getUser() ) ) );
@@ -174,7 +174,7 @@ public class DatabaseCertificateProxy implements EuareCertificate {
 
   public void setX509Certificate( final X509Certificate x509 ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( CertificateEntity.class, CertificateEntity_.certificateId, this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
           t.setPem( X509CertHelper.fromCertificate( x509 ) );
         }

@@ -77,11 +77,14 @@ import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
@@ -144,7 +147,7 @@ public class DatabaseUserProxy implements EuareUser {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           sb.append( t.toString( ) );
         }
@@ -179,7 +182,7 @@ public class DatabaseUserProxy implements EuareUser {
     } catch ( AuthException e ) {
       // not found
       try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-        UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+        UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
         user.setName( name );
         for ( GroupEntity g : user.getGroups( ) ) {
           if ( g.isUserGroup( ) ) {
@@ -212,7 +215,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( AuthException.INVALID_PATH, e );
     }
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.setPath( path );
         }
@@ -236,7 +239,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public void setEnabled( final boolean enabled ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.setEnabled( enabled );
         }
@@ -255,7 +258,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public void setToken( final String token ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.setToken( token );
         }
@@ -281,7 +284,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public void setPassword( final String password ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.setPassword( password );
         }
@@ -300,7 +303,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public void setPasswordExpires( final Long time ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.setPasswordExpires( time );
         }
@@ -327,7 +330,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( "Empty key" );
     }
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.getInfo( ).put( key.toLowerCase( ), value );
         }
@@ -344,7 +347,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( "Empty key" );
     }
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.getInfo( ).remove( key.toLowerCase( ) );
         }
@@ -361,7 +364,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( "Empty user info map" );
     }
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           t.getInfo( ).clear( );
           for ( Map.Entry<String, String> entry : newInfo.entrySet( ) ) {
@@ -379,7 +382,7 @@ public class DatabaseUserProxy implements EuareUser {
   public List<AccessKey> getKeys( ) throws AuthException {
     final List<AccessKey> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           for ( AccessKeyEntity k : t.getKeys( ) ) {
             results.add( new DatabaseAccessKeyProxy( k ) );
@@ -396,7 +399,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public EuareAccessKey getKey( final String keyId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( AccessKeyEntity.class ) ) {
-      AccessKeyEntity key = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      AccessKeyEntity key = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, keyId );
       checkKeyOwner( key );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
@@ -412,8 +415,8 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( AuthException.EMPTY_KEY_ID );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
-      AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, "accessKey", keyId );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
+      AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, keyId );
       checkKeyOwner( keyEntity );
       if ( !user.getKeys( ).remove( keyEntity ) ) {
         throw new AuthException( AuthException.NO_SUCH_KEY );
@@ -433,7 +436,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public EuareAccessKey createKey( ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
       AccessKeyEntity keyEntity = new AccessKeyEntity( user );
       keyEntity.setActive( true );
       Entities.persist( keyEntity );
@@ -450,7 +453,7 @@ public class DatabaseUserProxy implements EuareUser {
   public List<Certificate> getCertificates( ) throws AuthException {
     final List<Certificate> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           for ( CertificateEntity c : t.getCertificates( ) ) {
             results.add( new DatabaseCertificateProxy( c ) );
@@ -468,7 +471,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public EuareCertificate getCertificate( final String certificateId ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
-      CertificateEntity cert = DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+      CertificateEntity cert = DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateId, certificateId );
       checkCertOwner( cert );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
@@ -481,7 +484,7 @@ public class DatabaseUserProxy implements EuareUser {
   @Override
   public EuareCertificate addCertificate( String certificateId, X509Certificate cert ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
       CertificateEntity certEntity = new CertificateEntity( certificateId, cert );
       certEntity.setActive( true );
       Entities.persist( certEntity );
@@ -502,7 +505,7 @@ public class DatabaseUserProxy implements EuareUser {
     }
     try ( final TransactionResource db = Entities.transactionFor( CertificateEntity.class ) ) {
       CertificateEntity certificateEntity =
-          DatabaseAuthUtils.getUnique( CertificateEntity.class, "certificateId", certificateId );
+          DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateId, certificateId );
       checkCertOwner( certificateEntity );
       Entities.delete( certificateEntity );
       db.commit( );
@@ -516,7 +519,7 @@ public class DatabaseUserProxy implements EuareUser {
   public List<EuareGroup> getGroups( ) throws AuthException {
     final List<EuareGroup> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           for ( GroupEntity g : t.getGroups( ) ) {
             results.add( new DatabaseGroupProxy( g, accountNumberSupplier ) );
@@ -539,7 +542,7 @@ public class DatabaseUserProxy implements EuareUser {
   public EuareAccount getAccount( ) throws AuthException {
     final List<EuareAccount> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           if ( t.getGroups( ).size( ) < 1 ) {
             throw new RuntimeException( "Unexpected group number of the user" );
@@ -598,7 +601,7 @@ public class DatabaseUserProxy implements EuareUser {
   public List<Policy> getPolicies( ) throws AuthException {
     List<Policy> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
       GroupEntity group = getUserGroupEntity( user );
       if ( group == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -641,7 +644,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new PolicyParseException( "Policy with Allow effect can not be assigned to account/account admin" );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity userEntity = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity userEntity = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
       final GroupEntity groupEntity = getUserGroupEntity( userEntity );
       if ( groupEntity == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -667,7 +670,7 @@ public class DatabaseUserProxy implements EuareUser {
       throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", this.delegate.getUserId( ) );
+      UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, this.delegate.getUserId( ) );
       GroupEntity group = getUserGroupEntity( user );
       if ( group == null ) {
         throw new RuntimeException( "Can't find user group for user " + this.delegate.getName( ) );
@@ -701,7 +704,7 @@ public class DatabaseUserProxy implements EuareUser {
       public Map<String, String> get() {
         final Map<String, String> results = Maps.newHashMap( );
         try {
-          DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+          DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
             public void fire( UserEntity t ) {
               results.putAll( t.getInfo( ) );
             }

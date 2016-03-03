@@ -230,14 +230,12 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
         public boolean apply(@Nullable Class aClass) {
             EntityTransaction tran = Entities.get(AccountEntity.class);
             try {
-                List<AccountEntity> accounts = Entities.query(new AccountEntity());
-                if (accounts != null && accounts.size() > 0) {
-                    for (AccountEntity account : accounts) {
-                        if (account.getCanonicalId() == null || account.getCanonicalId().equals("")) {
-                            account.setCanonicalId( genCanonicalId( ) );
-                            LOG.debug("putting canonical id " + account.getCanonicalId() +
-                                    " on account " + account.getAccountNumber());
-                        }
+                final List<AccountEntity> accounts = Entities.criteriaQuery( AccountEntity.class ).list( );
+                for ( final AccountEntity account : accounts ) {
+                    if ( account.getCanonicalId() == null || account.getCanonicalId().equals("") ) {
+                         account.setCanonicalId( genCanonicalId( ) );
+                        LOG.debug("putting canonical id " + account.getCanonicalId() +
+                                " on account " + account.getAccountNumber());
                     }
                 }
                 tran.commit();
