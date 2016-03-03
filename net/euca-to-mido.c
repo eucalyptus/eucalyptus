@@ -5804,7 +5804,7 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
 //! @note
 //!
 int populate_mido_core(mido_config * mido, mido_core * midocore) {
-    int rc = 0, ret = 0, i = 0, j = 0, k = 0, gwidx = 0;
+    int rc = 0, ret = 0, i = 0, j = 0, k = 0;
     char *url = NULL;
 
     mido_resource_router *eucart = NULL;
@@ -5854,7 +5854,6 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     }
 
     // search for mido GW ports
-    gwidx = 0;
     for (j = 0; j < midocore->max_rtports; j++) {
         url = NULL;
         rc = mido_getel_midoname(&(midocore->rtports[j]), "portAddress", &url);
@@ -5862,22 +5861,25 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
             for (k = 0; k < mido->ext_rthostarrmax; k++) {
                 if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
                     LOGTRACE("Found gw port for %s.\n", mido->ext_rthostaddrarr[k])
-                    mido_copy_midoname(&(midocore->gwports[gwidx]), &(midocore->rtports[j]));
-                    gwidx++;
-                    midocore->max_gws++;
+                    mido_copy_midoname(&(midocore->gwports[k]), &(midocore->rtports[j]));
+                    if (midocore->max_gws < k) {
+                        midocore->max_gws = k;
+                    }
                 }
             }
         }
         EUCA_FREE(url);
     }
 
-    gwidx = 0;
     for (i = 0; i < mido->resources->max_hosts; i++) {
         for (k = 0; k < mido->ext_rthostarrmax; k++) {
             if (!strcmp(mido->resources->hosts[i].resc.name, mido->ext_rthostnamearr[k])) {
                 LOGTRACE("Found gw host %s\n", mido->resources->hosts[i].resc.name);
-                mido_copy_midoname(&(midocore->gwhosts[gwidx]), &(mido->resources->hosts[i].resc));
-                gwidx++;
+                mido_copy_midoname(&(midocore->gwhosts[k]), &(mido->resources->hosts[i].resc));
+                if (midocore->max_gws < k) {
+                    LOGWARN("Unexpected number of gwhosts(%d) - > number of gwports(%d).\n", k, midocore->max_gws);
+                    midocore->max_gws = k;
+                }
             }
         }
     }
@@ -5895,6 +5897,10 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     }
 
     for (i = 0; i < midocore->max_gws; i++) {
+        if ((midocore->gwhosts[i].init == 0) || (midocore->gwports[i].init == 0)) {
+            LOGWARN("Invalid gwhost or gwport found.\n");
+            continue;
+        }
         LOGDEBUG("\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i].name, midocore->gwhosts[i].init, midocore->gwports[i].name, midocore->gwports[i].init);
     }
     return (ret);
@@ -6895,6 +6901,9 @@ int delete_mido_core(mido_config * mido, mido_core * midocore) {
 
     // delete the host/port links
     for (i = 0; i < midocore->max_gws; i++) {
+        if ((midocore->gwhosts[i].init == 0) || (midocore->gwports[i].init == 0)) {
+            continue;
+        }
         rc = mido_unlink_host_port(&(midocore->gwhosts[i]), &(midocore->gwports[i]));
         sleep(1);
     }
