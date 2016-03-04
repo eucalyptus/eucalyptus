@@ -286,7 +286,7 @@
 
     <mapping class="com.eucalyptus.storage.msgs.s3.PreflightResponse" abstract="true">
         <value name="Origin" field="origin" usage="optional"/>
-        <value name="Method" field="method" usage="optional"/>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="methods" />
         <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedHeaders">
             <structure name="CorsHeader" map-as="com.eucalyptus.storage.msgs.s3.CorsHeader" />

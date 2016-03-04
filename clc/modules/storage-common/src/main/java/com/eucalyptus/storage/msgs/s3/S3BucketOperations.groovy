@@ -291,6 +291,10 @@ public class CorsRule {
 
 public class CorsHeader {
   String corsHeader;
+  
+  public String toString() {
+    return corsHeader;
+  }
 }
 
 public class PreflightRequest {
@@ -317,7 +321,7 @@ public class PreflightRequest {
 
 public class PreflightResponse {
   String origin;
-  String method;
+  List<String> methods;
   int maxAgeSeconds;
   List<CorsHeader> allowedHeaders;
   List<CorsHeader> exposeHeaders;
@@ -326,7 +330,7 @@ public class PreflightResponse {
     StringBuffer output = new StringBuffer();
     output.append(
         "Origin: " + origin +
-        "\nMethod: " + method +
+        //"\nMethod: " + method +
         "\nMax Age, Seconds: " + maxAgeSeconds +
         "\nAllowed Headers:");
     if (allowedHeaders == null || allowedHeaders.size() == 0) {

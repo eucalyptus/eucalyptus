@@ -225,6 +225,7 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
+import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -2192,8 +2193,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       boolean found = false;
+      boolean anyOrigin = false;
+      CorsRule corsRuleFound = null;
+      
       for (CorsRule corsRule : corsRules ) {
 
+        corsRuleFound = corsRule; // will only be used if we find a match
+        
         // Does the origin match any origin's regular expression in the rule?
         String[] allowedOrigins = corsRule.getAllowedOrigins();
         found = false;
@@ -2203,12 +2209,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
           Matcher m = p.matcher(requestOrigin);
           boolean match = m.matches();
           if (match) {
+            anyOrigin = (allowedOrigins[idx].equals("*"));
             found = true;
-            break;
+            break;  // stop looking through the origins for this rule
           }
         }
         if (!found) {
-          break;
+          continue;  // go to the next CORS rule
         }
         
         // Does the HTTP verb match any verb in the rule?
@@ -2217,46 +2224,49 @@ public class ObjectStorageGateway implements ObjectStorageService {
         for (int idx = 0; idx < allowedMethods.length; idx++) {
           if (requestMethod.equals(allowedMethods[idx])) {
             found = true;
-            break;
+            break;  // stop looking through the methods for this rule
           }
         }
         if (!found) {
-          break;
+          continue;  // go to the next CORS rule
         }
         
-        // If there are no Access-Control-Request-Headers, skip this check.
-        // We have matched the current CORS rule, 
-        // break out of checking more rules.
+        // If there are no Access-Control-Request-Headers, or if there are
+        // no AllowedHeaders in the CORS rule, then skip this check.
+        // We have matched the current CORS rule. Stop looking through them.
         List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
         if (requestHeaders == null || requestHeaders.size() == 0) {
           break;
         }
-        // Does every request header in the comma-delimited list in 
-        // Access-Control-Request-Headers have an entry in the allowed headers
-        // in the rule?
         String[] allowedHeaders = corsRule.getAllowedHeaders();
-        found = false;
-        if (allowedHeaders == null) {
+        if (allowedHeaders == null || allowedHeaders.length == 0) {
           break;
         }
+
+        // Does every request header in the comma-delimited list in 
+        // Access-Control-Request-Headers have a matching entry in the 
+        // allowed headers in the rule?
+        found = false;
+        Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.length];
         for (CorsHeader requestHeader : requestHeaders) {
           found = false;
           for (int idx = 0; idx < allowedHeaders.length; idx++) {
-            if (requestHeader.getCorsHeader().equalsIgnoreCase(allowedHeaders[idx])) {
+            if (allowedHeaderRegexPattern[idx] == null) {
+              String allowedHeaderRegex = "\\Q" + allowedHeaders[idx].replace("*", "\\E.*?\\Q") + "\\E";
+              allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex);
+            }
+            Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader.getCorsHeader());
+            boolean match = matcher.matches();
+            if (match) {
               found = true;
-              break;
+              break;  // stop looking through the allowed headers for this request header
             }
           }
           if (!found) {
-            break;
+            // No allowed header matches this request header, so this rule fails to match
+            break;  // stop looking through the request headers
           }
         }
-        
-        if (!found) {
-          // One of the requested headers is not in the allowed headers list
-          break;
-        }
-        
       }  // end for each CORS rule
       
       if (!found) {
@@ -2265,14 +2275,40 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw s3e;     
       }
       
+      // We found a match, fill in the response fields
+      PreflightResponse responseFields = new PreflightResponse();
+      response.setPreflightResponse(responseFields);
       
-      //LPT
-//      response.setStatus(HttpResponseStatus.NO_CONTENT);
-//      response.setStatusMessage("204WooHoo");
-//      
-//      LOG.debug("LPT: Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
-      //response.setContentLength("0");
-      //response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "PUT");
+      // If the origin we matched against is "*" (any origin allowed), then
+      // set the response's origin to "*" instead of the origin in the 
+      // request. Matches AWS behavior and W3 spec: (strange but true)
+      // https://www.w3.org/TR/cors/#resource-preflight-requests
+      responseFields.setOrigin(anyOrigin ? "*" : requestOrigin);
+      
+      List<String> methods = new ArrayList<String>();
+      String[] allowedMethods = corsRuleFound.getAllowedMethods();
+      for (int idx = 0; idx < allowedMethods.length; idx++) {
+        methods.add(allowedMethods[idx]);
+      }
+      responseFields.setMethods(methods);
+      
+      responseFields.setAllowedHeaders(preflightRequest.getRequestHeaders());
+
+      String[] ruleExposeHeaders = corsRuleFound.getExposeHeaders();
+      if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
+        List<CorsHeader> exposeHeaders = new ArrayList<CorsHeader>();
+        for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
+          CorsHeader exposeHeader = new CorsHeader();
+          exposeHeader.setCorsHeader(ruleExposeHeaders[idx]);
+          exposeHeaders.add(exposeHeader);
+        }
+        responseFields.setExposeHeaders(exposeHeaders);
+      }
+
+      responseFields.setMaxAgeSeconds(corsRuleFound.getMaxAgeSeconds());
+
+      response.setStatus(HttpResponseStatus.OK);
+      LOG.debug("LPT: preflight (not HTTP) response status is " + response.getStatus());
       
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 

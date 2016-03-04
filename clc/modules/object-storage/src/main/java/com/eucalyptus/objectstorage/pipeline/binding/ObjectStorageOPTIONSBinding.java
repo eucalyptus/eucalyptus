@@ -75,8 +75,9 @@ public class ObjectStorageOPTIONSBinding extends ObjectStorageRESTBinding {
   protected Map<String, String> populateOperationMap() {
     Map<String, String> newMap = new HashMap<>();
 
-    // Object operations
-    // Cross-Origin Resource Sharing (CORS) pre-flight request
+    // Cross-Origin Resource Sharing (CORS) pre-flight OPTIONS request,
+    // can be sent against either a bucket or object, same behavior.
+    newMap.put(BUCKET + HttpMethod.OPTIONS.toString(), "PreflightCheckCors");
     newMap.put(OBJECT + HttpMethod.OPTIONS.toString(), "PreflightCheckCors");
 
     return newMap;

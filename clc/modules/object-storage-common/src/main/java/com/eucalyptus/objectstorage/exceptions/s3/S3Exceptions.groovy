@@ -260,7 +260,7 @@ class CorsPreflightNotAllowedException extends S3Exception {
     "This is usually because the evaluation of Origin, request method / " +
     "Access-Control-Request-Method or Access-Control-Request-Headers are " +
     "not whitelisted by the resource's CORS spec.",
-    HttpResponseStatus.BAD_REQUEST);
+    HttpResponseStatus.FORBIDDEN);
     this.setResourceType("OBJECT");
   }
 }

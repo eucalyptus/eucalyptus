@@ -456,6 +456,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
           } else if (params.containsKey(ObjectStorageProperties.BucketParameter.versioning.toString())) {
             getVersioningStatus(operationParams, httpRequest);
           }
+        } else if (ObjectStorageProperties.HTTPVerb.OPTIONS.toString().equals(verb)) {
+          operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
         }
       } else {
         operationKey = SERVICE + verb;

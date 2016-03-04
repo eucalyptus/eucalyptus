@@ -63,6 +63,7 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import java.util.Date;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -76,7 +77,9 @@ import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
+import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
 
@@ -88,7 +91,6 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    //LPT Exception e = new Exception();
     LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()");
 
     LOG.debug("LPT: event's message is of class " + event.getMessage().getClass());
@@ -97,23 +99,78 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
       httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
-      // If there is no body, just HTTP headers, then set the content length 
-      // to zero or else the client is likely to hang waiting for the rest 
-      // of the response.
-      // If there is a body (XML response details), then do not set the
-      // content length, to match AWS's behavior.
-      httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
 
+      //Exception e = new Exception(); //LPT
       LOG.debug("LPT: msg is of class " + msg.getClass());
       if (msg instanceof PreflightCheckCorsResponseType) {
-        PreflightCheckCorsResponseType preflightCors = (PreflightCheckCorsResponseType) msg;
-        httpResponse.setStatus(preflightCors.getStatus());
+        PreflightCheckCorsResponseType preflightResponseMsg = (PreflightCheckCorsResponseType) msg;
+        PreflightResponse preflightResponseFields = preflightResponseMsg.getPreflightResponse();
+        httpResponse.setStatus(preflightResponseMsg.getStatus());
         //LPT e = new Exception();
-        LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my status code is " + 
+        LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my HTTP status code is " + 
             httpResponse.getStatus());
+
+        httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, preflightResponseFields.getOrigin());
+        
+        List<String> methodList = preflightResponseFields.getMethods();
+        if (methodList != null) {
+          // Convert list into "[method1, method2, ...]"
+          String methods = methodList.toString();
+          if (methods.length() > 2) {
+            // Chop off brackets
+            methods = methods.substring(1, methods.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, methods);
+          }
+        }
+        
+        List<CorsHeader> allowHeadersList = preflightResponseFields.getAllowedHeaders();
+        if (allowHeadersList != null) {
+          // Convert list into "[allowHeader1, allowHeader2, ...]"
+          String allowHeaders = allowHeadersList.toString();
+          if (allowHeaders.length() > 2) {
+            // Chop off brackets
+            allowHeaders = allowHeaders.substring(1, allowHeaders.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS, allowHeaders);
+          }
+        }
+        
+        List<CorsHeader> exposeHeadersList = preflightResponseFields.getExposeHeaders();
+        if (exposeHeadersList != null) {
+          // Convert list into "[exposeHeader1, exposeHeader2, ...]"
+          String exposeHeaders = exposeHeadersList.toString();
+          if (exposeHeaders.length() > 2) {
+            // Chop off brackets
+            exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
+          }
+        }
+        
+        if (preflightResponseFields.getMaxAgeSeconds() > 0) {
+          httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE, preflightResponseFields.getMaxAgeSeconds());
+        }
+        // Set the "allow credentials" header to true only if the matching 
+        // CORS rule is NOT "any origin", otherwise don't set the header.
+        if (preflightResponseFields.getOrigin() != null && 
+            !preflightResponseFields.getOrigin().equals("*")) {
+          httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+
+        // Match AWS behavior. Always contains these 3 header names. 
+        // It tells the user agent: If you cache this request+response, only
+        // give the cached response to a future request if all these headers 
+        // match the ones in the cached request. Otherwise, send the request 
+        // to the server, don't use the cached response.
+        httpResponse.setHeader(HttpHeaders.Names.VARY, 
+            HttpHeaders.Names.ORIGIN + ", " +
+                HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS + ", " +
+                HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD);
+
+        // No body in this preflight response that has no error.
+        // Error responses are handled separately as S3Exception objects.
+        httpResponse.setMessage(null);
+        // Need to set this to zero to prevent client from waiting for more.
+        httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
       }
-      //LPT Not true in error responses!: Since an OPTIONS response, never include a body
-      //httpResponse.setMessage(null);
     }
   }
 }
