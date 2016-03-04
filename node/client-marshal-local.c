@@ -79,6 +79,7 @@
 #include <string.h>
 
 #include <eucalyptus.h>
+#include <euca_auth.h>
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "client-marshal.h"
@@ -243,7 +244,14 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 //!
 int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
 {
-    return (EUCA_OK);
+  char *xmlbuf = NULL;
+
+  xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+  if (xmlbuf) {
+    return doBroadcastNetworkInfo(pMeta, xmlbuf);
+  }
+
+  return (EUCA_ERROR);
 }
 
 //!

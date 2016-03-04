@@ -87,6 +87,7 @@
 #include <sensor.h>
 #include <adb-helpers.h>
 #include <euca_string.h>
+#include <euca_auth.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -170,7 +171,7 @@ static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char
 static int ncClientDescribeResources(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientAttachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice);
 static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice, boolean force);
-static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device);
+static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device, char *psAttachmentId);
 static int ncClientDetachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, boolean force);
 static int ncClientDescribeSensors(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientModifyNode(ncStub * pStub, ncMetadata * pMeta, char *psStateName);
@@ -216,7 +217,7 @@ static void usage(void)
             "\t\tdescribeResource\n"
             "\t\tattachVolume\t\t[-i -V -R -L]\n"
             "\t\tdetachVolume\t\t[-i -V -R -L]\n"
-            "\t\tattachNetworkInterface\t[-i -E -a -P -Z]\n"
+            "\t\tattachNetworkInterface\t[-i -E -a -P -Z -A]\n"
             "\t\tdetachNetworkInterface\t[-i -E]\n"
             "\t\tbundleInstance\t\t[-i]\n"
             "\t\tbundleRestartInstance\t[-i]\n"
@@ -255,6 +256,7 @@ static void usage(void)
             "\t\t-E [str] \t- eni ID of network interface\n"
             "\t\t-P [str] \t- private IP of network interface\n"
             "\t\t-Z [number] \t- device ID/number of network interface on guest\n"
+            "\t\t-A [str] \t- attachment ID of network interface\n"
             "\t\t-s [stateName] \t- name of state\n"
             "\t\t\t\tUse {enabled|disabled} for modifyNode operation\n"
             "\t\t\t\tUse {prepare|commit|rollback} for migrateInstances opration\n" "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
@@ -420,8 +422,8 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
         if ((psUUID == NULL) || (nbInstances > 1)) {
             snprintf(sTempBuffer, sizeof(sTempBuffer), "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c", NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
-                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
-                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
+                     NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), '4', NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
+                     'b', NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM(),
                      NC_RANDOM(), NC_RANDOM(), NC_RANDOM(), NC_RANDOM());
             psLocalUUID = sTempBuffer;
         } else {
@@ -701,7 +703,7 @@ static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char
     char *networkInfoBuf = NULL;
     int rc = EUCA_OK;
     networkInfoBuf = file2str(psNetworkInfo);
-    rc = ncBroadcastNetworkInfoStub(pStub, pMeta, networkInfoBuf);
+    rc = ncBroadcastNetworkInfoStub(pStub, pMeta, base64_enc((u8 *) networkInfoBuf, strlen(networkInfoBuf)));
     printf("ncBroadcastNetworkInfoStub = %d, %s\n", rc, networkInfoBuf);
     return (rc);
 }
@@ -852,7 +854,7 @@ static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInst
 //!
 //! @note
 //!
-static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device)
+static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psInterfaceId, char *psMacAddr, char *psPrivateIp, int device, char *psAttachmentId)
 {
     int rc = EUCA_OK;
     netConfig netCfg = {0};
@@ -862,6 +864,7 @@ static int ncClientAttachNetworkInterface(ncStub * pStub, ncMetadata * pMeta, ch
     snprintf(netCfg.privateIp, INET_ADDR_LEN, "%s", psPrivateIp);
     snprintf(netCfg.publicIp, INET_ADDR_LEN, "%s", "0.0.0.0");
     snprintf(netCfg.interfaceId, ENI_ID_LEN, "%s", psInterfaceId);
+    snprintf(netCfg.attachmentId, ENI_ATTACHMENT_ID_LEN, "%s", psAttachmentId);
     netCfg.device = device;
 
     if ((rc = ncAttachNetworkInterfaceStub(pStub, pMeta, psInstanceId, &netCfg)) != EUCA_OK) {
@@ -1143,6 +1146,7 @@ int main(int argc, char *argv[])
     char *psTimeStamp = NULL;
     char *psCommand = NULL;
     char *psEucaHome = NULL;
+    char *psAttachmentId = NULL;
     char **ppsGroupNames = NULL;
     char sConfigFile[BUFSIZE] = "";
     char sPolicyFile[BUFSIZE] = "";
@@ -1157,7 +1161,7 @@ int main(int argc, char *argv[])
     serviceInfoType *pServInfo = NULL;
     virtualMachine virtMachine = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
 
-    while ((ch = getopt(argc, argv, "lhdN:n:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B:P:E:Z")) != -1) {
+    while ((ch = getopt(argc, argv, "lhdN:n:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B:P:E:Z:A")) != -1) {
         switch (ch) {
         case 'c':
             nbInstances = atoi(optarg);
@@ -1289,6 +1293,9 @@ int main(int argc, char *argv[])
             printf("Parsing -Z option used for supplying device ID for AttachNetworkInterface\n");
             nbDevice = atoi(optarg);
             printf("Parsed -Z option, value=%d\n", nbDevice);
+            break;
+        case 'A':
+            psAttachmentId = optarg;
             break;
         case '?':
         default:
@@ -1423,7 +1430,7 @@ int main(int argc, char *argv[])
 //        CHECK_PARAM(psMacAddr, "MAC address");
         CHECK_PARAM(psPrivateIP, "private IP address");
 //        CHECK_PARAM(nbDevice, "device ID");
-        ncClientAttachNetworkInterface(pStub, &meta, psInstanceId, psInterfaceId, psMacAddr, psPrivateIP, nbDevice);
+        ncClientAttachNetworkInterface(pStub, &meta, psInstanceId, psInterfaceId, psMacAddr, psPrivateIP, nbDevice, psAttachmentId);
     } else if (!strcmp(psCommand, "detachNetworkInterface")) {
         CHECK_PARAM(psInstanceId, "instance ID");
         CHECK_PARAM(psInterfaceId, "eni ID");

@@ -3591,12 +3591,12 @@ int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig *ne
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[in] netConfig the pointer to netConfig structure
+//! @param[in] attachmentId the attachment ID string (eni-attach-XXXXXXXX)
 //! @param[in] force if set to 1, this will force the network interface to detach
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doDetachNetworkInterface() handler call.
 //!
-int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *attachmentId, int force)
 {
     int ret = EUCA_OK;
 
@@ -3604,12 +3604,12 @@ int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *interfa
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s][%s] detaching network interface\n", instanceId, interfaceId);
+    LOGINFO("[%s][%s] detaching network interface\n", instanceId, attachmentId);
 
     if (nc_state.H->doDetachNetworkInterface)
-        ret = nc_state.H->doDetachNetworkInterface(&nc_state, pMeta, instanceId, interfaceId, force);
+        ret = nc_state.H->doDetachNetworkInterface(&nc_state, pMeta, instanceId, attachmentId, force);
     else
-        ret = nc_state.D->doDetachNetworkInterface(&nc_state, pMeta, instanceId, interfaceId, force);
+        ret = nc_state.D->doDetachNetworkInterface(&nc_state, pMeta, instanceId, attachmentId, force);
 
     return ret;
 }
@@ -4096,49 +4096,6 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
                 LOGDEBUG("[%s] cannot read valid global network view file '%s' (yet), waiting\n", instance->instanceId, xmlfile);
             }
             EUCA_FREE(fileBuf);
-            
-            /*
-            globalNetworkInfo *gni = NULL;
-            gni_hostname_info *host_info = NULL;
-            char xmlfile[EUCA_MAX_PATH] = "";
-            int rc = 0;
-            
-            gni = gni_init();
-            host_info = gni_init_hostname_info();
-            if (gni && host_info) {
-                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                snprintf(xmlfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/global_network_info.xml", nc_state.home);
-
-                rc = gni_populate(gni,host_info,xmlfile);
-                if (rc) {
-                    // error
-                } else {
-                    // compare version/applied-version and search for instance record
-                    if (strlen(gni->version) && strlen(gni->appliedVersion) && !strcmp(gni->version, gni->appliedVersion)) {
-                        LOGDEBUG("GATE: version and applied version match\n");
-                        // look for instance record
-                        gni_instance *gniInstance = NULL;
-                        rc = gni_find_instance(gni, instance->instanceId, &gniInstance);
-                        if (gniInstance) {
-                            LOGDEBUG("[%s] global network config contains required instance record, continuing\n", SP(instance->instanceId));
-                            
-                            // Free up gni and host_info memory
-                            rc = gni_free(gni);
-                            rc = gni_hostnames_free(host_info);
-                            
-                            return(0);
-                        } else {
-                            LOGTRACE("[%s] global network config does not (yet) contain required instance record, waiting...(%d seconds remaining)\n", SP(instance->instanceId), (int)(max_time - time(NULL)));
-                        }
-                    } else {
-                        LOGDEBUG("[%s] GATE: version (%s) and applied version (%s) do not match: waiting\n", SP(instance->instanceId), SP(gni->version), SP(gni->appliedVersion));
-                    }
-                }
-            }
-            // Free up gni and host_info memory
-            rc = gni_free(gni);
-            rc = gni_hostnames_free(host_info);
-            */
         } else {
             return(0);
         }

@@ -1047,6 +1047,7 @@ adb_ncAttachNetworkInterfaceResponse_t *ncAttachNetworkInterfaceMarshal(adb_ncAt
         snprintf(netConfig.privateIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_privateIp(netConfigType, env));
         snprintf(netConfig.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(netConfigType, env));
         snprintf(netConfig.interfaceId, ENI_ID_LEN, "%s", adb_netConfigType_get_interfaceId(netConfigType, env));
+        snprintf(netConfig.attachmentId, ENI_ATTACHMENT_ID_LEN, "%s", adb_netConfigType_get_attachmentId(netConfigType, env));
         netConfig.device = adb_netConfigType_get_device(netConfigType, env);
 
         {
@@ -1106,7 +1107,7 @@ adb_ncDetachNetworkInterfaceResponse_t *ncDetachNetworkInterfaceMarshal(adb_ncDe
 
         // get operation-specific fields from input
         instanceId = adb_ncDetachNetworkInterfaceType_get_instanceId(input, env);
-        interfaceId = adb_ncDetachNetworkInterfaceType_get_interfaceId(input, env);
+        interfaceId = adb_ncDetachNetworkInterfaceType_get_attachmentId(input, env);
         forceBool = adb_ncDetachNetworkInterfaceType_get_force(input, env);
         if (forceBool == AXIS2_TRUE) {
             force = TRUE;

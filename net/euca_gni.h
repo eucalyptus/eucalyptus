@@ -155,6 +155,7 @@ typedef struct gni_secgroup_t {
 typedef struct gni_instance_t {
     char name[INTERFACE_ID_LEN];       //!< Instance ID string
     char ifname[INTERFACE_ID_LEN];     //!< Interface ID string
+    char attachmentId[ENI_ATTACHMENT_ID_LEN]; //!< Attachment ID string
     char accountId[128];               //!< Instance Account ID string
     u8 macAddress[ENET_BUF_SIZE];      //!< Associated MAC address
     u32 publicIp;                      //!< Assigned public IP address
@@ -351,6 +352,7 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr);
 int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup);
 int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
+int gni_find_interface(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
 
 int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
                            int *out_max_clusters);

@@ -495,6 +495,7 @@ static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char 
     _ATTRIBUTE(nic, "hypervisorType", hypervisorType);
     _ATTRIBUTE(nic, "osPlatform", osPlatform);
     _ATTRIBUTE(nic, "osVirtioNetwork", osVirtioNetwork);
+    _ATTRIBUTE(nic, "attachmentId", net->attachmentId);
 }
 
 
@@ -1117,7 +1118,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR_FREE(volxpath, v->devName);
             }
             MKVOLPATH("libvirt");
-            if (get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
+            if (strcmp(v->stateName, "attaching") && get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
                 LOGERROR("failed to read '%s' from '%s'\n", volxpath, xml_path);
                 for (int z = 0; res_array[z] != NULL; z++)
                     EUCA_FREE(res_array[z]);

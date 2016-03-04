@@ -327,7 +327,7 @@ int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remot
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *attachmentToken, char *localDev, int force);
 int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig * netCfg);
-int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *interfaceId, int force);
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *attachmentId, int force);
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig,
                      char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
@@ -380,6 +380,7 @@ void set_serial_and_bus(const char *vol, const char *dev, char *serial, int seri
 
 int instance_network_gate(ncInstance *instance, time_t timeout_seconds);
 char *gettok(char *haystack, char *needle);
+int find_interface_changes(char *gni_path);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

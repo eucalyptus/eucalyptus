@@ -1162,12 +1162,12 @@ int ncAttachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *insta
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
-//! @param[in] interfaceId the eni identifier string (eni-XXXXXXXX)
+//! @param[in] attachmentId the eni identifier string (eni-attach-XXXXXXXX)
 //! @param[in] force if set to 1, this will force the network interface to detach
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *attachmentId, int force)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1195,7 +1195,7 @@ int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *insta
 
     // set op-specific input fields
     adb_ncDetachNetworkInterfaceType_set_instanceId(request, env, instanceId);
-    adb_ncDetachNetworkInterfaceType_set_interfaceId(request, env, interfaceId);
+    adb_ncDetachNetworkInterfaceType_set_attachmentId(request, env, attachmentId);
     if (force) {
         adb_ncDetachNetworkInterfaceType_set_force(request, env, AXIS2_TRUE);
     } else {
@@ -1211,7 +1211,7 @@ int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *insta
         } else {
             response = adb_ncDetachNetworkInterfaceResponse_get_ncDetachNetworkInterfaceResponse(output, env);
             if (adb_ncDetachNetworkInterfaceResponseType_get_return(response, env) == AXIS2_FALSE) {
-                LOGERROR("[%s][%s] returned an error\n", instanceId, interfaceId);
+                LOGERROR("[%s][%s] returned an error\n", instanceId, attachmentId);
                 status = 1;
             }
         }

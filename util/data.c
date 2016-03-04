@@ -363,7 +363,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //!
 //! @post The network configuration structure is updated with the provided information
 //!
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex)
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, const char *sPvAttachmentId, int vlan, int networkIndex)
 {
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
@@ -378,6 +378,9 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int devi
 
         if (sPbIp)
             euca_strncpy(pNetCfg->publicIp, sPbIp, INET_ADDR_LEN);
+
+        if (sPvAttachmentId)
+            euca_strncpy(pNetCfg->attachmentId, sPvAttachmentId, ENI_ATTACHMENT_ID_LEN);
 
         pNetCfg->device = device;
         pNetCfg->networkIndex = networkIndex;
@@ -721,7 +724,7 @@ int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 //!
 //! @post The function \p pFunction is applied to each member of the instance list.
 //!
-int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam)
+int for_each_instance(bunchOfInstances ** ppHead, instance_action pFunction, void *pParam)
 {
     bunchOfInstances *pHead = NULL;
 
@@ -1112,6 +1115,33 @@ netConfig *find_network_interface(ncInstance * pInstance, const char *sInterface
 
     return (NULL);
 }
+
+//!
+//! Finds a matching network interface
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//!
+//! @return true if present other false.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo this is present because find_network_interface does too much
+//!
+boolean is_network_interface_present(ncInstance * pInstance, const char *sInterfaceId)
+{
+    if ((pInstance != NULL) && (sInterfaceId != NULL)) {
+        for (int i = 0; i < EUCA_MAX_NICS; i++) {
+            if (strncmp(pInstance->secNetCfgs[i].interfaceId, sInterfaceId, ENI_ID_LEN) == 0) {
+                LOGDEBUG("found interface %s on instance %s", sInterfaceId, pInstance->instanceId);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 
 //
 //!

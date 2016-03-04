@@ -273,7 +273,7 @@
 	    <xs:extension base="tns:eucalyptusMessage">
 	      <xs:sequence>
 	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
-	        <xs:element minOccurs="0" maxOccurs="1" name="interfaceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="attachmentId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
 	      </xs:sequence>
 	    </xs:extension>
@@ -599,6 +599,7 @@
 	<xs:element name="publicIp" type="xs:string"/>
 	<xs:element name="vlan" type="xs:int"/>
 	<xs:element name="networkIndex" type="xs:int"/>
+	<xs:element name="attachmentId" type="xs:string"/>
       </xs:sequence>
     </xs:complexType>
 

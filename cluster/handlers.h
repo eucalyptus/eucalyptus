@@ -393,6 +393,8 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
 int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
 int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
+int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig * netCfg);
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *attachmentId, int force);
 int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen,
                        char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);

@@ -431,8 +431,11 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
     // Initialize to NULL
     (*pInstance) = NULL;
 
+    LOGDEBUG("attempting search for instance id %s in gni\n", psInstanceId);
+
     // Go through our instance list and look for that instance
     for (i = 0; i < gni->max_instances; i++) {
+        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->instances[i].name);
         if (!strcmp(psInstanceId, gni->instances[i].name)) {
             (*pInstance) = &(gni->instances[i]);
             return (0);
@@ -442,6 +445,28 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
     return(1);
 }
 
+int gni_find_interface(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
+    int i = 0;
+
+    if (!gni || !psInstanceId || !pInstance) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    // Initialize to NULL
+    (*pInstance) = NULL;
+
+    LOGDEBUG("attempting search for interface id %s in gni\n", psInstanceId);
+
+    for (i = 0; i < gni->max_interfaces; i++) {
+        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].name);
+        if (!strcmp(psInstanceId, gni->interfaces[i].name)) {
+            (*pInstance) = &(gni->interfaces[i]);
+            return EUCA_OK;
+        }
+    }
+
+    return(1);
+}
 //!
 //! Looks up through a list of configured node for the one that is associated with
 //! this currently running instance.
@@ -3449,6 +3474,15 @@ int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath,
         EUCA_FREE(results[i]);
     }
     instance->max_secgroup_names = max_results;
+    EUCA_FREE(results);
+
+    snprintf(expression, 2048, "%s[@name='%s']/attachmentId", xmlpath, instance->name);
+    rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+    for (i = 0; i < max_results; i++) {
+        LOGTRACE("after function: %d: %s\n", i, results[i]);
+        snprintf(instance->attachmentId, ENI_ATTACHMENT_ID_LEN, "%s", results[i]);
+        EUCA_FREE(results[i]);
+    }
     EUCA_FREE(results);
 
     if (is_instance) {

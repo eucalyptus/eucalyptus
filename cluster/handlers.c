@@ -770,6 +770,17 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             int force = va_arg(al, int);
 
             rc = ncDetachVolumeStub(ncs, localmeta, instanceId, volumeId, remoteDev, localDev, force);
+        }else if (!strcmp(ncOp, "ncAttachNetworkInterface")) {
+            char *instanceId = va_arg(al, char *);
+            netConfig *netCfg = va_arg(al, netConfig *);
+
+            rc = ncAttachNetworkInterfaceStub(ncs, localmeta, instanceId, netCfg);
+        } else if (!strcmp(ncOp, "ncDetachNetworkInterface")) {
+            char *instanceId = va_arg(al, char *);
+            char *attachmentId = va_arg(al, char *);
+            int force = va_arg(al, int);
+
+            rc = ncDetachNetworkInterfaceStub(ncs, localmeta, instanceId, attachmentId, force);
         } else if (!strcmp(ncOp, "ncCreateImage")) {
             char *instanceId = va_arg(al, char *);
             char *volumeId = va_arg(al, char *);
@@ -7103,9 +7114,9 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         out->volumesSize = volumesSize;
 
         if (ccnet)
-            allocate_netConfig(&(out->ccnet), ccnet->interfaceId, ccnet->device, ccnet->privateMac, ccnet->privateIp, ccnet->publicIp, ccnet->vlan, ccnet->networkIndex);
+            allocate_netConfig(&(out->ccnet), ccnet->interfaceId, ccnet->device, ccnet->privateMac, ccnet->privateIp, ccnet->publicIp, NULL, ccnet->vlan, ccnet->networkIndex);
         if (ncnet)
-            allocate_netConfig(&(out->ncnet), ncnet->interfaceId, ncnet->device, ncnet->privateMac, ncnet->privateIp, ncnet->publicIp, ncnet->vlan, ncnet->networkIndex);
+            allocate_netConfig(&(out->ncnet), ncnet->interfaceId, ncnet->device, ncnet->privateMac, ncnet->privateIp, ncnet->publicIp, NULL, ncnet->vlan, ncnet->networkIndex);
         if (ccvm)
             allocate_virtualMachine(&(out->ccvm), ccvm);
         if (secNetCfgs)
@@ -8145,4 +8156,157 @@ int image_cache_proxykick(ccResource * res, int *numHosts)
 
     EUCA_FREE(nodestr);
     return (rc);
+}
+
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId
+//! @param[in] netCfg a pointer to the netConfig structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig * netCfg){
+    return (-1);
+    int i, rc, start = 0, stop = 0, ret = 0, done = 0, timeout;
+    ccInstance *myInstance;
+    time_t op_start;
+    ccResourceCache resourceCacheLocal;
+
+    i = 0;
+    myInstance = NULL;
+    op_start = time(NULL);
+
+    rc = initialize(pMeta, FALSE);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    if(!netCfg) return (-1);
+
+    LOGINFO("[%s][%s] attaching network interface\n", SP(instanceId), SP(netCfg->attachmentId));
+    LOGDEBUG("invoked: userId=%s, attachmentId=%s, instanceId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(netCfg->attachmentId), SP(instanceId));
+    if (!netCfg || !(netCfg->attachmentId) || !instanceId ) {
+        LOGERROR("bad input params\n");
+        return (1);
+    }
+
+    sem_mywait(RESCACHE);
+    memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    rc = find_instanceCacheId(instanceId, &myInstance);
+    if (!rc) {
+        // found the instance in the cache
+        if (myInstance) {
+            start = myInstance->ncHostIdx;
+            stop = start + 1;
+            EUCA_FREE(myInstance);
+        }
+    } else {
+        start = 0;
+        stop = resourceCacheLocal.numResources;
+    }
+
+    done = 0;
+    for (i = start; i < stop && !done; i++) {
+        timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
+        timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
+
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachNetworkInterface", instanceId, netCfg);
+
+        if (rc) {
+            ret = 1;
+        } else {
+            ret = 0;
+            done++;
+        }
+    }
+
+    LOGTRACE("done\n");
+
+    shawn();
+
+    return (ret);
+}
+
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId
+//! @param[in] attachmentId the attachment identifier string (eni-attach-XXXXXXXX)
+//! @param[in] force
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *attachmentId, int force){
+    return (-1);
+    int i, rc, start = 0, stop = 0, ret = 0, done = 0, timeout;
+    ccInstance *myInstance;
+    time_t op_start;
+    ccResourceCache resourceCacheLocal;
+
+    i = 0;
+    myInstance = NULL;
+    op_start = time(NULL);
+
+    rc = initialize(pMeta, FALSE);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    LOGINFO("[%s][%s] detaching network interface\n", SP(instanceId), SP(attachmentId));
+    LOGDEBUG("invoked: userId=%s, attachmentId=%s, instanceId=%s, force=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(attachmentId), SP(instanceId), force);
+    if (!attachmentId || !instanceId ) {
+        LOGERROR("bad input params\n");
+        return (1);
+    }
+
+    sem_mywait(RESCACHE);
+    memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    rc = find_instanceCacheId(instanceId, &myInstance);
+    if (!rc) {
+        // found the instance in the cache
+        if (myInstance) {
+            start = myInstance->ncHostIdx;
+            stop = start + 1;
+            EUCA_FREE(myInstance);
+        }
+    } else {
+        start = 0;
+        stop = resourceCacheLocal.numResources;
+    }
+
+    done = 0;
+    for (i = start; i < stop && !done; i++) {
+        timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
+        timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
+
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachNetworkInterface", instanceId, attachmentId, force);
+
+        if (rc) {
+            ret = 1;
+        } else {
+            ret = 0;
+            done++;
+        }
+    }
+
+    LOGTRACE("done\n");
+
+    shawn();
+
+    return (ret);
 }
