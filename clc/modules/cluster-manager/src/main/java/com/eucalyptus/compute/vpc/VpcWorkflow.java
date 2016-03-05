@@ -64,6 +64,7 @@ public class VpcWorkflow {
 
   private static final Logger logger = Logger.getLogger( VpcWorkflow.class );
 
+  private final VpcInvalidator vpcInvalidator;
   private final InternetGateways internetGateways;
   private final NatGateways natGateways;
   private final NetworkInterfaces networkInterfaces;
@@ -77,10 +78,12 @@ public class VpcWorkflow {
       .build( );
 
   public VpcWorkflow(
+      final VpcInvalidator vpcInvalidator,
       final InternetGateways internetGateways,
       final NatGateways natGateways,
       final NetworkInterfaces networkInterfaces
   ) {
+    this.vpcInvalidator = vpcInvalidator;
     this.internetGateways = internetGateways;
     this.natGateways = natGateways;
     this.networkInterfaces = networkInterfaces;
@@ -154,6 +157,7 @@ public class VpcWorkflow {
    */
   private void natGatewaySetupElasticIp( ) {
     for ( final String natGatewayId : listNatGatewayIds( NatGateway.State.pending ) ) {
+      boolean invalidate = false;
       try ( final TransactionResource tx = Entities.transactionFor( NatGateway.class ) ) {
         final NatGateway natGateway = natGateways.lookupByName( null, natGatewayId, Functions.<NatGateway>identity( ) );
         if ( natGateway.getNetworkInterface( ) != null &&
@@ -161,6 +165,7 @@ public class VpcWorkflow {
           logger.info( "Setting up Elastic IP for pending NAT gateway " + natGatewayId );
           NatGatewayHelper.associatePublicAddress( natGateway );
           natGateway.setState( NatGateway.State.available );
+          invalidate = true;
         } catch ( final ComputeException e ) { // NAT gateway creation failure
           natGateway.setState( NatGateway.State.failed );
           natGateway.setFailureCode( e.getCode( ) );
@@ -173,6 +178,10 @@ public class VpcWorkflow {
         } else {
           logger.error( "Error processing pending NAT gateway " + natGatewayId, e );
         }
+        continue;
+      }
+      if ( invalidate ) {
+        vpcInvalidator.invalidate( natGatewayId );
       }
     }
   }
@@ -308,6 +317,7 @@ public class VpcWorkflow {
 
   public static class VpcWorkflowEventListener implements EventListener<ClockTick> {
     private final VpcWorkflow vpcWorkflow = new VpcWorkflow(
+        new EventFiringVpcInvalidator( ),
         new PersistenceInternetGateways( ),
         new PersistenceNatGateways( ),
         new PersistenceNetworkInterfaces( )
