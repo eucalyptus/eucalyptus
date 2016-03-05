@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,12 +65,10 @@ package com.eucalyptus.auth.euare.persist;
 import static com.eucalyptus.entities.Entities.criteriaQuery;
 import static com.eucalyptus.entities.Entities.restriction;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.persistence.metamodel.SingularAttribute;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
@@ -129,7 +127,27 @@ public class DatabaseAuthUtils {
       throw new NoSuchElementException( "Can not find user " + userName + " in " + accountName );
     }
   }
-  
+
+  /**
+   * Must call within a transaction.
+   */
+  public static long countUsersInGroup( String groupName, String accountName ) throws Exception {
+    return Entities.count( UserEntity.class )
+        .join( UserEntity_.groups ).whereEqual( GroupEntity_.name, groupName )
+        .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static long countPoliciesInGroup( String groupName, String accountName ) throws Exception {
+    return Entities.count( PolicyEntity.class )
+        .join( PolicyEntity_.group ).whereEqual( GroupEntity_.name, groupName )
+        .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+  }
+
   /**
    * Must call within a transaction.
    * 
