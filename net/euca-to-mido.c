@@ -1784,7 +1784,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
         // Name of primary interfaces should have been renamed to instance name.
 
         // check that we can do something about this instance:
-        if (gniinstance->vpc && strlen(gniinstance->vpc) && gniinstance->nodehostname && strlen(gniinstance->nodehostname)) {
+        if (gniinstance->vpc && strlen(gniinstance->vpc) && gniinstance->node && strlen(gniinstance->node)) {
             rc = find_mido_vpc(mido, gniinstance->vpc, &vpc);
             if (vpc) {
                 rc = find_mido_vpc_subnet(vpc, gniinstance->subnet, &vpcsubnet);
@@ -1804,8 +1804,8 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         LOGINFO("\tcreating %s\n", gniinstance->name);
                     }
 
-                    LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->nodehostname);
-                    rc = create_mido_vpc_instance(mido, vpcinstance, gniinstance->nodehostname);
+                    LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->node);
+                    rc = create_mido_vpc_instance(mido, vpcinstance, gniinstance->node);
                     if (rc) {
                         LOGERROR("cannot create VPC instance '%s': check midonet health\n", vpcinstance->name);
                         ret = 1;
@@ -1816,7 +1816,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     // do instance<->port connection and elip
                     if (vpcinstance->midos[VMHOST].init) {
                         LOGDEBUG("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n",
-                                gniinstance->nodehostname, vpcinstance->midos[VMHOST].name, gniinstance->name);
+                                gniinstance->node, vpcinstance->midos[VMHOST].name, gniinstance->name);
 
                         rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]), gni->instanceDNSDomain);
                         if (rc) {
@@ -3534,6 +3534,49 @@ mido_resource_host *find_mido_host_byuuid(mido_config *mido, char *uuid) {
 }
 
 //!
+//! Searches the discovered MidoNet resources for the host that matches the given
+//! IP address.
+//!
+//! @param[in] mido data structure holding all discovered MidoNet resources.
+//! @param[in] ip IP address of the host of interest.
+//!
+//! @return pointer to mido_resource_host data structure if found.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+mido_resource_host *search_mido_host_byip(mido_config *mido, char *ip) {
+    u32 int_ip;
+
+    if (!mido || !ip) {
+        LOGWARN("Invalid argument: NULL pointer in the argument.\n");
+        return (NULL);
+    }
+    LOGTRACE("Searching mido host %s\n", ip);
+    int_ip = dot2hex(ip);
+    mido_iphostmap *iphm = &(mido->resources->iphostmap);
+    if (iphm->sorted == 0) {
+        qsort(iphm->entries, iphm->max_entries, sizeof (mido_iphostmap_entry), compare_iphostmap_entry);
+        iphm->sorted = 1;
+    }
+    mido_iphostmap_entry key;
+    key.host = NULL;
+    key.ip = int_ip;
+    mido_iphostmap_entry *res = NULL;
+    res = (mido_iphostmap_entry *) bsearch(&key, iphm->entries, iphm->max_entries,
+            sizeof (mido_iphostmap_entry), compare_iphostmap_entry);
+    if (res == NULL) {
+        return (NULL);
+    }
+    return (res->host);
+}
+
+//!
 //! Searches the given list of MidoNet ports for ports that belongs to the device
 //! specified in the argument.
 //!
@@ -4397,21 +4440,31 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
 //!
 //! @note
 //!
-int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *nodehostname) {
-    int ret = 0, found = 0, i = 0, rc = 0;
+int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance, char *node) {
+    int ret = 0, found = 0, rc = 0;
     char iagname[64], tmp_name[32];
     midoname *tmpmn = NULL;
 
     // find the interface mapping
+/*
     found = 0;
-    for (i = 0; i < mido->resources->max_hosts && !found; i++) {
+    for (int i = 0; i < mido->resources->max_hosts && !found; i++) {
         if (mido->resources->hosts[i].resc.init == 0) {
             continue;
         }
-        if (strstr(mido->resources->hosts[i].resc.name, nodehostname)) {
+        if (strstr(mido->resources->hosts[i].resc.name, node)) {
             mido_copy_midoname(&(vpcinstance->midos[VMHOST]), &(mido->resources->hosts[i].resc));
             found = 1;
         }
+    }
+*/
+    
+    mido_resource_host *instance_node = search_mido_host_byip(mido, node);
+    if (instance_node) {
+        mido_copy_midoname(&(vpcinstance->midos[VMHOST]), &(instance_node->resc));
+        found = 1;
+    } else {
+        LOGWARN("Unable to find node %s in MidoNet.\n", node);
     }
 
     // set up elip ipaddrgroups
@@ -5215,7 +5268,6 @@ int check_mido_tunnelzone() {
 //!
 int discover_mido_resources(mido_config * mido) {
     int rc = 0, ret = 0, i = 0, max_mn = 0, j = 0, k = 0;
-    //int count = 0;
     midoname *mn = NULL;
     struct timeval tv;
 
@@ -5355,6 +5407,10 @@ int discover_mido_resources(mido_config * mido) {
             for (i = 0; i < resources->hosts[j].max_ports; i++) {
                 LOGTRACE("\tDiscovered port %s\n", (resources->hosts[j].ports[i])->name);
             }
+            rc = mido_get_addresses(&(mn[j]), &(resources->hosts[j].addresses), &(resources->hosts[j].max_addresses));
+            for (i = 0; i < resources->hosts[j].max_addresses; i++) {
+                LOGTRACE("\tDiscovered address %u\n", resources->hosts[j].addresses[i]);
+            }
         }
         resources->max_hosts = max_mn;
     }
@@ -5364,6 +5420,9 @@ int discover_mido_resources(mido_config * mido) {
     }
     mn = NULL;
     max_mn = 0;
+    
+    // populate IP-to-MidoNet Host Map Table
+    rc = populate_mido_iphostmap(mido);
 
     // get all IP address groups
     rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &mn, &max_mn);
@@ -5785,6 +5844,53 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
     }
 
     return (ret);
+}
+
+//!
+//! Populates the IP-to-MidoNet Host map table.
+//!
+//! @param[in] mido mido_config data structure.
+//!
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre mido_config data structure, specifically the resources property is assumed
+//!      to be pre-populated.
+//!
+//! @post
+//!
+//! @note
+//!
+int populate_mido_iphostmap(mido_config *mido) {
+    int i = 0;
+    int j = 0;
+    mido_iphostmap *iphm = NULL;
+    mido_resources *rescs = NULL;
+    struct timeval tv;
+
+    if ((mido == NULL) || (mido->resources->hosts == NULL)) {
+        LOGWARN("Invalid argument: NULL mido_config.\n");
+        return (1);
+    }
+    eucanetd_timer(&tv);
+    rescs = mido->resources;
+    iphm = &(rescs->iphostmap);
+    LOGTRACE("populating ip-to-midohost map table.\n");
+    
+    for (i = 0; i < rescs->max_hosts; i++) {
+        iphm->entries = EUCA_REALLOC(iphm->entries, iphm->max_entries + rescs->hosts[i].max_addresses,
+                sizeof (mido_iphostmap_entry));
+        bzero(&(iphm->entries[iphm->max_entries]), rescs->hosts[i].max_addresses * sizeof (mido_iphostmap_entry));
+        for (j = 0; j < rescs->hosts[i].max_addresses; j++) {
+            iphm->entries[iphm->max_entries].ip = rescs->hosts[i].addresses[j];
+            iphm->entries[iphm->max_entries].host = &(rescs->hosts[i]);
+            (iphm->max_entries)++;
+        }
+    }
+    
+    LOGDEBUG("ip-to-midohost map populated in %ld us.\n", eucanetd_timer_usec(&tv));
+    return (0);
 }
 
 //!
@@ -6297,8 +6403,12 @@ int free_mido_resources(mido_resources *midoresources) {
         for (i = 0; i < midoresources->max_hosts; i++) {
             mido_free_midoname(&(midoresources->hosts[i].resc));
             EUCA_FREE(midoresources->hosts[i].ports);
+            EUCA_FREE(midoresources->hosts[i].addresses);
         }
         EUCA_FREE(midoresources->hosts);
+    }
+    if (midoresources->iphostmap.entries) {
+        EUCA_FREE(midoresources->iphostmap.entries);
     }
     if (midoresources->ipaddrgroups) {
         for (i = 0; i < midoresources->max_ipaddrgroups; i++) {
@@ -6316,7 +6426,7 @@ int free_mido_resources(mido_resources *midoresources) {
         EUCA_FREE(midoresources->portgroups);
     }
 
-    bzero(midoresources, sizeof (midoresources));
+    bzero(midoresources, sizeof (mido_resources));
     return (ret);
 }
 

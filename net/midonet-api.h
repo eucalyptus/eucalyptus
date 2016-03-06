@@ -94,6 +94,17 @@
 // 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
 #define MAX_RTID 8192
 
+#define MIDO_HOST_INTERFACE_PHYSICAL           0x00000001
+#define MIDO_HOST_INTERFACE_VIRTUAL            0x00000002
+#define MIDO_HOST_INTERFACE_TUNNEL             0x00000004
+#define MIDO_HOST_INTERFACE_UNKNOWN            0x00000008
+#define MIDO_HOST_INTERFACE_ENDPOINT_PHYSICAL  0x00000100
+#define MIDO_HOST_INTERFACE_ENDPOINT_LOCALHOST 0x00000200
+#define MIDO_HOST_INTERFACE_ENDPOINT_DATAPAH   0x00000400
+#define MIDO_HOST_INTERFACE_ENDPOINT_UNKNOWN   0x00000800
+#define MIDO_HOST_INTERFACE_ENDPOINT_ALL       0xFFFFFFFF
+#define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -247,8 +258,21 @@ typedef struct mido_resource_chain_t {
 typedef struct mido_resource_host_t {
     midoname resc;
     midoname **ports;
+    u32 *addresses;
     int max_ports;
+    int max_addresses;
 } mido_resource_host;
+
+typedef struct mido_iphostmap_entry_t {
+    u32 ip;
+    mido_resource_host *host;
+} mido_iphostmap_entry;
+
+typedef struct mido_iphostmap_t {
+    mido_iphostmap_entry *entries;
+    int max_entries;
+    int sorted;
+} mido_iphostmap;
 
 typedef struct mido_resource_ipaddrgroup_t {
     midoname resc;
@@ -263,6 +287,7 @@ typedef struct mido_resource_portgroup_t {
 } mido_resource_portgroup;
 
 typedef struct mido_resources_t {
+    mido_iphostmap iphostmap;    
     midoname *ports;
     mido_resource_router *routers;
     mido_resource_bridge *bridges;
@@ -371,24 +396,6 @@ typedef struct mido_config_t {
     int flushmode;
     int disable_l2_isolation;
 
-//    midoname *hosts;
-//    midoname *routers;
-//    midoname *bridges;
-//    midoname *chains;
-//    midoname *brports;
-//    midoname *rtports;
-//    midoname *ipaddrgroups;
-//    midoname *portgroups;
-//
-//    int max_hosts;
-//    int max_routers;
-//    int max_bridges;
-//    int max_chains;
-//    int max_brports;
-//    int max_rtports;
-//    int max_ipaddrgroups;
-//    int max_portgroups;
-
     mido_resources *resources;
     mido_core *midocore;
 
@@ -431,6 +438,7 @@ void mido_free_midoname_list(midoname * name, int max_name);
 int mido_update_midoname(midoname * name);
 void mido_copy_midoname(midoname * dst, midoname * src);
 int mido_getel_midoname(midoname * name, char *key, char **val);
+int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_values);
 void mido_print_midoname(midoname * name);
 int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
@@ -500,7 +508,8 @@ int mido_link_host_port(midoname * host, char *interface, midoname * device, mid
 int mido_unlink_host_port(midoname * host, midoname * port);
 
 int mido_get_hosts(midoname ** outnames, int *outnames_max);
-int mido_get_interfaces(midoname * host, midoname ** outports, int *outports_max);
+int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max);
+int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
 
 int mido_create_chain(char *tenant, char *name, midoname * outname);
 //int mido_read_chain(midoname * name);
@@ -549,6 +558,8 @@ int midonet_http_get(char *url, char *apistr, char **out_payload);
 int midonet_http_put(char *url, char *resource_type, char *vers, char *payload);
 int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload);
 int midonet_http_delete(char *url);
+
+int compare_iphostmap_entry(const void *p1, const void *p2);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
