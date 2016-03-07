@@ -3135,7 +3135,8 @@ int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_
 
     // Process Node Controller names to populate the ip->hostname 'cache'
     // This is only relevant to VPCMIDO.
-    if (IS_NETMODE_VPCMIDO(gni)) {
+    // Search for nodes changed to MidoNet-based instead of DNS-based (EUCA-11997)
+    if (0 && (IS_NETMODE_VPCMIDO(gni))) {
         snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/*/property[@name='nodes']/node");
         rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
         LOGTRACE("Found %d Nodes in the config\n", max_results);
@@ -3298,6 +3299,7 @@ int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_
                     for (l = 0; l < gni->max_instances; l++) {
                         if (!strcmp(gni->instances[l].name, gni->clusters[j].nodes[k].instance_names[i].name)) {
                             snprintf(gni->instances[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+/*
                             {
                                 char *hostname = NULL;
 
@@ -3311,11 +3313,13 @@ int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_
                                     EUCA_FREE(hostname);
                                 }
                             }
+*/
                         }
                     }
                     for (l = 0; l < gni->max_interfaces; l++) {
                         if (!strcmp(gni->interfaces[l].instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
                             snprintf(gni->interfaces[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+/*
                             {
                                 char *hostname = NULL;
 
@@ -3329,6 +3333,7 @@ int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_
                                     EUCA_FREE(hostname);
                                 }
                             }
+*/
                         }
                     }
                 }
@@ -4988,7 +4993,7 @@ void gni_instance_interface_print(gni_instance *inst, int loglevel)
     EUCALOG(loglevel, "\tvpc          = %s\n", inst->vpc);
     EUCALOG(loglevel, "\tsubnet       = %s\n", inst->subnet);
     EUCALOG(loglevel, "\tnode         = %s\n", inst->node);
-    EUCALOG(loglevel, "\tnodehostname = %s\n", inst->nodehostname);
+    //EUCALOG(loglevel, "\tnodehostname = %s\n", inst->nodehostname);
     if (strstr(inst->name, "eni-")) {
         EUCALOG(loglevel, "\tinstance     = %s\n", inst->instance_name.name);
         EUCALOG(loglevel, "\tsrcdstcheck  = %s\n", inst->srcdstcheck ? "true" : "false");
