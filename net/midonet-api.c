@@ -4084,22 +4084,24 @@ int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max)
         *outnames_max = 0;
         for (i = 0; i < names_max; i++) {
             rc = mido_getarr_midoname(&(names[i]), "addresses", &addrs, &max_addrs);
-            if (rc == 0) {
+            LOGTRACE("%s %s - max_addrs: %d\n", host->name, names[i].name, max_addrs);
+            if ((rc == 0) && (max_addrs > 0)) {
                 hips = EUCA_REALLOC(hips, *outnames_max + max_addrs, sizeof (u32));
                 if (hips == NULL) {
-                    LOGFATAL("out of memory.\n");
+                    LOGFATAL("out of memory - onmax %d, maxa %d.\n", *outnames_max, max_addrs);
                     return (1);
                 }
                 bzero(&(hips[*outnames_max]), max_addrs * sizeof (u32));
                 for (int j = 0; j < max_addrs; j++) {
                     if (strlen(addrs[j]) > 16) {
-                        LOGDEBUG("\tskipping %s - not an IPv4 address.\n", addrs[j]);
+                        LOGTRACE("\tskipping %s - not an IPv4 address.\n", addrs[j]);
                     } else {
                         hips[*outnames_max] = dot2hex(addrs[j]);
                         if ((hips[*outnames_max] & 0xa9fe0000) == 0xa9fe0000) {
-                            LOGDEBUG("\tskipping %s - link local address\n", addrs[j]);
+                            LOGTRACE("\tskipping %s - link local address\n", addrs[j]);
                             hips[*outnames_max] = 0;
                         } else {
+                            LOGTRACE("\tFound %s\n", addrs[j]);
                             (*outnames_max)++;
                         }
                     }
