@@ -262,8 +262,8 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
   }
 
   private void validateProperties() throws ValidationErrorException {
-    // You must provide only one of the following: a GatewayID, InstanceID, NetworkInterfaceId, or VpcPeeringConnectionId.
-    List<String> oneOfTheseParams = Lists.newArrayList(properties.getGatewayId(), properties.getInstanceId(),
+    // You must provide only one of the following: a GatewayID, InstanceID, NatGatewayIdm NetworkInterfaceId, or VpcPeeringConnectionId.
+    List<String> oneOfTheseParams = Lists.newArrayList(properties.getGatewayId(), properties.getInstanceId(), properties.getNatGatewayId(),
       properties.getNetworkInterfaceId(), properties.getVpcPeeringConnectionId());
     int numNonNullOrEmpty = 0;
     for (String item: oneOfTheseParams) {
