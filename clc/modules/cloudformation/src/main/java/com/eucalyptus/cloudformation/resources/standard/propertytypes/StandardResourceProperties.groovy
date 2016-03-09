@@ -277,6 +277,16 @@ public class AWSEC2InternetGatewayProperties implements ResourceProperties {
 }
 
 @ToString(includeNames=true)
+public class AWSEC2NatGatewayProperties implements ResourceProperties {
+  @Required
+  @Property
+  String allocationId;
+  @Required
+  @Property
+  String subnetId;
+}
+
+@ToString(includeNames=true)
 public class AWSEC2NetworkAclProperties implements ResourceProperties {
   @Required
   @Property
@@ -355,6 +365,8 @@ public class AWSEC2RouteProperties implements ResourceProperties {
   String gatewayId;
   @Property
   String instanceId;
+  @Property
+  String natGatewayId;
   @Property
   String networkInterfaceId;
   @Required

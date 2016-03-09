@@ -80,6 +80,9 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getNatGatewayId(), otherAction.properties.getNatGatewayId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
     if (!Objects.equals(properties.getNetworkInterfaceId(), otherAction.properties.getNetworkInterfaceId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
@@ -120,6 +123,9 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         }
         if (!Strings.isNullOrEmpty(action.properties.getVpcPeeringConnectionId())) {
           createRouteType.setVpcPeeringConnectionId(action.properties.getVpcPeeringConnectionId());
+        }
+        if (!Strings.isNullOrEmpty(action.properties.getNatGatewayId())) {
+          createRouteType.setNatGatewayId(action.properties.getNatGatewayId());
         }
         if (!Strings.isNullOrEmpty(action.properties.getNetworkInterfaceId())) {
           createRouteType.setNetworkInterfaceId(action.properties.getNetworkInterfaceId());
@@ -217,6 +223,9 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         if (!Strings.isNullOrEmpty(newAction.properties.getVpcPeeringConnectionId())) {
           replaceRouteType.setVpcPeeringConnectionId(newAction.properties.getVpcPeeringConnectionId());
         }
+        if (!Strings.isNullOrEmpty(newAction.properties.getNatGatewayId())) {
+          replaceRouteType.setNatGatewayId(newAction.properties.getNatGatewayId());
+        }
         if (!Strings.isNullOrEmpty(newAction.properties.getNetworkInterfaceId())) {
           replaceRouteType.setNetworkInterfaceId(newAction.properties.getNetworkInterfaceId());
         }
@@ -253,15 +262,15 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
   }
 
   private void validateProperties() throws ValidationErrorException {
-    // You must provide only one of the following: a GatewayID, InstanceID, NetworkInterfaceId, or VpcPeeringConnectionId.
-    List<String> oneOfTheseParams = Lists.newArrayList(properties.getGatewayId(), properties.getInstanceId(),
+    // You must provide only one of the following: a GatewayID, InstanceID, NatGatewayIdm NetworkInterfaceId, or VpcPeeringConnectionId.
+    List<String> oneOfTheseParams = Lists.newArrayList(properties.getGatewayId(), properties.getInstanceId(), properties.getNatGatewayId(),
       properties.getNetworkInterfaceId(), properties.getVpcPeeringConnectionId());
     int numNonNullOrEmpty = 0;
     for (String item: oneOfTheseParams) {
       if (!Strings.isNullOrEmpty(item)) numNonNullOrEmpty++;
     }
     if (numNonNullOrEmpty != 1) {
-      throw new ValidationErrorException("Exactly one of GatewayID, InstanceID, NetworkInterfaceId, or VpcPeeringConnectionId must be specified");
+      throw new ValidationErrorException("Exactly one of GatewayID, InstanceID, NatGatewayId, NetworkInterfaceId, or VpcPeeringConnectionId must be specified");
     }
   }
 
@@ -269,6 +278,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
     if (!properties.getDestinationCidrBlock().equals(routeType.getDestinationCidrBlock())) return false;
     if (differentIfNotNullOrEmpty(properties.getInstanceId(), routeType.getInstanceId())) return false;
     if (differentIfNotNullOrEmpty(properties.getGatewayId(), routeType.getGatewayId())) return false;
+    if (differentIfNotNullOrEmpty(properties.getNatGatewayId(), routeType.getNatGatewayId())) return false;
     if (differentIfNotNullOrEmpty(properties.getNetworkInterfaceId(), routeType.getNetworkInterfaceId())) return false;
     if (differentIfNotNullOrEmpty(properties.getVpcPeeringConnectionId(), routeType.getVpcPeeringConnectionId())) return false;
     return true;

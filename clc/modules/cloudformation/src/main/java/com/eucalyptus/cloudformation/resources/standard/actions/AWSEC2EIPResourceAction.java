@@ -152,7 +152,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
         final AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
-        if ( action.info.getPhysicalResourceId( ) == null ) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if ( action.properties.getInstanceId( ) != null ) {
           final ServiceConfiguration configuration = Topology.lookup( Compute.class );
           final List<AddressInfoType> addresses = describeAddresses( action, configuration ).getAddressesSet( );
