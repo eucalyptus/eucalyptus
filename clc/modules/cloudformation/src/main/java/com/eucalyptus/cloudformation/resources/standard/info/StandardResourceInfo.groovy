@@ -168,6 +168,13 @@ public class AWSEC2InternetGatewayResourceInfo extends ResourceInfo {
 
 
 @ToString(includeNames=true)
+public class AWSEC2NatGatewayResourceInfo extends ResourceInfo {
+  public AWSEC2NatGatewayResourceInfo() {
+    setType("AWS::EC2::NatGateway");
+  }
+}
+
+@ToString(includeNames=true)
 public class AWSEC2NetworkAclResourceInfo extends ResourceInfo {
   public AWSEC2NetworkAclResourceInfo() {
     setType("AWS::EC2::NetworkAcl");
