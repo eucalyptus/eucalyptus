@@ -74,6 +74,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -122,12 +123,14 @@ public class CephRbdInfo extends AbstractPersistent {
   private String cephConfigFile;
   @ConfigurableField(
       description = "Ceph storage pool(s) made available to Eucalyptus for EBS volumes. Use a comma separated list for configuring multiple pools. "
-          + "Default value is 'rbd'", displayName = "Ceph Volume Pools", initial = "rbd")
+          + "Default value is 'rbd'",
+      displayName = "Ceph Volume Pools", initial = "rbd")
   @Column(name = "ceph_volume_pools")
   private String cephVolumePools;
   @ConfigurableField(
       description = "Ceph storage pool(s) made available to Eucalyptus for EBS snapshots. Use a comma separated list for configuring multiple pools. "
-          + "Default value is 'rbd'", displayName = "Ceph Snapshot Pools", initial = "rbd")
+          + "Default value is 'rbd'",
+      displayName = "Ceph Snapshot Pools", initial = "rbd")
   @Column(name = "ceph_snapshot_pools")
   private String cephSnapshotPools;
   @Column(name = "virsh_secret")
@@ -315,5 +318,29 @@ public class CephRbdInfo extends AbstractPersistent {
     }
 
     return info;
+  }
+
+  public String[] getAllVolumePools() {
+    String[] allPools = cephVolumePools.split(",");
+    if (allPools != null && allPools.length > 0) {
+      return allPools;
+    } else {
+      LOG.warn(
+          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephvolumepools=<pool-name>");
+      throw new EucalyptusCephException(
+          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephvolumepools=<pool-name>");
+    }
+  }
+
+  public String[] getAllSnapshotPools() {
+    String[] allPools = cephSnapshotPools.split(",");
+    if (allPools != null && allPools.length > 0) {
+      return allPools;
+    } else {
+      LOG.warn(
+          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephsnapshotpools=<pool-name>");
+      throw new EucalyptusCephException(
+          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephsnapshotpools=<pool-name>");
+    }
   }
 }

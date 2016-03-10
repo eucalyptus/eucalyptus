@@ -88,18 +88,30 @@ public interface CephRbdAdapter {
    * Delete RBD image
    * 
    * @param imageName Name of the image to be deleted
-   * @param poolName Name of the pool
+   * @param poolName Name of the pool to which the image belongs
    * @param
    */
   public void deleteImage(String imageName, String poolName);
+
+  /**
+   * List images in a pool and try deleting an image if it starts with the prefix or is present in the toBeDeleted set. If the deletion fails and the
+   * image does not start with the prefix, rename the image by appending the prefix to the original name. It might seem like this method is doing too
+   * many things but its intentional to limit the number of rbd connections
+   * 
+   * @param poolName Name of the pool
+   * @param imagePrefix Prefix of images that are marked for deletion
+   * @param toBeDeleted Set of images that have never been cleaned up
+   */
+  public void cleanUpImages(String poolName, String imagePrefix, List<String> toBeDeleted);
 
   /**
    * Rename RBD image
    * 
    * @param imageName Image to be renamed
    * @param newImageName New name of the image
+   * @param poolName Name of the pool to which the image belongs
    */
-  public void renameImage(String imageName, String newImageName);
+  public void renameImage(String imageName, String newImageName, String poolName);
 
   /**
    * Check if the image exists in any of the configured pools and return the pool name
@@ -114,17 +126,19 @@ public interface CephRbdAdapter {
    * 
    * @param parentName Name of the parent image
    * @param snapName Name of the snapshot
+   * @param parentPoolName Name of the pool to which the parent image belongs
    * @return Returns a representation of the newly created snapshot
    */
-  public String createSnapshot(String parentName, String snapName);
+  public String createSnapshot(String parentName, String snapName, String parentPoolName);
 
   /**
    * Delete the RBD snapshot
    * 
    * @param parentName Name of the parent image
    * @param snapName Name of the snapshot
+   * @param parentPoolName Name of the pool to which the parent image belongs
    */
-  public void deleteSnapshot(String parentName, String snapName);
+  public void deleteSnapshot(String parentName, String snapName, String parentPoolName);
 
   /**
    * Clone an image from the parent using the snapshot on the parent. If no snapshot is passed, a new snapshot is created on the parent and used for
@@ -134,9 +148,10 @@ public interface CephRbdAdapter {
    * @param snapName Name of the snapshot on parent image to be used for cloning
    * @param cloneName Name of the image to be cloned
    * @param size Size of the cloned image if it needs to resized
+   * @param parentPoolName Name of the pool to which the parent image belongs
    * @return Returns a representation of the cloned image
    */
-  public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size);
+  public String cloneAndResizeImage(String parentName, String snapName, String cloneName, Long size, String parentPoolName);
 
   /**
    * List RBD images in pool
