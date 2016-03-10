@@ -510,5 +510,4 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
     info = (AWSElasticLoadBalancingLoadBalancerResourceInfo) resourceInfo;
   }
 
-
 }
