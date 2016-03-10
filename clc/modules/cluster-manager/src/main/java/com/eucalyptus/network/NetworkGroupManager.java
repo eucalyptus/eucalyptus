@@ -293,6 +293,10 @@ public class NetworkGroupManager {
             if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
             }
+            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) && (ipPerm.getFromPort( ) > 255 || ipPerm.getToPort( ) > 255)) {
+              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" + ( ( ipPerm.getFromPort( ) > 255 ) ? ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
+                        "out of range. Supported range for ICMP code and type is 0 to 255" );
+            }
             if ( ipPerm.getIpProtocol( ) != null && !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
               throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
             }
@@ -358,6 +362,10 @@ public class NetworkGroupManager {
           for ( final IpPermissionType ipPerm : ipPermissions ) {
             if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
+            }
+            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) && (ipPerm.getFromPort( ) > 255 || ipPerm.getToPort( ) > 255)) {
+              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" + ( ( ipPerm.getFromPort( ) > 255 ) ? ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
+                      "out of range. Supported range for ICMP code and type is 0 to 255" );
             }
             if ( ipPerm.getIpProtocol( ) == null || !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
               throw new ClientComputeException("InvalidPermission.Malformed", "Invalid protocol ("+ipPerm.getIpProtocol( )+")" );
