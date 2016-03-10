@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,69 +60,114 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.ceph;
+package com.eucalyptus.blockstorage.ceph.entities;
 
-import java.io.InputStream;
-import java.io.OutputStream;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.ceph.rbd.RbdImage;
-import com.eucalyptus.blockstorage.StorageResource;
-import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
-import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
-import com.eucalyptus.blockstorage.exceptions.UnknownSizeException;
+import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.entities.AbstractPersistent;
 
-public class CephRbdResource extends StorageResource {
+@Entity
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "ceph_rbd_image_to_be_deleted")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+public class CephRbdImageToBeDeleted extends AbstractPersistent {
 
-  private static final Logger LOG = Logger.getLogger(CephRbdResource.class);
+  private static final long serialVersionUID = 1L;
 
-  private String imageName = null;
-  private String poolName = null;
-  private CephRbdInfo info = null;
+  @Column(name = "cluster_name")
+  private String clusterName;
 
-  public CephRbdResource(String id, String path) {
-    super(id, path, StorageResource.Type.CEPH);
-    info = CephRbdInfo.getStorageInfo();
-    String[] poolImage = path.split(CephRbdInfo.POOL_IMAGE_DELIMITER);
-    if (poolImage == null || poolImage.length != 2) {
-      LOG.warn("Invalid format for path CephImageResource, expected pool/image but got " + path);
-      throw new EucalyptusCephException("Invalid format for path CephImageResource, expected pool/image but got " + path);
-    } else {
-      poolName = poolImage[0];
-      imageName = poolImage[1];
-    }
+  @Column(name = "image_name")
+  private String imageName;
+
+  @Column(name = "pool_name")
+  private String poolName;
+
+  public CephRbdImageToBeDeleted() {
+    this.clusterName = StorageProperties.NAME;
+  }
+
+  public CephRbdImageToBeDeleted(String imageName, String poolName) {
+    this();
+    this.imageName = imageName;
+    this.poolName = poolName;
+  }
+
+  public String getClusterName() {
+    return clusterName;
+  }
+
+  public void setClusterName(String clusterName) {
+    this.clusterName = clusterName;
+  }
+
+  public String getImageName() {
+    return imageName;
+  }
+
+  public void setImageName(String imageName) {
+    this.imageName = imageName;
+  }
+
+  public CephRbdImageToBeDeleted withImageName(String imageName) {
+    this.imageName = imageName;
+    return this;
+  }
+
+  public String getPoolName() {
+    return poolName;
+  }
+
+  public void setPoolName(String poolName) {
+    this.poolName = poolName;
+  }
+
+  public CephRbdImageToBeDeleted withPoolName(String poolName) {
+    this.poolName = poolName;
+    return this;
   }
 
   @Override
-  public Boolean isDownloadSynchronous() {
-    return Boolean.FALSE;
+  public int hashCode() {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + ((clusterName == null) ? 0 : clusterName.hashCode());
+    result = prime * result + ((imageName == null) ? 0 : imageName.hashCode());
+    result = prime * result + ((poolName == null) ? 0 : poolName.hashCode());
+    return result;
   }
 
   @Override
-  public Long getSize() throws UnknownSizeException {
-    try (CephRbdConnectionManager conn = CephRbdConnectionManager.getConnection(info, poolName)) {
-      RbdImage rbdImage = null;
-      try {
-        rbdImage = conn.getRbd().open(imageName);
-        return rbdImage.stat().size;
-      } finally {
-        if (rbdImage != null) {
-          conn.getRbd().close(rbdImage);
-        }
-      }
-    } catch (Exception e) {
-      throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
-    }
-  }
-
-  @Override
-  public InputStream getInputStream() throws Exception {
-    return new CephRbdInputStream(imageName, poolName, info);
-  }
-
-  @Override
-  public OutputStream getOutputStream() throws Exception {
-    return new CephRbdOutputStream(imageName, poolName, info);
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (!super.equals(obj))
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CephRbdImageToBeDeleted other = (CephRbdImageToBeDeleted) obj;
+    if (clusterName == null) {
+      if (other.clusterName != null)
+        return false;
+    } else if (!clusterName.equals(other.clusterName))
+      return false;
+    if (imageName == null) {
+      if (other.imageName != null)
+        return false;
+    } else if (!imageName.equals(other.imageName))
+      return false;
+    if (poolName == null) {
+      if (other.poolName != null)
+        return false;
+    } else if (!poolName.equals(other.poolName))
+      return false;
+    return true;
   }
 }

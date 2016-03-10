@@ -20,7 +20,6 @@
 package com.eucalyptus.blockstorage.ceph;
 
 import java.io.File;
-import java.util.Random;
 
 import org.apache.log4j.Logger;
 
@@ -35,10 +34,9 @@ import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
  * Utility class for creating and managing connection to a pool in a Ceph cluster. Encapsulates all elements (Rados, IoCTX, Rbd, pool) of a ceph
  * connection if the caller needs access to a specific element.
  */
-public class CephRbdConnectionManager {
+public class CephRbdConnectionManager implements AutoCloseable {
 
   private static Logger LOG = Logger.getLogger(CephRbdConnectionManager.class);
-  private static Random randomGenerator = new Random();
   private static final String KEYRING = "keyring";
 
   private Rados rados;
@@ -48,6 +46,7 @@ public class CephRbdConnectionManager {
 
   private CephRbdConnectionManager(CephRbdInfo config, String poolName) {
     try {
+      LOG.trace("Opening a new connection to Ceph cluster pool=" + poolName);
       rados = new Rados(config.getCephUser());
       rados.confSet(KEYRING, config.getCephKeyringFile());
       rados.confReadFile(new File(config.getCephConfigFile()));
@@ -81,12 +80,19 @@ public class CephRbdConnectionManager {
   }
 
   public void disconnect() {
-    if (rados != null && ioContext != null) {
-      rados.ioCtxDestroy(ioContext);
-      rados = null;
-      ioContext = null;
-      rbd = null;
-      pool = null;
+    try {
+      LOG.trace("Closing connection to Ceph cluster pool=" + pool);
+      if (rados != null && ioContext != null) {
+        rados.ioCtxDestroy(ioContext);
+        // Calling shutdown causes the following initialization of rados to seg-fault and crash the jvm. commenting it out
+        // rados.shutDown();
+        rados = null;
+        ioContext = null;
+        rbd = null;
+        pool = null;
+      }
+    } catch (Exception e) {
+      LOG.debug("Caught error during teardown", e);
     }
   }
 
@@ -94,37 +100,8 @@ public class CephRbdConnectionManager {
     return new CephRbdConnectionManager(config, poolName);
   }
 
-  public static CephRbdConnectionManager getRandomVolumePoolConnection(CephRbdInfo config) {
-    String[] allPools = getAllVolumePools(config);
-    // TODO Implement evaluating strategy to pick a pool. Using a random pool for now
-    return new CephRbdConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
-  }
-
-  public static CephRbdConnectionManager getRandomSnapshotPoolConnection(CephRbdInfo config) {
-    String[] allPools = getAllSnapshotPools(config);
-    // TODO Implement evaluating strategy to pick a pool. Using a random pool for now
-    return new CephRbdConnectionManager(config, allPools[randomGenerator.nextInt(allPools.length)]);
-  }
-
-  public static String[] getAllVolumePools(CephRbdInfo config) {
-    String[] allPools = config.getCephVolumePools().split(",");
-    if (allPools != null && allPools.length > 0) {
-      return allPools;
-    } else {
-      LOG.warn("No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephvolumepools=<pool-name>");
-      throw new EucalyptusCephException(
-          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephvolumepools=<pool-name>");
-    }
-  }
-
-  public static String[] getAllSnapshotPools(CephRbdInfo config) {
-    String[] allPools = config.getCephSnapshotPools().split(",");
-    if (allPools != null && allPools.length > 0) {
-      return allPools;
-    } else {
-      LOG.warn("No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephsnapshotpools=<pool-name>");
-      throw new EucalyptusCephException(
-          "No ceph pools defined, retry after defining at least one pool using euca-modify-property -p <cluster>.storage.cephsnapshotpools=<pool-name>");
-    }
+  @Override
+  public void close() throws Exception {
+    disconnect();
   }
 }
