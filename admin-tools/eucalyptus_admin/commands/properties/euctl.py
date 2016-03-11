@@ -123,7 +123,7 @@ class Euctl(PropertiesRequest):
                     editor, vi(1).'''),
                 Arg('--dump', action='store_true', help='''Output the value of
                     a structure variable in its entirety.''')),
-            Arg('--format', choices=('json', 'yaml'), default='json',
+            Arg('--format', choices=('raw', 'json', 'yaml'), default='json',
                 help='''Try to use the specified format when displaying
                 a structure variable.  (default: json)''')]
 
@@ -273,6 +273,8 @@ class Euctl(PropertiesRequest):
         return True  # changed
 
     def _get_formatter(self):
+        if self.args.get('format') == 'raw':
+            return _Formatter()
         if self.args.get('format') == 'json':
             return _JSONFormatter()
         if self.args.get('format') == 'yaml':

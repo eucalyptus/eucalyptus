@@ -17,11 +17,11 @@
 .Ar NAME=@FILE ...
 .Nm
 .Fl -dump
-.Op Fl -format Cm {json,yaml}
+.Op Fl -format Cm {raw,json,yaml}
 .Ar NAME
 .Nm
 .Fl -edit
-.Op Fl -format Cm {json,yaml}
+.Op Fl -format Cm {raw,json,yaml}
 .Ar NAME
 .Sh DESCRIPTION
 The
@@ -109,7 +109,7 @@ then the environment variable
 and finally the
 default editor,
 .Xr vi 1 .
-.It Fl -format Cm {json,yaml}
+.It Fl -format Cm {raw,json,yaml}
 Use the specified format when displaying a structure.
 (default:
 .Cm json Ns )
