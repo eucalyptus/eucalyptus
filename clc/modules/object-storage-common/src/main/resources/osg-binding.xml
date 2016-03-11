@@ -90,6 +90,15 @@
     <!-- <mapping name="Error" class="com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType">
         <structure map-as="com.eucalyptus.storage.msgs.s3.S3ErrorMessage"/> </mapping> -->
 
+    <mapping name="Error"
+             class="com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType"
+             abstract="true">
+        <value name="Code" field="code" usage="optional"/>
+        <value name="Message" field="message" usage="optional"/>
+        <value name="Method" field="method" usage="optional"/>
+        <value name="ResourceType" field="resourceType" usage="optional"/>
+    </mapping>
+
     <mapping name="ListAllMyBuckets"
              class="com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType"
              extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -821,13 +830,8 @@
         <structure field="preflightResponse" usage="optional"
                    map-as="com.eucalyptus.storage.msgs.s3.PreflightResponse"/>
     </mapping>
-    
-    <mapping 
-             class="com.eucalyptus.objectstorage.msgs.CorsPreflightNoConfigMessageType"
-             abstract="true">
-        <value name="Method" field="requestMethod" usage="optional"/> 
-    </mapping>
 
+    
     <!-- multi-object-delete: POST bucket?delete -->
     <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">
         <structure field="deleteResult" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply" usage="optional"/>

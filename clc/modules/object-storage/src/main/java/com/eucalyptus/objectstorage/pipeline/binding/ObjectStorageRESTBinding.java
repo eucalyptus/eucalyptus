@@ -1641,7 +1641,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
     PreflightRequest preflightRequest = new PreflightRequest();
-    LOG.debug("LPT: Here I am in processPreflightRequest");
 
     preflightRequest.setOrigin(httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
     preflightRequest.setMethod(httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD));
@@ -1656,7 +1655,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       }
       preflightRequest.setRequestHeaders(requestHeaders);
     }
-    LOG.debug("LPT: ...and my request fields are:\n" + preflightRequest);
     return preflightRequest;
   }
   

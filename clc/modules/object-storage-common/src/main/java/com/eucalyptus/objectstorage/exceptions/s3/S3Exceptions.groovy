@@ -29,17 +29,14 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 class S3ErrorCodeStrings {
   public static final String AccessDenied = "AccessDenied"
+  public static final String AccessForbidden = "AccessForbidden"
   public static final String AccountProblem = "AccountProblem"
   public static final String AmbiguousGrantByEmailAddress = "AmbiguousGrantByEmailAddress"
   public static final String BadDigest = "BadDigest"
+  public static final String BadRequest = "BadRequest"
   public static final String BucketAlreadyExists = "BucketAlreadyExists"
   public static final String BucketAlreadyOwnedByYou = "BucketAlreadyOwnedByYou"
   public static final String BucketNotEmpty = "BucketNotEmpty"
-  public static final String CorsConfigUnsupportedMethod = "CorsConfigUnsupportedMethod"
-  public static final String CorsPreflightInvalidMethod = "CorsPreflightInvalidMethod"
-  public static final String CorsPreflightNoConfig = "CorsPreflightNoConfig"
-  public static final String CorsPreflightNoOrigin = "CorsPreflightNoOrigin"
-  public static final String CorsPreflightNotAllowed = "CorsPreflightNotAllowed"
   public static final String CredentialsNotSupported = "CredentialsNotSupported"
   public static final String CrossLocationLoggingProhibited = "CrossLocationLoggingProhibited"
   public static final String EntityTooSmall = "EntityTooSmall"
@@ -209,7 +206,7 @@ class BucketNotEmptyException extends S3Exception {
 // and message.
 class CorsConfigUnsupportedMethodException extends S3Exception {
   def CorsConfigUnsupportedMethodException(String method) {
-    super(S3ErrorCodeStrings.CorsConfigUnsupportedMethod,
+    super(S3ErrorCodeStrings.InvalidRequest,
     "Found unsupported HTTP method in CORS config. Unsupported method is " + method,
     HttpResponseStatus.BAD_REQUEST);
   }
@@ -222,7 +219,7 @@ class CorsConfigUnsupportedMethodException extends S3Exception {
 // and message.
 class CorsPreflightInvalidMethodException extends S3Exception {
   def CorsPreflightInvalidMethodException(String method) {
-    super(S3ErrorCodeStrings.CorsPreflightInvalidMethod,
+    super(S3ErrorCodeStrings.BadRequest,
     "Invalid Access-Control-Request-Method: " + method,
     HttpResponseStatus.BAD_REQUEST);
   }
@@ -234,14 +231,12 @@ class CorsPreflightInvalidMethodException extends S3Exception {
 class CorsPreflightNoConfigException extends S3Exception {
     String requestMethod;
     def CorsPreflightNoConfigException(String requestMethod, String resourceType) {
-    super(S3ErrorCodeStrings.CorsPreflightNoConfig,
+    super(S3ErrorCodeStrings.AccessForbidden,
     "CORSResponse: CORS is not enabled for this bucket.",
     HttpResponseStatus.FORBIDDEN);
     this.setResourceType(resourceType);
     this.setRequestMethod(requestMethod);
   }
-  //LPT: <Method>PUT</Method>
-  //LPT: <ResourceType>OBJECT</ResourceType>
 }
 
 // On a CORS preflight OPTIONS request, if no origin is provided,
@@ -249,7 +244,7 @@ class CorsPreflightNoConfigException extends S3Exception {
 // and message.
 class CorsPreflightNoOriginException extends S3Exception {
   def CorsPreflightNoOriginException() {
-    super(S3ErrorCodeStrings.CorsPreflightNoOrigin,
+    super(S3ErrorCodeStrings.BadRequest,
     "Insufficient information. Origin request header needed.",
     HttpResponseStatus.BAD_REQUEST);
   }
@@ -261,7 +256,7 @@ class CorsPreflightNoOriginException extends S3Exception {
 // and message.
 class CorsPreflightNotAllowedException extends S3Exception {
   def CorsPreflightNotAllowedException(String method) {
-    super(S3ErrorCodeStrings.CorsPreflightNotAllowed,
+    super(S3ErrorCodeStrings.AccessForbidden,
     "CORSResponse: This CORS request is not allowed. " +
     "This is usually because the evaluation of Origin, request method / " +
     "Access-Control-Request-Method or Access-Control-Request-Headers are " +
@@ -1121,6 +1116,9 @@ class UserKeyMustBeSpecifiedException extends S3Exception {
   }
 }
 
+// Currently not used. Would not work anyway with newly added CORS exceptions that are 
+// many-to-one of string-to-exception.class.
+// TODO: Remove?
 public enum S3Exceptions {
   INSTANCE;
   public static final Map<String, Class<? extends S3Exception>> exceptionCodeToClassMap;
@@ -1133,11 +1131,6 @@ public enum S3Exceptions {
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.BadDigest, BadDigestException.class)
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyExists, BucketAlreadyExistsException.class)
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyOwnedByYou, BucketAlreadyOwnedByYouException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CorsConfigUnsupportedMethod, CorsConfigUnsupportedMethodException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CorsPreflightInvalidMethod, CorsPreflightInvalidMethodException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CorsPreflightNoConfig, CorsPreflightNoConfigException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CorsPreflightNoOrigin, CorsPreflightNoOriginException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CorsPreflightNotAllowed, CorsPreflightNotAllowedException.class)
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.CredentialsNotSupported, CredentialsNotSupportedException.class)
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.CrossLocationLoggingProhibited, CrossLocationLoggingProhibitedException.class)
     exceptionCodeToClassMap.put(S3ErrorCodeStrings.EntityTooLarge, EntityTooLargeException.class)

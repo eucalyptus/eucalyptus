@@ -2158,9 +2158,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception {
-    //LPT Exception e = new Exception();
-    LOG.debug("LPT: Here I am in ObjectStorageGateway.preflightCors()");
-
     String bucketName = "nullBucket";
     PreflightCheckCorsResponseType response = null;
 
@@ -2168,7 +2165,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       Bucket bucket = getBucketAndCheckAuthorization(request);
       bucketName = request.getBucket();
       String key = request.getKey();
-      LOG.debug("LPT: Key is <" + key + ">");
       response = request.getReply();
       PreflightRequest preflightRequest = request.getPreflightRequest();
 
@@ -2309,8 +2305,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       responseFields.setMaxAgeSeconds(corsRuleFound.getMaxAgeSeconds());
 
       response.setStatus(HttpResponseStatus.OK);
-      LOG.debug("LPT: preflight (not HTTP) response status is " + response.getStatus());
-      
+
     } catch (S3Exception s3e) {
       LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
           bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
@@ -2323,7 +2318,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException(bucketName, ex);
     }
     
-    LOG.debug("LPT: About to return response. Status is " + response.getStatus() + ", Status Message is <" + response.getStatusMessage() + ">.");
     return response;
   }
 

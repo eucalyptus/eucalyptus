@@ -87,9 +87,9 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoConfigException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
-import com.eucalyptus.objectstorage.msgs.CorsPreflightNoConfigMessageType;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -131,7 +131,7 @@ public class OSGUtil {
     if (ex instanceof CorsPreflightNoConfigException){
       CorsPreflightNoConfigException e = (CorsPreflightNoConfigException) ex;
       errMsg =
-          new CorsPreflightNoConfigMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+          new ObjectStorageErrorMessageExtendedType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
               Internets.localHostAddress(), e.getLogData(), e.getRequestMethod());
       errMsg.setCorrelationId(correlationId);
       return errMsg;
@@ -142,6 +142,7 @@ public class OSGUtil {
           new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
               Internets.localHostAddress(), e.getLogData());
       errMsg.setCorrelationId(correlationId);
+
       return errMsg;
     } else {
       return null;

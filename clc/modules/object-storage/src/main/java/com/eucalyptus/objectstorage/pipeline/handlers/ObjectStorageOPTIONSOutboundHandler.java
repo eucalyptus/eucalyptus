@@ -91,25 +91,16 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    LOG.debug("LPT: Here I am in ObjectStorageOPTIONSOutboundHandler.outgoingMessage()");
-
-    LOG.debug("LPT: event's message is of class " + event.getMessage().getClass());
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
       httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 
-      //Exception e = new Exception(); //LPT
-      LOG.debug("LPT: msg is of class " + msg.getClass());
       if (msg instanceof PreflightCheckCorsResponseType) {
         PreflightCheckCorsResponseType preflightResponseMsg = (PreflightCheckCorsResponseType) msg;
         PreflightResponse preflightResponseFields = preflightResponseMsg.getPreflightResponse();
         httpResponse.setStatus(preflightResponseMsg.getStatus());
-        //LPT e = new Exception();
-        LOG.debug("LPT: Yes, I am a PreflightCheckCorsResponseType, and my HTTP status code is " + 
-            httpResponse.getStatus());
-
         httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, preflightResponseFields.getOrigin());
         
         List<String> methodList = preflightResponseFields.getMethods();

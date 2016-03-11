@@ -245,6 +245,25 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
   }
 }
 
+public class ObjectStorageErrorMessageExtendedType extends ObjectStorageErrorMessageType {
+  String method;
+
+  def ObjectStorageErrorMessageExtendedType() {}
+  
+  def ObjectStorageErrorMessageExtendedType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData,
+  String method) {
+    super(message,code,status,resourceType,resource,requestId,hostId,logData);
+    this.method = method;
+  }
+}
+
 public class ObjectStorageRedirectMessageType extends ObjectStorageErrorMessageType {
   private String redirectUrl;
 
@@ -859,26 +878,6 @@ public class PreflightCheckCorsType extends ObjectStorageRequestType {
 
 public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
   PreflightResponse preflightResponse;
-}
-
-@ComponentMessage(ObjectStorage.class)
-public class CorsPreflightNoConfigMessageType extends ObjectStorageErrorMessageType {
-  String requestMethod;
-
-  def CorsPreflightNoConfigMessageType() {}
-  
-  def CorsPreflightNoConfigMessageType(String message,
-  String code,
-  HttpResponseStatus status,
-  String resourceType,
-  String resource,
-  String requestId,
-  String hostId,
-  BucketLogData logData,
-  String requestMethod) {
-    super(message,code,status,resourceType,resource,requestId,hostId,logData);
-    this.requestMethod = requestMethod;
-  }
 }
 
 
