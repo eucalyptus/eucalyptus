@@ -1,4 +1,4 @@
-# Copyright 2015 Eucalyptus Systems, Inc.
+# Copyright (c) 2015-2016 Hewlett Packard Enterprise Development LP
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -55,7 +55,8 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                 Arg('--group-by-host', action='store_true', route_to=None,
                     help='collate services by host'),
                 Arg('--expert', action='store_true', route_to=None,
-                    help='show advanced information'))]
+                    help=('show advanced information, including service '
+                          'accounts')))]
     FILTERS = [_RenamingFilter('availability-zone', 'partition',
                                help="the service's availability zone"),
                Filter('host', help='the machine running the service'),
