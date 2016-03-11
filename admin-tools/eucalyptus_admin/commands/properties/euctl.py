@@ -1,4 +1,4 @@
-# Copyright 2015 Eucalyptus Systems, Inc.
+# Copyright (c) 2015-2016 Hewlett Packard Enterprise Development LP
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -83,9 +83,9 @@ class Euctl(PropertiesRequest):
             $ %(prog)s -r dns.enabled
 
         The information available from %(prog)s consists of integers,
-        strings, and structures.  The structured information can only
-        be retrieved by specialized programs and, in some cases, this
-        program's --edit and --dump options.
+        strings, and structures.  The structures can only be retrieved
+        by specialized programs and, in some cases, this program's
+        --edit and --dump options.
         ''')
 
     ARGS = [Arg('prop_pairs', metavar='NAME[=VALUE|=@FILE]', nargs='*',
@@ -98,8 +98,7 @@ class Euctl(PropertiesRequest):
             Arg('-A', '--all-types', action='store_true', help='''List all
                 the known variable names, including structures.  Those with
                 string or integer values will be output as usual; for the
-                structured values, the methods of retrieving them are
-                given.'''),
+                structures, the methods of retrieving them are given.'''),
             Arg('-r', '--reset', action='store_true',
                 help='Reset the given variables to their default values.'),
             MutuallyExclusiveArgList(
@@ -116,17 +115,17 @@ class Euctl(PropertiesRequest):
                 help='''Suppress all output when setting a variable.  This
                 option overrides the behavior of -n.'''),
             MutuallyExclusiveArgList(
-                Arg('--edit', action='store_true', help='''Edit a structured
+                Arg('--edit', action='store_true', help='''Edit a structure
                     variable interactively.  Only one variable may be edited
                     per invocation.  When looking for an editor, the program
                     will first try the environment variable VISUAL, then the
                     environment variable EDITOR, and finally the default
                     editor, vi(1).'''),
                 Arg('--dump', action='store_true', help='''Output the value of
-                    a structured variable in its entirety.''')),
+                    a structure variable in its entirety.''')),
             Arg('--format', choices=('json', 'yaml'), default='json',
                 help='''Try to use the specified format when displaying
-                a structured variable.  (default: json)''')]
+                a structure variable.  (default: json)''')]
 
     def configure(self):
         PropertiesRequest.configure(self)
@@ -224,11 +223,11 @@ class Euctl(PropertiesRequest):
     def _get_unique_property(self, prop_name):
         properties = self._get_all_properties(prop_name)
         if len(properties) < 1:
-            raise RuntimeError('no such property: {0}'.format(prop_name))
+            raise RuntimeError('no such variable: {0}'.format(prop_name))
         if len(properties) > 1:
             # This is probably where we should implement subtree editing
             # when the service supports it in the future.
-            raise RuntimeError('{0} matches more than one property'
+            raise RuntimeError('{0} matches more than one variable'
                                .format(prop_name))
         return properties[0]
 
