@@ -85,7 +85,9 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoConfigException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
+import com.eucalyptus.objectstorage.msgs.CorsPreflightNoConfigMessageType;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
@@ -126,7 +128,15 @@ public class OSGUtil {
 
   private static BaseMessage convertException(String correlationId, Throwable ex) {
     BaseMessage errMsg;
-    if (ex instanceof ObjectStorageException) {
+    if (ex instanceof CorsPreflightNoConfigException){
+      CorsPreflightNoConfigException e = (CorsPreflightNoConfigException) ex;
+      errMsg =
+          new CorsPreflightNoConfigMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+              Internets.localHostAddress(), e.getLogData(), e.getRequestMethod());
+      errMsg.setCorrelationId(correlationId);
+      return errMsg;
+      
+    } else if (ex instanceof ObjectStorageException) {
       ObjectStorageException e = (ObjectStorageException) ex;
       errMsg =
           new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,

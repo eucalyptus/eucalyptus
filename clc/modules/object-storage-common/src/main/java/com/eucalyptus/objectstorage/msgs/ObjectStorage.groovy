@@ -861,6 +861,26 @@ public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
   PreflightResponse preflightResponse;
 }
 
+@ComponentMessage(ObjectStorage.class)
+public class CorsPreflightNoConfigMessageType extends ObjectStorageErrorMessageType {
+  String requestMethod;
+
+  def CorsPreflightNoConfigMessageType() {}
+  
+  def CorsPreflightNoConfigMessageType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData,
+  String requestMethod) {
+    super(message,code,status,resourceType,resource,requestId,hostId,logData);
+    this.requestMethod = requestMethod;
+  }
+}
+
 
 // AddObject not used yet
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}

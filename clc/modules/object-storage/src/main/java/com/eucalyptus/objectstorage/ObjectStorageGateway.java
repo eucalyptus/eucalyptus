@@ -2188,7 +2188,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       List<CorsRule> corsRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
 
       if (corsRules == null || corsRules.isEmpty()) {
-        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(requestMethod);
+        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(requestMethod,
+            key == null ? "BUCKET" : "OBJECT");
         throw s3e;     
       }
 

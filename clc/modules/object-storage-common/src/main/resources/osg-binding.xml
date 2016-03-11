@@ -822,6 +822,11 @@
                    map-as="com.eucalyptus.storage.msgs.s3.PreflightResponse"/>
     </mapping>
     
+    <mapping 
+             class="com.eucalyptus.objectstorage.msgs.CorsPreflightNoConfigMessageType"
+             abstract="true">
+        <value name="Method" field="requestMethod" usage="optional"/> 
+    </mapping>
 
     <!-- multi-object-delete: POST bucket?delete -->
     <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">
