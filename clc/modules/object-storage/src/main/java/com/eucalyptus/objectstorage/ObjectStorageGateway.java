@@ -2268,7 +2268,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       
       if (!found) {
         // No rule matched the request
-        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(requestMethod);
+        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(requestMethod,
+            key == null ? "BUCKET" : "OBJECT");
         throw s3e;     
       }
       

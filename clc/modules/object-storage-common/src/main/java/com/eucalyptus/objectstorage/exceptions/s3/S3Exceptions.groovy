@@ -123,6 +123,25 @@ class S3Exception extends ObjectStorageException {
   }
 }
 
+class S3ExtendedException extends S3Exception {
+  String requestMethod;
+  
+  def S3ExtendedException() {}
+  
+  def S3ExtendedException(String errorCode, String description, HttpResponseStatus statusCode) {
+    super(errorCode, description, statusCode);
+  }
+  
+  public void setRequestMethod(String requestMethod) {
+    this.requestMethod = requestMethod;
+  }
+
+  public String getRequestMethod() {
+    return requestMethod;
+  }
+
+}
+
 class AccessDeniedException extends S3Exception {
   def AccessDeniedException() {
     super(S3ErrorCodeStrings.AccessDenied, "Access Denied", HttpResponseStatus.FORBIDDEN);
@@ -228,9 +247,8 @@ class CorsPreflightInvalidMethodException extends S3Exception {
 // On a CORS preflight OPTIONS request, when no CORS configuration exists,
 // to match AWS's response, return 403 Forbidden with this error code
 // and message.
-class CorsPreflightNoConfigException extends S3Exception {
-    String requestMethod;
-    def CorsPreflightNoConfigException(String requestMethod, String resourceType) {
+class CorsPreflightNoConfigException extends S3ExtendedException {
+  def CorsPreflightNoConfigException(String requestMethod, String resourceType) {
     super(S3ErrorCodeStrings.AccessForbidden,
     "CORSResponse: CORS is not enabled for this bucket.",
     HttpResponseStatus.FORBIDDEN);
@@ -254,15 +272,16 @@ class CorsPreflightNoOriginException extends S3Exception {
 // requested origin and HTTP verb (method),
 // to match AWS's response, return 403 Forbidden with this error code
 // and message.
-class CorsPreflightNotAllowedException extends S3Exception {
-  def CorsPreflightNotAllowedException(String method) {
+class CorsPreflightNotAllowedException extends S3ExtendedException {
+  def CorsPreflightNotAllowedException(String requestMethod, String resourceType) {
     super(S3ErrorCodeStrings.AccessForbidden,
     "CORSResponse: This CORS request is not allowed. " +
     "This is usually because the evaluation of Origin, request method / " +
     "Access-Control-Request-Method or Access-Control-Request-Headers are " +
     "not whitelisted by the resource's CORS spec.",
     HttpResponseStatus.FORBIDDEN);
-    this.setResourceType("OBJECT");
+    this.setResourceType(resourceType);
+    this.setRequestMethod(requestMethod);
   }
 }
 
@@ -1116,7 +1135,7 @@ class UserKeyMustBeSpecifiedException extends S3Exception {
   }
 }
 
-// Currently not used. Would not work anyway with newly added CORS exceptions that are 
+// Currently not used. Would not work anyway with newly added CORS exceptions that are
 // many-to-one of string-to-exception.class.
 // TODO: Remove?
 public enum S3Exceptions {
