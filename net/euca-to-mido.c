@@ -779,7 +779,9 @@ int do_midonet_populate(mido_config * mido) {
     mido_vpc_subnet *vpcsubnet = NULL;
     mido_vpc_natgateway *vpcnatg = NULL;
     mido_vpc *vpc = NULL;
+    struct timeval tv;
 
+    eucanetd_timer(&tv);
     mido_check_state();
 
     // mido discovery
@@ -788,7 +790,9 @@ int do_midonet_populate(mido_config * mido) {
         LOGERROR("could not discover resources from midonet: check midonet health\n");
         return (1);
     }
+    LOGINFO("\tMidoNet discovery executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
+    midonet_api_dirty_cache = 0;
     mido_check_state();
 
     // always populate the core from that which was discovered
@@ -797,12 +801,18 @@ int do_midonet_populate(mido_config * mido) {
         LOGERROR("could not populate midonet core (eucabr, eucart): check midonet health\n");
         return (1);
     }
+    LOGINFO("\tvpcmido core populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // create the core (only the things that aren't already there)
     rc = create_mido_core(mido, mido->midocore);
     if (rc) {
         LOGERROR("cannot setup midonet core router/bridge: check midonet health\n");
         return (1);
+    }
+    if (midonet_api_dirty_cache == 1) {
+        LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    } else {
+        LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
 
     // pattern
@@ -812,6 +822,9 @@ int do_midonet_populate(mido_config * mido) {
 
     // VPCs
     for (i = 0; i < mido->resources->max_routers; i++) {
+        if (!mido->resources->routers[i].resc.init) {
+            continue;
+        }
         LOGTRACE("inspecting mido router '%s'\n", mido->resources->routers[i].resc.name);
 
         bzero(vpcname, 16);
@@ -833,9 +846,13 @@ int do_midonet_populate(mido_config * mido) {
             }
         }
     }
+    LOGINFO("\tvpcs populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // SUBNETS
     for (i = 0; i < mido->resources->max_bridges; i++) {
+        if (!mido->resources->bridges[i].resc.init) {
+            continue;
+        }
         LOGTRACE("inspecting bridge '%s'\n", mido->resources->bridges[i].resc.name);
 
         bzero(vpcname, 16);
@@ -861,6 +878,9 @@ int do_midonet_populate(mido_config * mido) {
 
                 // Search for NAT Gateways
                 for (j = 0; j < mido->resources->max_routers; j++) {
+                    if (!mido->resources->routers[j].resc.init) {
+                        continue;
+                    }
                     natgname[0] = '\0';
                     natgrtid = 0;
                     snprintf(tmpstr, 64, "natr_%%21s_%s_%%d", subnetname);
@@ -876,7 +896,7 @@ int do_midonet_populate(mido_config * mido) {
                         vpcnatg->rtid = natgrtid;
                         rc = populate_mido_vpc_natgateway(mido, vpc, vpcsubnet, vpcnatg);
                         if (rc) {
-                            LOGERROR("cannot populate %s: check midonet health\n", vpcnatg->name);
+                            LOGERROR("cannot populate %s: check midonet health\n", natgname);
                             ret = 1;
                         }
                     }
@@ -884,9 +904,13 @@ int do_midonet_populate(mido_config * mido) {
             }
         }
     }
+    LOGINFO("\tvpc subnets populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // SECGROUPS
     for (i = 0; i < mido->resources->max_chains; i++) {
+        if (!mido->resources->chains[i].resc.init) {
+            continue;
+        }
         LOGTRACE("inspecting chain '%s'\n", mido->resources->chains[i].resc.name);
         chainname[0] = '\0';
 
@@ -905,6 +929,7 @@ int do_midonet_populate(mido_config * mido) {
             }
         }
     }
+    LOGINFO("\tsecurity groups populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // INSTANCES
     for (i = 0; i < mido->max_vpcs; i++) {
@@ -912,13 +937,13 @@ int do_midonet_populate(mido_config * mido) {
         for (j = 0; j < vpc->max_subnets; j++) {
             vpcsubnet = &(vpc->subnets[j]);
             for (k = 0; k < vpcsubnet->max_brports; k++) {
-
                 bzero(instanceId, 16);
                 bzero(deviceId, 16);
-                rc = mido_getel_midoname(&(vpcsubnet->brports[k]), "interfaceName", &iface);
-                rc = mido_getel_midoname(&(vpcsubnet->brports[k]), "deviceId", &devid);
+                rc = mido_getel_midoname(vpcsubnet->brports[k], "interfaceName", &iface);
+                rc = mido_getel_midoname(vpcsubnet->brports[k], "deviceId", &devid);
 
-                if ((iface && devid) && !strcmp(devid, vpcsubnet->midos[VPCBR].uuid)) {
+                if ((iface && devid) && vpcsubnet->midos[SUBN_VPCBR] &&
+                        !strcmp(devid, vpcsubnet->midos[SUBN_VPCBR]->uuid)) {
                     sscanf(iface, "vn_%s", instanceId);
                     snprintf(deviceId, 16, "%s", devid);
 
@@ -943,6 +968,7 @@ int do_midonet_populate(mido_config * mido) {
             }
         }
     }
+    LOGINFO("\tinstances populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     // END population phase
     return (ret);
 }
@@ -981,7 +1007,7 @@ int do_midonet_teardown(mido_config * mido) {
     }
 
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
-        delete_mido_resource_vpc_secgroup(mido, &(mido->vpcsecgroups[i]));
+        delete_mido_vpc_secgroup(mido, &(mido->vpcsecgroups[i]));
     }
 
     if (mido->flushmode == FLUSH_ALL) {
@@ -1103,6 +1129,7 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
     mido_vpc_natgateway *vpcnatgateway = NULL;
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
+    mido_resource_ipaddrgroup *ipag = NULL;
 
     // pass2 - remove anything in MIDO that is not in GNI
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -1110,7 +1137,7 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
         LOGTRACE("processing %s\n", vpcsecgroup->name);
         if (!vpcsecgroup->gnipresent) {
             LOGINFO("\tdeleting %s\n", vpcsecgroup->name);
-            rc = delete_mido_resource_vpc_secgroup(mido, vpcsecgroup);
+            rc = delete_mido_vpc_secgroup(mido, vpcsecgroup);
         } else {
             LOGDEBUG("pass2: mido VPC SECGROUP %s in global: Y\n", vpcsecgroup->name);
 
@@ -1125,22 +1152,30 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
 
                 gnisecgroup = vpcsecgroup->gniSecgroup;
 
-                mido_resource_ipaddrgroup *ipag = NULL;
-                ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPRIV].name);
+                ipag = NULL;
+                if (vpcsecgroup->midos[VPCSG_IAGPRIV] && vpcsecgroup->midos[VPCSG_IAGPRIV]->init) {
+                    ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPRIV]->name);
+                }
                 if (ipag != NULL) {
                     LOGDEBUG("pass2: found ipaddrgroup %s\n", ipag->resc.name);
                     privips = ipag->ips;
                     max_privips = ipag->max_ips;
                 }
 
-                ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPUB].name);
+                ipag = NULL;
+                if (vpcsecgroup->midos[VPCSG_IAGPUB] && vpcsecgroup->midos[VPCSG_IAGPUB]->init) {
+                    ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPUB]->name);
+                }
                 if (ipag != NULL) {
                     LOGDEBUG("pass2: found ipaddrgroup %s\n", ipag->resc.name);
                     pubips = ipag->ips;
                     max_pubips = ipag->max_ips;
                 }
 
-                ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGALL].name);
+                ipag = NULL;
+                if (vpcsecgroup->midos[VPCSG_IAGALL] && vpcsecgroup->midos[VPCSG_IAGALL]->init) {
+                    ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGALL]->name);
+                }
                 if (ipag != NULL) {
                     LOGDEBUG("pass2: found ipaddrgroup %s\n", ipag->resc.name);
                     allips = ipag->ips;
@@ -1164,9 +1199,9 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                     }
                     if (!found) {
                         LOGINFO("\tdeleting %s member pubip %s\n", vpcsecgroup->name, pubip_mido);
-                        rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPUB]), &(pubips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPUB], &(pubips[k]));
                         if (rc) {
-                            LOGWARN("Failed to remove %s from ip address group %s\n", pubips[k].name, vpcsecgroup->midos[VPCSG_IAGPUB].name);
+                            LOGWARN("Failed to remove %s from ip address group\n", pubips[k].name);
                         }
                     }
                 }
@@ -1190,9 +1225,9 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s is a VPC subnet+2 address.\n", vpcsecgroup->name, privip_mido);
                         } else {
                             LOGINFO("\tdeleting %s member privip %s\n", vpcsecgroup->name, privip_mido);
-                            rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(privips[k]));
+                            rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPRIV], &(privips[k]));
                             if (rc) {
-                                LOGWARN("Failed to remove %s from ip address group %s\n", privips[k].name, vpcsecgroup->midos[VPCSG_IAGPRIV].name);
+                                LOGWARN("Failed to remove %s from ip address group\n", privips[k].name);
                             }
                         }
                     }
@@ -1223,9 +1258,9 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                     }
                     if (!found) {
                         LOGINFO("\tdeleting %s member allip %s\n", vpcsecgroup->name, allip_mido);
-                        rc = mido_delete_ipaddrgroup_ip(&(vpcsecgroup->midos[VPCSG_IAGALL]), &(allips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGALL], &(allips[k]));
                         if (rc) {
-                            LOGWARN("Failed to remove %s from ip address group %s\n", allips[k].name, vpcsecgroup->midos[VPCSG_IAGALL].name);
+                            LOGWARN("Failed to remove %s from ip address group\n", allips[k].name);
                         }
                     }
                 }
@@ -1257,7 +1292,7 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
         }
         for (j = 0; j < vpc->max_natgateways; j++) {
             vpcnatgateway = &(vpc->natgateways[j]);
-            if (vpcnatgateway->midos[NATG_RT].init == 0) {
+            if ((!vpcnatgateway->midos[NATG_RT]) || (vpcnatgateway->midos[NATG_RT]->init == 0)) {
                 continue;
             }
             if (!vpc->gnipresent || !vpcnatgateway->gnipresent) {
@@ -1437,9 +1472,10 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
 
     mido_vpc_secgroup *vpcsecgroup = NULL;
     mido_resource_ipaddrgroup *ipag = NULL;
+    mido_vpc_secgroup *tgtsg = NULL;
     int egress_clear;
     int ingress_clear;
-    midoname *memorules;
+    midoname **memorules;
     int max_memorules;
 
     gni_secgroup *gnisecgroup = &(gni->secgroups[i]);
@@ -1468,10 +1504,20 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
             ret = 1;
         }
         vpcsecgroup->gnipresent = 1;
+    }
 
 
+    // now process sec. group rules
+    for (i = 0; i < gni->max_secgroups; i++) {
         {
-            midoname *rules = NULL;
+            gnisecgroup = &(gni->secgroups[i]);
+            // create the SG
+            rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
+            if (vpcsecgroup == NULL) {
+                LOGWARN("unable to find %s in the system.\n", gnisecgroup->name);
+            }
+
+            midoname **rules = NULL;
             int max_rules = 0, r = 0;
 
             // clear egress
@@ -1485,8 +1531,8 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
             if (max_rules != gnisecgroup->max_egress_rules) {
                 LOGINFO("\tcleaning %s %d egress rules.\n", gnisecgroup->name, max_rules);
                 for (r = 0; r < max_rules; r++) {
-                    mido_delete_rule(&(rules[r]));
-                    rules[r].init = 0;
+                    mido_delete_rule(rules[r]);
+                    //rules[r].init = 0;
                 }
                 egress_clear = 1;
             }
@@ -1501,8 +1547,8 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
             if (max_rules != gnisecgroup->max_ingress_rules) {
                 LOGINFO("\tcleaning %s %d ingress rules.\n", gnisecgroup->name, max_rules);
                 for (r = 0; r < max_rules; r++) {
-                    mido_delete_rule(&(rules[r]));
-                    rules[r].init = 0;
+                    mido_delete_rule(rules[r]);
+                    //rules[r].init = 0;
                 }
                 ingress_clear = 1;
             }
@@ -1525,11 +1571,18 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     srcMode = 2;
                     found = 1;
                 } else {
-                    // source SG set, but is not present (no instances membership)
-                    LOGTRACE("SRC IPADDRGROUP NOT FOUND: %s\n", name);
-                    srcMode = 0;
+                    rc = find_mido_vpc_secgroup(mido, gnisecgroup->egress_rules[k].groupId, &tgtsg);
+                    if (!rc && tgtsg && tgtsg->midos[VPCSG_IAGALL] && tgtsg->midos[VPCSG_IAGALL]->init) {
+                        LOGTRACE("FOUND SRC IPADDRGROUP MATCH: %s/%s\n", name, tgtsg->midos[VPCSG_IAGALL]->uuid);
+                        snprintf(grpUUID, 128, "%s", tgtsg->midos[VPCSG_IAGALL]->uuid);
+                        srcMode = 2;
+                        found = 1;
+                    } else {
+                        // source SG set, but is not present (no instances membership)
+                        LOGWARN("%s referenced in %s but not found\n",  gnisecgroup->egress_rules[k].groupId, gnisecgroup->name);
+                        srcMode = 0;
+                    }
                 }
-
             } else {
                 // source SG is not set, default CIDR 0.0.0.0 or set explicitly
                 srcMode = 1;
@@ -1562,9 +1615,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1582,9 +1635,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                         // skip
                         rc = 1;
                     } else if (srcMode == 1) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
                     } else if (srcMode == 2) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
                     }
                     if (rc) {
                     } else {
@@ -1595,9 +1648,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                         // skip
                         rc = 1;
                     } else if (srcMode == 1) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
                     } else if (srcMode == 2) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
                     }
                     if (rc) {
                     } else {
@@ -1611,9 +1664,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "ipAddrGroupDst", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "ipAddrGroupDst", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1625,9 +1678,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwDstAddress", subnet_buf, "nwDstLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_EGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_EGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupDst", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1652,9 +1705,17 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     srcMode = 2;
                     found = 1;
                 } else {
-                    // source SG set, but is not present (no instances membership)
-                    LOGTRACE("SRC IPADDRGROUP NOT FOUND: %s\n", name);
-                    srcMode = 0;
+                    rc = find_mido_vpc_secgroup(mido, gnisecgroup->ingress_rules[k].groupId, &tgtsg);
+                    if (!rc && tgtsg && tgtsg->midos[VPCSG_IAGALL] && tgtsg->midos[VPCSG_IAGALL]->init) {
+                        LOGTRACE("FOUND SRC IPADDRGROUP MATCH: %s/%s\n", name, tgtsg->midos[VPCSG_IAGALL]->uuid);
+                        snprintf(grpUUID, 128, "%s", tgtsg->midos[VPCSG_IAGALL]->uuid);
+                        srcMode = 2;
+                        found = 1;
+                    } else {
+                        // source SG set, but is not present (no instances membership)
+                        LOGWARN("%s referenced in %s but not found\n",  gnisecgroup->egress_rules[k].groupId, gnisecgroup->name);
+                        srcMode = 0;
+                    }
                 }
 
             } else {
@@ -1689,9 +1750,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name2, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1708,9 +1769,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                         // skip
                         rc = 1;
                     } else if (srcMode == 1) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                     } else if (srcMode == 2) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "tpDst", "jsonjson", "tpDst:start", tmp_name1, "tpDst:end", tmp_name1, "tpDst:END", "END", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
                     }
                     if (rc) {
                     } else {
@@ -1721,9 +1782,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                         // skip
                         rc = 1;
                     } else if (srcMode == 1) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                     } else if (srcMode == 2) {
-                        rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
+                        rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
                     }
                     if (rc) {
                     } else {
@@ -1736,9 +1797,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "ipAddrGroupSrc", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", "0", "ipAddrGroupSrc", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1750,9 +1811,9 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
                     // skip
                     rc = 1;
                 } else if (srcMode == 1) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "nwSrcAddress", subnet_buf, "nwSrcLength", slashnet_buf, NULL);
                 } else if (srcMode == 2) {
-                    rc = mido_create_rule(&(vpcsecgroup->midos[VPCSG_INGRESS]), NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
+                    rc = mido_create_rule(vpcsecgroup->midos[VPCSG_INGRESS], NULL, memorules, max_memorules, &sgrulepos, "position", tmp_name3, "type", "accept", "nwProto", tmp_name4, "ipAddrGroupSrc", grpUUID, NULL);
                 }
                 if (rc) {
                 } else {
@@ -1774,7 +1835,9 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
     mido_vpc *vpc = NULL;
 
     gni_instance *gniinstance = NULL;
-
+    
+    struct timeval tv;
+    eucanetd_timer(&tv);
     // now do instances
     for (i = 0; i < gni->max_interfaces; i++) {
         gniinstance = &(gni->interfaces[i]);
@@ -1791,7 +1854,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                 if (vpcsubnet) {
                     rc = find_mido_vpc_instance(vpcsubnet, gniinstance->name, &vpcinstance);
                     if (vpcinstance) {
-                        LOGDEBUG("found instance '%s' is in extant vpc '%s' subnet '%s' '%d'\n", vpcinstance->name, vpc->name, vpcsubnet->name, vpcinstance->midos[VMHOST].init);
+                        LOGDEBUG("found instance '%s' is in extant vpc '%s' subnet '%s'\n", vpcinstance->name, vpc->name, vpcsubnet->name);
                         vpcinstance->gniInst = gniinstance;
                     } else {
                         // create the instance
@@ -1812,31 +1875,36 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     }
 
                     vpcinstance->gnipresent = 1;
+                    LOGINFO("12095: find/create %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                     // do instance<->port connection and elip
-                    if (vpcinstance->midos[VMHOST].init) {
+                    if (vpcinstance->midos[INST_VMHOST] && vpcinstance->midos[INST_VMHOST]->init) {
                         LOGDEBUG("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n",
-                                gniinstance->node, vpcinstance->midos[VMHOST].name, gniinstance->name);
+                                gniinstance->node, vpcinstance->midos[INST_VMHOST]->name, gniinstance->name);
 
-                        rc = connect_mido_vpc_instance(vpcsubnet, vpcinstance, &(vpcinstance->midos[VMHOST]), gni->instanceDNSDomain);
+                        rc = connect_mido_vpc_instance(mido, vpcsubnet, vpcinstance, vpcinstance->midos[INST_VMHOST], gni->instanceDNSDomain);
+                        LOGINFO("12095: \tconnect %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                         if (rc) {
                             LOGERROR("cannot connect instance to midonet: check midonet health\n");
                             ret = 1;
                         } else {
                             // check to see if something has changed before running the DC
                             {
-                                char *pubip_gni = NULL, pubip_mido[32];
+                                //char *pubip_gni = NULL, pubip_mido[32];
 
-                                pubip_gni = hex2dot(gniinstance->publicIp);
-                                if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP].name && strlen(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP].name) && pubip_gni && strlen(pubip_gni)) {
-                                    sscanf(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP].name, "versions/6/ip_addrs/%s", pubip_mido);
+//                                pubip_gni = hex2dot(gniinstance->publicIp);
+                                if (vpcinstance->pubip) {
+                                    //sscanf(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP].name, "versions/6/ip_addrs/%s", pubip_mido);
 
-                                    if (!strcmp(pubip_gni, pubip_mido)) {
-                                        LOGDEBUG("elips are unchanged (%s %s), skipping disconnect\n", pubip_gni, pubip_mido);
+                                    //if (!strcmp(pubip_gni, pubip_mido)) {
+                                    if (gniinstance->publicIp == vpcinstance->pubip) {
+                                        LOGDEBUG("elips are unchanged (%x %x), skipping disconnect\n", gniinstance->publicIp, vpcinstance->pubip);
                                     } else {
-                                        LOGDEBUG("detected instance (%s) ELIP change from %s to %s: running disconnect\n", vpcinstance->name, pubip_mido, pubip_gni);
+                                        LOGDEBUG("detected instance (%s) ELIP change from %x to %x: running disconnect\n",
+                                                vpcinstance->name, vpcinstance->pubip, gniinstance->publicIp);
 
                                         rc = disconnect_mido_vpc_instance_elip(mido, vpcinstance);
+                                        LOGINFO("12095: \tdisconnect elip %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                                         if (rc) {
                                             LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
                                             ret = 1;
@@ -1844,12 +1912,13 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                                         LOGDEBUG("disconnect done\n");
                                     }
                                 }
-                                EUCA_FREE(pubip_gni);
+                                //EUCA_FREE(pubip_gni);
                             }
 
                             // Skip private-only instance/interface
                             if (gniinstance->publicIp) {
                                 rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
+                                LOGINFO("12095: \tconnect elip %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                                 if (rc) {
                                     LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
@@ -1865,21 +1934,31 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     // do inst->sg maps
                     int in_rulepos = 1, eg_rulepos = 1;
                     char tmp_name3[32], *instMac = NULL, *instIp = NULL;
-                    midoname *pre_rules = NULL, *post_rules = NULL;
+                    midoname **pre_rules = NULL, **post_rules = NULL;
                     midoname tmpmn;
                     int max_pre_rules = 0, max_post_rules = 0;
                     mido_resource_chain *rchain = NULL;
 
                     rchain = NULL;
-                    rchain = find_mido_chain(mido, vpcinstance->midos[INST_PRECHAIN].name);
+                    rchain = find_mido_chain(mido, vpcinstance->midos[INST_PRECHAIN]->name);
                     if (rchain != NULL) {
-                        pre_rules = rchain->rules;
+                        if (rchain->max_rules > 0) {
+                            pre_rules = EUCA_ZALLOC(rchain->max_rules, sizeof (midoname **));
+                            for (int i = 0; i < rchain->max_rules; i++) {
+                                pre_rules[i] = &(rchain->rules[i]);
+                            }
+                        }
                         max_pre_rules = rchain->max_rules;
                     }
                     rchain = NULL;
-                    rchain = find_mido_chain(mido, vpcinstance->midos[INST_POSTCHAIN].name);
+                    rchain = find_mido_chain(mido, vpcinstance->midos[INST_POSTCHAIN]->name);
                     if (rchain != NULL) {
-                        post_rules = rchain->rules;
+                        if (rchain->max_rules > 0) {
+                            post_rules = EUCA_ZALLOC(rchain->max_rules, sizeof (midoname **));
+                            for (int i = 0; i < rchain->max_rules; i++) {
+                                post_rules[i] = &(rchain->rules[i]);
+                            }
+                        }
                         max_post_rules = rchain->max_rules;
                     }
 
@@ -1896,6 +1975,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         instMac[i] = tolower(instMac[i]);
                     }
                     snprintf(tmp_name3, 32, "%d", 1);
+                    LOGINFO("12095: sg for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                     // anti-spoof
                     bzero(&tmpmn, sizeof (midoname));
@@ -1914,7 +1994,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if (!mido->disable_l2_isolation) {
                             LOGDEBUG("Creating L2 rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN],
                                     NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
                             if (rc) {
@@ -1939,7 +2019,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if ((!mido->disable_l2_isolation) && (gniinstance->srcdstcheck)) {
                             LOGDEBUG("Creating L3 rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN],
                                     NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlType", "2048", "nwSrcAddress",
                                     instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
@@ -1991,7 +2071,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if (!mido->disable_l2_isolation) {
                             LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN],
                                     NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true",
                                     "dlType", "2054", "invDlType", "false", NULL);
@@ -2019,7 +2099,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if (!mido->disable_l2_isolation) {
                             LOGDEBUG("Creating ARP_SPA rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN],
                                     NULL, pre_rules, max_pre_rules, &eg_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlType", "2054", "nwSrcAddress",
                                     instIp, "nwSrcLength", "32", "invNwSrc", "true",
@@ -2048,7 +2128,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if (!mido->disable_l2_isolation) {
                             LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN],
                                     NULL, post_rules, max_post_rules, &in_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlDst", instMac, "invDlDst", "true",
                                     "dlType", "2054", "invDlType", "false", "nwProto", "2",
@@ -2077,7 +2157,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     } else {
                         if (!mido->disable_l2_isolation) {
                             LOGDEBUG("Creating ARP_TPA rule for %s\n", gniinstance->name);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]),
+                            rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN],
                                     NULL, post_rules, max_post_rules, &in_rulepos, "position",
                                     tmp_name3, "type", "drop", "dlType", "2054", "nwDstAddress",
                                     instIp, "nwDstLength", "32", "invNwDst", "true",
@@ -2088,6 +2168,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         }
                     }
                     mido_free_midoname(&tmpmn);
+                    LOGINFO("12095: l2 isolation for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
 
                     EUCA_FREE(instMac);
@@ -2097,8 +2178,8 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     {
                         // metadata redirect egress
                         snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
-                                mido->midocore->midos[METADATA_IPADDRGROUP].uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
+                        rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN], NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
+                                mido->midocore->midos[CORE_METADATA_IPADDRGROUP]->uuid, "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
                                 "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf, "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
                                 "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
                         if (rc) {
@@ -2107,7 +2188,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
 
                         // metadata redirect ingress
                         snprintf(tmp_name3, 32, "%d", in_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf,
+                        rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN], NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "snat", "flowAction", "continue", "nwSrcAddress", pt_buf,
                                 "nwSrcLength", "32", "nwProto", "6", "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END",
                                 "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254", "natTargets:addressFrom", "169.254.169.254",
                                 "natTargets:portFrom", "80", "natTargets:portTo", "80", "natTargets:END", "END", NULL);
@@ -2120,14 +2201,14 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     {
                         // conntrack egress
                         snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                        rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN], NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
                         if (rc) {
                         } else {
                         }
 
                         // conn track ingress
                         snprintf(tmp_name3, 32, "%d", in_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                        rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN], NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
                         if (rc) {
                         } else {
                         }
@@ -2136,7 +2217,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
 
                     // plus two accept for metadata egress
                     snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
+                    rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN], NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
                     if (rc) {
                     } else {
                     }
@@ -2149,30 +2230,30 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         if (vpcsecgroup) {
                             // found one
                             tmpstr = hex2dot(gniinstance->privateIp);
-                            rc = mido_create_ipaddrgroup_ip(mido, &(vpcsecgroup->midos[VPCSG_IAGPRIV]), tmpstr, NULL);
-                            rc = mido_create_ipaddrgroup_ip(mido, &(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
+                            rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGPRIV], tmpstr, NULL);
+                            rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGALL], tmpstr, NULL);
                             EUCA_FREE(tmpstr);
 
                             tmpstr = hex2dot(gniinstance->publicIp);
                             if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
-                                rc = mido_create_ipaddrgroup_ip(mido, &(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpstr, NULL);
-                                rc = mido_create_ipaddrgroup_ip(mido, &(vpcsecgroup->midos[VPCSG_IAGALL]), tmpstr, NULL);
+                                rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGPUB], tmpstr, NULL);
+                                rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGALL], tmpstr, NULL);
                             }
                             EUCA_FREE(tmpstr);
 
 
                             // add the SG chain jump egress
                             snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "jump", "jumpChainId",
-                                    vpcsecgroup->midos[VPCSG_EGRESS].uuid, NULL);
+                            rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN], NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "jump", "jumpChainId",
+                                    vpcsecgroup->midos[VPCSG_EGRESS]->uuid, NULL);
                             if (rc) {
                             } else {
                             }
 
                             // jump to sg chain ingress
                             snprintf(tmp_name3, 32, "%d", in_rulepos);
-                            rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "jump", "jumpChainId",
-                                    vpcsecgroup->midos[VPCSG_INGRESS].uuid, NULL);
+                            rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN], NULL, post_rules, max_post_rules, &in_rulepos, "position", tmp_name3, "type", "jump", "jumpChainId",
+                                    vpcsecgroup->midos[VPCSG_INGRESS]->uuid, NULL);
                             if (rc) {
                             } else {
                             }
@@ -2186,19 +2267,26 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     {
                         // default drop all else egress
                         snprintf(tmp_name3, 32, "%d", eg_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
+                        rc = mido_create_rule(vpcinstance->midos[INST_PRECHAIN], NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
                         if (rc) {
                         } else {
                         }
 
                         // default drop all else ingress
                         snprintf(tmp_name3, 32, "%d", in_rulepos);
-                        rc = mido_create_rule(&(vpcinstance->midos[INST_POSTCHAIN]), NULL, post_rules, max_post_rules, &in_rulepos, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
+                        rc = mido_create_rule(vpcinstance->midos[INST_POSTCHAIN], NULL, post_rules, max_post_rules, &in_rulepos, "type", "drop", "invDlType", "true", "position", tmp_name3, "dlType", "2054", NULL);
                         if (rc) {
                         } else {
                         }
                     }
-
+                    
+                    if (pre_rules) {
+                        EUCA_FREE(pre_rules);
+                    }
+                    if (post_rules) {
+                        EUCA_FREE(post_rules);
+                    }
+                    LOGINFO("12095: misc rules for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                 }
             }
         }
@@ -2329,6 +2417,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido) {
         return (1);
     }
     LOGINFO("instances processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
     mido_info_http_count();
     return (ret);
 }
@@ -2428,11 +2517,11 @@ int clear_router_id(mido_config * mido, int id) {
 //!
 void print_mido_vpc(mido_vpc * vpc) {
     LOGDEBUG("PRINT VPC: name=%s max_rtports=%d max_subnets=%d gnipresent=%d\n", vpc->name, vpc->max_rtports, vpc->max_subnets, vpc->gnipresent);
-    mido_print_midoname(&(vpc->midos[VPCRT]));
-    mido_print_midoname(&(vpc->midos[EUCABR_DOWNLINK]));
-    mido_print_midoname(&(vpc->midos[VPCRT_UPLINK]));
-    mido_print_midoname(&(vpc->midos[VPCRT_UPLINK_PRECHAIN]));
-    mido_print_midoname(&(vpc->midos[VPCRT_UPLINK_POSTCHAIN]));
+    mido_print_midoname(vpc->midos[VPC_VPCRT]);
+    mido_print_midoname(vpc->midos[VPC_EUCABR_DOWNLINK]);
+    mido_print_midoname(vpc->midos[VPC_VPCRT_UPLINK]);
+    mido_print_midoname(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
+    mido_print_midoname(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
 
 }
 
@@ -2454,10 +2543,10 @@ void print_mido_vpc(mido_vpc * vpc) {
 void print_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet) {
     LOGDEBUG("PRINT VPCSUBNET: name=%s vpcname=%s max_brports=%d max_dhcphosts=%d max_instances=%d gnipresent=%d\n", vpcsubnet->name, vpcsubnet->vpcname, vpcsubnet->max_brports,
             vpcsubnet->max_dhcphosts, vpcsubnet->max_instances, vpcsubnet->gnipresent);
-    mido_print_midoname(&(vpcsubnet->midos[VPCBR]));
-    mido_print_midoname(&(vpcsubnet->midos[VPCBR_RTPORT]));
-    mido_print_midoname(&(vpcsubnet->midos[VPCRT_BRPORT]));
-    mido_print_midoname(&(vpcsubnet->midos[VPCBR_DHCP]));
+    mido_print_midoname(vpcsubnet->midos[SUBN_VPCBR]);
+    mido_print_midoname(vpcsubnet->midos[SUBN_VPCBR_RTPORT]);
+    mido_print_midoname(vpcsubnet->midos[SUBN_VPCRT_BRPORT]);
+    mido_print_midoname(vpcsubnet->midos[SUBN_VPCBR_DHCP]);
 }
 
 //!
@@ -2477,11 +2566,11 @@ void print_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet) {
 //!
 void print_mido_vpc_instance(mido_vpc_instance * vpcinstance) {
     LOGDEBUG("PRINT VPCINSTANCE: name=%s gnipresent=%d\n", vpcinstance->name, vpcinstance->gnipresent);
-    mido_print_midoname(&(vpcinstance->midos[VPCBR_VMPORT]));
-    mido_print_midoname(&(vpcinstance->midos[VPCBR_DHCPHOST]));
-    mido_print_midoname(&(vpcinstance->midos[VMHOST]));
-    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE]));
-    mido_print_midoname(&(vpcinstance->midos[ELIP_POST]));
+    mido_print_midoname(vpcinstance->midos[INST_VPCBR_VMPORT]);
+    mido_print_midoname(vpcinstance->midos[INST_VPCBR_DHCPHOST]);
+    mido_print_midoname(vpcinstance->midos[INST_VMHOST]);
+    mido_print_midoname(vpcinstance->midos[INST_ELIP_PRE]);
+    mido_print_midoname(vpcinstance->midos[INST_ELIP_POST]);
 }
 
 //!
@@ -2503,7 +2592,7 @@ void print_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup) {
     int i;
     LOGDEBUG("PRINT VPCSECGROUP: name=%s gnipresent=%d\n", vpcsecgroup->name, vpcsecgroup->gnipresent);
     for (i = 0; i < VPCSG_END; i++) {
-        mido_print_midoname(&(vpcsecgroup->midos[i]));
+        mido_print_midoname(vpcsecgroup->midos[i]);
     }
 }
 
@@ -2530,15 +2619,14 @@ int find_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, char *instancename, mido
         return (1);
     }
 
+    LOGTRACE("Searching instance %s\n", instancename);
     *outvpcinstance = NULL;
     for (i = 0; i < vpcsubnet->max_instances; i++) {
-        LOGDEBUG("Is (mido) %s == (gni) %s\n", vpcsubnet->instances[i].name, instancename);
         if (!strcmp(instancename, vpcsubnet->instances[i].name)) {
             *outvpcinstance = &(vpcsubnet->instances[i]);
             return (0);
         }
     }
-
     return (1);
 }
 
@@ -2590,7 +2678,7 @@ int find_mido_vpc_natgateway(mido_vpc *vpc, char *natgname, mido_vpc_natgateway 
 
     *outvpcnatgateway = NULL;
     for (i = 0; i < vpc->max_natgateways; i++) {
-        if (vpc->natgateways[i].midos[NATG_RT].init == 0) {
+        if ((!vpc->natgateways[i].midos[NATG_RT]) || (vpc->natgateways[i].midos[NATG_RT]->init == 0)) {
             continue;
         }
         LOGDEBUG("Is (mido) %s == (gni) %s\n", vpc->natgateways[i].name, natgname);
@@ -2796,8 +2884,8 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                 if (valid) {
                     retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
-                    mido_copy_midoname(&(retroutes[max_retroutes].router), &(vpc->midos[VPCRT]));
-                    mido_copy_midoname(&(retroutes[max_retroutes].rport), &(vpc->midos[VPCRT_UPLINK]));
+                    mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
+                    mido_copy_midoname(&(retroutes[max_retroutes].rport), vpc->midos[VPC_VPCRT_UPLINK]);
                     retroutes[max_retroutes].src_net = strdup(subnetNetaddr);
                     retroutes[max_retroutes].src_length = strdup(subnetSlashnet);
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
@@ -2839,8 +2927,8 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                 if (valid) {
                     retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
-                    mido_copy_midoname(&(retroutes[max_retroutes].router), &(vpc->midos[VPCRT]));
-                    mido_copy_midoname(&(retroutes[max_retroutes].rport), &(ifvpcsubnet->midos[VPCRT_BRPORT]));
+                    mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
+                    mido_copy_midoname(&(retroutes[max_retroutes].rport), ifvpcsubnet->midos[SUBN_VPCRT_BRPORT]);
                     retroutes[max_retroutes].src_net = strdup(subnetNetaddr);
                     retroutes[max_retroutes].src_length = strdup(subnetSlashnet);
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
@@ -2887,8 +2975,8 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
 
                     retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
-                    mido_copy_midoname(&(retroutes[max_retroutes].router), &(vpc->midos[VPCRT]));
-                    mido_copy_midoname(&(retroutes[max_retroutes].rport), &(natgatewaysubnet->midos[VPCRT_BRPORT]));
+                    mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
+                    mido_copy_midoname(&(retroutes[max_retroutes].rport), natgatewaysubnet->midos[SUBN_VPCRT_BRPORT]);
                     retroutes[max_retroutes].src_net = strdup(subnetNetaddr);
                     retroutes[max_retroutes].src_length = strdup(subnetSlashnet);
                     retroutes[max_retroutes].dst_net = strdup(dstNetaddr);
@@ -3776,12 +3864,12 @@ int parse_mido_vpc_subnet_cidr(mido_vpc_subnet *vpcsubnet, char **net, char **le
         LOGWARN("Invalid argument: NULL pointer.\n");
         return (1);
     }
-    if (!vpcsubnet->midos[VPCRT_UPLINK].init) {
+    if ((!vpcsubnet->midos[VPC_VPCRT_UPLINK]) || (!vpcsubnet->midos[VPC_VPCRT_UPLINK]->init)) {
         LOGWARN("Invalid argument: vpcsubnet VPCRT_UPLINK not found.\n");
         return (1);
     }
-    rc |= mido_getel_midoname(&(vpcsubnet->midos[VPCRT_UPLINK]), "networkAddress", net);
-    rc |= mido_getel_midoname(&(vpcsubnet->midos[VPCRT_UPLINK]), "networkLength", length);
+    rc |= mido_getel_midoname(vpcsubnet->midos[VPC_VPCRT_UPLINK], "networkAddress", net);
+    rc |= mido_getel_midoname(vpcsubnet->midos[VPC_VPCRT_UPLINK], "networkLength", length);
     return (rc);
 }
 
@@ -3850,8 +3938,8 @@ int find_mido_vpc_subnet_routes(mido_config *mido, mido_vpc *vpc, mido_vpc_subne
     char *vpcsubnet_net = NULL;
     char *vpcsubnet_mask = NULL;
     char *srcnet = NULL, *srcmask = NULL;
-    char vpcrtname[32];
-    mido_resource_router *vpcrouter = NULL;
+    //char vpcrtname[32];
+    //mido_resource_router *vpcrouter = NULL;
 
     if (!mido || !vpc || !vpcsubnet || !croutes || !croutes_max) {
         LOGWARN("Invalid argument: NULL pointer.\n");
@@ -3869,24 +3957,24 @@ int find_mido_vpc_subnet_routes(mido_config *mido, mido_vpc *vpc, mido_vpc_subne
         if (!vpcsubnet_mask) EUCA_FREE(vpcsubnet_mask);
         return (1);
     }
-    snprintf(vpcrtname, 32, "vr_%s", vpc->name);
-    vpcrouter = find_mido_router(mido, vpcrtname);
-    if (vpcrouter == NULL) {
-        LOGWARN("Unable to find mido router for %s\n", vpc->name);
-        if (!vpcsubnet_net) EUCA_FREE(vpcsubnet_net);
-        if (!vpcsubnet_mask) EUCA_FREE(vpcsubnet_mask);
-        return (1);
-    }
-    for (i = 0; i < vpcrouter->max_routes && !rc; i++) {
-        rc = parse_mido_vpc_route_addr(&(vpcrouter->routes[i]), &srcnet, &srcmask, NULL, NULL);
+    //snprintf(vpcrtname, 32, "vr_%s", vpc->name);
+    //vpcrouter = find_mido_router(mido, vpcrtname);
+    //if (vpcrouter == NULL) {
+    //    LOGWARN("Unable to find mido router for %s\n", vpc->name);
+    //    if (!vpcsubnet_net) EUCA_FREE(vpcsubnet_net);
+    //    if (!vpcsubnet_mask) EUCA_FREE(vpcsubnet_mask);
+    //    return (1);
+    //}
+    for (i = 0; i < vpc->max_rtroutes && !rc; i++) {
+        rc = parse_mido_vpc_route_addr(vpc->rtroutes[i], &srcnet, &srcmask, NULL, NULL);
         if (rc == 0) {
             if ((!strcmp(srcnet, vpcsubnet_net)) && (!strcmp(srcmask, vpcsubnet_mask))) {
                 vpcsubnet->routes = EUCA_REALLOC(vpcsubnet->routes, vpcsubnet->max_routes + 1, sizeof (midoname *));
                 if (vpcsubnet->routes == NULL) {
-                    LOGERROR("find_mido_vpc_subnet_routes: out of memory\n");
+                    LOGERROR("out of memory - find_mido_vpc_subnet_routes\n");
                     rc = 1;
                 }
-                vpcsubnet->routes[vpcsubnet->max_routes] = &(vpcrouter->routes[i]);
+                vpcsubnet->routes[vpcsubnet->max_routes] = vpc->rtroutes[i];
                 vpcsubnet->max_routes = vpcsubnet->max_routes + 1;
             }
         } else {
@@ -3930,13 +4018,15 @@ int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgro
     mido_resource_chain *sgchain = find_mido_chain(mido, name);
     if (sgchain != NULL) {
         LOGTRACE("Found SG chain %s\n", sgchain->resc.name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_INGRESS]), &(sgchain->resc));
+        //mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_INGRESS]), &(sgchain->resc));
+        vpcsecgroup->midos[VPCSG_INGRESS] = &(sgchain->resc);
         if (sgchain->max_rules) {
-            vpcsecgroup->ingress_rules = EUCA_ZALLOC(sgchain->max_rules, sizeof (midoname));
+            vpcsecgroup->ingress_rules = EUCA_ZALLOC(sgchain->max_rules, sizeof (midoname *));
             vpcsecgroup->max_ingress_rules = sgchain->max_rules;
             for (i = 0; i < sgchain->max_rules; i++) {
-                mido_copy_midoname(&(vpcsecgroup->ingress_rules[i]), &(sgchain->rules[i]));
-                LOGTRACE("\tcopying rule %s\n", vpcsecgroup->ingress_rules[i].name);
+                //mido_copy_midoname(&(vpcsecgroup->ingress_rules[i]), &(sgchain->rules[i]));
+                vpcsecgroup->ingress_rules[i] = &(sgchain->rules[i]);
+                //LOGTRACE("\tcopying rule %s\n", vpcsecgroup->ingress_rules[i].name);
             }
         }
     }
@@ -3944,13 +4034,15 @@ int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgro
     sgchain = find_mido_chain(mido, name);
     if (sgchain != NULL) {
         LOGTRACE("Found SG chain %s\n", sgchain->resc.name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_EGRESS]), &(sgchain->resc));
+        //mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_EGRESS]), &(sgchain->resc));
+        vpcsecgroup->midos[VPCSG_EGRESS] = &(sgchain->resc);
         if (sgchain->max_rules) {
-            vpcsecgroup->egress_rules = EUCA_ZALLOC(sgchain->max_rules, sizeof (midoname));
+            vpcsecgroup->egress_rules = EUCA_ZALLOC(sgchain->max_rules, sizeof (midoname *));
             vpcsecgroup->max_egress_rules = sgchain->max_rules;
             for (i = 0; i < sgchain->max_rules; i++) {
-                mido_copy_midoname(&(vpcsecgroup->egress_rules[i]), &(sgchain->rules[i]));
-                LOGTRACE("\tcopying rule %s\n", vpcsecgroup->egress_rules[i].name);
+                //mido_copy_midoname(&(vpcsecgroup->egress_rules[i]), &(sgchain->rules[i]));
+                vpcsecgroup->egress_rules[i] = &(sgchain->rules[i]);
+                //LOGTRACE("\tcopying rule %s\n", vpcsecgroup->egress_rules[i].name);
             }
         }
     }
@@ -3959,24 +4051,33 @@ int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgro
     mido_resource_ipaddrgroup *sgipaddrgroup = find_mido_ipaddrgroup(mido, name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->resc.name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(sgipaddrgroup->resc));
+        //mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), &(sgipaddrgroup->resc));
+        vpcsecgroup->midos[VPCSG_IAGPRIV] = &(sgipaddrgroup->resc);
     }
     snprintf(name, 64, "sg_pub_%11s", vpcsecgroup->name);
     sgipaddrgroup = find_mido_ipaddrgroup(mido, name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->resc.name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPUB]), &(sgipaddrgroup->resc));
+        //mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPUB]), &(sgipaddrgroup->resc));
+        vpcsecgroup->midos[VPCSG_IAGPUB] = &(sgipaddrgroup->resc);
     }
     snprintf(name, 64, "sg_all_%11s", vpcsecgroup->name);
     sgipaddrgroup = find_mido_ipaddrgroup(mido, name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->resc.name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGALL]), &(sgipaddrgroup->resc));
+        //mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGALL]), &(sgipaddrgroup->resc));
+        vpcsecgroup->midos[VPCSG_IAGALL] = &(sgipaddrgroup->resc);
     }
 
     LOGTRACE("vpc secgroup (%s): AFTER POPULATE\n", vpcsecgroup->name);
     for (i = 0; i < VPCSG_END; i++) {
-        LOGTRACE("\tmidos[%d]: %d\n", i, vpcsecgroup->midos[i].init);
+        if (vpcsecgroup->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, vpcsecgroup->midos[i]->init);
+        }
+        if (!vpcsecgroup->midos[i] || !vpcsecgroup->midos[i]->init) {
+            LOGWARN("failed to populate %s midos[%d]\n", vpcsecgroup->name, i);
+            ret = 1;
+        }
     }
 
     return (ret);
@@ -4007,70 +4108,69 @@ int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup
         return (1);
     }
     snprintf(name, 32, "sg_ingress_%11s", vpcsecgroup->name);
-    if ((!vpcsecgroup->midos[VPCSG_INGRESS].init) && (!find_mido_vpc_chain(mido, name, &tmpmn))) {
-        LOGINFO("Found chain %s - skipping creation.\n", name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_INGRESS]), tmpmn);
+    if (vpcsecgroup->midos[VPCSG_INGRESS] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_chain(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_INGRESS]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", name);
-            ret = 1;
-        }
+        tmpmn = vpcsecgroup->midos[VPCSG_INGRESS];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    }
+    vpcsecgroup->midos[VPCSG_INGRESS] = tmpmn;
 
     snprintf(name, 32, "sg_egress_%11s", vpcsecgroup->name);
-    if ((!vpcsecgroup->midos[VPCSG_EGRESS].init) && (!find_mido_vpc_chain(mido, name, &tmpmn))) {
-        LOGINFO("Found chain %s - skipping creation.\n", name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_EGRESS]), tmpmn);
+    if (vpcsecgroup->midos[VPCSG_EGRESS] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_chain(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_EGRESS]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", name);
-            ret = 1;
-        }
+        tmpmn = vpcsecgroup->midos[VPCSG_EGRESS];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    }
+    vpcsecgroup->midos[VPCSG_EGRESS] = tmpmn;
 
     snprintf(name, 32, "sg_priv_%11s", vpcsecgroup->name);
-    if ((!vpcsecgroup->midos[VPCSG_IAGPRIV].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
-        LOGINFO("Found IAG %s - skipping creation.\n", name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPRIV]), tmpmn);
+    if (vpcsecgroup->midos[VPCSG_IAGPRIV] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
-        if (rc) {
-            LOGWARN("Failed to create IAG %s.\n", name);
-            ret = 1;
-        } else {
-            add_mido_resource_ipaddrgroup(mido, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
-        }
+        tmpmn = vpcsecgroup->midos[VPCSG_IAGPRIV];
     }
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    }
+    vpcsecgroup->midos[VPCSG_IAGPRIV] = tmpmn;
 
     snprintf(name, 32, "sg_pub_%11s", vpcsecgroup->name);
-    if ((!vpcsecgroup->midos[VPCSG_IAGPUB].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
-        LOGINFO("Found IAG %s - skipping creation.\n", name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGPUB]), tmpmn);
+    if (vpcsecgroup->midos[VPCSG_IAGPUB] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
-        if (rc) {
-            LOGWARN("Failed to create IAG %s.\n", name);
-            ret = 1;
-        } else {
-            add_mido_resource_ipaddrgroup(mido, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
-        }
+        tmpmn = vpcsecgroup->midos[VPCSG_IAGPUB];
     }
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    }
+    vpcsecgroup->midos[VPCSG_IAGPUB] = tmpmn;
 
     snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
-    if ((!vpcsecgroup->midos[VPCSG_IAGALL].init) && (!find_mido_vpc_ipaddrgroup(mido, name, &tmpmn))) {
-        LOGINFO("Found IAG %s - skipping creation.\n", name);
-        mido_copy_midoname(&(vpcsecgroup->midos[VPCSG_IAGALL]), tmpmn);
+    if (vpcsecgroup->midos[VPCSG_IAGALL] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGALL]));
-        if (rc) {
-            LOGWARN("Failed to create IAG %s.\n", name);
-            ret = 1;
-        } else {
-            add_mido_resource_ipaddrgroup(mido, &(vpcsecgroup->midos[VPCSG_IAGALL]));
-        }
+        tmpmn = vpcsecgroup->midos[VPCSG_IAGALL];
     }
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    }
+    vpcsecgroup->midos[VPCSG_IAGALL] = tmpmn;
 
     return (ret);
 }
@@ -4145,39 +4245,18 @@ int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup)
 //!
 //! @note
 //!
-int delete_mido_resource_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) {
+int delete_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) {
     int ret = 0, rc = 0;
 
     if (!vpcsecgroup) {
         return (1);
     }
 
-    delete_mido_resource_chain(mido, vpcsecgroup->midos[VPCSG_INGRESS].name);
-    rc = mido_delete_chain(&(vpcsecgroup->midos[VPCSG_INGRESS]));
-    if (rc) {
-        LOGWARN("Failed to delete chain %s\n", vpcsecgroup->midos[VPCSG_INGRESS].name);
-    }
-    delete_mido_resource_chain(mido, vpcsecgroup->midos[VPCSG_EGRESS].name);
-    rc = mido_delete_chain(&(vpcsecgroup->midos[VPCSG_EGRESS]));
-    if (rc) {
-        LOGWARN("Failed to delete chain %s\n", vpcsecgroup->midos[VPCSG_EGRESS].name);
-    }
-
-    delete_mido_resource_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPRIV].name);
-    rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGPRIV]));
-    if (rc) {
-        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGPRIV].name);
-    }
-    delete_mido_resource_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPUB].name);
-    rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGPUB]));
-    if (rc) {
-        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGPUB].name);
-    }
-    delete_mido_resource_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGALL].name);
-    rc = mido_delete_ipaddrgroup(&(vpcsecgroup->midos[VPCSG_IAGALL]));
-    if (rc) {
-        LOGWARN("Failed to delete ipaddrgroup %s\n", vpcsecgroup->midos[VPCSG_IAGALL].name);
-    }
+    rc = mido_delete_chain(vpcsecgroup->midos[VPCSG_INGRESS]);
+    rc = mido_delete_chain(vpcsecgroup->midos[VPCSG_EGRESS]);
+    rc = mido_delete_ipaddrgroup(vpcsecgroup->midos[VPCSG_IAGPRIV]);
+    rc = mido_delete_ipaddrgroup(vpcsecgroup->midos[VPCSG_IAGPUB]);
+    rc = mido_delete_ipaddrgroup(vpcsecgroup->midos[VPCSG_IAGALL]);
 
     free_mido_vpc_secgroup(vpcsecgroup);
 
@@ -4212,7 +4291,7 @@ int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secg
 
     *outvpcsecgroup = NULL;
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
-        if (mido->vpcsecgroups[i].name && !strcmp(mido->vpcsecgroups[i].name, secgroupname)) {
+        if (strlen(mido->vpcsecgroups[i].name) && !strcmp(mido->vpcsecgroups[i].name, secgroupname)) {
             *outvpcsecgroup = &(mido->vpcsecgroups[i]);
             return (0);
         }
@@ -4242,13 +4321,13 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup) {
     if (!vpcsecgroup)
         return (0);
 
-    mido_free_midoname_list(vpcsecgroup->ingress_rules, vpcsecgroup->max_ingress_rules);
+    //mido_free_midoname_list(vpcsecgroup->ingress_rules, vpcsecgroup->max_ingress_rules);
     EUCA_FREE(vpcsecgroup->ingress_rules);
 
-    mido_free_midoname_list(vpcsecgroup->egress_rules, vpcsecgroup->max_egress_rules);
+    //mido_free_midoname_list(vpcsecgroup->egress_rules, vpcsecgroup->max_egress_rules);
     EUCA_FREE(vpcsecgroup->egress_rules);
 
-    mido_free_midoname_list(vpcsecgroup->midos, VPCSG_END);
+    //mido_free_midoname_list(vpcsecgroup->midos, VPCSG_END);
     bzero(vpcsecgroup, sizeof (mido_vpc_secgroup));
 
     return (ret);
@@ -4283,13 +4362,17 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
     char matchStr[64];
 
     LOGTRACE("populating VPC instance %s\n", vpcinstance->name);
-    mido_resource_bridge *subnetbr = find_mido_bridge(mido, vpcsubnet->midos[VPCBR].name);
+    mido_resource_bridge *subnetbr = NULL;
+    if (vpcsubnet->midos[SUBN_VPCBR]) {
+        subnetbr = find_mido_bridge(mido, vpcsubnet->midos[SUBN_VPCBR]->name);
+    }
     if (subnetbr != NULL) {
         LOGTRACE("Found subnet bridge %s\n", subnetbr->resc.name);
         midoname *instanceport = find_mido_bridge_port_byinterface(subnetbr, vpcinstance->name);
         if (instanceport != NULL) {
             LOGTRACE("Found instance port %s\n", instanceport->name);
-            mido_copy_midoname(&(vpcinstance->midos[VPCBR_VMPORT]), instanceport);
+            //mido_copy_midoname(&(vpcinstance->midos[INST_VPCBR_VMPORT]), instanceport);
+            vpcinstance->midos[INST_VPCBR_VMPORT] = instanceport;
             tmpstr = NULL;
             rc = mido_getel_midoname(instanceport, "hostId", &tmpstr);
             mido_resource_host *instancehost = NULL;
@@ -4298,25 +4381,27 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
             }
             if (instancehost != NULL) {
                 LOGTRACE("Found instance host %s\n", instancehost->resc.name);
-                mido_copy_midoname(&(vpcinstance->midos[VMHOST]), &(instancehost->resc));
+                //mido_copy_midoname(&(vpcinstance->midos[INST_VMHOST]), &(instancehost->resc));
+                vpcinstance->midos[INST_VMHOST] = &(instancehost->resc);
             }
             EUCA_FREE(tmpstr);
         }
     }
-    if (vpcinstance->midos[VPCBR_VMPORT].init && vpcinstance->midos[VMHOST].init) {
+    if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VMHOST]) {
         found = 1;
     } else {
         LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
     }
 
-    if (vpcsubnet->midos[VPCBR_DHCP].init) {
+    if ((vpcsubnet->midos[SUBN_VPCBR_DHCP]) && (vpcsubnet->midos[SUBN_VPCBR_DHCP]->init)) {
         found = 0;
         for (i = 0; i < vpcsubnet->max_dhcphosts && !found; i++) {
             tmpstr = NULL;
-            rc = mido_getel_midoname(&(vpcsubnet->dhcphosts[i]), "name", &tmpstr);
+            rc = mido_getel_midoname(vpcsubnet->dhcphosts[i], "name", &tmpstr);
             if (!rc && tmpstr && strlen(tmpstr) && !strcmp(tmpstr, vpcinstance->name)) {
-                LOGTRACE("Found dhcp host %s\n", vpcsubnet->dhcphosts[i].name);
-                mido_copy_midoname(&(vpcinstance->midos[VPCBR_DHCPHOST]), &(vpcsubnet->dhcphosts[i]));
+                LOGTRACE("Found dhcp host %s\n", vpcsubnet->dhcphosts[i]->name);
+                //mido_copy_midoname(&(vpcinstance->midos[INST_VPCBR_DHCPHOST]), vpcsubnet->dhcphosts[i]);
+                vpcinstance->midos[INST_VPCBR_DHCPHOST] = vpcsubnet->dhcphosts[i];
                 found = 1;
             }
             EUCA_FREE(tmpstr);
@@ -4329,33 +4414,38 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
     mido_resource_ipaddrgroup *ipag = find_mido_ipaddrgroup(mido, fstr);
     if (ipag != NULL) {
         LOGTRACE("Found ipag %s\n", ipag->resc.name);
-        mido_copy_midoname(&vpcinstance->midos[ELIP_PRE_IPADDRGROUP], &(ipag->resc));
+        //mido_copy_midoname(&vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP], &(ipag->resc));
+        vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] = &(ipag->resc);
         if (ipag->max_ips == 1) {
             sscanf(ipag->ips[0].name, "versions/6/ip_addrs/%s", pubip);
             LOGTRACE("Found pubip %s\n", pubip);
-            mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            //mido_copy_midoname(&(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP] = &(ipag->ips[0]);
+            vpcinstance->pubip = dot2hex(pubip);
             found = 0;
             // SNAT rule
             for (j = 0; j < vpc->max_rtpostchain_rules && !found; j++) {
-                rc = mido_getel_midoname(&(vpc->rtpostchain_rules[j]), "natTargets", &targetIP);
+                rc = mido_getel_midoname(vpc->rtpostchain_rules[j], "natTargets", &targetIP);
                 snprintf(matchStr, 64, "\"addressTo\": \"%s\"", pubip);
                 if (targetIP && strstr(targetIP, matchStr)) {
-                    LOGTRACE("Found rule %s\n", vpc->rtpostchain_rules[j].name);
-                    mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE]), &(vpc->rtpostchain_rules[j]));
+                    LOGTRACE("Found rule %s\n", vpc->rtpostchain_rules[j]->name);
+                    //mido_copy_midoname(&(vpcinstance->midos[INST_ELIP_PRE]), vpc->rtpostchain_rules[j]);
+                    vpcinstance->midos[INST_ELIP_POST] = vpc->rtpostchain_rules[j];
                     found = 1;
                 }
                 if (targetIP) EUCA_FREE(targetIP);
             }
             // ELIP route
-            if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init && midocore->midos[EUCART].init) {
-                mido_resource_router *eucart = find_mido_router(mido, midocore->midos[EUCART].name);
+            if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] && midocore->midos[CORE_EUCART]) {
+                mido_resource_router *eucart = midocore->eucart;
                 if (eucart != NULL) {
                     found = 0;
                     for (j = 0; j < eucart->max_routes && !found; j++) {
                         rc = mido_getel_midoname(&(eucart->routes[j]), "dstNetworkAddr", &rdst);
                         if (!strcmp(pubip, rdst)) {
                             LOGTRACE("Found route %s\n", eucart->routes[j].name);
-                            mido_copy_midoname(&(vpcinstance->midos[ELIP_ROUTE]), &(eucart->routes[j]));
+                            //mido_copy_midoname(&(vpcinstance->midos[INST_ELIP_ROUTE]), &(eucart->routes[j]));
+                            vpcinstance->midos[INST_ELIP_ROUTE] = &(eucart->routes[j]);
                             found = 1;
                         }
                         EUCA_FREE(rdst);
@@ -4375,19 +4465,23 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
     ipag = find_mido_ipaddrgroup(mido, fstr);
     if (ipag != NULL) {
         LOGTRACE("Found ipag %s\n", ipag->resc.name);
-        mido_copy_midoname(&vpcinstance->midos[ELIP_POST_IPADDRGROUP], &(ipag->resc));
+        //mido_copy_midoname(&vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP], &(ipag->resc));
+        vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP] = &(ipag->resc);
         if (ipag->max_ips == 1) {
             sscanf(ipag->ips[0].name, "versions/6/ip_addrs/%s", privip);
             LOGTRACE("Found privip %s\n", privip);
-            mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            //mido_copy_midoname(&(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP] = &(ipag->ips[0]);
+            vpcinstance->privip = dot2hex(privip);
             found = 0;
             // DNAT rule
             for (j = 0; j < vpc->max_rtpreelipchain_rules && !found; j++) {
-                rc = mido_getel_midoname(&(vpc->rtpreelipchain_rules[j]), "natTargets", &targetIP);
+                rc = mido_getel_midoname(vpc->rtpreelipchain_rules[j], "natTargets", &targetIP);
                 snprintf(matchStr, 64, "\"addressTo\": \"%s\"", privip);
                 if (targetIP && strstr(targetIP, matchStr)) {
-                    LOGTRACE("Found rule %s\n", vpc->rtpreelipchain_rules[j].name);
-                    mido_copy_midoname(&(vpcinstance->midos[ELIP_POST]), &(vpc->rtpreelipchain_rules[j]));
+                    LOGTRACE("Found rule %s\n", vpc->rtpreelipchain_rules[j]->name);
+                    //mido_copy_midoname(&(vpcinstance->midos[INST_ELIP_POST]), vpc->rtpreelipchain_rules[j]);
+                    vpcinstance->midos[INST_ELIP_PRE] = vpc->rtpreelipchain_rules[j];
                     found = 1;
                 }
                 if (targetIP) EUCA_FREE(targetIP);
@@ -4397,7 +4491,7 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
         }
     }
 
-    if (vpcinstance->midos[ELIP_PRE_IPADDRGROUP].init && vpcinstance->midos[ELIP_POST_IPADDRGROUP].init) {
+    if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] && vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]) {
         found = 1;
     } else {
         LOGWARN("Unable to populate vpcinstance %s IPADDRGROUP\n", vpcinstance->name);
@@ -4407,18 +4501,35 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
     mido_resource_chain *ic = find_mido_chain(mido, tmp_name);
     if (ic != NULL) {
         LOGTRACE("Found chain %s\n", ic->resc.name);
-        mido_copy_midoname(&(vpcinstance->midos[INST_PRECHAIN]), &(ic->resc));
+        //mido_copy_midoname(&(vpcinstance->midos[INST_PRECHAIN]), &(ic->resc));
+        vpcinstance->midos[INST_PRECHAIN] = &(ic->resc);
     }
     snprintf(tmp_name, 32, "ic_%s_postchain", vpcinstance->name);
     ic = find_mido_chain(mido, tmp_name);
     if (ic != NULL) {
         LOGTRACE("Found chain %s\n", ic->resc.name);
-        mido_copy_midoname(&(vpcinstance->midos[INST_POSTCHAIN]), &(ic->resc));
+        //mido_copy_midoname(&(vpcinstance->midos[INST_POSTCHAIN]), &(ic->resc));
+        vpcinstance->midos[INST_POSTCHAIN] = &(ic->resc);
     }
 
     LOGTRACE("vpc instance (%s): AFTER POPULATE\n", vpcinstance->name);
-    for (i = 0; i < VPCINSTANCEEND; i++) {
-        LOGTRACE("\tmidos[%d]: %d\n", i, vpcinstance->midos[i].init);
+    for (i = 0; i < INST_ELIP_PRE_IPADDRGROUP_IP; i++) {
+        if (vpcinstance->midos[i] == NULL) {
+            LOGWARN("VPC instance population failed to populate resource at idx %d\n", i);
+        }
+    }
+    if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP]) {
+        for (i = INST_ELIP_PRE_IPADDRGROUP_IP; i < INST_END; i++) {
+            if (vpcinstance->midos[i] == NULL) {
+                LOGWARN("VPC elip instance population failed to populate resource at idx %d\n", i);
+            }
+        }
+    }
+
+    for (i = 0; i < INST_END; i++) {
+        if (vpcinstance->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, vpcinstance->midos[i]->init);
+        }
     }
     return (ret);
 }
@@ -4445,6 +4556,9 @@ int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance
     char iagname[64], tmp_name[32];
     midoname *tmpmn = NULL;
 
+    if (!mido || !vpcinstance || !node) {
+        LOGWARN("Invalid argument: NULL cannot create_mido_vpc_instance.\n");
+    }
     // find the interface mapping
 /*
     found = 0;
@@ -4461,68 +4575,70 @@ int create_mido_vpc_instance(mido_config * mido, mido_vpc_instance * vpcinstance
     
     mido_resource_host *instance_node = search_mido_host_byip(mido, node);
     if (instance_node) {
-        mido_copy_midoname(&(vpcinstance->midos[VMHOST]), &(instance_node->resc));
+        //mido_copy_midoname(&(vpcinstance->midos[INST_VMHOST]), &(instance_node->resc));
+        vpcinstance->midos[INST_VMHOST] = &(instance_node->resc);
         found = 1;
     } else {
         LOGWARN("Unable to find node %s in MidoNet.\n", node);
+        ret = 1;
     }
 
     // set up elip ipaddrgroups
     snprintf(iagname, 64, "elip_pre_%s", vpcinstance->name);
-    if (!find_mido_vpc_ipaddrgroup(mido, iagname, &tmpmn)) {
-        LOGDEBUG("Found IAG %s - skipping creation.\n", iagname);
-        mido_copy_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), tmpmn);
-    } else {
+    if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         LOGINFO("\tcreating %s\n", iagname);
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]));
-        if (rc) {
-            LOGWARN("Failed to create IAG %s.\n", iagname);
-            ret = 1;
-        } else {
-            add_mido_resource_ipaddrgroup(mido, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]));
-        }
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP];
     }
-
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create IAG %s.\n", iagname);
+        ret = 1;
+    }
+    vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] = tmpmn;
+    
     snprintf(iagname, 64, "elip_post_%s", vpcinstance->name);
-    if (!find_mido_vpc_ipaddrgroup(mido, iagname, &tmpmn)) {
-        LOGDEBUG("Found IAG %s - skipping creation.\n", iagname);
-        mido_copy_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), tmpmn);
-    } else {
+    if (vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         LOGINFO("\tcreating %s\n", iagname);
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]));
-        if (rc) {
-            LOGWARN("Failed to create IAG %s.\n", iagname);
-            ret = 1;
-        } else {
-            add_mido_resource_ipaddrgroup(mido, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]));
-        }
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP];
     }
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create IAG %s.\n", iagname);
+        ret = 1;
+    }
+    vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP] = tmpmn;
 
     snprintf(tmp_name, 32, "ic_%s_prechain", vpcinstance->name);
-    if (!find_mido_vpc_chain(mido, tmp_name, &tmpmn)) {
-        LOGDEBUG("Found chain %s - skipping creation.\n", tmp_name);
-        mido_copy_midoname(&(vpcinstance->midos[INST_PRECHAIN]), tmpmn);
-    } else {
+    if (vpcinstance->midos[INST_PRECHAIN] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         LOGINFO("\tcreating %s\n", tmp_name);
-        rc = mido_create_chain(VPCMIDO_TENANT, tmp_name, &(vpcinstance->midos[INST_PRECHAIN]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", tmp_name);
-            ret = 1;
-        }
+    } else {
+        tmpmn = vpcinstance->midos[INST_PRECHAIN];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, tmp_name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", tmp_name);
+        ret = 1;
+    }
+    vpcinstance->midos[INST_PRECHAIN] = tmpmn;
 
     snprintf(tmp_name, 32, "ic_%s_postchain", vpcinstance->name);
-    if (!find_mido_vpc_chain(mido, tmp_name, &tmpmn)) {
-        LOGDEBUG("Found chain %s - skipping creation.\n", tmp_name);
-        mido_copy_midoname(&(vpcinstance->midos[INST_POSTCHAIN]), tmpmn);
-    } else {
+    if (vpcinstance->midos[INST_POSTCHAIN] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         LOGINFO("\tcreating %s\n", tmp_name);
-        rc = mido_create_chain(VPCMIDO_TENANT, tmp_name, &(vpcinstance->midos[INST_POSTCHAIN]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", tmp_name);
-            ret = 1;
-        }
+    } else {
+        tmpmn = vpcinstance->midos[INST_POSTCHAIN];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, tmp_name, tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create chain %s.\n", tmp_name);
+        ret = 1;
+    }
+    vpcinstance->midos[INST_POSTCHAIN] = tmpmn;
 
     return (ret);
 }
@@ -4551,44 +4667,29 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc_instance * vpcinstance)
     }
 
     rc = disconnect_mido_vpc_instance_elip(mido, vpcinstance);
-    if (rc) {
-        ret = 1;
-    }
+    ret += rc;
+
     // unlink port, delete port, delete dhcp entry
-    rc = mido_unlink_host_port(&(vpcinstance->midos[VMHOST]), &(vpcinstance->midos[VPCBR_VMPORT]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_unlink_host_port(vpcinstance->midos[INST_VMHOST], vpcinstance->midos[INST_VPCBR_VMPORT]);
+    ret += rc;
 
-    rc = mido_delete_port(&(vpcinstance->midos[VPCBR_VMPORT]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_port(vpcinstance->midos[INST_VPCBR_VMPORT]);
+    ret += rc;
 
-    rc = mido_delete_dhcphost(&(vpcinstance->midos[VPCBR_DHCPHOST]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_dhcphost(vpcinstance->midos[INST_VPCBR_DHCPHOST]);
+    ret += rc;
 
-    rc = mido_delete_ipaddrgroup(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_ipaddrgroup(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP]);
+    ret += rc;
 
-    rc = mido_delete_ipaddrgroup(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_ipaddrgroup(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]);
+    ret += rc;
 
-    rc = mido_delete_chain(&(vpcinstance->midos[INST_PRECHAIN]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_chain(vpcinstance->midos[INST_PRECHAIN]);
+    ret += rc;
 
-    rc = mido_delete_chain(&(vpcinstance->midos[INST_POSTCHAIN]));
-    if (rc) {
-        ret = 1;
-    }
+    rc = mido_delete_chain(vpcinstance->midos[INST_POSTCHAIN]);
+    ret += rc;
 
     free_mido_vpc_instance(vpcinstance);
 
@@ -4629,27 +4730,32 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     mido_resource_router *router = find_mido_router(mido, tmp_name);
     if (router != NULL) {
         LOGTRACE("Found router %s\n", router->resc.name);
-        mido_copy_midoname(&(natgateway->midos[NATG_RT]), &(router->resc));
+        //mido_copy_midoname(&(natgateway->midos[NATG_RT]), &(router->resc));
+        natgateway->midos[NATG_RT] = &(router->resc);
         // Search for NATG_RT_UPLINK
-        if (mido->midocore->midos[EUCABR].init) {
+        if (mido->midocore->midos[CORE_EUCABR]->init) {
             foundcnt = 0;
             for (i = 0; i < router->max_ports && (foundcnt != 2); i++) {
                 rc = mido_getel_midoname(router->ports[i], "peerId", &tmpstr);
                 for (j = 0; j < mido->midocore->max_brports && !found1; j++) {
-                    if (!rc && tmpstr && !strcmp(tmpstr, mido->midocore->brports[j].uuid)) {
-                        LOGTRACE("Found natr - eucabr link: %s %s\n", router->ports[i]->name, mido->midocore->brports[j].name);
-                        mido_copy_midoname(&(natgateway->midos[NATG_EUCABR_DOWNLINK]), &(mido->midocore->brports[j]));
-                        mido_copy_midoname(&(natgateway->midos[NATG_RT_UPLINK]), router->ports[i]);
+                    if (!rc && tmpstr && !strcmp(tmpstr, mido->midocore->brports[j]->uuid)) {
+                        LOGTRACE("Found natr - eucabr link: %s %s\n", router->ports[i]->name, mido->midocore->brports[j]->name);
+                        //mido_copy_midoname(&(natgateway->midos[NATG_EUCABR_DOWNLINK]), mido->midocore->brports[j]);
+                        natgateway->midos[NATG_EUCABR_DOWNLINK] = mido->midocore->brports[j];
+                        //mido_copy_midoname(&(natgateway->midos[NATG_RT_UPLINK]), router->ports[i]);
+                        natgateway->midos[NATG_RT_UPLINK] = router->ports[i];
                         foundcnt++;
                         found1 = TRUE;
                     }
                 }
                 // Search for NATG_RT_BRPORT
                 for (j = 0; j < vpcsubnet->max_brports && !found2; j++) {
-                    if (!rc && tmpstr && !strcmp(tmpstr, vpcsubnet->brports[j].uuid)) {
-                        LOGTRACE("Found natr - subnetbr link: %s %s\n", router->ports[i]->name, vpcsubnet->brports[j].name);
-                        mido_copy_midoname(&(natgateway->midos[NATG_VPCBR_RTPORT]), &(vpcsubnet->brports[j]));
-                        mido_copy_midoname(&(natgateway->midos[NATG_RT_BRPORT]), router->ports[i]);
+                    if (!rc && tmpstr && vpcsubnet->brports[i] && !strcmp(tmpstr, vpcsubnet->brports[j]->uuid)) {
+                        LOGTRACE("Found natr - subnetbr link: %s %s\n", router->ports[i]->name, vpcsubnet->brports[j]->name);
+                        //mido_copy_midoname(&(natgateway->midos[NATG_VPCBR_RTPORT]), vpcsubnet->brports[j]);
+                        natgateway->midos[NATG_VPCBR_RTPORT] = vpcsubnet->brports[j];
+                        //mido_copy_midoname(&(natgateway->midos[NATG_RT_BRPORT]), router->ports[i]);
+                        natgateway->midos[NATG_RT_BRPORT] = router->ports[i];
                         foundcnt++;
                         found2 = TRUE;
                     }
@@ -4665,26 +4771,30 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     mido_resource_ipaddrgroup *ipag = find_mido_ipaddrgroup(mido, tmp_name);
     if (ipag != NULL) {
         LOGTRACE("Found ipag %s\n", ipag->resc.name);
-        mido_copy_midoname(&natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP], &(ipag->resc));
+        //mido_copy_midoname(&natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP], &(ipag->resc));
+        natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] = &(ipag->resc);
         if (ipag->max_ips == 1) {
             sscanf(ipag->ips[0].name, "versions/6/ip_addrs/%s", pubip);
             LOGTRACE("Found pubip %s\n", pubip);
-            mido_copy_midoname(&(natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            //mido_copy_midoname(&(natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP]), &(ipag->ips[0]));
+            natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] = &(ipag->ips[0]);
         } else {
             LOGDEBUG("Unexpected number of IP addresses (%d) in %s\n", ipag->max_ips, ipag->resc.name);
         }
     }
 
     // Search for public IP route
-    if (natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP].init && mido->midocore->midos[EUCART].init) {
-        mido_resource_router *eucart = find_mido_router(mido, mido->midocore->midos[EUCART].name);
+    if ((natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] && mido->midocore->midos[CORE_EUCART]) &&
+            (natgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]->init && mido->midocore->midos[CORE_EUCART]->init)) {
+        mido_resource_router *eucart = mido->midocore->eucart;
         if (eucart != NULL) {
             foundcnt = 0;
             for (j = 0; j < eucart->max_routes && !foundcnt; j++) {
                 rc = mido_getel_midoname(&(eucart->routes[j]), "dstNetworkAddr", &tmpstr);
                 if (!strcmp(pubip, tmpstr)) {
                     LOGTRACE("Found %s route %s\n", pubip, eucart->routes[j].name);
-                    mido_copy_midoname(&(natgateway->midos[NATG_ELIP_ROUTE]), &(eucart->routes[j]));
+                    //mido_copy_midoname(&(natgateway->midos[NATG_ELIP_ROUTE]), &(eucart->routes[j]));
+                    natgateway->midos[NATG_ELIP_ROUTE] = &(eucart->routes[j]);
                     foundcnt = 1;
                 }
                 EUCA_FREE(tmpstr);
@@ -4699,19 +4809,23 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     mido_resource_chain *icin = find_mido_chain(mido, tmp_name);
     if (icin != NULL) {
         LOGTRACE("Found chain %s\n", icin->resc.name);
-        mido_copy_midoname(&(natgateway->midos[NATG_RT_INCHAIN]), &(icin->resc));
+        //mido_copy_midoname(&(natgateway->midos[NATG_RT_INCHAIN]), &(icin->resc));
+        natgateway->midos[NATG_RT_INCHAIN] = &(icin->resc);
     }
     snprintf(tmp_name, 64, "natc_%s_rtout", natgateway->name);
     mido_resource_chain *icout = find_mido_chain(mido, tmp_name);
     if (icout != NULL) {
         LOGTRACE("Found chain %s\n", icout->resc.name);
-        mido_copy_midoname(&(natgateway->midos[NATG_RT_OUTCHAIN]), &(icout->resc));
+        //mido_copy_midoname(&(natgateway->midos[NATG_RT_OUTCHAIN]), &(icout->resc));
+        natgateway->midos[NATG_RT_OUTCHAIN] = &(icout->resc);
     }
 
     LOGTRACE("(%s): AFTER POPULATE\n", natgateway->name);
     for (i = 0; i < NATG_END; i++) {
-        LOGTRACE("\tmidos[%d]: %d\n", i, natgateway->midos[i].init);
-        if (!natgateway->midos[i].init) {
+        if (natgateway->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, natgateway->midos[i]->init);
+        }
+        if ((!natgateway->midos[i]) || (!natgateway->midos[i]->init)) {
             LOGWARN("Failed to populate %s midos[%d]\n", natgateway->name, i);
             ret = 1;
         }
@@ -4719,7 +4833,7 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     if (ret == 1) {
         // Cleanup partial NAT Gateway
         LOGINFO("\tdeleting %s\n", natgateway->name);
-        ret = delete_mido_vpc_natgateway(mido, natgateway);
+        rc = delete_mido_vpc_natgateway(mido, natgateway);
         // Invalidate cache
         if (router) router->resc.init = 0;
         if (ipag) ipag->resc.init = 0;
@@ -4765,12 +4879,14 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
     char natg_rtname[64];
     char tmpbuf[64];
     char iagname[64];
+    //char ipagip[INET_ADDR_LEN];
+    //mido_resource_ipaddrgroup *ipag;
     char *tmpstr = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
     midoname *tmpmn;
 
     if (!mido || !vpc || !vpcnatgateway) {
-        LOGERROR("Invalid argument: NULL pointer.\n");
+        LOGERROR("Invalid argument - will not create vpc gateway.\n");
         return (1);
     }
     if ((vpcnatgateway->gniNatGateway == NULL) || (vpcnatgateway->gniVpcSubnet == NULL) || (vpcnatgateway->rtid == 0)) {
@@ -4811,38 +4927,55 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
         natg_subnetmac[i] = tolower(natg_subnetmac[i]);
     }
 
-
     tmpstr = hex2dot(vpcnatgateway->gniNatGateway->publicIp);
     snprintf(natg_pubip, INET_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
     // Create the NAT Gateway mido router
     snprintf(natg_rtname, 64, "natr_%s_%s_%d", vpcnatgateway->name, vpcsubnet->name, vpcnatgateway->rtid);
-    rc = mido_create_router(VPCMIDO_TENANT, natg_rtname, &(vpcnatgateway->midos[NATG_RT]));
+    if (vpcnatgateway->midos[NATG_RT] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcnatgateway->midos[NATG_RT];
+    }
+    rc = mido_create_router(VPCMIDO_TENANT, natg_rtname, tmpmn);
     if (rc) {
         LOGERROR("Failed to create %s: check midonet health\n", natg_rtname);
         ret = 1;
     }
+    vpcnatgateway->midos[NATG_RT] = tmpmn;
 
     if (ret == 0) {
         // link the NAT Gateway and euca network
         //    Create an eucabr port (downlink to nr)
-        rc = mido_create_port(&(mido->midocore->midos[EUCABR]), "Bridge", NULL, NULL, NULL, NULL, &(vpcnatgateway->midos[NATG_EUCABR_DOWNLINK]));
+        if (vpcnatgateway->midos[NATG_EUCABR_DOWNLINK] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_EUCABR_DOWNLINK];
+        }
+        rc = mido_create_port(mido->midocore->midos[CORE_EUCABR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
         if (rc) {
             LOGERROR("cannot create core bridge port: check midonet health\n");
             ret = 1;
         }
+        vpcnatgateway->midos[NATG_EUCABR_DOWNLINK] = tmpmn;
 
         //    Create an nr port (uplink to eucabr)
-        rc = mido_create_port(&(vpcnatgateway->midos[NATG_RT]), "Router",
-                natg_rtip, mido_rtnet, mido_rtmask, NULL, &(vpcnatgateway->midos[NATG_RT_UPLINK]));
+        if (vpcnatgateway->midos[NATG_RT_UPLINK] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_RT_UPLINK];
+        }
+        rc = mido_create_port(vpcnatgateway->midos[NATG_RT], "Router",
+                natg_rtip, mido_rtnet, mido_rtmask, NULL, tmpmn);
         if (rc) {
             LOGERROR("cannot create nat gateway router port: check midonet health\n");
             ret = 1;
         }
+        vpcnatgateway->midos[NATG_RT_UPLINK] = tmpmn;
 
         //    Link nr with eucabr
-        rc = mido_link_ports(&(vpcnatgateway->midos[NATG_EUCABR_DOWNLINK]), &(vpcnatgateway->midos[NATG_RT_UPLINK]));
+        rc = mido_link_ports(vpcnatgateway->midos[NATG_EUCABR_DOWNLINK], vpcnatgateway->midos[NATG_RT_UPLINK]);
         if (rc) {
             LOGERROR("cannot create midonet bridge <-> nat gateway router link: check midonet health\n");
             ret = 1;
@@ -4852,22 +4985,34 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
     if (ret == 0) {
         // link the NAT Gateway and VPC subnet
         //     create an nr subnet port
-        rc = mido_create_port(&(vpcnatgateway->midos[NATG_RT]), "Router",
-                natg_subnetip, subnet_net, subnet_mask, natg_subnetmac, &(vpcnatgateway->midos[NATG_RT_BRPORT]));
+        if (vpcnatgateway->midos[NATG_RT_BRPORT] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_RT_BRPORT];
+        }
+        rc = mido_create_port(vpcnatgateway->midos[NATG_RT], "Router",
+                natg_subnetip, subnet_net, subnet_mask, natg_subnetmac, tmpmn);
         if (rc) {
             LOGERROR("cannot create nat gateway subnet port: check midonet health\n");
             ret = 1;
         }
+        vpcnatgateway->midos[NATG_RT_BRPORT] = tmpmn;
 
         //     create an subnetbr port
-        rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "Bridge", NULL, NULL, NULL, NULL, &(vpcnatgateway->midos[NATG_VPCBR_RTPORT]));
+        if (vpcnatgateway->midos[NATG_VPCBR_RTPORT] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_VPCBR_RTPORT];
+        }
+        rc = mido_create_port(vpcsubnet->midos[SUBN_VPCBR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
         if (rc) {
             LOGERROR("cannot create subnet bridge port: check midonet health\n");
             ret = 1;
         }
+        vpcnatgateway->midos[NATG_VPCBR_RTPORT] = tmpmn;
 
         //     link nr subnet port with subnetbr port
-        rc = mido_link_ports(&(vpcnatgateway->midos[NATG_RT_BRPORT]), &(vpcnatgateway->midos[NATG_VPCBR_RTPORT]));
+        rc = mido_link_ports(vpcnatgateway->midos[NATG_RT_BRPORT], vpcnatgateway->midos[NATG_VPCBR_RTPORT]);
         if (rc) {
             LOGERROR("cannot create nat gateway router <-> subnet bridge link: check midonet health\n");
             ret = 1;
@@ -4876,15 +5021,21 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
 
     if (ret == 0) {
         // Route the NAT gateway public IP from the Internet to nr
-        rc = mido_create_route(mido, &(mido->midocore->midos[EUCART]), &(mido->midocore->midos[EUCART_BRPORT]),
-                "0.0.0.0", "0", natg_pubip, "32", natg_rtip, "100", &(vpcnatgateway->midos[NATG_ELIP_ROUTE]));
+        if (vpcnatgateway->midos[NATG_ELIP_ROUTE] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_ELIP_ROUTE];
+        }
+        rc = mido_create_route(mido, mido->midocore->midos[CORE_EUCART], mido->midocore->midos[CORE_EUCART_BRPORT],
+                "0.0.0.0", "0", natg_pubip, "32", natg_rtip, "100", tmpmn);
         if (rc) {
             LOGERROR("cannot create nat gateway elip route: check midonet health\n");
             ret = 1;
         }
+        vpcnatgateway->midos[NATG_ELIP_ROUTE] = tmpmn;
 
         // Default route to eucart
-        rc = mido_create_route(mido, &(vpcnatgateway->midos[NATG_RT]), &(vpcnatgateway->midos[NATG_RT_UPLINK]),
+        rc = mido_create_route(mido, vpcnatgateway->midos[NATG_RT], vpcnatgateway->midos[NATG_RT_UPLINK],
                 "0.0.0.0", "0", "0.0.0.0", "0", mido_rtip, "0", NULL);
         if (rc) {
             LOGERROR("cannot create nat gateway default route: check midonet health\n");
@@ -4892,7 +5043,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
         }
 
         // Route to euca internal network
-        rc = mido_create_route(mido, &(vpcnatgateway->midos[NATG_RT]), &(vpcnatgateway->midos[NATG_RT_UPLINK]),
+        rc = mido_create_route(mido, vpcnatgateway->midos[NATG_RT], vpcnatgateway->midos[NATG_RT_UPLINK],
                 "0.0.0.0", "0", mido_rtnet, mido_rtmask, "UNSET", "0", NULL);
         if (rc) {
             LOGERROR("cannot create midonet router route: check midonet health\n");
@@ -4900,7 +5051,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
         }
 
         // Route traffic destined to VPC CIDR block to VPC Router
-        rc = mido_create_route(mido, &(vpcnatgateway->midos[NATG_RT]), &(vpcnatgateway->midos[NATG_RT_BRPORT]),
+        rc = mido_create_route(mido, vpcnatgateway->midos[NATG_RT], vpcnatgateway->midos[NATG_RT_BRPORT],
                 "0.0.0.0", "0", vpc_net, vpc_mask, subnet_gwip, "0", NULL);
         if (rc) {
             LOGERROR("cannot create midonet router route: check midonet health\n");
@@ -4911,59 +5062,63 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
     if (ret == 0) {
         // create nat gateway router chains
         snprintf(tmpbuf, 64, "natc_%s_rtin", vpcnatgateway->name);
-        if (!find_mido_vpc_chain(mido, tmpbuf, &tmpmn)) {
-            LOGDEBUG("Found chain %s - skipping creation.\n", tmpbuf);
-            mido_copy_midoname(&(vpcnatgateway->midos[NATG_RT_INCHAIN]), tmpmn);
+        if (vpcnatgateway->midos[NATG_RT_INCHAIN] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         } else {
-            rc = mido_create_chain(VPCMIDO_TENANT, tmpbuf, &(vpcnatgateway->midos[NATG_RT_INCHAIN]));
-            if (rc) {
-                LOGWARN("Failed to create chain %s.\n", tmpbuf);
-                ret = 1;
-            }
+            tmpmn = vpcnatgateway->midos[NATG_RT_INCHAIN];
         }
+        rc = mido_create_chain(VPCMIDO_TENANT, tmpbuf, tmpmn);
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", tmpbuf);
+            ret = 1;
+        }
+        vpcnatgateway->midos[NATG_RT_INCHAIN] = tmpmn;
 
         snprintf(tmpbuf, 64, "natc_%s_rtout", vpcnatgateway->name);
-        if (!find_mido_vpc_chain(mido, tmpbuf, &tmpmn)) {
-            LOGDEBUG("Found chain %s - skipping creation.\n", tmpbuf);
-            mido_copy_midoname(&(vpcnatgateway->midos[NATG_RT_OUTCHAIN]), tmpmn);
+        if (vpcnatgateway->midos[NATG_RT_OUTCHAIN] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
         } else {
-            rc = mido_create_chain(VPCMIDO_TENANT, tmpbuf, &(vpcnatgateway->midos[NATG_RT_OUTCHAIN]));
-            if (rc) {
-                LOGWARN("Failed to create chain %s.\n", tmpbuf);
-                ret = 1;
-            }
+            tmpmn = vpcnatgateway->midos[NATG_RT_OUTCHAIN];
         }
+        rc = mido_create_chain(VPCMIDO_TENANT, tmpbuf, tmpmn);
+        if (rc) {
+            LOGWARN("Failed to create chain %s.\n", tmpbuf);
+            ret = 1;
+        }
+        vpcnatgateway->midos[NATG_RT_OUTCHAIN] = tmpmn;
 
         // set NATG_RT_INCHAIN and NATG_RT_OUTCHAIN to NATG_RT
-        if (vpcnatgateway->midos[NATG_RT].init && vpcnatgateway->midos[NATG_RT_INCHAIN].init && vpcnatgateway->midos[NATG_RT_OUTCHAIN].init) {
-            rc = mido_update_router(&(vpcnatgateway->midos[NATG_RT]), "inboundFilterId", vpcnatgateway->midos[NATG_RT_INCHAIN].uuid,
-                    "outboundFilterId", vpcnatgateway->midos[NATG_RT_OUTCHAIN].uuid, "name", vpcnatgateway->midos[NATG_RT].name, NULL);
+        if ((vpcnatgateway->midos[NATG_RT] && vpcnatgateway->midos[NATG_RT_INCHAIN] && vpcnatgateway->midos[NATG_RT_OUTCHAIN]) &&
+                (vpcnatgateway->midos[NATG_RT]->init && vpcnatgateway->midos[NATG_RT_INCHAIN]->init && vpcnatgateway->midos[NATG_RT_OUTCHAIN]->init)) {
+            rc = mido_update_router(vpcnatgateway->midos[NATG_RT], "inboundFilterId", vpcnatgateway->midos[NATG_RT_INCHAIN]->uuid,
+                    "outboundFilterId", vpcnatgateway->midos[NATG_RT_OUTCHAIN]->uuid, "name", vpcnatgateway->midos[NATG_RT]->name, NULL);
         } else {
             rc = 1;
         }
         if (rc) {
             LOGERROR("cannot update router infilter and/or outfilter: check midonet health\n");
-            return (1);
+            ret = 1;
         }
 
         // Create SNAT rule (post-routing/out)
         snprintf(tmpbuf, 8, "0");
-        if (vpcnatgateway->midos[NATG_RT_OUTCHAIN].init) {
-            rc = mido_create_rule(&(vpcnatgateway->midos[NATG_RT_OUTCHAIN]), NULL, NULL, 0, NULL,
+        if ((vpcnatgateway->midos[NATG_RT_OUTCHAIN]) && (vpcnatgateway->midos[NATG_RT_OUTCHAIN]->init)) {
+            rc = mido_create_rule(vpcnatgateway->midos[NATG_RT_OUTCHAIN], NULL, NULL, 0, NULL,
                     "position", tmpbuf, "type", "snat", "nwSrcAddress", vpc_net, "nwSrcLength", vpc_mask,
                     "invNwSrc", "false", "flowAction", "accept", "natTargets", "jsonlist",
                     "natTargets:addressFrom", natg_pubip, "natTargets:addressTo", natg_pubip,
                     "natTargets:portFrom", "1024", "natTargets:portTo", "65535", "natTargets:END", "END",
-                    "outPorts", "jsonarr", "outPorts:", vpcnatgateway->midos[NATG_RT_UPLINK].uuid, "outPorts:END",
+                    "outPorts", "jsonarr", "outPorts:", vpcnatgateway->midos[NATG_RT_UPLINK]->uuid, "outPorts:END",
                     "END", "invOutPorts", "false", NULL);
             if (rc) {
                 LOGWARN("Failed to create SNAT rule for %s\n", vpcnatgateway->name);
+                ret = 1;
             }
         }
 
         // Create REV_SNAT rule (pre-routing/in)
-        if (vpcnatgateway->midos[NATG_RT_INCHAIN].init) {
-            rc = mido_create_rule(&(vpcnatgateway->midos[NATG_RT_INCHAIN]), NULL, NULL, 0, NULL,
+        if ((vpcnatgateway->midos[NATG_RT_INCHAIN]) && (vpcnatgateway->midos[NATG_RT_INCHAIN]->init)) {
+            rc = mido_create_rule(vpcnatgateway->midos[NATG_RT_INCHAIN], NULL, NULL, 0, NULL,
                     "position", tmpbuf, "type", "rev_snat", "nwDstAddress", natg_pubip, "nwDstLength", "32",
                     "invNwDst", "false", "flowAction", "accept", NULL);
             if (rc) {
@@ -4974,28 +5129,73 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_natgat
 
     if (ret == 0) {
         snprintf(iagname, 64, "elip_pre_%s", vpcnatgateway->name);
-        if (!find_mido_vpc_ipaddrgroup(mido, iagname, &tmpmn)) {
+        if (vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP];
+        }
+        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, tmpmn);
+        if (rc) {
+            LOGWARN("Failed to create IAG %s.\n", iagname);
+            ret = 1;
+        }
+        vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] = tmpmn;
+
+        if (vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] && vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]->init) {
+            if (vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] == NULL) {
+                tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+            } else {
+                tmpmn = vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP];
+            }
+            rc = mido_create_ipaddrgroup_ip(mido, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP], natg_pubip, tmpmn);
+            if (rc) {
+                LOGERROR("Failed to add %s as member of %s\n", natg_pubip, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]->name);
+                ret = 1;
+            }
+            vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] = tmpmn;
+        }
+/*
+        ipag = find_mido_ipaddrgroup(mido, iagname);
+        if (ipag) {
             LOGDEBUG("Found IAG %s - skipping creation.\n", iagname);
-            mido_copy_midoname(&(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]), tmpmn);
+            //mido_copy_midoname(&(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]), tmpmn);
+            vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] = &(ipag->resc);
+            if (ipag->max_ips == 1) {
+                sscanf(ipag->ips[0].name, "versions/6/ip_addrs/%s", ipagip);
+                LOGTRACE("Found IP %s\n", ipagip);
+                vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] = &(ipag->ips[0]);
+            } else {
+                tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+                rc = mido_create_ipaddrgroup_ip(mido, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP],
+                        natg_pubip, tmpmn);
+                if (rc) {
+                    LOGERROR("Failed to add %s as member of %s\n", natg_pubip, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]->name);
+                    ret = 1;
+                }
+                vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] = tmpmn;
+            }
         } else {
             LOGINFO("\tcreating %s\n", iagname);
-            rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]));
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+            rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, tmpmn);
+            vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP] = tmpmn;
             if (rc) {
                 LOGWARN("Failed to create IAG %s.\n", iagname);
                 ret = 1;
             } else {
-                add_mido_resource_ipaddrgroup(mido, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]));
-
-                rc = mido_create_ipaddrgroup_ip(mido, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]),
-                        natg_pubip, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP]));
+                //add_mido_resource_ipaddrgroup(mido, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]));
+                tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+                rc = mido_create_ipaddrgroup_ip(mido, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP],
+                        natg_pubip, tmpmn);
                 if (rc) {
-                    LOGERROR("Failed to add %s as member of %s\n", natg_pubip, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP].name);
+                    LOGERROR("Failed to add %s as member of %s\n", natg_pubip, vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]->name);
                     ret = 1;
                 }
-
+                vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP_IP] = tmpmn;
                 // Public/Elastic IP of NAT gateways should never change.
             }
         }
+*/
     }
 
     return (ret);
@@ -5026,19 +5226,19 @@ int delete_mido_vpc_natgateway(mido_config *mido, mido_vpc_natgateway *vpcnatgat
     }
 
     // Delete NAT Gateway outfilter
-    rc += mido_delete_chain(&(vpcnatgateway->midos[NATG_RT_OUTCHAIN]));
+    rc += mido_delete_chain(vpcnatgateway->midos[NATG_RT_OUTCHAIN]);
     // Delete NAT Gateway infilter
-    rc += mido_delete_chain(&(vpcnatgateway->midos[NATG_RT_INCHAIN]));
+    rc += mido_delete_chain(vpcnatgateway->midos[NATG_RT_INCHAIN]);
     // Delete ELIP route from eucart
-    rc += mido_delete_route(&(vpcnatgateway->midos[NATG_ELIP_ROUTE]));
+    rc += mido_delete_route(vpcnatgateway->midos[NATG_ELIP_ROUTE]);
     // Delete ELIP ip-address-group
-    rc += mido_delete_ipaddrgroup(&(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]));
+    rc += mido_delete_ipaddrgroup(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]);
     // Delete VPC bridge port
-    rc += mido_delete_port(&(vpcnatgateway->midos[NATG_VPCBR_RTPORT]));
+    rc += mido_delete_port(vpcnatgateway->midos[NATG_VPCBR_RTPORT]);
     // Delete eucabr port
-    rc += mido_delete_port(&(vpcnatgateway->midos[NATG_EUCABR_DOWNLINK]));
+    rc += mido_delete_port(vpcnatgateway->midos[NATG_EUCABR_DOWNLINK]);
     // Delete NAT Gateway router
-    rc += mido_delete_router(&(vpcnatgateway->midos[NATG_RT]));
+    rc += mido_delete_router(vpcnatgateway->midos[NATG_RT]);
 
     clear_router_id(mido, vpcnatgateway->rtid);
     free_mido_vpc_natgateway(vpcnatgateway);
@@ -5124,7 +5324,9 @@ int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disab
     mido->int_rtnw = dot2hex(int_rtnetwork); // strdup(int_rtnetwork);
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
-    mido->midocore = calloc(1, sizeof (mido_core));
+    mido->midocore = EUCA_ZALLOC(1, sizeof (mido_core));
+    mido->resources = EUCA_ZALLOC(1, sizeof (mido_resources));
+    mido->mnamebuffer = midoname_list_new();
     LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
             SP(mido->ext_eucanetdhostname), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
             SP(int_rtslashnet));
@@ -5269,9 +5471,6 @@ int check_mido_tunnelzone() {
 int discover_mido_resources(mido_config * mido) {
     int rc = 0, ret = 0, i = 0, max_mn = 0, j = 0, k = 0;
     midoname *mn = NULL;
-    struct timeval tv;
-
-    eucanetd_timer_usec(&tv);
 
     free_mido_resources(mido->resources);
     if (mido->resources == NULL) {
@@ -5472,7 +5671,6 @@ int discover_mido_resources(mido_config * mido) {
     mn = NULL;
     max_mn = 0;
 
-    LOGDEBUG("MidoNet discovery processed in %.2f ms.\n", eucanetd_timer(&tv) / 1000.0);
     return (ret);
 }
 
@@ -5562,6 +5760,9 @@ int delete_mido_resource_chain(mido_config *mido, char *chainname) {
         return (1);
     }
     for (i = 0; i < mido->resources->max_chains; i++) {
+        if (mido->resources->chains[i].resc.init == 0) {
+            continue;
+        }
         if (!strcmp(mido->resources->chains[i].resc.name, chainname)) {
             mido->resources->chains[i].resc.init = 0;
         }
@@ -5594,6 +5795,9 @@ int delete_mido_resource_ipaddrgroup(mido_config *mido, char *ipag) {
         return (1);
     }
     for (i = 0; i < mido->resources->max_ipaddrgroups; i++) {
+        if (mido->resources->ipaddrgroups[i].resc.init == 0) {
+            continue;
+        }
         if (!strcmp(mido->resources->ipaddrgroups[i].resc.name, ipag)) {
             mido->resources->ipaddrgroups[i].resc.init = 0;
         }
@@ -5630,6 +5834,9 @@ int delete_mido_resource_ipaddrgroup_ip(mido_config *mido, midoname *ipag, midon
         return (1);
     }
     for (i = 0; (i < mido->resources->max_ipaddrgroups) && (!cipag); i++) {
+        if (mido->resources->ipaddrgroups[i].resc.init == 0) {
+            continue;
+        }
         if (!strcmp(mido->resources->ipaddrgroups[i].resc.name, ipag->name)) {
             cipag = &(mido->resources->ipaddrgroups[i]);
         }
@@ -5673,7 +5880,8 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
     found = 0;
     for (i = 0; i < mido->resources->max_hosts && !found; i++) {
         if (strstr(mido->resources->hosts[i].resc.name, mido->ext_eucanetdhostname)) {
-            mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(mido->resources->hosts[i].resc));
+            //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR_METAHOST]), &(mido->resources->hosts[i].resc));
+            vpcsubnet->midos[SUBN_VPCBR_METAHOST] = &(mido->resources->hosts[i].resc);
             found = 1;
             LOGTRACE("Found host %s\n", mido->resources->hosts[i].resc.name);
         }
@@ -5683,12 +5891,14 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
     mido_resource_bridge *subnetbridge = find_mido_bridge(mido, name);
     if (subnetbridge != NULL) {
         LOGTRACE("Found bridge %s\n", subnetbridge->resc.name);
-        mido_copy_midoname(&(vpcsubnet->midos[VPCBR]), &(subnetbridge->resc));
+        //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR]), &(subnetbridge->resc));
+        vpcsubnet->midos[SUBN_VPCBR] = &(subnetbridge->resc);
         if (subnetbridge->max_ports) {
-            vpcsubnet->brports = EUCA_ZALLOC(subnetbridge->max_ports, sizeof (midoname));
+            vpcsubnet->brports = EUCA_ZALLOC(subnetbridge->max_ports, sizeof (midoname *));
             vpcsubnet->max_brports = subnetbridge->max_ports;
             for (i = 0; i < subnetbridge->max_ports; i++) {
-                mido_copy_midoname(&(vpcsubnet->brports[i]), subnetbridge->ports[i]);
+                //mido_copy_midoname(&(vpcsubnet->brports[i]), subnetbridge->ports[i]);
+                vpcsubnet->brports[i] = subnetbridge->ports[i];
             }
         }
     }
@@ -5696,36 +5906,43 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
     if (subnetbridge != NULL) {
         if (subnetbridge->max_dhcps) {
             LOGTRACE("%d dhcp for bridge %s\n", subnetbridge->max_dhcps, subnetbridge->resc.name);
-            mido_copy_midoname(&(vpcsubnet->midos[VPCBR_DHCP]), &(subnetbridge->dhcps[0].resc));
-            vpcsubnet->dhcphosts = EUCA_ZALLOC(subnetbridge->dhcps[0].max_dhcphosts, sizeof (midoname));
+            //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR_DHCP]), &(subnetbridge->dhcps[0].resc));
+            vpcsubnet->midos[SUBN_VPCBR_DHCP] = &(subnetbridge->dhcps[0].resc);
+            vpcsubnet->dhcphosts = EUCA_ZALLOC(subnetbridge->dhcps[0].max_dhcphosts, sizeof (midoname *));
             vpcsubnet->max_dhcphosts = subnetbridge->dhcps[0].max_dhcphosts;
             for (i = 0; i < subnetbridge->dhcps[0].max_dhcphosts; i++) {
                 LOGTRACE("\tcopying dhcphost %s\n", subnetbridge->dhcps[0].dhcphosts[i].name);
-                mido_copy_midoname(&(vpcsubnet->dhcphosts[i]), &(subnetbridge->dhcps[0].dhcphosts[i]));
+                //mido_copy_midoname(&(vpcsubnet->dhcphosts[i]), &(subnetbridge->dhcps[0].dhcphosts[i]));
+                vpcsubnet->dhcphosts[i] = &(subnetbridge->dhcps[0].dhcphosts[i]);
             }
         }
     }
 
-    if (vpcsubnet->midos[VPCBR].init) {
+    if ((vpcsubnet->midos[SUBN_VPCBR]) && (vpcsubnet->midos[SUBN_VPCBR]->init)) {
         for (i = 0; i < vpcsubnet->max_brports; i++) {
             for (j = 0; j < vpc->max_rtports; j++) {
                 tmpstr = NULL;
-                rc = mido_getel_midoname(&(vpc->rtports[j]), "peerId", &tmpstr);
-                if (!rc && tmpstr && vpcsubnet->brports[i].uuid) {
-                    if (!strcmp(tmpstr, vpcsubnet->brports[i].uuid)) {
-                        LOGTRACE("Found rt-br link %s %s", vpc->rtports[j].name, vpcsubnet->brports[i].name);
-                        mido_copy_midoname(&(vpcsubnet->midos[VPCBR_RTPORT]), &(vpcsubnet->brports[i]));
-                        mido_copy_midoname(&(vpcsubnet->midos[VPCRT_BRPORT]), &(vpc->rtports[j]));
+                rc = mido_getel_midoname(vpc->rtports[j], "peerId", &tmpstr);
+                if (!rc && tmpstr && vpcsubnet->brports[i]) {
+                    if (!strcmp(tmpstr, vpcsubnet->brports[i]->uuid)) {
+                        LOGTRACE("Found rt-br link %s %s", vpc->rtports[j]->name, vpcsubnet->brports[i]->name);
+                        //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR_RTPORT]), &(vpcsubnet->brports[i]));
+                        vpcsubnet->midos[SUBN_VPCBR_RTPORT] = vpcsubnet->brports[i];
+                        //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCRT_BRPORT]), vpc->rtports[j]);
+                        vpcsubnet->midos[SUBN_VPCRT_BRPORT] = vpc->rtports[j];
                     }
                 }
                 EUCA_FREE(tmpstr);
             }
+        }
 
-            rc = mido_getel_midoname(&(vpcsubnet->brports[i]), "interfaceName", &tmpstr);
+        for (i = 0; i < vpcsubnet->max_brports; i++) {
+            rc = mido_getel_midoname(vpcsubnet->brports[i], "interfaceName", &tmpstr);
             if (!rc && tmpstr && strlen(tmpstr) && strstr(tmpstr, "vn0_")) {
                 // found the meta iface
-                LOGTRACE("Found meta interface %s", vpcsubnet->brports[i].name);
-                mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAPORT]), &(vpcsubnet->brports[i]));
+                LOGTRACE("Found meta interface %s", vpcsubnet->brports[i]->name);
+                //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR_METAPORT]), &(vpcsubnet->brports[i]));
+                vpcsubnet->midos[SUBN_VPCBR_METAPORT] = vpcsubnet->brports[i];
             }
             EUCA_FREE(tmpstr);
         }
@@ -5737,15 +5954,17 @@ int populate_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet
         }
     }
 
-    for (i = 0; i < VPCSUBNETEND; i++) {
-        if (!vpcsubnet->midos[i].init) {
+    for (i = 0; i < SUBN_END; i++) {
+        if (vpcsubnet->midos[i] == NULL) {
             LOGWARN("VPC subnet population failed to populate resource at idx %d\n", i);
         }
     }
 
     LOGTRACE("vpc subnet (%s): AFTER POPULATE\n", vpcsubnet->name);
-    for (i = 0; i < VPCSUBNETEND; i++) {
-        LOGTRACE("\tmidos[%d]: %d\n", i, vpcsubnet->midos[i].init);
+    for (i = 0; i < SUBN_END; i++) {
+        if (vpcsubnet->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, vpcsubnet->midos[i]->init);
+        }
     }
 
     return (ret);
@@ -5776,14 +5995,22 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
     mido_resource_router *router = find_mido_router(mido, vpcname);
     if (router != NULL) {
         LOGTRACE("Found router %s\n", router->resc.name);
-        mido_copy_midoname(&(vpc->midos[VPCRT]), &(router->resc));
+        //mido_copy_midoname(&(vpc->midos[VPC_VPCRT]), &(router->resc));
+        vpc->midos[VPC_VPCRT] = &(router->resc);
         vpc->max_rtports = router->max_ports;
         if (router->max_ports) {
-            vpc->rtports = EUCA_ZALLOC(router->max_ports, sizeof (midoname));
-            vpc->max_rtports = router->max_ports;
-            for (i = 0; i < router->max_ports; i++) {
-                mido_copy_midoname(&(vpc->rtports[i]), router->ports[i]);
-            }
+            vpc->rtports = EUCA_ZALLOC(router->max_ports, sizeof (midoname *));
+            memcpy(vpc->rtports, router->ports, router->max_ports * sizeof (midoname *));
+            //for (i = 0; i < router->max_ports; i++) {
+            //    mido_copy_midoname(&(vpc->rtports[i]), router->ports[i]);
+            //}
+        }
+        vpc->max_rtroutes = router->max_routes;
+        if (router->max_routes) {
+            vpc->rtroutes = EUCA_ZALLOC(router->max_routes, sizeof (midoname *));
+            for (i = 0; i < router->max_routes; i++) {
+                vpc->rtroutes[i] = &(router->routes[i]);
+            } 
         }
     }
 
@@ -5791,19 +6018,22 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
     mido_resource_chain *chain = find_mido_chain(mido, vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->resc.name);
-        mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK_PRECHAIN]), &(chain->resc));
+        //mido_copy_midoname(&(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]), &(chain->resc));
+        vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN] = &(chain->resc);
     }
 
     snprintf(vpcname, 32, "vc_%s_preelip", vpc->name);
     chain = find_mido_chain(mido, vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->resc.name);
-        mido_copy_midoname(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(chain->resc));
+        //mido_copy_midoname(&(vpc->midos[VPC_VPCRT_PREELIPCHAIN]), &(chain->resc));
+        vpc->midos[VPC_VPCRT_PREELIPCHAIN] = &(chain->resc);
+        vpc->max_rtpreelipchain_rules = chain->max_rules;
         if (chain->max_rules) {
-            vpc->rtpreelipchain_rules = EUCA_ZALLOC(chain->max_rules, sizeof (midoname));
-            vpc->max_rtpreelipchain_rules = chain->max_rules;
+            vpc->rtpreelipchain_rules = EUCA_ZALLOC(chain->max_rules, sizeof (midoname *));
             for (i = 0; i < chain->max_rules; i++) {
-                mido_copy_midoname(&(vpc->rtpreelipchain_rules[i]), &(chain->rules[i]));
+            //    mido_copy_midoname(&(vpc->rtpreelipchain_rules[i]), &(chain->rules[i]));
+                vpc->rtpreelipchain_rules[i] = &(chain->rules[i]);
             }
         }
     }
@@ -5812,25 +6042,29 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
     chain = find_mido_chain(mido, vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->resc.name);
-        mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK_POSTCHAIN]), &(chain->resc));
+        //mido_copy_midoname(&(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]), &(chain->resc));
+        vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN] = &(chain->resc);
+        vpc->max_rtpostchain_rules = chain->max_rules;
         if (chain->max_rules) {
-            vpc->rtpostchain_rules = EUCA_ZALLOC(chain->max_rules, sizeof (midoname));
-            vpc->max_rtpostchain_rules = chain->max_rules;
+            vpc->rtpostchain_rules = EUCA_ZALLOC(chain->max_rules, sizeof (midoname *));
             for (i = 0; i < chain->max_rules; i++) {
-                mido_copy_midoname(&(vpc->rtpostchain_rules[i]), &(chain->rules[i]));
+                //mido_copy_midoname(&(vpc->rtpostchain_rules[i]), &(chain->rules[i]));
+                vpc->rtpostchain_rules[i] = &(chain->rules[i]);
             }
         }
     }
 
-    if (midocore->midos[EUCABR].init) {
+    if ((midocore->midos[CORE_EUCABR]) && (midocore->midos[CORE_EUCABR]->init)) {
         for (i = 0; i < midocore->max_brports; i++) {
             for (j = 0; j < vpc->max_rtports; j++) {
-                rc = mido_getel_midoname(&(vpc->rtports[j]), "peerId", &url);
-                if (!rc && url && midocore->brports[i].uuid) {
-                    if (!strcmp(url, midocore->brports[i].uuid)) {
-                        LOGTRACE("Found rt-br link %s %s", vpc->rtports[j].name, midocore->brports[i].name);
-                        mido_copy_midoname(&(vpc->midos[EUCABR_DOWNLINK]), &(midocore->brports[i]));
-                        mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK]), &(vpc->rtports[j]));
+                rc = mido_getel_midoname(vpc->rtports[j], "peerId", &url);
+                if (!rc && url && midocore->brports[i]->uuid) {
+                    if (!strcmp(url, midocore->brports[i]->uuid)) {
+                        LOGTRACE("Found rt-br link %s %s", vpc->rtports[j]->name, midocore->brports[i]->name);
+                        //mido_copy_midoname(&(vpc->midos[VPC_EUCABR_DOWNLINK]), midocore->brports[i]);
+                        vpc->midos[VPC_EUCABR_DOWNLINK] = midocore->brports[i];
+                        //mido_copy_midoname(&(vpc->midos[VPC_VPCRT_UPLINK]), &(vpc->rtports[j]));
+                        vpc->midos[VPC_VPCRT_UPLINK] = vpc->rtports[j];
                     }
                 }
                 EUCA_FREE(url);
@@ -5839,8 +6073,10 @@ int populate_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) 
     }
 
     LOGTRACE("vpc (%s): AFTER POPULATE\n", vpc->name);
-    for (i = 0; i < VPCEND; i++) {
-        LOGTRACE("\tmidos[%d]: %d\n", i, vpc->midos[i].init);
+    for (i = 0; i < VPC_END; i++) {
+        if (vpc->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, vpc->midos[i]->init);
+        }
     }
 
     return (ret);
@@ -5917,11 +6153,14 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     eucart = find_mido_router(mido, "eucart");
     if (eucart) {
         LOGTRACE("Found core router %s\n", eucart->resc.name);
-        mido_copy_midoname(&(midocore->midos[EUCART]), &(eucart->resc));
-        midocore->rtports = EUCA_ZALLOC(eucart->max_ports, sizeof (midoname));
-        for (i = 0; i < eucart->max_ports; i++) {
-            mido_copy_midoname(&(midocore->rtports[i]), eucart->ports[i]);
-        }
+        midocore->eucart = eucart;
+        //mido_copy_midoname(&(midocore->midos[EUCART]), &(eucart->resc));
+        midocore->midos[CORE_EUCART] = &(eucart->resc);
+        //midocore->rtports = EUCA_ZALLOC(eucart->max_ports, sizeof (midoname));
+        //for (i = 0; i < eucart->max_ports; i++) {
+        //    mido_copy_midoname(&(midocore->rtports[i]), eucart->ports[i]);
+        //}
+        midocore->rtports = eucart->ports;
         midocore->max_rtports = eucart->max_ports;
     }
 
@@ -5929,11 +6168,14 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     eucabr = find_mido_bridge(mido, "eucabr");
     if (eucabr) {
         LOGTRACE("Found core bridge %s\n", eucabr->resc.name);
-        mido_copy_midoname(&(midocore->midos[EUCABR]), &(eucabr->resc));
-        midocore->brports = EUCA_ZALLOC(eucabr->max_ports, sizeof (midoname));
-        for (i = 0; i < eucabr->max_ports; i++) {
-            mido_copy_midoname(&(midocore->brports[i]), eucabr->ports[i]);
-        }
+        midocore->eucabr = eucabr;
+        //mido_copy_midoname(&(midocore->midos[EUCABR]), &(eucabr->resc));
+        midocore->midos[CORE_EUCABR] = &(eucabr->resc);
+        //midocore->brports = EUCA_ZALLOC(eucabr->max_ports, sizeof (midoname));
+        //for (i = 0; i < eucabr->max_ports; i++) {
+        //    mido_copy_midoname(&(midocore->brports[i]), eucabr->ports[i]);
+        //}
+        midocore->brports = eucabr->ports;
         midocore->max_brports = eucabr->max_ports;
     }
 
@@ -5941,18 +6183,21 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     mdipag = find_mido_ipaddrgroup(mido, "metadata_ip");
     if (mdipag) {
         LOGTRACE("Found metadata ip-address-group %s\n", mdipag->resc.name);
-        mido_copy_midoname(&(midocore->midos[METADATA_IPADDRGROUP]), &(mdipag->resc));
+        //mido_copy_midoname(&(midocore->midos[METADATA_IPADDRGROUP]), &(mdipag->resc));
+        midocore->midos[CORE_METADATA_IPADDRGROUP] = &(mdipag->resc);
     }
 
     // search all ports for RT/BR ports
     for (i = 0; i < midocore->max_brports; i++) {
         for (j = 0; j < midocore->max_rtports; j++) {
-            rc = mido_getel_midoname(&(midocore->rtports[j]), "peerId", &url);
-            if (!rc && url && midocore->brports[i].uuid) {
-                if (!strcmp(url, midocore->brports[i].uuid)) {
+            rc = mido_getel_midoname(midocore->rtports[j], "peerId", &url);
+            if (!rc && url && midocore->brports[i]->uuid) {
+                if (!strcmp(url, midocore->brports[i]->uuid)) {
                     LOGTRACE("Found eucart-eucabr link.\n");
-                    mido_copy_midoname(&(midocore->midos[EUCABR_RTPORT]), &(midocore->brports[i]));
-                    mido_copy_midoname(&(midocore->midos[EUCART_BRPORT]), &(midocore->rtports[j]));
+                    //mido_copy_midoname(&(midocore->midos[EUCABR_RTPORT]), &(midocore->brports[i]));
+                    midocore->midos[CORE_EUCABR_RTPORT] = midocore->brports[i];
+                    //mido_copy_midoname(&(midocore->midos[EUCART_BRPORT]), &(midocore->rtports[j]));
+                    midocore->midos[CORE_EUCART_BRPORT] = midocore->rtports[j];
                 }
             }
             EUCA_FREE(url);
@@ -5962,12 +6207,13 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
     // search for mido GW ports
     for (j = 0; j < midocore->max_rtports; j++) {
         url = NULL;
-        rc = mido_getel_midoname(&(midocore->rtports[j]), "portAddress", &url);
+        rc = mido_getel_midoname(midocore->rtports[j], "portAddress", &url);
         if (!rc && url) {
             for (k = 0; k < mido->ext_rthostarrmax; k++) {
                 if (!strcmp(url, mido->ext_rthostaddrarr[k])) {
                     LOGTRACE("Found gw port for %s.\n", mido->ext_rthostaddrarr[k])
-                    mido_copy_midoname(&(midocore->gwports[k]), &(midocore->rtports[j]));
+                    //mido_copy_midoname(&(midocore->gwports[k]), &(midocore->rtports[j]));
+                    midocore->gwports[k] = midocore->rtports[j];
                     if (midocore->max_gws < k) {
                         midocore->max_gws = k;
                     }
@@ -5977,11 +6223,12 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
         EUCA_FREE(url);
     }
 
-    for (i = 0; i < mido->resources->max_hosts; i++) {
-        for (k = 0; k < mido->ext_rthostarrmax; k++) {
+    for (k = 0; k < mido->ext_rthostarrmax; k++) {
+        for (i = 0; i < mido->resources->max_hosts; i++) {
             if (!strcmp(mido->resources->hosts[i].resc.name, mido->ext_rthostnamearr[k])) {
                 LOGTRACE("Found gw host %s\n", mido->resources->hosts[i].resc.name);
-                mido_copy_midoname(&(midocore->gwhosts[k]), &(mido->resources->hosts[i].resc));
+                //mido_copy_midoname(&(midocore->gwhosts[k]), &(mido->resources->hosts[i].resc));
+                midocore->gwhosts[k] = &(mido->resources->hosts[i].resc);
                 if (midocore->max_gws < k) {
                     LOGWARN("Unexpected number of gwhosts(%d) - > number of gwports(%d).\n", k, midocore->max_gws);
                     midocore->max_gws = k;
@@ -5989,25 +6236,27 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
             }
         }
     }
+    (midocore->max_gws)++;
 
     mido_resource_portgroup *eucapg = NULL;
     eucapg = find_mido_portgroup(mido, "eucapg");
     if (eucapg) {
         LOGTRACE("Found gw portgroup %s\n", eucapg->resc.name);
-        mido_copy_midoname(&(midocore->midos[GWPORTGROUP]), &(eucapg->resc));
+        //mido_copy_midoname(&(midocore->midos[GWPORTGROUP]), &(eucapg->resc));
+        midocore->midos[CORE_GWPORTGROUP] = &(eucapg->resc);
     }
 
     LOGDEBUG("midocore: AFTER POPULATE\n");
-    for (i = 0; i < MIDOCOREEND; i++) {
-        LOGDEBUG("\tmidos[%d]: %d\n", i, midocore->midos[i].init);
+    for (i = 0; i < CORE_END; i++) {
+        LOGDEBUG("\tmidos[%d]: %d\n", i, (midocore->midos[i] == NULL) ? 0 : midocore->midos[i]->init);
     }
 
     for (i = 0; i < midocore->max_gws; i++) {
-        if ((midocore->gwhosts[i].init == 0) || (midocore->gwports[i].init == 0)) {
+        if ((midocore->gwhosts[i] && midocore->gwports[i]) && ((midocore->gwhosts[i]->init == 0) || (midocore->gwports[i]->init == 0))) {
             LOGWARN("Invalid gwhost or gwport found.\n");
             continue;
         }
-        LOGDEBUG("\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i].name, midocore->gwhosts[i].init, midocore->gwports[i].name, midocore->gwports[i].init);
+        LOGDEBUG("\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i]->name, midocore->gwhosts[i]->init, midocore->gwports[i]->name, midocore->gwports[i]->init);
     }
     return (ret);
 }
@@ -6030,65 +6279,33 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
 int disconnect_mido_vpc_instance_elip(mido_config *mido, mido_vpc_instance * vpcinstance) {
     int ret = 0, rc = 0;
 
-    mido_print_midoname(&(vpcinstance->midos[ELIP_ROUTE]));
-    rc = mido_delete_route(&(vpcinstance->midos[ELIP_ROUTE]));
+    rc = mido_delete_route(vpcinstance->midos[INST_ELIP_ROUTE]);
     if (rc) {
-        //TODO
-        LOGWARN("Failed to delete ELIP_ROUTE, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_ROUTE].name, vpcinstance->midos[ELIP_ROUTE].resource_type, vpcinstance->midos[ELIP_ROUTE].uuid);
+        LOGWARN("Failed to delete ELIP_ROUTE for %s\n", vpcinstance->name);
         ret = 1;
     }
 
-    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE]));
-    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_PRE]));
+    rc = mido_delete_rule(vpcinstance->midos[INST_ELIP_PRE]);
     if (rc) {
-        //TODO
-        LOGWARN("Failed to delete ELIP_PRE, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_PRE].name, vpcinstance->midos[ELIP_PRE].resource_type, vpcinstance->midos[ELIP_PRE].uuid);
+        LOGWARN("Failed to delete ELIP_PRE for %s\n", vpcinstance->name);
         ret = 1;
     }
 
-    mido_print_midoname(&(vpcinstance->midos[ELIP_POST]));
-    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_POST]));
+    rc = mido_delete_rule(vpcinstance->midos[INST_ELIP_POST]);
     if (rc) {
-        //TODO
-        LOGWARN("Failed to delete ELIP_POST, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_POST].name, vpcinstance->midos[ELIP_POST].resource_type, vpcinstance->midos[ELIP_POST].uuid);
+        LOGWARN("Failed to delete ELIP_POST for %s\n", vpcinstance->name);
         ret = 1;
     }
 
-    /*
-    LOGDEBUG("going to delete ELIP_PRE_PUB");
-    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_PUB]));
-    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_PRE_PUB]));
+    rc = mido_delete_ipaddrgroup_ip(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP], vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP]);
     if (rc) {
-        //TODO
-        LOGWARN("Failed to delete ELIP_PRE_PUB, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_PRE_PUB].name, vpcinstance->midos[ELIP_PRE_PUB].resource_type, vpcinstance->midos[ELIP_PRE_PUB].uuid);
-        ret = 1;
-    }
-     */
-
-    /*
-    LOGDEBUG("going to delete ELIP_POST_PRIV");
-    mido_print_midoname(&(vpcinstance->midos[ELIP_POST_PRIV]));
-    rc = mido_delete_rule(&(vpcinstance->midos[ELIP_POST_PRIV]));
-    if (rc) {
-        //TODO
-        LOGWARN("Failed to delete ELIP_POST_PRIV, name:%s rtype:%s uuid:%s\n", vpcinstance->midos[ELIP_POST_PRIV].name, vpcinstance->midos[ELIP_POST_PRIV].resource_type, vpcinstance->midos[ELIP_POST_PRIV].uuid);
-        ret = 1;
-    }
-     */
-
-    mido_print_midoname(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
-    delete_mido_resource_ipaddrgroup_ip(mido, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
-    rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
-    if (rc) {
-        LOGERROR("could not delete instance (%s) IP addr (%s) from ipaddrgroup\n", vpcinstance->name, vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP].name);
+        LOGWARN("could not delete instance (%s) IP addr from ipaddrgroup\n", vpcinstance->name);
         ret = 1;
     }
 
-    mido_print_midoname(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
-    delete_mido_resource_ipaddrgroup_ip(mido, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
-    rc = mido_delete_ipaddrgroup_ip(&(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
+    rc = mido_delete_ipaddrgroup_ip(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP], vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP]);
     if (rc) {
-        LOGERROR("could not delete instance (%s) IP addr (%s) from ipaddrgroup\n", vpcinstance->name, vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP].name);
+        LOGWARN("could not delete instance (%s) IP addr from ipaddrgroup\n", vpcinstance->name);
         ret = 1;
     }
 
@@ -6118,12 +6335,13 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
     int rc = 0, ret = 0;
     char *ipAddr_pub = NULL, *ipAddr_priv = NULL, *tmpstr = NULL, vpc_nw[24], vpc_nm[24];
     char ip[32];
-    midoname *memorules = NULL;
+    midoname **memorules = NULL;
     int max_memorules = 0;
     mido_resource_chain *rchain = NULL;
+    midoname *tmpmn = NULL;
 
     if (!vpcinstance->gniInst->publicIp || !vpcinstance->gniInst->privateIp) {
-        LOGWARN("input ip is 0.0.0.0: nothing to do\n");
+        LOGWARN("input ip is 0.0.0.0: - will not connetc_mido_vpc_instance_elip\n");
         return (0);
     }
 
@@ -6136,68 +6354,114 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
 
     ipAddr_pub = hex2dot(vpcinstance->gniInst->publicIp);
     ipAddr_priv = hex2dot(vpcinstance->gniInst->privateIp);
-
-    rc = mido_create_ipaddrgroup_ip(mido, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP]), ipAddr_pub, &(vpcinstance->midos[ELIP_PRE_IPADDRGROUP_IP]));
+    if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP];
+    }
+    rc = mido_create_ipaddrgroup_ip(mido, vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP], ipAddr_pub, tmpmn);
     if (rc) {
-        LOGERROR("Failed to add %s as member of %s\n", ipAddr_pub, vpcinstance->midos[ELIP_PRE_IPADDRGROUP].name);
+        LOGERROR("Failed to add %s as member of ipag\n", ipAddr_pub);
         ret = 1;
     }
-
-    rc = mido_create_ipaddrgroup_ip(mido, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP]), ipAddr_priv, &(vpcinstance->midos[ELIP_POST_IPADDRGROUP_IP]));
+    vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP] = tmpmn;
+    if (vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP];
+    }
+    rc = mido_create_ipaddrgroup_ip(mido, vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP], ipAddr_priv, tmpmn);
     if (rc) {
-        LOGERROR("Failed to add %s as member of %s\n", ipAddr_priv, vpcinstance->midos[ELIP_POST_IPADDRGROUP].name);
+        LOGERROR("Failed to add %s as member of ipag\n", ipAddr_priv);
         ret = 1;
     }
-
+    vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP] = tmpmn;
     // dnat rule
     rchain = NULL;
     memorules = NULL;
     max_memorules = 0;
     if (midonet_api_dirty_cache == 0) {
-        rchain = find_mido_chain(mido, vpc->midos[VPCRT_PREELIPCHAIN].name);
+        rchain = find_mido_chain(mido, vpc->midos[VPC_VPCRT_PREELIPCHAIN]->name);
         if (rchain != NULL) {
-            memorules = rchain->rules;
+            if (rchain->max_rules > 0) {
+                memorules = EUCA_ZALLOC(rchain->max_rules, sizeof (midoname **));
+                for (int i = 0; i < rchain->max_rules; i++) {
+                    memorules[i] = &(rchain->rules[i]);
+                }
+            }
             max_memorules = rchain->max_rules;
         }
     }
-    rc = mido_create_rule(&(vpc->midos[VPCRT_PREELIPCHAIN]), &(vpcinstance->midos[ELIP_PRE]), memorules, max_memorules, NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
-            vpcinstance->midos[ELIP_PRE_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_priv, "natTargets:addressFrom", ipAddr_priv,
-            "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    if (vpcinstance->midos[INST_ELIP_PRE] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_PRE];
+    }
+    rc = mido_create_rule(vpc->midos[VPC_VPCRT_PREELIPCHAIN], tmpmn,
+            memorules, max_memorules, NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
+            vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP]->uuid, "natTargets", "jsonlist", "natTargets:addressTo",
+            ipAddr_priv, "natTargets:addressFrom", ipAddr_priv, "natTargets:portFrom", "0",
+            "natTargets:portTo", "0", "natTargets:END", "END", NULL);
     if (rc) {
-        LOGERROR("cannot create midonet rule: check midonet health\n");
+        LOGERROR("cannot create elip dnat rule: check midonet health\n");
         ret = 1;
     }
-
+    vpcinstance->midos[INST_ELIP_PRE] = tmpmn;
+    if (memorules) {
+        EUCA_FREE(memorules);
+    }
     // snat rule
     rchain = NULL;
     memorules = NULL;
     max_memorules = 0;
     if (midonet_api_dirty_cache == 0) {
-        rchain = find_mido_chain(mido, vpc->midos[VPCRT_UPLINK_POSTCHAIN].name);
+        rchain = find_mido_chain(mido, vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]->name);
         if (rchain != NULL) {
-            memorules = rchain->rules;
+            if (rchain->max_rules > 0) {
+                memorules = EUCA_ZALLOC(rchain->max_rules, sizeof (midoname **));
+                for (int i = 0; i < rchain->max_rules; i++) {
+                    memorules[i] = &(rchain->rules[i]);
+                }
+            }
             max_memorules = rchain->max_rules;
         }
     }
-    rc = mido_create_rule(&(vpc->midos[VPCRT_UPLINK_POSTCHAIN]), &(vpcinstance->midos[ELIP_POST]), memorules, max_memorules, NULL, "type", "snat", "nwDstAddress", vpc_nw, "invNwDst", "true", "nwDstLength", vpc_nm,
-            "flowAction", "continue", "ipAddrGroupSrc", vpcinstance->midos[ELIP_POST_IPADDRGROUP].uuid, "natTargets", "jsonlist", "natTargets:addressTo", ipAddr_pub,
-            "natTargets:addressFrom", ipAddr_pub, "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+   if (vpcinstance->midos[INST_ELIP_POST] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_ELIP_POST];
+    }
+    rc = mido_create_rule(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN], tmpmn,
+            memorules, max_memorules, NULL, "type", "snat", "nwDstAddress", vpc_nw, "invNwDst", "true",
+            "nwDstLength", vpc_nm, "flowAction", "continue", "ipAddrGroupSrc",
+            vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]->uuid, "natTargets", "jsonlist",
+            "natTargets:addressTo", ipAddr_pub, "natTargets:addressFrom", ipAddr_pub,
+            "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
     if (rc) {
-        LOGERROR("cannot create midonet rule: check midonet health\n");
+        LOGERROR("cannot create elip snat rule: check midonet health\n");
         ret = 1;
     }
-
-    if (!ret && strcmp(ipAddr_pub, "0.0.0.0")) {
+    vpcinstance->midos[INST_ELIP_POST] = tmpmn;
+    if (memorules) {
+        EUCA_FREE(memorules);
+    }
+    if (!ret && vpcinstance->gniInst->publicIp) {
         // create the EL ip route in main router
-        rc = mido_create_route(mido, &(midocore->midos[EUCART]), &(midocore->midos[EUCART_BRPORT]), "0.0.0.0", "0", ipAddr_pub, "32", ip, "100", &(vpcinstance->midos[ELIP_ROUTE]));
+        if (vpcinstance->midos[INST_ELIP_ROUTE] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = vpcinstance->midos[INST_ELIP_ROUTE];
+        }
+        rc = mido_create_route(mido, midocore->midos[CORE_EUCART], midocore->midos[CORE_EUCART_BRPORT],
+                "0.0.0.0", "0", ipAddr_pub, "32", ip, "100", tmpmn);
         if (rc) {
             LOGERROR("setup float IP router on midonet router: check midonet health\n");
             ret = 1;
         }
+        vpcinstance->midos[INST_ELIP_ROUTE] = tmpmn;
     }
     EUCA_FREE(ipAddr_pub);
     EUCA_FREE(ipAddr_priv);
-
     return (ret);
 }
 
@@ -6218,25 +6482,36 @@ int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mid
 //!
 //! @note
 //!
-int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * vpcinstance, midoname * vmhost, char *instanceDNSDomain) {
+int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, midoname *vmhost, char *instanceDNSDomain) {
     int ret = 0, rc = 0;
     char *macAddr = NULL, *ipAddr = NULL;
     char ifacename[IF_NAME_LEN];
+    midoname *tmpmn = NULL;
 
     snprintf(ifacename, IF_NAME_LEN, "vn_%s", vpcinstance->gniInst->name);
 
     // create the Exterior ports for VMs
-    rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "Bridge", NULL, NULL, NULL, NULL, &(vpcinstance->midos[VPCBR_VMPORT]));
+    if (vpcinstance->midos[INST_VPCBR_VMPORT] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_VPCBR_VMPORT];
+    }
+    rc = mido_create_port(vpcsubnet->midos[SUBN_VPCBR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet bridge port: check midonet health\n");
-        return (1);
+        ret = 1;
     }
+    vpcinstance->midos[INST_VPCBR_VMPORT] = tmpmn;
+
     // link vm host port to vm bridge port
-    rc = mido_link_host_port(vmhost, ifacename, &(vpcsubnet->midos[VPCBR]), &(vpcinstance->midos[VPCBR_VMPORT]));
-    if (rc) {
-        LOGERROR("cannot create midonet bridge port to vm interface link: check midonet health\n");
-        return (1);
+    if (ret == 0) {
+        rc = mido_link_host_port(vmhost, ifacename, vpcsubnet->midos[SUBN_VPCBR], vpcinstance->midos[INST_VPCBR_VMPORT]);
+        if (rc) {
+            LOGERROR("cannot create midonet bridge port to vm interface link: check midonet health\n");
+            ret = 1;
+        }
     }
+
     // set up dhcp host entry
     hex2mac(vpcinstance->gniInst->macAddress, &macAddr);
     ipAddr = hex2dot(vpcinstance->gniInst->privateIp);
@@ -6245,16 +6520,25 @@ int connect_mido_vpc_instance(mido_vpc_subnet * vpcsubnet, mido_vpc_instance * v
     }
 
     LOGDEBUG("adding host %s/%s to dhcp server\n", SP(macAddr), SP(ipAddr));
-    //  bzero(&(vpcinstance->midos[VPCBR_DHCPHOST]), sizeof(midoname));
-    rc = mido_create_dhcphost(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_DHCP]), vpcinstance->gniInst->name, macAddr, ipAddr, instanceDNSDomain, &(vpcinstance->midos[VPCBR_DHCPHOST]));
-    EUCA_FREE(ipAddr);
-    EUCA_FREE(macAddr);
+    if (vpcinstance->midos[INST_VPCBR_DHCPHOST] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcinstance->midos[INST_VPCBR_DHCPHOST];
+    }
+    rc = mido_create_dhcphost(vpcsubnet->midos[SUBN_VPCBR], vpcsubnet->midos[SUBN_VPCBR_DHCP],
+            vpcinstance->gniInst->name, macAddr, ipAddr, instanceDNSDomain, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet dhcp host entry: check midonet health\n");
-        return (1);
+        ret = 1;
     }
+    vpcinstance->midos[INST_VPCBR_DHCPHOST] = tmpmn;
+    EUCA_FREE(ipAddr);
+    EUCA_FREE(macAddr);
+
     // apply the chains to the instance port
-    rc = mido_update_port(&(vpcinstance->midos[VPCBR_VMPORT]), "inboundFilterId", vpcinstance->midos[INST_PRECHAIN].uuid, "outboundFilterId", vpcinstance->midos[INST_POSTCHAIN].uuid, "id", vpcinstance->midos[VPCBR_VMPORT].uuid, "type", "Bridge", NULL);
+    rc = mido_update_port(vpcinstance->midos[INST_VPCBR_VMPORT], "inboundFilterId", vpcinstance->midos[INST_PRECHAIN]->uuid,
+            "outboundFilterId", vpcinstance->midos[INST_POSTCHAIN]->uuid, "id", vpcinstance->midos[INST_VPCBR_VMPORT]->uuid,
+            "type", "Bridge", NULL);
     if (rc) {
         LOGERROR("cannot attach midonet chain to midonet port: check midonet health\n");
         return (1);
@@ -6316,6 +6600,13 @@ int free_mido_config_v(mido_config *mido, int mode) {
     if (mode == 1) {
         EUCA_FREE(mido->midocore);
         mido->midocore = NULL;
+    }
+
+    midoname_list_free(mido->mnamebuffer);
+    if (mode == 0) {
+        mido->mnamebuffer = midoname_list_new();
+    } else {
+        mido->mnamebuffer = NULL;
     }
 
     for (i = 0; i < mido->max_vpcs; i++) {
@@ -6451,15 +6742,15 @@ int free_mido_core(mido_core * midocore) {
     if (!midocore)
         return (0);
 
-    mido_free_midoname_list(midocore->midos, MIDOCOREEND);
-    mido_free_midoname_list(midocore->gwhosts, midocore->max_gws);
-    mido_free_midoname_list(midocore->gwports, midocore->max_gws);
+    //mido_free_midoname_list(midocore->midos, MIDOCOREEND);
+    //mido_free_midoname_list(midocore->gwhosts, midocore->max_gws);
+    //mido_free_midoname_list(midocore->gwports, midocore->max_gws);
 
-    mido_free_midoname_list(midocore->brports, midocore->max_brports);
-    EUCA_FREE(midocore->brports);
+    //mido_free_midoname_list(midocore->brports, midocore->max_brports);
+    //EUCA_FREE(midocore->brports);
 
-    mido_free_midoname_list(midocore->rtports, midocore->max_rtports);
-    EUCA_FREE(midocore->rtports);
+    //mido_free_midoname_list(midocore->rtports, midocore->max_rtports);
+    //EUCA_FREE(midocore->rtports);
 
     bzero(midocore, sizeof (mido_core));
 
@@ -6487,16 +6778,18 @@ int free_mido_vpc(mido_vpc * vpc) {
     if (!vpc)
         return (0);
 
-    mido_free_midoname_list(vpc->midos, VPCEND);
+    //mido_free_midoname_list(vpc->midos, VPC_END);
 
-    mido_free_midoname_list(vpc->rtports, vpc->max_rtports);
+    //mido_free_midoname_list(vpc->rtports, vpc->max_rtports);
     EUCA_FREE(vpc->rtports);
 
-    mido_free_midoname_list(vpc->rtpostchain_rules, vpc->max_rtpostchain_rules);
+    //mido_free_midoname_list(vpc->rtpostchain_rules, vpc->max_rtpostchain_rules);
     EUCA_FREE(vpc->rtpostchain_rules);
 
-    mido_free_midoname_list(vpc->rtpreelipchain_rules, vpc->max_rtpreelipchain_rules);
+    //mido_free_midoname_list(vpc->rtpreelipchain_rules, vpc->max_rtpreelipchain_rules);
     EUCA_FREE(vpc->rtpreelipchain_rules);
+    
+    EUCA_FREE(vpc->rtroutes);
 
     for (i = 0; i < vpc->max_subnets; i++) {
         free_mido_vpc_subnet(&(vpc->subnets[i]));
@@ -6534,12 +6827,12 @@ int free_mido_vpc_subnet(mido_vpc_subnet * vpcsubnet) {
     if (!vpcsubnet)
         return (0);
 
-    mido_free_midoname_list(vpcsubnet->midos, VPCSUBNETEND);
+    //mido_free_midoname_list(vpcsubnet->midos, SUBN_END);
 
-    mido_free_midoname_list(vpcsubnet->brports, vpcsubnet->max_brports);
+    //mido_free_midoname_list(vpcsubnet->brports, vpcsubnet->max_brports);
     EUCA_FREE(vpcsubnet->brports);
 
-    mido_free_midoname_list(vpcsubnet->dhcphosts, vpcsubnet->max_dhcphosts);
+    //mido_free_midoname_list(vpcsubnet->dhcphosts, vpcsubnet->max_dhcphosts);
     EUCA_FREE(vpcsubnet->dhcphosts);
 
     EUCA_FREE(vpcsubnet->routes);
@@ -6575,7 +6868,7 @@ int free_mido_vpc_instance(mido_vpc_instance * vpcinstance) {
     if (!vpcinstance)
         return (0);
 
-    mido_free_midoname_list(vpcinstance->midos, VPCINSTANCEEND);
+    //mido_free_midoname_list(vpcinstance->midos, INST_END);
 
     bzero(vpcinstance, sizeof (mido_vpc_instance));
 
@@ -6604,7 +6897,7 @@ int free_mido_vpc_natgateway(mido_vpc_natgateway *vpcnatgateway) {
         return (0);        
     }
 
-    mido_free_midoname_list(vpcnatgateway->midos, NATG_END);
+    //mido_free_midoname_list(vpcnatgateway->midos, NATG_END);
     bzero(vpcnatgateway, sizeof (mido_vpc_natgateway));
     return (ret);
 }
@@ -6629,7 +6922,7 @@ int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * vpcsubnet) {
     int rc = 0, ret = 0, i = 0;
 
     if (!mido || !vpcsubnet || !strlen(vpcsubnet->name)) {
-        LOGFATAL("BUG: invalid input parameters\n");
+        LOGERROR("Invalid argument: delete_mido_vpc_subnet\n");
         return (1);
     }
 
@@ -6644,11 +6937,11 @@ int delete_mido_vpc_subnet(mido_config * mido, mido_vpc_subnet * vpcsubnet) {
 
     //  rc = mido_delete_route(&(vpcsubnet->vpcrt_route));
 
-    rc = mido_delete_port(&(vpcsubnet->midos[VPCRT_BRPORT]));
+    rc = mido_delete_port(vpcsubnet->midos[SUBN_VPCRT_BRPORT]);
 
-    rc = mido_delete_dhcp(&(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_DHCP]));
+    rc = mido_delete_dhcp(vpcsubnet->midos[SUBN_VPCBR], vpcsubnet->midos[SUBN_VPCBR_DHCP]);
 
-    rc = mido_delete_bridge(&(vpcsubnet->midos[VPCBR]));
+    rc = mido_delete_bridge(vpcsubnet->midos[SUBN_VPCBR]);
 
     rc = delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
 
@@ -6681,14 +6974,14 @@ int delete_mido_vpc(mido_config * mido, mido_vpc * vpc) {
         return (1);
     }
 
-    LOGDEBUG("DELETING VPC: %s, %s\n", vpc->name, vpc->midos[VPCRT].name);
+    LOGDEBUG("DELETING VPC: %s, %s\n", vpc->name, vpc->midos[VPC_VPCRT]->name);
 
-    rc = mido_delete_port(&(vpc->midos[EUCABR_DOWNLINK]));
-    rc = mido_delete_router(&(vpc->midos[VPCRT]));
+    rc = mido_delete_port(vpc->midos[VPC_EUCABR_DOWNLINK]);
+    rc = mido_delete_router(vpc->midos[VPC_VPCRT]);
 
-    rc = mido_delete_chain(&(vpc->midos[VPCRT_PREELIPCHAIN]));
-    rc = mido_delete_chain(&(vpc->midos[VPCRT_UPLINK_PRECHAIN]));
-    rc = mido_delete_chain(&(vpc->midos[VPCRT_UPLINK_POSTCHAIN]));
+    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_PREELIPCHAIN]);
+    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
+    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
 
     for (i = 0; i < vpc->max_subnets; i++) {
         if (strlen(vpc->subnets[i].name)) {
@@ -6739,35 +7032,60 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
     //int i = 0;
     int found = 0;
     char name_buf[32], *tapiface = NULL;
+    midoname *tmpmn = NULL;
 
-    //    rc = mido_create_port(&(vpc->midos[VPCRT]), "InteriorRouter", gw, subnet, slashnet, &(vpcsubnet->midos[VPCRT_BRPORT]));
-    rc = mido_create_port(&(vpc->midos[VPCRT]), "Router", gw, subnet, slashnet, NULL, &(vpcsubnet->midos[VPCRT_BRPORT]));
+    if (vpcsubnet->midos[SUBN_VPCRT_BRPORT] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcsubnet->midos[SUBN_VPCRT_BRPORT];
+    }
+    rc = mido_create_port(vpc->midos[VPC_VPCRT], "Router", gw, subnet, slashnet, NULL, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet router port: check midonet health\n");
         return (1);
     }
+    vpcsubnet->midos[SUBN_VPCRT_BRPORT] = tmpmn;
 
-    rc = mido_create_route(mido, &(vpc->midos[VPCRT]), &(vpcsubnet->midos[VPCRT_BRPORT]), "0.0.0.0", "0", subnet, slashnet, "UNSET", "0", NULL);
+    tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    rc = mido_create_route(mido, vpc->midos[VPC_VPCRT], vpcsubnet->midos[SUBN_VPCRT_BRPORT], "0.0.0.0", "0", subnet, slashnet, "UNSET", "0", tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet router route: check midonet health\n");
         return (1);
     }
+    vpc->rtroutes = EUCA_REALLOC(vpc->rtroutes, vpc->max_rtroutes + 1, sizeof (midoname *));
+    if (vpc->rtroutes == NULL) {
+        LOGFATAL("out of memory - realloc vpc->rtroutes\n");
+        return (1);
+    }
+    vpc->rtroutes[vpc->max_rtroutes] = tmpmn;
+    (vpc->max_rtroutes)++;
 
+    if (vpcsubnet->midos[SUBN_VPCBR] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcsubnet->midos[SUBN_VPCBR];
+    }
     snprintf(name_buf, 32, "vb_%s_%s", vpc->name, vpcsubnet->name);
-    rc = mido_create_bridge(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[VPCBR]));
+    rc = mido_create_bridge(VPCMIDO_TENANT, name_buf, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet bridge: check midonet health\n");
         return (1);
     }
+    vpcsubnet->midos[SUBN_VPCBR] = tmpmn;
 
-    //    rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "InteriorBridge", NULL, NULL, NULL, &(vpcsubnet->midos[VPCBR_RTPORT]));
-    rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "Bridge", NULL, NULL, NULL, NULL, &(vpcsubnet->midos[VPCBR_RTPORT]));
+    if (vpcsubnet->midos[SUBN_VPCBR_RTPORT] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcsubnet->midos[SUBN_VPCBR_RTPORT];
+    }
+    rc = mido_create_port(vpcsubnet->midos[SUBN_VPCBR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet bridge port: check midonet health\n");
         return (1);
     }
+    vpcsubnet->midos[SUBN_VPCBR_RTPORT] = tmpmn;
 
-    rc = mido_link_ports(&(vpcsubnet->midos[VPCRT_BRPORT]), &(vpcsubnet->midos[VPCBR_RTPORT]));
+    rc = mido_link_ports(vpcsubnet->midos[SUBN_VPCRT_BRPORT], vpcsubnet->midos[SUBN_VPCBR_RTPORT]);
     if (rc) {
         LOGERROR("cannot create midonet router <-> bridge link: check midonet health\n");
         return (1);
@@ -6782,23 +7100,30 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
      */
 
     // setup DHCP on the bridge for this subnet
-    rc = mido_create_dhcp(&(vpcsubnet->midos[VPCBR]), subnet, slashnet, gw, instanceDNSServers, max_instanceDNSServers, &(vpcsubnet->midos[VPCBR_DHCP]));
+    if (vpcsubnet->midos[SUBN_VPCBR_DHCP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpcsubnet->midos[SUBN_VPCBR_DHCP];
+    }
+    rc = mido_create_dhcp(vpcsubnet->midos[SUBN_VPCBR], subnet, slashnet, gw, instanceDNSServers, max_instanceDNSServers, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet dhcp server: check midonet health\n");
         return (1);
     }
-    // meta tap
+    vpcsubnet->midos[SUBN_VPCBR_DHCP] = tmpmn;
 
+    // meta tap
     // find the interface mapping
     found = 0;
     mido_resource_host *rhost = NULL;
     rhost = find_mido_host(mido, mido->ext_eucanetdhostname);
     if (rhost != NULL) {
-        mido_copy_midoname(&(vpcsubnet->midos[VPCBR_METAHOST]), &(rhost->resc));
+        //mido_copy_midoname(&(vpcsubnet->midos[SUBN_VPCBR_METAHOST]), &(rhost->resc));
+        vpcsubnet->midos[SUBN_VPCBR_METAHOST] = &(rhost->resc);
         found = 1;
     }
 
-    if (vpcsubnet->midos[VPCBR_METAHOST].init) {
+    if ((vpcsubnet->midos[SUBN_VPCBR_METAHOST]) && (vpcsubnet->midos[SUBN_VPCBR_METAHOST]->init)) {
         rc = create_mido_meta_subnet_veth(mido, vpc, vpcsubnet->name, subnet, slashnet, &tapiface);
         if (rc || !tapiface) {
             LOGERROR("cannot create metadata taps: check log output for details\n");
@@ -6809,17 +7134,22 @@ int create_mido_vpc_subnet(mido_config * mido, mido_vpc * vpc, mido_vpc_subnet *
 
         if (!ret) {
             // create tap port
-            //            rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "ExteriorBridge", NULL, NULL, NULL, &(vpcsubnet->midos[VPCBR_METAPORT]));
-            rc = mido_create_port(&(vpcsubnet->midos[VPCBR]), "Bridge", NULL, NULL, NULL, NULL, &(vpcsubnet->midos[VPCBR_METAPORT]));
+            if (vpcsubnet->midos[SUBN_VPCBR_METAPORT] == NULL) {
+                tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+            } else {
+                tmpmn = vpcsubnet->midos[SUBN_VPCBR_METAPORT];
+            }
+            rc = mido_create_port(vpcsubnet->midos[SUBN_VPCBR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
             if (rc) {
                 LOGERROR("cannot create midonet bridge port: check midonet health\n");
                 ret = 1;
             }
+            vpcsubnet->midos[SUBN_VPCBR_METAPORT] = tmpmn;
         }
 
         if (!ret) {
             // link tap port
-            rc = mido_link_host_port(&(vpcsubnet->midos[VPCBR_METAHOST]), tapiface, &(vpcsubnet->midos[VPCBR]), &(vpcsubnet->midos[VPCBR_METAPORT]));
+            rc = mido_link_host_port(vpcsubnet->midos[SUBN_VPCBR_METAHOST], tapiface, vpcsubnet->midos[SUBN_VPCBR], vpcsubnet->midos[SUBN_VPCBR_METAPORT]);
             if (rc) {
                 LOGERROR("cannot link port to host interface: check midonet health\n");
                 ret = 1;
@@ -6869,41 +7199,67 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) {
 
     //  snprintf(vpc->name, 16, "%s", name);
     snprintf(name_buf, 32, "vr_%s_%d", vpc->name, vpc->rtid);
-    rc = mido_create_router(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPCRT]));
+    if (vpc->midos[VPC_VPCRT] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpc->midos[VPC_VPCRT];
+    }
+    rc = mido_create_router(VPCMIDO_TENANT, name_buf, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet router: check midonet health\n");
         return (1);
     }
+    vpc->midos[VPC_VPCRT] = tmpmn;
+
     // link the vpc network and euca network
-    //    rc = mido_create_port(&(midocore->midos[EUCABR]), "InteriorBridge", NULL, NULL, NULL, &(vpc->midos[EUCABR_DOWNLINK]));
-    rc = mido_create_port(&(midocore->midos[EUCABR]), "Bridge", NULL, NULL, NULL, NULL, &(vpc->midos[EUCABR_DOWNLINK]));
+    if (vpc->midos[VPC_EUCABR_DOWNLINK] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpc->midos[VPC_EUCABR_DOWNLINK];
+    }
+    rc = mido_create_port(midocore->midos[CORE_EUCABR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet bridge port: check midonet health\n");
         return (1);
     }
+    vpc->midos[VPC_EUCABR_DOWNLINK] = tmpmn;
 
-    //    rc = mido_create_port(&(vpc->midos[VPCRT]), "InteriorRouter", ip, nw, sn, &(vpc->midos[VPCRT_UPLINK]));
-    rc = mido_create_port(&(vpc->midos[VPCRT]), "Router", ip, nw, sn, NULL, &(vpc->midos[VPCRT_UPLINK]));
+    if (vpc->midos[VPC_VPCRT_UPLINK] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = vpc->midos[VPC_VPCRT_UPLINK];
+    }
+    rc = mido_create_port(vpc->midos[VPC_VPCRT], "Router", ip, nw, sn, NULL, tmpmn);
     if (rc) {
         LOGERROR("cannot create midonet router port: check midonet health\n");
         return (1);
     }
+    vpc->midos[VPC_VPCRT_UPLINK] = tmpmn;
 
-    rc = mido_create_route(mido, &(vpc->midos[VPCRT]), &(vpc->midos[VPCRT_UPLINK]), "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
+    rc = mido_create_route(mido, vpc->midos[VPC_VPCRT], vpc->midos[VPC_VPCRT_UPLINK], "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
     if (rc) {
         LOGERROR("cannot create midonet router route: check midonet health\n");
         return (1);
     }
+/*
+    vpc->rtroutes = EUCA_REALLOC(vpc->rtroutes, vpc->max_rtroutes + 1, sizeof (midoname *));
+    if (vpc->rtroutes == NULL) {
+        LOGFATAL("out of memory - realloc vpc->rtroutes\n");
+        return (1);
+    }
+    vpc->rtroutes[vpc->max_rtroutes] = tmpmn;
+    (vpc->max_rtroutes)++;
+*/
 
     // Default route to eucart - this route should be only available for subnets with internet gateway
     // Moving the route creation to subnet route table implementation - EUCA-11571
-    //rc = mido_create_route(mido, &(vpc->midos[VPCRT]), &(vpc->midos[VPCRT_UPLINK]), "0.0.0.0", "0", "0.0.0.0", "0", gw, "0", NULL);
+    //rc = mido_create_route(mido, vpc->midos[VPCRT], vpc->midos[VPCRT_UPLINK], "0.0.0.0", "0", "0.0.0.0", "0", gw, "0", NULL);
     //if (rc) {
     //    LOGERROR("cannot create midonet router route: check midonet health\n");
     //    return (1);
     //}
 
-    rc = mido_link_ports(&(vpc->midos[EUCABR_DOWNLINK]), &(vpc->midos[VPCRT_UPLINK]));
+    rc = mido_link_ports(vpc->midos[VPC_EUCABR_DOWNLINK], vpc->midos[VPC_VPCRT_UPLINK]);
     if (rc) {
         LOGERROR("cannot create midonet bridge <-> router link: check midonet health\n");
         return (1);
@@ -6911,51 +7267,56 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) {
 
     // create the chains
     snprintf(name_buf, 32, "vc_%s_prechain", vpc->name);
-    if (!find_mido_vpc_chain(mido, name_buf, &tmpmn)) {
-        LOGTRACE("Found chain %s - skipping creation.\n", name_buf);
-        mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK_PRECHAIN]), tmpmn);
+    if (vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPCRT_UPLINK_PRECHAIN]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", name_buf);
-            return (1);
-        }
+        tmpmn = vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, name_buf, tmpmn);
+    if (rc) {
+        LOGERROR("cannot create midonet router port: check midonet health\n");
+        return (1);
+    }
+    vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN] = tmpmn;
 
     snprintf(name_buf, 32, "vc_%s_preelip", vpc->name);
-    if (!find_mido_vpc_chain(mido, name_buf, &tmpmn)) {
-        LOGTRACE("Found chain %s - skipping creation.\n", name_buf);
-        mido_copy_midoname(&(vpc->midos[VPCRT_PREELIPCHAIN]), tmpmn);
+    if (vpc->midos[VPC_VPCRT_PREELIPCHAIN] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPCRT_PREELIPCHAIN]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", name_buf);
-            return (1);
-        }
+        tmpmn = vpc->midos[VPC_VPCRT_PREELIPCHAIN];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, name_buf, tmpmn);
+    if (rc) {
+        LOGERROR("cannot create midonet router port: check midonet health\n");
+        return (1);
+    }
+    vpc->midos[VPC_VPCRT_PREELIPCHAIN] = tmpmn;
 
     snprintf(name_buf, 32, "vc_%s_postchain", vpc->name);
-    if (!find_mido_vpc_chain(mido, name_buf, &tmpmn)) {
-        LOGTRACE("Found chain %s - skipping creation.\n", name_buf);
-        mido_copy_midoname(&(vpc->midos[VPCRT_UPLINK_POSTCHAIN]), tmpmn);
+    if (vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPCRT_UPLINK_POSTCHAIN]));
-        if (rc) {
-            LOGWARN("Failed to create chain %s.\n", name_buf);
-            return (1);
-        }
+        tmpmn = vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN];
     }
+    rc = mido_create_chain(VPCMIDO_TENANT, name_buf, tmpmn);
+    if (rc) {
+        LOGERROR("cannot create midonet router port: check midonet health\n");
+        return (1);
+    }
+    vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN] = tmpmn;
   
-    midoname *memorules = NULL;
+    midoname **memorules = NULL;
     int max_memorules = 0;
     mido_resource_chain *rchain = NULL;
-    rchain = find_mido_chain(mido, vpc->midos[VPCRT_UPLINK_PRECHAIN].name);
+    rchain = find_mido_chain(mido, vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]->name);
     if (rchain != NULL) {
-        memorules = rchain->rules;
+        memorules = &(rchain->rules);
         max_memorules = rchain->max_rules;
     }
     // add the jump chains
-    rc = mido_create_rule(&(vpc->midos[VPCRT_UPLINK_PRECHAIN]), NULL, memorules, max_memorules, NULL, "position", "1", "type", "jump", "jumpChainId", vpc->midos[VPCRT_PREELIPCHAIN].uuid, NULL);
+    rc = mido_create_rule(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN], NULL, memorules,
+            max_memorules, NULL, "position", "1", "type", "jump", "jumpChainId",
+            vpc->midos[VPC_VPCRT_PREELIPCHAIN]->uuid, NULL);
     if (rc) {
         LOGERROR("cannot create midonet rule: check midonet health\n");
     }
@@ -6969,8 +7330,8 @@ int create_mido_vpc(mido_config * mido, mido_core * midocore, mido_vpc * vpc) {
     }
 */
     // PRECHAIN and POST chain moved to VPCRT_UPLINK port in order to support custom routes based on source routing
-    rc = mido_update_port(&(vpc->midos[VPCRT_UPLINK]), "outboundFilterId", vpc->midos[VPCRT_UPLINK_POSTCHAIN].uuid,
-            "inboundFilterId", vpc->midos[VPCRT_UPLINK_PRECHAIN].uuid, "id", vpc->midos[VPCRT_UPLINK].uuid,
+    rc = mido_update_port(vpc->midos[VPC_VPCRT_UPLINK], "outboundFilterId", vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]->uuid,
+            "inboundFilterId", vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]->uuid, "id", vpc->midos[VPC_VPCRT_UPLINK]->uuid,
             "networkAddress", nw, "portAddress", ip, "type", "Router", NULL);
     if (rc) {
         LOGERROR("cannot update router port infilter and/or outfilter: check midonet health\n");
@@ -7007,29 +7368,29 @@ int delete_mido_core(mido_config * mido, mido_core * midocore) {
     int rc = 0, i = 0;
 
     // delete the metadata_ip ipaddrgroup
-    rc = mido_delete_ipaddrgroup(&(midocore->midos[METADATA_IPADDRGROUP]));
+    rc = mido_delete_ipaddrgroup(midocore->midos[CORE_METADATA_IPADDRGROUP]);
 
     // delete the host/port links
     for (i = 0; i < midocore->max_gws; i++) {
-        if ((midocore->gwhosts[i].init == 0) || (midocore->gwports[i].init == 0)) {
+        if ((midocore->gwhosts[i]->init == 0) || (midocore->gwports[i]->init == 0)) {
             continue;
         }
-        rc = mido_unlink_host_port(&(midocore->gwhosts[i]), &(midocore->gwports[i]));
+        rc = mido_unlink_host_port(midocore->gwhosts[i], midocore->gwports[i]);
         sleep(1);
     }
 
     // delete the port-group
-    rc = mido_delete_portgroup(&(midocore->midos[GWPORTGROUP]));
+    rc = mido_delete_portgroup(midocore->midos[CORE_GWPORTGROUP]);
 
     // delete the bridge
-    rc = mido_delete_bridge(&(midocore->midos[EUCABR]));
+    rc = mido_delete_bridge(midocore->midos[CORE_EUCABR]);
     sleep(1);
 
     // delete the router
     for (i = 0; i < midocore->max_rtports; i++) {
-        rc = mido_delete_port(&(midocore->rtports[i]));
+        rc = mido_delete_port(midocore->rtports[i]);
     }
-    rc = mido_delete_router(&(midocore->midos[EUCART]));
+    rc = mido_delete_router(midocore->midos[CORE_EUCART]);
     sleep(1);
 
     rc = delete_mido_meta_core(mido);
@@ -7069,66 +7430,90 @@ int create_mido_core(mido_config * mido, mido_core * midocore) {
     snprintf(sn, 32, "%d", mido->int_rtsn);
 
     LOGDEBUG("creating mido core\n");
-    rc = mido_create_router(VPCMIDO_TENANT, "eucart", &(midocore->midos[EUCART]));
+    if (midocore->midos[CORE_EUCART] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = midocore->midos[CORE_EUCART];
+    }
+    rc = mido_create_router(VPCMIDO_TENANT, "eucart", tmpmn);
     if (rc) {
         LOGERROR("cannot create router: check midonet health\n");
         ret = 1;
     }
+    midocore->midos[CORE_EUCART] = tmpmn;
 
     // core bridge port and addr/route
-    if (midocore->midos[EUCART].init) {
-        rc = mido_create_port(&(midocore->midos[EUCART]), "Router", gw, nw, sn, NULL, &(midocore->midos[EUCART_BRPORT]));
+    if (midocore->midos[CORE_EUCART]->init) {
+        if (midocore->midos[CORE_EUCART_BRPORT] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = midocore->midos[CORE_EUCART_BRPORT];
+        }
+        rc = mido_create_port(midocore->midos[CORE_EUCART], "Router", gw, nw, sn, NULL, tmpmn);
         if (rc) {
             LOGERROR("cannot create router port: check midonet health\n");
             ret = 1;
         }
+        midocore->midos[CORE_EUCART_BRPORT] = tmpmn;
 
-        rc = mido_create_route(mido, &(midocore->midos[EUCART]), &(midocore->midos[EUCART_BRPORT]), "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
+        rc = mido_create_route(mido, midocore->midos[CORE_EUCART], midocore->midos[CORE_EUCART_BRPORT], "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
         if (rc) {
             LOGERROR("cannot create router route: check midonet health\n");
             ret = 1;
         }
     }
 
-    rc = mido_create_portgroup(VPCMIDO_TENANT, "eucapg", &(midocore->midos[GWPORTGROUP]));
+    if (midocore->midos[CORE_GWPORTGROUP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = midocore->midos[CORE_GWPORTGROUP];
+    }
+    rc = mido_create_portgroup(VPCMIDO_TENANT, "eucapg", tmpmn);
     if (rc) {
         LOGWARN("cannot create portgroup: check midonet health\n");
     }
+    midocore->midos[CORE_GWPORTGROUP] = tmpmn;
 
     // conditional here depending on whether we have multi GW or single GW defined in config
     if (mido->ext_rthostarrmax) {
         for (i = 0; i < mido->ext_rthostarrmax; i++) {
             cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL, NULL);
-            if (midocore->midos[EUCART].init) {
-                rc = mido_create_port(&(midocore->midos[EUCART]), "Router", mido->ext_rthostaddrarr[i], pubnw, pubnm, NULL, &(midocore->gwports[i]));
+            if (midocore->midos[CORE_EUCART]->init) {
+                if (midocore->gwports[i] == NULL) {
+                    tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+                } else {
+                    tmpmn = midocore->gwports[i];
+                }
+                rc = mido_create_port(midocore->midos[CORE_EUCART], "Router", mido->ext_rthostaddrarr[i], pubnw, pubnm, NULL, tmpmn);
                 if (rc) {
                     LOGERROR("cannot create router port: check midonet health\n");
                     ret = 1;
                 }
+                midocore->gwports[i] = tmpmn;
 
-                if (midocore->gwports[i].init) {
+                if (midocore->gwports[i]->init) {
                     // exterior port GW IP
-                    rc = mido_create_route(mido, &(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
+                    rc = mido_create_route(mido, midocore->midos[CORE_EUCART], midocore->gwports[i], "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
                     if (rc) {
                         LOGERROR("cannot create router route: check midonet health\n");
                         ret = 1;
                     }
 
                     // exterior port default GW
-                    rc = mido_create_route(mido, &(midocore->midos[EUCART]), &(midocore->gwports[i]), "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
+                    rc = mido_create_route(mido, midocore->midos[CORE_EUCART], midocore->gwports[i], "0.0.0.0", "0", "0.0.0.0", "0", mido->ext_pubgwip, "0", NULL);
                     if (rc) {
                         LOGERROR("cannot create router route: check midonet health\n");
                         ret = 1;
                     }
 
                     // link exterior port 
-                    rc = mido_link_host_port(&(midocore->gwhosts[i]), mido->ext_rthostifacearr[i], &(midocore->midos[EUCART]), &(midocore->gwports[i]));
+                    rc = mido_link_host_port(midocore->gwhosts[i], mido->ext_rthostifacearr[i], midocore->midos[CORE_EUCART], midocore->gwports[i]);
                     if (rc) {
                         LOGERROR("cannot link router port to host interface: check midonet health\n");
                         ret = 1;
                     }
 
-                    rc = mido_create_portgroup_port(mido, &(midocore->midos[GWPORTGROUP]), midocore->gwports[i].uuid, NULL);
+                    rc = mido_create_portgroup_port(mido, midocore->midos[CORE_GWPORTGROUP], midocore->gwports[i]->uuid, NULL);
                     if (rc) {
                         LOGWARN("cannot add portgroup port: check midonet health\n");
                     }
@@ -7137,40 +7522,53 @@ int create_mido_core(mido_config * mido, mido_core * midocore) {
         }
     }
 
-    rc = mido_create_bridge(VPCMIDO_TENANT, "eucabr", &(midocore->midos[EUCABR]));
+    if (midocore->midos[CORE_EUCABR] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+    } else {
+        tmpmn = midocore->midos[CORE_EUCABR];
+    }
+    rc = mido_create_bridge(VPCMIDO_TENANT, "eucabr", tmpmn);
     if (rc) {
         LOGERROR("cannot create bridge: check midonet health\n");
         ret = 1;
     }
+    midocore->midos[CORE_EUCABR] = tmpmn;
 
-    if (midocore->midos[EUCABR].init) {
-        rc = mido_create_port(&(midocore->midos[EUCABR]), "Bridge", NULL, NULL, NULL, NULL, &(midocore->midos[EUCABR_RTPORT]));
+    if (midocore->midos[CORE_EUCABR]->init) {
+        if (midocore->midos[CORE_EUCABR_RTPORT] == NULL) {
+            tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
+        } else {
+            tmpmn = midocore->midos[CORE_EUCABR_RTPORT];
+        }
+        rc = mido_create_port(midocore->midos[CORE_EUCABR], "Bridge", NULL, NULL, NULL, NULL, tmpmn);
         if (rc) {
             LOGERROR("cannot create bridge port: check midonet health\n");
             ret = 1;
         }
+        midocore->midos[CORE_EUCABR_RTPORT] = tmpmn;
     }
 
-    if ((midocore->midos[EUCART_BRPORT].init) && (midocore->midos[EUCABR_RTPORT].init)) {
-        rc = mido_link_ports(&(midocore->midos[EUCART_BRPORT]), &(midocore->midos[EUCABR_RTPORT]));
+    if ((midocore->midos[CORE_EUCART_BRPORT]->init) && (midocore->midos[CORE_EUCABR_RTPORT]->init)) {
+        rc = mido_link_ports(midocore->midos[CORE_EUCART_BRPORT], midocore->midos[CORE_EUCABR_RTPORT]);
         if (rc) {
             LOGERROR("cannot create router <-> bridge link: check midonet health\n");
             ret = 1;
         }
     }
 
-    if (!find_mido_vpc_ipaddrgroup(mido, "metadata_ip", &tmpmn)) {
-        LOGTRACE("Found IAG metadata_ip - skipping creation.\n");
-        mido_copy_midoname(&(midocore->midos[METADATA_IPADDRGROUP]), tmpmn);
+    if (midocore->midos[CORE_METADATA_IPADDRGROUP] == NULL) {
+        tmpmn = midoname_list_get_midoname(mido->mnamebuffer);
     } else {
-        rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, "metadata_ip", &(midocore->midos[METADATA_IPADDRGROUP]));
-        if (rc) {
-            LOGWARN("Failed to create ip adress group metadata_ip.\n");
-            ret = 1;
-        }
+        tmpmn = midocore->midos[CORE_METADATA_IPADDRGROUP];
     }
+    rc = mido_create_ipaddrgroup(VPCMIDO_TENANT, "metadata_ip", tmpmn);
+    if (rc) {
+        LOGWARN("Failed to create ip adress group metadata_ip.\n");
+        ret = 1;
+    }
+    midocore->midos[CORE_METADATA_IPADDRGROUP] = tmpmn;
 
-    rc = mido_create_ipaddrgroup_ip(mido, &(midocore->midos[METADATA_IPADDRGROUP]), "169.254.169.254", NULL);
+    rc = mido_create_ipaddrgroup_ip(mido, midocore->midos[CORE_METADATA_IPADDRGROUP], "169.254.169.254", NULL);
     if (rc) {
         LOGERROR("cannot add metadata IP to metadata ipaddrgroup.\n");
         ret = 1;

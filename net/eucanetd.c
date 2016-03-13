@@ -152,7 +152,7 @@
 eucanetdConfig *config = NULL;
 
 //! Global Network Information structure pointer.
-globalNetworkInfo *globalnetworkinfo = NULL;
+//globalNetworkInfo *globalnetworkinfo = NULL;
 gni_hostname_info *host_info = NULL;
 
 //! Role of the component running alongside this eucanetd service
@@ -264,6 +264,8 @@ static driver_handler *pDriverHandler = NULL;
 //! Pointer to our Local Netowork Information (LNI) structure
 static lni_t *pLni = NULL;
 
+static globalNetworkInfo *pGni = NULL;
+
 //! Main loop termination condition
 static volatile boolean gIsRunning = FALSE;
 
@@ -282,11 +284,11 @@ static int eucanetd_fetch_latest_local_config(void);
 static int eucanetd_initialize(void);
 static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig);
 static int eucanetd_read_config_bootstrap(void);
-static int eucanetd_read_config(void);
+static int eucanetd_read_config(globalNetworkInfo *pGni);
 static int eucanetd_initialize_logs(void);
 static int eucanetd_fetch_latest_network(boolean * update_globalnet);
 static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet);
-static int eucanetd_read_latest_network(boolean * update_globalnet);
+static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean * update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo * pGni);
 
 /*----------------------------------------------------------------------------*\
@@ -398,25 +400,26 @@ int main(int argc, char **argv)
 
     // spin here until we get the latest config from active CC
     LOGINFO("eucanetd: starting pre-flight checks\n");
+    pGni = gni_init();
     rc = 1;
     while (rc) {
-        rc = eucanetd_read_config();
+        rc = eucanetd_read_config(pGni);
         if (rc) {
             LOGDEBUG("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
             sleep(1);
         } else {
             // At this point we have read a valid global network information
             // Sanity check before entering eucanetd main loop
-            if (globalnetworkinfo->nmCode != config->nmCode) {
-                LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s)\n", globalnetworkinfo->sMode, config->netMode);
+            if (pGni->nmCode != config->nmCode) {
+                LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s)\n", pGni->sMode, config->netMode);
                 rc = 1;
                 sleep(1);
             }
             if (check_peer_attempts > 0) {
-                eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
+                eucanetdPeer = eucanetd_detect_peer(pGni);
                 if (PEER_IS_NONE(eucanetdPeer)) {
                     // PEER_NONE should be only valid for VPCMIDO
-                    if (!IS_NETMODE_VPCMIDO(globalnetworkinfo)) {
+                    if (!IS_NETMODE_VPCMIDO(pGni)) {
                         LOGTRACE("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.\n", config->netMode);
                         rc = 1;
                         check_peer_attempts--;
@@ -436,7 +439,7 @@ int main(int argc, char **argv)
     }
     rc = 1;
     while (rc) {
-        if (IS_NETMODE_VPCMIDO(globalnetworkinfo)) {
+        if (IS_NETMODE_VPCMIDO(pGni)) {
             // Check tunnel-zone
             rc = check_mido_tunnelzone();
             if (rc) {
@@ -455,12 +458,14 @@ int main(int argc, char **argv)
     LOGINFO("eucanetd: pre-flight checks complete.\n");
 
     // Set to setup our local network view structure
-    if ((!pLni) && (!IS_NETMODE_VPCMIDO(globalnetworkinfo))) {
+    if ((!pLni) && (!IS_NETMODE_VPCMIDO(pGni))) {
         if ((pLni = lni_init(config->cmdprefix, config->sIptPreload)) == NULL) {
             LOGFATAL("out of memory\n");
             exit(1);
         }
     }
+    GNI_FREE(pGni);
+    pGni = NULL;
 
     // got all config, enter main loop
     while (gIsRunning) {
@@ -487,7 +492,17 @@ int main(int argc, char **argv)
         update_globalnet_failed = FALSE;
 
         if (update_globalnet) {
-            rc = eucanetd_read_latest_network(&update_globalnet);
+            globalNetworkInfo *tmpGni = NULL;
+            if ((pGni == NULL) || (IS_NETMODE_VPCMIDO(pGni))) {
+                // In VPCMIDO mode, the driver uses multiple versions of GNI, and is responsible to appropriately release memory.
+                tmpGni = pGni;
+                pGni = gni_init();
+            }
+            rc = eucanetd_read_latest_network(pGni, &update_globalnet);
+            if ((update_globalnet == FALSE) && (IS_NETMODE_VPCMIDO(pGni))) {
+                GNI_FREE(pGni);
+                pGni = tmpGni;
+            }
         }
         if (rc) {
             LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
@@ -495,13 +510,13 @@ int main(int argc, char **argv)
             update_globalnet = FALSE;
         }
 
-        if (globalnetworkinfo->nmCode != config->nmCode) {
-            LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s). Skipping update.\n", globalnetworkinfo->sMode, config->netMode);
+        if (pGni->nmCode != config->nmCode) {
+            LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s). Skipping update.\n", pGni->sMode, config->netMode);
             update_globalnet = FALSE;
         }
 
         if (eucanetdPeer == PEER_INVALID) {
-            eucanetdPeer = eucanetd_detect_peer(globalnetworkinfo);
+            eucanetdPeer = eucanetd_detect_peer(pGni);
             if (!PEER_IS_VALID(eucanetdPeer)) {
                 LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
                 update_globalnet = FALSE;
@@ -519,7 +534,7 @@ int main(int argc, char **argv)
 
         // Do we need to run the network upgrade stuff?
         if (pDriverHandler->upgrade) {
-            if (pDriverHandler->upgrade(globalnetworkinfo) == 0) {
+            if (pDriverHandler->upgrade(pGni) == 0) {
                 // We no longer need to run it
                 pDriverHandler->upgrade = NULL;
             } else {
@@ -536,7 +551,7 @@ int main(int argc, char **argv)
             eucanetd_timer(&tv);
             // Make sure we were given a flush API prior to calling it
             if (pDriverHandler->system_flush) {
-                if (pDriverHandler->system_flush(globalnetworkinfo)) {
+                if (pDriverHandler->system_flush(pGni)) {
                     LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
                 }
             }
@@ -551,7 +566,7 @@ int main(int argc, char **argv)
             LOGINFO("new networking state: updating system\n");
 
             // Are we able to load the LNI information - no need for lni in VPCMIDO
-            if (!IS_NETMODE_VPCMIDO(globalnetworkinfo)) {
+            if (!IS_NETMODE_VPCMIDO(pGni)) {
                 lni_populated = lni_populate(pLni);
             }
             if (lni_populated == 0) {
@@ -564,7 +579,7 @@ int main(int argc, char **argv)
                     scrubResult = EUCANETD_RUN_ALL_API;
                 } else {
                     // Scrub the system so see what needs to be done
-                    scrubResult = pDriverHandler->system_scrub(globalnetworkinfo, pLni);
+                    scrubResult = pDriverHandler->system_scrub(pGni, pLni);
                     LOGINFO("eucanetd system_scrub executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
                 }
                 
@@ -572,7 +587,7 @@ int main(int argc, char **argv)
                 if (scrubResult != EUCANETD_RUN_ERROR_API) {
                     // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
                     if (pDriverHandler->implement_network && (scrubResult & EUCANETD_RUN_NETWORK_API)) {
-                        rc = pDriverHandler->implement_network(globalnetworkinfo, pLni);
+                        rc = pDriverHandler->implement_network(pGni, pLni);
                         if (rc) {
                             if (epoch_failed_updates >= 60) {
                                 LOGERROR("could not complete VM network update after 60 retries: check above log errors for details\n");
@@ -586,7 +601,7 @@ int main(int argc, char **argv)
                     }
                     // update security groups, membership, etc. if the scrub indicate so
                     if (pDriverHandler->implement_sg && (scrubResult & EUCANETD_RUN_SECURITY_GROUP_API)) {
-                        rc = pDriverHandler->implement_sg(globalnetworkinfo, pLni);
+                        rc = pDriverHandler->implement_sg(pGni, pLni);
                         if (rc) {
                             LOGERROR("could not complete update of security groups: check above log errors for details\n");
                             update_globalnet_failed = TRUE;
@@ -596,7 +611,7 @@ int main(int argc, char **argv)
                     }
                     // update IP addressing, elastic IPs, etc. if the scrub indicate so
                     if (pDriverHandler->implement_addressing && (scrubResult & EUCANETD_RUN_ADDRESSING_API)) {
-                        rc = pDriverHandler->implement_addressing(globalnetworkinfo, pLni);
+                        rc = pDriverHandler->implement_addressing(pGni, pLni);
                         if (rc) {
                             LOGERROR("could not complete VM addressing update: check above log errors for details\n");
                             update_globalnet_failed = TRUE;
@@ -609,7 +624,7 @@ int main(int argc, char **argv)
                     update_globalnet_failed = TRUE;
                 }
                 // We're done with our local network view, reset it before the next populate
-                if (!IS_NETMODE_VPCMIDO(globalnetworkinfo)) {
+                if (!IS_NETMODE_VPCMIDO(pGni)) {
                     LNI_RESET(pLni);
                 }
             } else {
@@ -627,10 +642,10 @@ int main(int argc, char **argv)
                 epoch_updates++;
                 
                 snprintf(versionFile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.version", config->eucahome);
-                if (!strlen(globalnetworkinfo->version) || (str2file(globalnetworkinfo->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
+                if (!strlen(pGni->version) || (str2file(pGni->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
                     LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
                 } else {
-                    snprintf(config->lastAppliedVersion, 32, "%s", globalnetworkinfo->version);
+                    snprintf(config->lastAppliedVersion, 32, "%s", pGni->version);
                 }
             }
         }
@@ -646,7 +661,7 @@ int main(int argc, char **argv)
         polling_sleep_adjusted = config->polling_frequency * 1000000;
         if ((update_globalnet_failed == FALSE) && (update_globalnet == FALSE) && (gIsRunning == TRUE)) {
             if (pDriverHandler->system_maint) {
-                rc = pDriverHandler->system_maint(globalnetworkinfo, pLni);
+                rc = pDriverHandler->system_maint(pGni, pLni);
                 if (rc != 0) {
                     LOGWARN("Failed to execute maintenance for %s.\n", pDriverHandler->name);
                 }
@@ -688,13 +703,15 @@ int main(int argc, char **argv)
 
     if (pDriverHandler->cleanup) {
         LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
-        if (pDriverHandler->cleanup(globalnetworkinfo, config->flushmode) != 0) {
+        if (pDriverHandler->cleanup(pGni, config->flushmode) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }
 
     gni_hostnames_free(host_info);
-    GNI_FREE(globalnetworkinfo);
+    if (pGni != NULL) {
+        GNI_FREE(pGni);
+    }
     LNI_FREE(pLni);
 
     exit(0);
@@ -891,6 +908,7 @@ static int eucanetd_initialize(void)
     config->polling_frequency = 5;
     config->init = 1;
 
+/*
     if (!globalnetworkinfo) {
         globalnetworkinfo = gni_init();
         if (!globalnetworkinfo) {
@@ -898,6 +916,7 @@ static int eucanetd_initialize(void)
             exit(1);
         }
     }
+*/
 
 
     if (!host_info) {
@@ -1044,7 +1063,7 @@ static int eucanetd_read_config_bootstrap(void)
 //!
 //! @note
 //!
-static int eucanetd_read_config(void)
+static int eucanetd_read_config(globalNetworkInfo *pGni)
 {
     int i = 0;
     int rc = 0;
@@ -1118,7 +1137,7 @@ static int eucanetd_read_config(void)
         return (1);
     }
 
-    rc = gni_populate(globalnetworkinfo, host_info, config->global_network_info_file.dest);
+    rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1126,7 +1145,7 @@ static int eucanetd_read_config(void)
         }
         return (1);
     }
-    rc = gni_print(globalnetworkinfo);
+    rc = gni_print(pGni);
     rc = gni_hostnames_print(host_info);
 
     // setup and read local NC eucalyptus.conf file
@@ -1165,19 +1184,19 @@ static int eucanetd_read_config(void)
     config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
 
     if (!cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]) {
-        cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(globalnetworkinfo->EucanetdHost);
+        cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(pGni->EucanetdHost);
     }
 
     if (!cvals[EUCANETD_CVAL_MIDOGWHOSTS]) {
-        cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(globalnetworkinfo->GatewayHosts);
+        cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(pGni->GatewayHosts);
     }
 
     if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
-        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(globalnetworkinfo->PublicNetworkCidr);
+        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(pGni->PublicNetworkCidr);
     }
 
     if (!cvals[EUCANETD_CVAL_MIDOPUBGWIP]) {
-        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(globalnetworkinfo->PublicGatewayIP);
+        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(pGni->PublicGatewayIP);
     }
 
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
@@ -1488,7 +1507,7 @@ static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
 //!
 //! @note
 //!
-static int eucanetd_read_latest_network(boolean *update_globalnet)
+static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet)
 {
     int i = 0;
     int rc = 0;
@@ -1509,29 +1528,29 @@ static int eucanetd_read_latest_network(boolean *update_globalnet)
         LOGWARN("Invalid argument: update_globalnet is null.\n");
         return (1);
     }
-    rc = gni_populate(globalnetworkinfo, host_info, config->global_network_info_file.dest);
+    rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
       LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
       ret = 1;
     } else {
-      gni_print(globalnetworkinfo);
+      gni_print(pGni);
       gni_hostnames_print(host_info);
 
       // regardless, if the last successfully applied version matches the current GNI version, skip the update
-      if ( ( strlen(globalnetworkinfo->version) && strlen(config->lastAppliedVersion) ) ) {
-          if (!strcmp(globalnetworkinfo->version, config->lastAppliedVersion) ) {
-              LOGINFO("global network version (%s) already applied, skipping update\n", globalnetworkinfo->version);
+      if ( ( strlen(pGni->version) && strlen(config->lastAppliedVersion) ) ) {
+          if (!strcmp(pGni->version, config->lastAppliedVersion) ) {
+              LOGINFO("global network version (%s) already applied, skipping update\n", pGni->version);
               *update_globalnet = FALSE;
           } else {
-              LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", globalnetworkinfo->version, config->lastAppliedVersion);
+              LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", pGni->version, config->lastAppliedVersion);
           }
       }
 
-      if (IS_NETMODE_VPCMIDO(globalnetworkinfo)) {
+      if (IS_NETMODE_VPCMIDO(pGni)) {
 	// skip for VPCMIDO
 	ret = 0;
       } else {
-	rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+	rc = gni_find_self_cluster(pGni, &mycluster);
 	if (rc) {
 	  LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
 	  ret = 1;

@@ -165,7 +165,7 @@ extern struct driver_handler_t staticDriverHandler;         //!< STATIC network 
 //! @}
 
 //! Global Network Information structure pointer.
-extern globalNetworkInfo *globalnetworkinfo;
+//extern globalNetworkInfo *globalnetworkinfo;
 
 //! Role of the component running alongside this eucanetd service
 extern eucanetd_peer eucanetdPeer;

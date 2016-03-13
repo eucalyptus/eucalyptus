@@ -105,6 +105,8 @@
 #define MIDO_HOST_INTERFACE_ENDPOINT_ALL       0xFFFFFFFF
 #define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
 
+#define MIDONAME_LIST_DEFAULT_CAPACITY   50
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -116,7 +118,7 @@
  |                                ENUMERATIONS                                |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-enum {
+enum vpc_sg_midos_t {
     VPCSG_INGRESS,
     VPCSG_EGRESS,
     VPCSG_IAGPRIV,
@@ -139,52 +141,50 @@ enum vpc_nat_gateway_midos_t {
     NATG_END
 };
 
-enum {
-    VPCBR_VMPORT,
-    VPCBR_DHCPHOST,
-    VMHOST,
-    ELIP_PRE,
-    ELIP_POST,
-    ELIP_PRE_IPADDRGROUP,
-    ELIP_POST_IPADDRGROUP,
-    ELIP_PRE_IPADDRGROUP_IP,
-    ELIP_POST_IPADDRGROUP_IP,
-    ELIP_ROUTE,
+enum vpc_instance_midos_t {
+    INST_VMHOST,
+    INST_VPCBR_VMPORT,
+    INST_VPCBR_DHCPHOST,
     INST_PRECHAIN,
     INST_POSTCHAIN,
-    VPCINSTANCEEND
+    INST_ELIP_PRE_IPADDRGROUP,
+    INST_ELIP_POST_IPADDRGROUP,
+    INST_ELIP_PRE_IPADDRGROUP_IP,
+    INST_ELIP_POST_IPADDRGROUP_IP,
+    INST_ELIP_PRE,
+    INST_ELIP_POST,
+    INST_ELIP_ROUTE,
+    INST_END
 };
 
-enum {
-    VPCBR,
-    VPCBR_RTPORT,
-    VPCRT_BRPORT,
-    VPCBR_DHCP,
-    VPCBR_METAPORT,
-    VPCBR_METAHOST,
-    VPCSUBNETEND
+enum vpc_subnet_midos_t {
+    SUBN_VPCBR,
+    SUBN_VPCBR_RTPORT,
+    SUBN_VPCRT_BRPORT,
+    SUBN_VPCBR_DHCP,
+    SUBN_VPCBR_METAPORT,
+    SUBN_VPCBR_METAHOST,
+    SUBN_END
 };
 
-enum {
-    VPCRT,
-    EUCABR_DOWNLINK,
-    VPCRT_UPLINK,
-    VPCRT_UPLINK_PRECHAIN,
-    VPCRT_UPLINK_POSTCHAIN,
-    VPCRT_PREELIPCHAIN,
-    //VPCRT_RTINCHAIN,
-    //VPCRT_RTOUTCHAIN,
-    VPCEND
+enum vpc_midos_t {
+    VPC_VPCRT,
+    VPC_EUCABR_DOWNLINK,
+    VPC_VPCRT_UPLINK,
+    VPC_VPCRT_UPLINK_PRECHAIN,
+    VPC_VPCRT_UPLINK_POSTCHAIN,
+    VPC_VPCRT_PREELIPCHAIN,
+    VPC_END
 };
 
-enum {
-    EUCART,
-    EUCABR,
-    EUCART_BRPORT,
-    EUCABR_RTPORT,
-    METADATA_IPADDRGROUP,
-    GWPORTGROUP,
-    MIDOCOREEND
+enum mido_core_midos_t {
+    CORE_EUCART,
+    CORE_EUCABR,
+    CORE_EUCART_BRPORT,
+    CORE_EUCABR_RTPORT,
+    CORE_METADATA_IPADDRGROUP,
+    CORE_GWPORTGROUP,
+    CORE_END
 };
 
 enum vpc_route_entry_target_t {
@@ -214,6 +214,12 @@ typedef struct midoname_t {
     char *uri;
     int init;
 } midoname;
+
+typedef struct midoname_list_t {
+    midoname *mnames;
+    int size;
+    int capacity;
+} midoname_list;
 
 typedef struct mido_parsed_route_t {
     midoname router;
@@ -307,17 +313,20 @@ typedef struct mido_resources_t {
 typedef struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
     char name[16];
-    midoname midos[VPCSG_END];
-    midoname *ingress_rules, *egress_rules;
-    int max_ingress_rules, max_egress_rules;
+    midoname *midos[VPCSG_END];
+    midoname **ingress_rules;
+    midoname **egress_rules;
+    int max_ingress_rules;
+    int max_egress_rules;
     int gnipresent;
-
 } mido_vpc_secgroup;
 
 typedef struct mido_vpc_instance_t {
     gni_instance *gniInst;
     char name[16];
-    midoname midos[VPCINSTANCEEND];
+    midoname *midos[INST_END];
+    u32 privip;
+    u32 pubip;
     int gnipresent;
 } mido_vpc_instance;
 
@@ -326,7 +335,7 @@ typedef struct mido_vpc_natgateway_t {
     gni_vpcsubnet *gniVpcSubnet;
     char name[32];
     int rtid;
-    midoname midos[NATG_END];
+    midoname *midos[NATG_END];
     int gnipresent;
 } mido_vpc_natgateway;
 
@@ -334,9 +343,9 @@ typedef struct mido_vpc_subnet_t {
     gni_vpcsubnet *gniSubnet;
     char name[16];
     char vpcname[16];
-    midoname midos[VPCSUBNETEND];
-    midoname *brports;
-    midoname *dhcphosts;
+    midoname *midos[SUBN_END];
+    midoname **brports;
+    midoname **dhcphosts;
     midoname **routes;
     mido_vpc_instance *instances;
     int max_brports;
@@ -350,31 +359,35 @@ typedef struct mido_vpc_t {
     gni_vpc *gniVpc;
     char name[16];
     int rtid;
-    midoname midos[VPCEND];
-    midoname *rtports;
-    midoname *rtpostchain_rules;
-    midoname *rtpreelipchain_rules;
+    midoname *midos[VPC_END];
+    midoname **rtports;
+    midoname **rtpostchain_rules;
+    midoname **rtpreelipchain_rules;
+    midoname **rtroutes;
     mido_vpc_subnet *subnets;
     mido_vpc_natgateway *natgateways;
     int max_rtports;
     int max_rtpostchain_rules;
     int max_rtpreelipchain_rules;
+    int max_rtroutes;
     int max_subnets;
     int max_natgateways;
     int gnipresent;
 } mido_vpc;
 
 typedef struct mido_core_t {
-    midoname midos[MIDOCOREEND];
+    midoname *midos[CORE_END];
+    mido_resource_router *eucart;
+    mido_resource_bridge *eucabr;
 
-    midoname *brports;
+    midoname **brports;
     int max_brports;
 
-    midoname *rtports;
+    midoname **rtports;
     int max_rtports;
 
-    midoname gwhosts[32];
-    midoname gwports[32];
+    midoname *gwhosts[32];
+    midoname *gwports[32];
     int max_gws;
 } mido_core;
 
@@ -398,6 +411,7 @@ typedef struct mido_config_t {
 
     mido_resources *resources;
     mido_core *midocore;
+    midoname_list *mnamebuffer;
 
     mido_vpc *vpcs;
     int max_vpcs;
@@ -519,10 +533,10 @@ int mido_delete_chain(midoname * name);
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 
 //int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int *next_position, ...);
-int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int * next_position, ...);
+int mido_create_rule(midoname *chain, midoname *outname, midoname **memorules, int max_memorules, int *next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
-int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, ...);
+int mido_find_rule_from_list(midoname **rules, int max_rules, midoname *outrule, ...);
 int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
 int mido_delete_rule(midoname * name);
@@ -558,6 +572,10 @@ int midonet_http_get(char *url, char *apistr, char **out_payload);
 int midonet_http_put(char *url, char *resource_type, char *vers, char *payload);
 int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload);
 int midonet_http_delete(char *url);
+
+midoname_list *midoname_list_new(void);
+int midoname_list_free(midoname_list *list);
+midoname *midoname_list_get_midoname(midoname_list *list);
 
 int compare_iphostmap_entry(const void *p1, const void *p2);
 

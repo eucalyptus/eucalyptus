@@ -174,11 +174,14 @@ static int http_deletes_prev = 0;
 //!
 //! @note
 //!
-void mido_print_midoname(midoname * name)
-{
-    //    printf("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s jsonbuf=%s\n", name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type), SP(name->content_type), SP(name->jsonbuf));
-    LOGDEBUG("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n", name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
-             SP(name->content_type), SP(name->vers));
+void mido_print_midoname(midoname * name) {
+    if (name == NULL) {
+        LOGWARN("Invalid argument: NULL midoname\n");
+    } else {
+        LOGDEBUG("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n",
+                name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
+                SP(name->content_type), SP(name->vers));
+    }
 }
 
 //!
@@ -321,7 +324,7 @@ int mido_getel_midoname(midoname * name, char *key, char **val)
     int ret = 0;
     json_object *jobj = NULL;
 
-    if (!name || !key || !val) {
+    if (!name || !key || !val || (!name->init)) {
         return (1);
     }
 
@@ -373,7 +376,7 @@ int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_va
     int jarr_len = 0;
     char **res;
 
-    if (!name || !key || !values || !max_values) {
+    if (!name || !key || !values || !max_values || (!name->init)) {
         LOGWARN("Invalid argument: NULL pointer.\n");
         return (1);
     }
@@ -1389,6 +1392,9 @@ int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *i
     int rc = 0, ret = 0, max_ips = 0, found = 0, i = 0;
     midoname myname, *ips = NULL;
 
+    if (!mido || !ipaddrgroup) {
+        return (1);
+    }
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(ipaddrgroup->tenant);
     myname.resource_type = strdup("ip_addrs");
@@ -1414,7 +1420,7 @@ int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *i
             }
             rc = mido_cmp_midoname_to_input(&(ips[i]), "addr", ip, NULL);
             if (!rc) {
-                if (outname) {
+                if ((outname) && (outname != &(ips[i]))) {
                     mido_copy_midoname(outname, &(ips[i]));
                 }
                 found = 1;
@@ -1561,7 +1567,7 @@ int mido_allocate_midorule(char *position, char *type, char *action, char *proto
 //!
 //! @note
 //!
-int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, ...)
+int mido_find_rule_from_list(midoname **rules, int max_rules, midoname *outrule, ...)
 {
     int rc = 0, ret = 0, found = 0, i = 0;
     midoname myname;
@@ -1574,7 +1580,6 @@ int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, 
     va_start(ap, outrule);
 
     bzero(&myname, sizeof(midoname));
-
     myname.tenant = strdup(VPCMIDO_TENANT);
     myname.resource_type = strdup("rules");
     myname.content_type = strdup("Rule");
@@ -1582,14 +1587,14 @@ int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, 
 
     found = 0;
     for (i = 0; i < max_rules && !found; i++) {
-        if (rules[i].init == 0) {
+        if (!rules[i] || !rules[i]->init) {
             continue;
         }
         va_copy(ap1, ap);
-        rc = mido_cmp_midoname_to_input_json_v(&(rules[i]), &ap1);
+        rc = mido_cmp_midoname_to_input_json_v(rules[i], &ap1);
         va_end(ap1);
         if (!rc) {
-            mido_copy_midoname(outrule, &(rules[i]));
+            mido_copy_midoname(outrule, rules[i]);
             found = 1;
         }
     }
@@ -1619,10 +1624,13 @@ int mido_find_rule_from_list(midoname *rules, int max_rules, midoname *outrule, 
 //!
 //! @note
 //!
-int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int * next_position, ...)
+int mido_create_rule(midoname * chain, midoname * outname, midoname **memorules, int max_memorules, int * next_position, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
-    midoname myname, *rules = NULL;
+    midoname myname;
+    midoname *midorules = NULL;
+    midoname **pmidorules = NULL;
+    midoname **rules = NULL;
     va_list ap = {{0}}, ap1 = {{0}}, ap2 = {{0}};
     boolean gotrules = FALSE;
 
@@ -1644,33 +1652,43 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, 
         rc = 0;
     } else {
         if (midonet_api_dirty_cache == 1) {
-            rc = mido_get_rules(chain, &rules, &max_rules);
+            rc = mido_get_rules(chain, &midorules, &max_rules);
+            if (max_rules > 0) {
+                pmidorules = EUCA_ZALLOC(max_rules, sizeof (midoname **));
+                for (int j = 0; j < max_rules; j++) {
+                    pmidorules[j] = &(midorules[j]);
+                }
+            }
             gotrules = TRUE;
+            rules = pmidorules;
         }
     }    
 
     if (!rc) {
         found = 0;
         for (i = 0; i < max_rules && !found; i++) {
-            if (rules[i].init == 0) {
+            if (rules[i]->init == 0) {
                 continue;
             }
             va_copy(ap1, ap);
-            rc = mido_cmp_midoname_to_input_json_v(&(rules[i]), &ap1);
+            rc = mido_cmp_midoname_to_input_json_v(rules[i], &ap1);
             va_end(ap1);
             if (!rc) {
-                if (outname) {
-                    mido_copy_midoname(outname, &(rules[i]));
+                if ((outname) && (outname != rules[i])) {
+                    mido_copy_midoname(outname, rules[i]);
                 }
                 found = 1;
-                LOGDEBUG("FOUND RULE: %s\n", rules[i].jsonbuf);
+                LOGTRACE("FOUND RULE: %s\n", rules[i]->jsonbuf);
             }
         }
     }
     
     if (gotrules) {
-        mido_free_midoname_list(rules, max_rules);
-        EUCA_FREE(rules);
+        mido_free_midoname_list(midorules, max_rules);
+        EUCA_FREE(midorules);
+        if (pmidorules) {
+            EUCA_FREE(pmidorules);
+        }
     }
 
     LOGTRACE("MAX_RULE %s: %d\n", chain->name, max_rules);
@@ -1956,6 +1974,11 @@ int mido_unlink_host_port(midoname * host, midoname * port)
 {
     int rc = 0, ret = 0;
     char url[EUCA_MAX_PATH];
+    
+    if (!host || !port) {
+        LOGWARN("Invalid argument: NULL host or port - cannot unlink host-port.\n");
+        return (1);
+    }
 
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/hosts/%s/ports/%s", host->uuid, port->uuid);
     rc = midonet_http_delete(url);
@@ -2571,6 +2594,10 @@ void mido_copy_midoname(midoname * dst, midoname * src)
     if (!dst || !src) {
         return;
     }
+    if (dst == src) {
+        LOGINFO("mido_copy_midoname: %s %s dst == src skipping\n", dst->resource_type, dst->name);
+        return;
+    }
     if (dst->init) {
         mido_free_midoname(dst);
     }
@@ -2593,7 +2620,7 @@ void mido_copy_midoname(midoname * dst, midoname * src)
     if (src->uri)
         dst->uri = strdup(src->uri);
 
-    dst->init = 1;
+    dst->init = src->init;
 }
 
 //!
@@ -2667,6 +2694,9 @@ int mido_update_midoname(midoname * name)
     struct json_object *jobj = NULL, *el = NULL;
     char special_uuid[EUCA_MAX_PATH];
 
+    if (!name || (!name->init)) {
+        return (1);
+    }
     jobj = json_tokener_parse(name->jsonbuf);
     if (!jobj) {
         printf("ERROR: json_tokener_parse(...): returned NULL\n");
@@ -4084,22 +4114,24 @@ int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max)
         *outnames_max = 0;
         for (i = 0; i < names_max; i++) {
             rc = mido_getarr_midoname(&(names[i]), "addresses", &addrs, &max_addrs);
-            if (rc == 0) {
+            LOGTRACE("%s %s - max_addrs: %d\n", host->name, names[i].name, max_addrs);
+            if ((rc == 0) && (max_addrs > 0)) {
                 hips = EUCA_REALLOC(hips, *outnames_max + max_addrs, sizeof (u32));
                 if (hips == NULL) {
-                    LOGFATAL("out of memory.\n");
+                    LOGFATAL("out of memory - onmax %d, maxa %d.\n", *outnames_max, max_addrs);
                     return (1);
                 }
                 bzero(&(hips[*outnames_max]), max_addrs * sizeof (u32));
                 for (int j = 0; j < max_addrs; j++) {
                     if (strlen(addrs[j]) > 16) {
-                        LOGDEBUG("\tskipping %s - not an IPv4 address.\n", addrs[j]);
+                        LOGTRACE("\tskipping %s - not an IPv4 address.\n", addrs[j]);
                     } else {
                         hips[*outnames_max] = dot2hex(addrs[j]);
                         if ((hips[*outnames_max] & 0xa9fe0000) == 0xa9fe0000) {
-                            LOGDEBUG("\tskipping %s - link local address\n", addrs[j]);
+                            LOGTRACE("\tskipping %s - link local address\n", addrs[j]);
                             hips[*outnames_max] = 0;
                         } else {
+                            LOGTRACE("\tFound %s\n", addrs[j]);
                             (*outnames_max)++;
                         }
                     }
@@ -4143,6 +4175,95 @@ int mido_check_state(void) {
     }
 
     return(ret);
+}
+
+//!
+//! Creates an empty midoname_list structure.
+//!
+//! @return pointer to the newly created midoname_list structure or NULL in case of failure.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+midoname_list *midoname_list_new(void) {
+    midoname_list *res = NULL;
+
+    LOGTRACE("Creating a new midoname_list.\n");
+    res = EUCA_ZALLOC(1, sizeof (midoname_list));
+    if (res == NULL) {
+        LOGFATAL("out of memory - allocating midoname_list.\n");
+        return NULL;
+    }
+    res->capacity = MIDONAME_LIST_DEFAULT_CAPACITY;
+    res->mnames = EUCA_ZALLOC(res->capacity, sizeof (midoname));
+    if (res->mnames == NULL) {
+        LOGFATAL("out of memory - allocating midoname buffer for midoname_list.\n");
+        EUCA_FREE(res);
+        return NULL;
+    }
+    return (res);
+}
+
+//!
+//! Releases resources used by the midoname_list structure in the argument.
+//!
+//! @param[in]  midoname_list structure of interest.
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note The list is assumed to be created using midoname_list_new()
+//!
+int midoname_list_free(midoname_list *list) {
+    LOGTRACE("Releasing midoname_list at %p\n", list);
+    if (list == NULL) {
+        return (0);
+    }
+    mido_free_midoname_list(list->mnames, list->size);
+    EUCA_FREE(list->mnames);
+    bzero(list, sizeof (midoname_list));
+    EUCA_FREE(list);
+    return (0);
+}
+
+//!
+//! Returns a free midoname element from the midoname_list in the argument.
+//!
+//! @param[in]  midoname_list structure of interest.
+//! @return pointer to an unused midoname structure. NULL on any failure.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note The list is assumed to be created using midoname_list_new()
+//!
+midoname *midoname_list_get_midoname(midoname_list *list) {
+    midoname *res = NULL;
+    LOGTRACE("Retrieving an unused midoname element.\n");
+    if (list->size == list->capacity) {
+        list->mnames = EUCA_REALLOC(list->mnames, list->capacity + MIDONAME_LIST_DEFAULT_CAPACITY, sizeof (midoname));
+        bzero(&(list->mnames[list->capacity]), MIDONAME_LIST_DEFAULT_CAPACITY * sizeof (midoname));
+        list->capacity += MIDONAME_LIST_DEFAULT_CAPACITY;
+        if (list->mnames == NULL) {
+            LOGFATAL("out of memory - (re)allocating midoname buffer for midoname_list.\n ");
+            return NULL;
+        }
+    }
+    res = &(list->mnames[list->size]);
+    (list->size)++;
+    return res;
 }
 
 //!

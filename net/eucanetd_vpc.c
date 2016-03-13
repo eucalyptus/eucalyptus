@@ -191,6 +191,8 @@ static boolean gInitialized = FALSE;
 //! Midonet pluggin specific configuration
 mido_config *pMidoConfig = NULL;
 
+static globalNetworkInfo *appliedGni = NULL;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -490,5 +492,9 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
     } else {
         LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
+    if (appliedGni != NULL) {
+        GNI_FREE(appliedGni);
+    }
+    appliedGni = pGni;
     return (ret);
 }

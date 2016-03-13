@@ -1932,9 +1932,9 @@ globalNetworkInfo *gni_init()
     globalNetworkInfo *gni = NULL;
     gni = EUCA_ZALLOC(1, sizeof(globalNetworkInfo));
     if (!gni) {
-
+        LOGFATAL("out of memory - allocating memory for GNI\n");
     } else {
-        bzero(gni, sizeof(globalNetworkInfo));
+        //bzero(gni, sizeof(globalNetworkInfo));
         gni->init = 1;
     }
     return (gni);
