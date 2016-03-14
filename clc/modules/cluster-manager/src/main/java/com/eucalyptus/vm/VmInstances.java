@@ -517,7 +517,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         throw new ConfigurablePropertyException("Invalid value " + newValue + ", must be between 1 and " + ABSOLUTE_USER_DATA_MAX_SIZE_KB);
       }
       try {
-        t.getField().set(null, t.getTypeParser().apply(newValue));
+        t.getField().set(null, t.getTypeParser().apply(newValue.toString()));
       } catch (IllegalArgumentException e1) {
         e1.printStackTrace();
         throw new ConfigurablePropertyException(e1);

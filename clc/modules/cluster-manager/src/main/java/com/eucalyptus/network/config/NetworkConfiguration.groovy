@@ -19,28 +19,31 @@
  ************************************************************************/
 package com.eucalyptus.network.config
 
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+
+import java.lang.reflect.ParameterizedType
+import java.util.regex.Pattern
+
+import org.codehaus.groovy.runtime.MethodClosure
+import org.springframework.validation.Errors
+import org.springframework.validation.ValidationUtils
+import org.springframework.validation.Validator
+
 import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.ManagedSubnets
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Cidr
 import com.google.common.base.CaseFormat
+import com.google.common.base.Function
 import com.google.common.base.Functions
 import com.google.common.base.Joiner
 import com.google.common.base.Strings
 import com.google.common.collect.Iterables
 import com.google.common.net.InetAddresses
 import com.google.common.net.InternetDomainName
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
-import org.codehaus.groovy.runtime.MethodClosure
-import org.springframework.validation.Errors
-import org.springframework.validation.ValidationUtils
-import org.springframework.validation.Validator
-
-import java.lang.reflect.ParameterizedType
-import java.util.regex.Pattern
 
 /**
  * Class representing the global network configuration. The networking configuration include
@@ -232,8 +235,8 @@ abstract class TypedValidator<T> implements Validator {
 @PackageScope
 class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration> {
   public static final Pattern MAC_PREFIX_PATTERN = Pattern.compile( '[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' )
-  public static final Pattern MODE_PATTERN = Pattern.compile(
-      Joiner.on('|').join( Iterables.transform( Arrays.<NetworkMode>asList( NetworkMode.values( ) ), Functions.toStringFunction( ) ) )
+  public static final Pattern MODE_PATTERN = Pattern.compile( 
+    Joiner.on('|').join( Iterables.transform( Arrays.<NetworkMode>asList( NetworkMode.values( ) ), (Function<NetworkMode, String>)Functions.toStringFunction( ) ) ) 
   )
 
   Errors errors

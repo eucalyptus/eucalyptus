@@ -98,7 +98,7 @@ public class AsyncExceptions {
       final FailedRequestException failedRequestException =
           Exceptions.findCause( throwable, FailedRequestException.class );
       if ( failedRequestException != null && failedRequestException.getRequest( ) instanceof WebServiceError ) {
-        final WebServiceError webServiceError = failedRequestException.getRequest( );
+        final WebServiceError webServiceError = (WebServiceError)failedRequestException.getRequest( );
         final String code = webServiceError.getWebServiceErrorCode( );
         final String message = webServiceError.getWebServiceErrorMessage( );
         if ( code != null && message != null ) {

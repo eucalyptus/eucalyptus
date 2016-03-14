@@ -32,7 +32,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.system.log.LoggingResetter;
 
 
-public class LogLevelListener implements PropertyChangeListener {
+public class LogLevelListener implements PropertyChangeListener<Object> {
 	private static final Logger LOG = Logger.getLogger(LogLevelListener.class);
 	private final String[] logLevels = new String[] { "ALL", "DEBUG",
 			"INFO", "WARN", "ERROR", "FATAL", "TRACE", "OFF", "EXTREME" };
@@ -58,7 +58,7 @@ public class LogLevelListener implements PropertyChangeListener {
 		LOG.warn("Change occurred to property " + t.getQualifiedName()
 				+ " with new value " + newValue + ".");
 		try {
-			t.getField().set(null, t.getTypeParser().apply(newValue));
+			t.getField().set(null, t.getTypeParser().apply(newValue.toString()));
 		} catch (IllegalArgumentException e1) {
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);
