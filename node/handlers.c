@@ -3574,9 +3574,9 @@ int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig *ne
     DISABLED_CHECK;
 
     LOGINFO("[%s][%s] attaching network interface\n", instanceId, netCfg->interfaceId);
-    LOGDEBUG("[%s][%s] network interface attaching (vlan=%d networkIndex=%d privateMac=%s publicIp=%s privateIp=%s device=%d)\n",
+    LOGDEBUG("[%s][%s] network interface attaching (vlan=%d networkIndex=%d privateMac=%s publicIp=%s privateIp=%s device=%d attachmentId=%s)\n",
             instanceId, netCfg->interfaceId, netCfg->vlan, netCfg->networkIndex, netCfg->privateMac, netCfg->publicIp,
-            netCfg->privateIp, netCfg->device);
+            netCfg->privateIp, netCfg->device, netCfg->attachmentId);
 
     if (nc_state.H->doAttachNetworkInterface)
         ret = nc_state.H->doAttachNetworkInterface(&nc_state, pMeta, instanceId, netCfg);

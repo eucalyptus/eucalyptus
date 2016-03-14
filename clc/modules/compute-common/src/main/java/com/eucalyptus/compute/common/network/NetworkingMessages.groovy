@@ -76,6 +76,7 @@ abstract class NetworkResource extends EucalyptusData {
   String description
   Boolean deleteOnTerminate
   ArrayList<String> networkGroupIds
+  String attachmentId
 }
 
 abstract class NetworkFeature extends EucalyptusData {}

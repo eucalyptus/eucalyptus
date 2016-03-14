@@ -424,7 +424,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    int instIdsLen, char **netNames, int netNamesLen, char **netIds, int netIdsLen, char **macAddrs, int macAddrsLen, int *networkIndexList,
                    int networkIndexListLen, char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId,
                    char *ownerId, char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
-                   char *platform, int expiryTime, char *targetNode, char *rootDirective, netConfig * secNetCfgs, int secNetCfgsLen, ccInstance ** outInsts, int *outInstsLen);
+                   char *platform, int expiryTime, char *targetNode, char *rootDirective, char *eniAttachmentId, netConfig * secNetCfgs, int secNetCfgsLen,
+                   ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);

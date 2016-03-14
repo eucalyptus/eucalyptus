@@ -767,6 +767,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="ownerId" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	      <xs:element minOccurs="0" name="rootDirective" type="xs:string"/>
+          <xs:element minOccurs="0" maxOccurs="1" name="primaryEniAttachmentId" type="xs:string" />
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
 	    </xs:sequence>
 	  </xs:extension>
@@ -782,7 +783,7 @@
 	  <xs:element name="publicIp" type="xs:string"/>
 	  <xs:element name="vlan" type="xs:int"/>
 	  <xs:element name="networkIndex" type="xs:int"/>
-	  <xs:element name="attachmentId" type="xs:string"/>
+	  <xs:element minOccurs="0" maxOccurs="1" name="attachmentId" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
       

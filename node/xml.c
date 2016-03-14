@@ -495,7 +495,8 @@ static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char 
     _ATTRIBUTE(nic, "hypervisorType", hypervisorType);
     _ATTRIBUTE(nic, "osPlatform", osPlatform);
     _ATTRIBUTE(nic, "osVirtioNetwork", osVirtioNetwork);
-    _ATTRIBUTE(nic, "attachmentId", net->attachmentId);
+    if(strlen(net->attachmentId)) // vpc
+        _ATTRIBUTE(nic, "attachmentId", net->attachmentId);
 }
 
 
@@ -1137,7 +1138,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
         int secNet = 0;
         for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_NICS); i++) {
             int device = 0;
-            char str[16] = "";
+            char str[32] = "";
             char * tok = NULL;
 
             // TODO code for upgrade to 4.3.0 swathi to check if this correct
@@ -1171,6 +1172,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                     // primary nic is always attached, just make it so
                     euca_strncpy(instance->ncnet.stateName, VOL_STATE_ATTACHED, sizeof(instance->ncnet.stateName));
                 }
+                // To cover upgrade path and vpc mode
+                MKNICPATH("attachmentId");
+                if (get_xpath_content_at(xml_path, nicxpath, 0, instance->ncnet.attachmentId, sizeof(instance->ncnet.attachmentId)) == NULL) {
+                    instance->ncnet.attachmentId[0] = '\0';
+                }
 
                 MKNICPATH("bridgeDeviceName");
                 XGET_STR_FREE(nicxpath, instance->params.guestNicDeviceName);
@@ -1193,12 +1199,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                     euca_strncpy(net->interfaceId, (tok + 1), ENI_ID_LEN);
                 }
                 net->device = device;
+                // secondary nics will always have an attachment state associated
                 MKNICPATH("stateName");
-                // Upgrade path
-                if (get_xpath_content_at(xml_path, nicxpath, 0, net->stateName, sizeof(net->stateName)) == NULL) {
-                   // primary nic is always attached, just make it so
-                   euca_strncpy(net->stateName, VOL_STATE_ATTACHED, sizeof(net->stateName));
-                }
+                XGET_STR_FREE(nicxpath, net->stateName);
+                MKNICPATH("attachmentId");
+                XGET_STR_FREE(nicxpath, net->attachmentId);
 
                 secNet++;
             }

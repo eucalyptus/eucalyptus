@@ -354,6 +354,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //! @param[in]  sPvMac the private MAC string
 //! @param[in]  sPvIp the private IP string
 //! @param[in]  sPbIp the public IP string
+//! @param[in]  sPvAttachmentId the eni attachment ID string
 //! @param[in]  vlan the network Virtual LAN
 //! @param[in]  networkIndex the network index
 //!
@@ -1117,6 +1118,38 @@ netConfig *find_network_interface(ncInstance * pInstance, const char *sInterface
 }
 
 //!
+//! Searches and returns the network interface based on attachment ID. If no matching interface is found returns NULL
+//! OR if full, returns NULL.
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sAttachmentId the network interface attachment identifier string (eni-attach-XXXXXXXX)
+//!
+//! @return a pointer to the matching network interface OR returns a pointer to the next empty/avail
+//!         network interface slot OR if full, returns NULL.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo There's gotta be a way to improve and not scan the whole list all the time
+//!
+netConfig *find_network_interface_by_attachment(ncInstance * pInstance, const char *sAttachmentId)
+{
+    netConfig *pNet = NULL;
+    register u32 i = 0;
+
+    // Make sure our given parameters aren't NULL
+    if ((pInstance != NULL) && (sAttachmentId != NULL)) {
+        for (i = 0, pNet = pInstance->secNetCfgs; i < EUCA_MAX_NICS; i++, pNet++) {
+            // look for matches
+            if (!strncmp(pNet->attachmentId, sAttachmentId, ENI_ATTACHMENT_ID_LEN)) {
+                return pNet;
+            }
+        }
+    }
+
+    return (NULL);
+}
+
+//!
 //! Finds a matching network interface
 //!
 //! @param[in] pInstance a pointer to the instance structure the volume should be under
@@ -1135,6 +1168,41 @@ boolean is_network_interface_present(ncInstance * pInstance, const char *sInterf
             if (strncmp(pInstance->secNetCfgs[i].interfaceId, sInterfaceId, ENI_ID_LEN) == 0) {
                 LOGDEBUG("found interface %s on instance %s", sInterfaceId, pInstance->instanceId);
                 return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+//!
+//! Checks if the network interface is attached to the instance with the given attachment ID. Returns true if found and false otherwise
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//! @param[in] sAttachmentId the network interface attachment identifier string (eni-attach-XXXXXXXX)
+//!
+//! @return true if present other false.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo this is present because find_network_interface does too much
+//!
+boolean is_network_interface_attached(ncInstance * pInstance, const char *sInterfaceId, const char *sAttachmentId)
+{
+    if ((pInstance != NULL) && (sInterfaceId != NULL) && (sAttachmentId != NULL)) {
+        for (int i = 0; i < EUCA_MAX_NICS; i++) {
+            if (!strncmp(pInstance->secNetCfgs[i].interfaceId, sInterfaceId, ENI_ID_LEN)) {
+                // if(!strncmp(pInstance->secNetCfgs[i].attachmentId, sAttachmentId, ENI_ATTACHMENT_ID_LEN) &&
+                if (!strncmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_ATTACHED, sizeof(VOL_STATE_ATTACHED)) ||
+                        !strncmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_ATTACHING, sizeof(VOL_STATE_ATTACHING))) {
+                    LOGDEBUG("[%s][%s][%s] network interface attachment found in state %s\n",
+                            pInstance->instanceId, pInstance->secNetCfgs[i].interfaceId,
+                            pInstance->secNetCfgs[i].attachmentId, pInstance->secNetCfgs[i].stateName);
+                    return TRUE;
+                } else {
+                    return FALSE;
+                }
             }
         }
     }
@@ -1199,6 +1267,7 @@ netConfig *save_network_interface(ncInstance * pInstance, const netConfig * pNet
         pNet->networkIndex =  pNetConfig->networkIndex;
         pNet->device = pNetConfig->device;
         pNet->vlan = pNetConfig->vlan;
+        euca_strncpy(pNet->attachmentId, pNetConfig->attachmentId, ENI_ATTACHMENT_ID_LEN);
 
         if (sStateName)
             euca_strncpy(pNet->stateName, sStateName, CHAR_BUFFER_SIZE);

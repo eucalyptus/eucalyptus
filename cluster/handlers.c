@@ -3635,7 +3635,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    int instIdsLen, char **netNames, int netNamesLen, char **netIds, int netIdsLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
                    char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
-                   char *platform, int expiryTime, char *targetNode, char *rootDirective, netConfig * secNetCfgs, int secNetCfgsLen, ccInstance ** outInsts, int *outInstsLen)
+                   char *platform, int expiryTime, char *targetNode, char *rootDirective, char *eniAttachmentId, netConfig * secNetCfgs, int secNetCfgsLen,
+                   ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0, pid = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
@@ -3657,9 +3658,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     LOGINFO("running instances\n");
     LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s, rootDirective=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId),
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s, rootDirective=%s, eniAttachmentId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId),
              SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId),
-             SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode), SP(rootDirective));
+             SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode), SP(rootDirective), SP(eniAttachmentId));
 
     if (config->use_proxy) {
         char objectStorageURL[EUCA_MAX_PATH], *strptr = NULL, newURL[EUCA_MAX_PATH];
@@ -3800,6 +3801,10 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             snprintf(ncnet.privateMac, ENET_ADDR_LEN, "%s", mac);
             snprintf(ncnet.privateIp, INET_ADDR_LEN, "%s", privip);
             snprintf(ncnet.publicIp, INET_ADDR_LEN, "%s", pubip);
+            if (eniAttachmentId != NULL)
+                snprintf(ncnet.attachmentId, ENI_ATTACHMENT_ID_LEN, "%s", eniAttachmentId);
+            else
+                ncnet.attachmentId[0] = '\0';
 
             sem_mywait(RESCACHE);
 
@@ -7114,9 +7119,9 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         out->volumesSize = volumesSize;
 
         if (ccnet)
-            allocate_netConfig(&(out->ccnet), ccnet->interfaceId, ccnet->device, ccnet->privateMac, ccnet->privateIp, ccnet->publicIp, NULL, ccnet->vlan, ccnet->networkIndex);
+            allocate_netConfig(&(out->ccnet), ccnet->interfaceId, ccnet->device, ccnet->privateMac, ccnet->privateIp, ccnet->publicIp, ccnet->attachmentId, ccnet->vlan, ccnet->networkIndex);
         if (ncnet)
-            allocate_netConfig(&(out->ncnet), ncnet->interfaceId, ncnet->device, ncnet->privateMac, ncnet->privateIp, ncnet->publicIp, NULL, ncnet->vlan, ncnet->networkIndex);
+            allocate_netConfig(&(out->ncnet), ncnet->interfaceId, ncnet->device, ncnet->privateMac, ncnet->privateIp, ncnet->publicIp, ncnet->attachmentId, ncnet->vlan, ncnet->networkIndex);
         if (ccvm)
             allocate_virtualMachine(&(out->ccvm), ccvm);
         if (secNetCfgs)
@@ -7338,19 +7343,20 @@ void print_ccInstance(char *tag, ccInstance * in)
     char str[CHAR_BUFFER_SIZE];
     for (i = 0; i < EUCA_MAX_NICS; i++) {
         if (in->secNetCfgs[i].interfaceId[0] != '\0') {
-            snprintf(str, sizeof(str), "interfaceId=%s,device=%d,privateIp=%s,publicIp=%s,privateMac=%s,vlan=%d,networkIndex=%d ",
+            snprintf(str, sizeof(str), "interfaceId=%s,device=%d,privateIp=%s,publicIp=%s,privateMac=%s,vlan=%d,networkIndex=%d,attachmentId=%s ",
                     in->secNetCfgs[i].interfaceId, in->secNetCfgs[i].device, in->secNetCfgs[i].privateIp, in->secNetCfgs[i].publicIp,
-                    in->secNetCfgs[i].privateMac, in->secNetCfgs[i].vlan, in->secNetCfgs[i].networkIndex);
+                    in->secNetCfgs[i].privateMac, in->secNetCfgs[i].vlan, in->secNetCfgs[i].networkIndex, in->secNetCfgs[i].attachmentId);
             strncat(secNetBuf, str, sizeof(str));
         }
     }
 
     LOGDEBUG("%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s "
-             "vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
+             "vlan=%d networkIndex=%d (vpc-only interfaceId=%s device=%d attachmentId=%s)} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s "
              "bundleTaskStateName=%s bundleTaskProgress=%0.4f volumesSize=%d volumes={%s} groupNames={%s} migration_state=%s guestStateName=%s "
              "hasFloopy=%s secondaryNetCfgsSize=%d secondaryNetCfgs={%s}\n",
              tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp,
-             in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk,
+             in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccnet.interfaceId, in->ccnet.device,
+             in->ccnet.attachmentId, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk,
              in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->bundleTaskProgress,
              in->volumesSize, volbuf, groupbuf, migration_state_names[in->migration_state], in->guestStateName, in->hasFloppy ? "true":"false",
              in->secNetCfgsSize, secNetBuf);

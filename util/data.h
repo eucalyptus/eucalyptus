@@ -575,7 +575,9 @@ boolean is_network_interface_used(const netConfig * pNetConfig);
 netConfig *save_network_interface(ncInstance * pInstance, const netConfig * pNetConfig, const char *sStateName);
 netConfig *free_network_interface(ncInstance * pInstance, const char *sInterfaceId);
 netConfig *find_network_interface(ncInstance * pInstance, const char *sInterfaceId);
+netConfig *find_network_interface_by_attachment(ncInstance * pInstance, const char *sAttachmentId);
 boolean is_network_interface_present(ncInstance * pInstance, const char *sInterfaceId);
+boolean is_network_interface_attached(ncInstance * pInstance, const char *sInterfaceId, const char *sAttachmentId);
 //! @}
 
 //! @{

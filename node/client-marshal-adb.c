@@ -356,6 +356,10 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     adb_netConfigType_set_publicIp(netConfig, env, netparams->publicIp);
     adb_netConfigType_set_vlan(netConfig, env, netparams->vlan);
     adb_netConfigType_set_networkIndex(netConfig, env, netparams->networkIndex);
+    if (strlen(netparams->attachmentId)) // vpc
+        adb_netConfigType_set_attachmentId(netConfig, env, netparams->attachmentId);
+    else // non-vpc
+        adb_netConfigType_reset_attachmentId(netConfig, env);
     adb_ncRunInstanceType_set_netParams(request, env, netConfig);
     adb_ncRunInstanceType_set_userData(request, env, userData);
     adb_ncRunInstanceType_set_credential(request, env, credential);
@@ -374,7 +378,7 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
         adb_ncRunInstanceType_add_groupIds(request, env, groupIds[i]);
     }
 
-    for (i = 0; i < secNetCfgsLen; i++) {
+    for (i = 0; i < secNetCfgsLen; i++) { // non-vpc
         adb_netConfigType_t *secNetConfig = adb_netConfigType_create(env);
         adb_netConfigType_set_interfaceId(secNetConfig, env, secNetCfgs[i].interfaceId);
         adb_netConfigType_set_device(secNetConfig, env, secNetCfgs[i].device);
@@ -383,6 +387,7 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
         adb_netConfigType_set_publicIp(secNetConfig, env, secNetCfgs[i].publicIp);
         adb_netConfigType_set_vlan(secNetConfig, env, secNetCfgs[i].vlan);
         adb_netConfigType_set_networkIndex(secNetConfig, env, secNetCfgs[i].networkIndex);
+        adb_netConfigType_set_attachmentId(secNetConfig, env, secNetCfgs[i].attachmentId);
         adb_ncRunInstanceType_add_secondaryNetConfig(request, env, secNetConfig);
     }
 

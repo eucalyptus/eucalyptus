@@ -1166,9 +1166,11 @@ class VmInstanceLifecycleHelpers {
               RestrictedTypes.resolver( VpcNetworkInterface ).apply( primaryInterface.value )
           builder.privateAddress( networkInterface.privateIpAddress )
           builder.macAddress( networkInterface.macAddress )
+          builder.primaryEniAttachmentId( networkInterface.attachment.attachmentId );
         } else {
           builder.privateAddress( primaryInterface.privateIp )
           builder.macAddress( primaryInterface.mac )
+          builder.primaryEniAttachmentId( primaryInterface.attachmentId );
         }
         
         // Handle secondary interfaces
@@ -1183,9 +1185,11 @@ class VmInstanceLifecycleHelpers {
                 RestrictedTypes.resolver( VpcNetworkInterface ).apply( secondaryInterface.value )
             netConfig.macAddress = networkInterface.macAddress
             netConfig.ipAddress = networkInterface.privateIpAddress
+            netConfig.attachmentId = networkInterface.attachment.attachmentId
           } else {
             netConfig.macAddress = secondaryInterface.mac
             netConfig.ipAddress = secondaryInterface.privateIp
+            netConfig.attachmentId = secondaryInterface.attachmentId
           }
           builder.secondaryNetConfig(netConfig)
         }
@@ -1236,6 +1240,7 @@ class VmInstanceLifecycleHelpers {
               new Date( ),
               resource.deleteOnTerminate
           ) )
+          resource.attachmentId = networkInterface.attachment.attachmentId;
           Address address = getAddress( resourceToken )
           if ( address != null ) {
             NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
@@ -1293,6 +1298,7 @@ class VmInstanceLifecycleHelpers {
                 new Date( ),
                 secondaryResource.deleteOnTerminate
             ) )
+            secondaryResource.attachmentId = secondaryNetworkInterface.attachment.attachmentId
             NetworkInterfaceHelper.start( secondaryNetworkInterface, instance )
             // Add so eni information is available from instance, not for
             // persistence

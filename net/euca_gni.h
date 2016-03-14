@@ -352,7 +352,7 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr);
 int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup);
 int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
-int gni_find_interface(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
+int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int * size);
 
 int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
                            int *out_max_clusters);

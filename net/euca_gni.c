@@ -445,28 +445,44 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
     return(1);
 }
 
-int gni_find_interface(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
-    int i = 0;
-
-    if (!gni || !psInstanceId || !pInstance) {
+//!
+//! Searches through the list of network interfaces in the gni returns all non-primary interfaces for a given instance
+//!
+//! @param[in] gni a pointer to the global network information structure
+//! @param[in] psInstanceId a pointer to instance ID identifier (i-XXXXXXX)
+//! @param[out] pAInstances an array of network interface pointers
+//! @param[out] size a pointer to the size of the array
+//!
+//! @return 0 if lookup is successful or 1 if a failure occurred
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int *size) {
+    if (!size || !gni || !psInstanceId || !sizeof(pAInstances)) {
         LOGERROR("invalid input\n");
-        return (1);
+        return EUCA_ERROR;
     }
-    // Initialize to NULL
-    (*pInstance) = NULL;
 
-    LOGDEBUG("attempting search for interface id %s in gni\n", psInstanceId);
+    *size = 0;
 
-    for (i = 0; i < gni->max_interfaces; i++) {
-        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].name);
-        if (!strcmp(psInstanceId, gni->interfaces[i].name)) {
-            (*pInstance) = &(gni->interfaces[i]);
-            return EUCA_OK;
+    LOGDEBUG("attempting search for interfaces for instance id %s in gni\n", psInstanceId);
+
+    for (int i=0; i < gni->max_interfaces; i++) {
+        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].instance_name.name);
+        if (!strcmp(gni->interfaces[i].instance_name.name, psInstanceId) && 
+            strcmp(gni->interfaces[i].name, psInstanceId)) {
+            pAInstances[*size] = &(gni->interfaces[i]);
+            (*size)++;
         }
     }
 
-    return(1);
+    return EUCA_OK;
 }
+
 //!
 //! Looks up through a list of configured node for the one that is associated with
 //! this currently running instance.

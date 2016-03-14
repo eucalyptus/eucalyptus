@@ -30,7 +30,7 @@
  *
  *   Redistribution and use of this software in source and binary forms,
  *   with or without modification, are permitted provided that the
- *   following conditions are met:
+ *   following conditions are met: 
  *
  *     Redistributions of source code must retain the above copyright
  *     notice, this list of conditions and the following disclaimer.
@@ -1669,18 +1669,18 @@ static int update_network_interface(char *instanceId, netConfig * netCfg, const 
     return ret;
 }
 
-int attach_network_interface_instance(const char *instanceId, const char *interfaceId, const char *libvirt_xml)
+int attach_network_interface_instance(const ncInstance *pInstance, const char *interfaceId, const char *libvirt_xml)
 {
     int ret = EUCA_OK;
 
     virConnectPtr conn = lock_hypervisor_conn();
     if (conn == NULL) {
-    LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, interfaceId);
+    LOGERROR("[%s][%s] cannot get connection to hypervisor\n", pInstance->instanceId, interfaceId);
         return EUCA_HYPERVISOR_ERROR;
     }
 
     // find domain on hypervisor
-    virDomainPtr dom = virDomainLookupByName(conn, instanceId);
+    virDomainPtr dom = virDomainLookupByName(conn, pInstance->instanceId);
     if (dom == NULL) {
         unlock_hypervisor_conn();
         return EUCA_HYPERVISOR_ERROR;
@@ -1688,19 +1688,38 @@ int attach_network_interface_instance(const char *instanceId, const char *interf
 
     int err = 0;
     for (int i = 1; i <= VOL_RETRIES; i++) {
+        LOGDEBUG("[%s][%s] attaching network interface to guest by invoking virDomainAttachDevice() with: %s\n", pInstance->instanceId, interfaceId, libvirt_xml);
         err = virDomainAttachDevice(dom, libvirt_xml);
         if (err) {
-            LOGERROR("[%s][%s] failed to attach network interface on attempt %d of 3\n", instanceId, interfaceId, i);
-            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, interfaceId, err, libvirt_xml);
+            LOGERROR("[%s][%s] failed to attach network interface to guest on attempt %d of 3\n", pInstance->instanceId, interfaceId, i);
+            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", pInstance->instanceId, interfaceId, err, libvirt_xml);
             sleep(3);                  // sleep a bit and retry.
         } else {
+            LOGTRACE("[%s][%s] attached network interface to guest, rc=%d\n", pInstance->instanceId, interfaceId, err);
+
+            // remove the instance interface
+            char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+
+            snprintf(iface, 16, "vn_%s", interfaceId);
+
+            // If this device does not have a 'brport' path, this isn't a bridge device
+            snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+            if (!check_directory(sPath)) {
+                LOGDEBUG("[%s][%s] removing instance interface %s from host bridge\n", pInstance->instanceId, interfaceId, iface);
+                snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
+                err = timeshell(cmd, obuf, ebuf, 256, 10);
+                if (err) {
+                    LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+                }
+            }
+
             break;
         }
     }
 
     if (err) {
-        LOGERROR("[%s][%s] failed to attach EBS guest device after %d tries\n", instanceId, interfaceId, VOL_RETRIES);
-        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, interfaceId, err, libvirt_xml);
+        LOGERROR("[%s][%s] failed to attach network device to guest after %d tries\n", pInstance->instanceId, interfaceId, VOL_RETRIES);
+        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", pInstance->instanceId, interfaceId, err, libvirt_xml);
         ret = EUCA_ERROR;
     }
 
@@ -1728,11 +1747,24 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     char lpath[EUCA_MAX_PATH];
     char *libvirt_xml = NULL;
 
-    // Get the instance path
-    if ((ret = get_instance_path(instanceId, ipath, sizeof(ipath)))) {
-        LOGERROR("[%s][%s] failed to find instance for a network interface attach operation\n", instanceId, netCfg->interfaceId);
-        return EUCA_ERROR;
+    LOGINFO("[%s][%s][%s] processing attach network interface request\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
+
+    // Get the instance
+    ncInstance *instance = find_instance(&global_instances, instanceId);
+    assert(instance != NULL);
+
+    if (is_network_interface_attached(instance, netCfg->interfaceId, netCfg->attachmentId)) {
+        LOGDEBUG("[%s][%s][%s] network interface is either attaching or attached\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
+        return EUCA_OK;
     }
+
+    // Get the instance path
+    euca_strncpy(ipath, instance->instancePath, EUCA_MAX_PATH);
+
+//    if ((ret = get_instance_path(instanceId, ipath, sizeof(ipath)))) {
+//        LOGERROR("[%s][%s] failed to find instance for a network interface attach operation\n", instanceId, netCfg->interfaceId);
+//        return EUCA_ERROR;
+//    }
 
     // Save network interface to instance structure, that should generate the network interface xml
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHING))) {
@@ -1759,7 +1791,7 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     }
 
     // Invoke libvirt attach device from an xml
-    if ((ret = attach_network_interface_instance(instanceId, netCfg->interfaceId, libvirt_xml))) {
+    if ((ret = attach_network_interface_instance(instance, netCfg->interfaceId, libvirt_xml))) {
         LOGERROR("[%s][%s] libvirt attach device failed\n", instanceId, netCfg->interfaceId)
         // TODO cleanup and update state
         return ret;
@@ -1771,6 +1803,8 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
         // TODO cleanup and update state
         return ret;
     }
+
+    LOGINFO("[%s][%s][%s] attached network interface successfully\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
 
     return ret;
 }
@@ -1825,11 +1859,24 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     char lpath[EUCA_MAX_PATH];
     char *libvirt_xml = NULL;
 
-    // Get the instance and netCfg path
+    LOGINFO("[%s][%s] processing detach network interface request\n", instanceId, attachmentId);
+
+    // Get the instance
     ncInstance *instance = find_instance(&global_instances, instanceId);
-    netCfg = find_network_interface(instance, attachmentId);
     assert(instance != NULL);
-    assert(netCfg != NULL);
+
+    // Get the network interface
+    netCfg = find_network_interface_by_attachment(instance, attachmentId);
+    if (netCfg == NULL) {
+        LOGERROR("[%s][%s] no such network interface found\n", instanceId, attachmentId);
+        return EUCA_ERROR;
+    }
+
+    if (!strncmp(netCfg->stateName, VOL_STATE_DETACHING, sizeof(VOL_STATE_DETACHING)) ||
+            !strncmp(netCfg->stateName, VOL_STATE_DETACHED, sizeof(VOL_STATE_DETACHED))) {
+        LOGDEBUG("[%s][%s] network interface is either detaching or detached\n", instanceId, attachmentId);
+        return EUCA_OK;
+    }
 
     euca_strncpy(ipath, instance->instancePath, EUCA_MAX_PATH);
 
@@ -1841,7 +1888,7 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     }
 
     // Read libvirt xml content into a string
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_NIC_LIBVIRT_XML_PATH_FORMAT, ipath, attachmentId);
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_NIC_LIBVIRT_XML_PATH_FORMAT, ipath, netCfg->interfaceId);
     lpath[sizeof(lpath) - 1] = '\0';
     libvirt_xml = file2str(lpath);
     if (libvirt_xml == NULL) {
@@ -1868,6 +1915,8 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
         // TODO is there any clean up to be done here?
         return ret;
     }
+
+    LOGINFO("[%s][%s] detached network interface successfully\n", instanceId, attachmentId);
 
     return EUCA_OK;
 }
@@ -2806,97 +2855,115 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
  * @return     EUCA_OK on success or proper error code.
  */
 int attach_or_detach(bunchOfInstances **pHead, ncInstance *pInstance, void *pData){
-    LOGDEBUG("attach_or_detach enter for instanceId %s\n", pInstance->instanceId);
-    if (pInstance->state != RUNNING) return EUCA_OK;
+    if (pInstance->state != RUNNING) {
+        LOGDEBUG("[%s] skipping network interface check since instance state is not running\n", pInstance->instanceId);
+        return EUCA_OK;
+    } else {
+        LOGDEBUG("[%s] compare local network state with gni\n", pInstance->instanceId);
+    }
 
     globalNetworkInfo *gni = (globalNetworkInfo*) pData;
-    int rc = EUCA_OK, i = 0;
-    gni_instance *gniInstance = NULL;
+    int rc = EUCA_OK;
 
-    rc = gni_find_instance(gni, pInstance->instanceId, &gniInstance);
-    if (rc && NULL == gniInstance) {
-        LOGERROR("failed to find instance id %s in gni\n", pInstance->instanceId);
-        return EUCA_ERROR;
+    // Gather all secondary network interfaces for the instance
+    gni_instance * arrayOfInterfaces[EUCA_MAX_NICS] = {NULL};
+    int arraySize = 0;
+    rc = gni_find_secondary_interfaces(gni, pInstance->instanceId, arrayOfInterfaces, &(arraySize));
+    if (rc || !arraySize) {
+        LOGDEBUG("[%s] no secondary network interfaces found in gni\n", pInstance->instanceId);
+    } else {
+        LOGDEBUG("[%s] found %d secondary network interface(s) in gni\n", pInstance->instanceId, arraySize);
     }
 
-    for (i = 0; i < EUCA_MAX_NICS; i++){
-        gni_instance *secInstance = NULL;
-
-        LOGDEBUG("do detach detection %d of %d\n", i, EUCA_MAX_NICS);
-        if(strlen(pInstance->secNetCfgs[i].attachmentId) == 0 || 
-           strcmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_DETACHED) == 0 ||
-           pInstance->secNetCfgs[i].device == 0) {
-            LOGDEBUG("skipping empty, detached, or device 0 netconfg %d\n", i);
+    // Compute detachments for the instance
+    // Outer loop - local state (secondary network interfaces)
+    // Inner loop - gni (secondary network interfaces)
+    // For every network interface in local state, check if the gni contains a corresponding network interface. If found do nothing, else detach
+    for (int netIdx = 0; netIdx < EUCA_MAX_NICS; netIdx++){
+        if (strlen(pInstance->secNetCfgs[netIdx].attachmentId) == 0 ||
+                strcmp(pInstance->secNetCfgs[netIdx].stateName, VOL_STATE_DETACHED) == 0 ||
+                strcmp(pInstance->secNetCfgs[netIdx].stateName, VOL_STATE_DETACHING) == 0) {
+            LOGTRACE("[%s] skipping empty, detaching or detached network interface in slot %d\n", pInstance->instanceId, netIdx);
             continue;
-        } 
-
-        LOGDEBUG("attempting to locate interface %s in GNI\n", pInstance->secNetCfgs[i].attachmentId);
-        rc = gni_find_interface(gni, pInstance->secNetCfgs[i].attachmentId, &secInstance);
-
-        LOGDEBUG("found %p %d\n", secInstance, rc);
-
-        if (rc && NULL == secInstance) {
-            LOGINFO("failed to find interface %s in gni for instance %s, attempting detach\n", pInstance->secNetCfgs[i].attachmentId, pInstance->instanceId);
-            rc = doDetachNetworkInterface(NULL, NULL, pInstance->instanceId, pInstance->secNetCfgs[i].attachmentId, 1);
         }
 
+        boolean found = FALSE;
         rc = EUCA_OK;
-    }
 
-    for (i = 0; i < gniInstance->max_interface_names; i++) {
-        LOGDEBUG("do attach detection %d of (%d) %s\n", i, gniInstance->max_interface_names, gniInstance->interface_names[i].name);
-
-        if (!is_network_interface_present(pInstance, gniInstance->interface_names[i].name) || 
-            strcmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_DETACHED) == 0) {
-            gni_instance *gniInstanceInterface = NULL;
-            netConfig nc = {0};
-
-            LOGDEBUG("attempting to locate interface %s in GNI\n", gniInstance->interface_names[i].name);
-            rc = gni_find_interface(gni, gniInstance->interface_names[i].name, &gniInstanceInterface);
-
-            LOGDEBUG("found %p %d\n", gniInstanceInterface, rc);
-            
-            if (rc && NULL == gniInstanceInterface) {
-                LOGWARN("failed to find interface %s for instance %s in gni\n", gniInstance->interface_names[i].name, pInstance->instanceId);
-                continue;
+        LOGDEBUG("[%s][%s][%s] evaluating if network interface detach is necessary in slot %d of %d\n",
+                pInstance->instanceId, pInstance->secNetCfgs[netIdx].interfaceId, pInstance->secNetCfgs[netIdx].attachmentId, netIdx, (EUCA_MAX_NICS-1));
+        for(int gniIdx = 0; gniIdx < arraySize; gniIdx++) {
+            gni_instance *gniNetworkInterface = arrayOfInterfaces[gniIdx];
+            if (!strncmp(gniNetworkInterface->attachmentId, pInstance->secNetCfgs[netIdx].attachmentId, ENI_ATTACHMENT_ID_LEN)) {
+                LOGDEBUG("[%s][%s][%s] gni and local state contain network interface attachment, detach not required\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId)
+                found = TRUE;
+                arrayOfInterfaces[gniIdx] = NULL; //set to null since there shouldn't be any other action for this interface.
+                break;
             }
-
-            if (gniInstanceInterface->deviceidx == 0) {
-                LOGDEBUG("skipping device 0 for interface %s\n", gniInstanceInterface->name);
-                continue;
-            }
-
-            char *strmac = {0}, *strprivip = {0}, *strpubip = {0};
-            hex2mac(gniInstanceInterface->macAddress, (void*) &strmac);
-
-            strprivip = hex2dot(gniInstanceInterface->privateIp);
-            strpubip = hex2dot(gniInstanceInterface->publicIp);
-
-            rc = allocate_netConfig(&nc, 
-                                    gniInstanceInterface->name, 
-                                    gniInstanceInterface->deviceidx,
-                                    strmac,
-                                    strprivip,
-                                    strpubip, 
-                                    gniInstanceInterface->attachmentId, -1, -1);
-
-            EUCA_FREE(strmac);
-            EUCA_FREE(strprivip);
-            EUCA_FREE(strpubip);
-
-            if(rc) {
-                LOGERROR("failed to allocate network config for interface %s and instance %s\n", gniInstance->interface_names[i].name, pInstance->instanceId);
-                return EUCA_ERROR;
-            }
-
-            LOGINFO("failed to find interface %s for instance %s, attempting attach\n", gniInstance->interface_names[i].name, pInstance->instanceId);
-            rc = doAttachNetworkInterface(NULL, NULL, pInstance->instanceId, &nc);
         }
 
-        rc = EUCA_OK;
+        if (!found) {
+            // detach
+            LOGDEBUG("[%s][%s][%s] gni does not contain network interface attachment but local state does, invoking detach\n",
+                    pInstance->instanceId, pInstance->secNetCfgs[netIdx].interfaceId, pInstance->secNetCfgs[netIdx].attachmentId);
+            rc = doDetachNetworkInterface(NULL, NULL, pInstance->instanceId, pInstance->secNetCfgs[netIdx].attachmentId, 1);
+            if (rc) {
+                LOGERROR("[%s][%s][%s] failed to detach network interface", pInstance->instanceId, pInstance->secNetCfgs[netIdx].interfaceId, pInstance->secNetCfgs[netIdx].attachmentId);
+            }
+        }
     }
 
-    return EUCA_ERROR;
+    // Compute attachments for the instance
+    // Outer loop - gni secondary network interfaces
+    // Inner loop - local secondary network interfaces
+    // For every network interface in gni, check if the local state contains a corresponding network interface. If found do nothing, else attach
+    for (int gniIdx = 0; gniIdx < arraySize; gniIdx++) {
+        gni_instance *gniNetworkInterface = arrayOfInterfaces[gniIdx];
+        if (gniNetworkInterface != NULL && strcmp(gniNetworkInterface->name, pInstance->instanceId)) {
+            LOGDEBUG("[%s][%s][%s] evaluating if network interface attach is necessary\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId)
+
+            if (is_network_interface_attached(pInstance, gniNetworkInterface->name, gniNetworkInterface->attachmentId)) {
+                LOGDEBUG("[%s][%s][%s] gni and local state contain network interface attachment, attach not required\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId);
+                continue;
+            } else {
+                LOGDEBUG("[%s][%s][%s] gni contains network interface attachment but local state does not, invoking attach\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId);
+
+                rc = EUCA_OK;
+                netConfig net = {0};
+                char *strmac = {0}, *strprivip = {0}, *strpubip = {0};
+                hex2mac(gniNetworkInterface->macAddress, (void*) &strmac);
+                strprivip = hex2dot(gniNetworkInterface->privateIp);
+                strpubip = hex2dot(gniNetworkInterface->publicIp);
+
+                rc = allocate_netConfig(&net,
+                        gniNetworkInterface->name,
+                        gniNetworkInterface->deviceidx,
+                        strmac,
+                        strprivip,
+                        strpubip,
+                        gniNetworkInterface->attachmentId,
+                        -1, -1);
+
+                EUCA_FREE(strmac);
+                EUCA_FREE(strprivip);
+                EUCA_FREE(strpubip);
+
+                if (rc) {
+                    LOGERROR("[%s] failed to allocate netConfig structure for interface %s\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name);
+                    continue;
+                }
+
+                rc = doAttachNetworkInterface(NULL, NULL, pInstance->instanceId, &net);
+                if (rc) {
+                    LOGERROR("[%s][%s][%s] failed to attach network interface", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId);
+                }
+            }
+        } else {
+            LOGDEBUG("interface at index %d, this network interface may have been evaluated\n", gniIdx);
+        }
+    }
+
+    return EUCA_OK;
 }
 
 /**

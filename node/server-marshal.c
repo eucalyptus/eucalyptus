@@ -544,6 +544,11 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         snprintf(netparams.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(net_type, env));
         snprintf(netparams.interfaceId, ENI_ID_LEN, "%s", adb_netConfigType_get_interfaceId(net_type, env));
         netparams.device = adb_netConfigType_get_device(net_type, env);
+        if (adb_netConfigType_is_attachmentId_nil(net_type, env)) // non-vpc
+            netparams.attachmentId[0] = '\0';
+        else // vpc
+            euca_strncpy(netparams.attachmentId, adb_netConfigType_get_attachmentId(net_type, env), ENI_ATTACHMENT_ID_LEN);
+
         // Handle secondary network interfaces
         secNetCfgsLen = adb_ncRunInstanceType_sizeof_secondaryNetConfig(input, env);
         if (secNetCfgsLen > EUCA_MAX_NICS) {// Warn that number of net configs is greater than supported
@@ -560,6 +565,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
            euca_strncpy(secNetCfgs[i].privateMac, adb_netConfigType_get_privateMacAddress(net, env), ENET_ADDR_LEN);
            euca_strncpy(secNetCfgs[i].privateIp, adb_netConfigType_get_privateIp(net, env), INET_ADDR_LEN);
            euca_strncpy(secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(net, env), INET_ADDR_LEN);
+           euca_strncpy(secNetCfgs[i].attachmentId, adb_netConfigType_get_attachmentId(net, env), ENI_ATTACHMENT_ID_LEN);
         }
         userData = adb_ncRunInstanceType_get_userData(input, env);
         credential = adb_ncRunInstanceType_get_credential(input, env);

@@ -599,7 +599,7 @@
 	<xs:element name="publicIp" type="xs:string"/>
 	<xs:element name="vlan" type="xs:int"/>
 	<xs:element name="networkIndex" type="xs:int"/>
-	<xs:element name="attachmentId" type="xs:string"/>
+	<xs:element minOccurs="0" maxOccurs="1" name="attachmentId" type="xs:string"/>
       </xs:sequence>
     </xs:complexType>
 
