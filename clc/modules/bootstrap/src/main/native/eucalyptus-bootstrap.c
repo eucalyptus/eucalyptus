@@ -103,6 +103,15 @@
 
 #define _LINUX_FS_H
 
+// Helper function for logging and debugging. Helps track process tree
+static pid_t wrapped_fork() {
+  pid_t p = fork();
+  if(p != 0) __debug("Forked child %d", p);
+  return p;
+}
+
+
+
 extern char **environ;
 pid_t child_pid = 0;
 char *java_library(euca_opts *, java_home_t *);
@@ -244,7 +253,7 @@ static int checkuser(char *user, uid_t * uid, gid_t * gid)
     __abort(0, (pwds == NULL), "Invalid user name '%s' specified", user);
     *uid = pwds->pw_uid;
     *gid = pwds->pw_gid;
-    pid = fork();
+    pid = wrapped_fork();
     __abort(0, (pid == -1), "Cannot validate user name");
     if (pid == 0) {
         __die(set_user_group(user, *uid, *gid) != 0, "set_user_group failed.");
@@ -398,9 +407,9 @@ static int __update_limit(int resource, long long value)
     return 0;
 }
 
-static void __limits(void)
+static void __limits(int fileno_limit)
 {
-    __update_limit(RLIMIT_NOFILE, LIMIT_FILENO);
+    __update_limit(RLIMIT_NOFILE, fileno_limit);
     __update_limit(RLIMIT_NPROC, LIMIT_NPROC);
 }
 
@@ -410,7 +419,7 @@ static int child(euca_opts * args, java_home_t * data, uid_t uid, gid_t gid)
     jboolean r = 0;
     __write_pid(GETARG(args, pidfile));
     setpgrp();
-    __limits();
+    __limits(GETARG(args,fdlimit));
     __die(java_init(args, data) != 1, "Failed to initialize Eucalyptus.");
     __die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance, bootstrap.init)) == 0, "Failed to init Eucalyptus.");
     __abort(4, set_keys_ownership(GETARG(args, home), uid, gid) != 0, "Setting ownership of keyfile failed.");
@@ -552,13 +561,13 @@ int main(int argc, char *argv[])
     }
     __debug("Running w/ LD_LIBRARY_PATH=%s", getenv("LD_LIBRARY_PATH"));
     if (args->fork_flag) {
-        pid = fork();
+        pid = wrapped_fork();
         __die((pid == -1), "Cannot detach from parent process");
         if (pid != 0)
             return wait_child(args, pid);
         setsid();
     }
-    while ((pid = fork()) != -1) {
+    while ((pid = wrapped_fork()) != -1) {
         if (pid == 0)
             exit(child(args, data, uid, gid));
         child_pid = pid;

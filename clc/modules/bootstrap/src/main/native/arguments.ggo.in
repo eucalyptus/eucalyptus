@@ -90,6 +90,7 @@ option "fork"                  f   "Fork and daemonize Eucalyptus."             
 option "kill"                  k   "Kill a daemonized Eucalyptus."                     flag                              off
 option "pidfile"               -   "Location for the pidfile."                         string  typestr="FILENAME"        default="@prefix@/var/run/eucalyptus/eucalyptus-cloud.pid" no
 option "db-home"               -   "Set path to database home directory"               string  typestr="DIRECTORY"       default="" 	        no     hidden # DEPRRECATED
+option "fdlimit"               -   "File descriptor limit effective on jvm"            int                               default="65535"        no 
 ######                   #       #                                                    #       #                         #                      #      #           
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Logging Configuration"  #                                                    #       #                         #                      #      #

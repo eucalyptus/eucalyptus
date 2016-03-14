@@ -101,6 +101,9 @@ struct eucalyptus_opts
   char * db_home_arg;	/**< @brief Set path to database home directory (default='').  */
   char * db_home_orig;	/**< @brief Set path to database home directory original value given at command line.  */
   const char *db_home_help; /**< @brief Set path to database home directory help description.  */
+  int fdlimit_arg;	/**< @brief File descriptor limit effective on jvm (default='65535').  */
+  char * fdlimit_orig;	/**< @brief File descriptor limit effective on jvm original value given at command line.  */
+  const char *fdlimit_help; /**< @brief File descriptor limit effective on jvm help description.  */
   char * log_level_arg;	/**< @brief Control the log level for console output. (default='INFO').  */
   char * log_level_orig;	/**< @brief Control the log level for console output. original value given at command line.  */
   const char *log_level_help; /**< @brief Control the log level for console output. help description.  */
@@ -196,6 +199,7 @@ struct eucalyptus_opts
   unsigned int kill_given ;	/**< @brief Whether kill was given.  */
   unsigned int pidfile_given ;	/**< @brief Whether pidfile was given.  */
   unsigned int db_home_given ;	/**< @brief Whether db-home was given.  */
+  unsigned int fdlimit_given ;	/**< @brief Whether fdlimit was given.  */
   unsigned int log_level_given ;	/**< @brief Whether log-level was given.  */
   unsigned int log_appender_given ;	/**< @brief Whether log-appender was given.  */
   unsigned int exhaustive_given ;	/**< @brief Whether exhaustive was given.  */
