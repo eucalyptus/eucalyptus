@@ -82,6 +82,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -767,6 +768,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
     kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.getDomain()));
     kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.getDomain()));
     kvMap.put("objectstorage_service_url", String.format("objectstorage.%s", DNSProperties.getDomain()));
+    kvMap.put("webservice_port", String.format("%d", StackConfiguration.PORT));
     if(ownerAccountNumber!=null)
       kvMap.put("loadbalancer_owner_account", ownerAccountNumber);
     

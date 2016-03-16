@@ -81,11 +81,11 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LoadBalancer loadbalancer = null;
   
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies", cascade = CascadeType.REMOVE )
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies")
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<LoadBalancerListener> listeners = null;
 
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions", cascade = CascadeType.REMOVE )
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<LoadBalancerBackendServerDescription> backendServers = null;
   
