@@ -105,7 +105,7 @@
 #define MIDO_HOST_INTERFACE_ENDPOINT_ALL       0xFFFFFFFF
 #define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
 
-#define MIDONAME_LIST_DEFAULT_CAPACITY   50
+#define MIDONAME_LIST_CAPACITY_STEP   50
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -197,6 +197,28 @@ enum vpc_route_entry_target_t {
     VPC_TARGET_INVALID
 };
 
+enum mido_rule_type_t {
+    MIDO_RULE_INVALID,
+    MIDO_RULE_SG_EGRESS,
+    MIDO_RULE_SG_INGRESS
+};
+
+enum mido_chain_rule_elements_t {
+    MIDO_CRULE_PROTO,
+    MIDO_CRULE_NW,
+    MIDO_CRULE_NWLEN,
+    MIDO_CRULE_TPS,
+    MIDO_CRULE_TPS_S,
+    MIDO_CRULE_TPS_E,
+    MIDO_CRULE_TPS_END,
+    MIDO_CRULE_TPD,
+    MIDO_CRULE_TPD_S,
+    MIDO_CRULE_TPD_E,
+    MIDO_CRULE_TPD_END,
+    MIDO_CRULE_GRPUUID,
+    MIDO_CRULE_END
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -216,7 +238,7 @@ typedef struct midoname_t {
 } midoname;
 
 typedef struct midoname_list_t {
-    midoname *mnames;
+    midoname **mnames;
     int size;
     int capacity;
 } midoname_list;
@@ -254,6 +276,10 @@ typedef struct mido_resource_bridge_t {
     int max_ports;
     int max_dhcps;
 } mido_resource_bridge;
+
+typedef struct mido_parsed_chain_rule_t {
+    char jsonel[MIDO_CRULE_END][64];
+} mido_parsed_chain_rule;
 
 typedef struct mido_resource_chain_t {
     midoname resc;
@@ -533,7 +559,7 @@ int mido_delete_chain(midoname * name);
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 
 //int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int *next_position, ...);
-int mido_create_rule(midoname *chain, midoname *outname, midoname **memorules, int max_memorules, int *next_position, ...);
+int mido_create_rule(midoname *chain, midoname *outname, midoname **memorules, int max_memorules, midoname **outmemorule, int *next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
 int mido_find_rule_from_list(midoname **rules, int max_rules, midoname *outrule, ...);

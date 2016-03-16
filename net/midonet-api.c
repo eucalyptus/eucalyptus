@@ -1624,7 +1624,8 @@ int mido_find_rule_from_list(midoname **rules, int max_rules, midoname *outrule,
 //!
 //! @note
 //!
-int mido_create_rule(midoname * chain, midoname * outname, midoname **memorules, int max_memorules, int * next_position, ...)
+int mido_create_rule(midoname *chain, midoname *outname, midoname **memorules,
+        int max_memorules, midoname **outmemorule, int * next_position, ...)
 {
     int rc = 0, ret = 0, max_rules = 0, found = 0, i = 0;
     midoname myname;
@@ -1645,49 +1646,55 @@ int mido_create_rule(midoname * chain, midoname * outname, midoname **memorules,
     myname.content_type = strdup("Rule");
     myname.vers = strdup("v2");
 
-    if ((midonet_api_dirty_cache == 0) && (memorules != NULL)) {
-        LOGTRACE("Checking %d rules in memory.\n", max_memorules);
-        rules = memorules;
-        max_rules = max_memorules;
-        rc = 0;
-    } else {
-        if (midonet_api_dirty_cache == 1) {
-            rc = mido_get_rules(chain, &midorules, &max_rules);
-            if (max_rules > 0) {
-                pmidorules = EUCA_ZALLOC(max_rules, sizeof (midoname **));
-                for (int j = 0; j < max_rules; j++) {
-                    pmidorules[j] = &(midorules[j]);
+    if (outmemorule != NULL) {
+        if ((midonet_api_dirty_cache == 0) && (memorules != NULL)) {
+            LOGTRACE("Checking %d rules in memory.\n", max_memorules);
+            rules = memorules;
+            max_rules = max_memorules;
+            rc = 0;
+        } else {
+            if (midonet_api_dirty_cache == 1) {
+                rc = mido_get_rules(chain, &midorules, &max_rules);
+                LOGTRACE("Checking %d rules from mido.\n", max_rules);
+                if (max_rules > 0) {
+                    pmidorules = EUCA_ZALLOC(max_rules, sizeof (midoname **));
+                    for (int j = 0; j < max_rules; j++) {
+                        pmidorules[j] = &(midorules[j]);
+                    }
                 }
+                gotrules = TRUE;
+                rules = pmidorules;
             }
-            gotrules = TRUE;
-            rules = pmidorules;
         }
-    }    
 
-    if (!rc) {
-        found = 0;
-        for (i = 0; i < max_rules && !found; i++) {
-            if (rules[i]->init == 0) {
-                continue;
-            }
-            va_copy(ap1, ap);
-            rc = mido_cmp_midoname_to_input_json_v(rules[i], &ap1);
-            va_end(ap1);
-            if (!rc) {
-                if ((outname) && (outname != rules[i])) {
-                    mido_copy_midoname(outname, rules[i]);
+        if (!rc) {
+            found = 0;
+            for (i = 0; i < max_rules && !found; i++) {
+                if (rules[i]->init == 0) {
+                    continue;
                 }
-                found = 1;
-                LOGTRACE("FOUND RULE: %s\n", rules[i]->jsonbuf);
+                va_copy(ap1, ap);
+                rc = mido_cmp_midoname_to_input_json_v(rules[i], &ap1);
+                va_end(ap1);
+                if (!rc) {
+                    if ((outname) && (outname != rules[i])) {
+                        mido_copy_midoname(outname, rules[i]);
+                    }
+                    if (outmemorule) {
+                        *outmemorule = rules[i];
+                    }
+                    found = 1;
+                    LOGTRACE("FOUND RULE: %s\n", rules[i]->jsonbuf);
+                }
             }
         }
-    }
-    
-    if (gotrules) {
-        mido_free_midoname_list(midorules, max_rules);
-        EUCA_FREE(midorules);
-        if (pmidorules) {
-            EUCA_FREE(pmidorules);
+
+        if (gotrules) {
+            mido_free_midoname_list(midorules, max_rules);
+            EUCA_FREE(midorules);
+            if (pmidorules) {
+                EUCA_FREE(pmidorules);
+            }
         }
     }
 
@@ -4192,6 +4199,7 @@ int mido_check_state(void) {
 //!
 midoname_list *midoname_list_new(void) {
     midoname_list *res = NULL;
+    midoname *mnarr = NULL;
 
     LOGTRACE("Creating a new midoname_list.\n");
     res = EUCA_ZALLOC(1, sizeof (midoname_list));
@@ -4199,12 +4207,22 @@ midoname_list *midoname_list_new(void) {
         LOGFATAL("out of memory - allocating midoname_list.\n");
         return NULL;
     }
-    res->capacity = MIDONAME_LIST_DEFAULT_CAPACITY;
-    res->mnames = EUCA_ZALLOC(res->capacity, sizeof (midoname));
+    res->capacity = MIDONAME_LIST_CAPACITY_STEP;
+    res->mnames = EUCA_ZALLOC(MIDONAME_LIST_CAPACITY_STEP, sizeof (midoname *));
     if (res->mnames == NULL) {
-        LOGFATAL("out of memory - allocating midoname buffer for midoname_list.\n");
+        LOGFATAL("out of memory - allocating array of pointers for midoname_list.\n");
         EUCA_FREE(res);
         return NULL;
+    }
+    mnarr = EUCA_ZALLOC(res->capacity, sizeof (midoname));
+    if (mnarr == NULL) {
+        LOGFATAL("out of memory - allocating buffer for midoname list.\n");
+        EUCA_FREE(res->mnames);
+        EUCA_FREE(res);
+        return NULL;
+    }
+    for (int i = 0; i < res->capacity; i++) {
+        res->mnames[i] = &(mnarr[i]);
     }
     return (res);
 }
@@ -4228,7 +4246,9 @@ int midoname_list_free(midoname_list *list) {
     if (list == NULL) {
         return (0);
     }
-    mido_free_midoname_list(list->mnames, list->size);
+    for (int i = 0; i < list->size; i++) {
+        mido_free_midoname(list->mnames[i]);
+    }
     EUCA_FREE(list->mnames);
     bzero(list, sizeof (midoname_list));
     EUCA_FREE(list);
@@ -4251,17 +4271,25 @@ int midoname_list_free(midoname_list *list) {
 //!
 midoname *midoname_list_get_midoname(midoname_list *list) {
     midoname *res = NULL;
-    LOGTRACE("Retrieving an unused midoname element.\n");
+    midoname *mnarr = NULL;
+    LOGTRACE("Retrieving an unused midoname element %d/%d\n", list->size, list->capacity);
     if (list->size == list->capacity) {
-        list->mnames = EUCA_REALLOC(list->mnames, list->capacity + MIDONAME_LIST_DEFAULT_CAPACITY, sizeof (midoname));
-        bzero(&(list->mnames[list->capacity]), MIDONAME_LIST_DEFAULT_CAPACITY * sizeof (midoname));
-        list->capacity += MIDONAME_LIST_DEFAULT_CAPACITY;
+        list->mnames = EUCA_REALLOC(list->mnames, list->capacity + MIDONAME_LIST_CAPACITY_STEP, sizeof (midoname *));
         if (list->mnames == NULL) {
-            LOGFATAL("out of memory - (re)allocating midoname buffer for midoname_list.\n ");
+            LOGFATAL("out of memory - (re)allocating array of midoname pointers for midoname_list.\n ");
             return NULL;
         }
+        mnarr = EUCA_ZALLOC(MIDONAME_LIST_CAPACITY_STEP, sizeof (midoname));
+        if (mnarr == NULL) {
+            LOGFATAL("out of memory - allocating additional midoname buffer for midoname list.\n");
+            return NULL;
+        }
+        list->capacity += MIDONAME_LIST_CAPACITY_STEP;
+        for (int i = 0; i < MIDONAME_LIST_CAPACITY_STEP; i++) {
+            list->mnames[list->size + i] = &(mnarr[i]);
+        }
     }
-    res = &(list->mnames[list->size]);
+    res = list->mnames[list->size];
     (list->size)++;
     return res;
 }

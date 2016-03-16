@@ -218,9 +218,15 @@ int find_mido_vpc_subnet_routes(mido_config *mido, mido_vpc *vpc, mido_vpc_subne
 
 int populate_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
 int create_mido_vpc_secgroup(mido_config * mido, mido_vpc_secgroup * vpcsecgroup);
+int create_mido_vpc_secgroup_rule(midoname *chain, midoname *outname,
+        midoname **memorules, int max_memorules, midoname **outmemorule,
+        int *next_pos, int pos, int ruletype, mido_parsed_chain_rule *rule);
 //int delete_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup);
 int delete_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup);
 int find_mido_vpc_secgroup(mido_config * mido, char *secgroupname, mido_vpc_secgroup ** outvpcsecgroup);
+
+int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
+int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
 int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, midoname *vmhost, char *instanceDNSDomain);
 
