@@ -62,7 +62,7 @@ export EUCAPKGS=~/euca/pkgs
 
 # Define the required JAVA environment variables
 # (Verify these are correct for your system)
-export JAVA_HOME="/usr/lib/jvm/java-1.7.0/"
+export JAVA_HOME="/usr/lib/jvm/java-1.8.0/"
 export JAVA="$JAVA_HOME/bin/java"
 #------------------------
 
