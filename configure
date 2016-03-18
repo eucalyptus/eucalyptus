@@ -4965,8 +4965,7 @@ fi
 if test -z "$JAVA" ; then
         as_fn_error $? "Cannot find java!" "$LINENO" 5
 fi
-java_version=`$JAVA -version 2>&1 | grep "java version" | \
-        sed -e 's/.*java version "\(.*\)".*/\1/'`
+java_version=`$JAVA -version 2>&1 | head -n 1 | awk -F '"' '{print $2}'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         as_fn_error $? "Eucalyptus needs at least JDK version $java_min_version" "$LINENO" 5
