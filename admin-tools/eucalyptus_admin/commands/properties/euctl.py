@@ -123,9 +123,10 @@ class Euctl(PropertiesRequest):
                     editor, vi(1).'''),
                 Arg('--dump', action='store_true', help='''Output the value of
                     a structure variable in its entirety.''')),
-            Arg('--format', choices=('raw', 'json', 'yaml'), default='json',
+            Arg('--format', choices=('json', 'yaml', 'raw'), default='json',
                 help='''Try to use the specified format when displaying
-                a structure variable.  (default: json)''')]
+                a structure variable.  "raw" is only allowed with --dump.
+                (default: json)''')]
 
     def configure(self):
         PropertiesRequest.configure(self)
@@ -134,23 +135,30 @@ class Euctl(PropertiesRequest):
             argcheck = '--dump'
         elif self.args.get('edit'):
             argcheck = '--edit'
+            if self.args.get('format') == 'raw':
+                raise ArgumentError(
+                    'argument --format: "raw" is only allowed with --dump')
         if argcheck:
             if len(self.args.get('prop_pairs') or []) != 1:
                 raise ArgumentError(
                     'argument {0} must be accompanied by exactly one '
-                    'property name'.format(argcheck))
+                    'variable name'.format(argcheck))
             if self.args.get('prop_pairs')[0][1]:
                 raise ArgumentError(
                     'argument {0}: a value may not accompany the '
-                    'property name'.format(argcheck))
+                    'variable name'.format(argcheck))
+            if self.args.get('prop_pairs')[0][0] not in PROPERTY_TYPES:
+                raise ArgumentError(
+                    'argument {0} may not be used with variable {1}'
+                    .format(argcheck, self.args['prop_pairs'][0][0]))
 
     def main(self):
-        # FIXME:  This doesn't handle empty property values.
+        # FIXME:  This doesn't handle empty values.
         if self.args.get('dump'):
             prop_name = self.args.get('prop_pairs')[0][0]
             self.log.info('dumping property value   %s', prop_name)
             prop = self._get_unique_property(prop_name)
-            formatter = self._get_formatter()
+            formatter = self._get_formatter(prop)
             print formatter.dumps(prop.value).strip()
         elif self.args.get('edit'):
             prop_name = self.args.get('prop_pairs')[0][0]
@@ -189,16 +197,19 @@ class Euctl(PropertiesRequest):
                 for prop_dict in response.get('properties') or []:
                     if self.args.get('show_defaults'):
                         prop = _build_property(prop_dict.get('name'),
-                                               prop_dict.get('defaultValue'))
+                                               prop_dict.get('defaultValue'),
+                                               log=self.log)
                     elif self.args.get('show_descriptions'):
                         # Descriptions are plain text, so force plain
                         # text handling.
                         prop = _build_property(prop_dict.get('name'),
                                                prop_dict.get('description'),
-                                               prop_type=_Property)
+                                               prop_type=_Property,
+                                               log=self.log)
                     else:
                         prop = _build_property(prop_dict.get('name'),
-                                               prop_dict.get('value'))
+                                               prop_dict.get('value'),
+                                               log=self.log)
                     if not self.args.get('suppress_all'):
                         prop.print_(
                             suppress_name=self.args.get('suppress_name'),
@@ -217,7 +228,8 @@ class Euctl(PropertiesRequest):
         properties = []
         for prop_dict in request.main().get('properties') or []:
             properties.append(_build_property(prop_dict['name'],
-                                              prop_dict.get('value')))
+                                              prop_dict.get('value'),
+                                              log=self.log))
         return properties
 
     def _get_unique_property(self, prop_name):
@@ -232,7 +244,7 @@ class Euctl(PropertiesRequest):
         return properties[0]
 
     def edit_interactively(self, prop):
-        formatter = self._get_formatter()
+        formatter = self._get_formatter(prop)
         temp_fd, temp_name = tempfile.mkstemp()
         temp_fd = os.fdopen(temp_fd, 'w')
         try:
@@ -243,6 +255,17 @@ class Euctl(PropertiesRequest):
                 subprocess.check_call((editor, temp_name))
                 temp_fd = open(temp_name)
                 try:
+                    # In the event this is a _FallbackProperty, its old
+                    # value is very likely to be broken JSON since that
+                    # is the only data type eucalyptus uses for
+                    # structures.  Since the YAML parser can read the
+                    # corrected JSON value we can ignore the fact that
+                    # the formatter the user selected with --format will
+                    # not match the type of data that he or she entered
+                    # in that scenario.  If we later add structures with
+                    # new types or we add new --format options then this
+                    # will no longer hold, and we had best handle this
+                    # case explicitly.
                     new_value = formatter.load(temp_fd)
                 except yaml.error.MarkedYAMLError as err:
                     self.log.debug('YAML parse failed', exc_info=True)
@@ -272,25 +295,39 @@ class Euctl(PropertiesRequest):
         prop.value = new_value
         return True  # changed
 
-    def _get_formatter(self):
+    def _get_formatter(self, prop):
+        formatter = None
         if self.args.get('format') == 'raw':
-            return _Formatter()
+            formatter = _Formatter()
         if self.args.get('format') == 'json':
-            return _JSONFormatter()
+            formatter = _JSONFormatter()
         if self.args.get('format') == 'yaml':
-            return _YAMLFormatter()
+            formatter = _YAMLFormatter()
+        if isinstance(prop, _FallbackProperty):
+            print >> sys.stderr, 'warning: existing value of', prop.name, \
+                'is malformed; outputting it as raw text'
+            return _FallbackFormatter(formatter)
+        if formatter:
+            return formatter
         raise NotImplementedError('formatter "{0}" not implemented'
                                   .format(self.args.get('format')))
 
 
-def _build_property(prop_name, prop_value, prop_type=None):
+def _build_property(prop_name, prop_value, prop_type=None, log=None):
     if prop_type:
         prop = prop_type(prop_name)
     elif PROPERTY_TYPES.get(prop_name) == 'json':
         prop = _JSONProperty(prop_name)
     else:
         prop = _Property(prop_name)
-    prop.loads(prop_value)
+    try:
+        prop.loads(prop_value)
+    except (ValueError, yaml.error.YAMLError):
+        if log:
+            log.warn('parsing of variable %s failed; --dump or --edit will '
+                     'output it as raw text', prop_name, exc_info=True)
+        prop = _FallbackProperty(prop_name, output_formatter=prop.FORMATTER())
+        prop.loads(prop_value)
     return prop
 
 
@@ -339,6 +376,15 @@ class _YAMLFormatter(_Formatter):
         return yaml.safe_load(str_value)
 
 
+def _FallbackFormatter(input_formatter):
+    class AutoFallbackFormatter(_Formatter):
+        @staticmethod
+        def loads(value):
+            return input_formatter.loads(value)
+
+    return AutoFallbackFormatter()
+
+
 class _Property(object):
     FORMATTER = _Formatter
 
@@ -377,6 +423,33 @@ class _Property(object):
 
 class _JSONProperty(_Property):
     FORMATTER = _JSONFormatter
+
+    def print_(self, suppress_name=False, force=False):
+        if force:
+            print >> sys.stderr, 'use euctl --dump to view {0}'.format(
+                self.name)
+
+
+class _FallbackProperty(_Property):
+    """
+    A structure property that uses different formats for input and
+    output
+
+    This is used for handling migration from unparseable values to
+    parseable values.
+    """
+
+    def __init__(self, name, output_formatter=None):
+        _Property.__init__(self, name)
+        self.__output_formatter = output_formatter or self._formatter
+
+    def dumps(self):
+        if not self.value:
+            return ''
+        return self.__output_formatter.dumps(self.value)
+
+    def loads(self, value):
+        _Property.loads(self, value)
 
     def print_(self, suppress_name=False, force=False):
         if force:
