@@ -342,8 +342,14 @@ typedef struct mido_vpc_secgroup_t {
     midoname *midos[VPCSG_END];
     midoname **ingress_rules;
     midoname **egress_rules;
+    midoname **iag_priv_ips;
+    midoname **iag_pub_ips;
+    midoname **iag_all_ips;
     int max_ingress_rules;
     int max_egress_rules;
+    int max_iag_priv_ips;
+    int max_iag_pub_ips;
+    int max_iag_all_ips;
     int gnipresent;
 } mido_vpc_secgroup;
 
@@ -351,6 +357,14 @@ typedef struct mido_vpc_instance_t {
     gni_instance *gniInst;
     char name[16];
     midoname *midos[INST_END];
+    midoname **iag_pre_ips;
+    midoname **iag_post_ips;
+    midoname **prechain_rules;
+    midoname **postchain_rules;
+    int max_iag_pre_ips;
+    int max_iag_post_ips;
+    int max_prechain_rules;
+    int max_postchain_rules;
     u32 privip;
     u32 pubip;
     int gnipresent;
@@ -387,14 +401,16 @@ typedef struct mido_vpc_t {
     int rtid;
     midoname *midos[VPC_END];
     midoname **rtports;
-    midoname **rtpostchain_rules;
-    midoname **rtpreelipchain_rules;
+    midoname **rt_uplink_postchain_rules;
+    midoname **rt_uplink_prechain_rules;
+    midoname **rt_preelipchain_rules;
     midoname **rtroutes;
     mido_vpc_subnet *subnets;
     mido_vpc_natgateway *natgateways;
     int max_rtports;
-    int max_rtpostchain_rules;
-    int max_rtpreelipchain_rules;
+    int max_rt_uplink_postchain_rules;
+    int max_rt_uplink_prechain_rules;
+    int max_rt_preelipchain_rules;
     int max_rtroutes;
     int max_subnets;
     int max_natgateways;
@@ -411,6 +427,12 @@ typedef struct mido_core_t {
 
     midoname **rtports;
     int max_rtports;
+    
+    midoname **rtroutes;
+    int max_rtroutes;
+    
+    midoname **iag_metadata_ips;
+    int max_iag_metadata_ips;
 
     midoname *gwhosts[32];
     midoname *gwports[32];
@@ -507,8 +529,13 @@ int mido_delete_router(midoname * name);
 int mido_print_router(midoname * name);
 int mido_get_routers(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_find_route_from_list(midoname *routes, int max_routes, midoname *rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, int *foundidx);
-int mido_create_route(mido_config *mido, midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
+int mido_find_route_from_list(midoname **routes, int max_routes, midoname *rport,
+        char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip,
+        char *weight, int *foundidx);
+int mido_create_route(mido_config *mido, midoname *router, midoname *rport,
+        char *src, char *src_slashnet, char *dst, char *dst_slashnet,
+        char *next_hop_ip, char *weight, midoname **memoroutes, int max_memoroutes,
+        midoname **outmemoroute, midoname *outname);
 //int mido_create_route(midoname * router, midoname * rport, char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname * outname);
 int mido_delete_route(midoname * name);
 int mido_get_routes(midoname * router, midoname ** outnames, int *outnames_max);
@@ -559,10 +586,10 @@ int mido_delete_chain(midoname * name);
 int mido_get_chains(char *tenant, midoname ** outnames, int *outnames_max);
 
 //int mido_create_rule(midoname * chain, midoname * outname, midoname *memorules, int max_memorules, int *next_position, ...);
-int mido_create_rule(midoname *chain, midoname *outname, midoname **memorules, int max_memorules, midoname **outmemorule, int *next_position, ...);
+int mido_create_rule(mido_config *mido, midoname *chain, midoname *outname, midoname **memorules, int max_memorules, midoname **outmemorule, int *next_position, ...);
 //int mido_create_rule_v1(midoname *chain, midorule *rule, midoname *outname);
 //int mido_read_rule(midoname * name);
-int mido_find_rule_from_list(midoname **rules, int max_rules, midoname *outrule, ...);
+int mido_find_rule_from_list(midoname **rules, int max_rules, midoname **outrule, ...);
 int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
 int mido_delete_rule(midoname * name);
@@ -575,7 +602,10 @@ int mido_delete_ipaddrgroup(midoname * name);
 int mido_print_ipaddrgroup(midoname * name);
 int mido_get_ipaddrgroups(char *tenant, midoname ** outnames, int *outnames_max);
 
-int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *ip, midoname *outname);
+int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *ip,
+        midoname **memoips, int max_memoips, midoname **outmemoip, midoname *outname);
+//int mido_create_ipaddrgroup_ip(mido_config *mido, midoname *ipaddrgroup, char *ip,
+//        midoname *outname);
 //int mido_create_ipaddrgroup_ip(midoname * ipaddrgroup, char *ip, midoname * outname);
 int mido_delete_ipaddrgroup_ip(midoname * ipaddrgroup, midoname * ipaddrgroup_ip);
 int mido_get_ipaddrgroup_ips(midoname * ipaddrgroup, midoname ** outnames, int *outnames_max);
