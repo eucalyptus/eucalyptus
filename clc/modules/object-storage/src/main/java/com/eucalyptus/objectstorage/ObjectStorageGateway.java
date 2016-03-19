@@ -209,6 +209,7 @@ import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
 import com.eucalyptus.storage.msgs.s3.CorsHeader;
+import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
@@ -2189,6 +2190,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw s3e;     
       }
 
+      List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
+      CorsMatchResult corsMatchResult = matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
+      
       boolean found = false;
       boolean anyOrigin = false;
       CorsRule corsRuleFound = null;
@@ -2231,7 +2235,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         // If there are no Access-Control-Request-Headers, or if there are
         // no AllowedHeaders in the CORS rule, then skip this check.
         // We have matched the current CORS rule. Stop looking through them.
-        List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
         if (requestHeaders == null || requestHeaders.size() == 0) {
           break;
         }
@@ -2322,6 +2325,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
     return response;
   }
 
+  
+  private CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
+      String requestMethod, List<CorsHeader> requestHeaders) {
+    CorsMatchResult corsMatchResult = new CorsMatchResult();
+    corsMatchResult.setMatched(true);
+    corsMatchResult.setAnyOrigin(true);
+    return corsMatchResult;
+  }
   
   private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);

@@ -870,7 +870,7 @@ public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 // Does not require any specific permissions
 //@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
-// Does not require any specific permissions
+// Does not require any specific ACL permissions
 //@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class PreflightCheckCorsType extends ObjectStorageRequestType {
   PreflightRequest preflightRequest;

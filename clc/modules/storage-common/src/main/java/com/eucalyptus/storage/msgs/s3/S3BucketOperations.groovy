@@ -297,6 +297,11 @@ public class CorsHeader {
   }
 }
 
+public class CorsMatchResult {
+  boolean matched;
+  boolean anyOrigin;
+}
+
 public class PreflightRequest {
   String origin;
   String method;
