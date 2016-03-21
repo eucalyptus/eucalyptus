@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 #
-# Copyright 2015 Eucalyptus Systems, Inc.
+# Copyright (c) 2015-2016 Hewlett Packard Enterprise Development LP
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -44,6 +44,9 @@ ZONE_KEYS = ('cluster-cert.pem', 'cluster-pk.pem', 'node-cert.pem',
              'node-pk.pem')
 
 
+IS_CLUSTER = (os.path.basename(sys.argv[0]) == 'clusteradmin-copy-keys')
+
+
 def add_key_paths(keys, path_map, local_keydir, remote_keydir):
     for key in keys:
         local_keypath = os.path.join(local_keydir, key)
@@ -54,7 +57,7 @@ def add_key_paths(keys, path_map, local_keydir, remote_keydir):
 def build_key_path_map(local_keydir, remote_keydir, zone=None):
     path_map = {}
     add_key_paths(PUBLIC_KEYS, path_map, local_keydir, remote_keydir)
-    if os.path.basename(sys.argv[0]) == 'clusteradmin-copy-keys':
+    if IS_CLUSTER:
         # CC to NC (zone keys, keydir -> keydir)
         add_key_paths(ZONE_KEYS, path_map, local_keydir, remote_keydir)
     else:
@@ -103,25 +106,35 @@ def copy_keys(desthost, path_map, rsync):
 
 def main():
     keydir = os.path.join(os.getenv('EUCALYPTUS') or '/', KEYPATH)
-    parser = argparse.ArgumentParser(
-        description='copy cloud cryptographic keys to another system')
+    parser = argparse.ArgumentParser()
+    if IS_CLUSTER:
+        parser.description = 'Copy cryptographic keys to a node controller.'
+    else:
+        parser.description = ('Copy cryptographic keys to a eucalyptus-cloud '
+                              'service or a cluster controller.  When copying '
+                              'keys to a cluster controller, use -z to select '
+                              'which availability zone\'s keys to send.')
     parser.add_argument('hosts', metavar='HOST', nargs='+',
                         help='the host to copy keys to (required)')
-    parser.add_argument('-z', '--availability-zone', metavar='ZONE',
-                        help=('also copy the keys for the named '
-                              'availability zone'))
-    parser.add_argument('--local-keydir', default=keydir,
+    if IS_CLUSTER:
+        parser.add_argument('-z', '--availability-zone', metavar='ZONE',
+                            help=argparse.SUPPRESS)
+    else:
+        parser.add_argument('-z', '--availability-zone', metavar='ZONE',
+                            help=('also copy the keys for the given '
+                                  'availability zone'))
+    parser.add_argument('--local-keydir', default=keydir, metavar='DIR',
                         help=('the directory on this machine to copy '
                               'keys from (default: {0})'.format(keydir)))
-    parser.add_argument('--remote-keydir', default=keydir,
+    parser.add_argument('--remote-keydir', default=keydir, metavar='DIR',
                         help=('the directory on the remote machine to copy '
                               'keys to (default: {0})'.format(keydir)))
-    parser.add_argument('--rsync', default='rsync -a',
+    parser.add_argument('--rsync', default='rsync -a', metavar='CMD',
                         help=('rsync command to copy key files '
                               '(default: "rsync -a")'))
     args = parser.parse_args()
     path_map = build_key_path_map(args.local_keydir, args.remote_keydir,
-                                  zone=args.availability_zone)
+                                  zone=getattr(args, 'availability_zone', None))
     for host in args.hosts:
         copy_keys(host, path_map, args.rsync)
 
