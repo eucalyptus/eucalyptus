@@ -1,7 +1,5 @@
 /.gradle
 /build.gradle
-/clc.ipr
-/clc.iws
 /settings.gradle
 /build
 local.properties
