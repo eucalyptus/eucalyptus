@@ -668,7 +668,9 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "services.database.worker.instance_type",
           "services.database.worker.keyname",
           "services.database.worker.ntp_server",
-          "services.database.worker.volume"
+          "services.database.worker.volume",
+          "cloud.perm_gen_memory_check_poll_time",
+          "cloud.perm_gen_memory_check_ratio"
       ) );
 
       return true;
