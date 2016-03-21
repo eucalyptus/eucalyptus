@@ -1154,6 +1154,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             if ( runningInstance.getNetworkInterfaceSet( ) == null ) {
               runningInstance.setNetworkInterfaceSet( new InstanceNetworkInterfaceSetType( ) );
             }
+            if ( networkInterface.getAttachment( ).getDeviceIndex() == 0 ) {
+              // set properties for instance
+              runningInstance.setSourceDestCheck( networkInterface.getSourceDestCheck( ) );
+            }
             runningInstance.getNetworkInterfaceSet( ).getItem( ).add( new InstanceNetworkInterfaceSetItemType(
               networkInterface.getDisplayName( ),
               networkInterface.getSubnet( ).getDisplayName( ),
