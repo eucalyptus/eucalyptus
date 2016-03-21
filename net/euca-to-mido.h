@@ -251,12 +251,13 @@ void print_mido_vpc_instance(mido_vpc_instance * vpcinstance);
 void print_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup);
 
 int do_midonet_maint(mido_config *mido);
-int do_midonet_update(globalNetworkInfo * gni, mido_config * mido);
+int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mido_config * mido);
 int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido);
 int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido);
 int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido);
 int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido);
 int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido);
+int do_midonet_update_pass3_insts_byvpc(globalNetworkInfo * gni, mido_config * mido);
 
 int do_midonet_teardown(mido_config * mido);
 

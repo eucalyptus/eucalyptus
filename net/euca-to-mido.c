@@ -147,6 +147,8 @@ extern int midonet_api_dirty_cache;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int mido_buffer_allocated = 0;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
@@ -1041,6 +1043,15 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
 
     // pass1 - tag everything that is both in GNI and in MIDO
     // pass1: do vpcs and subnets
+    if ((!mido_buffer_allocated) && (gni->max_vpcs > 0) && (ret == 0)) {
+        // Allocate vpcs buffer for the worst case (add all VPCs in GNI)
+        mido->vpcs = EUCA_REALLOC(mido->vpcs, mido->max_vpcs + gni->max_vpcs, sizeof (mido_vpc));
+        if (mido->vpcs == NULL) {
+            LOGFATAL("out of memory: failed to allocate mido->vpcs\n");
+            ret = 1;
+        }
+        //bzero(&(mido->vpcs[mido->max_vpcs]), gni->max_vpcs * sizeof (mido_vpc));
+    }
     for (i = 0; i < gni->max_vpcs; i++) {
         gnivpc = &(gni->vpcs[i]);
         rc = find_mido_vpc(mido, gnivpc->name, &vpc);
@@ -1051,6 +1062,26 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
             LOGDEBUG("pass1: global VPC %s in mido: Y\n", gnivpc->name);
             vpc->gniVpc = gnivpc;
             vpc->gnipresent = 1;
+            gnivpc->mido_present = vpc;
+
+            if ((!mido_buffer_allocated) && (gnivpc->max_subnets > 0) && (ret == 0)) {
+                // Allocate vpcsubnets buffer for the worst case
+                vpc->subnets = EUCA_REALLOC(vpc->subnets, vpc->max_subnets + gnivpc->max_subnets, sizeof (mido_vpc_subnet));
+                if (vpc->subnets == NULL) {
+                    LOGFATAL("out of memory: failed to allocate %s->subnets\n", vpc->name);
+                    ret = 1;
+                }
+                //bzero(&(vpc->subnets[vpc->max_subnets]), gnivpc->max_subnets * sizeof (mido_vpc_subnet));
+            }
+            if ((!mido_buffer_allocated) && (gnivpc->max_natGateways > 0) && (ret == 0)) {
+                // Allocate natgateways buffer for the worst case
+                vpc->natgateways = EUCA_REALLOC(vpc->natgateways, vpc->max_natgateways + gnivpc->max_natGateways, sizeof (mido_vpc_natgateway));
+                if (vpc->natgateways == NULL) {
+                    LOGFATAL("out of memory: failed to allocate %s->natgateways\n", vpc->name);
+                    ret = 1;
+                }
+                //bzero(&(vpc->natgateways[vpc->max_natgateways]), gnivpc->max_natGateways * sizeof (mido_vpc_natgateway));
+            }
         }
 
         for (j = 0; j < gnivpc->max_subnets; j++) {
@@ -1062,6 +1093,17 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
                 LOGDEBUG("pass1: global VPC SUBNET %s in mido: Y\n", gnivpcsubnet->name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
                 vpcsubnet->gnipresent = 1;
+                gnivpcsubnet->mido_present = vpcsubnet;
+
+                if ((!mido_buffer_allocated) && (gnivpcsubnet->max_interfaces > 0) && (ret == 0)) {
+                    // Allocate interfaces buffer for the worst case
+                    vpcsubnet->instances = EUCA_REALLOC(vpcsubnet->instances, vpcsubnet->max_instances + gnivpcsubnet->max_interfaces, sizeof (mido_vpc_instance));
+                    if (vpcsubnet->instances == NULL) {
+                        LOGFATAL("out of memory: failed to allocate %s->instances\n", vpc->name);
+                        ret = 1;
+                    }
+                    //bzero(&(vpcsubnet->instances[vpcsubnet->max_instances]), gnivpc->max_interfaces * sizeof (mido_vpc_instance));
+                }
             }
         }
         
@@ -1074,6 +1116,7 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
                 LOGDEBUG("pass1: global VPC NAT Gateway %s in mido: Y\n", gninatgateway->name);
                 vpcnatgateway->gniNatGateway = gninatgateway;
                 vpcnatgateway->gnipresent = 1;
+                gninatgateway->mido_present = vpcnatgateway;
             }
         }
     }
@@ -1101,11 +1144,21 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
             LOGDEBUG("pass1: global VPC INSTANCE/INTERFACE %s in mido: Y\n", gniinstance->name);
             vpcinstance->gniInst = gniinstance;
             vpcinstance->gnipresent = 1;
+            gniinstance->mido_present = vpcinstance;
         }
     }
     if (PFH) fclose(PFH);
 
     // pass1: do security groups
+    if ((!mido_buffer_allocated) && (gni->max_secgroups > 0) && (ret == 0)) {
+        // Allocate secgroups buffer for the worst case (add all secgroups in GNI)
+        mido->vpcsecgroups = EUCA_REALLOC(mido->vpcsecgroups, mido->max_vpcsecgroups + gni->max_secgroups, sizeof (mido_vpc_secgroup));
+        if (mido->vpcsecgroups == NULL) {
+            LOGFATAL("out of memory: failed to allocate mido->vpcsecgroups\n");
+            ret = 1;
+        }
+        //bzero(&(mido->vpcsecgroups[mido->max_vpcsecgroups]), gni->max_secgroups * sizeof (mido_vpc_secgroup));
+    }
     for (i = 0; i < gni->max_secgroups; i++) {
         gnisecgroup = &(gni->secgroups[i]);
         rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
@@ -1115,6 +1168,7 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
             LOGDEBUG("pass1: global VPC SECGROUP %s in mido: Y\n", gnisecgroup->name);
             vpcsecgroup->gniSecgroup = gnisecgroup;
             vpcsecgroup->gnipresent = 1;
+            gnisecgroup->mido_present = vpcsecgroup;
         }
     }
 
@@ -1129,7 +1183,7 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
     mido_vpc_natgateway *vpcnatgateway = NULL;
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
-    mido_resource_ipaddrgroup *ipag = NULL;
+    //mido_resource_ipaddrgroup *ipag = NULL;
 
     // pass2 - remove anything in MIDO that is not in GNI
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -1144,14 +1198,15 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
             // remove any IPs from mido SG that are not in GNI SG instance list
             {
                 int secgroupinstances_max = 0;
-                gni_instance *secgroupinstances = NULL;
+                gni_instance **secgroupinstances = NULL;
                 gni_secgroup *gnisecgroup = NULL;
-                midoname *pubips = NULL, *privips = NULL, *allips = NULL;
-                int max_pubips = 0, max_privips = 0, max_allips = 0;
+                //midoname *pubips = NULL, *privips = NULL, *allips = NULL;
+                //int max_pubips = 0, max_privips = 0, max_allips = 0;
                 int found = 0;
 
                 gnisecgroup = vpcsecgroup->gniSecgroup;
 
+/*
                 ipag = NULL;
                 if (vpcsecgroup->midos[VPCSG_IAGPRIV] && vpcsecgroup->midos[VPCSG_IAGPRIV]->init) {
                     ipag = find_mido_ipaddrgroup(mido, vpcsecgroup->midos[VPCSG_IAGPRIV]->name);
@@ -1181,86 +1236,112 @@ int do_midonet_update_pass2(globalNetworkInfo * gni, mido_config * mido) {
                     allips = ipag->ips;
                     max_allips = ipag->max_ips;
                 }
+*/
 
                 rc = gni_secgroup_get_interfaces(gni, gnisecgroup, NULL, 0, NULL, 0, &secgroupinstances, &secgroupinstances_max);
-                for (k = 0; k < max_pubips; k++) {
+                //for (k = 0; k < max_pubips; k++) {
+                for (k = 0; k < vpcsecgroup->max_iag_pub_ips; k++) {
+                    if ((vpcsecgroup->iag_pub_ips[k] == NULL) || (vpcsecgroup->iag_pub_ips[k]->init == 0)) {
+                        continue;
+                    }
                     char pubip_mido[32];
-                    sscanf(pubips[k].name, "versions/6/ip_addrs/%s", pubip_mido);
+                    //sscanf(pubips[k].name, "versions/6/ip_addrs/%s", pubip_mido);
+                    sscanf(vpcsecgroup->iag_pub_ips[k]->name, "versions/6/ip_addrs/%s", pubip_mido);
 
                     found = 0;
                     for (j = 0; j < secgroupinstances_max && !found; j++) {
-                        char *pubip_gni = NULL;
-                        pubip_gni = hex2dot(secgroupinstances[j].publicIp);
-                        if (!strcmp(pubip_mido, pubip_gni)) {
+                        //char *pubip_gni = NULL;
+                        //pubip_gni = hex2dot(secgroupinstances[j].publicIp);
+                        u32 pubip_mido_hex = dot2hex(pubip_mido);
+                        //if (!strcmp(pubip_mido, pubip_gni)) {
+                        if (secgroupinstances[j]->publicIp == pubip_mido_hex) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member public IP %s in global: Y\n", vpcsecgroup->name, pubip_mido);
                             found++;
                         }
-                        EUCA_FREE(pubip_gni);
+                        //EUCA_FREE(pubip_gni);
                     }
                     if (!found) {
                         LOGINFO("\tdeleting %s member pubip %s\n", vpcsecgroup->name, pubip_mido);
-                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPUB], &(pubips[k]));
+                        //rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPUB], &(pubips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPUB], vpcsecgroup->iag_pub_ips[k]);
                         if (rc) {
-                            LOGWARN("Failed to remove %s from ip address group\n", pubips[k].name);
+                            //LOGWARN("Failed to remove %s from ip address group\n", pubips[k].name);
+                            LOGWARN("Failed to remove %s from ip address group\n", vpcsecgroup->iag_pub_ips[k]->name);
                         }
                     }
                 }
 
-                for (k = 0; k < max_privips; k++) {
+                //for (k = 0; k < max_privips; k++) {
+                for (k = 0; k < vpcsecgroup->max_iag_priv_ips; k++) {
+                    if ((vpcsecgroup->iag_priv_ips[k] == NULL) || (vpcsecgroup->iag_priv_ips[k]->init == 0)) {
+                        continue;
+                    }
                     char privip_mido[32];
-                    sscanf(privips[k].name, "versions/6/ip_addrs/%s", privip_mido);
+                    //sscanf(privips[k].name, "versions/6/ip_addrs/%s", privip_mido);
+                    sscanf(vpcsecgroup->iag_priv_ips[k]->name, "versions/6/ip_addrs/%s", privip_mido);
 
                     found = 0;
                     for (j = 0; j < secgroupinstances_max && !found; j++) {
-                        char *privip_gni = NULL;
-                        privip_gni = hex2dot(secgroupinstances[j].privateIp);
-                        if (!strcmp(privip_mido, privip_gni)) {
+                        //char *privip_gni = NULL;
+                        //privip_gni = hex2dot(secgroupinstances[j].privateIp);
+                        u32 privip_mido_hex = dot2hex(privip_mido);
+                        //if (!strcmp(privip_mido, privip_gni)) {
+                        if (secgroupinstances[j]->privateIp == privip_mido_hex) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s in global: Y\n", vpcsecgroup->name, privip_mido);
                             found++;
                         }
-                        EUCA_FREE(privip_gni);
+                        //EUCA_FREE(privip_gni);
                     }
                     if (!found) {
                         if (is_mido_vpc_plustwo(mido, privip_mido) == 0) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member private IP %s is a VPC subnet+2 address.\n", vpcsecgroup->name, privip_mido);
                         } else {
                             LOGINFO("\tdeleting %s member privip %s\n", vpcsecgroup->name, privip_mido);
-                            rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPRIV], &(privips[k]));
+                            //rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPRIV], &(privips[k]));
+                            rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGPRIV], vpcsecgroup->iag_priv_ips[k]);
                             if (rc) {
-                                LOGWARN("Failed to remove %s from ip address group\n", privips[k].name);
+                                //LOGWARN("Failed to remove %s from ip address group\n", privips[k].name);
+                                LOGWARN("Failed to remove %s from ip address group\n", vpcsecgroup->iag_priv_ips[k]->name);
                             }
                         }
                     }
                 }
 
-                for (k = 0; k < max_allips; k++) {
+                //for (k = 0; k < max_allips; k++) {
+                for (k = 0; k < vpcsecgroup->max_iag_all_ips; k++) {
                     char allip_mido[32];
-                    sscanf(allips[k].name, "versions/6/ip_addrs/%s", allip_mido);
+                    //sscanf(allips[k].name, "versions/6/ip_addrs/%s", allip_mido);
+                    sscanf(vpcsecgroup->iag_all_ips[k]->name, "versions/6/ip_addrs/%s", allip_mido);
 
                     found = 0;
                     for (j = 0; j < secgroupinstances_max && !found; j++) {
-                        char *pubip_gni = NULL;
-                        char *privip_gni = NULL;
-                        pubip_gni = hex2dot(secgroupinstances[j].publicIp);
-                        privip_gni = hex2dot(secgroupinstances[j].privateIp);
+                        //char *pubip_gni = NULL;
+                        //char *privip_gni = NULL;
+                        //pubip_gni = hex2dot(secgroupinstances[j].publicIp);
+                        //privip_gni = hex2dot(secgroupinstances[j].privateIp);
+                        u32 allip_mido_hex = dot2hex(allip_mido);
 
-                        if (!strcmp(allip_mido, pubip_gni)) {
+                        //if (!strcmp(allip_mido, pubip_gni)) {
+                        if (secgroupinstances[j]->publicIp == allip_mido_hex) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member all IP %s in global: Y\n", vpcsecgroup->name, allip_mido);
                             found++;
                         }
-                        EUCA_FREE(pubip_gni);
+                        //EUCA_FREE(pubip_gni);
 
-                        if (!strcmp(allip_mido, privip_gni)) {
+                        //if (!strcmp(allip_mido, privip_gni)) {
+                        if (secgroupinstances[j]->privateIp == allip_mido_hex) {
                             LOGDEBUG("pass2: mido VPC SECGROUP %s member all IP %s in global: Y\n", vpcsecgroup->name, allip_mido);
                             found++;
                         }
-                        EUCA_FREE(privip_gni);
+                        //EUCA_FREE(privip_gni);
                     }
                     if (!found) {
                         LOGINFO("\tdeleting %s member allip %s\n", vpcsecgroup->name, allip_mido);
-                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGALL], &(allips[k]));
+                        //rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGALL], &(allips[k]));
+                        rc = mido_delete_ipaddrgroup_ip(vpcsecgroup->midos[VPCSG_IAGALL], vpcsecgroup->iag_all_ips[k]);
                         if (rc) {
-                            LOGWARN("Failed to remove %s from ip address group\n", allips[k].name);
+                            //LOGWARN("Failed to remove %s from ip address group\n", allips[k].name);
+                            LOGWARN("Failed to remove %s from ip address group\n", vpcsecgroup->iag_all_ips[k]->name);
                         }
                     }
                 }
@@ -1345,18 +1426,21 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
         gnivpc = &(gni->vpcs[i]);
         LOGDEBUG("initializing VPC '%s' with '%d' subnets\n", gnivpc->name, gnivpc->max_subnets);
 
-        rc = find_mido_vpc(mido, gnivpc->name, &vpc);
+        //rc = find_mido_vpc(mido, gnivpc->name, &vpc);
+        vpc = (mido_vpc *) gnivpc->mido_present;
         if (vpc) {
             LOGDEBUG("found gni VPC '%s' already extant\n", gnivpc->name);
             vpc->gniVpc = gnivpc;
         } else {
             LOGINFO("\tcreating %s\n", gnivpc->name);
-            mido->vpcs = realloc(mido->vpcs, sizeof (mido_vpc) * (mido->max_vpcs + 1));
+            // necessary memory should have been allocated in pass1
+            //mido->vpcs = realloc(mido->vpcs, sizeof (mido_vpc) * (mido->max_vpcs + 1));
             vpc = &(mido->vpcs[mido->max_vpcs]);
             bzero(vpc, sizeof (mido_vpc));
             mido->max_vpcs++;
             snprintf(vpc->name, 16, "%s", gnivpc->name);
             vpc->gniVpc = gnivpc;
+            gnivpc->mido_present = vpc;
 
             get_next_router_id(mido, &(vpc->rtid));
         }
@@ -1369,7 +1453,9 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
         vpc->gnipresent = 1;
 
         // Get list of pointers for VPC interfaces - used to compute vpcsubnet route entries
-        rc = gni_vpc_get_interfaces(gni, gnivpc, &gni_vpcinterfaces, &max_gni_vpcinterfaces);
+        //rc = gni_vpc_get_interfaces(gni, gnivpc, &gni_vpcinterfaces, &max_gni_vpcinterfaces);
+        gni_vpcinterfaces = gnivpc->interfaces;
+        max_gni_vpcinterfaces = gnivpc->max_interfaces;
         if (rc != 0) {
             LOGWARN("Failed to retrieve list of %s interfaces.\n", vpc->name);
             ret = 1;
@@ -1379,19 +1465,21 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
         for (j = 0; j < gnivpc->max_subnets; j++) {
             gnivpcsubnet = &(gnivpc->subnets[j]);
 
-            rc = find_mido_vpc_subnet(vpc, gnivpcsubnet->name, &vpcsubnet);
+            //rc = find_mido_vpc_subnet(vpc, gnivpcsubnet->name, &vpcsubnet);
+            vpcsubnet = (mido_vpc_subnet *) gnivpcsubnet->mido_present;
             if (vpcsubnet) {
                 LOGDEBUG("found gni VPC '%s' subnet '%s'\n", vpc->name, vpcsubnet->name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
             } else {
                 LOGINFO("\tcreating %s\n", gnivpc->subnets[j].name);
-
-                vpc->subnets = realloc(vpc->subnets, sizeof (mido_vpc_subnet) * (vpc->max_subnets + 1));
+                // necessary memory should have been allocated in pass1
+                //vpc->subnets = realloc(vpc->subnets, sizeof (mido_vpc_subnet) * (vpc->max_subnets + 1));
                 vpcsubnet = &(vpc->subnets[vpc->max_subnets]);
                 vpc->max_subnets++;
                 bzero(vpcsubnet, sizeof (mido_vpc_subnet));
                 snprintf(vpcsubnet->name, 16, "%s", gnivpc->subnets[j].name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
+                gnivpcsubnet->mido_present = vpcsubnet;
             }
 
             subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
@@ -1422,18 +1510,20 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
             }
             vpcsubnet->gnipresent = 1;
         }
-        EUCA_FREE(gni_vpcinterfaces);
+        //EUCA_FREE(gni_vpcinterfaces);
 
         // do NAT gateways
         for (j = 0; j < gnivpc->max_natGateways; j++) {
             gninatg = &(gnivpc->natGateways[j]);
-            rc = find_mido_vpc_natgateway(vpc, gninatg->name, &vpcnatg);
+            //rc = find_mido_vpc_natgateway(vpc, gninatg->name, &vpcnatg);
+            vpcnatg = (mido_vpc_natgateway *) gninatg->mido_present;
             if (vpcnatg) {
                 LOGDEBUG("found %s in mido\n", vpcnatg->name);
                 vpcnatg->gniNatGateway = gninatg;
             } else {
                 LOGINFO("\tcreating %s\n", gnivpc->natGateways[j].name);
-                vpc->natgateways = EUCA_REALLOC(vpc->natgateways, (vpc->max_natgateways + 1), sizeof (mido_vpc_natgateway));
+                // necessary memory should have been allocated in pass1
+                //vpc->natgateways = EUCA_REALLOC(vpc->natgateways, (vpc->max_natgateways + 1), sizeof (mido_vpc_natgateway));
                 vpcnatg = &(vpc->natgateways[vpc->max_natgateways]);
                 (vpc->max_natgateways)++;
                 bzero(vpcnatg, sizeof (mido_vpc_natgateway));
@@ -1481,24 +1571,27 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
     //int max_memorules;
     mido_parsed_chain_rule sgrule;
 
-    gni_secgroup *gnisecgroup = &(gni->secgroups[i]);
+    gni_secgroup *gnisecgroup = NULL;
 
     // now add sec. groups
     for (i = 0; i < gni->max_secgroups; i++) {
         gnisecgroup = &(gni->secgroups[i]);
         // create the SG
-        rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
+        //rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
+        vpcsecgroup = (mido_vpc_secgroup *) gnisecgroup->mido_present;
         if (vpcsecgroup != NULL) {
             // found one
             vpcsecgroup->gniSecgroup = gnisecgroup;
         } else {
             LOGINFO("\tcreating %s\n", gnisecgroup->name);
-            mido->vpcsecgroups = realloc(mido->vpcsecgroups, sizeof (mido_vpc_secgroup) * (mido->max_vpcsecgroups + 1));
+            // necessary memory should have been allocated in pass1
+            //mido->vpcsecgroups = realloc(mido->vpcsecgroups, sizeof (mido_vpc_secgroup) * (mido->max_vpcsecgroups + 1));
             vpcsecgroup = &(mido->vpcsecgroups[mido->max_vpcsecgroups]);
             bzero(vpcsecgroup, sizeof (mido_vpc_secgroup));
             mido->max_vpcsecgroups++;
             snprintf(vpcsecgroup->name, SECURITY_GROUP_ID_LEN, "%s", gnisecgroup->name);
             vpcsecgroup->gniSecgroup = gnisecgroup;
+            gnisecgroup->mido_present = vpcsecgroup;
         }
 
         rc = create_mido_vpc_secgroup(mido, vpcsecgroup);
@@ -1516,8 +1609,10 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo * gni, mido_config * mido) {
             gnisecgroup = &(gni->secgroups[i]);
             // create the SG
             rc = find_mido_vpc_secgroup(mido, gnisecgroup->name, &vpcsecgroup);
+            vpcsecgroup = (mido_vpc_secgroup *) gnisecgroup->mido_present;
             if (vpcsecgroup == NULL) {
                 LOGWARN("unable to find %s in the system.\n", gnisecgroup->name);
+                continue;
             }
 
             midoname **rules = NULL;
@@ -1880,23 +1975,26 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
         // Name of primary interfaces should have been renamed to instance name.
 
         // check that we can do something about this instance:
-        if (gniinstance->vpc && strlen(gniinstance->vpc) && gniinstance->node && strlen(gniinstance->node)) {
+        if (strlen(gniinstance->vpc) && gniinstance->node && strlen(gniinstance->node)) {
             rc = find_mido_vpc(mido, gniinstance->vpc, &vpc);
             if (vpc) {
                 rc = find_mido_vpc_subnet(vpc, gniinstance->subnet, &vpcsubnet);
                 if (vpcsubnet) {
-                    rc = find_mido_vpc_instance(vpcsubnet, gniinstance->name, &vpcinstance);
+                    //rc = find_mido_vpc_instance(vpcsubnet, gniinstance->name, &vpcinstance);
+                    vpcinstance = (mido_vpc_instance *) gniinstance->mido_present;
                     if (vpcinstance) {
                         LOGDEBUG("found instance '%s' is in extant vpc '%s' subnet '%s'\n", vpcinstance->name, vpc->name, vpcsubnet->name);
                         vpcinstance->gniInst = gniinstance;
                     } else {
                         // create the instance
-                        vpcsubnet->instances = realloc(vpcsubnet->instances, sizeof (mido_vpc_instance) * (vpcsubnet->max_instances + 1));
+                        // necessary memory should have been allocated in pass1
+                        //vpcsubnet->instances = realloc(vpcsubnet->instances, sizeof (mido_vpc_instance) * (vpcsubnet->max_instances + 1));
                         vpcinstance = &(vpcsubnet->instances[vpcsubnet->max_instances]);
                         bzero(vpcinstance, sizeof (mido_vpc_instance));
                         vpcsubnet->max_instances++;
                         snprintf(vpcinstance->name, INTERFACE_ID_LEN, "%s", gniinstance->name);
                         vpcinstance->gniInst = gniinstance;
+                        gniinstance->mido_present = vpcinstance;
                         LOGINFO("\tcreating %s\n", gniinstance->name);
                     }
 
@@ -1908,7 +2006,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                     }
 
                     vpcinstance->gnipresent = 1;
-                    LOGINFO("12095: find/create %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                     // do instance<->port connection and elip
                     if (vpcinstance->midos[INST_VMHOST] && vpcinstance->midos[INST_VMHOST]->init) {
@@ -1916,7 +2013,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                                 gniinstance->node, vpcinstance->midos[INST_VMHOST]->name, gniinstance->name);
 
                         rc = connect_mido_vpc_instance(mido, vpcsubnet, vpcinstance, vpcinstance->midos[INST_VMHOST], gni->instanceDNSDomain);
-                        LOGINFO("12095: \tconnect %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                         if (rc) {
                             LOGERROR("cannot connect instance to midonet: check midonet health\n");
                             ret = 1;
@@ -1937,7 +2033,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                                                 vpcinstance->name, vpcinstance->pubip, gniinstance->publicIp);
 
                                         rc = disconnect_mido_vpc_instance_elip(mido, vpcinstance);
-                                        LOGINFO("12095: \tdisconnect elip %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                                         if (rc) {
                                             LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
                                             ret = 1;
@@ -1951,7 +2046,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                             // Skip private-only instance/interface
                             if (gniinstance->publicIp) {
                                 rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
-                                LOGINFO("12095: \tconnect elip %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                                 if (rc) {
                                     LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
@@ -2016,7 +2110,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         instMac[i] = tolower(instMac[i]);
                     }
                     snprintf(tmp_name3, 32, "%d", 1);
-                    LOGINFO("12095: sg for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
 
                     // anti-spoof
                     // block any source mac that isn't the registered instance mac
@@ -2233,8 +2326,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                             }
                         }
                     }
-                    LOGINFO("12095: l2 isolation for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
-
 
                     EUCA_FREE(instMac);
                     EUCA_FREE(instIp);
@@ -2422,12 +2513,584 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         }
                     }
                     
-                    LOGINFO("12095: misc rules for %s in %ld us.\n", gniinstance->name, eucanetd_timer_usec(&tv));
                 }
             }
         }
     }
 
+    return (ret);
+}
+
+int do_midonet_update_pass3_insts_byvpc(globalNetworkInfo * gni, mido_config * mido) {
+    int rc = 0, ret = 0, i = 0, j = 0, k = 0;
+    char subnet_buf[24], slashnet_buf[8], gw_buf[24], pt_buf[24];
+
+    mido_vpc_secgroup *vpcsecgroup = NULL;
+    mido_vpc_instance *vpcinstance = NULL;
+    mido_vpc_subnet *vpcsubnet = NULL;
+    mido_vpc *vpc = NULL;
+    
+    gni_vpc *gnivpc = NULL;
+    gni_vpcsubnet *gnivpcsubnet = NULL;
+    gni_instance *gniinstance = NULL;
+    
+    struct timeval tv;
+    // For each VPC, and each subnet, do instances/interfaces
+    for (i = 0; i < gni->max_vpcs; i++) {
+        gnivpc = &(gni->vpcs[i]);
+        vpc = (mido_vpc *) gnivpc->mido_present;
+        if (vpc == NULL) {
+            LOGWARN("Invalid %s detected at idx %d\n", gnivpc->name, i);
+            continue;
+        }
+        for (j = 0; j < gnivpc->max_subnets; j++) {
+            gnivpcsubnet = &(gnivpc->subnets[j]);
+            vpcsubnet = (mido_vpc_subnet *) gnivpcsubnet->mido_present;
+            if (vpcsubnet == NULL) {
+                LOGWARN("Invalid %s %s detected at idx %d\n", gnivpc->name, gnivpcsubnet->name, j);
+                continue;
+            }
+            
+            for (k = 0; k < gnivpcsubnet->max_interfaces; k++) {
+                eucanetd_timer_usec(&tv);
+                gniinstance = gnivpcsubnet->interfaces[k];
+                vpcinstance = (mido_vpc_instance *) gniinstance->mido_present;
+                if (vpcinstance) {
+                    LOGDEBUG("found instance '%s' is in extant vpc '%s' subnet '%s'\n", vpcinstance->name, vpc->name, vpcsubnet->name);
+                    vpcinstance->gniInst = gniinstance;
+                } else {
+                    // create the instance
+                    // necessary memory should have been allocated in pass1
+                    //vpcsubnet->instances = realloc(vpcsubnet->instances, sizeof (mido_vpc_instance) * (vpcsubnet->max_instances + 1));
+                    vpcinstance = &(vpcsubnet->instances[vpcsubnet->max_instances]);
+                    bzero(vpcinstance, sizeof (mido_vpc_instance));
+                    vpcsubnet->max_instances++;
+                    snprintf(vpcinstance->name, INTERFACE_ID_LEN, "%s", gniinstance->name);
+                    vpcinstance->gniInst = gniinstance;
+                    gniinstance->mido_present = vpcinstance;
+                    LOGINFO("\tcreating %s\n", gniinstance->name);
+                }
+
+                LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->node);
+                rc = create_mido_vpc_instance(mido, vpcinstance, gniinstance->node);
+                if (rc) {
+                    LOGERROR("cannot create VPC instance '%s': check midonet health\n", vpcinstance->name);
+                    ret = 1;
+                }
+
+                vpcinstance->gnipresent = 1;
+
+                // do instance<->port connection and elip
+                if (vpcinstance->midos[INST_VMHOST] && vpcinstance->midos[INST_VMHOST]->init) {
+                    LOGDEBUG("connecting gni host '%s' with midonet host '%s' interface for instance '%s'\n",
+                            gniinstance->node, vpcinstance->midos[INST_VMHOST]->name, gniinstance->name);
+
+                    rc = connect_mido_vpc_instance(mido, vpcsubnet, vpcinstance, vpcinstance->midos[INST_VMHOST], gni->instanceDNSDomain);
+                    if (rc) {
+                        LOGERROR("cannot connect instance to midonet: check midonet health\n");
+                        ret = 1;
+                    } else {
+                        // check to see if something has changed before running the DC
+                        {
+                            //char *pubip_gni = NULL, pubip_mido[32];
+
+                            //                                pubip_gni = hex2dot(gniinstance->publicIp);
+                            if (vpcinstance->pubip) {
+                                //sscanf(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP].name, "versions/6/ip_addrs/%s", pubip_mido);
+
+                                //if (!strcmp(pubip_gni, pubip_mido)) {
+                                if (gniinstance->publicIp == vpcinstance->pubip) {
+                                    LOGDEBUG("elips are unchanged (%x %x), skipping disconnect\n", gniinstance->publicIp, vpcinstance->pubip);
+                                } else {
+                                    LOGDEBUG("detected instance (%s) ELIP change from %x to %x: running disconnect\n",
+                                            vpcinstance->name, vpcinstance->pubip, gniinstance->publicIp);
+
+                                    rc = disconnect_mido_vpc_instance_elip(mido, vpcinstance);
+                                    if (rc) {
+                                        LOGERROR("cannot remove prior midonet floating IP for instance: check midonet health\n");
+                                        ret = 1;
+                                    }
+                                    LOGDEBUG("disconnect done\n");
+                                }
+                            }
+                            //EUCA_FREE(pubip_gni);
+                        }
+
+                        // Skip private-only instance/interface
+                        if (gniinstance->publicIp) {
+                            rc = connect_mido_vpc_instance_elip(mido, mido->midocore, vpc, vpcsubnet, vpcinstance);
+
+                            if (rc) {
+                                LOGERROR("cannot setup midonet floating IP <-> instance mapping: check midonet health\n");
+                                ret = 1;
+                            }
+                        }
+                    }
+                } else {
+                    LOGERROR("could not find midonet host for instance '%s': check midonet/euca node/host mappings\n", vpcinstance->name);
+                    ret = 1;
+                }
+
+                // do inst->sg maps
+                int in_rulepos = 1, eg_rulepos = 1;
+                char tmp_name3[32], *instMac = NULL, *instIp = NULL;
+                midoname **pre_rules = NULL, **post_rules = NULL;
+                midoname *ptmpmn;
+                int max_pre_rules = 0, max_post_rules = 0;
+                //mido_resource_chain *rchain = NULL;
+
+                /*
+                rchain = NULL;
+                rchain = find_mido_chain(mido, vpcinstance->midos[INST_PRECHAIN]->name);
+                if (rchain != NULL) {
+                    if (rchain->max_rules > 0) {
+                        // Allocating space for 32 rules (check for overflow)
+                        pre_rules = EUCA_ZALLOC(32, sizeof (midoname *));
+                        for (int i = 0; i < rchain->max_rules; i++) {
+                            pre_rules[i] = &(rchain->rules[i]);
+                        }
+                    }
+                    max_pre_rules = rchain->max_rules;
+                }
+                rchain = NULL;
+                rchain = find_mido_chain(mido, vpcinstance->midos[INST_POSTCHAIN]->name);
+                if (rchain != NULL) {
+                    if (rchain->max_rules > 0) {
+                        // Allocating space for 32 rules (check for overflow)
+                        post_rules = EUCA_ZALLOC(32, sizeof (midoname *));
+                        for (int i = 0; i < rchain->max_rules; i++) {
+                            post_rules[i] = &(rchain->rules[i]);
+                        }
+                    }
+                    max_post_rules = rchain->max_rules;
+                }
+                */
+                pre_rules = vpcinstance->prechain_rules;
+                max_pre_rules = vpcinstance->max_prechain_rules;
+                post_rules = vpcinstance->postchain_rules;
+                max_post_rules = vpcinstance->max_postchain_rules;
+
+                subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
+                cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
+
+                // for egress
+                eg_rulepos = max_pre_rules + 1;
+                // for ingress
+                in_rulepos = max_post_rules + 1;
+                hex2mac(gniinstance->macAddress, &instMac);
+                instIp = hex2dot(gniinstance->privateIp);
+                for (int i = 0; i < strlen(instMac); i++) {
+                    instMac[i] = tolower(instMac[i]);
+                }
+                snprintf(tmp_name3, 32, "%d", 1);
+
+                // anti-spoof
+                // block any source mac that isn't the registered instance mac
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &ptmpmn,
+                        "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if (mido->disable_l2_isolation) {
+                        LOGDEBUG("Deleting L2 rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete src mac check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if (!mido->disable_l2_isolation) {
+                        LOGDEBUG("Creating L2 rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                                NULL, NULL, max_pre_rules, &ptmpmn, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src mac check rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_pre_rules++;
+                            }
+                        }
+                    }
+                }
+
+                // block any outgoing IP traffic that isn't from the VM private IP
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &ptmpmn,
+                        "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if ((mido->disable_l2_isolation) || (!gniinstance->srcdstcheck)) {
+                        LOGDEBUG("Deleting L3 rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete src IP check rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if ((!mido->disable_l2_isolation) && (gniinstance->srcdstcheck)) {
+                        LOGDEBUG("Creating L3 rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                                NULL, NULL, max_pre_rules, &ptmpmn, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2048", "nwSrcAddress",
+                                instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_pre_rules++;
+                            }
+                        }
+                    }
+                }
+
+                /*
+                if (!mido->disable_l2_isolation) {
+                    // block any source mac that isn't the registered instance mac
+                    hex2mac(gniinstance->macAddress, &instMac);
+                    for (int i = 0; i < strlen(instMac); i++) {
+                        instMac[i] = tolower(instMac[i]);
+                    }
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true", NULL);
+                    if (rc) {
+                    } else {
+                    }
+                    EUCA_FREE(instMac);
+
+                    // block any outgoing IP traffic that isn't from the VM private IP
+                    instIp = hex2dot(gniinstance->privateIp);
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    rc = mido_create_rule(&(vpcinstance->midos[INST_PRECHAIN]), NULL, pre_rules, max_pre_rules, &eg_rulepos, "position", tmp_name3, "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
+                    if (rc) {
+                    } else {
+                    }
+                    EUCA_FREE(instIp);
+                }
+                 */
+                // anti arp poisoning
+                // block any outgoing ARP that does not have sender hardware address set to the registered MAC
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &ptmpmn,
+                        "type", "drop", "dlSrc", instMac, "invDlSrc", "true",
+                        "dlType", "2054", "invDlType", "false", NULL);
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if (mido->disable_l2_isolation) {
+                        LOGDEBUG("Deleting ARP_SHA rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete ARP_SHA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if (!mido->disable_l2_isolation) {
+                        LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                                NULL, NULL, max_pre_rules, &ptmpmn, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlSrc", instMac, "invDlSrc", "true",
+                                "dlType", "2054", "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create ARP_SHA rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_pre_rules++;
+                            }
+                        }
+                    }
+                }
+
+                // block any outgoing ARP that does not have sender protocol address set to the VM private IP
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(pre_rules, max_pre_rules, &ptmpmn,
+                        "type", "drop", "dlType", "2054", "nwSrcAddress",
+                        instIp, "nwSrcLength", "32", "invNwSrc", "true",
+                        "invDlType", "false", NULL);
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if (mido->disable_l2_isolation) {
+                        LOGDEBUG("Deleting ARP_SPA rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete ARP_SPA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if (!mido->disable_l2_isolation) {
+                        LOGDEBUG("Creating ARP_SPA rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                                NULL, NULL, max_pre_rules, &ptmpmn, &eg_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2054", "nwSrcAddress",
+                                instIp, "nwSrcLength", "32", "invNwSrc", "true",
+                                "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_pre_rules++;
+                            }
+                        }
+                    }
+                }
+
+                // block any incoming ARP replies that does not have target hardware address set to the registered MAC
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(post_rules, max_post_rules, &ptmpmn,
+                        "type", "drop", "dlDst", instMac, "invDlDst", "true",
+                        "dlType", "2054", "invDlType", "false", "nwProto", "2",
+                        "invNwProto", "false", NULL);
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if (mido->disable_l2_isolation) {
+                        LOGDEBUG("Deleting ARP_THA rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete ARP_THA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if (!mido->disable_l2_isolation) {
+                        LOGDEBUG("Creating ARP_SHA rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                                NULL, NULL, max_post_rules, &ptmpmn, &in_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlDst", instMac, "invDlDst", "true",
+                                "dlType", "2054", "invDlType", "false", "nwProto", "2",
+                                "invNwProto", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create ARP_THA rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_post_rules++;
+                            }
+                        }
+                    }
+                }
+
+                // block any incoming ARP that does not have target protocol address set to the VM private IP
+                // Check if the rule is already in place
+                rc = mido_find_rule_from_list(post_rules, max_post_rules, &ptmpmn,
+                        "type", "drop", "dlType", "2054", "nwDstAddress",
+                        instIp, "nwDstLength", "32", "invNwDst", "true",
+                        "invDlType", "false", NULL);
+                if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+                    if (mido->disable_l2_isolation) {
+                        LOGDEBUG("Deleting ARP_TPA rule for %s\n", gniinstance->name);
+                        rc = mido_delete_rule(ptmpmn);
+                        if (rc) {
+                            LOGWARN("Failed to delete ARP_TPA rule for %s\n", gniinstance->name);
+                        }
+                    }
+                } else {
+                    if (!mido->disable_l2_isolation) {
+                        LOGDEBUG("Creating ARP_TPA rule for %s\n", gniinstance->name);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                                NULL, NULL, max_post_rules, &ptmpmn, &in_rulepos, "position",
+                                tmp_name3, "type", "drop", "dlType", "2054", "nwDstAddress",
+                                instIp, "nwDstLength", "32", "invNwDst", "true",
+                                "invDlType", "false", NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create src IP check rule for %s\n", gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_post_rules++;
+                            }
+                        }
+                    }
+                }
+
+                EUCA_FREE(instMac);
+                EUCA_FREE(instIp);
+
+                // metadata
+                {
+                    // metadata redirect egress
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                            NULL, pre_rules, max_pre_rules, &ptmpmn, &eg_rulepos,
+                            "position", tmp_name3, "type", "dnat", "flowAction", "continue",
+                            "ipAddrGroupDst", mido->midocore->midos[CORE_METADATA_IPADDRGROUP]->uuid,
+                            "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
+                            "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf,
+                            "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
+                            "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create MD dnat rule for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_pre_rules++;
+                        }
+                    }
+
+                    // metadata redirect ingress
+                    snprintf(tmp_name3, 32, "%d", in_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                            NULL, post_rules, max_post_rules, &ptmpmn, &in_rulepos,
+                            "position", tmp_name3, "type", "snat", "flowAction", "continue",
+                            "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6",
+                            "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END",
+                            "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254",
+                            "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80",
+                            "natTargets:portTo", "80", "natTargets:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create MD snat rule for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_post_rules++;
+                        }
+                    }
+                }
+
+                // contrack
+                {
+                    // conntrack egress
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                            NULL, pre_rules, max_pre_rules, &ptmpmn, &eg_rulepos,
+                            "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create egress conntrack for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_pre_rules++;
+                        }
+                    }
+
+                    // conn track ingress
+                    snprintf(tmp_name3, 32, "%d", in_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                            NULL, post_rules, max_post_rules, &ptmpmn, &in_rulepos,
+                            "position", tmp_name3, "type", "accept", "matchReturnFlow", "true", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create ingress conntrack for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_post_rules++;
+                        }
+                    }
+                }
+
+                // plus two accept for metadata egress
+                snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                ptmpmn = NULL;
+                rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                        NULL, pre_rules, max_pre_rules, &ptmpmn, &eg_rulepos,
+                        "position", tmp_name3, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create egress +2 rule for %s\n", gniinstance->name);
+                } else {
+                    if (ptmpmn == NULL) {
+                        max_pre_rules++;
+                    }
+                }
+
+                // now set up the jumps to SG chains
+                for (j = 0; j < gniinstance->max_secgroup_names; j++) {
+                    char *tmpstr = NULL;
+                    midoname *dummymn;
+                    // find the SG
+                    rc = find_mido_vpc_secgroup(mido, gniinstance->secgroup_names[j].name, &vpcsecgroup);
+                    if (vpcsecgroup) {
+                        // found one
+                        tmpstr = hex2dot(gniinstance->privateIp);
+                        rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGPRIV],
+                                tmpstr, vpcsecgroup->iag_priv_ips, vpcsecgroup->max_iag_priv_ips,
+                                &dummymn, NULL);
+                        rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGALL],
+                                tmpstr, vpcsecgroup->iag_all_ips, vpcsecgroup->max_iag_all_ips,
+                                &dummymn, NULL);
+                        EUCA_FREE(tmpstr);
+
+                        tmpstr = hex2dot(gniinstance->publicIp);
+                        if (tmpstr && strcmp(tmpstr, "0.0.0.0")) {
+                            rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGPUB],
+                                    tmpstr, vpcsecgroup->iag_pub_ips, vpcsecgroup->max_iag_pub_ips,
+                                    &dummymn, NULL);
+                            rc = mido_create_ipaddrgroup_ip(mido, vpcsecgroup->midos[VPCSG_IAGALL],
+                                    tmpstr, vpcsecgroup->iag_all_ips, vpcsecgroup->max_iag_all_ips,
+                                    &dummymn, NULL);
+                        }
+                        EUCA_FREE(tmpstr);
+
+
+                        // add the SG chain jump egress
+                        snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                                NULL, pre_rules, max_pre_rules, &ptmpmn, &eg_rulepos,
+                                "position", tmp_name3, "type", "jump", "jumpChainId",
+                                vpcsecgroup->midos[VPCSG_EGRESS]->uuid, NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create egress jump rule %s %s\n", vpcsecgroup->name, gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_pre_rules++;
+                            }
+                        }
+
+                        // jump to sg chain ingress
+                        snprintf(tmp_name3, 32, "%d", in_rulepos);
+                        ptmpmn = NULL;
+                        rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                                NULL, post_rules, max_post_rules, &ptmpmn, &in_rulepos,
+                                "position", tmp_name3, "type", "jump", "jumpChainId",
+                                vpcsecgroup->midos[VPCSG_INGRESS]->uuid, NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create ingress jump rule %s %s\n", vpcsecgroup->name, gniinstance->name);
+                        } else {
+                            if (ptmpmn == NULL) {
+                                max_post_rules++;
+                            }
+                        }
+
+                    } else {
+                        LOGWARN("cannot locate extant security group in mido for group %s\n", gniinstance->secgroup_names[j].name);
+                    }
+                }
+
+                // drops
+                {
+                    // default drop all else egress
+                    snprintf(tmp_name3, 32, "%d", eg_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_PRECHAIN],
+                            NULL, pre_rules, max_pre_rules, &ptmpmn, &eg_rulepos,
+                            "position", tmp_name3, "type", "drop", "invDlType",
+                            "true", "dlType", "2054", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create egress drop rule for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_pre_rules++;
+                        }
+                    }
+
+                    // default drop all else ingress
+                    snprintf(tmp_name3, 32, "%d", in_rulepos);
+                    ptmpmn = NULL;
+                    rc = mido_create_rule(mido, vpcinstance->midos[INST_POSTCHAIN],
+                            NULL, post_rules, max_post_rules, &ptmpmn, &in_rulepos,
+                            "type", "drop", "invDlType", "true", "position", tmp_name3,
+                            "dlType", "2054", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create ingress drop rule for %s\n", gniinstance->name);
+                    } else {
+                        if (ptmpmn == NULL) {
+                            max_post_rules++;
+                        }
+                    }
+                }
+
+                LOGINFO("\t%s implemented in %.2f ms\n", vpcinstance->name, eucanetd_timer_usec(&tv) / 1000.0);
+            }
+        }
+    }
+    
     return (ret);
 }
 
@@ -2490,7 +3153,7 @@ int do_midonet_maint(mido_config *mido) {
 //!
 //! @note
 //!
-int do_midonet_update(globalNetworkInfo * gni, mido_config * mido) {
+int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mido_config *mido) {
     int rc = 0, ret = 0;
     struct timeval tv;
 
@@ -2516,6 +3179,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido) {
         }
         LOGINFO("midonet populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         mido_info_http_count();
+        mido_buffer_allocated = 0;
     }
     midonet_api_dirty_cache = 0;
 
@@ -2547,7 +3211,7 @@ int do_midonet_update(globalNetworkInfo * gni, mido_config * mido) {
     }
     LOGINFO("sgs processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
-    rc = do_midonet_update_pass3_insts(gni, mido);
+    rc = do_midonet_update_pass3_insts_byvpc(gni, mido);
     if (rc) {
         LOGERROR("pass3_insts: failed update - check midonet health\n");
         return (1);

@@ -486,9 +486,11 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
     }
 
     LOGDEBUG("midonet_api cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
-    if ((rc = do_midonet_update(pGni, pMidoConfig)) != 0) {
+    if ((rc = do_midonet_update(pGni, appliedGni, pMidoConfig)) != 0) {
         LOGERROR("could not update midonet: check log for details\n");
         ret = EUCANETD_RUN_ERROR_API;
+        GNI_FREE(pGni);
+        pGni = NULL;
     } else {
         LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
