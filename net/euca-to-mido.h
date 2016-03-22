@@ -229,6 +229,7 @@ int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chai
 int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
 int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, midoname *vmhost, char *instanceDNSDomain);
+int disconnect_mido_vpc_instance(mido_config *mido, mido_vpc_instance *vpcinstance);
 
 int connect_mido_vpc_instance_elip(mido_config * mido, mido_core * midocore, mido_vpc * vpc, mido_vpc_subnet * vpcsubnet, mido_vpc_instance * inst);
 int disconnect_mido_vpc_instance_elip(mido_config *mido, mido_vpc_instance * vpcinstance);

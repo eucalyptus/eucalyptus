@@ -147,8 +147,6 @@ extern int midonet_api_dirty_cache;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int mido_buffer_allocated = 0;
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
@@ -1025,7 +1023,7 @@ int do_midonet_teardown(mido_config * mido) {
 }
 
 int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
-    int ret = 0, i = 0, j = 0, rc = 0;
+    int ret = 0, i = 0, j = 0, k = 0, rc = 0;
     char *privIp = NULL, mapfile[EUCA_MAX_PATH];
     FILE *PFH = NULL;
 
@@ -1041,9 +1039,18 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
     gni_instance *gniinstance = NULL;
     gni_secgroup *gnisecgroup = NULL;
 
+    // pass1: ensure that the meta-data map is populated right away
+    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
+    unlink(mapfile);
+    PFH = fopen(mapfile, "w");
+    if (!PFH) {
+        LOGERROR("cannot open VPC map file '%s': check permissions and disk capacity\n", mapfile);
+        ret = 1;
+    }
+
     // pass1 - tag everything that is both in GNI and in MIDO
     // pass1: do vpcs and subnets
-    if ((!mido_buffer_allocated) && (gni->max_vpcs > 0) && (ret == 0)) {
+    if ((gni->max_vpcs > 0) && (ret == 0)) {
         // Allocate vpcs buffer for the worst case (add all VPCs in GNI)
         mido->vpcs = EUCA_REALLOC(mido->vpcs, mido->max_vpcs + gni->max_vpcs, sizeof (mido_vpc));
         if (mido->vpcs == NULL) {
@@ -1064,7 +1071,7 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
             vpc->gnipresent = 1;
             gnivpc->mido_present = vpc;
 
-            if ((!mido_buffer_allocated) && (gnivpc->max_subnets > 0) && (ret == 0)) {
+            if ((gnivpc->max_subnets > 0) && (ret == 0)) {
                 // Allocate vpcsubnets buffer for the worst case
                 vpc->subnets = EUCA_REALLOC(vpc->subnets, vpc->max_subnets + gnivpc->max_subnets, sizeof (mido_vpc_subnet));
                 if (vpc->subnets == NULL) {
@@ -1073,7 +1080,7 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
                 }
                 //bzero(&(vpc->subnets[vpc->max_subnets]), gnivpc->max_subnets * sizeof (mido_vpc_subnet));
             }
-            if ((!mido_buffer_allocated) && (gnivpc->max_natGateways > 0) && (ret == 0)) {
+            if ((gnivpc->max_natGateways > 0) && (ret == 0)) {
                 // Allocate natgateways buffer for the worst case
                 vpc->natgateways = EUCA_REALLOC(vpc->natgateways, vpc->max_natgateways + gnivpc->max_natGateways, sizeof (mido_vpc_natgateway));
                 if (vpc->natgateways == NULL) {
@@ -1094,8 +1101,7 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
                 vpcsubnet->gniSubnet = gnivpcsubnet;
                 vpcsubnet->gnipresent = 1;
                 gnivpcsubnet->mido_present = vpcsubnet;
-
-                if ((!mido_buffer_allocated) && (gnivpcsubnet->max_interfaces > 0) && (ret == 0)) {
+                if ((gnivpcsubnet->max_interfaces > 0) && (ret == 0)) {
                     // Allocate interfaces buffer for the worst case
                     vpcsubnet->instances = EUCA_REALLOC(vpcsubnet->instances, vpcsubnet->max_instances + gnivpcsubnet->max_interfaces, sizeof (mido_vpc_instance));
                     if (vpcsubnet->instances == NULL) {
@@ -1103,6 +1109,27 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
                         ret = 1;
                     }
                     //bzero(&(vpcsubnet->instances[vpcsubnet->max_instances]), gnivpc->max_interfaces * sizeof (mido_vpc_instance));
+                }
+            }
+
+            for (k = 0; k < gnivpcsubnet->max_interfaces; k++) {
+                gniinstance = gnivpcsubnet->interfaces[k];
+                privIp = hex2dot(gniinstance->privateIp);
+                if (PFH) fprintf(PFH, "%s %s %s\n", SP(gniinstance->vpc), SP(gniinstance->name), SP(privIp));
+                EUCA_FREE(privIp);
+
+                if (vpcsubnet != NULL) {
+                    rc = find_mido_vpc_instance(vpcsubnet, gniinstance->name, &vpcinstance);
+                } else {
+                    rc = 1;
+                }
+                if (rc) {
+                    LOGDEBUG("pass1: global VPC INSTANCE/INTERFACE %s in mido: N\n", gniinstance->name);
+                } else {
+                    LOGDEBUG("pass1: global VPC INSTANCE/INTERFACE %s in mido: Y\n", gniinstance->name);
+                    vpcinstance->gniInst = gniinstance;
+                    vpcinstance->gnipresent = 1;
+                    gniinstance->mido_present = vpcinstance;
                 }
             }
         }
@@ -1121,16 +1148,8 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
         }
     }
 
-    // pass1: ensure that the meta-data map is populated right away
-    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
-    unlink(mapfile);
-    PFH = fopen(mapfile, "w");
-    if (!PFH) {
-        LOGERROR("cannot open VPC map file '%s': check permissions and disk capacity\n", mapfile);
-        ret = 1;
-    }
-
     // pass1: do instances (interfaces) 
+/*
     for (i = 0; i < gni->max_interfaces; i++) {
         gniinstance = &(gni->interfaces[i]);
         privIp = hex2dot(gniinstance->privateIp);
@@ -1147,10 +1166,11 @@ int do_midonet_update_pass1(globalNetworkInfo * gni, mido_config * mido) {
             gniinstance->mido_present = vpcinstance;
         }
     }
+*/
     if (PFH) fclose(PFH);
 
     // pass1: do security groups
-    if ((!mido_buffer_allocated) && (gni->max_secgroups > 0) && (ret == 0)) {
+    if ((gni->max_secgroups > 0) && (ret == 0)) {
         // Allocate secgroups buffer for the worst case (add all secgroups in GNI)
         mido->vpcsecgroups = EUCA_REALLOC(mido->vpcsecgroups, mido->max_vpcsecgroups + gni->max_secgroups, sizeof (mido_vpc_secgroup));
         if (mido->vpcsecgroups == NULL) {
@@ -1441,8 +1461,22 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
             snprintf(vpc->name, 16, "%s", gnivpc->name);
             vpc->gniVpc = gnivpc;
             gnivpc->mido_present = vpc;
-
             get_next_router_id(mido, &(vpc->rtid));
+            // allocate space for subnets and natgateways
+            if (gnivpc->max_subnets > 0) {
+                vpc->subnets = EUCA_ZALLOC(gnivpc->max_subnets, sizeof (mido_vpc_subnet));
+                if (vpc->subnets == NULL) {
+                    LOGFATAL("out of memory: failed to allocate memory for %s->subnets\n", gnivpc->name);
+                    ret = 1;
+                }
+            }
+            if (gnivpc->max_natGateways > 0) {
+                vpc->natgateways = EUCA_ZALLOC(gnivpc->max_natGateways, sizeof (mido_vpc_natgateway));
+                if (vpc->natgateways == NULL) {
+                    LOGFATAL("out of memory: failed to allocate memory for %s->natgateways\n", gnivpc->name);
+                    ret = 1;
+                }
+            }
         }
 
         rc = create_mido_vpc(mido, mido->midocore, vpc);
@@ -1480,6 +1514,12 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo * gni, mido_config * mido) {
                 snprintf(vpcsubnet->name, 16, "%s", gnivpc->subnets[j].name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
                 gnivpcsubnet->mido_present = vpcsubnet;
+                // Allocate space for interfaces
+                vpcsubnet->instances = EUCA_ZALLOC(gnivpcsubnet->max_interfaces, sizeof (mido_vpc_instance));
+                if (vpcsubnet->instances == NULL) {
+                    LOGFATAL("out of memory: failed to allocate %s->instances\n", gnivpcsubnet->name);
+                    ret = 1;
+                }
             }
 
             subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
@@ -1963,6 +2003,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
     mido_vpc *vpc = NULL;
 
     gni_instance *gniinstance = NULL;
+    mido_resource_host *gni_instance_node = NULL;
     
     struct timeval tv;
     eucanetd_timer(&tv);
@@ -1996,6 +2037,23 @@ int do_midonet_update_pass3_insts(globalNetworkInfo * gni, mido_config * mido) {
                         vpcinstance->gniInst = gniinstance;
                         gniinstance->mido_present = vpcinstance;
                         LOGINFO("\tcreating %s\n", gniinstance->name);
+                    }
+
+                    // check for potential VMHOST change
+                    gni_instance_node = search_mido_host_byip(mido, gniinstance->node);
+                    if (vpcinstance->midos[INST_VMHOST] && vpcinstance->midos[INST_VMHOST]->init) {
+                        if (gni_instance_node) {
+                            if (((&(gni_instance_node->resc)) == vpcinstance->midos[INST_VMHOST]) ||
+                                    (!strcmp(gni_instance_node->resc.uuid, vpcinstance->midos[INST_VMHOST]->uuid))) {
+                                LOGTRACE("%s vmhost unchanged.\n", gniinstance->name);
+                            } else {
+                                LOGINFO("\t%s vmhost change detected.\n", gniinstance->name);
+                                disconnect_mido_vpc_instance(mido, vpcinstance);
+                            }
+                        } else {
+                            LOGINFO("\t%s vmhost not found.\n", gniinstance->name);
+                            disconnect_mido_vpc_instance(mido, vpcinstance);
+                        }
                     }
 
                     LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->node);
@@ -2533,6 +2591,7 @@ int do_midonet_update_pass3_insts_byvpc(globalNetworkInfo * gni, mido_config * m
     gni_vpc *gnivpc = NULL;
     gni_vpcsubnet *gnivpcsubnet = NULL;
     gni_instance *gniinstance = NULL;
+    mido_resource_host *gni_instance_node = NULL;
     
     struct timeval tv;
     // For each VPC, and each subnet, do instances/interfaces
@@ -2569,6 +2628,23 @@ int do_midonet_update_pass3_insts_byvpc(globalNetworkInfo * gni, mido_config * m
                     vpcinstance->gniInst = gniinstance;
                     gniinstance->mido_present = vpcinstance;
                     LOGINFO("\tcreating %s\n", gniinstance->name);
+                }
+
+                // check for potential VMHOST change
+                gni_instance_node = search_mido_host_byip(mido, gniinstance->node);
+                if (vpcinstance->midos[INST_VMHOST] && vpcinstance->midos[INST_VMHOST]->init) {
+                    if (gni_instance_node) {
+                        if (((&(gni_instance_node->resc)) == vpcinstance->midos[INST_VMHOST]) ||
+                                (!strcmp(gni_instance_node->resc.uuid, vpcinstance->midos[INST_VMHOST]->uuid))) {
+                            LOGTRACE("%s vmhost unchanged.\n", gniinstance->name);
+                        } else {
+                            LOGINFO("\t%s vmhost change detected.\n", gniinstance->name);
+                            disconnect_mido_vpc_instance(mido, vpcinstance);
+                        }
+                    } else {
+                        LOGINFO("\t%s vmhost not found.\n", gniinstance->name);
+                        disconnect_mido_vpc_instance(mido, vpcinstance);
+                    }
                 }
 
                 LOGDEBUG("ABOUT TO CREATE INSTANCE '%s' ON HOST '%s'\n", vpcinstance->name, gniinstance->node);
@@ -3179,7 +3255,6 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         }
         LOGINFO("midonet populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         mido_info_http_count();
-        mido_buffer_allocated = 0;
     }
     midonet_api_dirty_cache = 0;
 
@@ -5485,7 +5560,7 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
                 }
             }
         } else {
-            LOGWARN("Unexpected number of IP addresses (%d) in %s\n", ipag->max_ips, ipag->resc.name);
+            LOGDEBUG("Unexpected number of IP addresses (%d) in %s\n", ipag->max_ips, ipag->resc.name);
         }
         vpcinstance->iag_pre_ips = EUCA_ZALLOC(ipag->max_ips, sizeof (midoname *));
         if (vpcinstance->iag_pre_ips == NULL) {
@@ -5527,7 +5602,7 @@ int populate_mido_vpc_instance(mido_config * mido, mido_core * midocore, mido_vp
                 if (targetIP) EUCA_FREE(targetIP);
             }
         } else {
-            LOGWARN("Unexpected number of IP addresses (%d) in %s\n", ipag->max_ips, ipag->resc.name);
+            LOGDEBUG("Unexpected number of IP addresses (%d) in %s\n", ipag->max_ips, ipag->resc.name);
         }
         vpcinstance->iag_post_ips = EUCA_ZALLOC(ipag->max_ips, sizeof (midoname *));
         if (vpcinstance->iag_post_ips == NULL) {
@@ -5742,15 +5817,8 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc_instance * vpcinstance)
 
     rc = disconnect_mido_vpc_instance_elip(mido, vpcinstance);
     ret += rc;
-
-    // unlink port, delete port, delete dhcp entry
-    rc = mido_unlink_host_port(vpcinstance->midos[INST_VMHOST], vpcinstance->midos[INST_VPCBR_VMPORT]);
-    ret += rc;
-
-    rc = mido_delete_port(vpcinstance->midos[INST_VPCBR_VMPORT]);
-    ret += rc;
-
-    rc = mido_delete_dhcphost(vpcinstance->midos[INST_VPCBR_DHCPHOST]);
+    
+    rc = disconnect_mido_vpc_instance(mido, vpcinstance);
     ret += rc;
 
     rc = mido_delete_ipaddrgroup(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP]);
@@ -7374,6 +7442,48 @@ int populate_mido_core(mido_config * mido, mido_core * midocore) {
         }
         LOGDEBUG("\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i]->name, midocore->gwhosts[i]->init, midocore->gwports[i]->name, midocore->gwports[i]->init);
     }
+    return (ret);
+}
+
+//!
+//! Disconnects an instance/interface from mido - link of the interface to the
+//! VPC bridge port is removed; the corresponding bridge port is deleted; and
+//! the corresponding VPC bridge dhcp entry is removed.
+//!
+//! @param[in] mido current mido_config data structure
+//! @param[in] vpcinstance the instance of interest
+//!
+//! @return 0 on success. non-zero number otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int disconnect_mido_vpc_instance(mido_config *mido, mido_vpc_instance *vpcinstance) {
+    int ret = 0, rc = 0;
+
+    if (!vpcinstance || !strlen(vpcinstance->name)) {
+        LOGFATAL("Invalid argument: cannot disconnect a NULL instance\n");
+        return (1);
+    }
+    if ((vpcinstance->midos[INST_VMHOST] != NULL) && (vpcinstance->midos[INST_VMHOST]->init == 1)) {
+        LOGINFO("\tdisconnecting %s from %s\n", vpcinstance->name, vpcinstance->midos[INST_VMHOST]->name);
+    }
+
+    // unlink port, delete port, delete dhcp entry
+    rc = mido_unlink_host_port(vpcinstance->midos[INST_VMHOST], vpcinstance->midos[INST_VPCBR_VMPORT]);
+    ret += rc;
+
+    rc = mido_delete_port(vpcinstance->midos[INST_VPCBR_VMPORT]);
+    ret += rc;
+
+    rc = mido_delete_dhcphost(vpcinstance->midos[INST_VPCBR_DHCPHOST]);
+    ret += rc;
+    
     return (ret);
 }
 

@@ -2088,7 +2088,6 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     xmlCleanupParser();
 
     // Populate VPC and subnet interfaces
-    eucanetd_timer_usec(&tv);
     for (int i = 0; i < gni->max_vpcs; i++) {
         gni_vpc *vpc = &(gni->vpcs[i]);
         rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
@@ -2105,9 +2104,9 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
             }
         }
     }
-    LOGINFO("gni vpc/subnets/interfaces linked in %ld us.\n", eucanetd_timer_usec(&tv));
     LOGDEBUG("end parsing XML into data structures\n");
 
+    eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
     if (rc) {
         LOGDEBUG("could not validate GNI after XML parse: check network config\n");

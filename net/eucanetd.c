@@ -265,6 +265,7 @@ static driver_handler *pDriverHandler = NULL;
 static lni_t *pLni = NULL;
 
 static globalNetworkInfo *pGni = NULL;
+static globalNetworkInfo *pGniApplied = NULL;
 
 //! Main loop termination condition
 static volatile boolean gIsRunning = FALSE;
@@ -443,7 +444,7 @@ int main(int argc, char **argv)
             // Check tunnel-zone
             rc = check_mido_tunnelzone();
             if (rc) {
-                LOGERROR("No valid VPCMIDO tunnel-zone.\n");
+                LOGERROR("valid VPCMIDO tunnel-zone not found.\n");
                 if ((--check_tz_attempts) > 0) {
                     sleep(5);
                 } else {
@@ -469,8 +470,6 @@ int main(int argc, char **argv)
 
     // got all config, enter main loop
     while (gIsRunning) {
-        update_globalnet = FALSE;
-
         eucanetd_timer(&ttv);
         counter++;
 
@@ -492,17 +491,12 @@ int main(int argc, char **argv)
         update_globalnet_failed = FALSE;
 
         if (update_globalnet) {
-            globalNetworkInfo *tmpGni = NULL;
             if ((pGni == NULL) || (IS_NETMODE_VPCMIDO(pGni))) {
-                // In VPCMIDO mode, the driver uses multiple versions of GNI, and is responsible to appropriately release memory.
-                tmpGni = pGni;
-                pGni = gni_init();
+                if ((pGni == NULL) || (pGni == pGniApplied)) {
+                    pGni = gni_init();
+                }
             }
             rc = eucanetd_read_latest_network(pGni, &update_globalnet);
-            if ((update_globalnet == FALSE) && (IS_NETMODE_VPCMIDO(pGni))) {
-                GNI_FREE(pGni);
-                pGni = tmpGni;
-            }
         }
         if (rc) {
             LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
@@ -579,7 +573,7 @@ int main(int argc, char **argv)
                     scrubResult = EUCANETD_RUN_ALL_API;
                 } else {
                     // Scrub the system so see what needs to be done
-                    scrubResult = pDriverHandler->system_scrub(pGni, pLni);
+                    scrubResult = pDriverHandler->system_scrub(pGni, pGniApplied, pLni);
                     LOGINFO("eucanetd system_scrub executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
                 }
                 
@@ -673,10 +667,17 @@ int main(int argc, char **argv)
             polling_sleep = 0;
         }
         // do it all over again...
+        if ((pGniApplied != NULL) && (pGniApplied != pGni)) {
+            GNI_FREE(pGniApplied);
+            pGniApplied = NULL;
+        }
         if (update_globalnet_failed == TRUE) {
             LOGWARN("main loop complete (%ld ms): failures detected sleeping %d seconds before next poll\n", eucanetd_timer(&ttv), 1);
+            pGniApplied = NULL;
+            // invalidate mido cache
             sleep(1);
         } else {
+            pGniApplied = pGni;
             if (update_globalnet == FALSE) {
                 LOGDEBUG("main loop complete (%ld ms): sleeping %d seconds before next poll\n", eucanetd_timer(&ttv), config->polling_frequency);
                 if ((polling_sleep_adjusted > 0) && (polling_sleep_adjusted < 1000000)) {

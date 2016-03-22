@@ -142,7 +142,8 @@ typedef struct driver_handler_t {
     int (*upgrade) (globalNetworkInfo *pGni);                               //!< This is optional when upgrade tasks are required.
     int (*system_flush) (globalNetworkInfo *pGni);                          //!< Responsible for the flushing of all euca networking artifacts
     int (*system_maint) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Maintenance actions when eucanetd is idle (e.g., no GNI changes)
-    u32 (*system_scrub) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Works on detecting what is changing
+    u32 (*system_scrub) (globalNetworkInfo *pGni,
+            globalNetworkInfo *pGniApplied, lni_t *pLni);                   //!< Works on detecting what is changing
     int (*implement_network) (globalNetworkInfo *pGni, lni_t *pLni);        //!< Takes care of network devices, tunnels, etc.
     int (*implement_sg) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Takes care of security group implementations and membership
     int (*implement_addressing) (globalNetworkInfo *pGni, lni_t *pLni);     //!< Takes care of IP addressing, Elastic IPs, etc.

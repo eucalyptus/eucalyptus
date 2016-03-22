@@ -191,8 +191,6 @@ static boolean gInitialized = FALSE;
 //! Midonet pluggin specific configuration
 mido_config *pMidoConfig = NULL;
 
-static globalNetworkInfo *appliedGni = NULL;
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -211,7 +209,8 @@ static int network_driver_init(eucanetdConfig *pConfig);
 static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo *pGni);
 static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni,
+        globalNetworkInfo *pGniApplied, lni_t *pLni);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -463,7 +462,7 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni)
 {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
@@ -486,17 +485,13 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
     }
 
     LOGDEBUG("midonet_api cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
-    if ((rc = do_midonet_update(pGni, appliedGni, pMidoConfig)) != 0) {
+    if ((rc = do_midonet_update(pGni, pGniApplied, pMidoConfig)) != 0) {
         LOGERROR("could not update midonet: check log for details\n");
+        // Invalidate mido cache - force repopulate
+        midonet_api_dirty_cache = 1;
         ret = EUCANETD_RUN_ERROR_API;
-        GNI_FREE(pGni);
-        pGni = NULL;
     } else {
         LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
-    if (appliedGni != NULL) {
-        GNI_FREE(appliedGni);
-    }
-    appliedGni = pGni;
     return (ret);
 }
