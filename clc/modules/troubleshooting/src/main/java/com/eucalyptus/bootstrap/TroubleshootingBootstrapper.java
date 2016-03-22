@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,13 +77,10 @@ import com.eucalyptus.troubleshooting.changelisteners.MemoryCheckRatioListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckPollTimeListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckThresholdListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogLevelListener;
-import com.eucalyptus.troubleshooting.changelisteners.PermGenMemoryCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.changelisteners.PermGenMemoryCheckRatioListener;
 import com.eucalyptus.troubleshooting.changelisteners.TriggerFaultListener;
 import com.eucalyptus.troubleshooting.checker.schedule.DBCheckScheduler;
 import com.eucalyptus.troubleshooting.checker.schedule.MemoryCheckScheduler;
 import com.eucalyptus.troubleshooting.checker.schedule.LogFileDiskCheckScheduler;
-import com.eucalyptus.troubleshooting.checker.schedule.PermGenMemoryCheckScheduler;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.CloudServiceInit)
@@ -104,7 +101,6 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
     LOG.info("Starting troubleshooting interface.");
 		LogFileDiskCheckScheduler.resetLogFileDiskCheck();
 		DBCheckScheduler.resetDBCheck();
-		PermGenMemoryCheckScheduler.resetMXBeanMemoryCheck();
 		MemoryCheckScheduler.memoryCheck();
 		Faults.init();
     LOG.info("Starting monitoring interface");
@@ -178,12 +174,6 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 
 	@ConfigurableField(description = "Threshold (num connections or %) for db connection check", initial = "2.0%", changeListener = DBCheckThresholdListener.class, displayName = "db.check.threshold")
 	public static String DB_CHECK_THRESHOLD = "2.0%";
-
-	@ConfigurableField(description = "Poll time (ms) for perm-gen memory check", initial = "5000", changeListener = PermGenMemoryCheckPollTimeListener.class, displayName = "perm.gen.memory.check.poll.time")
-	public static String PERM_GEN_MEMORY_CHECK_POLL_TIME = "5000";
-
-	@ConfigurableField(description = "Ratio (of used memory) for perm-gen memory check", initial = "0.98", changeListener = PermGenMemoryCheckRatioListener.class, displayName = "perm.gen.memory.check.ratio")
-	public static String PERM_GEN_MEMORY_CHECK_RATIO = "0.98";
 
 	@ConfigurableField(description = "Poll time (ms) for memory check", initial = "5000", changeListener = MemoryCheckPollTimeListener.class, displayName = "memory.check.poll.time")
 	public static String MEMORY_CHECK_POLL_TIME = "5000";
