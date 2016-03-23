@@ -380,7 +380,7 @@ int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_va
         LOGWARN("Invalid argument: NULL pointer.\n");
         return (1);
     }
-    LOGTRACE("searching for %s", key);
+    LOGEXTREME("searching for %s", key);
 
     *values = NULL;
     *max_values = 0;
@@ -391,7 +391,7 @@ int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_va
             ret = 1;
         } else {
             jarr_len = json_object_array_length(jarr);
-            LOGTRACE("\tfound %d\n", jarr_len);
+            LOGEXTREME("\tfound %d\n", jarr_len);
             if (jarr_len > 0) {
                 res = EUCA_ZALLOC(jarr_len, sizeof (char *));
                 if (res == NULL) {
@@ -401,7 +401,7 @@ int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_va
                 for (int i = 0; i < jarr_len; i++) {
                     jarrel = json_object_array_get_idx(jarr, i);
                     res[i] = strdup(json_object_get_string(jarrel));
-                    LOGTRACE("\t%d %s\n", i, res[i]);
+                    LOGEXTREME("\t%d %s\n", i, res[i]);
                 }
                 *values = res;
                 *max_values = jarr_len;
