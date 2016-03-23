@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import com.eucalyptus.compute.common.*;
@@ -614,9 +615,9 @@ public class EucalyptusActivityTasks {
 		), Predicates.alwaysTrue() );
 	}
 
-	public List<VpcType> describeSystemVpcs(final boolean defaultVpc, final List<String> vpcIds) {
+	public List<VpcType> describeSystemVpcs(final List<String> vpcIds) {
 		return resultOf(
-				new EucaDescribeVpcsTask( defaultVpc, vpcIds ),
+				new EucaDescribeVpcsTask( null, vpcIds ),
 				new ComputeSystemActivity(),
 				"failed to describe system vpc"
 		);
@@ -937,6 +938,29 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
+	public List<NetworkInterfaceType> describeSystemNetworkInterfaces(final String subnetId) {
+		return resultOf(
+				new EucaDescribeNetworkInterfacesTask(subnetId),
+				new ComputeSystemActivity(),
+				"failed to describe network interfaces"
+		);
+	}
+
+	public NetworkInterfaceType createNetworkInterface(final String subnetId) {
+		return resultOf(
+				new EucaCreateNetworkInterfaceTask(subnetId),
+				new ComputeSystemActivity(),
+				"failed to create network interface"
+		);
+	}
+
+	public void attachNetworkInterface(final String instanceId, final String networkInterfaceId, final int deviceIndex) {
+		checkResult(new EucaAttachNetworkInterfaceTask(instanceId, networkInterfaceId, deviceIndex),
+				new ComputeSystemActivity(),
+				String.format("failed to attach network interface %s to %s at index %d",
+						networkInterfaceId, instanceId, deviceIndex));
+	}
+
 	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
@@ -1237,6 +1261,71 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
+	private class EucaAttachNetworkInterfaceTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String instanceId = null;
+		private String interfaceId = null;
+		private int deviceIdx = 1;
+		private EucaAttachNetworkInterfaceTask(final String instanceId,
+											   final String interfaceId,
+											   final int deviceIndex) {
+			this.instanceId = instanceId;
+			this.interfaceId = interfaceId;
+			this.deviceIdx = deviceIndex;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final AttachNetworkInterfaceType req = new AttachNetworkInterfaceType();
+			req.setInstanceId(this.instanceId);
+			req.setNetworkInterfaceId(this.interfaceId);
+			req.setDeviceIndex(this.deviceIdx);
+			return req;
+		}
+	}
+
+	private class EucaCreateNetworkInterfaceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, NetworkInterfaceType> {
+		private String subnetId = null;
+		private EucaCreateNetworkInterfaceTask(final String subnetId) {
+			this.subnetId = subnetId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final CreateNetworkInterfaceType req = new CreateNetworkInterfaceType();
+			req.setSubnetId(this.subnetId);
+			return req;
+		}
+
+		@Override
+		NetworkInterfaceType extractResult(ComputeMessage resp) {
+			final CreateNetworkInterfaceResponseType response = (CreateNetworkInterfaceResponseType) resp;
+			return response.getNetworkInterface();
+		}
+	}
+
+	private class EucaDescribeNetworkInterfacesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<NetworkInterfaceType>> {
+		private String subnetId = null;
+		private EucaDescribeNetworkInterfacesTask(final String subnetId) {
+			this.subnetId = subnetId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final DescribeNetworkInterfacesType req =
+					new DescribeNetworkInterfacesType();
+			if(this.subnetId!=null) {
+				req.getFilterSet().add(filter("subnet-id", this.subnetId));
+			}
+			return req;
+		}
+
+		@Override
+		List<NetworkInterfaceType> extractResult(ComputeMessage resp) {
+			final DescribeNetworkInterfacesResponseType response = (DescribeNetworkInterfacesResponseType) resp;
+			return response.getNetworkInterfaceSet().getItem();
+		}
+	}
+
 	private class EucaDescribeNatGatewayTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<NatGatewayType>> {
 		private String subnetId = null;
 		private EucaDescribeNatGatewayTask(final String subnetId) {
@@ -1351,7 +1440,14 @@ public class EucalyptusActivityTasks {
 				req.getFilterSet().add( filter( "isDefault", String.valueOf( defaultVpc ) ) );
 			}
 			if(this.vpcIds!=null){
-				req.getFilterSet().add( filter( "vpc-id", vpcIds ) );
+				final List<VpcIdSetItemType> idItems =
+						this.vpcIds.stream().map(s -> {
+							final VpcIdSetItemType item = new VpcIdSetItemType();
+							item.setVpcId(s);
+							return item;
+						}).collect(Collectors.toList());
+				req.setVpcSet( new VpcIdSetType() );
+				req.getVpcSet().setItem(new ArrayList(idItems));
 			}
 			return req;
 		}
