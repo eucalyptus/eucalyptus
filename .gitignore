@@ -77,7 +77,6 @@ tools/eucalyptus-eucanetd
 tools/eucalyptus-logrotate.conf
 util/eucalyptus-config.h
 util/euca-generate-fault
-util/euca_mountwrap
 util/euca_rootwrap
 util/test_misc
 util/test_fault

@@ -126,12 +126,9 @@ enum {
     MKDIR,
     MKEXT3,
     MKSWAP,
-    MOUNT,
     PARTED,
     TUNE2FS,
-    UMOUNT,
     ROOTWRAP,
-    MOUNTWRAP,
     LASTHELPER
 };
 
@@ -171,12 +168,9 @@ static char *helpers[LASTHELPER] = {
     "mkdir",
     "mkfs.ext3",
     "mkswap",
-    "mount",
     "parted",
     "tune2fs",
-    "umount",
     "euca_rootwrap",
-    "euca_mountwrap",
 };
 
 static char *helpers_path[LASTHELPER] = { NULL };
@@ -1012,82 +1006,6 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
     }
 
     LOGERROR("failed to extract partition information for '%s'\n", SP(path));
-    return (EUCA_INVALID_ERROR);
-}
-
-//!
-//! Mounts a given device at a given location.
-//!
-//! @param[in] dev
-//! @param[in] mnt_pt
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if any issue occured.
-//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions.
-//!
-//! @pre Both dev and mnt_pt parameters must not be NULL.
-//!
-//! @post On success, the device is successfully mounted at its mounting point.
-//!
-int diskutil_mount(const char *dev, const char *mnt_pt)
-{
-    char *output = NULL;
-
-    if (dev && mnt_pt) {
-        sem_p(loop_sem);
-        {
-            output = pruntf(TRUE, "%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
-        }
-        sem_v(loop_sem);
-
-        if (!output) {
-            LOGERROR("cannot mount device '%s' on '%s'\n", dev, mnt_pt);
-            return (EUCA_ERROR);
-        }
-
-        EUCA_FREE(output);
-        return (EUCA_OK);
-    }
-
-    LOGERROR("cannot mount device '%s' on '%s'\n", SP(dev), SP(mnt_pt));
-    return (EUCA_INVALID_ERROR);
-}
-
-//!
-//! Unmount a given device
-//!
-//! @param[in] dev
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if any issue occured.
-//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions.
-//!
-//! @pre \li The dev paramter must not be NULL.
-//!      \li The given device must already be mounted.
-//!
-//! @post On success, the device is unmounted from the file system.
-//!
-int diskutil_umount(const char *dev)
-{
-    char *output = NULL;
-
-    if (dev) {
-        sem_p(loop_sem);
-        {
-            output = pruntf(TRUE, "%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
-        }
-        sem_v(loop_sem);
-
-        if (!output) {
-            LOGERROR("cannot unmount device '%s'\n", dev);
-            return (EUCA_ERROR);
-        }
-
-        EUCA_FREE(output);
-        return (EUCA_OK);
-    }
-
-    LOGERROR("cannot unmount device '%s'\n", SP(dev));
     return (EUCA_INVALID_ERROR);
 }
 
