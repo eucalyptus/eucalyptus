@@ -71,6 +71,9 @@ public abstract class ResourceAction {
   public UpdateType getUpdateType(ResourceAction resourceAction) throws Exception {
     return UpdateType.NONE; // TODO: make this method abstract once all resources implement their update logic.
   }
+  public boolean mustCheckUpdateTypeEvenIfNoPropertiesChanged() { // there are a couple of cases, specifically EIP and EIPAssociation if instance has been 'updated'
+    return false;
+  }
 
   public abstract Promise<String> getUpdatePromise(UpdateTypeAndDirection updateTypeAndDirection, WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 

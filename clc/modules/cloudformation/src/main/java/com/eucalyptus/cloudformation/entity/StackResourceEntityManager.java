@@ -29,7 +29,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
@@ -74,7 +73,7 @@ public class StackResourceEntityManager {
   public static void copyStackResourceEntityData(StackResourceEntity sourceEntity, StackResourceEntity destEntity) {
     destEntity.setRecordDeleted(sourceEntity.getRecordDeleted());
     destEntity.setCreatedEnoughToDelete(sourceEntity.getCreatedEnoughToDelete());
-    destEntity.setFromUpdateReplacement(sourceEntity.getFromUpdateReplacement());
+    destEntity.setUpdateType(sourceEntity.getUpdateType());
     destEntity.setDescription(sourceEntity.getDescription());
     destEntity.setLogicalResourceId(sourceEntity.getLogicalResourceId());
     destEntity.setPhysicalResourceId(sourceEntity.getPhysicalResourceId());

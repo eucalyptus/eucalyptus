@@ -740,10 +740,16 @@ public class StackActivityImpl implements StackActivity {
     JsonNode previousProperties = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getPropertiesJson());
     JsonNode nextProperties = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getPropertiesJson());
     boolean propertiesChanged = !Objects.equals(previousProperties, nextProperties);
-    if (nothingOutsidePropertiesChanged && !propertiesChanged) {
+
+
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
+
+
+    if (nothingOutsidePropertiesChanged && !propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged()) {
       // nothing has changed, so copy the old values to the new one.
       StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
-      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
+      nextStackResourceEntity.setUpdateType("NONE"); // no update with replacement this time.
       nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
@@ -760,11 +766,11 @@ public class StackActivityImpl implements StackActivity {
     nextStackResourceEntity.setCreatedEnoughToDelete(previousStackResourceEntity.getCreatedEnoughToDelete());
     StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
 
-    if (!propertiesChanged) {
+    if (!propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged()) {
+      nextStackResourceEntity.setUpdateType("NO_PROPERTIES");
+      StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NO_PROPERTIES";
     }
-    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
-    ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
     previousResourceAction.setStackEntity(previousStackEntity); // NOTE: stack entity has been changed with new values but nothing (yet) is used from it
     previousResourceInfo.setEffectiveUserId(effectiveUserId);
     previousResourceAction.setResourceInfo(previousResourceInfo);
@@ -778,12 +784,13 @@ public class StackActivityImpl implements StackActivity {
     if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
       nextStackResourceEntity.setResourceStatusReason(null);
+      nextStackResourceEntity.setUpdateType(updateType.toString());
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       StackEventEntityManager.addStackEvent(nextStackResourceEntity);
     } else if (updateType == UpdateType.NEEDS_REPLACEMENT) {
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
       nextStackResourceEntity.setResourceStatusReason("Requested update requires the creation of a new physical resource; hence creating one.");
-      nextStackResourceEntity.setFromUpdateReplacement(Boolean.TRUE);
+      nextStackResourceEntity.setUpdateType(updateType.toString());
       nextStackResourceEntity.setCreatedEnoughToDelete(Boolean.FALSE); // just in case it was set before...
       StackEventEntityManager.addStackEvent(nextStackResourceEntity);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
@@ -792,7 +799,7 @@ public class StackActivityImpl implements StackActivity {
       // nothing has changed, so copy the old values to the new one.
       LOG.warn("Resource " + nextStackResourceEntity.getLogicalResourceId() + " on stack " + nextStackResourceEntity.getStackId() + " has changed properties, but the resource update type is NONE.  Copying the previous value");
       StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
-      nextStackResourceEntity.setFromUpdateReplacement(Boolean.FALSE); // no update with replacement this time.
+      nextStackResourceEntity.setUpdateType(updateType.toString());
       nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
@@ -901,7 +908,7 @@ public class StackActivityImpl implements StackActivity {
     boolean nextEntityExists = nextStackResourceEntity != null;
     boolean nextEntityState = nextStackResourceEntity == null ? null : nextStackResourceEntity.getResourceStatus();
     boolean nextEntityNotStarted = (nextEntityState == Status.NOT_STARTED);
-    boolean nextEntityFromResourceReplacement = (nextEntityExists  && nextStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+    boolean nextEntityFromResourceReplacement = (nextEntityExists  && UpdateType.NEEDS_REPLACEMENT.toString().equals(nextStackResourceEntity.getUpdateType()));
 
     if (previousEntityExists && previousEntityInAppropriateState &&
       (!nextEntityExists || nextEntityNotStarted || nextEntityFromResourceReplacement)
@@ -1024,16 +1031,17 @@ public class StackActivityImpl implements StackActivity {
     if (errorWithProperties) {
       return UpdateType.UNSUPPORTED; // (We can't check the update type, so there was obviously an error on the way "in", so treat it as if it were unsupported (same logic)
     }
-    // We check the update type going the original way (sometimes going backwards has a different value, such as IAM Access key with serial, needing the new number to be higher.)
-    UpdateType updateType = rolledbackResourceAction.getUpdateType(updatedResourceAction);
-    if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
+    // only put update in progress if we actually did an update and it was of no_interruption or some_interruption
+    if (UpdateType.NO_INTERRUPTION.toString().equals(updatedStackResourceEntity.getUpdateType()) ||
+      UpdateType.SOME_INTERRUPTION.toString().equals(updatedStackResourceEntity.getUpdateType())) {
       updatedStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
       updatedStackResourceEntity.setResourceStatusReason(null);
       StackResourceEntityManager.updateStackResource(updatedStackResourceEntity);
       StackEventEntityManager.addStackEvent(updatedStackResourceEntity);
     }
     // Unsupported update types or "needs replacement" ones don't need status updates
-    return updateType.toString();
+    // At this point just return the previous value
+    return updatedStackResourceEntity.getUpdateType();
   }
 
   public String finalizeUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
@@ -1082,12 +1090,12 @@ public class StackActivityImpl implements StackActivity {
       (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
       (nextStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
       (nextStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
-      (previousStackResourceEntity.getFromUpdateReplacement() == Boolean.TRUE);
+      (UpdateType.NEEDS_REPLACEMENT.toString().equals(previousStackResourceEntity.getUpdateType()));
 
     boolean createdCase = (previousStackResourceEntity != null) &&
       (previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE) &&
       (previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED) &&
-      (previousStackResourceEntity.getFromUpdateReplacement() != Boolean.TRUE) &&
+      (!UpdateType.NEEDS_REPLACEMENT.toString().equals(previousStackResourceEntity.getUpdateType())) &&
       (nextStackResourceEntity == null ||
         nextStackResourceEntity.getResourceStatus() == Status.NOT_STARTED ||
         nextStackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE);

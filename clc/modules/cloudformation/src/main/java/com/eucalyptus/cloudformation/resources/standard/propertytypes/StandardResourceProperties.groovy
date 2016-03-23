@@ -222,6 +222,8 @@ public class AWSEC2EIPAssociationProperties implements ResourceProperties {
 @ToString(includeNames=true)
 public class AWSEC2InstanceProperties implements ResourceProperties {
   @Property
+  String additionalInfo;
+  @Property
   String availabilityZone;
   @Property
   List<EC2BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
