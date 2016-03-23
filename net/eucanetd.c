@@ -437,6 +437,10 @@ int main(int argc, char **argv)
             }
             eucanetdPeer = PEER_INVALID;
         }
+        if (rc && config->flushmode) {
+            LOGFATAL("Unable to complete eucanetd pre-flight checks. Flush aborted.\n");
+            exit(1);
+        }
     }
     rc = 1;
     while (rc) {
@@ -453,6 +457,10 @@ int main(int argc, char **argv)
                 }
             }
         } else {
+            rc = 0;
+        }
+        if (rc && config->flushmode) {
+            LOGWARN("Will try eucanetd flush without a tunnel-zone.\n");
             rc = 0;
         }
     }

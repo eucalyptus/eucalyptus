@@ -152,13 +152,6 @@ int check_mido_tunnelzone();
 
 int discover_mido_resources(mido_config * mido);
 
-int add_mido_resource_router(mido_config *mido, midoname *router);
-int add_mido_resource_ipaddrgroup(mido_config *mido, midoname *ipag);
-
-int delete_mido_resource_chain(mido_config *mido, char *chainname);
-int delete_mido_resource_ipaddrgroup(mido_config *mido, char *ipag);
-int delete_mido_resource_ipaddrgroup_ip(mido_config *mido, midoname *ipag, midoname *ip);
-
 int populate_mido_iphostmap(mido_config *mido);
 
 int populate_mido_core(mido_config * mido, mido_core * midocore);
