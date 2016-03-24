@@ -309,16 +309,11 @@ sub lookup_session {
 
 sub get_disk_by_id_path {
   my ($devname) = @_;
-  my $disk_by_id_path = "/dev/disk/by-id/";
-  my @output = run_cmd(1, 0, "/lib/udev/scsi_id --whitelisted --replace-whitespace --device=$devname");
+  my @output = run_cmd(1, 0, "udevadm info --query=property --name=$devname | grep DEVLINKS");
   my $scsi_id = shift(@output);
   chomp $scsi_id;
   return $scsi_id if (is_null_or_empty($scsi_id));
-  if ($multipath == 0) {
-    $disk_by_id_path = $disk_by_id_path."scsi-".$scsi_id;
-  } else {
-    $disk_by_id_path = $disk_by_id_path."dm-uuid-mpath-".$scsi_id;
-  }
-  return $disk_by_id_path;
+  my @paths = split / /, $scsi_id;
+  return @paths[1];
 }
 
