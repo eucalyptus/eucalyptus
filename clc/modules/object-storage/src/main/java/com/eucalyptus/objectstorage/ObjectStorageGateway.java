@@ -191,6 +191,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
@@ -956,6 +957,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // Get the listing from the back-end and copy results in.
     // return ospClient.listBucket(request);
     ListBucketResponseType reply = request.getReply();
+
+    //LPT For CORS
+    reply.setOrigin(request.getOrigin());
+    reply.setBucketUuid(bucket.getBucketUuid());
+    
     int maxKeys = 1000;
     try {
       if (!Strings.isNullOrEmpty(request.getMaxKeys())) {
@@ -2191,85 +2197,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
-      CorsMatchResult corsMatchResult = matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
+      CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
       
-      boolean found = false;
-      boolean anyOrigin = false;
-      CorsRule corsRuleFound = null;
-      
-      for (CorsRule corsRule : corsRules ) {
-
-        corsRuleFound = corsRule; // will only be used if we find a match
-        
-        // Does the origin match any origin's regular expression in the rule?
-        String[] allowedOrigins = corsRule.getAllowedOrigins();
-        found = false;
-        for (int idx = 0; idx < allowedOrigins.length; idx++) {
-          String allowedOriginRegex = "\\Q" + allowedOrigins[idx].replace("*", "\\E.*?\\Q") + "\\E";
-          Pattern p = Pattern.compile(allowedOriginRegex);
-          Matcher m = p.matcher(requestOrigin);
-          boolean match = m.matches();
-          if (match) {
-            anyOrigin = (allowedOrigins[idx].equals("*"));
-            found = true;
-            break;  // stop looking through the origins for this rule
-          }
-        }
-        if (!found) {
-          continue;  // go to the next CORS rule
-        }
-        
-        // Does the HTTP verb match any verb in the rule?
-        String[] allowedMethods = corsRule.getAllowedMethods();
-        found = false;
-        for (int idx = 0; idx < allowedMethods.length; idx++) {
-          if (requestMethod.equals(allowedMethods[idx])) {
-            found = true;
-            break;  // stop looking through the methods for this rule
-          }
-        }
-        if (!found) {
-          continue;  // go to the next CORS rule
-        }
-        
-        // If there are no Access-Control-Request-Headers, or if there are
-        // no AllowedHeaders in the CORS rule, then skip this check.
-        // We have matched the current CORS rule. Stop looking through them.
-        if (requestHeaders == null || requestHeaders.size() == 0) {
-          break;
-        }
-        String[] allowedHeaders = corsRule.getAllowedHeaders();
-        if (allowedHeaders == null || allowedHeaders.length == 0) {
-          break;
-        }
-
-        // Does every request header in the comma-delimited list in 
-        // Access-Control-Request-Headers have a matching entry in the 
-        // allowed headers in the rule?
-        found = false;
-        Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.length];
-        for (CorsHeader requestHeader : requestHeaders) {
-          found = false;
-          for (int idx = 0; idx < allowedHeaders.length; idx++) {
-            if (allowedHeaderRegexPattern[idx] == null) {
-              String allowedHeaderRegex = "\\Q" + allowedHeaders[idx].replace("*", "\\E.*?\\Q") + "\\E";
-              allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex);
-            }
-            Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader.getCorsHeader());
-            boolean match = matcher.matches();
-            if (match) {
-              found = true;
-              break;  // stop looking through the allowed headers for this request header
-            }
-          }
-          if (!found) {
-            // No allowed header matches this request header, so this rule fails to match
-            break;  // stop looking through the request headers
-          }
-        }
-      }  // end for each CORS rule
-      
-      if (!found) {
+      CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
+      if (corsRuleMatch == null) {
         // No rule matched the request
         CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(requestMethod,
             key == null ? "BUCKET" : "OBJECT");
@@ -2284,10 +2215,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // set the response's origin to "*" instead of the origin in the 
       // request. Matches AWS behavior and W3 spec: (strange but true)
       // https://www.w3.org/TR/cors/#resource-preflight-requests
-      responseFields.setOrigin(anyOrigin ? "*" : requestOrigin);
+      responseFields.setOrigin(corsMatchResult.getAnyOrigin() ? "*" : requestOrigin);
       
       List<String> methods = new ArrayList<String>();
-      String[] allowedMethods = corsRuleFound.getAllowedMethods();
+      String[] allowedMethods = corsRuleMatch.getAllowedMethods();
       for (int idx = 0; idx < allowedMethods.length; idx++) {
         methods.add(allowedMethods[idx]);
       }
@@ -2295,7 +2226,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       
       responseFields.setAllowedHeaders(preflightRequest.getRequestHeaders());
 
-      String[] ruleExposeHeaders = corsRuleFound.getExposeHeaders();
+      String[] ruleExposeHeaders = corsRuleMatch.getExposeHeaders();
       if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
         List<CorsHeader> exposeHeaders = new ArrayList<CorsHeader>();
         for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
@@ -2306,7 +2237,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         responseFields.setExposeHeaders(exposeHeaders);
       }
 
-      responseFields.setMaxAgeSeconds(corsRuleFound.getMaxAgeSeconds());
+      responseFields.setMaxAgeSeconds(corsRuleMatch.getMaxAgeSeconds());
 
       response.setStatus(HttpResponseStatus.OK);
 
@@ -2325,15 +2256,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     return response;
   }
 
-  
-  private CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
-      String requestMethod, List<CorsHeader> requestHeaders) {
-    CorsMatchResult corsMatchResult = new CorsMatchResult();
-    corsMatchResult.setMatched(true);
-    corsMatchResult.setAnyOrigin(true);
-    return corsMatchResult;
-  }
-  
   private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);
     Bucket bucket = ensureBucketExists(request.getBucket());

@@ -69,8 +69,18 @@ import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageResponseType extends ObjectStorageRequestType {
   HttpResponseStatus status; //Most should be 200-ok, but for deletes etc it may be 204-No Content
+  protected String bucketUuid;
 
   def ObjectStorageResponseType() {}
+
+  public String getBucketUuid() {
+    return bucketUuid;
+  }
+
+  public void setBucketUuid(String bucketUuid) {
+    this.bucketUuid = bucketUuid;
+  }
+
 }
 
 @ComponentMessage(ObjectStorage.class)
@@ -86,6 +96,7 @@ public class ObjectStorageRequestType extends BaseMessage {
   BucketLogData logData;
   protected String bucket;
   protected String key;
+  protected String origin;
 
   public ObjectStorageRequestType() {}
 
@@ -120,6 +131,14 @@ public class ObjectStorageRequestType extends BaseMessage {
 
   public Date getTimestamp() {
     return this.timeStamp;
+  }
+
+  public String getOrigin() {
+    return origin;
+  }
+
+  public void setOrigin(String origin) {
+    this.origin = origin;
   }
 
   public UserPrincipal getUser() {
@@ -249,7 +268,7 @@ public class ObjectStorageErrorMessageExtendedType extends ObjectStorageErrorMes
   String method;
 
   def ObjectStorageErrorMessageExtendedType() {}
-  
+
   def ObjectStorageErrorMessageExtendedType(String message,
   String code,
   HttpResponseStatus status,
@@ -621,6 +640,7 @@ public class ListBucketType extends ObjectStorageRequestType {
   String marker;
   String maxKeys;
   String delimiter;
+  String origin;
 
   def ListBucketType() {
     prefix = "";

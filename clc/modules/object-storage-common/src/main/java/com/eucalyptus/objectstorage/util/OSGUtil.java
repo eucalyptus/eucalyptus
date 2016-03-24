@@ -66,6 +66,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 
@@ -84,6 +87,7 @@ import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3ExtendedException;
@@ -91,6 +95,9 @@ import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.storage.msgs.s3.CorsHeader;
+import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
@@ -340,4 +347,95 @@ public class OSGUtil {
     }
     return hostBucket;
   }
+  
+  public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
+      String requestMethod, List<CorsHeader> requestHeaders) {
+    CorsMatchResult corsMatchResult = new CorsMatchResult();
+    boolean found = false;
+    boolean anyOrigin = false;
+    CorsRule corsRuleMatch = null;
+    
+    for (CorsRule corsRule : corsRules ) {
+
+      corsRuleMatch = corsRule; // will only be used if we find a match
+      
+      // Does the origin match any origin's regular expression in the rule?
+      String[] allowedOrigins = corsRule.getAllowedOrigins();
+      found = false;
+      for (int idx = 0; idx < allowedOrigins.length; idx++) {
+        String allowedOriginRegex = "\\Q" + allowedOrigins[idx].replace("*", "\\E.*?\\Q") + "\\E";
+        Pattern p = Pattern.compile(allowedOriginRegex);
+        Matcher m = p.matcher(requestOrigin);
+        boolean match = m.matches();
+        if (match) {
+          anyOrigin = (allowedOrigins[idx].equals("*"));
+          found = true;
+          break;  // stop looking through the origins for this rule
+        }
+      }
+      if (!found) {
+        continue;  // go to the next CORS rule
+      }
+      
+      // Does the HTTP verb match any verb in the rule?
+      String[] allowedMethods = corsRule.getAllowedMethods();
+      found = false;
+      for (int idx = 0; idx < allowedMethods.length; idx++) {
+        if (requestMethod.equals(allowedMethods[idx])) {
+          found = true;
+          break;  // stop looking through the methods for this rule
+        }
+      }
+      if (!found) {
+        continue;  // go to the next CORS rule
+      }
+      
+      // If there are no Access-Control-Request-Headers, or if there are
+      // no AllowedHeaders in the CORS rule, then skip this check.
+      // We have matched the current CORS rule. Stop looking through them.
+      if (requestHeaders == null || requestHeaders.size() == 0) {
+        break;
+      }
+      String[] allowedHeaders = corsRule.getAllowedHeaders();
+      if (allowedHeaders == null || allowedHeaders.length == 0) {
+        break;
+      }
+
+      // Does every request header in the comma-delimited list in 
+      // Access-Control-Request-Headers have a matching entry in the 
+      // allowed headers in the rule?
+      found = false;
+      Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.length];
+      for (CorsHeader requestHeader : requestHeaders) {
+        found = false;
+        for (int idx = 0; idx < allowedHeaders.length; idx++) {
+          if (allowedHeaderRegexPattern[idx] == null) {
+            String allowedHeaderRegex = "\\Q" + allowedHeaders[idx].replace("*", "\\E.*?\\Q") + "\\E";
+            allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex);
+          }
+          Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader.getCorsHeader());
+          boolean match = matcher.matches();
+          if (match) {
+            found = true;
+            break;  // stop looking through the allowed headers for this request header
+          }
+        }
+        if (!found) {
+          // No allowed header matches this request header, so this rule fails to match
+          break;  // stop looking through the request headers
+        }
+      }
+    }  // end for each CORS rule
+
+    if (found) {
+      corsMatchResult.setCorsRuleMatch(corsRuleMatch);
+      corsMatchResult.setAnyOrigin(anyOrigin);
+    }
+    return corsMatchResult;
+  }
+  
+  public static void addCorsResponseHeaders (Bucket bucket, String origin, String verb) {
+    String bucketName = "nullBucket";
+  }
+  
 }

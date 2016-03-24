@@ -112,7 +112,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
 import com.eucalyptus.objectstorage.exceptions.s3.CorsConfigUnsupportedMethodException;
-import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoOriginException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
@@ -155,7 +154,6 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
-import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
@@ -386,6 +384,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         operationKey = BUCKET + verb;
         operationParams.put("Bucket", target[0]);
         operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
+        // LPT
+        if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
+            httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
+          operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+        }
         if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
           if (params.containsKey(ObjectStorageProperties.BucketParameter.delete.toString())) {
             operationParams.put("delete", getMultiObjectDeleteMessage(httpRequest));
@@ -477,6 +480,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("Key", objectKey);
       operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
 
+      // LPT
+      if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
+          httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
+        operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+      }
       if (!params.containsKey(ObjectStorageProperties.BucketParameter.acl.toString())) {
         if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
           if (httpRequest.containsHeader(ObjectStorageProperties.COPY_SOURCE.toString())) {

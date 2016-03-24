@@ -298,8 +298,8 @@ public class CorsHeader {
 }
 
 public class CorsMatchResult {
-  boolean matched;
-  boolean anyOrigin;
+  CorsRule CorsRuleMatch = null;
+  boolean anyOrigin = false;
 }
 
 public class PreflightRequest {
