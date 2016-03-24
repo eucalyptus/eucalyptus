@@ -94,6 +94,7 @@ import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
@@ -2207,8 +2208,15 @@ public class EuareService {
   private EuareAccount getRealAccount( Context ctx, EuareMessageWithDelegate request ) throws EuareException {
     final EuareAccount requestAccount;
     final String delegateAccount = request.getDelegateAccount( );
+
+    try {
+      requestAccount = Accounts.lookupAccountById( ctx.getAccountNumber() );
+    } catch ( AuthException e) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Request account error " + ctx.getAccountNumber());
+    }
+
     if ( delegateAccount != null ) {
-      if ( ctx.hasAdministrativePrivileges( ) ) {
+      if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( requestAccount.getName() ) ) {
         try {
           EuareAccount account = Accounts.lookupAccountByName( delegateAccount );
           if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
@@ -2222,11 +2230,6 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
     } else {
-      try {
-        requestAccount = com.eucalyptus.auth.euare.Accounts.lookupAccountById( ctx.getAccountNumber() );
-      } catch ( AuthException e ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Request account error " + ctx.getAccountNumber( ) );
-      }
       if ( ctx.isAdministrator( ) && !RestrictedTypes.filterPrivileged().apply( requestAccount ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Access not authorized for " + requestAccount );
       }
