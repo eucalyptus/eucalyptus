@@ -149,8 +149,6 @@ int diskutil_mkswap(const char *lodev, const long long size_bytes);
 int diskutil_mkfs(const char *lodev, const long long size_bytes);
 int diskutil_tune(const char *lodev);
 int diskutil_sectors(const char *path, const int part, long long *first, long long *last);
-int diskutil_mount(const char *dev, const char *mnt_pt);
-int diskutil_umount(const char *dev);
 int diskutil_write2file(const char *file, const char *str);
 int diskutil_ch(const char *path, const char *user, const char *group, const int perms);
 int diskutil_mkdir(const char *path);
