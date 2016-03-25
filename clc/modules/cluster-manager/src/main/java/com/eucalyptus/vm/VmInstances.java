@@ -1469,23 +1469,22 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       }
 
       private void updateNetworkInterfaces( final List<NetworkConfigType> networkConfigs ) {
-        final Set<Pair<String,Integer>> reportedAttachment = Sets.newHashSet( );
+        final Set<String> reportedAttachment = Sets.newHashSet( );
         if ( networkConfigs != null ) for ( final NetworkConfigType networkConfig : networkConfigs ) {
-          reportedAttachment.add( Pair.pair( networkConfig.getInterfaceId( ), networkConfig.getDevice( ) ) );
+          reportedAttachment.add( networkConfig.getAttachmentId( ) );
         }
         for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
           if ( !networkInterface.isAttached( ) || networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
             continue;
           }
           final NetworkInterfaceAttachment attachment = networkInterface.getAttachment( );
-          final Pair<String,Integer> eniPair =
-              Pair.pair( networkInterface.getDisplayName( ), attachment.getDeviceIndex( ) );
+          final String attachmentId = attachment.getAttachmentId( );
           if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.attaching ) {
-            if ( reportedAttachment.contains( eniPair ) ) {
+            if ( reportedAttachment.contains( attachmentId ) ) {
               attachment.transitionStatus( NetworkInterfaceAttachment.Status.attached );
             }
           } else if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.detaching ) {
-            if ( !reportedAttachment.contains( eniPair ) &&
+            if ( !reportedAttachment.contains( attachmentId ) &&
                 ( attachment.getLastStatus( ) == NetworkInterfaceAttachment.Status.attached ||
                   ( networkInterface.lastUpdateMillis( ) > TimeUnit.MINUTES.toMillis( 1 ) ) )
             ) {
