@@ -65,7 +65,6 @@ import java.util.Objects;
 * Created by ethomas on 2/3/14.
 */
 public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedResourceAction {
-
   private AWSEC2NetworkInterfaceAttachmentProperties properties = new AWSEC2NetworkInterfaceAttachmentProperties( );
   private AWSEC2NetworkInterfaceAttachmentResourceInfo info = new AWSEC2NetworkInterfaceAttachmentResourceInfo( );
 
@@ -207,10 +206,10 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
       public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
         final AWSEC2NetworkInterfaceAttachmentResourceAction action =
             (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
-        if ( action.info.getCreatedEnoughToDelete() != Boolean.TRUE ) {
-          deleteNetworkInterfaceAttachment(action);
-        }
-        return action;
+        ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if ( action.info.getCreatedEnoughToDelete() != Boolean.TRUE ) return action;
+        if (notCreatedOrNoInstanceOrNoNetworkInterface(action, configuration)) return action;
+        return deleteNetworkInterfaceAttachment(action, configuration);
       }
 
     },
@@ -219,6 +218,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceAttachmentResourceAction action = (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
+        if ( action.info.getCreatedEnoughToDelete() != Boolean.TRUE ) return action;
         if (notCreatedOrNoInstanceOrNoNetworkInterface(action, configuration)) return action;
         return waitUntilDetached(action, configuration);
       }
@@ -243,9 +243,8 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
         AWSEC2NetworkInterfaceAttachmentResourceAction oldAction = (AWSEC2NetworkInterfaceAttachmentResourceAction) oldResourceAction;
         AWSEC2NetworkInterfaceAttachmentResourceAction newAction = (AWSEC2NetworkInterfaceAttachmentResourceAction) newResourceAction;
         if (deviceInstanceOrNetworkInterfaceIsDifferent(oldAction, newAction)) {
-          if (oldAction.info.getCreatedEnoughToDelete() != Boolean.TRUE) {
-            deleteNetworkInterfaceAttachment(oldAction);
-          }
+          ServiceConfiguration configuration = Topology.lookup(Compute.class);
+          deleteNetworkInterfaceAttachment(oldAction, configuration);
         }
         return newAction;
       }
@@ -257,7 +256,6 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
         AWSEC2NetworkInterfaceAttachmentResourceAction newAction = (AWSEC2NetworkInterfaceAttachmentResourceAction) newResourceAction;
         if (deviceInstanceOrNetworkInterfaceIsDifferent(oldAction, newAction)) {
           ServiceConfiguration configuration = Topology.lookup(Compute.class);
-          if (notCreatedOrNoInstanceOrNoNetworkInterface(oldAction, configuration)) return newAction;
           waitUntilDetached(oldAction, configuration);
         }
         return newAction;
@@ -340,8 +338,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
     throw new RetryAfterConditionCheckFailedException("Network interface " + action.properties.getNetworkInterfaceId() + " is not yet detached from instance " + action.properties.getInstanceId());
   }
 
-  private static void deleteNetworkInterfaceAttachment(AWSEC2NetworkInterfaceAttachmentResourceAction action) throws Exception {
-    final ServiceConfiguration configuration = Topology.lookup(Compute.class);
+  private static ResourceAction deleteNetworkInterfaceAttachment(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
     final DetachNetworkInterfaceType detachNetworkInterfaceType =
         MessageHelper.createMessage(DetachNetworkInterfaceType.class, action.info.getEffectiveUserId());
     detachNetworkInterfaceType.setAttachmentId( action.info.getPhysicalResourceId( ) );
@@ -356,6 +353,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
         throw e;
       }
     }
+    return action;
   }
 
 
@@ -381,21 +379,41 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
 
   private static boolean notCreatedOrNoInstanceOrNoNetworkInterface(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
     if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
-    DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-    describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
-    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-    if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
-      return true; // can't be attached to a nonexistent instance;
+    try {
+      final DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
+      describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
+      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+      if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
+        return true; // can't be attached to a nonexistent instance;
+      }
+    } catch ( final Exception e ) {
+      final Optional<AsyncWebServiceError> error = AsyncExceptions.asWebServiceError( e );
+      if ( error.isPresent( ) ) switch ( Strings.nullToEmpty(error.get().getCode()) ) {
+        case "InvalidInstanceID.NotFound":
+          return true; // can't be attached to a nonexistent instance;
+      }
+      throw e;
     }
-    DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-    describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.properties.getNetworkInterfaceId()));
-    DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
-    if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
-      describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
-      return true; // network interface can't be attached if it doesnt exist
+
+    try {
+      final DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
+      describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.properties.getNetworkInterfaceId()));
+      DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.<DescribeNetworkInterfacesType, DescribeNetworkInterfacesResponseType>sendSync(configuration, describeNetworkInterfacesType);
+      if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null || describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
+              describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().isEmpty()) {
+        return true; // network interface can't be attached if it doesnt exist
+      }
+    } catch ( final Exception e ) {
+      final Optional<AsyncWebServiceError> error = AsyncExceptions.asWebServiceError( e );
+      if ( error.isPresent( ) ) switch ( Strings.nullToEmpty(error.get().getCode()) ) {
+        case "InvalidNetworkInterfaceID.NotFound":
+          return true; // network interface can't be attached if it doesnt exist
+      }
+      throw e;
     }
+
     return false;
-  };
+  }
 
   private NetworkInterfaceIdSetType convertNetworkInterfaceIdSet(String networkInterfaceId) {
     NetworkInterfaceIdSetType networkInterfaceIdSetType = new NetworkInterfaceIdSetType();
