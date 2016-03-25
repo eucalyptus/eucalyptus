@@ -94,6 +94,8 @@ public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
 public class ObjectStorageRequestType extends BaseMessage {
   protected Date timeStamp;
   BucketLogData logData;
+  // This is sometimes the bucket name, sometimes the bucket UUID.
+  //TODO: Stop doing that! Make separate fields.
   protected String bucket;
   protected String key;
   protected String origin;
@@ -178,12 +180,15 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
   String cacheControl;
   String contentEncoding;
   String expires;
+  String origin;
+  String bucket;
+  String bucketUuid;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
   protected Channel channel;
   Map<String,String> responseHeaderOverrides;
-
+  
   public Channel getChannel() {
     return channel;
   }

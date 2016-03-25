@@ -128,6 +128,7 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In ObjectStorageOutboundHandler (not Basic), msg is: " + msg.getClass());
 
       // Ordering if-else conditions from most to least restrictive i.e. narrow to broad filters
       if (msg instanceof PostObjectResponseType) {

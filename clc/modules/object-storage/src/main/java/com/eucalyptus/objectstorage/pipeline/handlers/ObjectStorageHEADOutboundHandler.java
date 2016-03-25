@@ -90,6 +90,7 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In HEAD outbound handler, msg is: " + msg.getClass());
       httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
       if (msg instanceof ObjectStorageDataResponseType) {

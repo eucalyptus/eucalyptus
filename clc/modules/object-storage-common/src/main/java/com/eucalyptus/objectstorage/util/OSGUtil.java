@@ -72,6 +72,7 @@ import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
@@ -87,7 +88,6 @@ import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3ExtendedException;
@@ -95,6 +95,8 @@ import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
@@ -434,8 +436,43 @@ public class OSGUtil {
     return corsMatchResult;
   }
   
-  public static void addCorsResponseHeaders (Bucket bucket, String origin, String verb) {
-    String bucketName = "nullBucket";
+  public static void setCorsInfo(ObjectStorageRequestType request, ObjectStorageResponseType reply, String bucketUuid) {
+    // Don't change it if the caller has already set it.
+    if (reply.getOrigin() == null) {
+      reply.setOrigin(request.getOrigin());
+    }
+    // This might be the bucket name, or might be the UUID, depending on how it's used by the caller.
+    // So, we don't depend on it to be either one. We just copy it to the reply so it shows up in 
+    // cases that normally use it, like exception messages.
+    // Don't change it if the caller has already set it.
+    if (reply.getBucket() == null) {
+      reply.setBucket(request.getBucket());
+    }
+    // This is the field we depend on to look up bucket entities in the DB.
+    // Don't change it if the caller has already set it.
+    if (reply.getBucketUuid() == null) {
+      reply.setBucketUuid(bucketUuid);
+    }
   }
   
+  public static void setCorsInfo(ObjectStorageRequestType request, ObjectStorageDataResponseType reply, String bucketUuid) {
+    // Don't change it if the caller has already set it.
+    if (reply.getOrigin() == null) {
+      reply.setOrigin(request.getOrigin());
+    }
+    // This might be the bucket name, or might be the UUID, depending on how it's used by the caller.
+    // So, we don't depend on it to be either one. We just copy it to the reply so it shows up in 
+    // cases that normally use it, like exception messages.
+    // Don't change it if the caller has already set it.
+    if (reply.getBucket() == null) {
+      reply.setBucket(request.getBucket());
+    }
+    // This is the field we depend on to look up bucket entities in the DB.
+    // Don't change it if the caller has already set it.
+    if (reply.getBucketUuid() == null) {
+      reply.setBucketUuid(bucketUuid);
+    }
+  }
+  
+
 }

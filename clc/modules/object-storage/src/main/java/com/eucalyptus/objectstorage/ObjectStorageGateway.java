@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,6 +40,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.DateTimeFieldType;
@@ -61,6 +60,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -164,6 +164,7 @@ import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
@@ -224,7 +225,6 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.PreflightResponse;
@@ -237,6 +237,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.net.HttpHeaders;
 
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -958,10 +959,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // return ospClient.listBucket(request);
     ListBucketResponseType reply = request.getReply();
 
-    //LPT For CORS
-    reply.setOrigin(request.getOrigin());
-    reply.setBucketUuid(bucket.getBucketUuid());
-    
     int maxKeys = 1000;
     try {
       if (!Strings.isNullOrEmpty(request.getMaxKeys())) {
@@ -1013,6 +1010,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Do nothing
       // reply.setContents(new ArrayList<ListEntry>());
     }
+
+    OSGUtil.setCorsInfo(request, reply, bucket.getBucketUuid());
 
     return reply;
   }
@@ -1242,6 +1241,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
     populateStoredHeaders(reply, objectEntity.getStoredHeaders());
     reply.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
     reply.setStatus(HttpResponseStatus.OK);
+    
+    OSGUtil.setCorsInfo(request, reply, objectEntity.getBucket().getBucketUuid());
+
     return reply;
   }
 
@@ -2255,6 +2257,111 @@ public class ObjectStorageGateway implements ObjectStorageService {
     
     return response;
   }
+
+  public static void addCorsResponseHeaders (MappingHttpResponse httpResponse) throws S3Exception {
+    LOG.debug("LPT In addCorsResponseHeaders (MappingHttpResponse)");
+
+    BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+    
+    if (msg instanceof ObjectStorageResponseType) {
+      ObjectStorageResponseType response = (ObjectStorageResponseType) msg;
+      addCorsResponseHeaders((HttpResponse) httpResponse, response);
+    } else if (msg instanceof ObjectStorageDataResponseType) {
+      ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
+      addCorsResponseHeaders((HttpResponse) httpResponse, response);
+    }
+  }
+  
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, ObjectStorageResponseType response) throws S3Exception {
+    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, ObjectStorageResponseType)");
+    addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getBucket(), response.getBucketUuid());
+  }
+  
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, ObjectStorageDataResponseType response) throws S3Exception {
+    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, ObjectStorageDataResponseType)");
+    addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getBucket(), response.getBucketUuid());
+  }
+  
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, String origin, String bucket, String bucketUuid) throws S3Exception {
+    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, origin, bucket, bucketUuid)");
+
+    LOG.debug("Origin is: " + origin + "\nBucket is: " + bucket + "\nBucket UUID is: " + bucketUuid);
+
+    if (origin != null && bucketUuid != null) {
+      List<CorsRule> corsRules;
+      try {
+        corsRules = BucketCorsManagers.getInstance().getCorsRules(bucketUuid);
+      } catch (S3Exception s3e) {
+        LOG.warn("Caught S3Exception while getting the CORS configuration for bucket <" + 
+            bucket + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+            ", responding to client with: ", s3e);
+        throw s3e;
+      } catch (Exception ex) {
+        LOG.warn("Caught general exception while getting the CORS configuration for bucket <" + 
+            bucket + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+            ", responding to client with 500 InternalError because of: ", ex);
+        throw new InternalErrorException(bucket, ex);
+      }
+
+      CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, origin, HttpMethod.GET.getName(), null);
+      CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
+
+      if (corsRuleMatch != null) {
+        httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, corsMatchResult.getAnyOrigin() ? "*" : origin);
+
+        List<String> methodList = new ArrayList<String>();
+        String[] allowedMethods = corsRuleMatch.getAllowedMethods();
+        for (int idx = 0; idx < allowedMethods.length; idx++) {
+          methodList.add(allowedMethods[idx]);
+        }
+        if (methodList != null) {
+          // Convert list into "[method1, method2, ...]"
+          String methods = methodList.toString();
+          if (methods.length() > 2) {
+            // Chop off brackets
+            methods = methods.substring(1, methods.length()-1);
+            httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, methods);
+          }
+        }
+        String[] ruleExposeHeaders = corsRuleMatch.getExposeHeaders();
+        if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
+          List<CorsHeader> exposeHeadersList = new ArrayList<CorsHeader>();
+          for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
+            CorsHeader exposeHeader = new CorsHeader();
+            exposeHeader.setCorsHeader(ruleExposeHeaders[idx]);
+            exposeHeadersList.add(exposeHeader);
+          }
+          if (exposeHeadersList != null) {
+            // Convert list into "[exposeHeader1, exposeHeader2, ...]"
+            String exposeHeaders = exposeHeadersList.toString();
+            if (exposeHeaders.length() > 2) {
+              // Chop off brackets
+              exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
+              httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
+            }
+          }
+        }
+        if (corsRuleMatch.getMaxAgeSeconds() > 0) {
+          httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_MAX_AGE, corsRuleMatch.getMaxAgeSeconds());
+        }
+        // Set the "allow credentials" header to true only if the matching 
+        // CORS rule is NOT "any origin", otherwise don't set the header.
+        if (!corsMatchResult.getAnyOrigin()) {
+          httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
+        }
+
+        // Match AWS behavior. Always contains these 3 header names. 
+        // It tells the user agent: If you cache this request+response, only
+        // give the cached response to a future request if all these headers 
+        // match the ones in the cached request. Otherwise, send the request 
+        // to the server, don't use the cached response.
+        httpResponse.setHeader(HttpHeaders.VARY, 
+            HttpHeaders.ORIGIN + ", " +
+                HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS + ", " +
+                HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD);
+      }  // end if matching CORS rule
+    }  // end if origin exists
+  }  // end addCorsResponseHeaders()
 
   private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);

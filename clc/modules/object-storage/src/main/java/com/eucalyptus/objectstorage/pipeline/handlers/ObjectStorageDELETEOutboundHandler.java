@@ -90,6 +90,7 @@ public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In DELETE outbound handler, msg is: " + msg.getClass());
 
       if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
         if (msg instanceof DeleteResponseType) {

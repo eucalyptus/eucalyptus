@@ -64,9 +64,7 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import java.io.InputStream;
 import java.io.PushbackInputStream;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -81,23 +79,19 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.BucketCorsManagers;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.ChunkedDataStream;
 import com.eucalyptus.storage.common.DateFormatter;
-import com.eucalyptus.storage.msgs.s3.CorsHeader;
-import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
-import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.server.MessageStatistics;
@@ -154,86 +148,19 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In GET outbound handler, msg is: " + msg.getClass());
 
-      //LPT
-      if (msg instanceof ObjectStorageResponseType) {
-        ObjectStorageResponseType response = (ObjectStorageResponseType) msg;
-        LOG.debug("Origin is: " + response.getOrigin());
-        LOG.debug("Bucket UUID is: " + response.getBucketUuid());
-        
-        List<CorsRule> corsRules = BucketCorsManagers.getInstance().getCorsRules(response.getBucketUuid());
-
-        CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, response.getOrigin(), HttpMethod.GET.getName(), null);
-        CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
-
-        if (corsRuleMatch != null) {
-          httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, corsMatchResult.getAnyOrigin() ? "*" : response.getOrigin());
-
-          List<String> methodList = new ArrayList<String>();
-          String[] allowedMethods = corsRuleMatch.getAllowedMethods();
-          for (int idx = 0; idx < allowedMethods.length; idx++) {
-            methodList.add(allowedMethods[idx]);
-          }
-          if (methodList != null) {
-            // Convert list into "[method1, method2, ...]"
-            String methods = methodList.toString();
-            if (methods.length() > 2) {
-              // Chop off brackets
-              methods = methods.substring(1, methods.length()-1);
-              httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, methods);
-            }
-          }
-          String[] ruleExposeHeaders = corsRuleMatch.getExposeHeaders();
-          if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
-            List<CorsHeader> exposeHeadersList = new ArrayList<CorsHeader>();
-            for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
-              CorsHeader exposeHeader = new CorsHeader();
-              exposeHeader.setCorsHeader(ruleExposeHeaders[idx]);
-              exposeHeadersList.add(exposeHeader);
-            }
-            if (exposeHeadersList != null) {
-              // Convert list into "[exposeHeader1, exposeHeader2, ...]"
-              String exposeHeaders = exposeHeadersList.toString();
-              if (exposeHeaders.length() > 2) {
-                // Chop off brackets
-                exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
-                httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
-              }
-            }
-          }
-          if (corsRuleMatch.getMaxAgeSeconds() > 0) {
-            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE, corsRuleMatch.getMaxAgeSeconds());
-          }
-          // Set the "allow credentials" header to true only if the matching 
-          // CORS rule is NOT "any origin", otherwise don't set the header.
-          if (!corsMatchResult.getAnyOrigin()) {
-            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-          }
-
-          // Match AWS behavior. Always contains these 3 header names. 
-          // It tells the user agent: If you cache this request+response, only
-          // give the cached response to a future request if all these headers 
-          // match the ones in the cached request. Otherwise, send the request 
-          // to the server, don't use the cached response.
-          httpResponse.setHeader(HttpHeaders.Names.VARY, 
-              HttpHeaders.Names.ORIGIN + ", " +
-                  HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS + ", " +
-                  HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD);
-        }
-      } else {
-        LOG.debug("Origin not in this msg which is of type " + msg.getClass());
-      }
-      
       if (msg instanceof ObjectStorageDataGetResponseType) {
         ObjectStorageDataGetResponseType dataResponse = (ObjectStorageDataGetResponseType) msg;
         writeObjectStorageDataGetResponse(dataResponse, ctx);
         return true;
       }
+      ObjectStorageGateway.addCorsResponseHeaders(httpResponse);
     }
     return false;
   }
 
-  protected void writeObjectStorageDataGetResponse(final ObjectStorageDataGetResponseType response, final ChannelHandlerContext ctx) {
+  protected void writeObjectStorageDataGetResponse(final ObjectStorageDataGetResponseType response, final ChannelHandlerContext ctx) throws S3Exception {
     DefaultHttpResponse httpResponse = createHttpResponse(response);
     if (!Strings.isNullOrEmpty(response.getCorrelationId())) {
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, response.getCorrelationId());
@@ -271,7 +198,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
   }
 
   // TODO: zhill - this should all be done in bindings, just need 2-way bindings
-  protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) {
+  protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) throws S3Exception{
     DefaultHttpResponse httpResponse = null;
 
     if (reply.getStatus() == HttpResponseStatus.OK) {
@@ -320,6 +247,8 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 
     // add copied headers
     OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
+
+    ObjectStorageGateway.addCorsResponseHeaders(httpResponse, reply);
 
     return httpResponse;
   }

@@ -62,10 +62,12 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -75,6 +77,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger(ObjectStorageGateway.class);
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
@@ -95,6 +98,7 @@ public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHand
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In ObjectStorageBasicOutboundHandler, msg is: " + msg.getClass());
 
       if (msg instanceof EucalyptusErrorMessageType) {
         EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;

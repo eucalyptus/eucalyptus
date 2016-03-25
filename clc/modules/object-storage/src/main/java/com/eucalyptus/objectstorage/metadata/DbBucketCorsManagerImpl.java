@@ -78,7 +78,6 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.BucketCorsManagers;
 import com.eucalyptus.objectstorage.entities.CorsRule;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
-import com.google.common.collect.Lists;
 
 import net.sf.json.JSONArray;
 
