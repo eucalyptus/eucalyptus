@@ -39,6 +39,7 @@ import javax.persistence.EntityNotFoundException;
 import javax.persistence.OptimisticLockException;
 import javax.persistence.RollbackException;
 
+import com.eucalyptus.loadbalancing.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -58,28 +59,15 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.EventFailedException;
-import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServers;
-import com.eucalyptus.loadbalancing.LoadBalancerCwatchMetrics;
-import com.eucalyptus.loadbalancing.LoadBalancerListener;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyTypeDescription;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroupRef;
-import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.ApplySecurityGroupsEvent;
 import com.eucalyptus.loadbalancing.activities.CreateListenerEvent;
 import com.eucalyptus.loadbalancing.activities.DeleteListenerEvent;
@@ -242,12 +230,26 @@ public class LoadBalancingBackendService {
 
   private void isValidServoRequest(final LoadBalancerServoInstance instance, String remoteHost) throws LoadBalancingException{
 	  try{
-		  if(! (remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
-				  throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)",remoteHost, instance.getAddress(), instance.getPrivateIp()));
-	  }catch(final LoadBalancingException ex){
-		  throw ex;
-	  }catch(Exception ex){
-		  throw new LoadBalancingException("unknown error", ex);
+        if(LoadBalancingSystemVpcs.isCloudVpc()) {
+          final Set<String> validAddresses =
+                  LoadBalancingSystemVpcs.getControlInterfaceAddresses(instance);
+          if(validAddresses == null) {
+            return;
+            // why no fail? Failing to lookup the NAT gateway address is the system's fault, not user's
+            // so we shouldn't make users the victim of system's bug.
+          }else {
+            if(! validAddresses.contains(remoteHost))
+              throw new LoadBalancingException(String.format("IP address (%s) doesn't match with ELB's control interface address (%s)",
+                      remoteHost, validAddresses.stream().reduce((result, addr) -> result+ "," +addr)));
+          }
+        }else {
+          if (!(remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
+            throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)", remoteHost, instance.getAddress(), instance.getPrivateIp()));
+        }
+      }catch(final LoadBalancingException ex){
+        throw ex;
+      }catch(Exception ex){
+        throw new LoadBalancingException("unknown error", ex);
 	  }
   }
   

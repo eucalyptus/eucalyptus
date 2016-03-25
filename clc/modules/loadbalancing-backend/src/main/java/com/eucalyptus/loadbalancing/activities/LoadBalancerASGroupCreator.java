@@ -82,6 +82,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -450,72 +451,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
       changeListener = InitScriptChangeListener.class)
   public static String INIT_SCRIPT = null;
 	 
-	@Provides(LoadBalancingBackend.class)
-	@RunDuring(Bootstrap.Stage.Final)
-	@DependsLocal(LoadBalancingBackend.class)
-	public static class LoadBalancingPropertyBootstrapper extends Bootstrapper.Simple {
-
-	  private static LoadBalancingPropertyBootstrapper singleton;
-	  private static final Callable<String> imageNotConfiguredFaultRunnable =
-	      Faults.forComponent( LoadBalancingBackend.class ).havingId( 1014 ).logOnFirstRun();
-
-	  public static Bootstrapper getInstance( ) {
-	    synchronized ( LoadBalancingPropertyBootstrapper.class ) {
-	      if ( singleton == null ) {
-	        singleton = new LoadBalancingPropertyBootstrapper( );
-	        LOG.info( "Creating Load Balancing Bootstrapper instance." );
-	      } else {
-	        LOG.info( "Returning Load Balancing Bootstrapper instance." );
-	      }
-	    }
-	    return singleton;
-	  }
-	  
-	  private static int CheckCounter =0 ;
-	  private static boolean EmiCheckResult = true;
-	  @Override
-    public boolean check( ) throws Exception {
-      if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.IMAGE ) ) {
-        if( CheckCounter >= 3 && Topology.isEnabled( Compute.class ) ){
-          try{
-            final List<ImageDetails> emis =
-                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(LoadBalancerASGroupCreator.IMAGE));
-            EmiCheckResult = LoadBalancerASGroupCreator.IMAGE.equals( emis.get( 0 ).getImageId() );
-            EmiCheckResult = "available".equals(emis.get(0).getImageState());
-          }catch(final Exception ex){
-            EmiCheckResult=false;
-          }
-          CheckCounter = 0;
-        }else
-          CheckCounter++;
-        return EmiCheckResult;
-        } else {
-        try {
-          //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
-          final ServiceConfiguration localService = Components.lookup( LoadBalancingBackend.class ).getLocalServiceConfiguration( );
-          final CheckException ex = Faults.failure( localService, imageNotConfiguredFaultRunnable.call( ).split("\n")[1] );
-          Faults.submit( localService, localService.lookupStateMachine().getTransitionRecord(), ex );
-        } catch ( Exception e ) {
-          LOG.debug( e );
-        }
-        return false;
-       }
-    }
-
-	  @Override
-	  public boolean enable( ) throws Exception {
-	    if (!super.enable())
-	      return false;
-	    try{
-	      LoadBalancerPolicies.initialize();
-	    }catch(final Exception ex){
-	      LOG.error("Unable to initialize ELB policy types", ex);
-	      return false;
-	    }
-	    return true;
-	  }
-	}
-		
 	private List<String> launchConfigNames = Lists.newArrayList();
 	private List<String> asgNames = Lists.newArrayList();
 	private List<String> createdLaunchConfigNames = Lists.newArrayList();
@@ -767,6 +702,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
     kvMap.put("elb_service_url", String.format("loadbalancing.%s",DNSProperties.getDomain()));
     kvMap.put("euare_service_url", String.format("euare.%s", DNSProperties.getDomain()));
     kvMap.put("objectstorage_service_url", String.format("objectstorage.%s", DNSProperties.getDomain()));
+    kvMap.put("webservice_port", String.format("%d", StackConfiguration.PORT));
     if(ownerAccountNumber!=null)
       kvMap.put("loadbalancer_owner_account", ownerAccountNumber);
     

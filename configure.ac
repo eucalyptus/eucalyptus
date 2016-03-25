@@ -40,7 +40,7 @@ LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
 WSDL2C=""
-java_min_version="1.7.0"
+java_min_version="1.8.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)
@@ -100,6 +100,9 @@ AC_ARG_ENABLE(debug,
 AC_ARG_WITH(extra-version,
         [  --extra-version=<str>                string to append to versions to make logs and messages more precise],
         [EXTRA_VERSION="${withval}"])
+AC_ARG_WITH(java-home,
+        [  --with-java-home=<dir>               where the JRE is installed (same as JAVA_HOME)],
+        [JAVA_HOME="${withval}"])
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
@@ -186,8 +189,7 @@ fi
 if test -z "$JAVA" ; then
         AC_MSG_ERROR([Cannot find java!])
 fi
-java_version=`$JAVA -version 2>&1 | grep "java version" | \
-        sed -e 's/.*java version "\(.*\)".*/\1/'`
+java_version=`$JAVA -version 2>&1 | head -n 1 | awk -F '"' '{print $2}'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
@@ -205,7 +207,7 @@ if test $goodversion -eq 0; then
         AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
 fi
 # some version of ant picks up the wrong java
-java_version=`$ANT -diagnostics 2>&1 | grep ^java.version | \
+java_version=`JAVA_HOME=$JAVA_HOME $ANT -diagnostics 2>&1 | grep ^java.version | \
         sed -e 's/java.* \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then

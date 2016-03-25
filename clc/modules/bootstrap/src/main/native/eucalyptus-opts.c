@@ -53,6 +53,7 @@ const char *eucalyptus_opts_full_help[] = {
   "  -k, --kill                    Kill a daemonized Eucalyptus.  (default=off)",
   "      --pidfile=FILENAME        Location for the pidfile.  \n                                  (default=`/var/run/eucalyptus/eucalyptus-cloud.pid')",
   "      --db-home=DIRECTORY       Set path to database home directory  \n                                  (default=`')",
+  "      --fdlimit=INT             File descriptor limit effective on jvm  \n                                  (default=`65535')",
   "\nLogging Configuration:",
   "  -l, --log-level=LEVEL      Control the log level for console output.  \n                                  (default=`INFO')",
   "  -L, --log-appender=APPENDERNAME\n                                Control the destination for console output.  \n                                  (default=`console-log')",
@@ -74,7 +75,7 @@ const char *eucalyptus_opts_full_help[] = {
   "      --disable-dns             DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "      --disable-storage         DEPRECATED DO NOT USE. IT DOES NOTHING.  \n                                  (default=off)",
   "\nJava Options:",
-  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.7.0')",
+  "  -j, --java-home=DIRECTORY     Alternative way to specify JAVA_HOME.  \n                                  (default=`/usr/lib/jvm/java-1.8.0')",
   "      --jvm-name=JVMNAME        Which JVM type to run (see jvm.cfg).  \n                                  (default=`-server')",
   "  -X, --jvm-args=STRING         Arguments to pass to the JVM.",
   "      --jmx                     Launch with JMX enabled.  (default=off)",
@@ -178,6 +179,7 @@ void clear_given (struct eucalyptus_opts *args_info)
   args_info->kill_given = 0 ;
   args_info->pidfile_given = 0 ;
   args_info->db_home_given = 0 ;
+  args_info->fdlimit_given = 0 ;
   args_info->log_level_given = 0 ;
   args_info->log_appender_given = 0 ;
   args_info->exhaustive_given = 0 ;
@@ -242,80 +244,83 @@ void clear_args (struct eucalyptus_opts *args_info)
   args_info->pidfile_orig = NULL;
   args_info->db_home_arg = gengetopt_strdup ("");
   args_info->db_home_orig = NULL;
-  args_info->log_level_arg = gengetopt_strdup ("INFO");
-  args_info->log_level_orig = NULL;
-  args_info->log_appender_arg = gengetopt_strdup ("console-log");
-  args_info->log_appender_orig = NULL;
-  args_info->exhaustive_flag = 0;
-  args_info->exhaustive_db_flag = 0;
-  args_info->exhaustive_user_flag = 0;
-  args_info->exhaustive_cc_flag = 0;
-  args_info->exhaustive_external_flag = 0;
-  args_info->out_arg = gengetopt_strdup ("&1");
-  args_info->out_orig = NULL;
-  args_info->err_arg = gengetopt_strdup ("&2");
-  args_info->err_orig = NULL;
-  args_info->remote_dns_flag = 0;
-  args_info->remote_cloud_flag = 0;
-  args_info->remote_walrus_flag = 0;
-  args_info->remote_storage_flag = 0;
-  args_info->disable_iscsi_flag = 0;
-  args_info->disable_cloud_flag = 0;
-  args_info->disable_walrus_flag = 0;
-  args_info->disable_dns_flag = 0;
-  args_info->disable_storage_flag = 0;
-  args_info->java_home_arg = NULL;
-  args_info->java_home_orig = NULL;
-  args_info->jvm_name_arg = gengetopt_strdup ("-server");
-  args_info->jvm_name_orig = NULL;
-  args_info->jvm_args_arg = NULL;
-  args_info->jvm_args_orig = NULL;
-  args_info->jmx_flag = 0;
-  args_info->debug_flag = 0;
-  args_info->verbose_flag = 0;
-  args_info->debug_port_arg = 5005;
-  args_info->debug_port_orig = NULL;
-  args_info->debug_noha_flag = 0;
-  args_info->debug_suspend_flag = 0;
-  args_info->profile_flag = 0;
-  args_info->profiler_home_arg = gengetopt_strdup ("/opt/profile");
-  args_info->profiler_home_orig = NULL;
-  args_info->agentlib_arg = NULL;
-  args_info->agentlib_orig = NULL;
-  
+  args_info->fdlimit_arg = 65535;
+args_info->fdlimit_orig = NULL;
+args_info->log_level_arg = gengetopt_strdup ("INFO");
+args_info->log_level_orig = NULL;
+args_info->log_appender_arg = gengetopt_strdup ("console-log");
+args_info->log_appender_orig = NULL;
+args_info->exhaustive_flag = 0;
+args_info->exhaustive_db_flag = 0;
+args_info->exhaustive_user_flag = 0;
+args_info->exhaustive_cc_flag = 0;
+args_info->exhaustive_external_flag = 0;
+args_info->out_arg = gengetopt_strdup ("&1");
+args_info->out_orig = NULL;
+args_info->err_arg = gengetopt_strdup ("&2");
+args_info->err_orig = NULL;
+args_info->remote_dns_flag = 0;
+args_info->remote_cloud_flag = 0;
+args_info->remote_walrus_flag = 0;
+args_info->remote_storage_flag = 0;
+args_info->disable_iscsi_flag = 0;
+args_info->disable_cloud_flag = 0;
+args_info->disable_walrus_flag = 0;
+args_info->disable_dns_flag = 0;
+args_info->disable_storage_flag = 0;
+args_info->java_home_arg = NULL;
+args_info->java_home_orig = NULL;
+args_info->jvm_name_arg = gengetopt_strdup ("-server");
+args_info->jvm_name_orig = NULL;
+args_info->jvm_args_arg = NULL;
+args_info->jvm_args_orig = NULL;
+args_info->jmx_flag = 0;
+args_info->debug_flag = 0;
+args_info->verbose_flag = 0;
+args_info->debug_port_arg = 5005;
+args_info->debug_port_orig = NULL;
+args_info->debug_noha_flag = 0;
+args_info->debug_suspend_flag = 0;
+args_info->profile_flag = 0;
+args_info->profiler_home_arg = gengetopt_strdup ("/opt/profile");
+args_info->profiler_home_orig = NULL;
+args_info->agentlib_arg = NULL;
+args_info->agentlib_orig = NULL;
+
 }
 
 static
 void init_args_info(struct eucalyptus_opts *args_info)
 {
 
-  init_help_array(); 
-  args_info->help_help = eucalyptus_opts_full_help[0] ;
-  args_info->full_help_help = eucalyptus_opts_full_help[1] ;
-  args_info->version_help = eucalyptus_opts_full_help[2] ;
-  args_info->user_help = eucalyptus_opts_full_help[4] ;
-  args_info->home_help = eucalyptus_opts_full_help[5] ;
-  args_info->extra_version_help = eucalyptus_opts_full_help[6] ;
-  args_info->initialize_help = eucalyptus_opts_full_help[7] ;
-  args_info->upgrade_help = eucalyptus_opts_full_help[8] ;
-  args_info->upgrade_old_version_help = eucalyptus_opts_full_help[9] ;
-  args_info->upgrade_old_dir_help = eucalyptus_opts_full_help[10] ;
-  args_info->upgrade_force_help = eucalyptus_opts_full_help[11] ;
-  args_info->bind_addr_help = eucalyptus_opts_full_help[12] ;
-  args_info->bind_addr_min = 0;
-  args_info->bind_addr_max = 0;
-  args_info->mcast_addr_help = eucalyptus_opts_full_help[13] ;
-  args_info->bootstrap_host_help = eucalyptus_opts_full_help[14] ;
-  args_info->bootstrap_host_min = 0;
-  args_info->bootstrap_host_max = 0;
-  args_info->force_remote_bootstrap_help = eucalyptus_opts_full_help[15] ;
-  args_info->define_help = eucalyptus_opts_full_help[16] ;
-  args_info->define_min = 0;
-  args_info->define_max = 0;
-  args_info->fork_help = eucalyptus_opts_full_help[17] ;
-  args_info->kill_help = eucalyptus_opts_full_help[18] ;
-  args_info->pidfile_help = eucalyptus_opts_full_help[19] ;
-  args_info->db_home_help = eucalyptus_opts_full_help[20] ;
+init_help_array(); 
+args_info->help_help = eucalyptus_opts_full_help[0] ;
+args_info->full_help_help = eucalyptus_opts_full_help[1] ;
+args_info->version_help = eucalyptus_opts_full_help[2] ;
+args_info->user_help = eucalyptus_opts_full_help[4] ;
+args_info->home_help = eucalyptus_opts_full_help[5] ;
+args_info->extra_version_help = eucalyptus_opts_full_help[6] ;
+args_info->initialize_help = eucalyptus_opts_full_help[7] ;
+args_info->upgrade_help = eucalyptus_opts_full_help[8] ;
+args_info->upgrade_old_version_help = eucalyptus_opts_full_help[9] ;
+args_info->upgrade_old_dir_help = eucalyptus_opts_full_help[10] ;
+args_info->upgrade_force_help = eucalyptus_opts_full_help[11] ;
+args_info->bind_addr_help = eucalyptus_opts_full_help[12] ;
+args_info->bind_addr_min = 0;
+args_info->bind_addr_max = 0;
+args_info->mcast_addr_help = eucalyptus_opts_full_help[13] ;
+args_info->bootstrap_host_help = eucalyptus_opts_full_help[14] ;
+args_info->bootstrap_host_min = 0;
+args_info->bootstrap_host_max = 0;
+args_info->force_remote_bootstrap_help = eucalyptus_opts_full_help[15] ;
+args_info->define_help = eucalyptus_opts_full_help[16] ;
+args_info->define_min = 0;
+args_info->define_max = 0;
+args_info->fork_help = eucalyptus_opts_full_help[17] ;
+args_info->kill_help = eucalyptus_opts_full_help[18] ;
+args_info->pidfile_help = eucalyptus_opts_full_help[19] ;
+args_info->db_home_help = eucalyptus_opts_full_help[20] ;
+args_info->fdlimit_help = eucalyptus_opts_full_help[21] ;
   args_info->log_level_help = eucalyptus_opts_full_help[22] ;
   args_info->log_appender_help = eucalyptus_opts_full_help[23] ;
   args_info->exhaustive_help = eucalyptus_opts_full_help[24] ;
@@ -503,6 +508,7 @@ arguments_release (struct eucalyptus_opts *args_info)
   free_string_field (&(args_info->pidfile_orig));
   free_string_field (&(args_info->db_home_arg));
   free_string_field (&(args_info->db_home_orig));
+  free_string_field (&(args_info->fdlimit_orig));
   free_string_field (&(args_info->log_level_arg));
   free_string_field (&(args_info->log_level_orig));
   free_string_field (&(args_info->log_appender_arg));
@@ -595,6 +601,8 @@ arguments_dump(FILE *outfile, struct eucalyptus_opts *args_info)
     write_into_file(outfile, "pidfile", args_info->pidfile_orig, 0);
   if (args_info->db_home_given)
     write_into_file(outfile, "db-home", args_info->db_home_orig, 0);
+  if (args_info->fdlimit_given)
+    write_into_file(outfile, "fdlimit", args_info->fdlimit_orig, 0);
   if (args_info->log_level_given)
     write_into_file(outfile, "log-level", args_info->log_level_orig, 0);
   if (args_info->log_appender_given)
@@ -1271,6 +1279,7 @@ arguments_internal (
         { "kill",	0, NULL, 'k' },
         { "pidfile",	1, NULL, 0 },
         { "db-home",	1, NULL, 0 },
+        { "fdlimit",	1, NULL, 0 },
         { "log-level",	1, NULL, 'l' },
         { "log-appender",	1, NULL, 'L' },
         { "exhaustive",	0, NULL, 'x' },
@@ -1447,7 +1456,7 @@ arguments_internal (
         case 'j':	/* Alternative way to specify JAVA_HOME..  */
         
           if (update_multiple_arg_temp(&java_home_list, 
-              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.7.0", ARG_STRING,
+              &(local_args_info.java_home_given), optarg, 0, "/usr/lib/jvm/java-1.8.0", ARG_STRING,
               "java-home", 'j',
               additional_error))
             goto failure;
@@ -1634,6 +1643,20 @@ arguments_internal (
                 &(local_args_info.db_home_given), optarg, 0, "", ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "db-home", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* File descriptor limit effective on jvm.  */
+          else if (strcmp (long_options[option_index].name, "fdlimit") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->fdlimit_arg), 
+                 &(args_info->fdlimit_orig), &(args_info->fdlimit_given),
+                &(local_args_info.fdlimit_given), optarg, 0, "65535", ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "fdlimit", '-',
                 additional_error))
               goto failure;
           
@@ -1911,7 +1934,7 @@ arguments_internal (
     &(args_info->define_orig), args_info->define_given,
     local_args_info.define_given, 0,
     ARG_STRING, define_list);
-  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.7.0";
+  multiple_default_value.default_string_arg = "/usr/lib/jvm/java-1.8.0";
   update_multiple_arg((void *)&(args_info->java_home_arg),
     &(args_info->java_home_orig), args_info->java_home_given,
     local_args_info.java_home_given, &multiple_default_value,

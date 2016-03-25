@@ -128,7 +128,6 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.walrus.WalrusBackend;
-import com.eucalyptus.walrus.WalrusBucketLogger;
 import com.eucalyptus.walrus.exceptions.NotImplementedException;
 import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
@@ -139,6 +138,7 @@ import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.walrus.util.WalrusUtil;
 import com.eucalyptus.ws.MethodNotAllowedException;
+
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -155,6 +155,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
   private static final String OBJECT = "object";
   private static final Map<String, String> operationMap = populateOperationMap();
   private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
+  private static final Map<String, String> notAllowedOperationMap = populateNotAllowedOperationMap();
   private static WalrusDataMessenger putMessenger;
   public static final int DATA_MESSAGE_SIZE = 102400;
   private String key;
@@ -176,6 +177,10 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
       final MessageEvent msgEvent = (MessageEvent) channelEvent;
       try {
         this.incomingMessage(channelHandlerContext, msgEvent);
+      } catch (com.eucalyptus.walrus.exceptions.MethodNotAllowedException e) {
+        // there are some valid cases where 405 should be thrown
+        Channels.fireExceptionCaught(channelHandlerContext, e);
+        return;
       } catch (Exception e) {
         LOG.warn("Error processing incoming message in Walrus Binding", e);
         // throw e;
@@ -319,6 +324,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     return newMap;
   }
 
+  private static Map<String, String> populateNotAllowedOperationMap() {
+    Map<String, String> opsMap = new HashMap<String, String>();
+    opsMap.put(SERVICE + WalrusProperties.HTTPVerb.HEAD.toString(), "HEAD to Service");
+    return opsMap;
+  }
+
   private static Map<String, String> populateUnsupportedOperationMap() {
     Map<String, String> opsMap = new HashMap<String, String>();
 
@@ -441,9 +452,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
       String operation = (String) bindingArguments.remove("Operation");
       if (operation != null) {
         WalrusRequestType request = (WalrusRequestType) eucaMsg;
-        BucketLogData logData = WalrusBucketLogger.getInstance().makeLogEntry(UUID.randomUUID().toString());
-        logData.setOperation("REST." + operation);
-        request.setLogData(logData);
       }
     }
   }
@@ -452,7 +460,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     msg.setProperty("timeStamp", new Date());
   }
 
-  protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception, NotImplementedException {
+  protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception,
+    NotImplementedException, com.eucalyptus.walrus.exceptions.MethodNotAllowedException {
     String[] target = null;
     String path = getOperationPath(httpRequest);
 
@@ -775,6 +784,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
         }
         throw new NotImplementedException(unsupportedOp + " is not implemented", resourceType, resource);
       }
+      if (notAllowedOperationMap.containsKey(operationKey))
+        throw new com.eucalyptus.walrus.exceptions.MethodNotAllowedException();
     }
 
     if ("CreateBucket".equals(operationName)) {

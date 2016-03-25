@@ -164,7 +164,7 @@ upgrade_db() {
   # rm -rfv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
   
   # Arbitrary string of properly formatted opts passed direct to jvm"
-  UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
+  UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom"
   # Upgrade version and directory info
   UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA}"
   UPGRADE_ARGS="--upgrade  ${UPGRADE_OLD_ARGS}"

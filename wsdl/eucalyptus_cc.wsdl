@@ -350,8 +350,58 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+    
+    <xs:complexType name="DetachVolumeResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="AttachNetworkInterfaceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="netConfig" type="tns:netConfigType"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="AttachNetworkInterfaceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="DetachNetworkInterfaceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="attachmentId" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="force" type="xs:boolean"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="DetachNetworkInterfaceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
 
-      <xs:complexType name="createImageType">
+	<xs:complexType name="createImageType">
         <xs:complexContent>
           <xs:extension base="tns:eucalyptusMessage">
             <xs:sequence>
@@ -717,6 +767,7 @@
 	      <xs:element minOccurs="0" maxOccurs="1" name="ownerId" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="1" name="accountId" type="xs:string"/>
 	      <xs:element minOccurs="0" name="rootDirective" type="xs:string"/>
+          <xs:element minOccurs="0" maxOccurs="1" name="primaryEniAttachmentId" type="xs:string" />
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="secondaryNetConfig" type="tns:netConfigType"/>
 	    </xs:sequence>
 	  </xs:extension>
@@ -732,6 +783,7 @@
 	  <xs:element name="publicIp" type="xs:string"/>
 	  <xs:element name="vlan" type="xs:int"/>
 	  <xs:element name="networkIndex" type="xs:int"/>
+	  <xs:element minOccurs="0" maxOccurs="1" name="attachmentId" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
       
@@ -998,6 +1050,12 @@
       <xs:element name="DetachVolume" nillable="true" type="tns:detachVolumeType"/>
       <xs:element name="DetachVolumeResponse" nillable="true" type="tns:detachVolumeResponseType"/>
 
+	<xs:element name="AttachNetworkInterface" nillable="true" type="tns:AttachNetworkInterfaceType"/>
+	<xs:element name="AttachNetworkInterfaceResponse" nillable="true" type="tns:AttachNetworkInterfaceResponseType"/>
+
+	<xs:element name="DetachNetworkInterface" nillable="true" type="tns:DetachNetworkInterfaceType"/>
+	<xs:element name="DetachNetworkInterfaceResponse" nillable="true" type="tns:DetachNetworkInterfaceResponseType"/>
+
       <xs:element name="CreateImage" nillable="true" type="tns:createImageType"/>
       <xs:element name="CreateImageResponse" nillable="true" type="tns:createImageResponseType"/>
 
@@ -1120,7 +1178,17 @@
     </wsdl:part>
   </wsdl:message>
 
-  <wsdl:message name="CreateImageResponse">
+<wsdl:message name="AttachNetworkInterfaceResponse">
+  <wsdl:part element="tns:AttachNetworkInterfaceResponse" name="AttachNetworkInterfaceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="DetachNetworkInterfaceResponse">
+  <wsdl:part element="tns:DetachNetworkInterfaceResponse" name="DetachNetworkInterfaceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="CreateImageResponse">
     <wsdl:part element="tns:CreateImageResponse" name="CreateImageResponse">
     </wsdl:part>
   </wsdl:message>
@@ -1274,6 +1342,16 @@
     <wsdl:part element="tns:DetachVolume" name="DetachVolume">
     </wsdl:part>
   </wsdl:message>
+
+<wsdl:message name="AttachNetworkInterface">
+  <wsdl:part element="tns:AttachNetworkInterface" name="AttachNetworkInterface">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="DetachNetworkInterface">
+  <wsdl:part element="tns:DetachNetworkInterface" name="DetachNetworkInterface">
+  </wsdl:part>
+</wsdl:message>
 
   <wsdl:message name="CreateImage">
     <wsdl:part element="tns:CreateImage" name="CreateImage">
@@ -1464,6 +1542,20 @@
       <wsdl:output message="tns:DetachVolumeResponse" name="DetachVolumeResponse">
       </wsdl:output>
     </wsdl:operation>
+
+  <wsdl:operation name="AttachNetworkInterface">
+    <wsdl:input message="tns:AttachNetworkInterface" name="AttachNetworkInterface">
+    </wsdl:input>
+    <wsdl:output message="tns:AttachNetworkInterfaceResponse" name="AttachNetworkInterfaceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="DetachNetworkInterface">
+    <wsdl:input message="tns:DetachNetworkInterface" name="DetachNetworkInterface">
+    </wsdl:input>
+    <wsdl:output message="tns:DetachNetworkInterfaceResponse" name="DetachNetworkInterfaceResponse">
+    </wsdl:output>
+  </wsdl:operation>
 
     <wsdl:operation name="CreateImage">
       <wsdl:input message="tns:CreateImage" name="CreateImage">
@@ -1733,6 +1825,26 @@
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
+
+  <wsdl:operation name="AttachNetworkInterface">
+    <soap:operation soapAction="EucalyptusCC#AttachNetworkInterface" style="document"/>
+    <wsdl:input name="AttachNetworkInterface">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="AttachNetworkInterfaceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="DetachNetworkInterface">
+    <soap:operation soapAction="EucalyptusCC#DetachNetworkInterface" style="document"/>
+    <wsdl:input name="DetachNetworkInterface">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="DetachNetworkInterfaceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
 
     <wsdl:operation name="CreateImage">
       <soap:operation soapAction="EucalyptusCC#CreateImage" style="document"/>

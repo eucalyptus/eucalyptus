@@ -393,6 +393,8 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
 int ncGetTimeout(time_t op_start, time_t op_max, int numCalls, int idx);
 int doAttachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
+int doAttachNetworkInterface(ncMetadata * pMeta, char *instanceId, netConfig * netCfg);
+int doDetachNetworkInterface(ncMetadata * pMeta, char *instanceId, char *attachmentId, int force);
 int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int namedLen, char **sourceNames, char **userNames, int netLen,
                        char **sourceNets, char *destName, char *destUserName, char *protocol, int minPort, int maxPort);
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
@@ -422,7 +424,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                    int instIdsLen, char **netNames, int netNamesLen, char **netIds, int netIdsLen, char **macAddrs, int macAddrsLen, int *networkIndexList,
                    int networkIndexListLen, char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId,
                    char *ownerId, char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
-                   char *platform, int expiryTime, char *targetNode, char *rootDirective, netConfig * secNetCfgs, int secNetCfgsLen, ccInstance ** outInsts, int *outInstsLen);
+                   char *platform, int expiryTime, char *targetNode, char *rootDirective, char *eniAttachmentId, netConfig * secNetCfgs, int secNetCfgsLen,
+                   ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);
 int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int force, int **outStatus);

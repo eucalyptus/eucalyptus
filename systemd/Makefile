@@ -22,6 +22,10 @@ build:
 
 deploy:
 
+clean:
+
+distclean: clean
+
 install: deploy
 ifeq ($(USE_SYSTEMD), yes)
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
@@ -33,6 +37,6 @@ ifeq ($(USE_SYSTEMD), yes)
 	install -m 0644 tmpfiles.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
 	install -m 0644 units/*.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system
 	# For backwards compatibility with ``service eucalyptus-cc/nc start''
-	ln -s eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
-	ln -s eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
+	ln -fs eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
+	ln -fs eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
 endif

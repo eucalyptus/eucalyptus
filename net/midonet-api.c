@@ -346,6 +346,71 @@ int mido_getel_midoname(midoname * name, char *key, char **val)
 }
 
 //!
+//! Parses an json array that is a value of the given key, and returns as an array
+//! of strings.
+//!
+//! @param[in]  name midoname containing the jsonbuf of interest.
+//! @param[in]  key json key of interest.
+//! @param[out] values array of parsed strings.
+//! @param[out] max_values number of elements in the returning array.
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note caller is responsible for releasing memory allocated for results.
+//!
+int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_values)
+{
+    int ret = 0;
+    json_object *jobj = NULL;
+    json_object *jarr = NULL;
+    json_object *jarrel = NULL;
+    int jarr_len = 0;
+    char **res;
+
+    if (!name || !key || !values || !max_values) {
+        LOGWARN("Invalid argument: NULL pointer.\n");
+        return (1);
+    }
+    LOGTRACE("searching for %s", key);
+
+    *values = NULL;
+    *max_values = 0;
+    jobj = json_tokener_parse(name->jsonbuf);
+    if (jobj) {
+        json_object_object_get_ex(jobj, key, &jarr);
+        if ((jarr == NULL) || (!json_object_is_type(jarr, json_type_array))) {
+            ret = 1;
+        } else {
+            jarr_len = json_object_array_length(jarr);
+            LOGTRACE("\tfound %d\n", jarr_len);
+            if (jarr_len > 0) {
+                res = EUCA_ZALLOC(jarr_len, sizeof (char *));
+                if (res == NULL) {
+                    LOGFATAL("out of memory.\n");
+                    return (1);
+                }
+                for (int i = 0; i < jarr_len; i++) {
+                    jarrel = json_object_array_get_idx(jarr, i);
+                    res[i] = strdup(json_object_get_string(jarrel));
+                    LOGTRACE("\t%d %s\n", i, res[i]);
+                }
+                *values = res;
+                *max_values = jarr_len;
+            }
+        }
+        json_object_put(jobj);
+    }
+
+    return (ret);
+}
+
+//!
 //! Retrieves extant tunnel-zones from MidoNet NSDB.
 //!
 //! @param[in]  tenant name of the tenant.
@@ -1695,6 +1760,7 @@ int mido_delete_rule(midoname * name)
 //! @param[in] ip
 //! @param[in] nw
 //! @param[in] slashnet
+//! @param[in] mac
 //! @param[in] outname
 //!
 //! @return
@@ -1707,7 +1773,7 @@ int mido_delete_rule(midoname * name)
 //!
 //! @note
 //!
-int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, midoname * outname)
+int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, char *slashnet, char *mac, midoname * outname)
 {
     int rc;
     midoname myname;
@@ -1720,7 +1786,11 @@ int mido_create_port(midoname * devname, char *port_type, char *ip, char *nw, ch
     myname.vers = strdup("v2");
 
     if (ip && nw && slashnet) {
-        rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, NULL);
+        if (mac) {
+            rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, "portMac", mac, NULL);
+        } else {
+            rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, "portAddress", ip, "networkAddress", nw, "networkLength", slashnet, NULL);
+        }
     } else {
         rc = mido_create_resource(devname, 1, &myname, outname, "type", port_type, NULL);
     }
@@ -2891,7 +2961,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
     if (httpcode != 200L) {
-        LOGWARN("curl get http code: %ld\n", httpcode);
+        LOGWARN("curl get http code: %ld\nurl: %s\napistr: %s\n", httpcode, url, apistr);
         ret = 1;
     }
     curl_slist_free_all(headers);
@@ -3845,6 +3915,210 @@ int mido_get_hosts(midoname ** outnames, int *outnames_max)
     return (ret);
 }
 
+//!
+//! Retrieves interfaces of the specified host as detected by midolman.
+//!
+//! @param[in]  host host of interest.
+//! @param[in]  iftype interface type to search and return.
+//! @param[out] outnames array of interfaces of the host.
+//! @param[out] outnames_max number of interfaces.
+//!
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note memory allocated for outnames must be released by the caller. The caller
+//!       is also required to release prior memory allocations to outnames before
+//!       calling this function.
+//!
+int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max)
+{
+    int rc = 0, ret = 0, i = 0, getif = 0;
+    char *payload = NULL, url[EUCA_MAX_PATH];
+    midoname *names = NULL;
+    int names_max = 0;
+
+    if ((host == NULL) || (host->init == 0) || (host->uuid == NULL)) {
+        LOGWARN("Invalid argument: invalid MidoNet host.\n");
+        return (1);
+    }
+    *outnames = NULL;
+    *outnames_max = 0;
+
+    bzero(url, EUCA_MAX_PATH);
+    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/hosts/%s/interfaces", host->uuid);
+    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Interface-v1+json", &payload);
+    if (!rc) {
+        struct json_object *jobj = NULL, *interface = NULL, *el = NULL;
+
+        jobj = json_tokener_parse(payload);
+        if (!jobj) {
+            LOGWARN("cannot tokenize midonet response: check midonet health\n");
+        } else {
+            if (json_object_is_type(jobj, json_type_array)) {
+                names_max = 0;
+                names = EUCA_ZALLOC(json_object_array_length(jobj), sizeof (midoname));
+                for (i = 0; i < json_object_array_length(jobj); i++) {
+                    interface = json_object_array_get_idx(jobj, i);
+                    if (interface) {
+                        if (iftype == MIDO_HOST_INTERFACE_ALL) {
+                            getif = 1;
+                        } else {
+                            getif = 0;
+                        }
+                        json_object_object_get_ex(interface, "type", &el);
+                        if (el) {
+                            const char *tmp = NULL;
+                            tmp = json_object_get_string(el);
+                            if ((!getif) && (iftype & MIDO_HOST_INTERFACE_PHYSICAL) && (!strcmp(tmp, "Physical"))) {
+                                getif = 1;
+                            }
+                            if ((!getif) && (iftype & MIDO_HOST_INTERFACE_VIRTUAL) && (!strcmp(tmp, "Virtual"))) {
+                                getif = 1;
+                            }
+                            if ((!getif) && (iftype & MIDO_HOST_INTERFACE_TUNNEL) && (!strcmp(tmp, "Tunnel"))) {
+                                getif = 1;
+                            }
+                            if ((!getif) && (iftype & MIDO_HOST_INTERFACE_UNKNOWN) && (!strcmp(tmp, "Unknown"))) {
+                                getif = 1;
+                            }
+                        }
+                        if (getif) {
+                            if (ifendpoint == MIDO_HOST_INTERFACE_ENDPOINT_ALL) {
+                                getif = 1;
+                            } else {
+                                getif = 0;
+                            }
+                            json_object_object_get_ex(interface, "endpoint", &el);
+                            if (el) {
+                                const char *tmp = json_object_get_string(el);
+                                if ((!getif) && (ifendpoint & MIDO_HOST_INTERFACE_ENDPOINT_PHYSICAL) && (!strcmp(tmp, "PHYSICAL"))) {
+                                    getif = 1;
+                                }
+                                if ((!getif) && (ifendpoint & MIDO_HOST_INTERFACE_ENDPOINT_DATAPAH) && (!strcmp(tmp, "DATAPATH"))) {
+                                    getif = 1;
+                                }
+                                if ((!getif) && (ifendpoint & MIDO_HOST_INTERFACE_ENDPOINT_LOCALHOST) && (!strcmp(tmp, "LOCALHOST"))) {
+                                    getif = 1;
+                                }
+                                if ((!getif) && (ifendpoint & MIDO_HOST_INTERFACE_ENDPOINT_UNKNOWN) && (!strcmp(tmp, "UNKNOWN"))) {
+                                    getif = 1;
+                                }
+                            }
+                        }
+
+                        if (getif) {
+                            names[names_max].jsonbuf = strdup(json_object_to_json_string(interface));
+                            json_object_object_get_ex(interface, "id", &el);
+                            if (el) {
+                                names[names_max].uuid = strdup(json_object_get_string(el));
+                            }
+                            json_object_object_get_ex(interface, "name", &el);
+                            if (el) {
+                                names[names_max].name = strdup(json_object_get_string(el));
+                            }
+                            names[names_max].resource_type = strdup("interfaces");
+                            names[names_max].content_type = NULL;
+                            names[names_max].init = 1;
+                            names_max++;
+                        }
+                    }
+                }
+            }
+            json_object_put(jobj);
+        }
+        EUCA_FREE(payload);
+    }
+
+    if (names && (names_max > 0)) {
+        *outnames = EUCA_ZALLOC(names_max, sizeof(midoname));
+        memcpy(*outnames, names, sizeof(midoname) * names_max);
+        *outnames_max = names_max;
+    }
+    EUCA_FREE(names);
+
+    return (ret);
+}
+
+//!
+//! Retrieves the IPv4 addresses of the specified host as detected by midolman.
+//!
+//! @param[in]  host host of interest.
+//! @param[out] outnames array of IPv4 addresses of the host.
+//! @param[out] outnames_max number of addresses.
+//!
+//! @return 0 on success. 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note memory allocated for outnames must be released by the caller. The caller
+//!       is also required to release prior memory allocations to outnames before
+//!       calling this function.
+//!
+int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max)
+{
+    int rc = 0, ret = 0;
+    int i = 0;
+    midoname *names = NULL;
+    int names_max = 0;
+    char **addrs;
+    int max_addrs;
+    u32 *hips = NULL;
+
+    if ((host == NULL) || (host->init == 0) || (host->uuid == NULL)) {
+        LOGWARN("Invalid argument: invalid MidoNet host.\n");
+        return (1);
+    }
+    LOGTRACE("retrieving IPv4 addresses of %s\n", host->name);
+    rc = mido_get_interfaces(host, MIDO_HOST_INTERFACE_ALL, (MIDO_HOST_INTERFACE_ENDPOINT_PHYSICAL | MIDO_HOST_INTERFACE_ENDPOINT_UNKNOWN), &names, &names_max);
+
+    if ((rc == 0) && (names != NULL) && (names_max > 0)) {
+        *outnames_max = 0;
+        for (i = 0; i < names_max; i++) {
+            rc = mido_getarr_midoname(&(names[i]), "addresses", &addrs, &max_addrs);
+            LOGTRACE("%s %s - max_addrs: %d\n", host->name, names[i].name, max_addrs);
+            if ((rc == 0) && (max_addrs > 0)) {
+                hips = EUCA_REALLOC(hips, *outnames_max + max_addrs, sizeof (u32));
+                if (hips == NULL) {
+                    LOGFATAL("out of memory - onmax %d, maxa %d.\n", *outnames_max, max_addrs);
+                    return (1);
+                }
+                bzero(&(hips[*outnames_max]), max_addrs * sizeof (u32));
+                for (int j = 0; j < max_addrs; j++) {
+                    if (strlen(addrs[j]) > 16) {
+                        LOGTRACE("\tskipping %s - not an IPv4 address.\n", addrs[j]);
+                    } else {
+                        hips[*outnames_max] = dot2hex(addrs[j]);
+                        if ((hips[*outnames_max] & 0xa9fe0000) == 0xa9fe0000) {
+                            LOGTRACE("\tskipping %s - link local address\n", addrs[j]);
+                            hips[*outnames_max] = 0;
+                        } else {
+                            LOGTRACE("\tFound %s\n", addrs[j]);
+                            (*outnames_max)++;
+                        }
+                    }
+                    EUCA_FREE(addrs[j]);
+                }
+                EUCA_FREE(addrs);
+            }
+        }
+        *outnames = hips;
+    }
+
+    mido_free_midoname_list(names, names_max);
+    EUCA_FREE(names);
+
+    return (ret);
+}
+
 int mido_check_state(void) {
     int ret = 0, rc = 0, mido = 0, retries = 300, i;
     char url[EUCA_MAX_PATH];
@@ -3871,6 +4145,36 @@ int mido_check_state(void) {
     }
 
     return(ret);
+}
+
+//!
+//! Comparator function for mido_iphostmap_entry structures.
+//!
+//! @param[in] p1 pointer to mido_iphostmap_entry 1.
+//! @param[in] p2 pointer to mido_iphostmap_entry 1.
+//!
+//! @return 0 iff p1->ip == p2->ip. -1 iff p1->ip < p2->ip. 1 iff p1->ip > p2->ip.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int compare_iphostmap_entry(const void *p1, const void *p2) {
+    mido_iphostmap_entry *e1 = (mido_iphostmap_entry *) p1;
+    mido_iphostmap_entry *e2 = (mido_iphostmap_entry *) p2;
+
+    if (e1->ip == e2->ip) {
+        return 0;
+    }
+    if (e1->ip < e2->ip) {
+        return -1;
+    } else {
+        return 1;
+    }
 }
 
 #ifdef MIDONET_API_TEST

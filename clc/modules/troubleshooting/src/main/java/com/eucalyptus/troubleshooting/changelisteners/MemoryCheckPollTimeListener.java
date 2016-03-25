@@ -25,7 +25,7 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.troubleshooting.checker.schedule.MemoryCheckScheduler;
 
-public class MemoryCheckPollTimeListener implements PropertyChangeListener {
+public class MemoryCheckPollTimeListener implements PropertyChangeListener<Object> {
 	/**
 	 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 	 *      java.lang.Object)
@@ -43,7 +43,7 @@ public class MemoryCheckPollTimeListener implements PropertyChangeListener {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
 		}
 		try {
-			t.getField().set(null, t.getTypeParser().apply(newValue));
+			t.getField().set(null, t.getTypeParser().apply(newValue.toString()));
 		} catch (IllegalArgumentException e1) {
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);

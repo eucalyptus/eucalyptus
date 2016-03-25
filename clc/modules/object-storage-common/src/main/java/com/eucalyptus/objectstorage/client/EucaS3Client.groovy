@@ -139,7 +139,7 @@ class EucaS3Client implements AmazonS3, AutoCloseable {
 
   public String getObjectContent( String bucket, String key, int maximumSize ) {
     final byte[] buffer = new byte[10*1024]; //10k buffer
-    s3Client.getObject(bucket, key).getObjectContent( ).withStream{ S3ObjectInputStream contentStream ->
+    s3Client.getObject(bucket, key).getObjectContent( ).withStream{ InputStream contentStream ->
       final ByteArrayOutputStream contentBytes = new ByteArrayOutputStream(buffer.length);
       int readBytes;
       while( (readBytes = contentStream.read( buffer ) ) > 0 ) {

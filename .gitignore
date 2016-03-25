@@ -77,7 +77,6 @@ tools/eucalyptus-eucanetd
 tools/eucalyptus-logrotate.conf
 util/eucalyptus-config.h
 util/euca-generate-fault
-util/euca_mountwrap
 util/euca_rootwrap
 util/test_misc
 util/test_fault
@@ -114,16 +113,12 @@ node/test_xml
 node/test_xml2
 util/euca-generate-fault
 /.settings
-.idea/
 .groovy/
 *.[ei]ml
 atlassian-ide-plugin.xml
 \#*#
 /project/
 **/*.[ei]ml
-clc/*.ipr
-clc/*.iws
-clc/*.gradle
 storage/imager/euca-imager
 storage/imager/euca-vmdk
 storage/imager/test-vmdk-shim
@@ -133,3 +128,17 @@ tools/imaging/setup.cfg
 tools/imaging/setup.cfg.template
 .tags
 .tags_sorted_by_file
+
+# don't commit IDE related files
+**/.project
+**/.classpath
+**/.idea/
+**/**/.idea/
+**/*.gradle
+**/*.iml
+**/*.ipl
+**/*.iws
+**/*.ipr
+**/.pydevproject
+.project
+.cproject

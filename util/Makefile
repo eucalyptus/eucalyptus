@@ -67,7 +67,7 @@ EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
 CFLAGS += 
 
-all: euca_system.o euca_string.o euca_network.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o sequence_executor.o atomic_file.o euca_rootwrap euca_mountwrap euca-generate-fault 
+all: euca_system.o euca_string.o euca_network.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o sequence_executor.o atomic_file.o euca_rootwrap euca-generate-fault
 	@for subdir in $(SUBDIRS); do \
         	(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
 
@@ -75,9 +75,6 @@ build: all
 
 euca_rootwrap: euca_rootwrap.c euca_string.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c euca_string.o 
-
-euca_mountwrap: euca_mountwrap.c euca_string.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c euca_string.o
 
 test: test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_network.o euca_file.o data.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_network.o euca_file.o data.o -lpthread $(LIBS) $(LDFLAGS)
@@ -113,7 +110,7 @@ indent:
 	done
 
 clean:
-	rm -rf *~ *.o test test_fault euca-generate-fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor
+	rm -rf *~ *.o test test_fault euca-generate-fault test_misc test_wc euca_rootwrap test_sensor
 	@make -C stats clean
 
 
@@ -122,7 +119,6 @@ distclean:
 
 install: all
 	$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
-	$(INSTALL) -m 0755 euca_mountwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
 	$(INSTALL) -m 0755 euca-generate-fault $(DESTDIR)$(usrdir)/sbin/
 	$(INSTALL) -d $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
 	$(INSTALL) -m 0644 faults/en_US/common.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
@@ -133,5 +129,4 @@ deploy:
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_rootwrap
-	$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_mountwrap
 	$(RM) -f $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/*.xml

@@ -32,21 +32,21 @@ import org.codehaus.jackson.map.introspect.AnnotatedMethod
 @CompileStatic
 class UpperCamelPropertyNamingStrategy extends PropertyNamingStrategy {
   @Override
-  String nameForField( final MapperConfig<?> mapperConfig,
+  String nameForField( final MapperConfig<? extends MapperConfig> mapperConfig,
                        final AnnotatedField field,
                        final String defaultName ) {
     upperCamel( defaultName )
   }
 
   @Override
-  String nameForGetterMethod( final MapperConfig<?> mapperConfig,
+  String nameForGetterMethod( final MapperConfig<? extends MapperConfig> mapperConfig,
                               final AnnotatedMethod method,
                               final String defaultName ) {
     upperCamel( defaultName )
   }
 
   @Override
-  String nameForSetterMethod( final MapperConfig<?> mapperConfig,
+  String nameForSetterMethod( final MapperConfig<? extends MapperConfig> mapperConfig,
                               final AnnotatedMethod method,
                               final String defaultName ) {
     upperCamel( defaultName )

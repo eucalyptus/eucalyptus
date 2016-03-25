@@ -2211,19 +2211,17 @@ public class EuareService {
     final EuareAccount requestAccount;
     final String delegateAccount = request.getDelegateAccount( );
     if ( delegateAccount != null ) {
-      if ( ctx.hasAdministrativePrivileges( ) ) {
+      if ( ctx.isAdministrator( ) ) {
         try {
           EuareAccount account = Accounts.lookupAccountByName( delegateAccount );
-          if ( !RestrictedTypes.filterPrivileged( ).apply( account ) ) {
-            throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
+          if ( RestrictedTypes.filterPrivileged( ).apply( account ) ) {
+            return account;
           }
-          return account;
         } catch ( AuthException e ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
         }        
-      } else {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Non-sysadmin can not have delegation access to " + delegateAccount );
       }
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
     } else {
       try {
         requestAccount = com.eucalyptus.auth.euare.Accounts.lookupAccountById( ctx.getAccountNumber() );

@@ -736,6 +736,7 @@ with_db_old_home
 with_db_old_suffix
 enable_debug
 with_extra_version
+with_java_home
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1378,6 +1379,7 @@ Optional Packages:
   --with-db-old-home=<dir>             where previous postgresql is installed
   --with-db-old-suffix=<dir>           where previous postgresql is installed
   --extra-version=<str>                string to append to versions to make logs and messages more precise
+  --with-java-home=<dir>               where the JRE is installed (same as JAVA_HOME)
 
 Some influential environment variables:
   CC          C compiler command
@@ -3623,7 +3625,7 @@ LIBVIRT_HOME="${LIBVIRT_HOME}"
 ANT=""
 JAVA=""
 WSDL2C=""
-java_min_version="1.7.0"
+java_min_version="1.8.0"
 ant_min_version="1.6.5"
 
 # these are for large files (>2GB)
@@ -3724,6 +3726,10 @@ if test "${with_extra_version+set}" = set; then :
   withval=$with_extra_version; EXTRA_VERSION="${withval}"
 fi
 
+# Check whether --with-java-home was given.
+if test "${with_java_home+set}" = set; then
+  withval=$with_java_home; JAVA_HOME="${withval}"
+fi
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
@@ -4965,8 +4971,7 @@ fi
 if test -z "$JAVA" ; then
         as_fn_error $? "Cannot find java!" "$LINENO" 5
 fi
-java_version=`$JAVA -version 2>&1 | grep "java version" | \
-        sed -e 's/.*java version "\(.*\)".*/\1/'`
+java_version=`$JAVA -version 2>&1 | head -n 1 | awk -F '"' '{print $2}'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then
         as_fn_error $? "Eucalyptus needs at least JDK version $java_min_version" "$LINENO" 5
@@ -4984,7 +4989,7 @@ if test $goodversion -eq 0; then
         as_fn_error $? "Eucalyptus needs at least ANT version $ant_min_version" "$LINENO" 5
 fi
 # some version of ant picks up the wrong java
-java_version=`$ANT -diagnostics 2>&1 | grep ^java.version | \
+java_version=`JAVA_HOME=$JAVA_HOME $ANT -diagnostics 2>&1 | grep ^java.version | \
         sed -e 's/java.* \([0-9.]*\).*/\1/'`
 goodversion=`expr $java_version ">=" $java_min_version`
 if test $goodversion -eq 0; then

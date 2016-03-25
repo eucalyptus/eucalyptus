@@ -19,16 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
-
+import com.eucalyptus.compute.common.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -85,53 +85,6 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.ClusterInfoType;
-import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.ComputeMessage;
-import com.eucalyptus.compute.common.DeleteResourceTag;
-import com.eucalyptus.compute.common.DescribeImagesResponseType;
-import com.eucalyptus.compute.common.DescribeImagesType;
-import com.eucalyptus.compute.common.DescribeInstanceTypesResponseType;
-import com.eucalyptus.compute.common.DescribeInstanceTypesType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
-import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseItemType;
-import com.eucalyptus.compute.common.DescribeKeyPairsResponseType;
-import com.eucalyptus.compute.common.DescribeKeyPairsType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
-import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
-import com.eucalyptus.compute.common.DescribeSubnetsType;
-import com.eucalyptus.compute.common.DescribeVpcsResponseType;
-import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.Filter;
-import com.eucalyptus.compute.common.GroupIdSetType;
-import com.eucalyptus.compute.common.ImageDetails;
-import com.eucalyptus.compute.common.InternetGatewayIdSetItemType;
-import com.eucalyptus.compute.common.InternetGatewayIdSetType;
-import com.eucalyptus.compute.common.InternetGatewayType;
-import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.ResourceTag;
-import com.eucalyptus.compute.common.RunningInstancesItemType;
-import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
-import com.eucalyptus.compute.common.SecurityGroupItemType;
-import com.eucalyptus.compute.common.SubnetIdSetItemType;
-import com.eucalyptus.compute.common.SubnetIdSetType;
-import com.eucalyptus.compute.common.SubnetType;
-import com.eucalyptus.compute.common.VmTypeDetails;
-import com.eucalyptus.compute.common.VpcType;
-import com.eucalyptus.compute.common.backend.AuthorizeSecurityGroupIngressType;
-import com.eucalyptus.compute.common.backend.CreateSecurityGroupResponseType;
-import com.eucalyptus.compute.common.backend.CreateSecurityGroupType;
-import com.eucalyptus.compute.common.backend.DeleteSecurityGroupType;
-import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
-import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
-import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeType;
-import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressType;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -150,11 +103,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-
-import com.eucalyptus.compute.common.backend.CreateTagsType;
-import com.eucalyptus.compute.common.backend.DeleteTagsType;
-
-
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -288,23 +236,10 @@ public class EucalyptusActivityTasks {
 		private EmpyreanSystemActivity() { super( Empyrean.class, false ); }
 	}
 	
-	public class EucalyptusSystemActivity extends SystemActivityContextSupport<ComputeMessage, Eucalyptus>{
-    public EucalyptusSystemActivity() { super( Eucalyptus.class ); }
-	  public EucalyptusSystemActivity(final boolean useELBSystemAccount) {
-	    super(Eucalyptus.class, useELBSystemAccount);
-	  }
-	}
-
-	private class EucalyptusUserActivity extends UserActivityContextSupport<ComputeMessage, Eucalyptus>{
-		private EucalyptusUserActivity(final AccountFullName accountFullName){
-			super( Eucalyptus.class, accountFullName );
-		}
-	}
-	
 	private class ComputeSystemActivity extends SystemActivityContextSupport<ComputeMessage, Compute>{
 		private ComputeSystemActivity() { super( Compute.class ); }
 		private ComputeSystemActivity(final boolean useELBSystemAccount) { super( Compute.class , useELBSystemAccount); }
- }
+    }
 
 	private class ComputeUserActivity extends UserActivityContextSupport<ComputeMessage, Compute>{
 		private ComputeUserActivity(final AccountFullName accountFullName){
@@ -349,7 +284,7 @@ public class EucalyptusActivityTasks {
   public List<ClusterInfoType> describeAvailabilityZonesWithVerbose(){
     return resultOf(
         new EucalyptusDescribeAvailabilityZonesTask(true),
-        new EucalyptusSystemActivity(false),
+        new ComputeSystemActivity(false),
         "failed to describe the availability zones"
     );
   }
@@ -363,14 +298,14 @@ public class EucalyptusActivityTasks {
 	private List<ClusterInfoType> describeAvailabilityZonesImpl(final boolean useELBSystemAccount){
 		return resultOf(
 				new EucalyptusDescribeAvailabilityZonesTask(false),
-				new EucalyptusSystemActivity(useELBSystemAccount),
+				new ComputeSystemActivity(useELBSystemAccount),
 				"failed to describe the availability zones"
 		);
 	}
 
 	public void createSystemSecurityGroup( String groupName, String groupDesc ){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
-		checkResult( task, new EucalyptusSystemActivity(), "failed to create the group "+groupName );
+		checkResult( task, new ComputeSystemActivity(), "failed to create the group "+groupName );
 	}
 
 	public void deleteSystemSecurityGroup( String groupName ){
@@ -381,7 +316,7 @@ public class EucalyptusActivityTasks {
 	}
 	private void deleteSystemSecurityGroupImpl( String groupName, boolean useELBSystemAccount ){
 	  final EucalyptusDeleteGroupTask task = new EucalyptusDeleteGroupTask(groupName);
-	  checkResult( task, new EucalyptusSystemActivity(useELBSystemAccount), "failed to delete the group "+groupName );
+	  checkResult( task, new ComputeSystemActivity(useELBSystemAccount), "failed to delete the group "+groupName );
 	}
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames, boolean useElbSystemAccount ){
     return describeSystemSecurityGroupsImpl(groupNames, useElbSystemAccount);
@@ -395,14 +330,14 @@ public class EucalyptusActivityTasks {
 	}
 
 	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
-	  this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new EucalyptusSystemActivity());
+	  this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new ComputeSystemActivity());
 	}
 	
   public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum, boolean useELBSystemAccount ){
-    this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new EucalyptusSystemActivity(useELBSystemAccount));
+    this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new ComputeSystemActivity(useELBSystemAccount));
   }
   
-  private void authorizeSystemSecurityGroupImpl( String groupNameOrId, String protocol, int portNum, EucalyptusSystemActivity context){
+  private void authorizeSystemSecurityGroupImpl( String groupNameOrId, String protocol, int portNum, ComputeSystemActivity context){
     final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupNameOrId, protocol, portNum);
     checkResult(
         task,
@@ -423,7 +358,7 @@ public class EucalyptusActivityTasks {
 		final EucalyptusRevokeIngressRuleTask task = new EucalyptusRevokeIngressRuleTask(groupName, protocol, portNum);
 		checkResult(
 				task,
-				new EucalyptusSystemActivity(useELBSystemAccount),
+				new ComputeSystemActivity(useELBSystemAccount),
 				String.format("failed to revoke:%s, %s, %d ", groupName, protocol, portNum)
 		);
 	}
@@ -436,7 +371,7 @@ public class EucalyptusActivityTasks {
 
 	public void createUserSecurityGroup( AccountFullName accountFullName, String groupName, String groupDesc ){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask( groupName, groupDesc );
-		checkResult( task, new EucalyptusUserActivity( accountFullName ), "failed to create the group "+groupName );
+		checkResult( task, new ComputeUserActivity( accountFullName ), "failed to create the group "+groupName );
 	}
 
 	public void putCloudWatchMetricData(final String userId, final String namespace, final MetricData data){
@@ -667,7 +602,7 @@ public class EucalyptusActivityTasks {
 	    ) {
 	  checkResult(
 	      new EucalyptusModifySecurityGroupsTask( instanceId, securityGroupIds ),
-	      new EucalyptusSystemActivity( useELBSystemAccount ),
+	      new ComputeSystemActivity( useELBSystemAccount ),
 	      "failed to modify security groups"
 	      );
 	}
@@ -680,10 +615,19 @@ public class EucalyptusActivityTasks {
 		), Predicates.alwaysTrue() );
 	}
 
+	public List<VpcType> describeSystemVpcs(final List<String> vpcIds) {
+		return resultOf(
+				new EucaDescribeVpcsTask( null, vpcIds ),
+				new ComputeSystemActivity(),
+				"failed to describe system vpc"
+		);
+	}
+
+	//// FIXME: The usage from LoadBalancingBackendService is probably wrong.
 	public List<SubnetType> describeSubnets(final Collection<String> subnetIds ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( subnetIds ),
-				new ComputeSystemActivity(false),
+				new ComputeSystemActivity(),
 				"failed to describe subnets"
 		);
 	}
@@ -694,15 +638,31 @@ public class EucalyptusActivityTasks {
 			final Collection<String> zones ){
 		return resultOf(
 				new EucaDescribeSubnetsTask( vpcId, defaultSubnet, zones ),
-				new ComputeSystemActivity(false),
+				new ComputeSystemActivity(),
 				"failed to describe subnets"
+		);
+	}
+
+	public List<AddressInfoType> describeSystemAddresses(final boolean vpc) {
+		return resultOf(
+				new EucaDescribeAddressesTask( vpc? "vpc" : "standard"),
+				new ComputeSystemActivity(),
+				"failed to describe addresses"
+		);
+	}
+
+	public List<AddressInfoType> describeSystemAddresses(final boolean vpc, final String publicIp) {
+		return resultOf(
+				new EucaDescribeAddressesTask( vpc? "vpc" : "standard", publicIp),
+				new ComputeSystemActivity(),
+				"failed to describe addresses"
 		);
 	}
 
 	public List<InternetGatewayType> describeInternetGateways(final Collection<String> vpcIds ){
 		return resultOf(
 				new EucaDescribeInternetGatewaysTask(vpcIds),
-				new ComputeSystemActivity(false),
+				new ComputeSystemActivity(),
 				"failed to describe internet gateways"
 		);
 	}
@@ -856,7 +816,7 @@ public class EucalyptusActivityTasks {
 	public void createTags(final String tagKey, final String tagValue, final List<String> resources){
 		checkResult(
 				new EucaCreateTagsTask(tagKey, tagValue, resources),
-				new EucalyptusSystemActivity( ),
+				new ComputeSystemActivity( ),
 				"failed to create tags"
 		);
 	}
@@ -864,11 +824,143 @@ public class EucalyptusActivityTasks {
 	public void deleteTags(final String tagKey, final String tagValue, final List<String> resources){
 		checkResult(
 				new EucaDeleteTagsTask(tagKey, tagValue, resources),
-				new EucalyptusSystemActivity( ),
+				new ComputeSystemActivity( ),
 				"failed to delete tags"
 		);
 	}
-	
+
+	public String createSystemVpc(final String cidrBlock) {
+		return resultOf(
+				new EucaCreateVpcTask(cidrBlock),
+				new ComputeSystemActivity( ),
+				"failed to create system VPC"
+		);
+	}
+
+	public String createSystemInternetGateway() {
+		return resultOf(
+				new EucaCreateInternetGatewayTask(),
+				new ComputeSystemActivity(),
+				"failed to create Internet gateway"
+		);
+	}
+
+	public void attachSystemInternetGateway(final String vpcId, final String gatewayId) {
+		checkResult(
+				new EucaAttachInternetGatewayTask(vpcId, gatewayId),
+				new ComputeSystemActivity(),
+				"failed to attach Internet gateway"
+		);
+	}
+
+	public String createSystemSubnet(final String vpcId, final String availabilityZone, final String cidrBlock) {
+		return resultOf(
+				new EucaCreateSubnetTask(vpcId, availabilityZone, cidrBlock),
+				new ComputeSystemActivity(),
+				"failed to create subnet"
+		);
+	}
+
+	public List<RouteTableType> describeSystemRouteTables() {
+		return describeSystemRouteTables(null, null);
+	}
+
+	public List<RouteTableType> describeSystemRouteTables(final String routeTableId, final String vpcId) {
+		final List<RouteTableType> tables =
+				resultOf(
+						new EucaDescribeRouteTableTask(routeTableId, vpcId),
+						new ComputeSystemActivity(),
+						"failed to describe route table"
+				);
+		return tables;
+	}
+
+	public String createSystemRouteTable(final String vpcId) {
+		return resultOf(
+				new EucaCreateRouteTableTask(vpcId),
+				new ComputeSystemActivity(),
+				"failed to create custom route table"
+		);
+	}
+
+	public void deleteSystemRoute(final String routeTableId, final String destCidr) {
+		checkResult(
+				new EucaDeleteRouteTask(routeTableId, destCidr),
+				new ComputeSystemActivity(),
+				"failed to delete route"
+		);
+	}
+	public void createSystemRouteToInternetGateway(final String routeTableId, final String destCidr, final String gatewayId ) {
+		checkResult(
+				new EucaCreateRouteTask(routeTableId, destCidr, gatewayId, null),
+				new ComputeSystemActivity(),
+				"failed to create a route"
+		);
+	}
+
+	public void createSystemRouteToNatGateway(final String routeTableId, final String destCidr, final String gatewayId) {
+		checkResult(
+				new EucaCreateRouteTask(routeTableId, destCidr, null, gatewayId),
+				new ComputeSystemActivity(),
+				"failed to create a route"
+		);
+	}
+
+	public void associateSystemRouteTable(final String subnetId, final String routeTableId) {
+		checkResult(
+				new EucaAssociateRouteTableTask(subnetId, routeTableId),
+				new ComputeSystemActivity(),
+				"failed to associate a route table with subnet"
+		);
+	}
+
+	public String allocateSystemVpcAddress() {
+		return resultOf(
+				new EucaAllocateAddressTask(true),
+				new ComputeSystemActivity(),
+				"failed to allocate address"
+		);
+	}
+
+	public List<NatGatewayType> describeSystemNatGateway(final String subnetId) {
+		return resultOf(
+				new EucaDescribeNatGatewayTask(subnetId),
+				new ComputeSystemActivity(),
+				"failed to describe nat gateway"
+		);
+	}
+
+	public String createSystemNatGateway(final String subnetId, final String elasticIpAllocationId) {
+		return resultOf(
+				new EucaCreateNatGatewayTask(subnetId, elasticIpAllocationId),
+				new ComputeSystemActivity(),
+				"failed to create nat gateway"
+		);
+	}
+
+	public List<NetworkInterfaceType> describeSystemNetworkInterfaces(final String subnetId) {
+		return resultOf(
+				new EucaDescribeNetworkInterfacesTask(subnetId),
+				new ComputeSystemActivity(),
+				"failed to describe network interfaces"
+		);
+	}
+
+	public NetworkInterfaceType createNetworkInterface(final String subnetId) {
+		return resultOf(
+				new EucaCreateNetworkInterfaceTask(subnetId),
+				new ComputeSystemActivity(),
+				"failed to create network interface"
+		);
+	}
+
+	public void attachNetworkInterface(final String instanceId, final String networkInterfaceId, final int deviceIndex) {
+		checkResult(new EucaAttachNetworkInterfaceTask(instanceId, networkInterfaceId, deviceIndex),
+				new ComputeSystemActivity(),
+				String.format("failed to attach network interface %s to %s at index %d",
+						networkInterfaceId, instanceId, deviceIndex));
+	}
+
 	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
@@ -914,7 +1006,7 @@ public class EucalyptusActivityTasks {
     }
 	}
 	
-	private class EucaDeleteTagsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
+	private class EucaDeleteTagsTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private List<String> resources = null;
@@ -936,7 +1028,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucaCreateTagsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
+	private class EucaCreateTagsTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private List<String> resources = null;
@@ -979,6 +1071,354 @@ public class EucalyptusActivityTasks {
 			return resp.getSecurityGroupInfo( );
 		}
 	}
+	
+	private class EucaCreateVpcTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private String cidr = null;
+		private EucaCreateVpcTask( final String cidr) {
+			this.cidr = cidr;
+		}
+
+		ComputeMessage getRequest( ) {
+			final CreateVpcType req = new CreateVpcType();
+			req.setCidrBlock(this.cidr);
+			return req;
+		}
+
+		@Override
+		String extractResult( ComputeMessage resp ) {
+			final CreateVpcResponseType response  = (CreateVpcResponseType) resp;
+			return response.getVpc().getVpcId();
+		}
+	}
+
+	private class EucaCreateInternetGatewayTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private EucaCreateInternetGatewayTask() {
+		}
+		ComputeMessage getRequest( ) {
+			final CreateInternetGatewayType req = new CreateInternetGatewayType();
+			return req;
+		}
+
+		@Override
+		String extractResult( ComputeMessage resp ) {
+			final CreateInternetGatewayResponseType response = (CreateInternetGatewayResponseType) resp;
+			return response.getInternetGateway().getInternetGatewayId();
+		}
+	}
+
+	private class EucaAttachInternetGatewayTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String vpcId = null;
+		private String gatewayId = null;
+		private EucaAttachInternetGatewayTask(final String vpcId, final String gatewayId) {
+			this.vpcId = vpcId;
+			this.gatewayId = gatewayId;
+		}
+
+		ComputeMessage getRequest( ) {
+			final AttachInternetGatewayType req = new AttachInternetGatewayType();
+			req.setVpcId(this.vpcId);
+			req.setInternetGatewayId(this.gatewayId);
+			return req;
+		}
+	}
+
+	private class EucaCreateSubnetTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private String vpcId = null;
+		private String availabilityZone = null;
+		private String cidr = null;
+
+		private EucaCreateSubnetTask(final String vpcId, final String availabilityZone, final String cidr) {
+			this.vpcId = vpcId;
+			this.availabilityZone = availabilityZone;
+			this.cidr = cidr;
+		}
+
+		ComputeMessage getRequest( ) {
+			final CreateSubnetType req = new CreateSubnetType();
+			req.setVpcId( this.vpcId );
+			req.setAvailabilityZone( this.availabilityZone );
+			req.setCidrBlock( this.cidr );
+			return req;
+		}
+
+		String extractResult( ComputeMessage resp ) {
+			final CreateSubnetResponseType response = (CreateSubnetResponseType) resp;
+			return response.getSubnet().getSubnetId();
+		}
+	}
+
+	private class EucaCreateRouteTableTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private String vpcId = null;
+		private EucaCreateRouteTableTask(final String vpcId) {
+			this.vpcId = vpcId;
+		}
+
+		ComputeMessage getRequest( ) {
+			final CreateRouteTableType req = new CreateRouteTableType();
+			req.setVpcId( this.vpcId );
+			return req;
+		}
+
+		String extractResult( ComputeMessage resp) {
+			final CreateRouteTableResponseType response = (CreateRouteTableResponseType) resp;
+			return response.getRouteTable().getRouteTableId();
+		}
+	}
+
+	private class EucaDescribeRouteTableTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<RouteTableType>> {
+		private String vpcId = null;
+		private String routeTableId = null;
+		private EucaDescribeRouteTableTask(final String routeTableId, final String vpcId) {
+			this.routeTableId = routeTableId;
+			this.vpcId = vpcId;
+		}
+		private EucaDescribeRouteTableTask(final String routeTableId) {
+			this.routeTableId = routeTableId;
+		}
+
+		ComputeMessage getRequest( ) {
+			final DescribeRouteTablesType req = new DescribeRouteTablesType();
+			if(this.routeTableId!=null) {
+				req.getFilterSet().add( filter( "route-table-id", this.routeTableId) );
+			}
+			if(this.vpcId != null) {
+				req.getFilterSet().add( filter( "vpc-id", this.vpcId) );
+			}
+			return req;
+		}
+
+		List<RouteTableType> extractResult(ComputeMessage resp) {
+			final DescribeRouteTablesResponseType response =
+					(DescribeRouteTablesResponseType) resp;
+			return response.getRouteTableSet().getItem();
+		}
+	}
+	private class EucaAssociateRouteTableTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String subnetId = null;
+		private String routeTableId = null;
+
+		private EucaAssociateRouteTableTask(final String subnetId, final String routeTableId) {
+			this.subnetId = subnetId;
+			this.routeTableId = routeTableId;
+		}
+
+		ComputeMessage getRequest( ) {
+			final AssociateRouteTableType req = new AssociateRouteTableType();
+			req.setSubnetId(this.subnetId);
+			req.setRouteTableId(this.routeTableId);
+			return req;
+		}
+	}
+
+	private class EucaDescribeAddressesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<AddressInfoType>> {
+		private String domain = null;
+		private String publicIp = null;
+		private EucaDescribeAddressesTask() {}
+
+		private EucaDescribeAddressesTask(final String domain) {
+			this.domain = domain;
+		}
+
+		private EucaDescribeAddressesTask(final String domain, final String publicIp) {
+			this.domain = domain;
+			this.publicIp = publicIp;
+		}
+
+		ComputeMessage getRequest( ) {
+			final DescribeAddressesType req = new DescribeAddressesType();
+			if(this.domain!=null) {
+				req.getFilterSet().add( filter("domain", domain));
+			}
+			if(this.publicIp!=null) {
+				req.getFilterSet().add( filter("public-ip", this.publicIp));
+			}
+			return req;
+		}
+
+		List<AddressInfoType> extractResult(final ComputeMessage resp) {
+			final DescribeAddressesResponseType response = (DescribeAddressesResponseType) resp;
+			return response.getAddressesSet();
+		}
+	}
+	private class EucaAllocateAddressTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private boolean isVpc = false;
+
+		private EucaAllocateAddressTask(final boolean isVpc) {
+			this.isVpc = isVpc;
+		}
+
+		ComputeMessage getRequest() {
+			final AllocateAddressType req = new AllocateAddressType();
+			if (this.isVpc)
+				req.setDomain("vpc");
+			return req;
+		}
+
+		@Override
+		String extractResult(final ComputeMessage resp) {
+			final AllocateAddressResponseType response = (AllocateAddressResponseType) resp;
+			return response.getPublicIp();
+		}
+	}
+
+	private class EucaAttachNetworkInterfaceTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String instanceId = null;
+		private String interfaceId = null;
+		private int deviceIdx = 1;
+		private EucaAttachNetworkInterfaceTask(final String instanceId,
+											   final String interfaceId,
+											   final int deviceIndex) {
+			this.instanceId = instanceId;
+			this.interfaceId = interfaceId;
+			this.deviceIdx = deviceIndex;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final AttachNetworkInterfaceType req = new AttachNetworkInterfaceType();
+			req.setInstanceId(this.instanceId);
+			req.setNetworkInterfaceId(this.interfaceId);
+			req.setDeviceIndex(this.deviceIdx);
+			return req;
+		}
+	}
+
+	private class EucaCreateNetworkInterfaceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, NetworkInterfaceType> {
+		private String subnetId = null;
+		private EucaCreateNetworkInterfaceTask(final String subnetId) {
+			this.subnetId = subnetId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final CreateNetworkInterfaceType req = new CreateNetworkInterfaceType();
+			req.setSubnetId(this.subnetId);
+			return req;
+		}
+
+		@Override
+		NetworkInterfaceType extractResult(ComputeMessage resp) {
+			final CreateNetworkInterfaceResponseType response = (CreateNetworkInterfaceResponseType) resp;
+			return response.getNetworkInterface();
+		}
+	}
+
+	private class EucaDescribeNetworkInterfacesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<NetworkInterfaceType>> {
+		private String subnetId = null;
+		private EucaDescribeNetworkInterfacesTask(final String subnetId) {
+			this.subnetId = subnetId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final DescribeNetworkInterfacesType req =
+					new DescribeNetworkInterfacesType();
+			if(this.subnetId!=null) {
+				req.getFilterSet().add(filter("subnet-id", this.subnetId));
+			}
+			return req;
+		}
+
+		@Override
+		List<NetworkInterfaceType> extractResult(ComputeMessage resp) {
+			final DescribeNetworkInterfacesResponseType response = (DescribeNetworkInterfacesResponseType) resp;
+			return response.getNetworkInterfaceSet().getItem();
+		}
+	}
+
+	private class EucaDescribeNatGatewayTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<NatGatewayType>> {
+		private String subnetId = null;
+		private EucaDescribeNatGatewayTask(final String subnetId) {
+			this.subnetId = subnetId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final DescribeNatGatewaysType req = new DescribeNatGatewaysType();
+			if (this.subnetId != null) {
+				req.getFilterSet().add(filter("subnet-id", this.subnetId));
+			}
+			return req;
+		}
+
+		@Override
+		List<NatGatewayType> extractResult( final ComputeMessage resp ) {
+			final DescribeNatGatewaysResponseType response = (DescribeNatGatewaysResponseType) resp;
+			return response.getNatGatewaySet().getItem();
+		}
+	}
+	private class EucaCreateNatGatewayTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+		private String subnetId = null;
+		private String elasticIpAllocationId = null;
+
+		private EucaCreateNatGatewayTask(final String subnetId, final String elasticIpAllocationId) {
+			this.subnetId = subnetId;
+			this.elasticIpAllocationId = elasticIpAllocationId;
+		}
+
+		@Override
+		ComputeMessage getRequest() {
+			final CreateNatGatewayType req = new CreateNatGatewayType();
+			req.setSubnetId(this.subnetId);
+			req.setAllocationId(this.elasticIpAllocationId);
+			return req;
+		}
+
+		@Override
+		String extractResult(final ComputeMessage resp) {
+			final CreateNatGatewayResponseType response = (CreateNatGatewayResponseType) resp;
+			return response.getNatGateway().getNatGatewayId();
+ 		}
+	}
+
+	private class EucaDeleteRouteTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String routeTableId = null;
+		private String destCidr = null;
+
+		private EucaDeleteRouteTask(final String routeTableId, final String destCidr) {
+			this.routeTableId = routeTableId;
+			this.destCidr = destCidr;
+		}
+
+		ComputeMessage getRequest() {
+			final DeleteRouteType req = new DeleteRouteType();
+			req.setRouteTableId(this.routeTableId);
+			req.setDestinationCidrBlock(this.destCidr);
+			return req;
+		}
+	}
+
+	private class EucaCreateRouteTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String destCidr = null;
+		private String internetGateway = null;
+		private String natGateway = null;
+		private String routeTable = null;
+
+		private EucaCreateRouteTask(final String routeTable, final String destCidr,
+									final String internetGateway, final String natGateway) {
+			this.routeTable = routeTable;
+			this.destCidr = destCidr;
+
+			if(internetGateway!=null && natGateway!=null) {
+				throw Exceptions.toUndeclared("Both internet gateway and nat gateway are specified");
+			} else if(internetGateway == null && natGateway == null) {
+				throw Exceptions.toUndeclared("Internet or nat gateway must be specified");
+			}
+			this.internetGateway = internetGateway;
+			this.natGateway = natGateway;
+		}
+
+		ComputeMessage getRequest( ) {
+			final CreateRouteType req = new CreateRouteType();
+			req.setRouteTableId( this.routeTable );
+			req.setDestinationCidrBlock( this.destCidr );
+			if (this.internetGateway != null)
+				req.setGatewayId( this.internetGateway );
+			if (this.natGateway != null)
+				req.setNatGatewayId( this.natGateway );
+			return req;
+		}
+	}
 
 	private class EucaDescribeVpcsTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<VpcType>> {
 		private Collection<String> vpcIds;
@@ -1000,7 +1440,14 @@ public class EucalyptusActivityTasks {
 				req.getFilterSet().add( filter( "isDefault", String.valueOf( defaultVpc ) ) );
 			}
 			if(this.vpcIds!=null){
-				req.getFilterSet().add( filter( "vpc-id", vpcIds ) );
+				final List<VpcIdSetItemType> idItems =
+						this.vpcIds.stream().map(s -> {
+							final VpcIdSetItemType item = new VpcIdSetItemType();
+							item.setVpcId(s);
+							return item;
+						}).collect(Collectors.toList());
+				req.setVpcSet( new VpcIdSetType() );
+				req.getVpcSet().setItem(new ArrayList(idItems));
 			}
 			return req;
 		}
@@ -1588,7 +2035,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	
-	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, List<ClusterInfoType>> {
+	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ClusterInfoType>> {
 		private boolean verbose = false;
 		private EucalyptusDescribeAvailabilityZonesTask(boolean verbose){
 			this.verbose = verbose;
@@ -1668,7 +2115,7 @@ public class EucalyptusActivityTasks {
 	}
 	
 	//SPARK: TODO: SYSTEM, STATIC MODE?
-	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Eucalyptus, String> {
+	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
 		private String groupName = null;
 		private String groupDesc = null;
 		EucalyptusCreateGroupTask(String groupName, String groupDesc){
@@ -1689,7 +2136,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
+	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
 		String groupNameOrId=null;
 		String protocol = null;
 		int portNum = 1;
@@ -1715,7 +2162,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
+	private class EucalyptusRevokeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
 		String groupName=null;
 		String protocol=null;
 		int portNum = 1;
@@ -1737,7 +2184,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus>{
+	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String groupName = null;
 		EucalyptusDeleteGroupTask(String groupName){
 			this.groupName = groupName;
@@ -1784,7 +2231,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	private class EucalyptusModifySecurityGroupsTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
+	private class EucalyptusModifySecurityGroupsTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
 		private final String instanceId;
 		private final Collection<String> securityGroupIds;
 

@@ -32,6 +32,8 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.util.Parameters;
 
 /**
@@ -77,10 +79,10 @@ public class ReservedNameEntity extends AbstractPersistent implements Serializab
     return reservedNameEntity;
   }
 
-  public static ReservedNameEntity exampleWithToken( final String clientToken ) {
-    final ReservedNameEntity example = new ReservedNameEntity( );
-    example.setClientToken( clientToken );
-    return example;
+  public static EntityRestriction<ReservedNameEntity> exampleWithToken( final String clientToken ) {
+    return Entities.restriction( ReservedNameEntity.class )
+        .equal( ReservedNameEntity_.clientToken, clientToken )
+        .build( );
   }
 
   public Date getExpiry( ) {

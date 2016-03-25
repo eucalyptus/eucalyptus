@@ -209,11 +209,12 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
     @Override
     public boolean apply( Class arg0 ) {
       try ( final TransactionResource tx = Entities.transactionFor( CertificateEntity.class ) ) {
-        final List<CertificateEntity> entities = (List<CertificateEntity>)
-            Entities.createCriteria( CertificateEntity.class ).add( Restrictions.or(
-                Restrictions.isNull( "certificateHashId" ),
-                Restrictions.eq( "revoked", true )
-            ) ).list( );
+        final List<CertificateEntity> entities = Entities.criteriaQuery( CertificateEntity.class ).where(
+            Entities.restriction( CertificateEntity.class ).any(
+                Entities.restriction( CertificateEntity.class ).isTrue( CertificateEntity_.revoked ).build( ),
+                Entities.restriction( CertificateEntity.class ).isNull( CertificateEntity_.certificateHashId ).build( )
+            )
+        ).list( );
         for ( final CertificateEntity entity : entities ) {
           if ( entity.revoked ) {
             logger.info( "Deleting revoked certificate: " + entity.getCertificateId( ) );

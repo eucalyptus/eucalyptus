@@ -84,12 +84,12 @@ public class StackResourceEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String referenceValueJson;
 
-  public Boolean getFromUpdateReplacement() {
-    return fromUpdateReplacement;
+  public String getUpdateType() {
+    return updateType;
   }
 
-  public void setFromUpdateReplacement(Boolean fromUpdateReplacement) {
-    this.fromUpdateReplacement = fromUpdateReplacement;
+  public void setUpdateType(String updateType) {
+    this.updateType = updateType;
   }
 
   @Column(name = "resource_attributes_json" )
@@ -116,8 +116,8 @@ public class StackResourceEntity extends AbstractPersistent {
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
 
-  @Column(name="from_update_replacement", nullable = false)
-  Boolean fromUpdateReplacement = false;
+  @Column(name="update_type")
+  String updateType;
 
   public StackResourceEntity() {
   }
@@ -295,7 +295,7 @@ public class StackResourceEntity extends AbstractPersistent {
       ", resourceAttributesJson='" + resourceAttributesJson + '\'' +
       ", stackId='" + stackId + '\'' +
       ", stackName='" + stackName + '\'' +
-      ", fromUpdateReplacement='" + fromUpdateReplacement + '\'' +
+      ", updateType='" + updateType + '\'' +
       ", recordDeleted=" + recordDeleted +
       '}';
   }

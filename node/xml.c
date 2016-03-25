@@ -175,6 +175,8 @@ static void cleanup(void);
 static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
 static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr);
+static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char * bridgeDeviceName, const char * hypervisorType, const char * osPlatform, const char * osVirtioNetwork);
+static int gen_nic_xml_without_lock(const ncInstance * instance, const netConfig * net);
 
 static void error_handler(void *ctx, const char *fmt, ...) _attribute_format_(2, 3);
 static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize);
@@ -468,6 +470,37 @@ static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr)
 }
 
 //!
+//! Writes nic information to xml node
+//!
+//! @param[in] nics pointer to nics XML node
+//! @param[in] net pointer to the netConfig
+//! @param[in] bridgeDeviceName name of the bridge device on host
+//!
+//!
+static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char * bridgeDeviceName, const char * hypervisorType, const char * osPlatform, const char * osVirtioNetwork) {
+    char str[16];
+    snprintf(str, sizeof(str), "%d", net->vlan);
+    _ATTRIBUTE(nic, "vlan", str);
+    snprintf(str, sizeof(str), "%d", net->networkIndex);
+    _ATTRIBUTE(nic, "networkIndex", str);
+    _ATTRIBUTE(nic, "mac", net->privateMac);
+    _ATTRIBUTE(nic, "publicIp", net->publicIp);
+    _ATTRIBUTE(nic, "privateIp", net->privateIp);
+    _ATTRIBUTE(nic, "bridgeDeviceName", bridgeDeviceName);
+    snprintf(str, sizeof(str), "vn_%s", net->interfaceId);
+    _ATTRIBUTE(nic, "guestDeviceName", str);
+    snprintf(str, sizeof(str), "%d", net->device);
+    _ATTRIBUTE(nic, "device", str);
+    _ATTRIBUTE(nic, "stateName", net->stateName);
+    _ATTRIBUTE(nic, "hypervisorType", hypervisorType);
+    _ATTRIBUTE(nic, "osPlatform", osPlatform);
+    _ATTRIBUTE(nic, "osVirtioNetwork", osVirtioNetwork);
+    if(strlen(net->attachmentId)) // vpc
+        _ATTRIBUTE(nic, "attachmentId", net->attachmentId);
+}
+
+
+//!
 //! Encodes instance metadata (contained in ncInstance struct) in XML
 //! and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
 //! That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
@@ -695,43 +728,21 @@ int gen_instance_xml(const ncInstance * instance)
         }
 
         if (instance->params.nicType != NIC_TYPE_NONE) {    // NIC specification
-            char str[16];
-
             nics = _NODE(instanceNode, "nics");
 
             // Handle primary network interface
             nic = _NODE(nics, "nic");
-            snprintf(str, sizeof(str), "%d", instance->ncnet.vlan);
-            _ATTRIBUTE(nic, "vlan", str);
-            snprintf(str, sizeof(str), "%d", instance->ncnet.networkIndex);
-            _ATTRIBUTE(nic, "networkIndex", str);
-            _ATTRIBUTE(nic, "mac", instance->ncnet.privateMac);
-            _ATTRIBUTE(nic, "publicIp", instance->ncnet.publicIp);
-            _ATTRIBUTE(nic, "privateIp", instance->ncnet.privateIp);
-            _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
-            snprintf(str, sizeof(str), "vn_%s", instance->ncnet.interfaceId);
-            _ATTRIBUTE(nic, "guestDeviceName", str);
-            snprintf(str, sizeof(str), "%d", instance->ncnet.device);
-            _ATTRIBUTE(nic, "device", str);
+            prep_nic_xml_node(nic, &(instance->ncnet), instance->params.guestNicDeviceName, instance->hypervisorType, instance->platform, _BOOL(config_use_virtio_net));
 
             // Handle secondary network interfaces in VPC mode
             for (int i = 0; i < EUCA_MAX_NICS; i++) {
                 const netConfig *net = instance->secNetCfgs + i;
                 if (strlen(net->interfaceId) == 0) // empty slot
                     continue;
-                xmlNodePtr secNic = _NODE(nics, "nic");
-                snprintf(str, sizeof(str), "%d", net->vlan);
-                _ATTRIBUTE(secNic, "vlan", str);
-                snprintf(str, sizeof(str), "%d", net->networkIndex);
-                _ATTRIBUTE(secNic, "networkIndex", str);
-                _ATTRIBUTE(secNic, "mac", net->privateMac);
-                _ATTRIBUTE(secNic, "publicIp", net->publicIp);
-                _ATTRIBUTE(secNic, "privateIp", net->privateIp);
-                _ATTRIBUTE(secNic, "bridgeDeviceName", instance->params.guestNicDeviceName);
-                snprintf(str, sizeof(str), "vn_%s", net->interfaceId);
-                _ATTRIBUTE(secNic, "guestDeviceName", str);
-                snprintf(str, sizeof(str), "%d", net->device);
-                _ATTRIBUTE(secNic, "device", str);
+                nic = _NODE(nics, "nic");
+                prep_nic_xml_node(nic, net, instance->params.guestNicDeviceName, instance->hypervisorType, instance->platform, _BOOL(config_use_virtio_net));
+                // Generate a separate eni-xyz.xml for each NIC for detachability
+                gen_nic_xml_without_lock(instance, net);
             }
         }
 
@@ -794,6 +805,65 @@ free:
     pthread_mutex_unlock(&xml_mutex);
     return (ret);
 }
+
+
+//!
+//! Generates nic XML content for a given network interface
+//!
+//! @param[in] instance a pointer to instance structure
+//! @param[in] net a pointer to netConfig structure
+//!
+//! @return The results of calling write_xml_file()
+//!
+//! @see write_xml_file()
+//!
+int gen_nic_xml(const ncInstance * instance, const netConfig * net) {
+
+    int ret = EUCA_ERROR;
+    INIT();
+
+    pthread_mutex_lock(&xml_mutex);
+    {
+        ret = gen_nic_xml_without_lock(instance, net);
+    }
+    pthread_mutex_unlock(&xml_mutex);
+
+    return (ret);
+}
+
+//!
+//! For use within this file only. Generates nic XML content for a given network interface without locking. Caller must lock
+//!
+//! @param[in] instance a pointer to instance structure
+//! @param[in] net a pointer to netConfig structure
+//!
+//! @return The results of calling write_xml_file()
+//!
+//! @see write_xml_file()
+//!
+static int gen_nic_xml_without_lock(const ncInstance * instance, const netConfig * net) {
+
+    int ret = EUCA_ERROR;
+    char path[EUCA_MAX_PATH] = "";
+    char ver_s[4] = "";
+    xmlDocPtr doc = NULL;
+    xmlNodePtr nic = NULL;
+
+    doc = xmlNewDoc(BAD_CAST "1.0");
+    nic = xmlNewNode(NULL, BAD_CAST "nic");
+    sprintf(ver_s, "%d", VERSION);
+    _ATTRIBUTE(nic, "xml-version", ver_s);
+    xmlDocSetRootElement(doc, nic);
+
+    prep_nic_xml_node(nic, net, instance->params.guestNicDeviceName, instance->hypervisorType, instance->platform, _BOOL(config_use_virtio_net));
+
+    snprintf(path, sizeof(path), EUCALYPTUS_NIC_XML_PATH_FORMAT, instance->instancePath, net->interfaceId);
+    ret = write_xml_file(doc, instance->instanceId, path, "nic");
+    xmlFreeDoc(doc);
+
+    return (ret);
+}
+
 
 //!
 //! Read instance information from an XML content
@@ -1049,7 +1119,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR_FREE(volxpath, v->devName);
             }
             MKVOLPATH("libvirt");
-            if (get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
+            if (strcmp(v->stateName, "attaching") && get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
                 LOGERROR("failed to read '%s' from '%s'\n", volxpath, xml_path);
                 for (int z = 0; res_array[z] != NULL; z++)
                     EUCA_FREE(res_array[z]);
@@ -1068,7 +1138,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
         int secNet = 0;
         for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_NICS); i++) {
             int device = 0;
-            char str[16] = "";
+            char str[32] = "";
             char * tok = NULL;
 
             // TODO code for upgrade to 4.3.0 swathi to check if this correct
@@ -1096,6 +1166,17 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                     euca_strncpy(instance->ncnet.interfaceId, (tok + 1), ENI_ID_LEN);
                 }
                 instance->ncnet.device = device;
+                MKNICPATH("stateName");
+                // Upgrade path
+                if (get_xpath_content_at(xml_path, nicxpath, 0, instance->ncnet.stateName, sizeof(instance->ncnet.stateName)) == NULL) {
+                    // primary nic is always attached, just make it so
+                    euca_strncpy(instance->ncnet.stateName, VOL_STATE_ATTACHED, sizeof(instance->ncnet.stateName));
+                }
+                // To cover upgrade path and vpc mode
+                MKNICPATH("attachmentId");
+                if (get_xpath_content_at(xml_path, nicxpath, 0, instance->ncnet.attachmentId, sizeof(instance->ncnet.attachmentId)) == NULL) {
+                    instance->ncnet.attachmentId[0] = '\0';
+                }
 
                 MKNICPATH("bridgeDeviceName");
                 XGET_STR_FREE(nicxpath, instance->params.guestNicDeviceName);
@@ -1118,6 +1199,11 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                     euca_strncpy(net->interfaceId, (tok + 1), ENI_ID_LEN);
                 }
                 net->device = device;
+                // secondary nics will always have an attachment state associated
+                MKNICPATH("stateName");
+                XGET_STR_FREE(nicxpath, net->stateName);
+                MKNICPATH("attachmentId");
+                XGET_STR_FREE(nicxpath, net->attachmentId);
 
                 secNet++;
             }
@@ -1186,6 +1272,47 @@ int gen_libvirt_instance_xml(const ncInstance * instance)
         ret = apply_xslt_stylesheet(xslt_path, instance->xmlFilePath, instance->libvirtFilePath, NULL, 0);
     }
     pthread_mutex_unlock(&xml_mutex);
+
+    // Generate a separate eni-xyz-libvirt.xml for each nic interface stored in eni-xyz.xml for detachability
+    for (int i = 0; i < EUCA_MAX_NICS; i++) {
+        const netConfig *net = instance->secNetCfgs + i;
+        if (strlen(net->interfaceId) == 0) // empty slot
+            continue;
+        gen_libvirt_nic_xml(instance->instancePath, net->interfaceId);
+    }
+
+    return (ret);
+}
+
+//!
+//! Generate nic XML content for LIBVIRT
+//!
+//! @param[in] eniId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] instance a pointer to our instance structure.
+//!
+//! @return The results of calling apply_xslt_stylesheet()
+//!
+//! @see apply_xslt_stylesheet()
+//!
+int gen_libvirt_nic_xml(const char * instancePath, const char * eniId)
+{
+    int ret = EUCA_OK;
+    char path[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
+
+    INIT();
+
+    snprintf(path, sizeof(path), EUCALYPTUS_NIC_XML_PATH_FORMAT, instancePath, eniId);  // eni-XXX.xml
+    snprintf(lpath, sizeof(lpath), EUCALYPTUS_NIC_LIBVIRT_XML_PATH_FORMAT, instancePath, eniId);    // eni-XXX-libvirt.xml
+
+    pthread_mutex_lock(&xml_mutex);
+    {
+        ret = apply_xslt_stylesheet(xslt_path, path, lpath, NULL, 0);
+    }
+    pthread_mutex_unlock(&xml_mutex);
+
+    // TODO should eni-XXX.xml file be removed after generating eni-XXX-libvirt.xml? In case of volumes its never generated
+
     return (ret);
 }
 

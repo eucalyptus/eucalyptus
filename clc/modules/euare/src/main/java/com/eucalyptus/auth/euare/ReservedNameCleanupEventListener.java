@@ -20,9 +20,9 @@
 package com.eucalyptus.auth.euare;
 
 import java.util.Date;
-import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
+import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity_;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
@@ -30,7 +30,6 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.google.common.collect.Maps;
 
 /**
  *
@@ -47,9 +46,9 @@ public class ReservedNameCleanupEventListener implements EventListener<ClockTick
   public void fireEvent( final ClockTick event ) {
     if ( Topology.isEnabledLocally( Euare.class ) ) {
       try ( final TransactionResource tx = Entities.transactionFor( ReservedNameEntity.class ) ) {
-        final Map<String, Date> parameters = Maps.newHashMap( );
-        parameters.put( "expiry", new Date( ) );
-        Entities.deleteAllMatching( ReservedNameEntity.class, "WHERE expiry < :expiry", parameters );
+        Entities.delete(
+            Entities.restriction( ReservedNameEntity.class ).before( ReservedNameEntity_.expiry, new Date( ) ).build( )
+        ).delete( );
         tx.commit();
       } catch ( final Exception e ) {
         logger.error( "Error deleting expired name reservations", e );

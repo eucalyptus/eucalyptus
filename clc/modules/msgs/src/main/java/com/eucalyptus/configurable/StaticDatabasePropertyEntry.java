@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,6 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
@@ -212,7 +211,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     return true;
   }
   
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_2_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade.class );
@@ -233,7 +232,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     
   }
 
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_3_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_3_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenamePropertyUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
@@ -261,7 +260,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     
   }
 
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_4_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_4_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenameExpermentalDNSPropertyUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameExpermentalDNSPropertyUpgrade.class );
@@ -291,7 +290,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_0_1, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_0_1, value = Empyrean.class )
   public enum StaticPropertyEntryRenamePropertyCloudWatchUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
@@ -318,7 +317,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade40 implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade40.class );
@@ -366,7 +365,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v4_1_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_1_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenameServiceVMPropertyUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameServiceVMPropertyUpgrade.class );
@@ -438,7 +437,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade420 implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade420.class );
@@ -567,7 +566,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_2_0, value = Empyrean.class )
   public enum DropServiceKeypairPropertyUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( DropServiceKeypairPropertyUpgrade.class );
@@ -631,6 +630,49 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     public boolean apply( final Class entity ) {
       migrateIdentifierCanonicalizerProperty( );
       enableInstanceDns( );
+      return true;
+    }
+  }
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_3_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade430 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade430.class );
+
+    private void deleteRemovedProperties( final Iterable<String> propertyNames ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final String propertyName : propertyNames ) try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null,propertyName, null ) );
+          LOG.info( "Deleting cloud property: " + propertyName );
+          Entities.delete( property );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Property not found, skipped delete for: " + propertyName );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      deleteRemovedProperties( Lists.newArrayList(
+          "www.https_ciphers",
+          "www.https_port",
+          "www.https_protocols",
+          "services.database.worker.availability_zones",
+          "services.database.worker.configured",
+          "services.database.worker.expiration_days",
+          "services.database.worker.image",
+          "services.database.worker.init_script",
+          "services.database.worker.instance_type",
+          "services.database.worker.keyname",
+          "services.database.worker.ntp_server",
+          "services.database.worker.volume",
+          "cloud.perm_gen_memory_check_poll_time",
+          "cloud.perm_gen_memory_check_ratio"
+      ) );
+
       return true;
     }
   }

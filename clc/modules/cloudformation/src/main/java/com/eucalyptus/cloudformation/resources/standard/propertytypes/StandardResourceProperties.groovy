@@ -222,6 +222,8 @@ public class AWSEC2EIPAssociationProperties implements ResourceProperties {
 @ToString(includeNames=true)
 public class AWSEC2InstanceProperties implements ResourceProperties {
   @Property
+  String additionalInfo;
+  @Property
   String availabilityZone;
   @Property
   List<EC2BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
@@ -274,6 +276,16 @@ public class AWSEC2InstanceProperties implements ResourceProperties {
 public class AWSEC2InternetGatewayProperties implements ResourceProperties {
   @Property
   List<EC2Tag> tags = Lists.newArrayList();
+}
+
+@ToString(includeNames=true)
+public class AWSEC2NatGatewayProperties implements ResourceProperties {
+  @Required
+  @Property
+  String allocationId;
+  @Required
+  @Property
+  String subnetId;
 }
 
 @ToString(includeNames=true)
@@ -355,6 +367,8 @@ public class AWSEC2RouteProperties implements ResourceProperties {
   String gatewayId;
   @Property
   String instanceId;
+  @Property
+  String natGatewayId;
   @Property
   String networkInterfaceId;
   @Required
@@ -542,7 +556,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   ElasticLoadBalancingAccessLoggingPolicy accessLoggingPolicy;
   @Property
-  ElasticLoadBalancingAppCookieStickinessPolicy appCookieStickinessPolicy;
+  List<ElasticLoadBalancingAppCookieStickinessPolicy> appCookieStickinessPolicy = Lists.newArrayList();
   @Property
   List<String> availabilityZones = Lists.newArrayList();
   @Property
@@ -556,7 +570,7 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   @Property
   List<String> instances = Lists.newArrayList();
   @Property(name="LBCookieStickinessPolicy")
-  ElasticLoadBalancingLBCookieStickinessPolicyType lbCookieStickinessPolicy;
+  List<ElasticLoadBalancingLBCookieStickinessPolicyType> lbCookieStickinessPolicy = Lists.newArrayList();
   @Property
   String loadBalancerName;
   @Required
@@ -570,6 +584,8 @@ public class AWSElasticLoadBalancingLoadBalancerProperties implements ResourcePr
   List<String> securityGroups = Lists.newArrayList();
   @Property
   List<String> subnets = Lists.newArrayList();
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
 }
 @ToString(includeNames=true)
 public class AWSIAMAccessKeyProperties implements ResourceProperties {

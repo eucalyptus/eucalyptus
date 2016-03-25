@@ -75,8 +75,10 @@ import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -118,7 +120,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           sb.append( t.toString( ) );
         }
@@ -148,7 +150,7 @@ public class DatabaseGroupProxy implements EuareGroup {
     } catch ( AuthException ae ) {
       // not found
       try {
-        DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+        DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
           public void fire( GroupEntity t ) {
             t.setName( name );
           }
@@ -177,7 +179,7 @@ public class DatabaseGroupProxy implements EuareGroup {
       throw new AuthException( AuthException.INVALID_PATH, e );
     }    
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           t.setPath( path );
         }
@@ -201,7 +203,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   @Override
   public void setUserGroup( final Boolean userGroup ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           t.setUserGroup( userGroup );
         }
@@ -215,7 +217,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   @Override
   public void addUserByName( String userName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).add( userEntity );
       userEntity.getGroups( ).add( groupEntity );
@@ -229,7 +231,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   @Override
   public void removeUserByName( String userName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ) );
       UserEntity userEntity = DatabaseAuthUtils.getUniqueUser( userName, groupEntity.getAccount( ).getName( ) );
       groupEntity.getUsers( ).remove( userEntity );
       userEntity.getGroups( ).remove( groupEntity );
@@ -244,9 +246,9 @@ public class DatabaseGroupProxy implements EuareGroup {
   public boolean hasUser( String userName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
       @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", userName ) )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "groupId", this.delegate.getGroupId( ) ) )
+      List<UserEntity> users = Entities
+          .criteriaQuery( UserEntity.class ).whereEqual( UserEntity_.name, userName )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.groupId, this.delegate.getGroupId( ) )
           .list( );
       db.commit( );
       return users.size( ) > 0;
@@ -260,7 +262,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   public List<Policy> getPolicies( ) {
     final List<Policy> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           for ( PolicyEntity p : t.getPolicies( ) ) {
             results.add( new DatabasePolicyProxy( p ) );
@@ -297,7 +299,7 @@ public class DatabaseGroupProxy implements EuareGroup {
     final PolicyPolicy policyPolicy = PolicyParser.getInstance().parse( policy );
     final PolicyEntity parsedPolicy = PolicyEntity.create( name, policyPolicy.getPolicyVersion( ), policy );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      final GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      final GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ) );
       final PolicyEntity remove = DatabaseAuthUtils.removeGroupPolicy( groupEntity, name );
       if ( remove != null ) {
         Entities.delete( remove );
@@ -319,7 +321,7 @@ public class DatabaseGroupProxy implements EuareGroup {
       throw new AuthException( AuthException.EMPTY_POLICY_NAME );
     }
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity group = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      GroupEntity group = DatabaseAuthUtils.getUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ) );
       PolicyEntity policy = DatabaseAuthUtils.removeGroupPolicy( group, name );
       if ( policy != null ) {
         Entities.delete( policy );
@@ -335,7 +337,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   public List<EuareUser> getUsers( ) {
     final List<EuareUser> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           for ( UserEntity u : t.getUsers( ) ) {
             results.add( new DatabaseUserProxy( u ) );
@@ -357,7 +359,7 @@ public class DatabaseGroupProxy implements EuareGroup {
   public EuareAccount getAccount( ) {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
-      DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
           Entities.initialize( t.getAccount( ) );
           results.add( new DatabaseAccountProxy( t.getAccount( ) ) );

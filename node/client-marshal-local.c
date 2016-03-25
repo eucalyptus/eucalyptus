@@ -79,6 +79,7 @@
 #include <string.h>
 
 #include <eucalyptus.h>
+#include <euca_auth.h>
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "client-marshal.h"
@@ -243,7 +244,14 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 //!
 int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
 {
-    return (EUCA_OK);
+  char *xmlbuf = NULL;
+
+  xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+  if (xmlbuf) {
+    return doBroadcastNetworkInfo(pMeta, xmlbuf);
+  }
+
+  return (EUCA_ERROR);
 }
 
 //!
@@ -414,6 +422,37 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     return doDetachVolume(pMeta, instanceId, volumeId, remoteDev, localDev, force);
+}
+
+//!
+//! Handles the client attach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netCfg a pointer to network interface
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, netConfig * netCfg)
+{
+    return doAttachNetworkInterface(pMeta, instanceId, netCfg);
+}
+
+//!
+//! Handles the client detach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] interfaceId the eni identifier string (eni-XXXXXXXX)
+//! @param[in] force if set to 1, this will force the network interface to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    return doDetachNetworkInterface(pMeta, instanceId, interfaceId, force);
 }
 
 //!

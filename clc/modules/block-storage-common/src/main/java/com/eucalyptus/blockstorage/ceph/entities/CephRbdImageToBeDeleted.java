@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,58 +60,52 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.entities;
+package com.eucalyptus.blockstorage.ceph.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
-@PersistenceContext(name = "eucalyptus_walrus")
-@Table(name = "ImageCache")
-public class ImageCacheInfo extends AbstractPersistent implements Comparable<ImageCacheInfo> {
-  @Column(name = "bucket_name")
-  private String bucketName;
+@PersistenceContext(name = "eucalyptus_storage")
+@Table(name = "ceph_rbd_image_to_be_deleted")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
+public class CephRbdImageToBeDeleted extends AbstractPersistent {
 
-  @Column(name = "manifest_name")
-  private String manifestName;
+  private static final long serialVersionUID = 1L;
+
+  @Column(name = "cluster_name")
+  private String clusterName;
 
   @Column(name = "image_name")
   private String imageName;
 
-  @Column(name = "in_cache")
-  private Boolean inCache;
+  @Column(name = "pool_name")
+  private String poolName;
 
-  @Column(name = "size")
-  private Long size;
-
-  @Column(name = "use_count")
-  private Integer useCount;
-
-  public ImageCacheInfo() {}
-
-  public ImageCacheInfo(String bucketName, String manifestName) {
-    this.bucketName = bucketName;
-    this.manifestName = manifestName;
+  public CephRbdImageToBeDeleted() {
+    this.clusterName = StorageProperties.NAME;
   }
 
-  public String getBucketName() {
-    return bucketName;
+  public CephRbdImageToBeDeleted(String imageName, String poolName) {
+    this();
+    this.imageName = imageName;
+    this.poolName = poolName;
   }
 
-  public void setBucketName(String bucketName) {
-    this.bucketName = bucketName;
+  public String getClusterName() {
+    return clusterName;
   }
 
-  public String getManifestName() {
-    return manifestName;
-  }
-
-  public void setManifestName(String manifestName) {
-    this.manifestName = manifestName;
+  public void setClusterName(String clusterName) {
+    this.clusterName = clusterName;
   }
 
   public String getImageName() {
@@ -122,45 +116,31 @@ public class ImageCacheInfo extends AbstractPersistent implements Comparable<Ima
     this.imageName = imageName;
   }
 
-  public Boolean getInCache() {
-    return inCache;
+  public CephRbdImageToBeDeleted withImageName(String imageName) {
+    this.imageName = imageName;
+    return this;
   }
 
-  public void setInCache(Boolean inCache) {
-    this.inCache = inCache;
+  public String getPoolName() {
+    return poolName;
   }
 
-  public Long getSize() {
-    return size;
+  public void setPoolName(String poolName) {
+    this.poolName = poolName;
   }
 
-  public void setSize(Long size) {
-    this.size = size;
-  }
-
-  public Integer getUseCount() {
-    return useCount;
-  }
-
-  public void setUseCount(Integer useCount) {
-    this.useCount = useCount;
-  }
-
-  public int compareTo(ImageCacheInfo info) {
-    if (info.getUseCount().equals(useCount))
-      return 0;
-    if (info.getUseCount() < useCount)
-      return 1;
-    else
-      return -1;
+  public CephRbdImageToBeDeleted withPoolName(String poolName) {
+    this.poolName = poolName;
+    return this;
   }
 
   @Override
   public int hashCode() {
     final int prime = 31;
-    int result = 1;
-    result = prime * result + ((bucketName == null) ? 0 : bucketName.hashCode());
-    result = prime * result + ((manifestName == null) ? 0 : manifestName.hashCode());
+    int result = super.hashCode();
+    result = prime * result + ((clusterName == null) ? 0 : clusterName.hashCode());
+    result = prime * result + ((imageName == null) ? 0 : imageName.hashCode());
+    result = prime * result + ((poolName == null) ? 0 : poolName.hashCode());
     return result;
   }
 
@@ -168,22 +148,26 @@ public class ImageCacheInfo extends AbstractPersistent implements Comparable<Ima
   public boolean equals(Object obj) {
     if (this == obj)
       return true;
-    if (obj == null)
+    if (!super.equals(obj))
       return false;
     if (getClass() != obj.getClass())
       return false;
-    ImageCacheInfo other = (ImageCacheInfo) obj;
-    if (bucketName == null) {
-      if (other.bucketName != null)
+    CephRbdImageToBeDeleted other = (CephRbdImageToBeDeleted) obj;
+    if (clusterName == null) {
+      if (other.clusterName != null)
         return false;
-    } else if (!bucketName.equals(other.bucketName))
+    } else if (!clusterName.equals(other.clusterName))
       return false;
-    if (manifestName == null) {
-      if (other.manifestName != null)
+    if (imageName == null) {
+      if (other.imageName != null)
         return false;
-    } else if (!manifestName.equals(other.manifestName))
+    } else if (!imageName.equals(other.imageName))
+      return false;
+    if (poolName == null) {
+      if (other.poolName != null)
+        return false;
+    } else if (!poolName.equals(other.poolName))
       return false;
     return true;
   }
-
 }

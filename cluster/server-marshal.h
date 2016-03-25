@@ -145,6 +145,8 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
 adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t * migrateInstances, const axutil_env_t * env);
 adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startInstance, const axutil_env_t * env);
 adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstance, const axutil_env_t * env);
+adb_AttachNetworkInterfaceResponse_t *AttachNetworkInterfaceMarshal(adb_AttachNetworkInterface_t * AttachNetworkInterface, const axutil_env_t * env);
+adb_DetachNetworkInterfaceResponse_t *DetachNetworkInterfaceMarshal(adb_DetachNetworkInterface_t * DetachNetworkInterface, const axutil_env_t * env);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

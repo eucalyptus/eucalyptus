@@ -30,7 +30,6 @@ import eucadmin.configfile
 from eucadmin.utils import chown_recursive, chmod_recursive
 
 RootWrapPath = 'usr/lib/eucalyptus/euca_rootwrap'
-MountWrapPath = 'usr/lib/eucalyptus/euca_mountwrap'
 
 MakeDirs = ['var/lib/eucalyptus/dynserv/data',
             'var/lib/eucalyptus/db',
@@ -88,10 +87,6 @@ class EucaSetup(object):
         rootwrap = os.path.join(self.config['EUCALYPTUS'], RootWrapPath)
         if not os.path.isfile(rootwrap):
             raise IOError('Cannot find %s or not executable' % rootwrap)
-        # check for existence of mountwrap
-        mountwrap = os.path.join(self.config['EUCALYPTUS'], MountWrapPath)
-        if not os.path.isfile(mountwrap):
-            raise IOError('Cannot find %s or not executable' % mountwrap)
         root_data = pwd.getpwnam('root')
         if self.euca_user_name == 'root':
             self.euca_user_id = root_data.pw_uid
@@ -104,8 +99,6 @@ class EucaSetup(object):
             self.euca_user_group_id = user_data.pw_gid
             os.chown(rootwrap, root_data.pw_uid, self.euca_user_group_id)
             os.chmod(rootwrap, 04750)
-            os.chown(mountwrap, root_data.pw_uid, self.euca_user_group_id)
-            os.chmod(mountwrap, 04750)
         self.instance_path = self.config['INSTANCE_PATH']
         if self.instance_path and self.instance_path != 'not_configured':
             if not os.path.isdir(self.instance_path):

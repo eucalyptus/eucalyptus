@@ -930,7 +930,7 @@ public class VmControl {
         } else if ( request.getUserData() != null ) {
           final byte[] userData;
           try {
-            userData = B64.standard.dec( request.getUserData( ).getValue( ) );
+            userData = Strings.nullToEmpty(request.getUserData().getValue()).isEmpty() ? new byte[0] : B64.standard.dec( request.getUserData( ).getValue( ) );
           } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
             throw new ClientComputeException( "InvalidParameterValue", "User data decoding error." );
           }

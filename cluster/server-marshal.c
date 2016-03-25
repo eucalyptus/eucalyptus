@@ -1524,6 +1524,10 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     adb_netConfigType_set_publicIp(netconf, env, src->ccnet.publicIp);
     adb_netConfigType_set_vlan(netconf, env, src->ccnet.vlan);
     adb_netConfigType_set_networkIndex(netconf, env, src->ccnet.networkIndex);
+    if (strlen(src->ccnet.attachmentId)) // vpc
+        adb_netConfigType_set_attachmentId(netconf, env, src->ccnet.attachmentId);
+    else // non-vpc
+        adb_netConfigType_reset_attachmentId(netconf, env);
     adb_ccInstanceType_set_netParams(dst, env, netconf);
 
     for (i = 0; i < src->secNetCfgsSize; i++) {
@@ -1537,6 +1541,7 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
        adb_netConfigType_set_publicIp(netconf, env, src->secNetCfgs[i].publicIp);
        adb_netConfigType_set_vlan(netconf, env, src->secNetCfgs[i].vlan);
        adb_netConfigType_set_networkIndex(netconf, env, src->secNetCfgs[i].networkIndex);
+       adb_netConfigType_set_attachmentId(netconf, env, src->secNetCfgs[i].attachmentId);
        adb_ccInstanceType_add_secondaryNetConfig(dst, env, netconf);
     }
 
@@ -1599,6 +1604,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char *accountId = NULL;
     char *ownerId = NULL;
     char *rootDirective = NULL;
+    char *eniAttachmentId = NULL; // only in vpc mode
     char statusMessage[256] = "";
     long long call_time = time_ms();
     ncMetadata ccMeta = { 0 };
@@ -1612,7 +1618,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     adb_virtualMachineType_t *vm = NULL;
     ccInstance *outInsts = NULL;
     ccInstance *myInstance = NULL;
-    netConfig secNetCfgs[EUCA_MAX_NICS] = {{ 0 }};
+    netConfig secNetCfgs[EUCA_MAX_NICS] = {{ 0 }}; // only in vpc mode
     int secNetCfgsLen = 0;
 
     rit = adb_RunInstances_get_RunInstances(runInstances, env);
@@ -1715,6 +1721,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         }
     }
 
+    eniAttachmentId = adb_runInstancesType_get_primaryEniAttachmentId(rit, env);
+
     secNetCfgsLen = adb_runInstancesType_sizeof_secondaryNetConfig(rit, env);
     if (secNetCfgsLen > EUCA_MAX_NICS) {// Warn that number of net configs is greater than supported
         LOGWARN("Maximum number of secondary enis supported is %d\n", EUCA_MAX_NICS);
@@ -1730,6 +1738,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         euca_strncpy(secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(net, env), INET_ADDR_LEN);
         secNetCfgs[i].vlan = adb_netConfigType_get_vlan(net, env);
         secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(net, env);
+        euca_strncpy(secNetCfgs[i].attachmentId, adb_netConfigType_get_attachmentId(net, env), ENI_ATTACHMENT_ID_LEN);
     }
 
     accountId = adb_runInstancesType_get_accountId(rit, env);
@@ -1754,7 +1763,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         threadCorrelationId *corr_id = set_corrid(ccMeta.correlationId);
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, netIds, netIdsLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
-                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective,
+                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, rootDirective, eniAttachmentId,
                             secNetCfgs, secNetCfgsLen, &outInsts, &outInstsLen);
         unset_corrid(corr_id);
     }
@@ -2332,4 +2341,141 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
     cached_message_stats_update("StopInstance", (long)call_time, rc);
 
     return (ret);
+}
+
+//!
+//! Unmarshals, executes, responds to the attach network interface request.
+//!
+//! @param[in] AttachNetworkInterface a pointer to the attach betwork interface request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_AttachNetworkInterfaceResponse_t *AttachNetworkInterfaceMarshal(adb_AttachNetworkInterface_t * AttachNetworkInterface, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    netConfig netConfig = { 0 };
+    axis2_char_t *instanceId = NULL;
+    adb_netConfigType_t *netConfigType = NULL;
+    adb_AttachNetworkInterfaceType_t *input = NULL;
+    adb_AttachNetworkInterfaceResponse_t *response = NULL;
+    adb_AttachNetworkInterfaceResponseType_t *output = NULL;
+    long long call_time = time_ms();
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256];
+    status = AXIS2_TRUE;
+
+    input = adb_AttachNetworkInterface_get_AttachNetworkInterface(AttachNetworkInterface, env);
+    response = adb_AttachNetworkInterfaceResponse_create(env);
+    output = adb_AttachNetworkInterfaceResponseType_create(env);
+
+    // get operation-specific fields from input
+    instanceId = adb_AttachNetworkInterfaceType_get_instanceId(input, env);
+    netConfigType = adb_AttachNetworkInterfaceType_get_netConfig(input, env);
+    netConfig.vlan = adb_netConfigType_get_vlan(netConfigType, env);
+    netConfig.networkIndex = adb_netConfigType_get_networkIndex(netConfigType, env);
+    snprintf(netConfig.privateMac, ENET_ADDR_LEN, "%s", adb_netConfigType_get_privateMacAddress(netConfigType, env));
+    snprintf(netConfig.privateIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_privateIp(netConfigType, env));
+    snprintf(netConfig.publicIp, INET_ADDR_LEN, "%s", adb_netConfigType_get_publicIp(netConfigType, env));
+    snprintf(netConfig.interfaceId, ENI_ID_LEN, "%s", adb_netConfigType_get_interfaceId(netConfigType, env));
+    snprintf(netConfig.attachmentId, ENI_ATTACHMENT_ID_LEN, "%s", adb_netConfigType_get_attachmentId(netConfigType, env));
+    netConfig.device = adb_netConfigType_get_device(netConfigType, env);
+
+    if(!DONOTHING) {
+        // do it
+        EUCA_MESSAGE_UNMARSHAL(AttachNetworkInterfaceType, input, (&meta));
+
+        threadCorrelationId *corr_id = set_corrid(meta.correlationId);
+        if ((error = doAttachNetworkInterface(&meta, instanceId, &netConfig)) != EUCA_OK) {
+            LOGERROR("[%s][%s] failed error=%d\n", instanceId, netConfig.interfaceId, error);
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+            adb_AttachNetworkInterfaceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_AttachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_AttachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            adb_AttachNetworkInterfaceResponseType_set_statusMessage(output, env, statusMessage);
+        } else {
+            // set standard fields in output
+            adb_AttachNetworkInterfaceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_AttachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_AttachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            // no operation-specific fields in output
+        }
+        unset_corrid(corr_id);
+    }
+
+    // set response to output
+    adb_AttachNetworkInterfaceResponse_set_AttachNetworkInterfaceResponse(response, env, output);
+
+    cached_message_stats_update("AttachNetworkInterface", (long)(time_ms() - call_time), error);
+    return (response);
+}
+
+//!
+//! Unmarshals, executes, responds to the detach network interface request.
+//!
+//! @param[in] ncNetworkInterfaceVolume a pointer to the detach network interface request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_DetachNetworkInterfaceResponse_t *DetachNetworkInterfaceMarshal(adb_DetachNetworkInterface_t * DetachNetworkInterface, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    boolean force = FALSE;
+    ncMetadata meta = { 0 };
+    axis2_char_t *instanceId = NULL;
+    axis2_char_t *interfaceId = NULL;
+    axis2_bool_t forceBool = AXIS2_FALSE;
+    adb_DetachNetworkInterfaceType_t *input = NULL;
+    adb_DetachNetworkInterfaceResponse_t *response = NULL;
+    adb_DetachNetworkInterfaceResponseType_t *output = NULL;
+    long long call_time = time_ms();
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256];
+    status = AXIS2_TRUE;
+
+    input = adb_DetachNetworkInterface_get_DetachNetworkInterface(DetachNetworkInterface, env);
+    response = adb_DetachNetworkInterfaceResponse_create(env);
+    output = adb_DetachNetworkInterfaceResponseType_create(env);
+
+    // get operation-specific fields from input
+    instanceId = adb_DetachNetworkInterfaceType_get_instanceId(input, env);
+    interfaceId = adb_DetachNetworkInterfaceType_get_attachmentId(input, env);
+    forceBool = adb_DetachNetworkInterfaceType_get_force(input, env);
+    if (forceBool == AXIS2_TRUE) {
+        force = TRUE;
+    } else {
+        force = FALSE;
+    }
+
+    if(!DONOTHING) {
+        // do it
+        EUCA_MESSAGE_UNMARSHAL(DetachNetworkInterfaceType, input, (&meta));
+
+        threadCorrelationId *corr_id = set_corrid(meta.correlationId);
+        if ((error = doDetachNetworkInterface(&meta, instanceId, interfaceId, force)) != EUCA_OK) {
+            LOGERROR("[%s][%s] failed error=%d\n", instanceId, interfaceId, error);
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+            adb_DetachNetworkInterfaceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_DetachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_DetachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            adb_DetachNetworkInterfaceResponseType_set_statusMessage(output, env, statusMessage);
+        } else {
+            // set standard fields in output
+            adb_DetachNetworkInterfaceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_DetachNetworkInterfaceResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_DetachNetworkInterfaceResponseType_set_userId(output, env, meta.userId);
+            // no operation-specific fields in output
+        }
+        unset_corrid(corr_id);
+    }
+
+    // set response to output
+    adb_DetachNetworkInterfaceResponse_set_DetachNetworkInterfaceResponse(response, env, output);
+
+    cached_message_stats_update("DetachNetworkInterface", (long)(time_ms() - call_time), error);
+    return (response);
 }

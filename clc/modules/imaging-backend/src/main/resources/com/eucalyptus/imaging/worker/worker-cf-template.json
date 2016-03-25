@@ -138,8 +138,8 @@
                 "log_server=", { "Ref" : "LogServer" }, "\n",
                 "log_server_port=", { "Ref" : "LogServerPort" }, "\n",
                 "\" > /etc/eucalyptus-imaging-worker/imaging-worker.conf\n",
-                "touch /var/lib/eucalyptus-imaging-worker/ntp.lock\n",
                 "chown -R imaging-worker:imaging-worker /etc/eucalyptus-imaging-worker\n",
+                "python /usr/libexec/eucalyptus-imaging-worker/ntp-update\n",
                 "service eucalyptus-imaging-worker start"
               ]
             ]

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,19 +62,26 @@
 
 package com.eucalyptus.auth.euare.persist;
 
+import static com.eucalyptus.entities.Entities.criteriaQuery;
+import static com.eucalyptus.entities.Entities.restriction;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.hibernate.criterion.Restrictions;
+import javax.persistence.metamodel.SingularAttribute;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccountScopedPrincipal;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.Policy;
@@ -85,6 +92,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
@@ -110,18 +118,36 @@ public class DatabaseAuthUtils {
    * @return
    */
   public static UserEntity getUniqueUser( String userName, String accountName ) throws Exception {
-    @SuppressWarnings( "unchecked" )
-    UserEntity result = ( UserEntity ) Entities
-        .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", userName ) )
-        .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-        .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-        .uniqueResult( );
-    if ( result == null ) {
+    try {
+      return Entities.criteriaQuery( UserEntity.class ).whereEqual( UserEntity_.name, userName )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
       throw new NoSuchElementException( "Can not find user " + userName + " in " + accountName );
     }
-    return result;
   }
-  
+
+  /**
+   * Must call within a transaction.
+   */
+  public static long countUsersInGroup( String groupName, String accountName ) throws Exception {
+    return Entities.count( UserEntity.class )
+        .join( UserEntity_.groups ).whereEqual( GroupEntity_.name, groupName )
+        .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static long countPoliciesInGroup( String groupName, String accountName ) throws Exception {
+    return Entities.count( PolicyEntity.class )
+        .join( PolicyEntity_.group ).whereEqual( GroupEntity_.name, groupName )
+        .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+  }
+
   /**
    * Must call within a transaction.
    * 
@@ -131,47 +157,39 @@ public class DatabaseAuthUtils {
    * @throws Exception
    */
   public static GroupEntity getUniqueGroup( String groupName, String accountName ) throws Exception {
-    @SuppressWarnings( "unchecked" )
-    GroupEntity result = ( GroupEntity ) Entities
-        .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", groupName ) )
-        .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-        .uniqueResult( );
-    if ( result == null ) {
+    try {
+      return Entities.criteriaQuery( GroupEntity.class ).whereEqual( GroupEntity_.name, groupName )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
       throw new NoSuchElementException( "Can not find group " + groupName + " in " + accountName );
     }
-    return result;
   }
 
   /**
    * Must call within a transaction.
    */
   public static InstanceProfileEntity getUniqueInstanceProfile( String instanceProfileName, String accountName ) throws Exception {
-    @SuppressWarnings( "unchecked" )
-    InstanceProfileEntity result = ( InstanceProfileEntity ) Entities
-        .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
-        .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-        .setCacheable( true )
+    try {
+      return Entities.criteriaQuery( InstanceProfileEntity.class ).whereEqual( InstanceProfileEntity_.name, instanceProfileName )
+        .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, accountName )
         .uniqueResult( );
-    if ( result == null ) {
+    } catch ( final NoSuchElementException e ) {
       throw new NoSuchElementException( "Can not find instance profile " + instanceProfileName + " in " + accountName );
     }
-    return result;
   }
 
   /**
    * Must call within a transaction.
    */
   public static RoleEntity getUniqueRole( String roleName, String accountName ) throws Exception {
-    @SuppressWarnings( "unchecked" )
-    final RoleEntity result = ( RoleEntity ) Entities
-        .createCriteria( RoleEntity.class ).add( Restrictions.eq( "name", roleName ) )
-        .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-        .setCacheable( true )
-        .uniqueResult();
-    if ( result == null ) {
+    try {
+      return Entities.criteriaQuery( RoleEntity.class ).whereEqual( RoleEntity_.name, roleName )
+        .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
       throw new NoSuchElementException( "Can not find role " + roleName + " in " + accountName );
     }
-    return result;
   }
 
   /**
@@ -182,22 +200,20 @@ public class DatabaseAuthUtils {
    * @throws Exception
    */
   public static AccountEntity getUniqueAccount( String accountName ) throws Exception {
-    return getUnique( AccountEntity.class, "name", accountName );
+    return getUnique( AccountEntity.class, AccountEntity_.name, accountName );
   }
   
   /**
    * Must call within a transacton.
    */
   public static PolicyEntity getUniquePolicy(  String policyName, String groupId ) throws Exception {
-    @SuppressWarnings( "unchecked" )
-    PolicyEntity result = ( PolicyEntity ) Entities
-        .createCriteria( PolicyEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", policyName ) )
-        .createCriteria( "group" ).setCacheable( true ).add( Restrictions.eq( "groupId", groupId ) )
+    try {
+      return Entities.criteriaQuery( PolicyEntity.class ).whereEqual( PolicyEntity_.name, policyName )
+        .join( PolicyEntity_.group ).whereEqual( GroupEntity_.id, groupId )
         .uniqueResult( );
-    if ( result == null ) {
+    } catch ( final NoSuchElementException e ) {
       throw new NoSuchElementException( "Can not find policy " + policyName + " for group " + groupId );
     }
-    return result;
   }
   
   public static PolicyEntity removeGroupPolicy( GroupEntity group, String name ) throws Exception {
@@ -263,14 +279,13 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Empty user name or account name" );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      UserEntity result = ( UserEntity ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", userName ) )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-          .uniqueResult( );
+      final Optional<UserEntity> userOptional = Entities
+          .criteriaQuery( UserEntity.class ).whereEqual( UserEntity_.name, userName )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
       db.commit( );
-      return result != null;
+      return userOptional.isPresent( );
     } catch ( Exception e ) {
       throw new AuthException( "Failed to find user", e );
     }
@@ -284,13 +299,11 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Empty user name or account name" );
     }
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      RoleEntity result = ( RoleEntity ) Entities
-          .createCriteria( RoleEntity.class ).add( Restrictions.eq( "name", roleName ) )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-          .setCacheable( true )
-          .uniqueResult();
-      return result != null;
+      final Optional<RoleEntity> roleOptional = Entities
+          .criteriaQuery( RoleEntity.class ).whereEqual( RoleEntity_.name, roleName )
+          .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
+      return roleOptional.isPresent( );
     } catch ( Exception e ) {
       throw new AuthException( "Failed to find role", e );
     }
@@ -308,12 +321,11 @@ public class DatabaseAuthUtils {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      AccountEntity result = ( AccountEntity ) Entities
-          .createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-          .uniqueResult( );
+      final Optional<AccountEntity> accountOptional = Entities
+          .criteriaQuery( AccountEntity.class ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
       db.commit( );
-      return result != null;
+      return accountOptional.isPresent( );
     } catch ( Exception e ) {
       throw new AuthException( "Failed to find account", e );
     }
@@ -335,13 +347,12 @@ public class DatabaseAuthUtils {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
     }
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      GroupEntity result = ( GroupEntity ) Entities
-          .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", groupName ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-          .uniqueResult( );
+      final Optional<GroupEntity> groupOptional = Entities
+          .criteriaQuery( GroupEntity.class ).whereEqual( GroupEntity_.name, groupName )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
       db.commit( );
-      return result != null;
+      return groupOptional.isPresent( );
     } catch ( Exception e ) {
       throw new AuthException( "Failed to find group", e );
     }
@@ -355,34 +366,30 @@ public class DatabaseAuthUtils {
       throw new AuthException( "Empty instance profile name or account name" );
     }
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      InstanceProfileEntity result = ( InstanceProfileEntity ) Entities
-          .createCriteria( InstanceProfileEntity.class ).add( Restrictions.eq( "name", instanceProfileName ) )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", accountName ) )
-          .setCacheable( true )
-          .uniqueResult();
-      return result != null;
+      final Optional<InstanceProfileEntity> profileOptional = Entities
+          .criteriaQuery( InstanceProfileEntity.class ).whereEqual( InstanceProfileEntity_.name, instanceProfileName )
+          .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
+      return profileOptional.isPresent( );
     } catch ( Exception e ) {
       throw new AuthException( "Failed to find instance profile", e );
     }
   }
-
-
 
   /**
    * Check if the account is empty (no roles, no groups, no users).
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      final long groups = Entities.count(
-          new GroupEntity( ),
-          Restrictions.eq( "account.name", accountName ),
-          Collections.singletonMap( "account", "account" ) );
+      final long groups = Entities.count( GroupEntity.class )
+          .join( GroupEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
 
-      final long roles = Entities.count(
-          new RoleEntity( ),
-          Restrictions.eq( "account.name", accountName ),
-          Collections.singletonMap( "account", "account" ) );
+      final long roles = Entities.count( RoleEntity.class )
+          .join( RoleEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
 
       return roles + groups == 0;
     } catch ( Exception e ) {
@@ -401,16 +408,15 @@ public class DatabaseAuthUtils {
     return false;
   }
 
-  @SuppressWarnings("unchecked")
-  public static <T> T getUnique( Class<T> entityClass, String property, Object value ) throws Exception {
-    T result = ( T ) Entities.createCriteria( entityClass ).setCacheable( true ).add( Restrictions.eq( property, value ) ).uniqueResult( );
-    if ( result == null ) {
-      throw new NoSuchElementException( "No " + entityClass.getCanonicalName( ) + " with " + property + "=" + value ); 
+  public static <T,PT> T getUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value ) throws Exception {
+    try {
+      return criteriaQuery( restriction( entityClass ).equal( property, value ) ).uniqueResult( );
+    } catch ( NoSuchElementException e ) {
+      throw new NoSuchElementException( "No " + entityClass.getCanonicalName( ) + " with " + property.getName( ) + "=" + value );
     }
-    return result;
   }
-  
-  public static <T> void invokeUnique( Class<T> entityClass, String property, Object value, final Callback<T> c ) throws TransactionException {
+
+  public static <T,PT> void invokeUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value, final Callback<T> c ) throws TransactionException {
     try ( final TransactionResource db = Entities.transactionFor( entityClass ) ) {
       T result = getUnique( entityClass, property, value );
       if ( c != null ) {

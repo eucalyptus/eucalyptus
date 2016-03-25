@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Objects;
 
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.StackResourceEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -56,7 +58,6 @@ import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 
@@ -65,13 +66,18 @@ import javax.annotation.Nullable;
  * Created by ethomas on 2/3/14.
  */
 public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
-  private static final Logger LOG = Logger.getLogger(AWSEC2EIPResourceAction.class);
   private AWSEC2EIPProperties properties = new AWSEC2EIPProperties();
   private AWSEC2EIPResourceInfo info = new AWSEC2EIPResourceInfo();
 
   public AWSEC2EIPResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
+
+  @Override
+  public boolean mustCheckUpdateTypeEvenIfNoPropertiesChanged() {
+    return true;
+  }
+
   @Override
   public UpdateType getUpdateType(ResourceAction resourceAction) {
     UpdateType updateType = UpdateType.NONE;
@@ -82,7 +88,22 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    // finally update if the 'instance' we are associated was either NO_INTERRUPTION or SOME_INTERRUPTION updated
+    if (Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId()) ) {
+      if (wasInstanceUpdated(otherAction)) {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
     return updateType;
+  }
+
+  private boolean wasInstanceUpdated(AWSEC2EIPResourceAction action) {
+    if (action.properties.getInstanceId() == null) {
+      return false;
+    }
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(action.stackEntity.getStackId(), action.stackEntity.getAccountId(), action.properties.getInstanceId(), action.stackEntity.getStackVersion());
+    return  (stackResourceEntity != null && stackResourceEntity.getUpdateType() != null &&
+      (stackResourceEntity.getUpdateType().equals(UpdateType.NO_INTERRUPTION.toString()) || stackResourceEntity.getUpdateType().equals(UpdateType.SOME_INTERRUPTION.toString())));
   }
 
   private enum CreateSteps implements Step {
@@ -152,7 +173,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
         final AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
-        if ( action.info.getPhysicalResourceId( ) == null ) return action;
+        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
         if ( action.properties.getInstanceId( ) != null ) {
           final ServiceConfiguration configuration = Topology.lookup( Compute.class );
           final List<AddressInfoType> addresses = describeAddresses( action, configuration ).getAddressesSet( );

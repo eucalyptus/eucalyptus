@@ -336,6 +336,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           if ( !subParams.isEmpty( ) ) {
             this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
             obj.setProperty( e.getValue(), newInstance );
+            if ( subParams != params ) for ( Map.Entry<String,String> entry : subParams.entrySet( ) ) {
+              params.put( e.getKey( ) + "." + entry.getKey( ), entry.getValue( ) );
+            }
           } else if ( params.containsKey( e.getKey( ) ) ) {
             obj.setProperty( e.getValue(), newInstance );
           }

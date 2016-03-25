@@ -107,6 +107,7 @@
 #define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
 #define ENI_ID_LEN                                 13   //! Length of the instance ID string (eni-xxxxxxxx\0)
+#define ENI_ATTACHMENT_ID_LEN                      20   //! Length of the eni attachment ID string (eni-attach-xxxxxxxx\0)
 //! @}
 
 //! @{
@@ -327,6 +328,8 @@ typedef struct netConfig_t {
     char privateIp[INET_ADDR_LEN];     //!< Private IP address
     int device;                        //!< indicates nic device; 0 is primary and everything else is secondary nic
     char interfaceId[ENI_ID_LEN];      //!< ENI in case of VPC
+    char stateName[CHAR_BUFFER_SIZE];  //!< Network interface state name string
+    char attachmentId[ENI_ATTACHMENT_ID_LEN]; //!< Attachment ID string
 } netConfig;
 
 //! Structure defining NC Volumes
@@ -523,7 +526,7 @@ extern const char *ncResourceFormatTypeNames[];
 \*----------------------------------------------------------------------------*/
 
 int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachine * pVirtMachingIn);
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex);
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, const char *sPvAttachmentId, int vlan, int networkIndex);
 
 //! @{
 //! @name Metadata APIs
@@ -542,7 +545,10 @@ ncInstance *clone_instance(const ncInstance * old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
-int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam);
+
+typedef int (*instance_action) (bunchOfInstances **, ncInstance *, void *);
+int for_each_instance(bunchOfInstances ** ppHead, instance_action pFunction, void *pParam);
+
 ncInstance *find_instance(bunchOfInstances ** ppHead, const char *instanceId);
 ncInstance *get_instance(bunchOfInstances ** ppHead);
 int total_instances(bunchOfInstances ** ppHead);
@@ -561,6 +567,17 @@ boolean is_volume_used(const ncVolume * pVolume);
 ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sVolumeAttachmentToken, const char *sConnectionString, const char *sDevName,
                       const char *sStateName, const char *sXml);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
+//! @}
+
+//! @{
+//! @name Network Interface APIs
+boolean is_network_interface_used(const netConfig * pNetConfig);
+netConfig *save_network_interface(ncInstance * pInstance, const netConfig * pNetConfig, const char *sStateName);
+netConfig *free_network_interface(ncInstance * pInstance, const char *sInterfaceId);
+netConfig *find_network_interface(ncInstance * pInstance, const char *sInterfaceId);
+netConfig *find_network_interface_by_attachment(ncInstance * pInstance, const char *sAttachmentId);
+boolean is_network_interface_present(ncInstance * pInstance, const char *sInterfaceId);
+boolean is_network_interface_attached(ncInstance * pInstance, const char *sInterfaceId, const char *sAttachmentId);
 //! @}
 
 //! @{

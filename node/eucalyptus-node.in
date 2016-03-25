@@ -49,6 +49,7 @@ for mod in authn_core authz_core authz_host mpm_prefork unixd; do
     fi
 done
 
+export AXIS2C_HOME
 export EUCALYPTUS
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND

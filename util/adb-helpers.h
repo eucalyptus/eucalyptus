@@ -824,11 +824,17 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     adb_netConfigType_set_publicIp(netconf, env, outInst->ncnet.publicIp);
     adb_netConfigType_set_vlan(netconf, env, outInst->ncnet.vlan);
     adb_netConfigType_set_networkIndex(netconf, env, outInst->ncnet.networkIndex);
+    if (strlen(outInst->ncnet.attachmentId)) // vpc
+        adb_netConfigType_set_attachmentId(netconf, env, outInst->ncnet.attachmentId);
+    else // non-vpc
+        adb_netConfigType_reset_attachmentId(netconf, env);
     adb_instanceType_set_netParams(instance, env, netconf);
 
-    for (i = 0; i < EUCA_MAX_NICS; i++) {
-        if (strlen(outInst->secNetCfgs[i].interfaceId) == 0)
-            continue;
+    for (i = 0; i < EUCA_MAX_NICS; i++) { // vpc
+        // report only attached interfaces since state is not a part of the message
+        if (strlen(outInst->secNetCfgs[i].interfaceId) == 0 ||
+                strncmp(outInst->secNetCfgs[i].stateName, VOL_STATE_ATTACHED, sizeof(VOL_STATE_ATTACHED)))
+            continue;  // skip empty or un-attached interfaces
         netconf = adb_netConfigType_create(env);
         adb_netConfigType_set_interfaceId(netconf, env, outInst->secNetCfgs[i].interfaceId);
         adb_netConfigType_set_device(netconf, env, outInst->secNetCfgs[i].device);
@@ -837,6 +843,7 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
         adb_netConfigType_set_publicIp(netconf, env, outInst->secNetCfgs[i].publicIp);
         adb_netConfigType_set_vlan(netconf, env, outInst->secNetCfgs[i].vlan);
         adb_netConfigType_set_networkIndex(netconf, env, outInst->secNetCfgs[i].networkIndex);
+        adb_netConfigType_set_attachmentId(netconf, env, outInst->secNetCfgs[i].attachmentId);
         adb_instanceType_add_secondaryNetConfig(instance, env, netconf);
     }
 
@@ -921,6 +928,10 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), ENET_ADDR_LEN);
         euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), INET_ADDR_LEN);
         euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), INET_ADDR_LEN);
+        if (adb_netConfigType_is_attachmentId_nil(netconf, env)) // non-vpc
+            ncnet.attachmentId[0] = '\0';
+        else // vpc
+            euca_strncpy(ncnet.attachmentId, adb_netConfigType_get_attachmentId(netconf, env), ENI_ATTACHMENT_ID_LEN);
     }
 
     groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
@@ -985,6 +996,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         euca_strncpy(outInst->secNetCfgs[i].publicIp, adb_netConfigType_get_publicIp(netParams, env), INET_ADDR_LEN);
         outInst->secNetCfgs[i].vlan = adb_netConfigType_get_vlan(netParams, env);
         outInst->secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(netParams, env);
+        euca_strncpy(outInst->secNetCfgs[i].attachmentId, adb_netConfigType_get_attachmentId(netParams, env), ENI_ATTACHMENT_ID_LEN);
     }
     outInst->hasFloppy = adb_instanceType_get_hasFloopy(instance, env);
     return (outInst);

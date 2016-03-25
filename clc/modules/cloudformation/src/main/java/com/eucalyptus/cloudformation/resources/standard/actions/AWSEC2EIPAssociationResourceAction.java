@@ -21,6 +21,8 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.StackResourceEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -69,6 +71,11 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
   }
 
   @Override
+  public boolean mustCheckUpdateTypeEvenIfNoPropertiesChanged() {
+    return true;
+  }
+
+  @Override
   public UpdateType getUpdateType(ResourceAction resourceAction) {
     UpdateType updateType = UpdateType.NONE;
     AWSEC2EIPAssociationResourceAction otherAction = (AWSEC2EIPAssociationResourceAction) resourceAction;
@@ -112,9 +119,21 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
     if (!Objects.equals(properties.getPrivateIpAddress(), otherAction.properties.getPrivateIpAddress())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    // finally update if the 'instance' we are associated was either NO_INTERRUPTION or SOME_INTERRUPTION updated
+    if (Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId()) ) {
+      if (wasInstanceUpdated(otherAction)) {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
     return updateType;
   }
 
+  private boolean wasInstanceUpdated(AWSEC2EIPAssociationResourceAction action) {
+    if (action.properties.getInstanceId() == null) return false;
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResourceByPhysicalResourceId(action.stackEntity.getStackId(), action.stackEntity.getAccountId(), action.properties.getInstanceId(), action.stackEntity.getStackVersion());
+    return (stackResourceEntity != null &&
+      (stackResourceEntity.getUpdateType().equals(UpdateType.NO_INTERRUPTION.toString()) || stackResourceEntity.getUpdateType().equals(UpdateType.SOME_INTERRUPTION.toString())));
+  }
 
   private enum CreateSteps implements Step {
     CREATE_EIP_ASSOCIATION {

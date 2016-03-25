@@ -284,7 +284,7 @@ const char *euca_error_names[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId);
+static ncVolume *find_volume(ncInstance * pInstance, const char *interfaceId);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -354,6 +354,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //! @param[in]  sPvMac the private MAC string
 //! @param[in]  sPvIp the private IP string
 //! @param[in]  sPbIp the public IP string
+//! @param[in]  sPvAttachmentId the eni attachment ID string
 //! @param[in]  vlan the network Virtual LAN
 //! @param[in]  networkIndex the network index
 //!
@@ -363,7 +364,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
 //!
 //! @post The network configuration structure is updated with the provided information
 //!
-int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, int vlan, int networkIndex)
+int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int device, const char *sPvMac, const char *sPvIp, const char *sPbIp, const char *sPvAttachmentId, int vlan, int networkIndex)
 {
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
@@ -378,6 +379,9 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvInterfaceId, int devi
 
         if (sPbIp)
             euca_strncpy(pNetCfg->publicIp, sPbIp, INET_ADDR_LEN);
+
+        if (sPvAttachmentId)
+            euca_strncpy(pNetCfg->attachmentId, sPvAttachmentId, ENI_ATTACHMENT_ID_LEN);
 
         pNetCfg->device = device;
         pNetCfg->networkIndex = networkIndex;
@@ -721,7 +725,7 @@ int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 //!
 //! @post The function \p pFunction is applied to each member of the instance list.
 //!
-int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInstances **, ncInstance *, void *), void *pParam)
+int for_each_instance(bunchOfInstances ** ppHead, instance_action pFunction, void *pParam)
 {
     bunchOfInstances *pHead = NULL;
 
@@ -1055,6 +1059,266 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId)
     /* empty the last one */
     bzero(pLastVol, sizeof(ncVolume));
     return (pVol);
+}
+
+//!
+//! Finds a matching network interface OR returns a pointer to the next empty/avail network interface slot
+//! OR if full, returns NULL.
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//!
+//! @return a pointer to the matching network interface OR returns a pointer to the next empty/avail
+//!         network interface slot OR if full, returns NULL.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo There's gotta be a way to improve and not scan the whole list all the time
+//!
+netConfig *find_network_interface(ncInstance * pInstance, const char *sInterfaceId)
+{
+    netConfig *pNet = NULL;
+    netConfig *pMatch = NULL;
+    netConfig *pAvail = NULL;
+    netConfig *pEmpty = NULL;
+    register u32 i = 0;
+
+    // Make sure our given parameters aren't NULL
+    if ((pInstance != NULL) && (sInterfaceId != NULL)) {
+        for (i = 0, pNet = pInstance->secNetCfgs; i < EUCA_MAX_NICS; i++, pNet++) {
+            // look for matches
+            if (!strncmp(pNet->interfaceId, sInterfaceId, ENI_ID_LEN)) {
+                assert(pMatch == NULL);
+                pMatch = pNet;
+                //TODO why not break out of the loop here?
+            }
+            // look for the first empty and available slot
+            if (!strnlen(pNet->interfaceId, ENI_ID_LEN)) {
+                if (pEmpty == NULL)
+                    pEmpty = pNet;
+            } else if (!is_network_interface_used(pNet)) {
+                if (pAvail == NULL)
+                    pAvail = pNet;
+            }
+        }
+
+        // Return match first if any are found
+        if (pMatch)
+            return (pMatch);
+
+        // then return the empty slot
+        if (pEmpty)
+            return (pEmpty);
+
+        // If nothing else, return the first available slot.
+        return (pAvail);
+    }
+
+    return (NULL);
+}
+
+//!
+//! Searches and returns the network interface based on attachment ID. If no matching interface is found returns NULL
+//! OR if full, returns NULL.
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sAttachmentId the network interface attachment identifier string (eni-attach-XXXXXXXX)
+//!
+//! @return a pointer to the matching network interface OR returns a pointer to the next empty/avail
+//!         network interface slot OR if full, returns NULL.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo There's gotta be a way to improve and not scan the whole list all the time
+//!
+netConfig *find_network_interface_by_attachment(ncInstance * pInstance, const char *sAttachmentId)
+{
+    netConfig *pNet = NULL;
+    register u32 i = 0;
+
+    // Make sure our given parameters aren't NULL
+    if ((pInstance != NULL) && (sAttachmentId != NULL)) {
+        for (i = 0, pNet = pInstance->secNetCfgs; i < EUCA_MAX_NICS; i++, pNet++) {
+            // look for matches
+            if (!strncmp(pNet->attachmentId, sAttachmentId, ENI_ATTACHMENT_ID_LEN)) {
+                return pNet;
+            }
+        }
+    }
+
+    return (NULL);
+}
+
+//!
+//! Finds a matching network interface
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//!
+//! @return true if present other false.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo this is present because find_network_interface does too much
+//!
+boolean is_network_interface_present(ncInstance * pInstance, const char *sInterfaceId)
+{
+    if ((pInstance != NULL) && (sInterfaceId != NULL)) {
+        for (int i = 0; i < EUCA_MAX_NICS; i++) {
+            if (strncmp(pInstance->secNetCfgs[i].interfaceId, sInterfaceId, ENI_ID_LEN) == 0) {
+                LOGDEBUG("found interface %s on instance %s", sInterfaceId, pInstance->instanceId);
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+//!
+//! Checks if the network interface is attached to the instance with the given attachment ID. Returns true if found and false otherwise
+//!
+//! @param[in] pInstance a pointer to the instance structure the volume should be under
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//! @param[in] sAttachmentId the network interface attachment identifier string (eni-attach-XXXXXXXX)
+//!
+//! @return true if present other false.
+//!
+//! @pre Both \p pInstance and \p sInterfaceId fields must not be NULL
+//!
+//! @todo this is present because find_network_interface does too much
+//!
+boolean is_network_interface_attached(ncInstance * pInstance, const char *sInterfaceId, const char *sAttachmentId)
+{
+    if ((pInstance != NULL) && (sInterfaceId != NULL) && (sAttachmentId != NULL)) {
+        for (int i = 0; i < EUCA_MAX_NICS; i++) {
+            if (!strncmp(pInstance->secNetCfgs[i].interfaceId, sInterfaceId, ENI_ID_LEN)) {
+                // if(!strncmp(pInstance->secNetCfgs[i].attachmentId, sAttachmentId, ENI_ATTACHMENT_ID_LEN) &&
+                if (!strncmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_ATTACHED, sizeof(VOL_STATE_ATTACHED)) ||
+                        !strncmp(pInstance->secNetCfgs[i].stateName, VOL_STATE_ATTACHING, sizeof(VOL_STATE_ATTACHING))) {
+                    LOGDEBUG("[%s][%s][%s] network interface attachment found in state %s\n",
+                            pInstance->instanceId, pInstance->secNetCfgs[i].interfaceId,
+                            pInstance->secNetCfgs[i].attachmentId, pInstance->secNetCfgs[i].stateName);
+                    return TRUE;
+                } else {
+                    return FALSE;
+                }
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+
+//
+//!
+//! Checks whether or not a network interface is in use
+//!
+//! @param[in] pNetConfig a pointer to the netConfig structure to validate
+//!
+//! @return FALSE if network interface slot is not in use or if NULL and TRUE if it is in use
+//!
+//! @pre The \p pNetConfig field must not be NULL.
+//!
+boolean is_network_interface_used(const netConfig * pNetConfig)
+{
+    if (pNetConfig != NULL) {
+        if (strlen(pNetConfig->stateName) == 0)
+            return (FALSE);
+        return (strcmp(pNetConfig->stateName, VOL_STATE_ATTACHING_FAILED) && strcmp(pNetConfig->stateName, VOL_STATE_DETACHED));
+    }
+    return (FALSE);
+}
+
+//!
+//! Records network interface's information in the instance struct, updating the non-NULL values if the record
+//! already exists
+//!
+//! @param[in] pInstance a pointer to our instance containing the volume information to save
+
+//!
+//!
+//! @pre \li Both \p pInstance and \p sVolumeId fields must not be NULL
+//!      \li A volume with \p sVolumeId for \p pInstance should exists
+//!      \li If such volume does not exists, we must have an empty slot in the volume list
+//!
+//! @post \li If any of \p pInstance or \p sVolumeId is NULL, the application will throw a SIGABRT signal
+//!       \li If the volume is found or if we have an empty slot, the volume information will be saved
+//!       \li If the volume is not found and if we do not have empty slot, NULL is returned and nothing is saved
+//!
+netConfig *save_network_interface(ncInstance * pInstance, const netConfig * pNetConfig, const char *sStateName)
+{
+    netConfig *pNet = NULL;
+
+    // Make sure pInstance and pNetConfig aren't NULL
+    assert(pInstance != NULL);
+    assert(pNetConfig != NULL);
+
+    // Lookup for our device
+    if ((pNet = find_network_interface(pInstance, pNetConfig->interfaceId)) != NULL) {
+        //
+        // Save our network information
+        //
+        euca_strncpy(pNet->interfaceId, pNetConfig->interfaceId, ENI_ID_LEN);
+        euca_strncpy(pNet->privateIp, pNetConfig->privateIp, INET_ADDR_LEN);
+        euca_strncpy(pNet->publicIp, pNetConfig->publicIp, INET_ADDR_LEN);
+        euca_strncpy(pNet->privateMac, pNetConfig->privateMac, ENET_ADDR_LEN);
+        pNet->networkIndex =  pNetConfig->networkIndex;
+        pNet->device = pNetConfig->device;
+        pNet->vlan = pNetConfig->vlan;
+        euca_strncpy(pNet->attachmentId, pNetConfig->attachmentId, ENI_ATTACHMENT_ID_LEN);
+
+        if (sStateName)
+            euca_strncpy(pNet->stateName, sStateName, CHAR_BUFFER_SIZE);
+
+    }
+
+    return (pNet);
+}
+
+//!
+//! Zeroes out the network interface's slot in the instance struct (no longer used)
+//!
+//! @param[in] pInstance a pointer to the instance to free a volume from
+//! @param[in] sInterfaceId the network interface identifier string (eni-XXXXXXXX)
+//!
+//! @return a pointer to the network inteface structure if found otherwise NULL is returned
+//!
+//! @pre \li Both the \p pInstance and \p sInterfaceId fields must not be NULL.
+//!      \li The network interface specified by \p sInterfaceId must exists
+//!
+//! @post On success, the volume entry is erased from the instance volume list
+//!
+netConfig *free_network_interface(ncInstance * pInstance, const char *sInterfaceId)
+{
+    int slotsLeft = 0;
+    netConfig *pNet = NULL;
+    netConfig *pLastNet = NULL;
+
+    // Make sure our given parameters are valid
+    if ((pInstance == NULL) || (sInterfaceId == NULL))
+        return (NULL);
+
+    // Check if this volume exists in our volume list
+    if ((pNet = find_network_interface(pInstance, sInterfaceId)) == NULL) {
+        return (NULL);
+    }
+    // Make sure this is the volume we're looking for
+    if (strncmp(pNet->interfaceId, sInterfaceId, ENI_ID_LEN)) {
+        return (NULL);
+    }
+
+    pLastNet = pInstance->secNetCfgs + (EUCA_MAX_NICS - 1);
+    slotsLeft = pLastNet - pNet;
+
+    /* shift the remaining entries up, empty or not */
+    if (slotsLeft)
+        memmove(pNet, (pNet + 1), (slotsLeft * sizeof(netConfig)));
+
+    /* empty the last one */
+    bzero(pLastNet, sizeof(netConfig));
+    return (pNet);
 }
 
 //!

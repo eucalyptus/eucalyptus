@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2011-2015 Eucalyptus Systems, Inc.
+  Copyright 2011-2016 Eucalyptus Systems, Inc.
 
   Redistribution and use of this software in source and binary forms,
   with or without modification, are permitted provided that the following
@@ -766,6 +766,7 @@
     <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
     <value name="gatewayId" field="gatewayId" usage="optional"/>
     <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
     <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
     <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
   </mapping>

@@ -950,6 +950,113 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 }
 
 //!
+//! Handles the client attach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] netCfg a pointer to network interface
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, netConfig * netCfg)
+{
+    int i = 0;
+    int j = 0;
+    int done = 0;
+    int vdone = 0;
+    int foundidx = -1;
+
+    LOGDEBUG("fakeNC:  attachNetworkInterface(): params: instanceId=%s interfaceId=%s macAddr=%s device=%d\n",
+            SP(instanceId), SP(netCfg->interfaceId), SP(netCfg->privateMac), netCfg->device);
+    if (!instanceId || !(netCfg->interfaceId) || !(netCfg->privateMac) || (netCfg->device <= 0)) {
+       LOGDEBUG("fakeNC:  attachNetworkInterface(): bad input params\n");
+       return (EUCA_ERROR);
+    }
+
+    loadNcStuff();
+
+    for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
+       if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
+           LOGDEBUG("fakeNC: \tsetting network interface info at idx %d\n", i);
+           vdone = 0;
+           for (j = 0; j < EUCA_MAX_NICS; j++) {
+               if (!strlen(myconfig->global_instances[i].secNetCfgs[j].interfaceId)) {
+                   if (foundidx < 0) {
+                       foundidx = j;
+                   }
+               } else if (!strcmp(myconfig->global_instances[i].secNetCfgs[j].interfaceId, netCfg->interfaceId)) {
+                   vdone++;
+               }
+           }
+           if (!vdone && foundidx >= 0) {
+               LOGDEBUG("fakeNC: \tfake attaching network interface at idx %d\n", foundidx);
+               myconfig->global_instances[i].secNetCfgs[foundidx].vlan = netCfg->vlan;
+               myconfig->global_instances[i].secNetCfgs[foundidx].networkIndex = netCfg->networkIndex;
+               myconfig->global_instances[i].secNetCfgs[foundidx].device = netCfg->device;
+               snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].privateMac, ENET_ADDR_LEN, "%s", netCfg->privateMac);
+               snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].publicIp, INET_ADDR_LEN, "%s", netCfg->publicIp);
+               snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].privateIp, INET_ADDR_LEN, "%s", netCfg->privateIp);
+               snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].interfaceId, ENI_ID_LEN, "%s", netCfg->interfaceId);
+               snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].stateName, CHAR_BUFFER_SIZE, "%s", "attached");
+           }
+           done++;
+       }
+    }
+
+    saveNcStuff();
+    return (EUCA_OK);
+}
+
+//!
+//! Handles the client detach network interface request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] interfaceId the eni identifier string (eni-XXXXXXXX)
+//! @param[in] force if set to 1, this will force the network interface to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachNetworkInterfaceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *interfaceId, int force)
+{
+    int i = 0;
+        int j = 0;
+        int done = 0;
+        int vdone = 0;
+        int foundidx = -1;
+
+        LOGDEBUG("fakeNC:  detachNetworkInterface(): params: instanceId=%s interfaceId=%s, force=%d\n", SP(instanceId), SP(interfaceId), force);
+        if (!instanceId || !interfaceId) {
+            LOGDEBUG("fakeNC:  detachNetworkInterface(): bad input params\n");
+            return (EUCA_ERROR);
+        }
+
+        loadNcStuff();
+
+        for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
+            if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
+                LOGDEBUG("fakeNC: \tsetting network interface info at idx %d\n", i);
+                vdone = 0;
+                for (j = 0; j < EUCA_MAX_NICS; j++) {
+                    if (!strcmp(myconfig->global_instances[i].secNetCfgs[j].interfaceId, interfaceId)) {
+                        foundidx = j;
+                    }
+                }
+                if (foundidx >= 0) {
+                    LOGDEBUG("fakeNC: \tfake detaching network interface at idx %d\n", foundidx);
+                    snprintf(myconfig->global_instances[i].secNetCfgs[foundidx].stateName, CHAR_BUFFER_SIZE, "%s", "detached");
+                }
+                done++;
+            }
+        }
+
+        saveNcStuff();
+        return (EUCA_OK);
+}
+
+//!
 //! Handles the client create image request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure

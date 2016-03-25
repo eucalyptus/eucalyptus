@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,7 +76,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.encoders.Base64;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -89,13 +88,17 @@ import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
-import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
+import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
@@ -120,9 +123,8 @@ import com.eucalyptus.util.Tx;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 public class DatabaseAccountProxy implements EuareAccount {
 
@@ -141,16 +143,6 @@ public class DatabaseAccountProxy implements EuareAccount {
     this.delegate = delegate;
   }
 
-  private static Map<String, Object> lockMap = Maps.newHashMap();
-  private static synchronized Object obtainLock(final String key) {
-    if (!lockMap.containsKey(key))
-      lockMap.put(key, new Object());
-    return lockMap.get(key);
-  }
-  private Object getLock() {
-    return obtainLock(this.getAccountNumber());
-  }
-  
   @Override
   public String getName( ) {
     return this.delegate.getName( );
@@ -214,7 +206,7 @@ public class DatabaseAccountProxy implements EuareAccount {
     } catch ( AuthException ae ) {
       try {
         // not found
-        DatabaseAuthUtils.invokeUnique( AccountEntity.class, "accountNumber", this.delegate.getAccountNumber( ), new Tx<AccountEntity>( ) {
+        DatabaseAuthUtils.invokeUnique( AccountEntity.class, AccountEntity_.accountNumber, this.delegate.getAccountNumber( ), new Tx<AccountEntity>( ) {
           public void fire( AccountEntity t ) {
             t.setName( name );
           }
@@ -233,11 +225,10 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareUser> getUsers( ) throws AuthException {
     List<EuareUser> results = Lists.newArrayList();
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<UserEntity> users = ( List<UserEntity> ) Entities
-          .createCriteria( UserEntity.class ).setCacheable( true )
-          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
+      List<UserEntity> users = Entities
+          .criteriaQuery( UserEntity.class )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       db.commit();
       for ( UserEntity u : users ) {
@@ -254,10 +245,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareGroup> getGroups( ) throws AuthException {
     List<EuareGroup> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-          .createCriteria( GroupEntity.class ).setCacheable( true ).add( Restrictions.eq( "userGroup", false ) )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", this.delegate.getName() ) )
+      List<GroupEntity> groups = Entities
+          .criteriaQuery( GroupEntity.class ).whereEqual( GroupEntity_.userGroup, Boolean.FALSE )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       db.commit( );
       for ( GroupEntity g : groups ) {
@@ -274,11 +264,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareRole> getRoles( ) throws AuthException {
     final List<EuareRole> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<RoleEntity> roles = ( List<RoleEntity> ) Entities
-          .createCriteria( RoleEntity.class )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName() ) )
-          .setCacheable( true )
+      List<RoleEntity> roles = Entities
+          .criteriaQuery( RoleEntity.class )
+          .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       for ( final RoleEntity role : roles ) {
         results.add( new DatabaseRoleProxy( role ) );
@@ -294,11 +282,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   public List<EuareInstanceProfile> getInstanceProfiles() throws AuthException {
     final List<EuareInstanceProfile> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<InstanceProfileEntity> instanceProfiles = ( List<InstanceProfileEntity> ) Entities
-          .createCriteria( InstanceProfileEntity.class )
-          .createCriteria( "account" ).add( Restrictions.eq( "name", this.delegate.getName( ) ) )
-          .setCacheable( true )
+      List<InstanceProfileEntity> instanceProfiles = Entities
+          .criteriaQuery( InstanceProfileEntity.class )
+          .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       for ( final InstanceProfileEntity instanceProfile : instanceProfiles ) {
         results.add( new DatabaseInstanceProfileProxy( instanceProfile  ) );
@@ -312,46 +298,44 @@ public class DatabaseAccountProxy implements EuareAccount {
 
   @Override
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
-    synchronized(getLock()) {
-      try {
-        USER_NAME_CHECKER.check( userName );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid user name " + userName );
-        throw new AuthException( AuthException.INVALID_NAME, e );
-      }
-      try {
-        PATH_CHECKER.check( path );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid path " + path );
-        throw new AuthException( AuthException.INVALID_PATH, e );
-      }
-      if ( DatabaseAuthUtils.checkUserExists( userName, this.delegate.getName( ) ) ) {
-        throw new AuthException( AuthException.USER_ALREADY_EXISTS );
-      }
-      UserEntity newUser = new UserEntity( this.getAccountNumber(), userName );
-      newUser.setPath( path );
-      newUser.setEnabled( enabled );
-      newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
-      if ( info != null ) {
-        newUser.getInfo( ).putAll( info );
-      }
-      newUser.setToken( Crypto.generateSessionToken() );
-      //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
-      GroupEntity newGroup = new GroupEntity( this.getAccountNumber(), DatabaseAuthUtils.getUserGroupName( userName ) );
-      newGroup.setUserGroup( true );
-      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
-        newGroup = Entities.mergeDirect( newGroup );
-        newUser = Entities.mergeDirect( newUser );
-        newGroup.setAccount( account );
-        newGroup.getUsers( ).add( newUser );
-        newUser.getGroups( ).add( newGroup );
-        db.commit( );
-        return new DatabaseUserProxy( newUser );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to add user: " + userName + " in " + this.delegate.getName( ) );
-        throw new AuthException( AuthException.USER_CREATE_FAILURE, e );
-      }
+    try {
+      USER_NAME_CHECKER.check( userName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid user name " + userName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkUserExists( userName, this.delegate.getName( ) ) ) {
+      throw new AuthException( AuthException.USER_ALREADY_EXISTS );
+    }
+    UserEntity newUser = new UserEntity( this.getAccountNumber(), userName );
+    newUser.setPath( path );
+    newUser.setEnabled( enabled );
+    newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
+    if ( info != null ) {
+      newUser.getInfo( ).putAll( info );
+    }
+    newUser.setToken( Crypto.generateSessionToken() );
+    //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
+    GroupEntity newGroup = new GroupEntity( this.getAccountNumber(), DatabaseAuthUtils.getUserGroupName( userName ) );
+    newGroup.setUserGroup( true );
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      newGroup = Entities.mergeDirect( newGroup );
+      newUser = Entities.mergeDirect( newUser );
+      newGroup.setAccount( account );
+      newGroup.getUsers( ).add( newUser );
+      newUser.getGroups( ).add( newGroup );
+      db.commit( );
+      return new DatabaseUserProxy( newUser );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add user: " + userName + " in " + this.delegate.getName( ) );
+      throw new AuthException( AuthException.USER_CREATE_FAILURE, e );
     }
   }
   
@@ -385,132 +369,125 @@ public class DatabaseAccountProxy implements EuareAccount {
 
   @Override
   public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException {
-    synchronized(getLock()) {
-      String accountName = this.delegate.getName( );
-      if ( userName == null ) {
-        throw new AuthException( AuthException.EMPTY_USER_NAME );
-      }
-      if ( !forceDeleteAdmin && DatabaseAuthUtils.isAccountAdmin( userName ) ) {
-        throw new AuthException( AuthException.DELETE_ACCOUNT_ADMIN );
-      }
-      if ( !recursive && userHasResourceAttached( userName, accountName ) ) {
-        throw new AuthException( AuthException.USER_DELETE_CONFLICT );
-      }
-      try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-        UserEntity user = DatabaseAuthUtils.getUniqueUser( userName, accountName );
-        for ( GroupEntity ge : user.getGroups( ) ) {
-          if ( ge.isUserGroup( ) ) {
-            Entities.delete( ge );
-          } else {
-            ge.getUsers( ).remove( user );
-          }
+    String accountName = this.delegate.getName( );
+    if ( userName == null ) {
+      throw new AuthException( AuthException.EMPTY_USER_NAME );
+    }
+    if ( !forceDeleteAdmin && DatabaseAuthUtils.isAccountAdmin( userName ) ) {
+      throw new AuthException( AuthException.DELETE_ACCOUNT_ADMIN );
+    }
+    if ( !recursive && userHasResourceAttached( userName, accountName ) ) {
+      throw new AuthException( AuthException.USER_DELETE_CONFLICT );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
+      UserEntity user = DatabaseAuthUtils.getUniqueUser( userName, accountName );
+      for ( GroupEntity ge : user.getGroups( ) ) {
+        if ( ge.isUserGroup( ) ) {
+          Entities.delete( ge );
+        } else {
+          ge.getUsers( ).remove( user );
         }
-        Entities.delete( user );
-        db.commit( );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to delete user: " + userName + " in " + accountName );
-        throw new AuthException( AuthException.NO_SUCH_USER, e );
       }
+      Entities.delete( user );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete user: " + userName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
 
   @Override
   public EuareRole addRole( final String roleName, final String path, final String assumeRolePolicy ) throws AuthException, PolicyParseException {
-    synchronized(getLock()) {
-      try {
-        USER_NAME_CHECKER.check( roleName );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid role name " + roleName );
-        throw new AuthException( AuthException.INVALID_NAME, e );
-      }
-      try {
-        PATH_CHECKER.check( path );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid path " + path );
-        throw new AuthException( AuthException.INVALID_PATH, e );
-      }
-      if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
-        throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
-      }
-      final PolicyPolicy policyPolicy = PolicyParser.getResourceInstance( ).parse( assumeRolePolicy );
-      final PolicyEntity parsedPolicy = PolicyEntity.create( null, policyPolicy.getPolicyVersion( ), assumeRolePolicy );
-      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
-        final RoleEntity newRole = new RoleEntity( roleName );
-        newRole.setRoleId( Identifiers.generateIdentifier( "ARO" ) );
-        newRole.setPath( path );
-        newRole.setAccount( account );
-        newRole.setAssumeRolePolicy( parsedPolicy );
-        parsedPolicy.setName( "assume-role-policy-for-" + newRole.getRoleId() );
-        final RoleEntity persistedRole = Entities.persist( newRole );
-        db.commit( );
-        return new DatabaseRoleProxy( persistedRole );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to add role: " + roleName + " in " + this.delegate.getName() );
-        throw new AuthException( AuthException.ROLE_CREATE_FAILURE, e );
-      }
+    try {
+      USER_NAME_CHECKER.check( roleName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid role name " + roleName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
+      throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
+    }
+    final PolicyPolicy policyPolicy = PolicyParser.getResourceInstance( ).parse( assumeRolePolicy );
+    final PolicyEntity parsedPolicy = PolicyEntity.create( null, policyPolicy.getPolicyVersion( ), assumeRolePolicy );
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final RoleEntity newRole = new RoleEntity( roleName );
+      newRole.setRoleId( Identifiers.generateIdentifier( "ARO" ) );
+      newRole.setPath( path );
+      newRole.setAccount( account );
+      newRole.setAssumeRolePolicy( parsedPolicy );
+      parsedPolicy.setName( "assume-role-policy-for-" + newRole.getRoleId() );
+      final RoleEntity persistedRole = Entities.persist( newRole );
+      db.commit( );
+      return new DatabaseRoleProxy( persistedRole );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add role: " + roleName + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.ROLE_CREATE_FAILURE, e );
     }
   }
 
   @Override
   public void deleteRole( final String roleName ) throws AuthException {
-    synchronized(getLock()) {
-      final String accountName = this.delegate.getName( );
-      if ( roleName == null ) {
-        throw new AuthException( AuthException.EMPTY_ROLE_NAME );
-      }
-      if ( roleHasResourceAttached( roleName, accountName ) ) {
-        throw new AuthException( AuthException.ROLE_DELETE_CONFLICT );
-      }
-      try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
-        final RoleEntity role = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
-        Entities.delete( role );
-        db.commit( );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to delete role: " + roleName + " in " + accountName );
-        throw new AuthException( AuthException.NO_SUCH_ROLE, e );
-      }
+    final String accountName = this.delegate.getName( );
+    if ( roleName == null ) {
+      throw new AuthException( AuthException.EMPTY_ROLE_NAME );
+    }
+    if ( roleHasResourceAttached( roleName, accountName ) ) {
+      throw new AuthException( AuthException.ROLE_DELETE_CONFLICT );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
+      final RoleEntity role = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
+      Entities.delete( role );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete role: " + roleName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
     }
   }
 
   @Override
   public EuareGroup addGroup( String groupName, String path ) throws AuthException {
-    synchronized(getLock()) {
-      try {
-        GROUP_NAME_CHECKER.check( groupName );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid group name " + groupName );
-        throw new AuthException( AuthException.INVALID_NAME, e );
-      }
-      try {
-        PATH_CHECKER.check( path );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid path " + path );
-        throw new AuthException( AuthException.INVALID_PATH, e );
-      }
-      if ( DatabaseAuthUtils.checkGroupExists( groupName, this.delegate.getName( ) ) ) {
-        throw new AuthException( AuthException.GROUP_ALREADY_EXISTS );
-      }
-      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
-        GroupEntity group = new GroupEntity( this.getAccountNumber(), groupName );
-        group.setPath( path );
-        group.setUserGroup( false );
-        group.setAccount( account );
-        Entities.persist( group );
-        db.commit( );
-        return new DatabaseGroupProxy( group, Suppliers.ofInstance( getAccountNumber( ) ) );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to add group " + groupName + " in " + this.delegate.getName( ) );
-        throw new AuthException( AuthException.GROUP_CREATE_FAILURE, e );
-      }
+    try {
+      GROUP_NAME_CHECKER.check( groupName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid group name " + groupName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkGroupExists( groupName, this.delegate.getName( ) ) ) {
+      throw new AuthException( AuthException.GROUP_ALREADY_EXISTS );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      GroupEntity group = new GroupEntity( this.getAccountNumber(), groupName );
+      group.setPath( path );
+      group.setUserGroup( false );
+      group.setAccount( account );
+      Entities.persist( group );
+      db.commit( );
+      return new DatabaseGroupProxy( group, Suppliers.ofInstance( getAccountNumber( ) ) );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add group " + groupName + " in " + this.delegate.getName( ) );
+      throw new AuthException( AuthException.GROUP_CREATE_FAILURE, e );
     }
   }
   
   private boolean groupHasResourceAttached( String groupName, String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
-      boolean hasResAttached = group.getUsers( ).size( ) > 0 || group.getPolicies( ).size( ) > 0;
+      boolean hasResAttached =
+          DatabaseAuthUtils.countUsersInGroup( groupName, accountName ) > 0 ||
+          DatabaseAuthUtils.countPoliciesInGroup( groupName, accountName ) > 0;
       db.commit( );
       return hasResAttached;
     } catch ( Exception e ) {
@@ -521,77 +498,71 @@ public class DatabaseAccountProxy implements EuareAccount {
   
   @Override
   public void deleteGroup( String groupName, boolean recursive ) throws AuthException {
-    synchronized(getLock()) {
-      String accountName = this.delegate.getName( );
-      if ( groupName == null ) {
-        throw new AuthException( AuthException.EMPTY_GROUP_NAME );
-      }
-      if ( DatabaseAuthUtils.isUserGroupName( groupName ) ) {
-        throw new AuthException( AuthException.USER_GROUP_DELETE );
-      }
-      if ( !recursive && groupHasResourceAttached( groupName, accountName ) ) {
-        throw new AuthException( AuthException.GROUP_DELETE_CONFLICT );
-      }
+    String accountName = this.delegate.getName( );
+    if ( groupName == null ) {
+      throw new AuthException( AuthException.EMPTY_GROUP_NAME );
+    }
+    if ( DatabaseAuthUtils.isUserGroupName( groupName ) ) {
+      throw new AuthException( AuthException.USER_GROUP_DELETE );
+    }
+    if ( !recursive && groupHasResourceAttached( groupName, accountName ) ) {
+      throw new AuthException( AuthException.GROUP_DELETE_CONFLICT );
+    }
 
-      try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-        GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
-        Entities.delete( group );
-        db.commit( );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to delete group " + groupName + " in " + accountName );
-        throw new AuthException( AuthException.NO_SUCH_GROUP, e );
-      }
+    try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
+      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
+      Entities.delete( group );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete group " + groupName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     }
   }
 
   @Override
   public EuareInstanceProfile addInstanceProfile( final String instanceProfileName, final String path ) throws AuthException {
-    synchronized(getLock()) {
-      try {
-        GROUP_NAME_CHECKER.check( instanceProfileName );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid instance profile name " + instanceProfileName );
-        throw new AuthException( AuthException.INVALID_NAME, e );
-      }
-      try {
-        PATH_CHECKER.check( path );
-      } catch ( InvalidValueException e ) {
-        Debugging.logError( LOG, e, "Invalid path " + path );
-        throw new AuthException( AuthException.INVALID_PATH, e );
-      }
-      if ( DatabaseAuthUtils.checkInstanceProfileExists( instanceProfileName, this.delegate.getName() ) ) {
-        throw new AuthException( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS );
-      }
-      try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-        final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, "name", this.delegate.getName( ) );
-        final InstanceProfileEntity newInstanceProfile = new InstanceProfileEntity( instanceProfileName );
-        newInstanceProfile.setPath( path );
-        newInstanceProfile.setAccount( account );
-        final InstanceProfileEntity persistedInstanceProfile = Entities.persist( newInstanceProfile );
-        db.commit( );
-        return new DatabaseInstanceProfileProxy( persistedInstanceProfile );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to add instance profile: " + instanceProfileName + " in " + this.delegate.getName() );
-        throw new AuthException( AuthException.INSTANCE_PROFILE_CREATE_FAILURE, e );
-      }
+    try {
+      GROUP_NAME_CHECKER.check( instanceProfileName );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid instance profile name " + instanceProfileName );
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      Debugging.logError( LOG, e, "Invalid path " + path );
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( DatabaseAuthUtils.checkInstanceProfileExists( instanceProfileName, this.delegate.getName() ) ) {
+      throw new AuthException( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final InstanceProfileEntity newInstanceProfile = new InstanceProfileEntity( instanceProfileName );
+      newInstanceProfile.setPath( path );
+      newInstanceProfile.setAccount( account );
+      final InstanceProfileEntity persistedInstanceProfile = Entities.persist( newInstanceProfile );
+      db.commit( );
+      return new DatabaseInstanceProfileProxy( persistedInstanceProfile );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add instance profile: " + instanceProfileName + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.INSTANCE_PROFILE_CREATE_FAILURE, e );
     }
   }
 
   @Override
   public void deleteInstanceProfile( final String instanceProfileName ) throws AuthException {
-    synchronized(getLock()) {
-      final String accountName = this.delegate.getName( );
-      if ( instanceProfileName == null ) {
-        throw new AuthException( AuthException.EMPTY_INSTANCE_PROFILE_NAME );
-      }
-      try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
-        final InstanceProfileEntity instanceProfileEntity = DatabaseAuthUtils.getUniqueInstanceProfile( instanceProfileName, accountName );
-        Entities.delete( instanceProfileEntity );
-        db.commit( );
-      } catch ( Exception e ) {
-        Debugging.logError( LOG, e, "Failed to delete instance profile: " + instanceProfileName + " in " + accountName );
-        throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
-      }
+    final String accountName = this.delegate.getName( );
+    if ( instanceProfileName == null ) {
+      throw new AuthException( AuthException.EMPTY_INSTANCE_PROFILE_NAME );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
+      final InstanceProfileEntity instanceProfileEntity = DatabaseAuthUtils.getUniqueInstanceProfile( instanceProfileName, accountName );
+      Entities.delete( instanceProfileEntity );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete instance profile: " + instanceProfileName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
     }
   }
 
@@ -667,179 +638,165 @@ public class DatabaseAccountProxy implements EuareAccount {
   public ServerCertificate addServerCertificate(String certName,
       String certBody, String certChain, String certPath, String pk)
           throws AuthException {
-    synchronized(getLock()) {
-      if(! ServerCertificateEntity.isCertificateNameValid(certName))
-        throw new AuthException(AuthException.INVALID_SERVER_CERT_NAME);
-      if(! ServerCertificateEntity.isCertificatePathValid(certPath))
-        throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
+    if(! ServerCertificateEntity.isCertificateNameValid(certName))
+      throw new AuthException(AuthException.INVALID_SERVER_CERT_NAME);
+    if(! ServerCertificateEntity.isCertificatePathValid(certPath))
+      throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
 
-      try{
-        ServerCertificates.verifyCertificate( certBody, pk, certChain );
-      }catch(final AuthException ex) {
-        throw ex;
-      }catch(final Exception ex) {
-        throw new AuthException(AuthException.SERVER_CERT_INVALID_FORMAT);
-      }
-
-      String encPk = null;
-      String sessionKey = null;
-      try{
-        // generate symmetric key
-        final MessageDigest digest = Digest.SHA256.get();
-        final byte[] salt = new byte[32];
-        Crypto.getSecureRandomSupplier().get().nextBytes(salt);
-        //digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
-        digest.update( salt );
-        final SecretKey symmKey = new SecretKeySpec( digest.digest(), "AES" );
-
-        // encrypt the server pk
-        Cipher cipher = Ciphers.AES_GCM.get();
-        final byte[] iv = new byte[32];
-        Crypto.getSecureRandomSupplier().get().nextBytes(iv);
-        cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
-        final byte[] cipherText = cipher.doFinal(pk.getBytes());
-        encPk = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
-
-        final PublicKey euarePublicKey = SystemCredentials.lookup(Euare.class).getCertificate().getPublicKey();
-        cipher = Ciphers.RSA_PKCS1.get();
-        cipher.init(Cipher.WRAP_MODE, euarePublicKey, Crypto.getSecureRandomSupplier( ).get( ));
-        byte[] wrappedKeyBytes = cipher.wrap(symmKey);
-        sessionKey = new String(Base64.encode(wrappedKeyBytes));
-      } catch ( final Exception e ) {
-        LOG.error("Failed to encrypt key", e);
-        throw Exceptions.toUndeclared(e);
-      } 
-
-      try{
-        final ServerCertificate found = lookupServerCertificate(certName);
-        if(found!=null)
-          throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
-      }catch(final NoSuchElementException ex){
-        ;
-      }catch(final AuthException ex){
-        if(! AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
-          throw ex;
-      }catch(final Exception ex){
-        throw ex;
-      }
-
-      final String certId = Identifiers.generateIdentifier( "ASC" );
-      ServerCertificateEntity entity = null;
-      try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-        final UserFullName accountAdmin = UserFullName.getInstance( this.lookupAdmin());
-        entity = new ServerCertificateEntity(accountAdmin, certName);
-        entity.setCertBody(certBody);
-        entity.setCertChain(certChain);
-        entity.setCertPath(certPath);
-        entity.setPrivateKey(encPk);
-        entity.setSessionKey(sessionKey);
-        entity.setCertId(certId);
-        Entities.persist(entity);
-        db.commit();
-      } catch( final Exception ex){
-        LOG.error("Failed to persist server certificate entity", ex);
-        throw Exceptions.toUndeclared(ex);
-      }
-
-      return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
+    try{
+      ServerCertificates.verifyCertificate( certBody, pk, certChain );
+    }catch(final AuthException ex) {
+      throw ex;
+    }catch(final Exception ex) {
+      throw new AuthException(AuthException.SERVER_CERT_INVALID_FORMAT);
     }
+
+    String encPk = null;
+    String sessionKey = null;
+    try{
+      // generate symmetric key
+      final MessageDigest digest = Digest.SHA256.get();
+      final byte[] salt = new byte[32];
+      Crypto.getSecureRandomSupplier().get().nextBytes(salt);
+      //digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
+      digest.update( salt );
+      final SecretKey symmKey = new SecretKeySpec( digest.digest(), "AES" );
+
+      // encrypt the server pk
+      Cipher cipher = Ciphers.AES_GCM.get();
+      final byte[] iv = new byte[32];
+      Crypto.getSecureRandomSupplier().get().nextBytes(iv);
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ), Crypto.getSecureRandomSupplier( ).get( ) );
+      final byte[] cipherText = cipher.doFinal(pk.getBytes());
+      encPk = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
+
+      final PublicKey euarePublicKey = SystemCredentials.lookup(Euare.class).getCertificate().getPublicKey();
+      cipher = Ciphers.RSA_PKCS1.get();
+      cipher.init(Cipher.WRAP_MODE, euarePublicKey, Crypto.getSecureRandomSupplier( ).get( ));
+      byte[] wrappedKeyBytes = cipher.wrap(symmKey);
+      sessionKey = new String(Base64.encode(wrappedKeyBytes));
+    } catch ( final Exception e ) {
+      LOG.error("Failed to encrypt key", e);
+      throw Exceptions.toUndeclared(e);
+    }
+
+    try{
+      final ServerCertificate found = lookupServerCertificate(certName);
+      if(found!=null)
+        throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
+    }catch(final NoSuchElementException ex){
+      ;
+    }catch(final AuthException ex){
+      if(! AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
+        throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+
+    final String certId = Identifiers.generateIdentifier( "ASC" );
+    ServerCertificateEntity entity = null;
+    try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
+      final UserFullName accountAdmin = UserFullName.getInstance( this.lookupAdmin());
+      entity = new ServerCertificateEntity(accountAdmin, certName);
+      entity.setCertBody(certBody);
+      entity.setCertChain(certChain);
+      entity.setCertPath(certPath);
+      entity.setPrivateKey(encPk);
+      entity.setSessionKey(sessionKey);
+      entity.setCertId(certId);
+      Entities.persist(entity);
+      db.commit();
+    } catch( final Exception ex){
+      LOG.error("Failed to persist server certificate entity", ex);
+      throw Exceptions.toUndeclared(ex);
+    }
+
+    return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
   }
   
   @Override
   public ServerCertificate deleteServerCertificate(String certName)
       throws AuthException {
-    synchronized(getLock()) {
-      ServerCertificateEntity found = null;
-      try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-        found = 
-            Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName));
-        Entities.delete(found);
-        db.commit();
-      } catch(final NoSuchElementException ex){
-        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
-      } catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-      if(found!=null)
-        return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
-      else
-        return null;
-    }
-  }
-
-  @Override
-  public ServerCertificate lookupServerCertificate(String certName)
-      throws AuthException {
-    ServerCertificateEntity found = null;
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      final List<ServerCertificateEntity> result = 
-          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName), true);
-      if(result==null || result.size()<=0)
-        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
-      found=result.get(0);
-      db.rollback();
-      return ServerCertificates.ToServerCertificateWithSecrets.INSTANCE.apply(found);
+      final ServerCertificateEntity found = Entities.criteriaQuery(
+          ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ), certName )
+      ).uniqueResult( );
+      Entities.delete( found );
+      db.commit();
+      return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
     } catch(final NoSuchElementException ex){
       throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
-    } catch(final AuthException ex){
-      throw ex;
     } catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
   }
 
   @Override
-  public List<ServerCertificate> listServerCertificates(String pathPrefix)
-      throws AuthException {
-    List<ServerCertificateEntity> result = null;
+  public ServerCertificate lookupServerCertificate(final String certName) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      result =
-          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin())), true);
+      final ServerCertificateEntity serverCertificateEntity = Entities.criteriaQuery(
+          ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ), certName )
+      ).readonly( ).uniqueResult( );
+      db.rollback();
+      return ServerCertificates.ToServerCertificateWithSecrets.INSTANCE.apply( serverCertificateEntity );
+    } catch( final NoSuchElementException ex ){
+      throw new AuthException( AuthException.SERVER_CERT_NO_SUCH_ENTITY );
+    } catch( final AuthException ex ){
+      throw ex;
+    } catch( final Exception ex ){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  @Override
+  public List<ServerCertificate> listServerCertificates(final String pathPrefix) throws AuthException {
+    final List<ServerCertificateEntity> result;
+    try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
+      result = Entities.criteriaQuery(
+          ServerCertificateEntity.named( UserFullName.getInstance( this.lookupAdmin( ) ) )
+      ).readonly( ).list( );
       db.rollback();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
     
     final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
-    List<ServerCertificateEntity> filtered = null;
-    
-    if(prefix.equals("/")){
+    final Iterable<ServerCertificateEntity> filtered;
+    if ( prefix.equals("/") ) {
       filtered = result;
-    }else{
-      filtered  = Lists.newArrayList(Collections2.filter(result, new Predicate<ServerCertificateEntity>(){
+    } else {
+      filtered = Iterables.filter( result, new Predicate<ServerCertificateEntity>(){
       @Override
       public boolean apply(ServerCertificateEntity entity) {
         final String path = entity.getCertPath();
         return path.startsWith(prefix) && (path.length()==prefix.length() || path.charAt(prefix.length()) == '/');
-      }}));
+      }});
     }
     
-    return Lists.transform(filtered, new Function<ServerCertificateEntity, ServerCertificate>(){
+    return Lists.newArrayList( Iterables.transform( filtered, new Function<ServerCertificateEntity, ServerCertificate>(){
       @Override
       public ServerCertificate apply(ServerCertificateEntity entity) {
         return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
       }
-    });
+    }));
   }
   
   @Override
   public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException    {
-    synchronized(getLock()) {
+    try{
+      ServerCertificate cert = this.lookupServerCertificate(certName);
       try{
-        ServerCertificate cert = this.lookupServerCertificate(certName);
-        try{
-          cert = this.lookupServerCertificate(newCertName);
-          if(cert!=null)
-            throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
-        }catch(final AuthException ex){
-          ;
-        }
-        ServerCertificates.updateServerCertificate(UserFullName.getInstance(this.lookupAdmin()), certName, newCertName, newPath);
+        cert = this.lookupServerCertificate(newCertName);
+        if(cert!=null)
+          throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
       }catch(final AuthException ex){
-        throw ex;
-      }catch(final Exception ex){
-        throw ex;
+        ;
       }
+      ServerCertificates.updateServerCertificate(UserFullName.getInstance(this.lookupAdmin()), certName, newCertName, newPath);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
     }
   }
 }

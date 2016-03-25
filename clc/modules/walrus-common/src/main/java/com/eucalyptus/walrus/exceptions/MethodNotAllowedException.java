@@ -31,4 +31,13 @@ public class MethodNotAllowedException extends WalrusException {
   public MethodNotAllowedException(String message, String resourceType, String resource) {
     super("MethodNotAllowed", message, resourceType, resource, HttpResponseStatus.METHOD_NOT_ALLOWED);
   }
+
+  // Because of HACK for EUCA-9397 WalrusException always report HTTP 500
+  public String getCode() {
+    return HttpResponseStatus.METHOD_NOT_ALLOWED.toString();
+  }
+
+  public HttpResponseStatus getStatus() {
+    return HttpResponseStatus.METHOD_NOT_ALLOWED;
+  }
 }

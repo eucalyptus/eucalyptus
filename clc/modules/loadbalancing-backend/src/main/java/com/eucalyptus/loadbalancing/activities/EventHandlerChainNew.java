@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
-
+import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -720,6 +720,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		    newInstance.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
 		  return newInstance;
 		}
+
 		
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -737,7 +738,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			  
 				// lookup all LoadBalancerAutoScalingGroup records
 				List<LoadBalancerAutoScalingGroup> groups = Lists.newArrayList();
-				Map<String, LoadBalancerAutoScalingGroup>  allGroupMap = new ConcurrentHashMap<>();
+				Map<String, LoadBalancerAutoScalingGroup> allGroupMap = new ConcurrentHashMap<>();
 				try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
 					groups = Entities.query(LoadBalancerAutoScalingGroup.named(), true);
 					for(LoadBalancerAutoScalingGroup g : groups){
@@ -808,6 +809,14 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 						db.commit();
 					}catch(Exception ex){
 						LOG.error("Failed to persist the servo instance record", ex);
+					}
+					try {
+						newServos.stream()
+								.filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
+										instance.getState()))
+								.forEach(instance -> LoadBalancingSystemVpcs.setupVpcControlInterface(instance));
+					}catch(final Exception ex) {
+						LOG.error("Failed to attach system network interface to ELB instances", ex);
 					}
 				}
 				
@@ -880,6 +889,13 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 								db.commit();
 	              LoadBalancingServoCache.getInstance().invalidate(update);
 							}catch(Exception ex){
+							}
+							if (LoadBalancerServoInstance.STATE.InService.equals(newState)) {
+								try {
+									LoadBalancingSystemVpcs.setupVpcControlInterface(instance);
+								}catch(final Exception ex) {
+									LOG.error("Failed to attach system network interface to ELB instances", ex);
+								}
 							}
 						}
 					}

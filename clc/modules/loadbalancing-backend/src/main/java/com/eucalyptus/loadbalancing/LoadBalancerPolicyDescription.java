@@ -76,10 +76,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
   private LoadBalancer loadbalancer = null;
   
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies", cascade = CascadeType.REMOVE )
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies")
   private List<LoadBalancerListener> listeners = null;
 
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions", cascade = CascadeType.REMOVE )
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions" )
   private List<LoadBalancerBackendServerDescription> backendServers = null;
   
   @Column( name = "policy_name", nullable=false)

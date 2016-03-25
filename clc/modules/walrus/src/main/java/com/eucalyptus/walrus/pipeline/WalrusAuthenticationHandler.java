@@ -65,7 +65,6 @@ package com.eucalyptus.walrus.pipeline;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.component.ComponentIds;
@@ -73,6 +72,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.auth.WalrusWrappedCredentials;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
+import com.eucalyptus.walrus.exceptions.MethodNotAllowedException;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.walrus.util.WalrusUtil;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -87,6 +87,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -202,9 +203,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         //Consolidate duplicates, etc.
 
         canonicalizeHeaders(httpRequest);
-        if (httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
-          checkUploadPolicy(httpRequest);
-        }
         handle(httpRequest);
       } catch (Exception ex) {
         Channels.fireExceptionCaught(ctx, ex);
@@ -251,44 +249,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
     }
 
     return authMap;
-  }
-
-  /*
-   * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
-   * Simply verifies the policy and signature of the policy.
-   */
-  private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AccessDeniedException {
-    Map<String, String> fields = new HashMap<String, String>();
-    String policy = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
-    fields.put(WalrusProperties.FormField.policy.toString(), policy);
-    String policySignature = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
-    if (policySignature == null) {
-      throw new AccessDeniedException("Policy signature must be specified with policy.");
-    }
-    String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
-    if (awsAccessKeyId == null) {
-      throw new AccessDeniedException("AWSAccessKeyID must be specified.");
-    }
-    fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
-    fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
-    String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
-    if (acl != null) {
-      fields.put(WalrusProperties.FormField.acl.toString(), acl);
-    }
-    String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
-    String[] target = WalrusUtil.getTarget(operationPath);
-    if (target != null) {
-      fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
-      if (target.length > 1) {
-        fields.put(WalrusProperties.FormField.key.toString(), target[1]);
-      }
-    }
-    try {
-      UploadPolicyChecker.checkPolicy(httpRequest, fields);
-    } catch (AuthenticationException aex) {
-      throw new AccessDeniedException(aex.getMessage());
-    }
-
   }
 
   private static class S3Authentication {
@@ -473,7 +433,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
   /**
    * Authentication Handler for Walrus REST requests (POST method and SOAP are processed using different handlers)
    */
-  public void handle(MappingHttpRequest httpRequest) throws AccessDeniedException {
+  public void handle(MappingHttpRequest httpRequest) throws AccessDeniedException, MethodNotAllowedException {
     //Clean up the headers such that no duplicates may exist etc.
     //sanitizeHeaders(httpRequest);
     Map<String, String> parameters = httpRequest.getParameters();
@@ -487,6 +447,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         S3Authentication.authenticate(httpRequest, authMap);
         return;
       }
+    }
+    // Added to handle EUCA-11882 and EUCA-11496
+    String servicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
+    if (HttpMethod.HEAD == httpRequest.getMethod() && servicePath.equals(httpRequest.getServicePath())) {
+      throw new MethodNotAllowedException();
     }
     throw new AccessDeniedException("Invalid Authentication Scheme");
   }

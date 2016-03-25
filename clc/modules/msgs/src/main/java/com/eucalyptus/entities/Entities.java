@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,12 +87,15 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
+import javax.persistence.criteria.AbstractQuery;
+import javax.persistence.criteria.CommonAbstractCriteria;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaDelete;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Expression;
 import javax.persistence.criteria.From;
 import javax.persistence.criteria.Join;
+import javax.persistence.criteria.Subquery;
 import javax.persistence.metamodel.CollectionAttribute;
 import javax.persistence.metamodel.ListAttribute;
 import javax.persistence.metamodel.PluralAttribute;
@@ -130,6 +133,7 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.NonNullFunction;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
@@ -1906,10 +1910,16 @@ public class Entities {
     }
   }
 
-  private static final class SimpleEntityCriteriaQueryContext<E> extends EntityCriteriaQueryContext<E,E> {
+  private static final class SimpleEntityCriteriaQueryContext<E> extends EntityCriteriaQueryContext<E,E,CriteriaQuery<E>> {
 
     SimpleEntityCriteriaQueryContext( final Class<E> entityClass ) {
-      super( entityClass, entityClass );
+      super( entityClass, new NonNullFunction<CriteriaBuilder, CriteriaQuery<E>>(){
+        @Nonnull
+        @Override
+        public CriteriaQuery<E> apply( final CriteriaBuilder builder ) {
+          return builder.createQuery( entityClass );
+        }
+      }  );
     }
 
     protected void init( ) {
@@ -1917,14 +1927,45 @@ public class Entities {
     }
   }
 
-  private static final class CountEntityCriteriaQueryContext<E> extends EntityCriteriaQueryContext<E,Long> {
+  private static final class CountEntityCriteriaQueryContext<E> extends EntityCriteriaQueryContext<E,Long,CriteriaQuery<Long>> {
 
     CountEntityCriteriaQueryContext( final Class<E> entityClass ) {
-      super( entityClass, Long.class );
+      super( entityClass, new NonNullFunction<CriteriaBuilder, CriteriaQuery<Long>>(){
+        @Nonnull
+        @Override
+        public CriteriaQuery<Long> apply( final CriteriaBuilder builder ) {
+          return builder.createQuery( Long.class );
+        }
+      } );
     }
 
     protected void init( ) {
       this.query.select( builder.countDistinct( from ) );
+    }
+  }
+
+  private static final class PropertySubqueryEntityCriteriaQueryContext<E,V> extends EntityCriteriaQueryContext<E,V,Subquery<V>> {
+    private final SingularAttribute<? super E, V> attribute;
+    private final CommonAbstractCriteria criteria;
+
+    PropertySubqueryEntityCriteriaQueryContext(
+        final CommonAbstractCriteria criteria,
+        final Class<E> entityClass,
+        final SingularAttribute<? super E, V> attribute
+    ) {
+      super( entityClass, new NonNullFunction<CriteriaBuilder, Subquery<V>>(){
+        @Nonnull
+        @Override
+        public Subquery<V> apply( final CriteriaBuilder builder ) {
+          return criteria.subquery( attribute.getType( ).getJavaType( ) );
+        }
+      } );
+      this.criteria = criteria;
+      this.attribute = attribute;
+      this.query.select( from.get( attribute ) );
+    }
+
+    protected void init( ) {
     }
   }
 
@@ -1942,21 +1983,22 @@ public class Entities {
     protected abstract List<Expression<Boolean>> getRestrictions( );
   }
 
-  private static abstract class EntityCriteriaQueryContext<E,R> extends EntityCriteriaContext<E> {
-    protected final CriteriaQuery<R> query;
+  private static abstract class EntityCriteriaQueryContext<E,R,Q extends AbstractQuery<R>> extends EntityCriteriaContext<E> {
+    protected final Q query;
     protected final From<E,E> from;
     protected final List<Expression<Boolean>> restrictions;
 
     EntityCriteriaQueryContext(
         final Class<E> entityClass,
-        final Class<R> resultClass
+        final NonNullFunction<CriteriaBuilder,Q> queryBuilder
     ) {
       super( entityClass );
-      this.query = this.builder.createQuery( resultClass );
+      this.query = queryBuilder.apply( builder );
       this.from = this.query.from( entityClass );
       final javax.persistence.criteria.Predicate where = builder.conjunction( );
       this.restrictions = where.getExpressions( );
       this.query.where( where );
+      init( );
     }
 
     protected abstract void init( );
@@ -2055,30 +2097,42 @@ public class Entities {
   }
 
   /**
+   * Callback for construction of subquery
+   *
+   * @param <E> The subquery entity type
+   * @param <R> The subquery result type
+   */
+  public interface EntityCriteriaSubqueryCallback<E,R> {
+    void restrict( final EntityCriteriaSubquery<E,R> subquery );
+  }
+
+  /**
    * Entity type-safe query
    *
    * @param <E> The entity type
    * @param <R> The query result type
    */
   @SuppressWarnings( "unused" )
-  public static final class EntityCriteriaQuery<E,R> {
-    private final EntityCriteriaQueryContext<E,R> context;
-    private final EntityTypedQueryOptions options;
+  public static abstract class EntityCriteriaQueryBase<E,R,C extends AbstractQuery<R>,B extends EntityCriteriaQueryBase<E,R,C,B>> {
+    protected final EntityCriteriaQueryContext<E,R,C> context;
+    protected final EntityTypedQueryOptions options;
 
-    EntityCriteriaQuery( @Nonnull final EntityCriteriaQueryContext<E,R> context ) {
+    EntityCriteriaQueryBase( @Nonnull final EntityCriteriaQueryContext<E,R,C> context ) {
       this.context = context;
       this.options = new EntityTypedQueryOptions( );
     }
 
+    protected abstract B self( );
+
     /**
      * Add a where condition to the criteria.
      *
      * @param restriction The restriction to add.
      * @return This criteria query for method chaining.
      */
-    public EntityCriteriaQuery<E,R> where( @Nonnull final EntityRestriction<E> restriction ) {
+    public B where( @Nonnull final EntityRestriction<E> restriction ) {
       context.restrictions.add( restriction.build( context.builder, context.from ) );
-      return this;
+      return self( );
     }
 
     /**
@@ -2087,12 +2141,11 @@ public class Entities {
      * @param restriction The restriction to add.
      * @return This criteria query for method chaining.
      */
-    public EntityCriteriaQuery<E,R> where( @Nonnull final EntityRestrictionBuilder<E> restriction ) {
+    public B where( @Nonnull final EntityRestrictionBuilder<E> restriction ) {
       return where( restriction.build( ) );
     }
 
     /**
-     /**
      * Directly add an equality restriction to the join.
      *
      * <p><code>
@@ -2109,7 +2162,7 @@ public class Entities {
      *
      * @see Entities.EntityRestrictionBuilder#equal(SingularAttribute, Object)
      */
-    public <V> EntityCriteriaQuery<E,R> whereEqual(
+    public <V> B whereEqual(
         @Nonnull final SingularAttribute<? super E, V> attribute,
         @Nonnull final V value
     ) {
@@ -2118,7 +2171,30 @@ public class Entities {
           attribute,
           value
       ).build( context.builder, context.from ) );
-      return this;
+      return self( );
+    }
+
+    /**
+     * Add a subselect contains condition to the criteria.
+     *
+     * @param attribute The attribute to check if contained
+     * @param subqueryEntityClass The subquery entity class
+     * @param subqueryAttribute The attribute of the subquery entity to match
+     * @param subqueryCallback Callback to build subquery constraints.
+     * @param <V> The contained value type
+     * @param <S> The subquery entity type
+     * @return
+     */
+    public <V,S> B whereIn(
+        @Nonnull final SingularAttribute<? super E, V> attribute,
+        @Nonnull final Class<S> subqueryEntityClass,
+        @Nonnull final SingularAttribute<? super S, V> subqueryAttribute,
+        @Nonnull final EntityCriteriaSubqueryCallback<S,V> subqueryCallback ) {
+      final EntityCriteriaSubquery<S,V> subquery = new EntityCriteriaSubquery<>(
+          new PropertySubqueryEntityCriteriaQueryContext<>( context.query, subqueryEntityClass, subqueryAttribute ) );
+      subqueryCallback.restrict( subquery );
+      context.restrictions.add( context.builder.in( context.from.get( attribute ) ).value( subquery.expression( ) ) );
+      return self( );
     }
 
     /**
@@ -2129,13 +2205,13 @@ public class Entities {
      * @param <J> The joined entity type
      * @return This criteria query for method chaining.
      */
-    public <J> EntityCriteriaQuery<E,R> join(
+    public <J> B join(
         @Nonnull final SingularAttribute<? super E, J> attribute,
         @Nonnull final EntityRestriction<J> restriction
     ) {
       final Join<E,J> join = context.from.join( attribute );
       context.restrictions.add( restriction.build( context.builder, join ) );
-      return this;
+      return self( );
     }
 
     /**
@@ -2146,13 +2222,13 @@ public class Entities {
      * @param <J> The joined entity type
      * @return This criteria query for method chaining.
      */
-    public <J> EntityCriteriaQuery<E,R> join(
+    public <J> B join(
         @Nonnull final CollectionAttribute<? super E, J> attribute,
         @Nonnull final EntityRestriction<J> restriction
     ) {
       final Join<E,J> join = context.from.join( attribute );
       context.restrictions.add( restriction.build( context.builder, join ) );
-      return this;
+      return self( );
     }
 
     /**
@@ -2163,13 +2239,13 @@ public class Entities {
      * @param <J> The joined entity type
      * @return This criteria query for method chaining.
      */
-    public <J> EntityCriteriaQuery<E,R> join(
+    public <J> B join(
         @Nonnull final ListAttribute<? super E, J> attribute,
         @Nonnull final EntityRestriction<J> restriction
     ) {
       final Join<E,J> join = context.from.join( attribute );
       context.restrictions.add( restriction.build( context.builder, join ) );
-      return this;
+      return self( );
     }
 
     /**
@@ -2180,12 +2256,166 @@ public class Entities {
      * @param <J> The joined entity type
      * @return This criteria query for method chaining.
      */
-    public <J> EntityCriteriaQuery<E,R> join(
+    public <J> B join(
         @Nonnull final SetAttribute<? super E, J> attribute,
         @Nonnull final EntityRestriction<J> restriction
     ) {
       final Join<E,J> join = context.from.join( attribute );
       context.restrictions.add( restriction.build( context.builder, join ) );
+      return self( );
+    }
+  }
+
+  public static final class EntityCriteriaSubquery<E,R> extends EntityCriteriaQueryBase<E,R,Subquery<R>,EntityCriteriaSubquery<E,R>> {
+
+    EntityCriteriaSubquery( @Nonnull final EntityCriteriaQueryContext<E, R, Subquery<R>> context ) {
+      super( context );
+    }
+
+    protected EntityCriteriaSubquery<E, R> self() {
+      return this;
+    }
+
+    Expression<R> expression( ) {
+      return context.query;
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final SingularAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final CollectionAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final ListAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining.
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final SetAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Outer join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> joinLeft(
+        @Nonnull final SingularAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute, javax.persistence.criteria.JoinType.LEFT );
+      return new EntityCriteriaJoin<>( attribute.getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Outer join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> joinLeft(
+        @Nonnull final CollectionAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute, javax.persistence.criteria.JoinType.LEFT );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Outer join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> joinLeft(
+        @Nonnull final ListAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute, javax.persistence.criteria.JoinType.LEFT );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Outer join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining.
+     */
+    public <J> EntityCriteriaJoin<J> joinLeft(
+        @Nonnull final SetAttribute<? super E, J> attribute
+    ) {
+      final Join<E,J> join = context.from.join( attribute, javax.persistence.criteria.JoinType.LEFT );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+  }
+
+  public static final class EntityCriteriaQuery<E,R> extends EntityCriteriaQueryBase<E,R,CriteriaQuery<R>,EntityCriteriaQuery<E,R>>  {
+
+    EntityCriteriaQuery( @Nonnull final EntityCriteriaQueryContext<E,R, CriteriaQuery<R>> context ) {
+      super( context );
+    }
+
+    protected EntityCriteriaQuery<E,R> self( ) {
       return this;
     }
 
@@ -2395,13 +2625,90 @@ public class Entities {
     }
   }
 
+  public static final class EntityCriteriaJoin<JE> extends EntityCriteriaBaseJoin<JE,EntityCriteriaJoin<JE>> {
+    EntityCriteriaJoin( @Nonnull Class<JE> joinEntityClass,
+                        @Nonnull final EntityCriteriaContext<?> context,
+                        @Nonnull final Join<?, JE> join ) {
+      super( joinEntityClass, context, join );
+    }
+
+    @Override
+    protected  EntityCriteriaJoin<JE> self() {
+      return this;
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final SingularAttribute<? super JE, J> attribute
+    ) {
+      final Join<JE,J> join = this.join.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final CollectionAttribute<? super JE, J> attribute
+    ) {
+      final Join<JE,J> join = this.join.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final ListAttribute<? super JE, J> attribute
+    ) {
+      final Join<JE,J> join = this.join.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+
+    /**
+     * Join on the given attribute and restriction.
+     *
+     * <p>Restrictions should be added to the returned type-safe join.</p>
+     *
+     * @param attribute The entity attribute that defines the relation
+     * @param <J> The joined entity type
+     * @return A criteria join for method chaining.
+     */
+    public <J> EntityCriteriaJoin<J> join(
+        @Nonnull final SetAttribute<? super JE, J> attribute
+    ) {
+      final Join<JE,J> join = this.join.join( attribute );
+      return new EntityCriteriaJoin<>( attribute.getElementType( ).getJavaType( ), this.context, join );
+    }
+  }
+
   /**
    * Entity type-safe join for queries
    *
    * @param <JE> The joined entity type
    * @param <ECQ> The query type
    */
-  public static final class EntityCriteriaQueryJoin<JE,ECQR,ECQ extends EntityCriteriaQuery<?,ECQR>> extends EntityCriteriaJoin<JE,EntityCriteriaQueryJoin<JE,ECQR,ECQ>>  {
+  public static final class EntityCriteriaQueryJoin<JE,ECQR,ECQ extends EntityCriteriaQuery<?,ECQR>> extends EntityCriteriaBaseJoin<JE,EntityCriteriaQueryJoin<JE,ECQR,ECQ>>  {
     private final ECQ entityCriteriaQuery;
 
     EntityCriteriaQueryJoin( @Nonnull Class<JE> joinEntityClass,
@@ -2458,7 +2765,6 @@ public class Entities {
     public List<ECQR> list( ) {
       return entityCriteriaQuery( ).list( );
     }
-
 
     /**
      * Join on the given attribute and restriction.
@@ -2526,123 +2832,18 @@ public class Entities {
   }
 
   /**
-   * Entity type-safe join for deletes
-   *
-   * @param <JE> The joined entity type
-   */
-  public static final class EntityCriteriaDeleteJoin<JE> extends EntityCriteriaJoin<JE,EntityCriteriaDeleteJoin<JE>>  {
-    private final EntityCriteriaDelete<?> entityCriteriaDelete;
-
-    EntityCriteriaDeleteJoin( @Nonnull Class<JE> joinEntityClass,
-                              @Nonnull EntityCriteriaDelete<?> entityCriteriaDelete,
-                              @Nonnull final EntityCriteriaContext<?> context,
-                              @Nonnull final Join<?, JE> join ) {
-      super( joinEntityClass, context, join );
-      this.entityCriteriaDelete = entityCriteriaDelete;
-    }
-
-    @Override
-    protected EntityCriteriaDeleteJoin<JE> self() {
-      return this;
-    }
-
-    /**
-     * Get the original query.
-     *
-     * @return The query.
-     */
-    public EntityCriteriaDelete<?> entityCriteriaDelete( ) {
-      return entityCriteriaDelete;
-    }
-
-    /**
-     * Evaluate the root for this delete.
-     *
-     * @see EntityCriteriaQuery#uniqueResult()
-     * @return The unique result entity
-     */
-    public int delete( ) {
-      return entityCriteriaDelete( ).delete( );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J> join(
-        @Nonnull final SingularAttribute<? super JE, J> attribute
-    ) {
-      final Join<JE,J> join = this.join.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getJavaType( ), entityCriteriaDelete, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J>  join(
-        @Nonnull final CollectionAttribute<? super JE, J> attribute
-    ) {
-      final Join<JE,J> join = this.join.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), entityCriteriaDelete, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J>  join(
-        @Nonnull final ListAttribute<? super JE, J> attribute
-    ) {
-      final Join<JE,J> join = this.join.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), entityCriteriaDelete, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining.
-     */
-    public <J> EntityCriteriaDeleteJoin<J>  join(
-        @Nonnull final SetAttribute<? super JE, J> attribute
-    ) {
-      final Join<JE,J> join = this.join.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), entityCriteriaDelete, this.context, join );
-    }
-  }
-
-  /**
    * Entity type-safe join
    *
    * @param <JE> The joined entity type
    */
-  public static abstract class EntityCriteriaJoin<JE,ECJT> {
+  public static abstract class EntityCriteriaBaseJoin<JE,ECJT> {
     protected final Class<JE> joinEntityClass;
     protected final EntityCriteriaContext<?> context;
     protected final Join<?, JE> join;
 
-    EntityCriteriaJoin( @Nonnull Class<JE> joinEntityClass,
-                        @Nonnull final EntityCriteriaContext<?> context,
-                        @Nonnull final Join<?, JE> join ) {
+    EntityCriteriaBaseJoin( @Nonnull Class<JE> joinEntityClass,
+                            @Nonnull final EntityCriteriaContext<?> context,
+                            @Nonnull final Join<?, JE> join ) {
       this.joinEntityClass = joinEntityClass;
       this.context = context;
       this.join = join;
@@ -2790,136 +2991,58 @@ public class Entities {
       return this;
     }
 
+
     /**
-     * Join on the given attribute and restriction.
+     * Directly add an equality restriction to the join.
      *
-     * @param attribute The entity attribute that defines the relation
-     * @param restriction Restriction on the joined entity
-     * @param <J> The joined entity type
-     * @return This criteria query for method chaining.
+     * <p><code>
+     *   Entities.query( X.class )
+     *     .join( X.relation ).whereEqual( Y_.name, "example" ).list( )
+     * </code></p>
+
+     * <p>This is a shorthand for:</p>
+     *
+     * <p><code>
+     *   Entities.query( X.class )
+     *     .join( X.relation ).where( Entities.restriction( Y.class ).equal( Y_.name, "example" ) ).list( )
+     * </code></p>
+     *
+     * @return This delete criteria for method chaining.
+     * @see Entities.EntityRestrictionBuilder#equal(SingularAttribute, Object)
      */
-    public <J> EntityCriteriaDelete<E> join(
-        @Nonnull final SingularAttribute<? super E, J> attribute,
-        @Nonnull final EntityRestriction<J> restriction
+    public <V> EntityCriteriaDelete<E> whereEqual(
+        @Nonnull final SingularAttribute<? super E, V> attribute,
+        @Nonnull final V value
     ) {
-      final Join<E,J> join = context.from.join( attribute );
-      context.restrictions.add( restriction.build( context.builder, join ) );
+      context.restrictions.add( new EntityRestriction.EqualPropertyEntityValueRestriction<>(
+          context.entityClass,
+          attribute,
+          value
+      ).build( context.builder, context.from ) );
       return this;
     }
 
     /**
-     * Join on the given attribute and restriction.
+     * Add a subselect contains condition to the criteria.
      *
-     * @param attribute The entity attribute that defines the relation
-     * @param restriction Restriction on the joined entity
-     * @param <J> The joined entity type
-     * @return This criteria query for method chaining.
+     * @param attribute The attribute to check if contained
+     * @param subqueryEntityClass The subquery entity class
+     * @param subqueryAttribute The attribute of the subquery entity to match
+     * @param subqueryCallback Callback to build subquery constraints.
+     * @param <V> The contained value type
+     * @param <S> The subquery entity type
+     * @return This delete criteria for method chaining.
      */
-    public <J> EntityCriteriaDelete<E> join(
-        @Nonnull final CollectionAttribute<? super E, J> attribute,
-        @Nonnull final EntityRestriction<J> restriction
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      context.restrictions.add( restriction.build( context.builder, join ) );
+    public <V,S> EntityCriteriaDelete<E> whereIn(
+        @Nonnull final SingularAttribute<? super E, V> attribute,
+        @Nonnull final Class<S> subqueryEntityClass,
+        @Nonnull final SingularAttribute<? super S, V> subqueryAttribute,
+        @Nonnull final EntityCriteriaSubqueryCallback<S,V> subqueryCallback ) {
+      final EntityCriteriaSubquery<S,V> subquery = new EntityCriteriaSubquery<>(
+          new PropertySubqueryEntityCriteriaQueryContext<>( context.delete, subqueryEntityClass, subqueryAttribute ) );
+      subqueryCallback.restrict( subquery );
+      context.restrictions.add( context.builder.in( context.from.get( attribute ) ).value( subquery.expression( ) ) );
       return this;
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param restriction Restriction on the joined entity
-     * @param <J> The joined entity type
-     * @return This criteria query for method chaining.
-     */
-    public <J> EntityCriteriaDelete<E> join(
-        @Nonnull final ListAttribute<? super E, J> attribute,
-        @Nonnull final EntityRestriction<J> restriction
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      context.restrictions.add( restriction.build( context.builder, join ) );
-      return this;
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param restriction Restriction on the joined entity
-     * @param <J> The joined entity type
-     * @return This criteria query for method chaining.
-     */
-    public <J> EntityCriteriaDelete<E> join(
-        @Nonnull final SetAttribute<? super E, J> attribute,
-        @Nonnull final EntityRestriction<J> restriction
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      context.restrictions.add( restriction.build( context.builder, join ) );
-      return this;
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J> join(
-        @Nonnull final SingularAttribute<? super E, J> attribute
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getJavaType( ), this, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J> join(
-        @Nonnull final CollectionAttribute<? super E, J> attribute
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), this, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J> join(
-        @Nonnull final ListAttribute<? super E, J> attribute
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), this, this.context, join );
-    }
-
-    /**
-     * Join on the given attribute and restriction.
-     *
-     * <p>Restrictions should be added to the returned type-safe join.</p>
-     *
-     * @param attribute The entity attribute that defines the relation
-     * @param <J> The joined entity type
-     * @return A criteria join for method chaining
-     */
-    public <J> EntityCriteriaDeleteJoin<J> join(
-        @Nonnull final SetAttribute<? super E, J> attribute
-    ) {
-      final Join<E,J> join = context.from.join( attribute );
-      return new EntityCriteriaDeleteJoin<>( attribute.getElementType( ).getJavaType( ), this, this.context, join );
     }
 
     /**

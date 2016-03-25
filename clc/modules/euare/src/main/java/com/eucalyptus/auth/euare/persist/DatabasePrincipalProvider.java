@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import javax.persistence.PersistenceException;
 import org.hibernate.FlushMode;
-import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.euare.Accounts;
@@ -38,12 +38,14 @@ import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
+import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
+import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
@@ -62,7 +64,6 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -80,7 +81,7 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   public UserPrincipal lookupPrincipalByUserId( final String userId, final String nonce ) throws AuthException {
     try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( UserEntity.class ) ) {
       try {
-        final UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, "userId", userId );
+        final UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, userId );
         return decorateCredentials( new UserPrincipalImpl( user ), nonce, user.getToken( ) );
       } catch ( Exception e ) {
         throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -99,20 +100,21 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   @Override
   public UserPrincipal lookupPrincipalByAccessKeyId( final String keyId, final String nonce ) throws AuthException {
     try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( AccessKeyEntity.class ) ) {
-      final UserEntity user;
+      final Optional<UserEntity> user;
       try {
-        user = (UserEntity) Entities.createCriteria( UserEntity.class )
-            .createCriteria( "keys" ).add( Restrictions.eq( "accessKey", keyId ) )
-            .setFlushMode( FlushMode.MANUAL )
-            .setReadOnly( true )
-            .uniqueResult( );
+        user = Entities.criteriaQuery( UserEntity.class )
+            .join( UserEntity_.keys ).whereEqual( AccessKeyEntity_.accessKey, keyId )
+            .entityCriteriaQuery( )
+            .fetchSize( FlushMode.MANUAL )
+            .readonly( )
+            .uniqueResultOption( );
       } catch ( Exception e ) {
         throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
       }
-      if ( user == null ) {
+      if ( !user.isPresent( ) ) {
         throw new InvalidAccessKeyAuthException( "Failed to find access key" );
       }
-      final UserPrincipal principal = new UserPrincipalImpl( user );
+      final UserPrincipal principal = new UserPrincipalImpl( user.get( ) );
       final Optional<AccessKey> accessKey = Iterables.tryFind(
           principal.getKeys( ),
           CollectionUtils.propertyPredicate( keyId, AccessKeys.accessKeyIdentifier( ) ) );
@@ -318,11 +320,11 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
       if ( !Strings.isNullOrEmpty( clientToken ) ) try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( ReservedNameEntity.class ) ) {
         // use the existing reservation for the token if it matches and
         // has half the duration remaining
-        final ReservedNameEntity entity = Entities.uniqueResult( ReservedNameEntity.exampleWithToken( clientToken ) );
+        final ReservedNameEntity entity = Entities.criteriaQuery( ReservedNameEntity.exampleWithToken( clientToken ) ).uniqueResult( );
         conflict = !entity.getNamespace( ).equals( namespace ) ||
             !entity.getName( ).equals( name ) ||
             entity.getExpiry( ).before( new Date( System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( duration / 2  ) ) );
-      } catch ( TransactionException|NoSuchElementException e1 ) {
+      } catch ( PersistenceException|NoSuchElementException e1 ) {
         // fail with conflict
       }
       if ( conflict ) {

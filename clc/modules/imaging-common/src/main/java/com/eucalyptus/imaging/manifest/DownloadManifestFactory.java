@@ -145,7 +145,7 @@ public class DownloadManifestFactory {
 
   public static class ManifestLocksEventListener implements EventListener<ClockTick> {
     private static long lastCleanUp = System.currentTimeMillis();
-    private static long CLENAUP_INTERVAL = 5 * 60 * 1000L;
+    private static long CLEANUP_INTERVAL = 5 * 60 * 1000L;
 
     public static void register( ) {
       Listeners.register( ClockTick.class, new ManifestLocksEventListener() );
@@ -153,7 +153,7 @@ public class DownloadManifestFactory {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-      if (lastCleanUp + CLENAUP_INTERVAL < System.currentTimeMillis()) {
+      if (lastCleanUp + CLEANUP_INTERVAL < System.currentTimeMillis()) {
         synchronized(manifestLocks) {
           Iterator<Entry<String, ReentrantLock>> itr = manifestLocks.entrySet().iterator();
           while (itr.hasNext()) {

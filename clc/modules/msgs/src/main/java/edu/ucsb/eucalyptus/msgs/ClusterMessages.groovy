@@ -324,7 +324,7 @@ public class ResourceType extends EucalyptusData {
   }
 }
 public class NetworkConfigType extends EucalyptusData {
-  String interfaceId;
+  String interfaceId; // for use in vpc mode only
   Integer device = 0;
   String macAddress;
   String ipAddress;
@@ -333,6 +333,7 @@ public class NetworkConfigType extends EucalyptusData {
   String publicDnsName;
   Integer vlan = -1;
   Long networkIndex = -1l;
+  String attachmentId; // for use in vpc mode only
 
   def NetworkConfigType() {
   }

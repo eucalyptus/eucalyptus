@@ -23,7 +23,12 @@
 package com.eucalyptus.walrus.pipeline
 
 import com.eucalyptus.http.MappingHttpRequest
+
+import com.eucalyptus.walrus.exceptions.MethodNotAllowedException
+
 import groovy.transform.CompileStatic
+
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod
 import org.jboss.netty.handler.codec.http.HttpVersion
 import org.junit.Test
@@ -78,5 +83,13 @@ public class WalrusRESTBindingTest {
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
     path = binding.getOperationPath(request);
     assert("/bucket/object/".equals(path));
+  }
+
+  @Test(expected=MethodNotAllowedException.class)
+  public void testBindHeadOperation() throws Exception {
+    WalrusRESTBinding binding = new WalrusRESTBinding();
+    MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
+    request.setHeader(HttpHeaders.Names.HOST, "foo.bar.com");
+    final Object o = binding.bind(request);
   }
 }

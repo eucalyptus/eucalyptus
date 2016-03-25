@@ -120,8 +120,10 @@ public class SANManagerTest {
   public void cleanSnapshot_BasicTest() throws Exception {
     final String snapId = "foo";
     final String sanVolId = "bar";
+    final String iqn = "foo-iqn";
     SANVolumeInfo volInfo = new SANVolumeInfo(snapId);
     volInfo.setSanVolumeId(sanVolId);
+    volInfo.setIqn(iqn);
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       Entities.persist(volInfo);
       tran.commit();
@@ -130,7 +132,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(sanVolId);
+        oneOf(sanProvider).deleteVolume(sanVolId, iqn);
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -159,8 +161,10 @@ public class SANManagerTest {
   public void cleanVolume_BasicTest() throws Exception {
     final String volId = "foo";
     final String sanVolId = "bar";
+    final String iqn = "iqn";
     SANVolumeInfo volInfo = new SANVolumeInfo(volId);
     volInfo.setSanVolumeId(sanVolId);
+    volInfo.setIqn(iqn);
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       Entities.persist(volInfo);
       tran.commit();
@@ -169,7 +173,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(sanVolId);
+        oneOf(sanProvider).deleteVolume(sanVolId, iqn);
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -239,7 +243,9 @@ public class SANManagerTest {
     sanInfo.setResourceSuffix("foosuffix");
 
     final String volId = "foo";
+    final String iqn = "iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId("fooprefix" + volId + "foosuffix");
+    existing.setIqn(iqn);
 
     try (TransactionResource tran = Entities.transactionFor(SANInfo.class)) {
       Entities.persist(sanInfo);
@@ -252,7 +258,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).volumeExists(existing.getSanVolumeId());
+        oneOf(sanProvider).volumeExists(existing.getSanVolumeId(), iqn);
         will(returnValue(Boolean.FALSE));
         oneOf(sanProvider).createVolume("fooprefix" + volId + "foosuffix", volSz);
         will(returnValue("foo-iqn"));
@@ -277,7 +283,9 @@ public class SANManagerTest {
   @Test
   public void deleteSnapshot_BasicTest() throws Exception {
     final String volId = "foo";
+    final String iqn = "foo-iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId("fooprefix" + volId + "foosuffix");
+    existing.setIqn(iqn);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       Entities.persist(existing);
@@ -287,7 +295,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId());
+        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId(), iqn);
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -304,7 +312,9 @@ public class SANManagerTest {
   @Test
   public void deleteSnapshot_NoSANSnapshot() throws Exception {
     final String volId = "foo";
+    final String iqn = "foo-iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId("fooprefix" + volId + "foosuffix");
+    existing.setIqn(iqn);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       Entities.persist(existing);
@@ -314,9 +324,9 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId());
+        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId(), iqn);
         will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId());
+        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId(), iqn);
         will(returnValue(Boolean.FALSE));
       }
     });
@@ -367,7 +377,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId());
+        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId(), null);
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -401,7 +411,7 @@ public class SANManagerTest {
       {
         oneOf(sanProvider).disconnectTarget(sanVolId, volIqn, lun);
         oneOf(sanProvider).unexportResource(sanVolId, "sc-foo-iqn");
-        oneOf(sanProvider).waitAndComplete(sanVolId);
+        oneOf(sanProvider).waitAndComplete(sanVolId, existing.getIqn());
       }
     });
 
@@ -654,6 +664,7 @@ public class SANManagerTest {
   public void exportVolume_BasicTest() throws Exception {
     final String volId = "foo";
     final String sanVolId = "fooprefix" + volId + "foosuffix";
+    final String nodeIqn = "node-iqn";
     final String volIqn = "foo-iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId);
     existing.setSanVolumeId(sanVolId);
@@ -671,7 +682,7 @@ public class SANManagerTest {
         will(returnValue("fooprotocol"));
         oneOf(sanProvider).getProviderName();
         will(returnValue("fooprovider"));
-        oneOf(sanProvider).exportResource(sanVolId, volIqn);
+        oneOf(sanProvider).exportResource(sanVolId, nodeIqn, volIqn);
         will(returnValue(new String("1")));
         oneOf(sanProvider).getVolumeConnectionString(volId);
         will(returnValue("fooconnectionstring"));
@@ -684,7 +695,7 @@ public class SANManagerTest {
 
     String expected = "fooprotocol,fooprovider,foooptchapuser,fooauthtype,1,fooconnectionstring";
     SANManager test = new SANManager(sanProvider);
-    String result = test.exportVolume(volId, volIqn);
+    String result = test.exportVolume(volId, nodeIqn);
     assertTrue("expected result to be '" + expected + "' but was '" + result + "'", expected.equals(result));
   }
 
@@ -774,7 +785,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId());
+        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId(), null);
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -802,7 +813,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId());
+        oneOf(sanProvider).snapshotExists(existing.getSanVolumeId(), existing.getIqn());
         will(returnValue(Boolean.TRUE));
       }
     });
@@ -842,8 +853,9 @@ public class SANManagerTest {
     final String volId = "testparentvol";
     final String rezPrefix = "fooprefix";
     final String rezSuffix = "foosuffix";
+    final String iqn = "foo-iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId(rezPrefix + volId + rezSuffix);
-    existing.setIqn("foo-iqn");
+    existing.setIqn(iqn);
     existing.setSize(new Integer(5));
     existing.setSnapshotOf("foo-vol");
 
@@ -860,7 +872,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).createSnapshotPoint(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix);
+        oneOf(sanProvider).createSnapshotPoint(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, iqn);
         will(returnValue("result"));
       }
     });
@@ -914,7 +926,7 @@ public class SANManagerTest {
     context.checking(new Expectations() {
       {
         // oneOf(sanProvider).snapshotExists(existing.getSanVolumeId()); will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).cloneVolume(rezPrefix + "foo" + rezSuffix, existing.getSanVolumeId());
+        oneOf(sanProvider).cloneVolume(rezPrefix + "foo" + rezSuffix, existing.getSanVolumeId(), existing.getIqn());
         will(returnValue("foo-iqn"));
       }
     });
@@ -955,9 +967,9 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId());
+        oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId(), existingClone.getIqn());
         will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).cloneVolume(rezPrefix + "testvol" + rezSuffix, existing.getSanVolumeId());
+        oneOf(sanProvider).cloneVolume(rezPrefix + "testvol" + rezSuffix, existing.getSanVolumeId(), existing.getIqn());
         will(returnValue("foo-iqn"));
       }
     });
@@ -976,8 +988,9 @@ public class SANManagerTest {
     final String volId = "testparentvol";
     final String rezPrefix = "fooprefix";
     final String rezSuffix = "foosuffix";
+    final String parentIqn = "foo-parent-iqn";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId(rezPrefix + volId + rezSuffix);
-    existing.setIqn("foo-parent-iqn");
+    existing.setIqn(parentIqn);
     existing.setSize(new Integer(5));
     existing.setSnapshotOf("foo-vol");
 
@@ -995,7 +1008,7 @@ public class SANManagerTest {
     context.checking(new Expectations() {
       {
         // oneOf(sanProvider).snapshotExists(existing.getSanVolumeId()); will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, "bar");
+        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, "bar", parentIqn);
         will(returnValue("foo-iqn"));
       }
     });
@@ -1036,9 +1049,9 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId());
+        oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId(), existingClone.getIqn());
         will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "testvol" + rezSuffix, "bar");
+        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "testvol" + rezSuffix, "bar", existing.getIqn());
         will(returnValue("foo-iqn"));
       }
     });
@@ -1077,7 +1090,8 @@ public class SANManagerTest {
     context.checking(new Expectations() {
       {
         // oneOf(sanProvider).snapshotExists(existing.getSanVolumeId()); will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createVolume(rezPrefix + "foo" + rezSuffix, existing.getSanVolumeId(), snapSz.intValue(), snapSz.intValue());
+        oneOf(sanProvider).createVolume(rezPrefix + "foo" + rezSuffix, existing.getSanVolumeId(), snapSz.intValue(), snapSz.intValue(),
+            existing.getIqn());
         will(returnValue("foo-iqn"));
       }
     });
@@ -1119,9 +1133,10 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).volumeExists(existingClone.getSanVolumeId());
+        oneOf(sanProvider).volumeExists(existingClone.getSanVolumeId(), existingClone.getIqn());
         will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createVolume(rezPrefix + "testvol" + rezSuffix, existingClone.getSanVolumeId(), snapSz.intValue(), snapSz.intValue());
+        oneOf(sanProvider).createVolume(rezPrefix + "testvol" + rezSuffix, existingClone.getSanVolumeId(), snapSz.intValue(), snapSz.intValue(),
+            existingClone.getIqn());
         will(returnValue("foo-iqn"));
       }
     });
@@ -1163,7 +1178,7 @@ public class SANManagerTest {
       {
         oneOf(sanProvider).createSnapshotHolder(rezPrefix + volId + rezSuffix, snapSz * 1024l);
         will(returnValue("foo-iqn"));
-        oneOf(sanProvider).exportResource(rezPrefix + volId + rezSuffix, "sc-foo-iqn");
+        oneOf(sanProvider).exportResource(rezPrefix + volId + rezSuffix, "sc-foo-iqn", "foo-iqn");
         will(returnValue(new String("1")));
         oneOf(sanProvider).connectTarget("foo-iqn", "1");
         will(returnValue(new StorageResource(volId, "foopath", StorageResource.Type.FILE) {

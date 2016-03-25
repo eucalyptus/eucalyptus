@@ -75,7 +75,7 @@
 #include "eucalyptus-opts.h"
 
 #define PRINT_NULL(x) ((x) == NULL ? "null" : (x))
-#define LIMIT_FILENO 65535
+
 #define LIMIT_NPROC RLIM_INFINITY
 #define CAPS \
 				(1 << CAP_SETUID)+ \
@@ -116,12 +116,12 @@ static int debug = 0;
 		}\
 		exit(1);} \
 	} while(0)
-#define __die(condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ", ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
+#define __die(condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s %d ERROR %04d ", ts_buff, getpid(), __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); exit(1);} } while(0)
 #define __fail(format,...) __die(1,format,##__VA_ARGS__)
-#define __abort(r,condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff, __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
-#define __debug(format,...) do { if(debug){get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s DEBUG %04d ",ts_buff,__LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
-#define __error(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s ERROR %04d ",ts_buff,__LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
-#define __info(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s INFO ",ts_buff);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } while(0)
+#define __abort(r,condition,format,...) do { if(condition) {get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s %d ERROR %04d ",ts_buff, getpid(), __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
+#define __debug(format,...) do { if(debug){get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stdout,"%s %d DEBUG %04d ",ts_buff, getpid(), __LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
+#define __error(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s %d ERROR %04d ",ts_buff, getpid(), __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
+#define __info(format,...) do { get_timestamp(ts_buff,sizeof(ts_buff));fprintf(stderr,"%s %d INFO ",ts_buff, getpid());fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } while(0)
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
 
@@ -195,7 +195,6 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
     "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
-    "-XX:MaxPermSize=512m",
     "-XX:+UseConcMarkSweepGC",
     "-Djava.net.preferIPv4Stack=true",
     "-Djava.security.policy=" EUCALYPTUS_ETC_DIR "/security.policy",

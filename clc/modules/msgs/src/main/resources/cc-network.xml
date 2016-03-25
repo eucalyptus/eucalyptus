@@ -71,6 +71,7 @@
     <value name="publicIp" field="ignoredPublicIp" />
     <value name="vlan" field="vlan" />
     <value name="networkIndex" field="networkIndex" />
+    <value name="attachmentId" field="attachmentId" usage="optional" />
   </mapping>
 
   <mapping name="BroadcastNetworkInfo" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

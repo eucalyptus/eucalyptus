@@ -110,20 +110,22 @@ public interface SANProvider {
    * @param snapshotId - The id of the source snapshot from which to create the volume
    * @param snapSize - The size of the snapshot in gigabytes
    * @param size - The size of the volume to be created (may be larger than the snapshot size)
+   * @param snapshotIqn - The IQN of source snapshot from which to create the volume
    * @return - The string that is the iqn that a client can connect to
    * @throws EucalyptusCloudException
    */
-  public String createVolume(String volumeId, String snapshotId, int snapSize, int size) throws EucalyptusCloudException;
+  public String createVolume(String volumeId, String snapshotId, int snapSize, int size, String snapshotIqn) throws EucalyptusCloudException;
 
   /**
    * Clone existing parent volume identified by parentVolumeId into a new volume with name/id volumeId
    * 
    * @param volumeId
    * @param parentVolumeId
+   * @param parentVolumeIqn
    * @return - The string that is the iqn/connection string that a client can connect to
    * @throws EucalyptusCloudException
    */
-  public String cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
+  public String cloneVolume(String volumeId, String parentVolumeId, String parentVolumeIqn) throws EucalyptusCloudException;
 
   /**
    * Connect to the lun specified by the given iqn.
@@ -169,9 +171,10 @@ public interface SANProvider {
    * Delete the specified volume on the underlying device
    * 
    * @param volumeName
+   * @param volumeIqn 
    * @return boolean result of the delete attempt
    */
-  public boolean deleteVolume(String volumeName);
+  public boolean deleteVolume(String volumeName, String volumeIqn);
 
   /**
    * Creates a snapshot of the specified volume and gives it the specified snapshot Id
@@ -180,10 +183,11 @@ public interface SANProvider {
    * @param snapshotId - the CLC-designated name to give the snapshot.
    * @param snapshotPointId - if non-null, this specifies the snap point id to start the operation from rather than the source volume itself. This id
    *        is opaque.
+   * @param volumeIqn
    * @return A string iqn for the newly created snapshot where the string is of the form: <SAN iqn>,lunid example: iqn-xxxx,1
    * @throws EucalyptusCloudException
    */
-  public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
+  public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId, String volumeIqn) throws EucalyptusCloudException;
 
   /**
    * Delete a snapshot -- This is never used in SANManager.
@@ -191,9 +195,10 @@ public interface SANProvider {
    * @param volumeId
    * @param snapshotId
    * @param locallyCreated
+   * @param snapshotIqn 
    * @return
    */
-  public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated);
+  public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated, String snapshotIqn);
 
   /**
    * Delete the specified CHAP username from the device
@@ -237,10 +242,11 @@ public interface SANProvider {
    * 
    * @param volumeId
    * @param nodeIqn
-   * @return Integer id of the lun exported
+   * @param volumeIqn
+   * @return String id of the lun exported
    * @throws EucalyptusCloudException
    */
-  public String exportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException;
+  public String exportResource(String volumeId, String nodeIqn, String volumeIqn) throws EucalyptusCloudException;
 
   /**
    * Removes the node permission for the volume for the specified iqn. After this operation a node should not be able to connect to the volume
@@ -296,39 +302,45 @@ public interface SANProvider {
    * Checks for the snapshot on the SAN backend and returns true or false accordingly
    * 
    * @param snapshotId
+   * @param snapshotIqn 
    * @return True if the volume exists on the SAN and false if it does not
    * @throws EucalyptusCloudException
    */
-  public boolean snapshotExists(String snapshotId) throws EucalyptusCloudException;
+  public boolean snapshotExists(String snapshotId, String snapshotIqn) throws EucalyptusCloudException;
 
   /**
    * Creates a snapshot point only. This does not do a transfer or ensure that the snapshot is fully independent from the source volume. This method
    * is intended to be very fast and can be called synchronously from the CLC request.
    * 
+   * @param parentVolumeIqn 
    * @param snapshotId
+   * 
    * @throws EucalyptusCloudException
    */
-  public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
+  public String createSnapshotPoint(String parentVolumeId, String volumeId, String parentVolumeIqn) throws EucalyptusCloudException;
 
   /**
    * Delete the created snapshot point, not the entire snapshot lun
    * 
    * @param parentVolumeId
    * @param snapshotPointId
+   * @param parentVolumeIqn
    * @throws EucalyptusCloudException
    */
-  public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId) throws EucalyptusCloudException;
+  public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId, String parentVolumeIqn) throws EucalyptusCloudException;
 
   public void checkConnectionInfo() throws EucalyptusCloudException;
 
   /**
    * Checks for the snapshot on the SAN backend and returns true or false accordingly
    * 
-   * @param snapshotId
+   * @param volumeId
+   * @param volumeIqn
+   * 
    * @return True if the volume exists on the SAN and false if it does not
    * @throws EucalyptusCloudException
    */
-  public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
+  public boolean volumeExists(String volumeId, String volumeIqn) throws EucalyptusCloudException;
 
   /**
    * Returns the protocol to be used for data transfers with the storage backend
@@ -347,9 +359,10 @@ public interface SANProvider {
    * Check if the snapshot is in progress and wait for it to complete before returning back to caller
    * 
    * @param snapshotId
+   * @param snapshotIqn
    * @throws EucalyptusCloudException
    */
-  public void waitAndComplete(String snapshotId) throws EucalyptusCloudException;
+  public void waitAndComplete(String snapshotId, String snapshotIqn) throws EucalyptusCloudException;
 
   /**
    * 

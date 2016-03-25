@@ -170,6 +170,11 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
+    public VmRunType.Builder primaryEniAttachmentId( final String primaryAttachmentId ) {
+      this.buildit.setPrimaryEniAttachmentId( primaryAttachmentId );
+      return this;
+    }
+    
     public VmRunType.Builder secondaryNetConfig( final NetworkConfigType netConfig ) {
       this.buildit.getSecondaryNetConfigList().add(netConfig);
       return this;
@@ -230,6 +235,7 @@ public class VmRunType extends CloudClusterMessage {
   private List<String> networkIds = new ArrayList<String>( );
   private Long         networkIndex = -1l;
   private String       privateAddress;
+  private String       primaryEniAttachmentId;
   private List<NetworkConfigType> secondaryNetConfigList = new ArrayList<NetworkConfigType>();
   
   protected VmRunType( ) {}
@@ -379,6 +385,10 @@ public class VmRunType extends CloudClusterMessage {
 
   public String getPrivateAddress() { return privateAddress; }
   
+  public String getPrimaryEniAttachmentId( ) {
+    return this.primaryEniAttachmentId;
+  }
+  
   public List<NetworkConfigType> getSecondaryNetConfigList() {
     return secondaryNetConfigList;
   }
@@ -427,6 +437,10 @@ public class VmRunType extends CloudClusterMessage {
   
   public void setAccountId( String accountId ) {
     this.accountId = accountId;
+  }
+  
+  public void setPrimaryEniAttachmentId( final String primaryEniAttachmentId ) {
+    this.primaryEniAttachmentId = primaryEniAttachmentId;
   }
   
   public void setSecondaryNetConfigList(List<NetworkConfigType> secondaryNetConfigList) {

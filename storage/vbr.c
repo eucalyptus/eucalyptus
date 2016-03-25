@@ -1624,65 +1624,6 @@ blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}
         }
     }
 
-    if (strlen(a->sshkey)) {
-
-        int injection_failed = 1;
-        LOGINFO("[%s] injecting the ssh key\n", a->instanceId);
-
-        // mount the partition
-        char mnt_pt[EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
-        if (safe_mkdtemp(mnt_pt) == NULL) {
-            LOGERROR("[%s] mkdtemp() failed: %s\n", a->instanceId, strerror(errno));
-            goto error;
-        }
-        if (diskutil_mount(dev, mnt_pt) != EUCA_OK) {
-            LOGERROR("[%s] failed to mount '%s' on '%s'\n", a->instanceId, dev, mnt_pt);
-            goto error;
-        }
-        // save the SSH key, with the right permissions
-        char path[EUCA_MAX_PATH];
-        snprintf(path, sizeof(path), "%s/root/.ssh", mnt_pt);
-        if (diskutil_mkdir(path) == -1) {
-            LOGERROR("[%s] failed to create path '%s'\n", a->instanceId, path);
-            goto unmount;
-        }
-        if (diskutil_ch(path, "root", NULL, 0700) != EUCA_OK) {
-            LOGERROR("[%s] failed to change user and/or permissions for '%s'\n", a->instanceId, path);
-            goto unmount;
-        }
-        snprintf(path, sizeof(path), "%s/root/.ssh/authorized_keys", mnt_pt);
-        if (diskutil_write2file(path, a->sshkey) != EUCA_OK) {  //! @TODO maybe append the key instead of overwriting?
-            LOGERROR("[%s] failed to save key in '%s'\n", a->instanceId, path);
-            goto unmount;
-        }
-        if (diskutil_ch(path, "root", NULL, 0600) != EUCA_OK) {
-            LOGERROR("[%s] failed to change user and/or permissions for '%s'\n", a->instanceId, path);
-            goto unmount;
-        }
-        // change user of the blob device back to 'eucalyptus' (tune and maybe other commands above set it to 'root')
-        if (diskutil_ch(dev, get_username(), NULL, 0) != EUCA_OK) {
-            LOGERROR("[%s] failed to change user for '%s' to '%s'\n", a->instanceId, dev, get_username());
-        }
-        injection_failed = 0;
-
-unmount:
-
-        // unmount partition and delete the mount point
-        if (diskutil_umount(mnt_pt) != EUCA_OK) {
-            LOGERROR("[%s] failed to unmount %s (there may be a resource leak)\n", a->instanceId, mnt_pt);
-            injection_failed = 1;
-        }
-        if (rmdir(mnt_pt) != 0) {
-            LOGERROR("[%s] failed to remove %s (there may be a resource leak): %s\n", a->instanceId, mnt_pt, strerror(errno));
-            injection_failed = 1;
-        }
-
-error:
-
-        if (injection_failed)
-            return (EUCA_ERROR);
-    }
-
     return (EUCA_OK);
 }
 

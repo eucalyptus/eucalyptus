@@ -101,9 +101,7 @@ public class CephRbdResource extends StorageResource {
 
   @Override
   public Long getSize() throws UnknownSizeException {
-    CephRbdConnectionManager conn = null;
-    try {
-      conn = CephRbdConnectionManager.getConnection(info, poolName);
+    try (CephRbdConnectionManager conn = CephRbdConnectionManager.getConnection(info, poolName)) {
       RbdImage rbdImage = null;
       try {
         rbdImage = conn.getRbd().open(imageName);
@@ -115,10 +113,6 @@ public class CephRbdResource extends StorageResource {
       }
     } catch (Exception e) {
       throw new UnknownSizeException("Failed to determine size of ceph image " + imageName + " in pool " + poolName, e);
-    } finally {
-      if (conn != null) {
-        conn.disconnect();
-      }
     }
   }
 
