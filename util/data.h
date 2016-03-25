@@ -107,7 +107,7 @@
 #define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
 #define ENI_ID_LEN                                 13   //! Length of the instance ID string (eni-xxxxxxxx\0)
-#define ENI_ATTACHMENT_ID_LEN                      20   //! Length of the eni attachment ID string (eni-attach-xxxxxxxx\0)
+#define ENI_ATTACHMENT_ID_LEN                      21   //! Length of the eni attachment ID string (eni-attach-xxxxxxxx\0)
 //! @}
 
 //! @{
