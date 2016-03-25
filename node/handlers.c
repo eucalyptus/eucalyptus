@@ -669,6 +669,22 @@ int get_value(char *s, const char *name, long long *valp)
     return ((euca_lscanf(s, buf, valp) == 1) ? EUCA_OK : EUCA_NOT_FOUND_ERROR);
 }
 
+// check SELinux mode and warn if it is in Permissive mode
+static void check_enforce(void) {
+    pid_t pid;
+    int fd;
+    char buf[CHAR_BUFFER_SIZE] = "";
+    if (euca_execlp_fd(&pid, NULL, &fd, NULL, "/usr/sbin/getenforce", NULL) == EUCA_OK) {
+        if (read(fd, &buf, CHAR_BUFFER_SIZE) > 0 && strstr(buf ,"Permissive")) {
+            LOGWARN("SELinux is in Permissive mode. Some functionality like migration would not work.\n");
+        }
+        waitpid(pid, NULL, 0);
+        close(fd);
+    } else {
+        LOGWARN("Failed to run /usr/sbin/getenforce\n");
+    }
+}
+
 //!
 //! Handles the logging of libvirt errors
 //!
@@ -701,6 +717,10 @@ void libvirt_err_handler(void *userData, virErrorPtr error)
 
     if (!ignore_error) {
         EUCALOG(EUCA_LOG_ERROR, "libvirt: %s (code=%d)\n", error->message, error->code);
+        // Warn about possible cause EUCA-11803
+        if (strstr(error->message, "Cannot parse sensitivity level")) {
+            check_enforce();
+        }
     }
 }
 
@@ -2977,6 +2997,8 @@ static int init(void)
         }
 
     }
+    // check SELinux mode
+    check_enforce();
 
     // post-init hook
     if (call_hooks(NC_EVENT_POST_INIT, nc_state.home)) {
