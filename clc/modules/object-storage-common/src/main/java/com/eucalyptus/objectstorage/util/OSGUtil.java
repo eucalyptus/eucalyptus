@@ -359,6 +359,10 @@ public class OSGUtil {
     
     for (CorsRule corsRule : corsRules ) {
 
+      if (corsRule == null) {
+        continue;
+      }
+      
       corsRuleMatch = corsRule; // will only be used if we find a match
       
       // Does the origin match any origin's regular expression in the rule?
@@ -436,43 +440,45 @@ public class OSGUtil {
     return corsMatchResult;
   }
   
-  public static void setCorsInfo(ObjectStorageRequestType request, ObjectStorageResponseType reply, String bucketUuid) {
-    // Don't change it if the caller has already set it.
-    if (reply.getOrigin() == null) {
-      reply.setOrigin(request.getOrigin());
-    }
-    // This might be the bucket name, or might be the UUID, depending on how it's used by the caller.
+  public static void setCorsInfo(ObjectStorageRequestType request, BaseMessage msg, String bucketUuid) {
+    // NOTE: The getBucket() might be the bucket name, or might be the UUID, depending on how it's used by the caller.
     // So, we don't depend on it to be either one. We just copy it to the reply so it shows up in 
     // cases that normally use it, like exception messages.
-    // Don't change it if the caller has already set it.
-    if (reply.getBucket() == null) {
-      reply.setBucket(request.getBucket());
-    }
-    // This is the field we depend on to look up bucket entities in the DB.
-    // Don't change it if the caller has already set it.
-    if (reply.getBucketUuid() == null) {
-      reply.setBucketUuid(bucketUuid);
+    // The getBucketUuid() is the field we depend on to look up bucket entities in the DB.
+    // 
+    // Don't change any response fields that are already set.
+    
+    if (request != null && msg != null) {
+      if (msg instanceof ObjectStorageResponseType) {
+        ObjectStorageResponseType response = (ObjectStorageResponseType) msg;
+        if (response.getOrigin() == null) {
+          response.setOrigin(request.getOrigin());
+        }
+        if (response.getHttpMethod() == null) {
+          response.setHttpMethod(request.getHttpMethod());
+        }
+        if (response.getBucket() == null) {
+          response.setBucket(request.getBucket());
+        }
+        if (response.getBucketUuid() == null) {
+          response.setBucketUuid(bucketUuid);
+        }
+      } else if (msg instanceof ObjectStorageDataResponseType) {
+        ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
+        if (response.getOrigin() == null) {
+          response.setOrigin(request.getOrigin());
+        }
+        if (response.getHttpMethod() == null) {
+          response.setHttpMethod(request.getHttpMethod());
+        }
+        if (response.getBucket() == null) {
+          response.setBucket(request.getBucket());
+        }
+        if (response.getBucketUuid() == null) {
+          response.setBucketUuid(bucketUuid);
+        }
+      }
     }
   }
-  
-  public static void setCorsInfo(ObjectStorageRequestType request, ObjectStorageDataResponseType reply, String bucketUuid) {
-    // Don't change it if the caller has already set it.
-    if (reply.getOrigin() == null) {
-      reply.setOrigin(request.getOrigin());
-    }
-    // This might be the bucket name, or might be the UUID, depending on how it's used by the caller.
-    // So, we don't depend on it to be either one. We just copy it to the reply so it shows up in 
-    // cases that normally use it, like exception messages.
-    // Don't change it if the caller has already set it.
-    if (reply.getBucket() == null) {
-      reply.setBucket(request.getBucket());
-    }
-    // This is the field we depend on to look up bucket entities in the DB.
-    // Don't change it if the caller has already set it.
-    if (reply.getBucketUuid() == null) {
-      reply.setBucketUuid(bucketUuid);
-    }
-  }
-  
 
 }

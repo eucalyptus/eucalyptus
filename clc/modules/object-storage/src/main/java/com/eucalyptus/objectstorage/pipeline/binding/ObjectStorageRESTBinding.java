@@ -388,6 +388,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
             httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
           operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+          operationParams.put("HttpMethod", httpRequest.getMethod().getName());
         }
         if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
           if (params.containsKey(ObjectStorageProperties.BucketParameter.delete.toString())) {
@@ -484,6 +485,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
           httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
         operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+        operationParams.put("HttpMethod", httpRequest.getMethod().getName());
       }
       if (!params.containsKey(ObjectStorageProperties.BucketParameter.acl.toString())) {
         if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {

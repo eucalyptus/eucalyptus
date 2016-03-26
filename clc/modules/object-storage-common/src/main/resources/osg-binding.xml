@@ -122,7 +122,6 @@
         <value name="Marker" field="marker" usage="optional"/>
         <value name="MaxKeys" field="maxKeys" usage="optional"/>
         <value name="Delimiter" field="delimiter" usage="optional"/>
-        <value name="Origin" field="origin" usage="optional"/>
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>

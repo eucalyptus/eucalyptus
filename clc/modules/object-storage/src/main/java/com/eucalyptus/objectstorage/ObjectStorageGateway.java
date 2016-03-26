@@ -493,6 +493,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       } catch (Exception ex) {
         LOG.debug("Failed to fire reporting event for OSG object creation", ex);
       }
+      OSGUtil.setCorsInfo(request, response, bucket.getBucketUuid());
       return response;
     } catch (AccessDeniedException e) {
       LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
@@ -591,6 +592,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
     reply.setStatus(HttpResponseStatus.OK);
     reply.setStatusMessage("OK");
     reply.setTimestamp(new Date());
+
+    OSGUtil.setCorsInfo(request, reply, bucket.getBucketUuid());
+
     return reply;
   }
 
@@ -895,14 +899,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public DeleteObjectResponseType deleteObject(final DeleteObjectType request) throws S3Exception {
-    ObjectEntity objectEntity;
+    ObjectEntity objectEntity = null;
+    Bucket bucket = null;
     try {
+      bucket = getBucketAndCheckAuthorization(request);
       objectEntity = getObjectEntityAndCheckPermissions(request, null);
     } catch (NoSuchKeyException e) {
       // Nothing to do, object doesn't exist. Return 204 per S3 spec
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
       reply.setStatusMessage("No Content");
+      if (bucket != null) {
+        OSGUtil.setCorsInfo(request, reply, bucket.getBucketUuid());
+      }
       return reply;
     } catch (AccessDeniedException e) {
       LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
@@ -932,6 +941,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
         reply.setVersionId(responseEntity.getVersionId());
         if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
           reply.setIsDeleteMarker(Boolean.TRUE);
+      }
+      if (bucket != null) {
+        OSGUtil.setCorsInfo(request, reply, bucket.getBucketUuid());
       }
       return reply;
     } catch (AccessDeniedException e) {
@@ -1471,6 +1483,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
     reply.setSize(objectEntity.getSize());
     reply.setVersionId(objectEntity.getVersionId());
     reply.setEtag(objectEntity.geteTag());
+
+    OSGUtil.setCorsInfo(request, reply, objectEntity.getBucket().getBucketUuid());
 
     return reply;
   }
@@ -2262,30 +2276,26 @@ public class ObjectStorageGateway implements ObjectStorageService {
     LOG.debug("LPT In addCorsResponseHeaders (MappingHttpResponse)");
 
     BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-    
-    if (msg instanceof ObjectStorageResponseType) {
+    addCorsResponseHeaders((HttpResponse) httpResponse, (BaseMessage) msg);
+  }
+  
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, BaseMessage msg) throws S3Exception {
+    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, BaseMessage), msg class is " + msg.getClass());
+    if (msg != null && msg instanceof ObjectStorageResponseType) {
       ObjectStorageResponseType response = (ObjectStorageResponseType) msg;
-      addCorsResponseHeaders((HttpResponse) httpResponse, response);
+      addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getHttpMethod(), 
+          response.getBucket(), response.getBucketUuid());
     } else if (msg instanceof ObjectStorageDataResponseType) {
       ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
-      addCorsResponseHeaders((HttpResponse) httpResponse, response);
+      addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getHttpMethod(), 
+          response.getBucket(), response.getBucketUuid());
     }
   }
   
-  public static void addCorsResponseHeaders (HttpResponse httpResponse, ObjectStorageResponseType response) throws S3Exception {
-    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, ObjectStorageResponseType)");
-    addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getBucket(), response.getBucketUuid());
-  }
-  
-  public static void addCorsResponseHeaders (HttpResponse httpResponse, ObjectStorageDataResponseType response) throws S3Exception {
-    LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, ObjectStorageDataResponseType)");
-    addCorsResponseHeaders(httpResponse, response.getOrigin(), response.getBucket(), response.getBucketUuid());
-  }
-  
-  public static void addCorsResponseHeaders (HttpResponse httpResponse, String origin, String bucket, String bucketUuid) throws S3Exception {
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, String origin, String httpMethod, String bucket, String bucketUuid) throws S3Exception {
     LOG.debug("LPT In addCorsResponseHeaders (HttpResponse, origin, bucket, bucketUuid)");
 
-    LOG.debug("Origin is: " + origin + "\nBucket is: " + bucket + "\nBucket UUID is: " + bucketUuid);
+    LOG.debug("LPT Origin is: " + origin + ", Bucket (name or UUID) is: " + bucket + ", Bucket UUID is: " + bucketUuid);
 
     if (origin != null && bucketUuid != null) {
       List<CorsRule> corsRules;
@@ -2303,7 +2313,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw new InternalErrorException(bucket, ex);
       }
 
-      CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, origin, HttpMethod.GET.getName(), null);
+      CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, origin, httpMethod, null);
       CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
 
       if (corsRuleMatch != null) {

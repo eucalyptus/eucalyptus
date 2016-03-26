@@ -71,6 +71,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -127,6 +128,11 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
         // add copied headers
         OSGUtil.addCopiedHeadersToResponse(httpResponse, headResponse);
       }
+
+      // Need to add the CORS headers before the next line where we null out
+      // the Message that contains the response fields we need.
+      ObjectStorageGateway.addCorsResponseHeaders(httpResponse);
+
       // Since a HEAD response, never include a body
       httpResponse.setMessage(null);
     }

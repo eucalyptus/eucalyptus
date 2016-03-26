@@ -99,6 +99,7 @@ public class ObjectStorageRequestType extends BaseMessage {
   protected String bucket;
   protected String key;
   protected String origin;
+  protected String httpMethod;
 
   public ObjectStorageRequestType() {}
 
@@ -143,6 +144,14 @@ public class ObjectStorageRequestType extends BaseMessage {
     this.origin = origin;
   }
 
+  public String getHttpMethod() {
+    return httpMethod;
+  }
+
+  public void setHttpMethod(String httpMethod) {
+    this.httpMethod = httpMethod;
+  }
+
   public UserPrincipal getUser() {
     return Principals.nobodyUser();
   }
@@ -181,6 +190,7 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
   String contentEncoding;
   String expires;
   String origin;
+  String httpMethod;
   String bucket;
   String bucketUuid;
 }
@@ -645,7 +655,6 @@ public class ListBucketType extends ObjectStorageRequestType {
   String marker;
   String maxKeys;
   String delimiter;
-  String origin;
 
   def ListBucketType() {
     prefix = "";
