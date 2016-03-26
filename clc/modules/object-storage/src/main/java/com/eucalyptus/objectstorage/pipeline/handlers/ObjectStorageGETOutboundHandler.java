@@ -155,8 +155,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
         writeObjectStorageDataGetResponse(dataResponse, ctx);
         return true;
       } else {
-        // CORS headers added within writeObjectStorageDataGetResponse() in a way that 
-        // we can't do it here, see that other addCorsResponseHeaders() call. 
+        // CORS headers are also added within createHttpResponse().
         // Do it here for any other message types.
         ObjectStorageGateway.addCorsResponseHeaders(httpResponse);
       }
@@ -253,7 +252,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
     OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
 
     // Have to do this here instead of in handleOutgoing() because here we
-    // created a new/replacement httpResponse object.    
+    // created a new/replacement httpResponse object.
     ObjectStorageGateway.addCorsResponseHeaders(httpResponse, reply);
 
     return httpResponse;

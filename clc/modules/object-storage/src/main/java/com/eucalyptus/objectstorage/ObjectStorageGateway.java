@@ -1389,6 +1389,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       populateStoredHeaders(response, objectEntity.getStoredHeaders());
       response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
       response.setStatus(HttpResponseStatus.OK);
+      OSGUtil.setCorsInfo(request, response, objectEntity.getBucket().getBucketUuid());
       return response;
     } catch (AccessDeniedException e) {
       LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
