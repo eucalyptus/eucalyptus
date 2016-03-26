@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,16 @@ import com.google.common.base.Optional;
  * Functional utility methods
  */
 public class FUtils {
+
+  /**
+   * Chain functions, useful for method reference composition.
+   */
+  public static <I,P,R> java.util.function.Function<P,R> chain(
+      final java.util.function.Function<? super P, ? extends I> f1,
+      final java.util.function.Function<? super I, R> f2
+  ) {
+    return f2.compose( f1 );
+  }
 
   /**
    * Partially apply the function using the given parameter.
