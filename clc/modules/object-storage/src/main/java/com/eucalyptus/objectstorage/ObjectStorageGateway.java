@@ -902,7 +902,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
     ObjectEntity objectEntity = null;
     Bucket bucket = null;
     try {
-      bucket = getBucketAndCheckAuthorization(request);
+      //LPT Bug! Throws exception on anonymous access to an object
+      //bucket = getBucketAndCheckAuthorization(request);
+      //LPT The fix:
+      bucket = ensureBucketExists(request.getBucket());
+      
       objectEntity = getObjectEntityAndCheckPermissions(request, null);
     } catch (NoSuchKeyException e) {
       // Nothing to do, object doesn't exist. Return 204 per S3 spec
@@ -2186,11 +2190,20 @@ public class ObjectStorageGateway implements ObjectStorageService {
     PreflightCheckCorsResponseType response = null;
 
     try {
-      Bucket bucket = getBucketAndCheckAuthorization(request);
+      // For a preflight request, we don't need to authenticate the client's 
+      // access to the bucket nor object in the request. We send back the 
+      // response headers regardless. This matches AWS behavior.
+      // We're not exposing any data from the bucket, just whether or
+      // not the client's proposed CORS request would be allowed or not,
+      // based on the CORS config. The actual CORS request can still fail
+      // based on authentication, independent of CORS.
+      //LPT No!: Bucket bucket = getBucketAndCheckAuthorization(request);
       bucketName = request.getBucket();
+      Bucket bucket = ensureBucketExists(bucketName);
       String key = request.getKey();
-      response = request.getReply();
+
       PreflightRequest preflightRequest = request.getPreflightRequest();
+      response = request.getReply();
 
       String requestOrigin = preflightRequest.getOrigin();
       if (requestOrigin == null || requestOrigin.isEmpty()) {

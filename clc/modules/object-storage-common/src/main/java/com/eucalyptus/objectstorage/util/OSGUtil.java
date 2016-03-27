@@ -430,6 +430,11 @@ public class OSGUtil {
           // No allowed header matches this request header, so this rule fails to match
           break;  // stop looking through the request headers
         }
+      }  // end for each request header
+      if (found) {
+        // Request headers are OK too, so everything in the request matches 
+        // this rule. Stop looking through CORS rules.
+        break;
       }
     }  // end for each CORS rule
 
