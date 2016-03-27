@@ -49,21 +49,30 @@ import com.eucalyptus.util.Pair
 import com.eucalyptus.util.Strings
 import com.google.common.base.Function
 import com.google.common.base.Optional
+import com.google.common.base.Supplier
+import com.google.common.base.Suppliers
 import com.google.common.collect.Iterables
 import com.google.common.collect.Iterators
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
+import java.util.concurrent.TimeUnit
+
 import static com.eucalyptus.compute.common.network.NetworkingFeature.*
 
 /**
- * NetworkingService implementation for EDGE mode
+ * NetworkingService implementation for EDGE and VPC modes
  */
 @CompileStatic
 class EdgeNetworkingService extends NetworkingServiceSupport {
 
   private static final Logger logger = Logger.getLogger( EdgeNetworkingService );
+
+  private static final Supplier<Boolean> isVpc = Suppliers.memoizeWithExpiration( {
+    final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
+    configurationOptional.isPresent( ) && NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode
+  }, 5, TimeUnit.SECONDS,  )
 
   EdgeNetworkingService( ) {
     super( logger )
@@ -125,12 +134,9 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
 
   @Override
   DescribeNetworkingFeaturesResponseType describeFeatures(final DescribeNetworkingFeaturesType request) {
-    final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
-    final boolean vpc = configurationOptional.isPresent( ) &&
-        NetworkMode.VPCMIDO.toString( ) == configurationOptional.get( ).mode;
     DescribeNetworkingFeaturesResponseType.cast( request.reply( new DescribeNetworkingFeaturesResponseType(
         describeNetworkingFeaturesResult : new DescribeNetworkingFeaturesResult(
-            networkingFeatures: vpc ?
+            networkingFeatures: isVpc.get( ) ?
                 Lists.newArrayList( Vpc, SiteLocalManaged ) :
                 Lists.newArrayList( Classic )
         )
@@ -139,8 +145,11 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
 
   @Override
   UpdateInstanceResourcesResponseType update(final UpdateInstanceResourcesType request) {
-    boolean updated = PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
-    PrivateAddresses.releasing( request.resources.privateIps, request.partition )
+    boolean updated = false
+    if ( !isVpc.get( ) ) {
+      updated = PublicAddresses.clearDirty( request.resources.publicIps, request.partition ) || updated
+    }
+    updated = PrivateAddresses.releasing( request.resources.privateIps, request.partition ) || updated
     UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType(
       updated: updated
     ) ) )

@@ -226,6 +226,9 @@ class NetworkInfoBroadcasts {
         }
         vpcIds
     }
+    natGateways.forEach( { NatGatewayNetworkView natGateway ->
+      if ( natGateway.state == NatGateway.State.available ) activeVpcs.add( natGateway.vpcId )
+    } )
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
