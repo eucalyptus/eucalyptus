@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   }
 
   @Override
-  void releasing( Iterable<String> activeAddresses, String partition ) {
+  boolean releasing( Iterable<String> activeAddresses, String partition ) {
     boolean released = false
     getPersistence( ).withMatching( PrivateAddress.inState( RELEASING, partition ) ) { PrivateAddress privateAddress ->
       if ( !Iterables.contains( activeAddresses, privateAddress.name ) && privateAddress.getScope( ) == null ) {
@@ -112,6 +112,7 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
         getPersistence( ).teardown( privateAddress )
         released = true
       }
+      void
     }
 
     getPersistence( ).withMatching( PrivateAddress.inState( PENDING ) ) { PrivateAddress privateAddress ->
@@ -121,8 +122,10 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
         getPersistence( ).teardown( privateAddress )
         released = true
       }
+      void
     }
     if ( released ) cache.invalidate( key( '', '') )
+    released
   }
 
   /**

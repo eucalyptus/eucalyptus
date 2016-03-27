@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.NIInstance;
+import com.eucalyptus.cluster.NINetworkInterface;
 import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback;
 import com.eucalyptus.component.Topology;
@@ -36,6 +38,8 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.RouteTable;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.EntityCache;
@@ -58,6 +62,7 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.NetworkInfoSource;
 import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Pair;
@@ -94,9 +99,11 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
@@ -105,6 +112,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.google.common.hash.Hashing.goodFastHash;
@@ -263,6 +272,7 @@ public class NetworkInfoBroadcaster {
       if ( lastBroadcast != null && lastBroadcast.version == sourceFingerprint &&
           ( appliedVersion == null || appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) ) {
         encodedNetworkInfo = lastBroadcast.encodedNetworkInfo;
+        clearDirtyPublicAddresses( lastBroadcast.networkInfo );
       } else {
         final int networkInfoFingerprint;
         final NetworkInfo info;
@@ -270,7 +280,7 @@ public class NetworkInfoBroadcaster {
             ( appliedVersion != null && !appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) &&
             ( System.currentTimeMillis() - lastBroadcast.lastConvergedTimestamp > TimeUnit.SECONDS.toMillis( 150 ) );
         if ( converged ) {
-          info =  lastBroadcast.networkInfo;
+          info = lastBroadcast.networkInfo;
           networkInfoFingerprint = lastBroadcast.version;
         } else {
           info = NetworkInfoBroadcasts.buildNetworkConfiguration(
@@ -376,6 +386,20 @@ public class NetworkInfoBroadcaster {
     hasher.putString( Joiner.on( ',' ).join( Sets.newTreeSet( dirtyPublicAddresses ) ), StandardCharsets.UTF_8 );
     hasher.putInt( networkConfiguration.hashCode( ) );
     return hasher.hash( ).asInt( );
+  }
+
+  private static void clearDirtyPublicAddresses( final NetworkInfo networkInfo ) {
+    if ( !Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) return;
+
+    final Set<String> broadcastPublicIps = networkInfo.getInstances( ).stream( )
+        .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
+        .map( NINetworkInterface::getPublicIp )
+        .filter( Objects::nonNull )
+        .collect( Collectors.toSet( ) );
+
+    PublicAddresses.dirtySnapshot( ).stream( )
+        .filter( publicIp -> !broadcastPublicIps.contains( publicIp ) )
+        .forEach( PublicAddresses::clearDirty );
   }
 
   public static class AppliedNetworkInfoEventListener implements EventListener<ClockTick> {

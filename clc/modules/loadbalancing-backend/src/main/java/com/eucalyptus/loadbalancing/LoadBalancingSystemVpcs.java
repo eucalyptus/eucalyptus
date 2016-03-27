@@ -490,6 +490,7 @@ public class LoadBalancingSystemVpcs {
             }
 
             final Map<String, String> azToNatGateway = Maps.newHashMap();
+            final Set<String> eipAllocated = Sets.newHashSet();
             for (final String vpcId : systemVpcIds) {
                 // 2. Internet gateway
                 final String internetGatewayId = getInternetGateway(vpcId);
@@ -498,7 +499,6 @@ public class LoadBalancingSystemVpcs {
                 final Map<String, String> publicSubnets = getSubnets(vpcId,
                         SystemVpcPublicSubnetBlocks().get(vpcToCidr.get(vpcId)),
                         availabilityZones);
-
                 // 4. create a route table for the public subnet
                 for (final String az : publicSubnets.keySet()) {
                     final String subnetId = publicSubnets.get(az);
@@ -506,7 +506,8 @@ public class LoadBalancingSystemVpcs {
                     addRouteToGateway(routeTableId, internetGatewayId, null);
 
                     // 5. elastic IP to be assigned to Nat gateway
-                    final String eipAllocationId = getElasticIp();
+                    final String eipAllocationId = getElasticIp(eipAllocated);
+                    eipAllocated.add(eipAllocationId);
 
                     // 6. Nat gateway placed in the public subnet
                     final String natGatewayId = getNatGateway(subnetId, eipAllocationId);
@@ -549,12 +550,14 @@ public class LoadBalancingSystemVpcs {
         return client.createSystemNatGateway(subnetId, eipAllocationId);
     }
 
-    private static String getElasticIp() {
+    private static String getElasticIp(final Set<String> exclude) {
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         List<AddressInfoType> addresses =
                 client.describeSystemAddresses(true);
         String allocationId = null;
         for (final AddressInfoType address : addresses) {
+            if (exclude.contains(address.getAllocationId()))
+                continue;
             if (address.getAssociationId() != null || address.getInstanceId() != null)
                 continue;
             if (address.getPublicIp() != null) {

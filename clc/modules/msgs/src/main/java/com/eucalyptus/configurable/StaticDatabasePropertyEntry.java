@@ -609,13 +609,27 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
 
     private void enableInstanceDns( ) {
+      setPropertyValue(
+          "dns.split_horizon.enabled",
+          String.valueOf( true ),
+          "Setting property dns.split_horizon.enabled property to true to enable instance dns" );
+    }
+
+    private void enableServiceDns( ) {
+      setPropertyValue(
+          "dns.services.enabled",
+          String.valueOf( true ),
+          "Setting property dns.services.enabled property to true to enable service dns" );
+    }
+
+    private void setPropertyValue( final String name, final String value, final String message ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
         try {
-          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "dns.split_horizon.enabled", null ) );
-          final String trueStr = String.valueOf( true );
-          if ( !trueStr.equals( property.getValue( ) ) ) {
-            LOG.info( "Setting property dns.split_horizon.enabled property to true to enable instance dns" );
-            property.setValue( trueStr );
+          final StaticDatabasePropertyEntry property =
+              Entities.uniqueResult( new StaticDatabasePropertyEntry( null, name, null ) );
+          if ( !value.equals( property.getValue( ) ) ) {
+            LOG.info( message );
+            property.setValue( value );
           }
         } catch ( NoSuchElementException e ) {
           //Nothing to do.
@@ -630,6 +644,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     public boolean apply( final Class entity ) {
       migrateIdentifierCanonicalizerProperty( );
       enableInstanceDns( );
+      enableServiceDns( );
       return true;
     }
   }

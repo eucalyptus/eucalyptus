@@ -31,6 +31,7 @@ import com.eucalyptus.cluster.NIInstance
 import com.eucalyptus.cluster.NIManagedSubnet
 import com.eucalyptus.cluster.NIManagedSubnets
 import com.eucalyptus.cluster.NIMidonet
+import com.eucalyptus.cluster.NINatGateway
 import com.eucalyptus.cluster.NINetworkInterface
 import com.eucalyptus.cluster.NINode
 import com.eucalyptus.cluster.NINodes
@@ -42,6 +43,7 @@ import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NIVpc
 import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
+import com.eucalyptus.compute.common.internal.vpc.NatGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.EdgeSubnet
@@ -403,6 +405,47 @@ class NetworkInfoBroadcasterTest {
     vpcBroadcastTest( midonet, niMidonet )
   }
 
+  /**
+   * Test to ensure that a vpc is included in the network broadcast
+   * even when there are no instances in that vpc.
+   */
+  @Test
+  void testBroadcastVpcMidoNatGatewayOnly( ) {
+    Midonet midonet = new Midonet(
+        eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+        gateways: [
+            new MidonetGateway(
+                gatewayHost: 'a-35.qa1.eucalyptus-systems.com',
+                gatewayIP: '10.116.133.77',
+                gatewayInterface: 'em1.116',
+            ),
+        ],
+        publicNetworkCidr: '10.116.0.0/17',
+        publicGatewayIP: '10.116.133.67'
+    )
+    NIMidonet niMidonet = new NIMidonet(
+        name: 'mido',
+        gateways: new NIMidonetGateways(
+            name: 'gateways',
+            gateways: [
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
+                        new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
+                    ]
+                ),
+            ]
+        ),
+        properties: [
+            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
+            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
+        ]
+    )
+    vpcBroadcastTestNatGateway( midonet, niMidonet )
+  }
+
   private void vpcBroadcastTest( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
     NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
@@ -549,6 +592,143 @@ class NetworkInfoBroadcasterTest {
                     )
                 ]
             )
+        ],
+        securityGroups: [ ]
+    ), info )
+  }
+
+  private void vpcBroadcastTestNatGateway( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+        Optional.of( new NetworkConfiguration(
+            mode: 'VPCMIDO',
+            mido: midoConfig,
+            publicIps: [ '2.0.0.0-2.0.0.255' ],
+        ) ),
+        new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
+            [ ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
+            [ vpc( 'vpc-00000001', '000000000002' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
+            [ subnet( 'subnet-00000001', '000000000002', 'cluster1', 'vpc-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
+            [ routeTable( 'rtb-00000001', '000000000002', 'vpc-00000001', true, [ 'subnet-00000001' ], [
+                route( '0.0.0.0/0', null, 'nat-00000000000000001' )
+            ] ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
+            [ internetGateway( 'igw-00000001', '000000000002', 'vpc-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            [ ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+            [ natGateway( 'nat-00000000000000001', '000000000002', 'vpc-00000001', 'subnet-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0'   ) ]
+          }
+          @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+            [:]
+          }
+        },
+        { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { '1.1.1.1' } as Supplier<String>,
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+        [] as Set<String>
+    )
+
+    assertEquals( 'broadcast vpc midonet', new NetworkInfo(
+        configuration: new NIConfiguration(
+            properties: [
+                new NIProperty( name: 'mode', values: ['VPCMIDO'] ),
+                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
+                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
+                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
+                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
+            ],
+            midonet: midoNetworkInformation,
+            clusters: new NIClusters( name: 'clusters', clusters: [
+                new NICluster(
+                    name: 'cluster1',
+                    subnet: new NISubnet(
+                        name: '172.31.0.0',
+                        properties: [
+                            new NIProperty( name: 'subnet', values: ['172.31.0.0'] ),
+                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
+                            new NIProperty( name: 'gateway', values: ['172.31.0.1'] )
+                        ]
+                    ),
+                    properties: [
+                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
+                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
+                        new NIProperty( name: 'privateIps', values: ['172.31.0.5'] ),
+                    ],
+                    nodes: new NINodes( name: 'nodes', nodes: [
+                        new NINode(
+                            name: 'node1',
+                            instanceIds: [ ]
+                        )
+                    ] )
+                )
+            ] ),
+        ),
+        vpcs: [
+            new NIVpc(
+                name: 'vpc-00000001',
+                ownerId: '000000000002',
+                cidr: '10.0.0.0/16',
+                subnets: [
+                    new NIVpcSubnet(
+                        name:  'subnet-00000001',
+                        ownerId: '000000000002',
+                        cidr: '10.0.0.0/16',
+                        cluster: 'cluster1',
+                        routeTable: 'rtb-00000001'
+                    )
+                ],
+                routeTables: [
+                    new NIRouteTable(
+                        name: 'rtb-00000001',
+                        ownerId: '000000000002',
+                        routes: [
+                            new NIRoute(
+                                destinationCidr: '0.0.0.0/0',
+                                natGatewayId: 'nat-00000000000000001',
+                            )
+                        ]
+                    )
+                ],
+                natGateways: [
+                  new NINatGateway(
+                      name: 'nat-00000000000000001',
+                      ownerId:  '000000000002',
+                      vpc:  'vpc-00000001',
+                      subnet: 'subnet-00000001',
+                      macAddress: '00:00:00:00:00:00',
+                      publicIp: '2.0.0.0',
+                      privateIp: '10.0.0.0'
+                  )
+                ],
+                internetGateways: [ 'igw-00000001' ]
+            )
+        ],
+        internetGateways: [
+            new NIInternetGateway(
+                name: 'igw-00000001',
+                ownerId: '000000000002'
+            )
+        ],
+        instances: [
         ],
         securityGroups: [ ]
     ), info )
@@ -742,6 +922,20 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
+  private static NetworkInfoBroadcasts.NatGatewayNetworkView natGateway( String id, String ownerAccountNumber, String vpcId, String subnetId, String mac, String publicIp, String privateIp ) {
+    new NetworkInfoBroadcasts.NatGatewayNetworkView(
+        id,
+        1,
+        NatGateway.State.available,
+        ownerAccountNumber,
+        mac,
+        privateIp,
+        publicIp,
+        vpcId,
+        subnetId
+    )
+  }
+
   private static NetworkInfoBroadcasts.RouteTableNetworkView routeTable( String id, String ownerAccountNumber, String vpcId, boolean main, List<String> subnetIds, List<NetworkInfoBroadcasts.RouteNetworkView> routes = [] ) {
     new NetworkInfoBroadcasts.RouteTableNetworkView(
         id,
@@ -754,12 +948,12 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcasts.RouteNetworkView route( String cidr, String internetGatewayId ) {
+  private static NetworkInfoBroadcasts.RouteNetworkView route( String cidr, String internetGatewayId, String natGatewayId = null ) {
     new NetworkInfoBroadcasts.RouteNetworkView(
         true,
         cidr,
         internetGatewayId,
-        null,
+        natGatewayId,
         null,
         null
     )
