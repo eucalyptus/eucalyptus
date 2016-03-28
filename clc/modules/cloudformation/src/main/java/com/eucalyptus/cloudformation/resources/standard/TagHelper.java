@@ -29,13 +29,16 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoS
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.loadbalancing.common.msgs.TagKeyList;
 import com.eucalyptus.loadbalancing.common.msgs.TagList;
 import com.eucalyptus.util.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by ethomas on 9/21/14.
@@ -137,7 +140,7 @@ public class TagHelper {
     }
   }
 
-  public static void checkReservedCloudFormationResourceTemplateTags(List<CloudFormationResourceTag> tags) throws ValidationErrorException {
+  public static void checkReservedCloudFormationResourceTemplateTags(Collection<CloudFormationResourceTag> tags) throws ValidationErrorException {
     if (tags == null) return;
     List<String> tagNames = Lists.newArrayList();
     for (CloudFormationResourceTag tag: tags) {
@@ -157,7 +160,7 @@ public class TagHelper {
     }
   }
 
-  public static TagList convertToTagList(List<CloudFormationResourceTag> cloudFormationResourceTags) {
+  public static TagList convertToTagList(Collection<CloudFormationResourceTag> cloudFormationResourceTags) {
     TagList tagList = new TagList();
     if (cloudFormationResourceTags != null) {
       for (CloudFormationResourceTag cloudFormationResourceTag: cloudFormationResourceTags) {
@@ -168,5 +171,27 @@ public class TagHelper {
       }
     }
     return tagList;
+  }
+
+  public static TagKeyList convertToTagKeyList(Set<String> tagKeys) {
+    TagKeyList tagKeyList = new TagKeyList();
+    if (tagKeys != null) {
+      for (String tagKey: tagKeys) {
+        com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly tagKeyOnly = new com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly();
+        tagKeyOnly.setKey(tagKey);
+        tagKeyList.getMember().add(tagKeyOnly);
+      }
+    }
+    return tagKeyList;
+  }
+
+  public static Set<String> getTagKeyNames(Set<CloudFormationResourceTag> tags) {
+    Set<String> tagKeyNames = Sets.newHashSet();
+    if (tags != null) {
+      for (CloudFormationResourceTag tag: tags) {
+        tagKeyNames.add(tag.getKey());
+      }
+    }
+    return tagKeyNames;
   }
 }
