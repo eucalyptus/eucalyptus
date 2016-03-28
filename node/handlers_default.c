@@ -1794,6 +1794,8 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     if ((ret = attach_network_interface_instance(instance, netCfg->interfaceId, libvirt_xml))) {
         LOGERROR("[%s][%s] libvirt attach device failed\n", instanceId, netCfg->interfaceId)
         // TODO cleanup and update state
+        
+        if(libvirt_xml) EUCA_FREE(libvirt_xml);
         return ret;
     }
 
@@ -1801,11 +1803,14 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHED))) {
         LOGERROR("[%s][%s] Aborting network interface attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
         // TODO cleanup and update state
+        
+        if(libvirt_xml) EUCA_FREE(libvirt_xml);
         return ret;
     }
 
     LOGINFO("[%s][%s][%s] attached network interface successfully\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
 
+    if(libvirt_xml) EUCA_FREE(libvirt_xml);
     return ret;
 }
 
@@ -1901,6 +1906,8 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     if ((ret = detach_network_interface_instance(instanceId, attachmentId, libvirt_xml))) {
         LOGERROR("[%s][%s] libvirt detach device failed\n", instanceId, attachmentId)
         // TODO cleanup and update state
+        
+        if(libvirt_xml) EUCA_FREE(libvirt_xml);
         return ret;
     } else {
         // Remove libvirt.xml file
@@ -1913,11 +1920,14 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_DETACHED))) {
         LOGERROR("[%s][%s] Aborting network interface detach operation due to error updating network interface record\n", instanceId, netCfg->attachmentId)
         // TODO is there any clean up to be done here?
+        
+        if(libvirt_xml) EUCA_FREE(libvirt_xml);
         return ret;
     }
 
     LOGINFO("[%s][%s] detached network interface successfully\n", instanceId, attachmentId);
 
+    if(libvirt_xml) EUCA_FREE(libvirt_xml);
     return EUCA_OK;
 }
 
