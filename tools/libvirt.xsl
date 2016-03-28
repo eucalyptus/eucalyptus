@@ -213,18 +213,6 @@ that describes a Eucalyptus instance to be launched.
                                 </xsl:otherwise>
                             </xsl:choose>
                         </source>
-                        <boot>
-                            <xsl:attribute name="order">
-                                <xsl:variable name="devname" select="@targetDeviceName" />
-                                <xsl:for-each select="/instance/vbrs/vbr">
-                                    <xsl:choose>
-                                        <xsl:when test="./guestDeviceName[text() = $devname]">
-                                            <xsl:value-of select="number(./diskNumber) + 1" />
-                                        </xsl:when>
-                                    </xsl:choose>
-                                </xsl:for-each>
-                            </xsl:attribute>
-                        </boot>
                         <target>
 	                    <xsl:choose> 
 			       <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and ( /instance/os/@platform='windows' or /instance/os/@virtioRoot = 'true')">
