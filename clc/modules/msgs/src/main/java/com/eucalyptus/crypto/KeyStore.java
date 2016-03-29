@@ -80,8 +80,10 @@ public interface KeyStore {
   public abstract boolean check( ) throws GeneralSecurityException;
   
   public abstract boolean containsEntry( final String alias );
-  
+
   public abstract X509Certificate getCertificate( final String alias ) throws GeneralSecurityException;
+
+  public abstract List<X509Certificate> getCertificateChain( final String alias ) throws GeneralSecurityException;
   
   public abstract Key getKey( final String alias, final String password ) throws GeneralSecurityException;
   
