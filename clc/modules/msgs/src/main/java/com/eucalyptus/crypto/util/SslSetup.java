@@ -426,14 +426,13 @@ public class SslSetup {
                                                                                 
                                                                                 @Override
                                                                                 public X509Certificate[] get( ) {
-                                                                                  X509Certificate[] certs = ObjectArrays.newArray( X509Certificate.class, 1 );
                                                                                   try {
-                                                                                    certs[0] = SystemCredentials.getKeyStore( ).getCertificate(
-                                                                                      SslSetup.SERVER_ALIAS );
-                                                                                    return certs;
+                                                                                    return SystemCredentials.getKeyStore( ).getCertificateChain(
+                                                                                            SslSetup.SERVER_ALIAS ).toArray( new X509Certificate[0] );
                                                                                   } catch ( GeneralSecurityException ex ) {
                                                                                     LOG.error( ex, ex );
-                                                                                    return certs;
+                                                                                    // Return an empty array
+                                                                                    return ObjectArrays.newArray( X509Certificate.class, 1);
                                                                                   }
                                                                                 }
                                                                               };
