@@ -72,6 +72,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAKey;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -414,6 +415,15 @@ public class SystemCredentials {
       X509Certificate certificate = super.getCertificate( alias );
       RestrictSize.INSTANCE.apply( certificate.getPublicKey( ) );
       return certificate;
+    }
+
+    @Override
+    public final List<X509Certificate> getCertificateChain( String alias) throws GeneralSecurityException {
+      List<X509Certificate> certificateChain = super.getCertificateChain(alias);
+      for (X509Certificate cert: certificateChain) {
+        RestrictSize.INSTANCE.apply(cert.getPublicKey());
+      }
+      return certificateChain;
     }
 
     @Override

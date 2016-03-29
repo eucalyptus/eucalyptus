@@ -131,6 +131,18 @@ public abstract class AbstractKeyStore implements com.eucalyptus.crypto.KeyStore
   public X509Certificate getCertificate( final String alias ) throws GeneralSecurityException {
     return ( X509Certificate ) this.keyStore.getCertificate( alias );
   }
+
+  @Override
+  public List<X509Certificate> getCertificateChain(final String alias) throws GeneralSecurityException {
+    List<X509Certificate> result = Lists.newArrayList();
+    Certificate[] certChain = this.keyStore.getCertificateChain(alias);
+    for (Certificate cert: certChain) {
+      if (cert instanceof X509Certificate) {
+        result.add((X509Certificate) cert);
+      }
+    }
+    return result;
+  }
   
   @Override
   public Key getKey( final String alias, final String password ) throws GeneralSecurityException {
