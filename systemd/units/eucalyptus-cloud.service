@@ -7,7 +7,8 @@ Wants=chronyd.service
 Type=simple
 EnvironmentFile=-/etc/eucalyptus/eucalyptus.conf
 ExecStart=/usr/sbin/eucalyptus-cloud $CLOUD_OPTS
-LimitNOFILE=4096
+LimitNOFILE=65535
+LimitNPROC=infinity
 PrivateTmp=true
 
 [Install]
