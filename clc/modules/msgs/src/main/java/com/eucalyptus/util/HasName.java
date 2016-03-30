@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,11 +65,11 @@ package com.eucalyptus.util;
 import com.google.common.base.Function;
 
 public interface HasName<T> extends Mappable<T,String> {
-  public abstract String getName( );
-  public final Function<HasName<?>,String> GET_NAME = new Function<HasName<?>,String>() {
-
+  String getName( );
+  CompatFunction<HasName<?>,String> GET_NAME = new CompatFunction<HasName<?>,String>() {
     @Override
     public String apply( HasName<?> arg0 ) {
       return arg0.getName( );
-    }};
+    }
+  };
 }

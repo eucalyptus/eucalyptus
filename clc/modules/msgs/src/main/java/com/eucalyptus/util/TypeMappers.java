@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,6 +101,8 @@ public class TypeMappers {
   private static Logger                          LOG          = Logger.getLogger( TypeMappers.class );
   private static SortedSetMultimap<Class, Class> knownMappers = TreeMultimap.create( CompareClasses.INSTANCE, CompareClasses.INSTANCE );
   private static Map<String, Function>           mappers      = Maps.newConcurrentMap();
+  private static Map<String, java.util.function.Function>
+                                                 jdkMmappers  = Maps.newConcurrentMap();
   private static final Joiner                    keyJoiner    = Joiner.on( "=>" );
 
   public static <A, B> B transform( A from, Class<B> to ) {
@@ -126,6 +128,17 @@ public class TypeMappers {
       checkParam( knownMappers.get( a ), hasItem( b ) );
     }
     return mapper;
+  }
+
+  public static <A, B> java.util.function.Function<A, B> lookupF( Class<A> a, Class<B> b ) {
+    final String key = key( a, b );
+    java.util.function.Function<A, B> mapperF = jdkMmappers.get( key );
+    if ( mapperF == null ) {
+      final Function<A,B> mapper = lookup( a, b );
+      mapperF = mapper::apply;
+      jdkMmappers.putIfAbsent( key, mapperF );
+    }
+    return mapperF;
   }
 
   private static <A, B> Function<A, B> lookupUnsafe( Class<A> a, Class<B> b ) {

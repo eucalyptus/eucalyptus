@@ -1473,6 +1473,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         if ( networkConfigs != null ) for ( final NetworkConfigType networkConfig : networkConfigs ) {
           reportedAttachment.add( networkConfig.getAttachmentId( ) );
         }
+        boolean touch = false;
         for ( final NetworkInterface networkInterface : vm.getNetworkInterfaces( ) ) {
           if ( !networkInterface.isAttached( ) || networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
             continue;
@@ -1482,6 +1483,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.attaching ) {
             if ( reportedAttachment.contains( attachmentId ) ) {
               attachment.transitionStatus( NetworkInterfaceAttachment.Status.attached );
+              touch = true;
             }
           } else if ( attachment.getStatus( ) == NetworkInterfaceAttachment.Status.detaching ) {
             if ( !reportedAttachment.contains( attachmentId ) &&
@@ -1489,8 +1491,12 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                   ( networkInterface.lastUpdateMillis( ) > TimeUnit.MINUTES.toMillis( 1 ) ) )
             ) {
               networkInterface.detach( );
+              touch = true;
             }
           }
+        }
+        if ( touch ) {
+          vm.updateTimeStamps( );
         }
       }
     };
