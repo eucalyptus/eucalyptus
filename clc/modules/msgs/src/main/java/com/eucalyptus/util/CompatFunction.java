@@ -19,15 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.util.function.Function;
 
 /**
- * Function interface with a non-null result.
+ * Function that is compatible with both Java 8 and Guava.
  */
-public interface NonNullFunction<F, T> extends CompatFunction<F, T> {
-
-  @Nonnull
-  @Override
-  T apply( @Nullable F f );
+public interface CompatFunction<F, T> extends Function<F, T>, com.google.common.base.Function<F,T> {
 }
