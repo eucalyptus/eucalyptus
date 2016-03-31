@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -197,7 +197,6 @@ static char *jvm_default_opts[] = {
     "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
     "-XX:+UseConcMarkSweepGC",
     "-Djava.net.preferIPv4Stack=true",
-    "-Djava.security.policy=" EUCALYPTUS_ETC_DIR "/security.policy",
     "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
     "-Djava.awt.headless=true",
     "-Dsun.java.command=Eucalyptus",

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,6 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.bootstrap.Bootstrap.Stage;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
@@ -85,7 +84,7 @@ public class DirectoryBootstrapper extends Bootstrapper {
     }
     for( SubDirectory s : SubDirectory.values( ) ) {
       EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ).info( );
-      s.check( );
+      s.perhapsCheck( );
       System.setProperty( "com.eucalyptus.dir." + s.name( ).toLowerCase( ), s.getFile( ).getAbsolutePath( ) );
     }
     return true;

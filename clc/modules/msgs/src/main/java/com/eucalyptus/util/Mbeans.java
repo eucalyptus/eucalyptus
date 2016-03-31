@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -90,12 +91,16 @@ import javax.management.remote.JMXServiceURL;
 import javax.management.remote.rmi.RMIConnectorServer;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.component.Component;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Charsets;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import com.google.common.io.Resources;
 
 public class Mbeans {
   private static final Map<String, String> EMPTY    = new HashMap<String, String>( );
@@ -213,6 +218,17 @@ public class Mbeans {
             LOG.trace( "Succeeded reading jmx config file: " + jmxConfig.getAbsolutePath( ) );
             break;
           } catch ( IOException ex ) {
+            LOG.error( ex, ex );
+          }
+        } else {
+          try {
+            final URL jmxConfigUrl = Resources.getResource( c, c.getSimpleName( ) + ".jmx-export.groovy" );
+            exportString = Resources.toString( jmxConfigUrl, Charsets.UTF_8 );
+            LOG.trace( "Succeeded reading jmx config resource: " + jmxConfigUrl );
+            break;
+          } catch ( final IllegalArgumentException e ) {
+            // configuration not present, continue
+          } catch ( final IOException ex ) {
             LOG.error( ex, ex );
           }
         }
