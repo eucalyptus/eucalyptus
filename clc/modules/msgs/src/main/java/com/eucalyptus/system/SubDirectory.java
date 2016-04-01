@@ -70,8 +70,8 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 public enum SubDirectory {
-  SYSFAULTS( BaseDirectory.LIB, "faults" ),
-  CUSTOMFAULTS( BaseDirectory.HOME, "/etc/eucalyptus/faults" ),
+  SYSFAULTS( BaseDirectory.LIB, "faults", false ),
+  CUSTOMFAULTS( BaseDirectory.HOME, "/etc/eucalyptus/faults", false  ),
   
   DB( BaseDirectory.STATE, "db" ) {
     @Override
@@ -141,7 +141,7 @@ public enum SubDirectory {
   },
   UPGRADE( BaseDirectory.VAR, "upgrade" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
-  LIB( BaseDirectory.LIB, "" ),
+  LIB( BaseDirectory.LIB, "", false ),
   RUNDB( BaseDirectory.RUN, "/db" ) {
     
     @Override
@@ -161,16 +161,16 @@ public enum SubDirectory {
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   private final BaseDirectory         parent;
   private final String                dir;
-  private final boolean               check;
+  private final boolean               assertPermissions;
 
   SubDirectory( final BaseDirectory parent, final String dir ) {
     this( parent, dir, true );
   }
 
-  SubDirectory( final BaseDirectory parent, final String dir, final boolean check ) {
+  SubDirectory( final BaseDirectory parent, final String dir, final boolean assertPermissions ) {
     this.parent = parent;
     this.dir = dir;
-    this.check = check;
+    this.assertPermissions = assertPermissions;
   }
   
   @Override
@@ -182,18 +182,16 @@ public enum SubDirectory {
     return new File( this.toString( ) );
   }
 
-  public void perhapsCheck( ) {
-    if ( check ) check( );
-  }
-
   public void check( ) {
     final File dir = new File( this.toString( ) );
     if ( dir.exists( ) ) {
-      this.assertPermissions( );
+      if ( assertPermissions ) {
+        this.assertPermissions( );
+      }
     } else {
       EventRecord.here( SubDirectory.class, EventType.SYSTEM_DIR_CREATE, this.name( ), this.toString( ) ).info( );
       if ( dir.mkdirs( ) ) {
-        this.assertPermissions( );
+        this.assertPermissions( ); // always assert permissions when creating
       }
     }
   }
