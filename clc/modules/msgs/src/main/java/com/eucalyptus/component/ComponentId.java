@@ -83,6 +83,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
+import com.eucalyptus.component.annotation.AdminServiceName;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.ComponentDatabase;
@@ -508,6 +509,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
 
+  public Optional<String> getAdminServiceName( ) {
+    if ( this.ats.has( AdminServiceName.class ) ) {
+      return Optional.of( this.ats.get( AdminServiceName.class ).value( ) );
+    }
+    return Optional.absent( );
+  }
+
   /**
    * Get any additional DNS host labels for this component.
    */
@@ -517,6 +525,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       names = ImmutableSet.copyOf( this.ats.get( ServiceNames.class ).value( ) );
     } else if ( this.ats.has( AwsServiceName.class ) ) {
       names = Collections.singleton( getAwsServiceName( ) );
+    } else if ( this.ats.has( AdminServiceName.class ) ) {
+      names = Collections.singleton( getAdminServiceName( ).get( ) );
     }
     return names;
   }

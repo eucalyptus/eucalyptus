@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,9 @@ import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -295,13 +297,19 @@ public class TopologyDnsResolver extends DnsResolver {
     final Record query = request.getQuery( );
     final Name name = query.getName( );
     if ( ResolverSupport.COMPONENT.apply( name ) ) {
-      Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
-      Component comp = Components.lookup( compIdType );
-      List<ServiceConfiguration> configs = Lists.newArrayList( );
-      final ComponentId componentId = comp.getComponentId( );
-      if ( componentId.isPartitioned( ) ) {
-        String partitionName = name.getLabelString( 1 );
-        Partition partition = Partitions.lookupByName( partitionName );
+      final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
+      final ComponentId componentId = ComponentIds.lookup( compIdType );
+      final List<ServiceConfiguration> configs = Lists.newArrayList( );
+      final Optional<String> adminServiceName = componentId.getAdminServiceName( );
+      final Host coordinator = Hosts.getCoordinator( );
+      Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE;
+      if ( coordinator != null && adminServiceName.isPresent( ) &&
+          adminServiceName.get( ).equals( name.getLabelString( 0 ) ) ) {
+        configFilter = Predicates.alwaysTrue( );
+        configs.add( ServiceConfigurations.createEphemeral( componentId, coordinator.getBindAddress( ) ) );
+      } else if ( componentId.isPartitioned( ) ) {
+        final String partitionName = name.getLabelString( 1 );
+        final Partition partition = Partitions.lookupByName( partitionName );
         if ( componentId.isManyToOnePartition( ) ) {
           for ( ServiceConfiguration conf : Iterables.filter( Components.lookup( compIdType ).services( ),
                                                               ServiceConfigurations.filterByPartition( partition ) ) ) {
@@ -321,9 +329,9 @@ public class TopologyDnsResolver extends DnsResolver {
           configs.add( Topology.lookup( compIdType ) );
         }
       }
-      List<Record> answers = Lists.newArrayList( );
+      final List<Record> answers = Lists.newArrayList( );
       for ( ServiceConfiguration config : configs ) {
-        if(RESOLVABLE_STATE.apply(config)){
+        if(configFilter.apply(config)){
           Record aRecord = DomainNameRecords.addressRecord(
               name,
               maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
@@ -333,7 +341,7 @@ public class TopologyDnsResolver extends DnsResolver {
       return DnsResponse.forName( query.getName( ) )
                         .answer( RequestType.A.apply( query ) ? answers : null);
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
-      ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
+      final ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )
                         .answer( RequestType.A.apply( query ) ? 
                             DomainNameRecords.addressRecord(
