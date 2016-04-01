@@ -899,9 +899,11 @@ public class VpcManager {
     final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
     final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
-    if ( !Cidr.parse().apply( request.getCidrBlock( ) ).transform( Cidr.prefix( ) )
-        .transform( Functions.forPredicate( Range.closed( 16, 28 ) ) ).or( createDefault ) ) {
-      throw new ClientComputeException( "InvalidVpcRange", "Cidr range invalid: " + request.getCidrBlock( ) );
+    final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
+    if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or(
+        !requestedCidr.transform( Cidr.prefix( ) ).transform( Functions.forPredicate( Range.closed( 16, 28 ) ) )
+        .or( createDefault ) ) ) {
+      throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
