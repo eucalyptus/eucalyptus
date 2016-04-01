@@ -61,7 +61,9 @@ export EUCARPM=~/euca/rpmbuild
 export EUCAPKGS=~/euca/pkgs
 
 # Define the required JAVA environment variables
-# (Verify these are correct for your system)
+# As of Eucalyptus 4.3 Java 1.8 is required.  If you need to use a
+# different implementation of Java, set the JAVA_HOME so that it
+# references that location.
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0/"
 export JAVA="$JAVA_HOME/bin/java"
 #------------------------
