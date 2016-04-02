@@ -28,6 +28,7 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.ValidationErrorException
+import com.eucalyptus.cloudformation.entity.SignalEntityManager
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
@@ -184,6 +185,20 @@ public class StackActivityImpl implements StackActivity {
         }
       }
       resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyJsonNode));
+    }
+    // Update creation policy: (should we?)
+    if (resourceInfo.getCreationPolicyJson() != null) {
+      JsonNode creationPolicyJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getCreationPolicyJson());
+      List<String> creationPolicyKeys = Lists.newArrayList(creationPolicyJsonNode.fieldNames());
+      for (String creationPolicyKey : creationPolicyKeys) {
+        JsonNode evaluatedCreationPolicyNode = FunctionEvaluation.evaluateFunctions(creationPolicyJsonNode.get(creationPolicyKey), stackEntity, resourceInfoMap, effectiveUserId);
+        if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedCreationPolicyNode).isMatch()) {
+          ((ObjectNode) creationPolicyJsonNode).remove(creationPolicyKey);
+        } else {
+          ((ObjectNode) creationPolicyJsonNode).put(creationPolicyKey, evaluatedCreationPolicyNode);
+        }
+      }
+      resourceInfo.setCreationPolicyJson(JsonHelper.getStringFromJsonNode(creationPolicyJsonNode));
     }
   }
 
@@ -444,6 +459,7 @@ public class StackActivityImpl implements StackActivity {
     stackResourceEntity.setResourceStatusReason("");
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     StackEventEntityManager.addStackEvent(stackResourceEntity);
+    SignalEntityManager.deleteSignals(stackId, accountId, resourceId, createdResourceVersion); // no need anymore
 
     LOG.info("Finished creating resource " + resourceId);
     return "";
@@ -632,26 +648,6 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion) {
-    try {
-      VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, resourceVersion);
-      StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, resourceVersion);
-      ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
-      Integer timeout = ((AWSCloudFormationWaitConditionProperties) resourceAction.getResourceProperties()).getTimeout(); // not proud of this hard coding.
-      return timeout
-    } catch (Exception ex) {
-      Throwable rootCause = Throwables.getRootCause(ex);
-      LOG.info("Error getting timeout for resource " + resourceId);
-      LOG.error(ex, ex);
-      throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
-    }
-  }
-  @Override
   public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId, int stackVersion) {
     try {
       VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
@@ -735,6 +731,11 @@ public class StackActivityImpl implements StackActivity {
     JsonNode previousUpdatePolicy = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getUpdatePolicyJson());
     JsonNode nextUpdatePolicy = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getUpdatePolicyJson());
     if (!Objects.equals(previousUpdatePolicy, nextUpdatePolicy)) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    JsonNode previousCreationPolicy = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getCreationPolicyJson());
+    JsonNode nextCreationPolicy = JsonHelper.getJsonNodeFromString(nextStackResourceEntity.getCreationPolicyJson());
+    if (!Objects.equals(previousCreationPolicy, nextCreationPolicy)) {
       nothingOutsidePropertiesChanged = false;
     }
     JsonNode previousProperties = JsonHelper.getJsonNodeFromString(previousStackResourceEntity.getPropertiesJson());
@@ -991,6 +992,11 @@ public class StackActivityImpl implements StackActivity {
     JsonNode previousUpdatePolicy = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getUpdatePolicyJson());
     JsonNode nextUpdatePolicy = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getUpdatePolicyJson());
     if (!Objects.equals(previousUpdatePolicy, nextUpdatePolicy)) {
+      nothingOutsidePropertiesChanged = false;
+    }
+    JsonNode previousCreationPolicy = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getCreationPolicyJson());
+    JsonNode nextCreationPolicy = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getCreationPolicyJson());
+    if (!Objects.equals(previousCreationPolicy, nextCreationPolicy)) {
       nothingOutsidePropertiesChanged = false;
     }
     JsonNode previousProperties = JsonHelper.getJsonNodeFromString(rolledbackStackResourceEntity.getPropertiesJson());

@@ -73,6 +73,10 @@ public class StackResourceEntity extends AbstractPersistent {
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String updatePolicyJson;
+  @Column(name = "creation_policy_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String creationPolicyJson;
   @Column(name = "deletionPolicy", nullable = false )
   String deletionPolicy = "Delete";
   @Column(name = "is_allowed_by_condition", nullable = false)
@@ -226,6 +230,14 @@ public class StackResourceEntity extends AbstractPersistent {
     this.updatePolicyJson = updatePolicyJson;
   }
 
+  public String getCreationPolicyJson() {
+    return creationPolicyJson;
+  }
+
+  public void setCreationPolicyJson(String creationPolicyJson) {
+    this.creationPolicyJson = creationPolicyJson;
+  }
+
   public String getDeletionPolicy() {
     return deletionPolicy;
   }
@@ -289,6 +301,7 @@ public class StackResourceEntity extends AbstractPersistent {
       ", createdEnoughToDelete=" + createdEnoughToDelete +
       ", propertiesJson='" + propertiesJson + '\'' +
       ", updatePolicyJson='" + updatePolicyJson + '\'' +
+      ", creationPolicyJson='" + creationPolicyJson + '\'' +
       ", deletionPolicy='" + deletionPolicy + '\'' +
       ", allowedByCondition=" + allowedByCondition +
       ", referenceValueJson='" + referenceValueJson + '\'' +

@@ -66,6 +66,7 @@ public class StackResourceEntityManager {
     stackResourceEntity.setReady(resourceInfo.getReady());
     stackResourceEntity.setReferenceValueJson(resourceInfo.getReferenceValueJson());
     stackResourceEntity.setUpdatePolicyJson(resourceInfo.getUpdatePolicyJson());
+    stackResourceEntity.setCreationPolicyJson(resourceInfo.getCreationPolicyJson());
     stackResourceEntity.setResourceAttributesJson(ResourceInfoHelper.getResourceAttributesJson(resourceInfo));
     return stackResourceEntity;
   }
@@ -87,6 +88,7 @@ public class StackResourceEntityManager {
     destEntity.setReady(sourceEntity.getReady());
     destEntity.setPropertiesJson(sourceEntity.getPropertiesJson());
     destEntity.setUpdatePolicyJson(sourceEntity.getUpdatePolicyJson());
+    destEntity.setCreationPolicyJson(sourceEntity.getCreationPolicyJson());
     destEntity.setDeletionPolicy(sourceEntity.getDeletionPolicy());
     destEntity.setAllowedByCondition(sourceEntity.getAllowedByCondition());
     destEntity.setReferenceValueJson(sourceEntity.getReferenceValueJson());
@@ -211,6 +213,7 @@ public class StackResourceEntityManager {
     resourceInfo.setReady(stackResourceEntity.getReady());
     resourceInfo.setReferenceValueJson(stackResourceEntity.getReferenceValueJson());
     resourceInfo.setUpdatePolicyJson(stackResourceEntity.getUpdatePolicyJson());
+    resourceInfo.setCreationPolicyJson(stackResourceEntity.getCreationPolicyJson());
     ResourceInfoHelper.setResourceAttributesJson(resourceInfo, stackResourceEntity.getResourceAttributesJson());
     return resourceInfo;
   }

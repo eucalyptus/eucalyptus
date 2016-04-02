@@ -31,6 +31,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
+import com.eucalyptus.cloudformation.entity.SignalEntity;
+import com.eucalyptus.cloudformation.entity.SignalEntityManager;
+import com.eucalyptus.cloudformation.entity.SignalEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
@@ -965,7 +968,84 @@ public class CloudFormationService {
 
   public SignalResourceResponseType signalResource(SignalResourceType request)
     throws CloudFormationException {
-    return request.getReply();
+    SignalResourceResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccountNumber();
+      final String accountName = ctx.getAccountAlias();
+      final String stackName = request.getStackName();
+      final String logicalResourceId = request.getLogicalResourceId();
+      final String status = request.getStatus();
+      final String uniqueId = request.getUniqueId();
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
+      if (logicalResourceId == null) {
+        throw new ValidationErrorException("LogicalResourceId must not be null");
+      }
+      if (uniqueId == null) {
+        throw new ValidationErrorException("UniqueId must not be null");
+      }
+      if (status == null) {
+        throw new ValidationErrorException("Status must not be null");
+      }
+      if (!"SUCCESS".equals(status) && !"FAILURE".equals(status)) {
+        throw new ValidationErrorException("Status must either be SUCCESS or FAILURE");
+      }
+
+      checkStackPermission( ctx, stackName, accountId );
+      final StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(
+              stackName,
+              accountId); // no administrator check here because signal requires user on account stack.
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      final String stackId = stackEntity.getStackId();
+
+      // status check
+      if (stackEntity.getStackStatus() != Status.CREATE_IN_PROGRESS && stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS &&
+              stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_IN_PROGRESS) { //
+        throw new ValidationErrorException("Stack:" + stackId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be signaled.");
+      }
+
+      final StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, logicalResourceId, stackEntity.getStackVersion());
+      if (stackResourceEntity == null) {
+        throw new ValidationErrorException("Resource " + logicalResourceId + " does not exist for stack " + stackName);
+      }
+      ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+      if (!resourceInfo.supportsSignals()) {
+        throw new ValidationErrorException("Resource " + logicalResourceId + " is of type " + resourceInfo.getType() + " and cannot be signaled");
+
+      }
+      if (stackResourceEntity.getResourceStatus() != Status.CREATE_IN_PROGRESS && stackResourceEntity.getResourceStatus() != Status.UPDATE_IN_PROGRESS) {
+        throw new ValidationErrorException("Resource " + logicalResourceId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be signaled.");
+      }
+      SignalEntity signal = SignalEntityManager.getSignal(stackId, accountId, logicalResourceId, stackResourceEntity.getResourceVersion(), uniqueId);
+      if (signal != null && !"FAILURE".equals(status)) {
+        throw new ValidationErrorException("Signal with ID " + uniqueId + " for resource " + logicalResourceId+ " already exists.  Signals may only be updated with a FAILURE status.");
+      }
+      if (signal != null) {
+        signal.setStatus(SignalEntity.Status.valueOf(status));
+        signal.setProcessed(false);
+        SignalEntityManager.updateSignal(signal);
+      } else {
+        signal = new SignalEntity();
+        signal.setStackId(stackId);
+        signal.setAccountId(accountId);
+        signal.setLogicalResourceId(logicalResourceId);
+        signal.setResourceVersion(stackResourceEntity.getResourceVersion());
+        signal.setUniqueId(uniqueId);
+        signal.setStatus(SignalEntity.Status.valueOf(status));
+        SignalEntityManager.addSignal(signal);
+      }
+      SignalResourceResult signalResourceResult = new SignalResourceResult();
+      reply.setSignalResourceResult(signalResourceResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)

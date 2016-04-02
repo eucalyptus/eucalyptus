@@ -54,7 +54,6 @@ public interface StackActivity {
   public String setStackStatus(String stackId, String accountId, String status, String statusReason, int stackVersion);
   public String cancelCreateAndMonitorWorkflows(String stackId);
   public String verifyCreateAndMonitorWorkflowsClosed(String stackId);
-  public Integer getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion);
   public String cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage, int createdResourceVersion);
   public String cancelOutstandingUpdateResources(String stackId, String accountId, String cancelMessage, int updatedResourceVersion);
   public String initUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int updatedResourceVersion);

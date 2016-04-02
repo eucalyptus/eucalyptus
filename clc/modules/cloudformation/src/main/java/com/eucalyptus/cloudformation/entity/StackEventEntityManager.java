@@ -135,6 +135,17 @@ public class StackEventEntityManager {
     }
     return returnValue;
   }
+
+  public static void addSignalStackEvent(SignalEntity signal) {
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(signal.getStackId(), signal.getAccountId(), signal.getLogicalResourceId(), signal.getResourceVersion());
+    Date timestamp = new Date();
+    String eventId = stackResourceEntity.getLogicalResourceId() + "-" + stackResourceEntity.getResourceStatus() + "-" + timestamp.getTime();
+    addStackEvent(stackResourceEntity.getAccountId(), eventId, stackResourceEntity.getLogicalResourceId(),
+      stackResourceEntity.getPhysicalResourceId(), stackResourceEntity.getPropertiesJson(),
+      stackResourceEntity.getResourceStatus(), "Received " + signal.getStatus() + " signal with UniqueId " + signal.getUniqueId(),
+      stackResourceEntity.getResourceType(), stackResourceEntity.getStackId(), stackResourceEntity.getStackName(),
+      timestamp);
+  }
 }
 
 

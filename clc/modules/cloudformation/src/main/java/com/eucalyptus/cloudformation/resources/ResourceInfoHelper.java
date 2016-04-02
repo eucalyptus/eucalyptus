@@ -40,62 +40,11 @@ import java.util.Map;
 public class ResourceInfoHelper {
   private static final Logger LOG = Logger.getLogger(ResourceInfoHelper.class);
   private static final ObjectMapper mapper = new ObjectMapper();
-  public static ResourceInfo jsonToResourceInfo(String json) throws CloudFormationException {
-    JsonNode resourceNode = JsonHelper.getJsonNodeFromString(json);
-    LOG.info("resourceNode="+resourceNode);
-    LOG.info("resourceNode.get(\"type\")="+resourceNode.get("type"));
-    String type = resourceNode.get("type").asText();
-    ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
-    resourceInfo.setAccountId(resourceNode.get("accountId").asText());
-    resourceInfo.setAllowedByCondition(resourceNode.get("allowedByCondition").booleanValue());
-    resourceInfo.setCreatedEnoughToDelete(resourceNode.get("createdEnoughToDelete").booleanValue());
-    resourceInfo.setDescription(resourceNode.get("description").asText());
-    resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").asText());
-    resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").asText());
-    resourceInfo.setLogicalResourceId(resourceNode.get("logicalResourceId").asText());
-    resourceInfo.setMetadataJson(resourceNode.get("metadataJson").asText());
-    resourceInfo.setPhysicalResourceId(resourceNode.get("physicalResourceId").asText());
-    resourceInfo.setPropertiesJson(resourceNode.get("propertiesJson").asText());
-    resourceInfo.setReady(resourceNode.get("ready").booleanValue());
-    resourceInfo.setReferenceValueJson(resourceNode.get("referenceValueJson").asText());
-    resourceInfo.setUpdatePolicyJson(resourceNode.get("updatePolicyJson").asText());
-    setResourceAttributesJson(resourceInfo, resourceNode.get("attributes").asText());
-    return resourceInfo;
-  }
 
   public static void setResourceAttributesJson(ResourceInfo resourceInfo, String json) throws CloudFormationException {
     JsonNode attributeNode = JsonHelper.getJsonNodeFromString(json);
     for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
       resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).asText());
-    }
-  }
-
-  public static String resourceInfoToJson(ResourceInfo resourceInfo) throws CloudFormationException {
-    if (resourceInfo == null) {
-      return null;
-    } else {
-      ObjectNode resourceNode = mapper.createObjectNode();
-      resourceNode.put("accountId", resourceInfo.getAccountId());
-      resourceNode.put("type", resourceInfo.getType());
-      resourceNode.put("allowedByCondition", resourceInfo.getAllowedByCondition());
-      resourceNode.put("createdEnoughToDelete", resourceInfo.getCreatedEnoughToDelete());
-      resourceNode.put("deletionPolicy", resourceInfo.getDeletionPolicy());
-      resourceNode.put("description", resourceInfo.getDescription());
-      resourceNode.put("effectiveUserId", resourceInfo.getEffectiveUserId());
-      resourceNode.put("logicalResourceId", resourceInfo.getLogicalResourceId());
-      resourceNode.put("metadataJson", resourceInfo.getMetadataJson());
-      resourceNode.put("physicalResourceId", resourceInfo.getPhysicalResourceId());
-      resourceNode.put("propertiesJson", resourceInfo.getPropertiesJson());
-      resourceNode.put("ready", resourceInfo.getReady());
-      resourceNode.put("referenceValueJson", resourceInfo.getReferenceValueJson());
-      resourceNode.put("updatePolicyJson", resourceInfo.getUpdatePolicyJson());
-      Collection<String> attributeNames = resourceInfo.getAttributeNames();
-      if (attributeNames == null) {
-        resourceNode.put("attributes", (String) null);
-      } else {
-        resourceNode.put("attributes", getResourceAttributesJson(resourceInfo));
-      }
-      return JsonHelper.getStringFromJsonNode(resourceNode);
     }
   }
 

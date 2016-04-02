@@ -30,8 +30,14 @@ import groovy.transform.ToString
 
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String eucaCreateStartTime; // used to check against timeout
   public AWSAutoScalingAutoScalingGroupResourceInfo() {
     setType("AWS::AutoScaling::AutoScalingGroup");
+  }
+  @Override
+  public boolean supportsSignals() {
+    return true;
   }
 }
 
@@ -92,8 +98,14 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
 public class AWSCloudFormationWaitConditionResourceInfo extends ResourceInfo {
   @AttributeJson
   String data;
+  @AttributeJson
+  String eucaCreateStartTime; // used to check against timeout
   public AWSCloudFormationWaitConditionResourceInfo() {
     setType("AWS::CloudFormation::WaitCondition");
+  }
+  @Override
+  public boolean supportsSignals() {
+    return true;
   }
 }
 
@@ -152,10 +164,17 @@ public class AWSEC2InstanceResourceInfo extends ResourceInfo {
   String privateIp;
   @AttributeJson
   String publicIp;
+  @AttributeJson
+  String eucaCreateStartTime; // used to check against timeout
 
   public AWSEC2InstanceResourceInfo() {
     setType("AWS::EC2::Instance");
   }
+  @Override
+  public boolean supportsSignals() {
+    return true;
+  }
+
 }
 
 

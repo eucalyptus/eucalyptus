@@ -24,6 +24,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingNotificationTypes;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
@@ -34,6 +35,9 @@ import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesType;
+import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationType;
@@ -43,6 +47,9 @@ import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.SignalEntity;
+import com.eucalyptus.cloudformation.entity.SignalEntityManager;
+import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -50,8 +57,10 @@ import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingAutoScalingGroupProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
+import com.eucalyptus.cloudformation.template.CreationPolicy;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
@@ -64,9 +73,15 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -117,13 +132,14 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (action.properties.getTerminationPolicies() != null) {
           createAutoScalingGroupType.setTerminationPolicies(new TerminationPolicies(action.properties.getTerminationPolicies()));
         }
-        if ( action.properties.getVpcZoneIdentifier() != null ) {
-          createAutoScalingGroupType.setVpcZoneIdentifier(Strings.emptyToNull(Joiner.on( "," ).join(action.properties.getVpcZoneIdentifier())));
+        if (action.properties.getVpcZoneIdentifier() != null) {
+          createAutoScalingGroupType.setVpcZoneIdentifier(Strings.emptyToNull(Joiner.on(",").join(action.properties.getVpcZoneIdentifier())));
         }
-        AsyncRequests.<CreateAutoScalingGroupType,CreateAutoScalingGroupResponseType> sendSync(configuration, createAutoScalingGroupType);
+        AsyncRequests.<CreateAutoScalingGroupType, CreateAutoScalingGroupResponseType>sendSync(configuration, createAutoScalingGroupType);
         action.info.setPhysicalResourceId(autoScalingGroupName);
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        action.info.setEucaCreateStartTime(JsonHelper.getStringFromJsonNode(new TextNode("" + System.currentTimeMillis())));
         return action;
       }
     },
@@ -133,7 +149,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
         // Create 'system' tags as admin user
-        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber( Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber( ) ).getUserId();
+        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber(Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber()).getUserId();
         CreateOrUpdateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateOrUpdateTagsType.class, effectiveAdminUserId);
         createSystemTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(action.info.getPhysicalResourceId(), TagHelper.getAutoScalingSystemTags(action.info, action.getStackEntity())));
         AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createSystemTagsType);
@@ -155,7 +171,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (autoScalingTags == null) return null;
         Tags tags = new Tags();
         ArrayList<TagType> member = Lists.newArrayList();
-        for (AutoScalingTag autoScalingTag: autoScalingTags) {
+        for (AutoScalingTag autoScalingTag : autoScalingTags) {
           TagType tagType = new TagType();
           tagType.setResourceType("auto-scaling-group");
           tagType.setResourceId(physicalResourceId);
@@ -181,13 +197,80 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           ArrayList<String> member = Lists.newArrayList(action.properties.getNotificationConfiguration().getNotificationTypes());
           autoScalingNotificationTypes.setMember(member);
           putNotificationConfigurationType.setNotificationTypes(autoScalingNotificationTypes);
-          AsyncRequests.<PutNotificationConfigurationType,PutNotificationConfigurationResponseType> sendSync(configuration, putNotificationConfigurationType);
+          AsyncRequests.<PutNotificationConfigurationType, PutNotificationConfigurationResponseType>sendSync(configuration, putNotificationConfigurationType);
         }
         return action;
       }
-    };
+    },
+    CHECK_SIGNALS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction action = (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        CreationPolicy creationPolicy = CreationPolicy.parse(action.info.getCreationPolicyJson());
+        if (creationPolicy != null && creationPolicy.getResourceSignal() != null) {
+          // For some reason AWS completely ignores signals that are not instance ids in the asg.
+          Set<String> instanceIds = Sets.newHashSet();
+          DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+          AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+          autoScalingGroupNames.getMember().add(action.info.getPhysicalResourceId());
+          describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+          DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType = AsyncRequests.sendSync(configuration, describeAutoScalingGroupsType);
+          if (describeAutoScalingGroupsResponseType != null && describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult() != null &&
+            describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups() != null &&
+            describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember() != null) {
+            for (AutoScalingGroupType autoScalingGroupType: describeAutoScalingGroupsResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()) {
+              if (!Objects.equals(autoScalingGroupType.getAutoScalingGroupName(), action.info.getPhysicalResourceId())) continue;
+              if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+                for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+                  instanceIds.add(instance.getInstanceId());
+                }
+              }
+            }
+          }
+          // check for signals
+          Collection<SignalEntity> signals = SignalEntityManager.getSignals(action.getStackEntity().getStackId(), action.info.getAccountId(), action.info.getLogicalResourceId(),
+            action.getStackEntity().getStackVersion());
+          int numSuccessSignals = 0;
+          if (signals != null) {
+            for (SignalEntity signal : signals) {
+              // Honor old signals in case some instance is no longer in the group
+              if (signal.getProcessed() && signal.getStatus() == SignalEntity.Status.SUCCESS) {
+                numSuccessSignals++;
+                continue;
+              }
+              // Ignore signals with ids not from the list of instance ids.
+              if (!instanceIds.contains(signal.getUniqueId())) continue;
 
-    // no retries on these steps
+              if (signal.getStatus() == SignalEntity.Status.FAILURE) {
+                throw new ResourceFailureException("Received FAILURE signal with UniqueId " + signal.getUniqueId());
+              }
+              if (!signal.getProcessed()) {
+                StackEventEntityManager.addSignalStackEvent(signal);
+                signal.setProcessed(true);
+                SignalEntityManager.updateSignal(signal);
+              }
+              numSuccessSignals++;
+            }
+          }
+          if (numSuccessSignals < creationPolicy.getResourceSignal().getCount()) {
+            long durationMs = System.currentTimeMillis() - Long.valueOf(JsonHelper.getJsonNodeFromString(action.info.getEucaCreateStartTime()).asText());
+            if (TimeUnit.MILLISECONDS.toSeconds(durationMs) > creationPolicy.getResourceSignal().getTimeout()) {
+              throw new ResourceFailureException("Failed to receive " + creationPolicy.getResourceSignal().getCount() + " resource signal(s) within the specified duration");
+            }
+            throw new RetryAfterConditionCheckFailedException("Not enough success signals yet");
+          }
+        }
+        return action;
+      }
+
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return (int) TimeUnit.HOURS.toSeconds(12);
+      }
+    };
+    // no retries on most steps
     @Override
     public Integer getTimeout( ) {
       return null;

@@ -28,11 +28,18 @@ public abstract class ResourceInfo {
   Boolean ready = false;
   String propertiesJson;
   String metadataJson;
+  String creationPolicyJson;
   String updatePolicyJson;
   String deletionPolicy = "Delete";
+
   public boolean supportsSnapshot() {
     return false;
   }
+
+  public boolean supportsSignals() {
+    return false;
+  }
+
   public boolean isAttributeAllowed(String attributeName) {
     return ResourceAttributeResolver.resourceHasAttribute(this, attributeName);
   }
@@ -51,12 +58,12 @@ public abstract class ResourceInfo {
   String description;
 
   public String getResourceAttributeJson(String attributeName)
-    throws CloudFormationException {
+          throws CloudFormationException {
     return ResourceAttributeResolver.getResourceAttributeJson(this, attributeName);
   }
 
   public void setResourceAttributeJson(String attributeName, String attributeValueJson)
-    throws CloudFormationException {
+          throws CloudFormationException {
     ResourceAttributeResolver.setResourceAttributeJson(this, attributeName, attributeValueJson);
   }
 

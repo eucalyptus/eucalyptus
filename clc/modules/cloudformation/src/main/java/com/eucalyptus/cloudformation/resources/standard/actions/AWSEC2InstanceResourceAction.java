@@ -23,6 +23,9 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.SignalEntity;
+import com.eucalyptus.cloudformation.entity.SignalEntityManager;
+import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -36,8 +39,10 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPo
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterface;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterfacePrivateIPSpecification;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
+import com.eucalyptus.cloudformation.template.CreationPolicy;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
@@ -111,6 +116,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
 
@@ -349,6 +355,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType, RunInstancesResponseType>sendSync(configuration, runInstancesType);
         action.info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
         action.info.setCreatedEnoughToDelete(true);
+        action.info.setEucaCreateStartTime(JsonHelper.getStringFromJsonNode(new TextNode("" + System.currentTimeMillis())));
         return action;
       }
     },
@@ -493,8 +500,51 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return INSTANCE_ATTACH_VOLUME_MAX_CREATE_RETRY_SECS;
       }
+    },
+    CHECK_SIGNALS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
+        CreationPolicy creationPolicy = CreationPolicy.parse(action.info.getCreationPolicyJson());
+        if (creationPolicy != null && creationPolicy.getResourceSignal() != null) {
+          if (creationPolicy.getResourceSignal().getCount() != 1) {
+            throw new ValidationErrorException("ResourceSignal CreationPolicy property Count cannot be greater than 1 for EC2 instance resources");
+          }
+          // check for signals
+          Collection<SignalEntity> signals = SignalEntityManager.getSignals(action.getStackEntity().getStackId(), action.info.getAccountId(), action.info.getLogicalResourceId(),
+            action.getStackEntity().getStackVersion());
+          int numSuccessSignals = 0;
+          if (signals != null) {
+            for (SignalEntity signal : signals) {
+              // For some reason AWS completely ignores signals that do not have the unique id of the instance id
+              if (!Objects.equals(signal.getUniqueId(), action.info.getPhysicalResourceId())) continue;
+              if (signal.getStatus() == SignalEntity.Status.FAILURE) {
+                throw new ResourceFailureException("Received FAILURE signal with UniqueId " + signal.getUniqueId());
+              }
+              if (!signal.getProcessed()) {
+                StackEventEntityManager.addSignalStackEvent(signal);
+                signal.setProcessed(true);
+                SignalEntityManager.updateSignal(signal);
+              }
+              numSuccessSignals++;
+            }
+          }
+          if (numSuccessSignals < creationPolicy.getResourceSignal().getCount()) {
+            long durationMs = System.currentTimeMillis() - Long.valueOf(JsonHelper.getJsonNodeFromString(action.info.getEucaCreateStartTime()).asText());
+            if (TimeUnit.MILLISECONDS.toSeconds(durationMs) > creationPolicy.getResourceSignal().getTimeout()) {
+              throw new ResourceFailureException("Failed to receive " + creationPolicy.getResourceSignal().getCount() + " resource signal(s) within the specified duration");
+            }
+            throw new RetryAfterConditionCheckFailedException("Not enough success signals yet");
+          }
+        }
+        return action;
+      }
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return (int) TimeUnit.HOURS.toSeconds(12);
+      }
     };
-
 
     @Nullable
     @Override

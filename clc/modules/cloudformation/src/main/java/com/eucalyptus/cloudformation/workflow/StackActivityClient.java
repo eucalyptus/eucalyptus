@@ -103,9 +103,6 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.verifyCreateAndMonitorWorkflowsClosed")
   Promise<String> verifyCreateAndMonitorWorkflowsClosed(String stackId);
 
-  @Activity(name = "StackActivity.getAWSCloudFormationWaitConditionTimeout")
-  Promise<Integer> getAWSCloudFormationWaitConditionTimeout(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion);
-
   @Activity(name = "StackActivity.cancelOutstandingCreateResources")
   Promise<String> cancelOutstandingCreateResources(String stackId, String accountId, String cancelMessage, int createdResourceVersion);
 

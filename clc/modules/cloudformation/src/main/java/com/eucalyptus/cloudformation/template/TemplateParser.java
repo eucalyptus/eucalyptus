@@ -99,6 +99,7 @@ public class TemplateParser {
     DependsOn,
     Metadata,
     UpdatePolicy,
+    CreationPolicy,
     Condition
   }
 
@@ -986,10 +987,16 @@ public class TemplateParser {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
         resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyNode));
       }
+      JsonNode creationPolicyNode = JsonHelper.checkObject(resourceJsonNode, ResourceKey.CreationPolicy.toString());
+      if (propertiesNode != null) {
+        FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
+        resourceInfo.setCreationPolicyJson(JsonHelper.getStringFromJsonNode(creationPolicyNode));
+      }
       resourceInfo.setLogicalResourceId(resourceKey);
       resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
       resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
       resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
+      resourceDependencyCrawl(resourceKey, creationPolicyNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
       String deletionPolicy = JsonHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
       if (deletionPolicy != null) {
         if (!DeletionPolicyValues.Delete.toString().equals(deletionPolicy)

@@ -128,10 +128,8 @@ public class AWSCloudFormationStackProperties implements ResourceProperties {
 public class AWSCloudFormationWaitConditionProperties implements ResourceProperties {
   @Property
   Integer count;
-  @Required
   @Property
   String handle;
-  @Required
   @Property
   Integer timeout;
 }
