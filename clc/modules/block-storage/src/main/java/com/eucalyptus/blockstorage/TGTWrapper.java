@@ -366,6 +366,8 @@ public class TGTWrapper {
 
   /**
    * Runs pre-checks for startup etc.
+   * If we can run a tgtadm command that connects to the tgtd and
+   * does not return an error, assume we are OK.
    * 
    * @param timeout
    * @throws EucalyptusCloudException
@@ -374,62 +376,46 @@ public class TGTWrapper {
     CommandOutput output = null;
     output = execute(new String[] {ROOT_WRAP, "tgtadm", "--help"}, timeout);
     if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-      Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "tgtadm --help")
-          .withVar("error", output.error).log();
-      throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
+      String errmsg = "Unable to run 'tgtadm --help' command " + 
+          "(SCSI Target Administration Utility). " +
+          "Is the scsi-target-utils package installed? " + 
+          "Is the tgtd service running? " + 
+          "Is /usr/sbin/tgtadm accessible? " + 
+          "Error output: " + output.error; 
+      LOG.warn(errmsg);
+      Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
+        .withVar("operation", "tgtadm --help")
+        .withVar("error", output.error).log();
+      throw new EucalyptusCloudException(errmsg);
     }
-
-    output = execute(new String[] {ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
-    if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-      LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
-      LOG.info("Attempting to start tgtd ISCSI daemon");
-      String ex[] = systemctl ? new String[] {ROOT_WRAP, "systemctl", "status", TGT_SERVICE_NAME} :
-        new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"};
-      output = execute(ex, timeout);
-      if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-        ex = systemctl ? new String[] {ROOT_WRAP, "systemctl", "start", TGT_SERVICE_NAME} :
-          new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "start"};
-        output = execute(ex, timeout);
-        if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-          Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
-              .withVar("operation", "service tgt start").withVar("error", output.error).log();
-          throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
-        }
-      } else {
-        ex = systemctl ? new String[] {ROOT_WRAP, "systemctl", "start", TGT_SERVICE_NAME} :
-          new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "start"};
-        output = execute(ex, timeout);
-        if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-          Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
-              .withVar("operation", "service tgt start").withVar("error", output.error).log();
-          throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
-        }
-      }
-    }
+    checkService(timeout);
   }
 
   /**
    * Runs a service check on TGT.
+   * If we can run a tgtadm command that connects to the tgtd and
+   * does not return an error, assume we are OK.
    * 
    * @param timeout
    * @throws EucalyptusCloudException
    */
   public static void checkService(Long timeout) throws EucalyptusCloudException {
-    try {
-      String ex[] = systemctl ? new String[] {ROOT_WRAP, "systemctl", "status", TGT_SERVICE_NAME} :
-        new String[] {ROOT_WRAP, "service", TGT_SERVICE_NAME, "status"};
-      CommandOutput output = execute(ex, timeout);
-      if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-        Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
-            .withVar("operation", "service tgt status").withVar("error", output.error).log();
-        throw new EucalyptusCloudException("tgt service check failed with error: " + output.error);
-      }
-    } catch (CallTimeoutException e) {
-      LOG.error("Call timed out checking service.", e);
-      throw e;
-    } catch (EucalyptusCloudException e) {
-      LOG.error("Check service failed", e);
-      throw e;
+    CommandOutput output = null;
+    output = execute(new String[] {ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
+    if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
+      String cmdline = "tgtadm --lld iscsi --mode target --op show";
+      String errmsg = "Unable to run tgtadm command " + 
+          "(SCSI Target Administration Utility). " +
+          "Is the scsi-target-utils package installed? " + 
+          "Is the tgtd service running? " + 
+          "Is /usr/sbin/tgtadm accessible? " +
+          "Attempted command: '" + cmdline + "' " +
+          "Error output: " + output.error; 
+      LOG.warn(errmsg);
+      Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller")
+        .withVar("operation", cmdline)
+        .withVar("error", output.error).log();
+      throw new EucalyptusCloudException(errmsg);
     }
   }
 
