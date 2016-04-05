@@ -2512,8 +2512,6 @@ static int init(void)
     // initialize the EBS subsystem
     update_ebs_params();
 
-    authorize_migration_keys("-D -r", NULL, NULL, NULL, TRUE);
-
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
     // either or
