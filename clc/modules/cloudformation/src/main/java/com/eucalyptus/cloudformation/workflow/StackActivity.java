@@ -80,4 +80,10 @@ public interface StackActivity {
 
   public String rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
 
+  public String recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion);
+  public String flattenStackForDelete(String stackId, String accountId);
+
+  public String checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId);
+
+  public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
 }

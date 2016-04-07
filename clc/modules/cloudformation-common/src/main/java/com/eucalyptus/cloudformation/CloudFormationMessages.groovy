@@ -23,7 +23,6 @@ package com.eucalyptus.cloudformation
 import com.eucalyptus.ws.WebServiceError
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonSerializer
@@ -235,6 +234,9 @@ public class TemplateParameters extends EucalyptusData {
 }
 public class CancelUpdateStackResult extends EucalyptusData {
   public CancelUpdateStackResult() {  }
+}
+public class ContinueUpdateRollbackResult extends EucalyptusData {
+  public ContinueUpdateRollbackResult() {  }
 }
 public class CreateStackResult extends EucalyptusData {
   String stackId;
@@ -450,6 +452,15 @@ public class CancelUpdateStackType extends CloudFormationMessage {
 public class CancelUpdateStackResponseType extends CloudFormationMessage {
   public CancelUpdateStackResponseType() {  }
   CancelUpdateStackResult cancelUpdateStackResult = new CancelUpdateStackResult();
+  ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+public class ContinueUpdateRollbackType extends CloudFormationMessage {
+  String stackName;
+  public ContinueUpdateRollbackType() {  }
+}
+public class ContinueUpdateRollbackResponseType extends CloudFormationMessage {
+  public ContinueUpdateRollbackResponseType() {  }
+  ContinueUpdateRollbackResult continueUpdateRollbackResult = new ContinueUpdateRollbackResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class CreateStackType extends CloudFormationMessage {

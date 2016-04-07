@@ -50,12 +50,15 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             activities.verifyCreateAndMonitorWorkflowsClosed(stackId);
           }
         ) {
-          new CommonDeleteRollbackPromises(workflowOperations,
-            Status.DELETE_IN_PROGRESS.toString(),
-            "User Initiated",
-            Status.DELETE_FAILED.toString(),
-            Status.DELETE_COMPLETE.toString(),
-            true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion);
+          Promise<String> flattenStackPromise = activities.flattenStackForDelete(stackId, accountId);
+          waitFor(flattenStackPromise) {
+            new CommonDeleteRollbackPromises(workflowOperations,
+              Status.DELETE_IN_PROGRESS.toString(),
+              "User Initiated",
+              Status.DELETE_FAILED.toString(),
+              Status.DELETE_COMPLETE.toString(),
+              true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion);
+          }
         }
       }
     } catch (Exception ex) {

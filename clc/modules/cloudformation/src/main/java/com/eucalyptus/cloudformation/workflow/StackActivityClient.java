@@ -154,4 +154,16 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.rollbackStackState")
   Promise<String> rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
 
+  @Activity(name = "StackActivity.recordUpdateRollbackInfo")
+  Promise<String> recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion);
+
+  @Activity(name = "StackActivity.flattenStackForDelete")
+  Promise<String> flattenStackForDelete(String stackId, String accountId);
+
+  @Activity(name = "StackActivity.checkResourceAlreadyRolledBackOrStartedRollback")
+  Promise<String> checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId);
+
+  @Activity(name = "StackActivity.addCompletedUpdateRollbackResource")
+  Promise<String> addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
+
 }

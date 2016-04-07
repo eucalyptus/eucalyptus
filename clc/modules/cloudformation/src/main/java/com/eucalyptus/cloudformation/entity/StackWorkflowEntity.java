@@ -56,7 +56,8 @@ public class StackWorkflowEntity extends AbstractPersistent {
     UPDATE_STACK_WORKFLOW,
     DELETE_STACK_WORKFLOW,
     MONITOR_CREATE_STACK_WORKFLOW,
-    MONITOR_UPDATE_STACK_WORKFLOW
+    MONITOR_UPDATE_STACK_WORKFLOW,
+    CONTINUE_UPDATE_ROLLBACK_WORKFLOW
   }
   public StackWorkflowEntity() {
   }

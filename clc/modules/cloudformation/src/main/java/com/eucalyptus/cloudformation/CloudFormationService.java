@@ -33,8 +33,9 @@ import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
-import com.eucalyptus.cloudformation.entity.SignalEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntity;
+import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
@@ -52,6 +53,9 @@ import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
 import com.eucalyptus.cloudformation.template.url.S3Helper;
 import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
+import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflow;
+import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
@@ -195,6 +199,81 @@ public class CloudFormationService {
     return reply;
   }
 
+  public ContinueUpdateRollbackResponseType continueUpdateRollbackStackResponseType (final ContinueUpdateRollbackType request ) throws CloudFormationException {
+    ContinueUpdateRollbackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = ctx.getAccountNumber();
+      final String accountAlias = ctx.getAccountAlias();
+      final String stackName = request.getStackName();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
+      if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
+        stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, null);
+      }
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        throw new AccessDeniedException( "Not authorized." );
+      }
+      final String stackAccountId = stackEntity.getAccountId( );
+      if (stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_FAILED) {
+        throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not continue to update rollback.");
+      }
+      // check to see if there has been a continue update rollback stack workflow.  If one exists and is still going on, just quit:
+      boolean existingOpenContinueUpdateRollbackWorkflow = false;
+      List<StackWorkflowEntity> continueUpdateRollbackWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.CONTINUE_UPDATE_ROLLBACK_WORKFLOW);
+      if ( continueUpdateRollbackWorkflows != null && !continueUpdateRollbackWorkflows.isEmpty( ) ) {
+        if (continueUpdateRollbackWorkflows.size() > 1) {
+          throw new ValidationErrorException("More than one continue update rollback workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
+        }
+        // see if the workflow is open
+        try {
+          AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
+          StackWorkflowEntity deleteStackWorkflowEntity = continueUpdateRollbackWorkflows.get(0);
+          DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+          describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
+          WorkflowExecution execution = new WorkflowExecution();
+          execution.setRunId(deleteStackWorkflowEntity.getRunId());
+          execution.setWorkflowId(deleteStackWorkflowEntity.getWorkflowId());
+          describeWorkflowExecutionRequest.setExecution(execution);
+          WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+          if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+            existingOpenContinueUpdateRollbackWorkflow = true;
+          }
+        } catch (Exception ex) {
+          LOG.error("Unable to get status of continue update rollback workflow for " + stackEntity.getStackId() + ", assuming not open");
+          LOG.debug(ex);
+        }
+      }
+      if (!existingOpenContinueUpdateRollbackWorkflow) {
+        String stackId = stackEntity.getStackId();
+        StackWorkflowTags stackWorkflowTags =
+          new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
+         StackUpdateRollbackInfoEntity stackUpdateRollbackInfoEntity = StackUpdateRollbackInfoEntityManager.getStackUpdateRollbackInfoEntity(stackId, accountId);
+         WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
+        WorkflowDescriptionTemplate workflowDescriptionTemplate = new ContinueUpdateRollbackWorkflowDescriptionTemplate();
+        InterfaceBasedWorkflowClient<ContinueUpdateRollbackWorkflow> client = workflowClientFactory
+          .getNewWorkflowClient(ContinueUpdateRollbackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
+        ContinueUpdateRollbackWorkflow continueUpdateRollbackWorkflow = new ContinueUpdateRollbackWorkflowClient(client);
+        continueUpdateRollbackWorkflow.continueUpdateRollback(stackId, accountId,
+          stackUpdateRollbackInfoEntity.getOldResourceDependencyManagerJson(),
+          stackUpdateRollbackInfoEntity.getResourceDependencyManagerJson(), userId,
+          stackUpdateRollbackInfoEntity.getRolledBackStackVersion().intValue());
+        StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
+          StackWorkflowEntity.WorkflowType.CONTINUE_UPDATE_ROLLBACK_WORKFLOW,
+          CloudFormationProperties.SWF_DOMAIN,
+          client.getWorkflowExecution().getWorkflowId(),
+          client.getWorkflowExecution().getRunId());
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
   public CreateStackResponseType createStack( final CreateStackType request ) throws CloudFormationException {
     CreateStackResponseType reply = request.getReply();
     try {
