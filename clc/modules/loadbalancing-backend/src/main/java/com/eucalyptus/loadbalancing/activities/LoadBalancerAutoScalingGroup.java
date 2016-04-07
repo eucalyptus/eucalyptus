@@ -93,7 +93,14 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	
   @Column(name="metadata_availability_zone", nullable=true)
   private String availabilityZone = null;
-  
+
+	@Column(name="metadata_user_subnet_id", nullable=true)
+	private String userSubnetId = null;
+
+	@Column(name="metadata_system_subnet_id", nullable=true)
+	private String systemSubnetId = null;
+
+
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
@@ -106,7 +113,26 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		this.uniqueName = this.createUniqueName();
 		view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
-	
+
+	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String availabilityZone,
+										 final String userSubnetId, final String systemSubnetId, final String groupName, final String launchConfig){
+		this.loadbalancer = lb;
+		this.availabilityZone = availabilityZone;
+		this.userSubnetId =  userSubnetId;
+		this.systemSubnetId = systemSubnetId;
+		this.groupName = groupName;
+		this.launchConfig = launchConfig;
+		this.uniqueName = this.createUniqueName();
+		view = new LoadBalancerAutoScalingGroupRelationView(this);
+	}
+
+	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String availabilityZone,
+														   final String userSubnetId, final String systemSubnetId, final String groupName, final String launchConfig) {
+		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, availabilityZone,
+				userSubnetId, systemSubnetId, groupName, launchConfig);
+		return instance;
+	}
+
 	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String availabilityZone, final String groupName, final String launchConfig){
 		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, availabilityZone, groupName, launchConfig);
 		return instance;
@@ -143,6 +169,14 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	public void setAvailabilityZone(final String zone) {
 	  this.availabilityZone = zone;
 	}
+
+	public String getUserSubnetId() { return this.userSubnetId; }
+
+	public String getSystemSubnetId() { return this.systemSubnetId; }
+
+	public void setUserSubnetId(final String subnetId) { this.userSubnetId = subnetId; }
+
+	public void setSystemSubnetId(final String subnetId) { this.systemSubnetId = subnetId; }
 	
 	public List<LoadBalancerServoInstanceCoreView> getServos(){
 		return view.getServos();
@@ -187,6 +221,10 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
     	public String getAvailabilityZone() {
     	  return this.group.getAvailabilityZone();
     	}
+
+		public String getUserSubnetId() { return this.group.getUserSubnetId(); }
+
+		public String getSystemSubnetId() { return this.group.getSystemSubnetId(); }
     }
     
 	@TypeMapper

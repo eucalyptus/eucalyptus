@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -721,6 +722,26 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		  return newInstance;
 		}
 
+		public void updateIpAddressesInVpc(final String instanceId) {
+			final List<Optional<String>> userVpcInterfaceAddresses =
+					LoadBalancingSystemVpcs.getUserVpcInterfaceIps(instanceId);
+			if(userVpcInterfaceAddresses!=null) {
+				final Optional<String> publicIp = userVpcInterfaceAddresses.get(0);
+				final Optional<String> privateIp = userVpcInterfaceAddresses.get(1);
+				try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+					final LoadBalancerServoInstance update =
+							Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+					if(publicIp.isPresent())
+						update.setAddress(publicIp.get());
+					if(privateIp.isPresent())
+						update.setPrivateIp(privateIp.get());
+					Entities.persist(update);
+					db.commit();
+				}catch(final Exception ex) {
+					LOG.error("Failed to update instance's IP addresses", ex);
+				}
+			}
+		}
 		
 		@Override
 		public void fireEvent(ClockTick event) {
@@ -810,13 +831,25 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}catch(Exception ex){
 						LOG.error("Failed to persist the servo instance record", ex);
 					}
-					try {
-						newServos.stream()
-								.filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
-										instance.getState()))
-								.forEach(instance -> LoadBalancingSystemVpcs.setupVpcControlInterface(instance));
-					}catch(final Exception ex) {
-						LOG.error("Failed to attach system network interface to ELB instances", ex);
+					if (LoadBalancingSystemVpcs.isCloudVpc()) {
+						try {
+							newServos.stream()
+									.filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
+											instance.getState()))
+									.forEach(instance -> LoadBalancingSystemVpcs.setupUserVpcInterface(instance.getInstanceId()));
+						} catch (final Exception ex) {
+							LOG.error("Failed to attach secondary network interface to ELB instances", ex);
+						}
+						try { // if servo is in VPC, update ip addresses using the secondary interface's address
+							newServos.stream()
+									.filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
+											instance.getState()))
+									.forEach(instance -> {
+										updateIpAddressesInVpc(instance.getInstanceId());
+									});
+						} catch (final Exception ex) {
+							LOG.error("Failed to retrieve IP addresses of secondary network interface");
+						}
 					}
 				}
 				
@@ -892,9 +925,12 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							}
 							if (LoadBalancerServoInstance.STATE.InService.equals(newState)) {
 								try {
-									LoadBalancingSystemVpcs.setupVpcControlInterface(instance);
+									if(LoadBalancingSystemVpcs.isCloudVpc()) {
+										LoadBalancingSystemVpcs.setupUserVpcInterface(instance.getInstanceId());
+										updateIpAddressesInVpc(instance.getInstanceId());
+									}
 								}catch(final Exception ex) {
-									LOG.error("Failed to attach system network interface to ELB instances", ex);
+									LOG.error("Failed to attach secondary network interface to ELB instances", ex);
 								}
 							}
 						}

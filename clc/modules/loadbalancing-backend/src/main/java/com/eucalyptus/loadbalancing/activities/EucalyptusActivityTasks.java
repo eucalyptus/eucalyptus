@@ -914,11 +914,27 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public String allocateSystemVpcAddress() {
+	public AllocateAddressResponseType allocateSystemVpcAddress() {
 		return resultOf(
 				new EucaAllocateAddressTask(true),
 				new ComputeSystemActivity(),
 				"failed to allocate address"
+		);
+	}
+
+	public void associateSystemVpcAddress(final String allocationId, final String networkInterfaceId) {
+		checkResult(
+				new EucaAssociateAddressTask(allocationId, networkInterfaceId),
+				new ComputeSystemActivity(),
+				"failed to associate EIP address with network interface"
+		);
+	}
+
+	public void disassociateSystemVpcAddress(final String publicIp) {
+		checkResult(
+				new EucaDisassociateAddressTask(publicIp),
+				new ComputeSystemActivity(),
+				"failed to disassociate EIP address"
 		);
 	}
 
@@ -946,9 +962,9 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
-	public NetworkInterfaceType createNetworkInterface(final String subnetId) {
+	public NetworkInterfaceType createNetworkInterface(final String subnetId, final List<String> securityGroupIds) {
 		return resultOf(
-				new EucaCreateNetworkInterfaceTask(subnetId),
+				new EucaCreateNetworkInterfaceTask(subnetId, securityGroupIds),
 				new ComputeSystemActivity(),
 				"failed to create network interface"
 		);
@@ -1210,6 +1226,37 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
+	private class EucaAssociateAddressTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String allocationId = null;
+		private String networkInterfaceId = null;
+
+		private EucaAssociateAddressTask(final String allocationId, final String networkInterfaceId) {
+			this.allocationId = allocationId;
+			this.networkInterfaceId = networkInterfaceId;
+		}
+
+		ComputeMessage getRequest() {
+			final AssociateAddressType req = new AssociateAddressType();
+			req.setAllocationId( this.allocationId );
+			req.setNetworkInterfaceId( this.networkInterfaceId );
+			return req;
+		}
+	}
+
+	private class EucaDisassociateAddressTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String publicIp = null;
+
+		private EucaDisassociateAddressTask(final String publicIp) {
+			this.publicIp = publicIp;
+		}
+
+		ComputeMessage getRequest() {
+			final DisassociateAddressType req = new DisassociateAddressType();
+			req.setPublicIp(this.publicIp);
+			return req;
+		}
+	}
+
 	private class EucaDescribeAddressesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<AddressInfoType>> {
 		private String domain = null;
 		private String publicIp = null;
@@ -1240,7 +1287,7 @@ public class EucalyptusActivityTasks {
 			return response.getAddressesSet();
 		}
 	}
-	private class EucaAllocateAddressTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
+	private class EucaAllocateAddressTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, AllocateAddressResponseType> {
 		private boolean isVpc = false;
 
 		private EucaAllocateAddressTask(final boolean isVpc) {
@@ -1255,9 +1302,10 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		String extractResult(final ComputeMessage resp) {
-			final AllocateAddressResponseType response = (AllocateAddressResponseType) resp;
-			return response.getPublicIp();
+		AllocateAddressResponseType extractResult(final ComputeMessage resp) {
+			final AllocateAddressResponseType response =
+					(AllocateAddressResponseType) resp;
+			return response;
 		}
 	}
 
@@ -1285,14 +1333,32 @@ public class EucalyptusActivityTasks {
 
 	private class EucaCreateNetworkInterfaceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, NetworkInterfaceType> {
 		private String subnetId = null;
+		private List<String> securityGroupIds = null;
 		private EucaCreateNetworkInterfaceTask(final String subnetId) {
 			this.subnetId = subnetId;
+		}
+		private EucaCreateNetworkInterfaceTask(final String subnetId, final List<String> securityGrupIds) {
+			this.subnetId = subnetId;
+			this.securityGroupIds = securityGrupIds;
 		}
 
 		@Override
 		ComputeMessage getRequest() {
 			final CreateNetworkInterfaceType req = new CreateNetworkInterfaceType();
 			req.setSubnetId(this.subnetId);
+			if(this.securityGroupIds!=null && ! this.securityGroupIds.isEmpty()) {
+				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
+				groupIds.setItem(new ArrayList(
+						this.securityGroupIds.stream()
+						.map(id -> {
+							final SecurityGroupIdSetItemType item =
+									new SecurityGroupIdSetItemType();
+							item.setGroupId(id);
+							return item;
+						})
+						.collect(Collectors.toList())));
+				req.setGroupSet( groupIds );
+			}
 			return req;
 		}
 

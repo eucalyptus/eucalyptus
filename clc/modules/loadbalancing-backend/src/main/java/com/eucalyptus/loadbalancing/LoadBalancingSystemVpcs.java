@@ -35,20 +35,17 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
-
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
@@ -59,6 +56,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -228,6 +226,14 @@ public class LoadBalancingSystemVpcs {
         return controlIf.isPresent();
     };
 
+    private static Predicate<RunningInstancesItemType> instanceAttachedToUserVpc = (instance) -> {
+        final Optional<InstanceNetworkInterfaceSetItemType> userIf =
+                instance.getNetworkInterfaceSet().getItem().stream()
+                .filter(netif -> !systemVpcs().contains(netif.getVpcId()))
+                .findAny();
+        return userIf.isPresent();
+    };
+
     private static Function<RunningInstancesItemType, Set<String>> systemVpcInterfaceAddress = (instance) -> {
         final Set<String> addresses = Sets.newHashSet();
         /// find instance's data interface address
@@ -314,6 +320,68 @@ public class LoadBalancingSystemVpcs {
                         .findAny().orElse(null);
             };
 
+    private static Function<String, String> systemSubnetToSecurityGroupId =
+            (subnetId) -> {
+                final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
+                final Optional<String> optVpcId = client.describeSubnets(Lists.newArrayList(subnetId)).stream()
+                        .map( subnet -> subnet.getVpcId())
+                        .findFirst();
+                if(! optVpcId.isPresent())
+                    throw Exceptions.toUndeclared("No VPC ID for the requested subnet is found: " +subnetId);
+                final String vpcId = optVpcId.get();
+                final Optional<String> optSgroupId =
+                        client.describeSystemSecurityGroups(null).stream()
+                        .filter(g -> vpcId.equals(g.getVpcId()))
+                        .map(g -> g.getGroupId())
+                        .findFirst();   // assuming there's only one security group for system VPCs
+                if (! optSgroupId.isPresent())
+                    throw Exceptions.toUndeclared("No security group is found for VPC: " + vpcId);
+                return optSgroupId.get();
+            };
+
+    private static Function<String, String> userSubnetTosystemVpcPrivateSubnet =
+            (userSubnetId) -> {
+                final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
+
+                // describe user subnet
+                final Optional<SubnetType> optUserSubnet =
+                        client.describeSubnets(Lists.newArrayList(userSubnetId)).stream()
+                        .findFirst();
+                if(!optUserSubnet.isPresent())
+                    throw Exceptions.toUndeclared("No such user subnet is found: " + userSubnetId);
+                final SubnetType userSubnet = optUserSubnet.get();
+                final String az = userSubnet.getAvailabilityZone();
+                final String userVpcId = userSubnet.getVpcId();
+
+                final Optional<VpcType> userVpc =
+                        client.describeSystemVpcs(Lists.newArrayList(userVpcId)).stream()
+                                .findAny();
+                if(! userVpc.isPresent())
+                    throw Exceptions.toUndeclared("No user VPC is found: "+userVpcId);
+
+                final String userVpcCidrBlock = userVpc.get().getCidrBlock();
+                // find system VPC with no-overlapping cidr block
+                final String systemCidrBlock = SystemVpcCidrBlocks.stream().filter((systemCidr ->
+                        ! cidrBlockInclusive.test(systemCidr, userVpcCidrBlock)
+                )).findFirst().get();
+
+                final Optional<String> vpcId =
+                        client.describeSystemVpcs(null).stream()
+                                .filter(vpc -> systemCidrBlock.equals(vpc.getCidrBlock()))
+                                .map(vpc -> vpc.getVpcId())
+                                .findAny();
+                if(! vpcId.isPresent())
+                    throw Exceptions.toUndeclared("No system VPC with cidr block " + systemCidrBlock +" is found");
+
+                final Map<String, String> privateSubnets = getSubnets(vpcId.get(),
+                        SystemVpcPrivateSubnetBlocks().get(systemCidrBlock),
+                        Lists.newArrayList(az));
+                if(! privateSubnets.containsKey(az))
+                    throw Exceptions.toUndeclared("Failed to lookup system VPC's private subnet");
+
+                return privateSubnets.get(az);
+            };
+
     private static Function<RunningInstancesItemType, String> systemVpcPrivateSubnet =
             (instance) -> {
                 final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
@@ -374,6 +442,17 @@ public class LoadBalancingSystemVpcs {
         }
     });
 
+    // given the user vpc's subnet ID, return the corresponding system vpc's subnet ID
+    // to which the control interface will be attached
+    public static String getSystemVpcSubnetId(final String userSubnetId) {
+        return userSubnetTosystemVpcPrivateSubnet.apply(userSubnetId);
+    }
+
+    // given the system vpc's subnet ID, return the security group ID for the VPC.
+    public static String getSecurityGroupId(final String systemSubnetId) {
+        return systemSubnetToSecurityGroupId.apply(systemSubnetId);
+    }
+
     public static Set<String> getControlInterfaceAddresses(final LoadBalancerServoInstance instance) {
         if(!isCloudVpc())
             return null;
@@ -385,56 +464,135 @@ public class LoadBalancingSystemVpcs {
         }
     }
 
-    public static void setupVpcControlInterface(final LoadBalancerServoInstance instance) {
+    // list[0]: public IP, list[1]
+    public static List<Optional<String>> getUserVpcInterfaceIps(final String instanceId) {
+        if (!isCloudVpc())
+            return null;
+
+        final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
+        final Optional<RunningInstancesItemType> vmInstanceOpt =
+                client.describeSystemInstances(Lists.newArrayList(instanceId)).stream()
+                        .filter(vm -> "running".equals(vm.getStateName()))
+                        .findFirst();
+        if (!vmInstanceOpt.isPresent())
+            throw Exceptions.toUndeclared("No running instance is found with ID " + instanceId);
+        final RunningInstancesItemType vmInstance = vmInstanceOpt.get();
+        final Optional<InstanceNetworkInterfaceSetItemType> userVpcEni =
+                vmInstance.getNetworkInterfaceSet().getItem().stream()
+                .filter(netif -> !systemVpcs().contains(netif.getVpcId()))
+                .findAny();
+        if(! userVpcEni.isPresent())
+            return null;
+
+        final InstanceNetworkInterfaceSetItemType eni = userVpcEni.get();
+        final String privateIp = eni.getPrivateIpAddress();
+        String publicIp = null;
+        if (eni.getAssociation()!=null) {
+            publicIp = eni.getAssociation().getPublicIp();
+        }
+
+        final Optional<String> optPublicIp = publicIp!=null ? Optional.of(publicIp)  : Optional.empty();
+        final Optional<String> optPrivateIp = privateIp!=null ? Optional.of(privateIp) : Optional.empty();
+        return Lists.newArrayList(optPublicIp, optPrivateIp);
+    }
+
+    // if the primary interface is for system VPC, the secondary interface is attached to user VPC
+    public static void setupUserVpcInterface(final String instanceId) {
         if(!isCloudVpc())
             return;
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
-        // 1. check attached ENI for the Vm instance
         final Optional<RunningInstancesItemType> vmInstanceOpt =
-                client.describeSystemInstances(Lists.newArrayList(instance.getInstanceId())).stream()
+                client.describeSystemInstances(Lists.newArrayList(instanceId)).stream()
                         .filter(vm -> "running".equals(vm.getStateName()))
                         .findFirst();
         if(! vmInstanceOpt.isPresent())
-            throw Exceptions.toUndeclared("No running instance is found with ID " + instance.getInstanceId());
+            throw Exceptions.toUndeclared("No running instance is found with ID " + instanceId);
         final RunningInstancesItemType vmInstance = vmInstanceOpt.get();
+        if(! instanceAttachedToUserVpc.test(vmInstance) ) {
 
-        if (! instanceAttachedToSystemVpc.test(vmInstance)) {
-            /// find private subnet id for this instance
-            final String privateSubnetId = systemVpcPrivateSubnet.apply(vmInstance);
+            LoadBalancerServoInstance instance = null;
+            try {
+                instance = LoadBalancers.lookupServoInstance(instanceId);
+            }catch(final Exception ex) {
+                throw Exceptions.toUndeclared("Faild to lookup loadbalancer VM named: " + instanceId);
+            }
 
-            String attachedENI = null;
+            final LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView
+                    autoscaleGroupView = instance.getAutoScalingGroup();
+            // 1. find out this servo VM's user subnet ID
+            final String userSubnetId = autoscaleGroupView.getUserSubnetId();
+            if(userSubnetId == null)
+                throw Exceptions.toUndeclared("User subnet ID of the loadbalancer instance is null");
+
+            // 2. also find out the ELB's security group ID
+            final LoadBalancerAutoScalingGroup autoscaleGroup =
+                    LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(autoscaleGroupView);
+            final LoadBalancer.LoadBalancerCoreView lbView = autoscaleGroup.getLoadBalancer();
+            final Set<String> userSecurityGroupIds = lbView.getSecurityGroupIdsToNames().keySet();
+
+            // 3. create ENI from the subnet ID, associated with the security group ID
+            //    the creation of ENI out of user subnet is EUCA-only exception
+            NetworkInterfaceType attachedENI = null;
             final int MAX_RETRY = 5;
             int i = 1;
             do {
                 NetworkInterfaceType availableInteface = null;
                 try {
                     availableInteface =
-                            client.describeSystemNetworkInterfaces(privateSubnetId).stream()
-                            .filter(n -> "available".equals(n.getStatus()))
-                            .findAny()
-                            .orElse(client.createNetworkInterface(privateSubnetId));
+                            client.describeSystemNetworkInterfaces(userSubnetId).stream()
+                                    .filter(n -> "available".equals(n.getStatus()))
+                                    .findAny()
+                                    .orElse(client.createNetworkInterface(userSubnetId,
+                                            Lists.newArrayList(userSecurityGroupIds)));
                 }catch(final Exception ex) {
-                    throw Exceptions.toUndeclared("Failed to create network interface to subnet " + privateSubnetId, ex);
+                    throw Exceptions.toUndeclared("Failed to create network interface to subnet " + userSubnetId, ex);
                 }
 
+                // 3. attach ENI to the instance
                 try {
                     // in case attach conflicts
                     client.attachNetworkInterface(vmInstance.getInstanceId(),
                             availableInteface.getNetworkInterfaceId(), 1);
-                    attachedENI = availableInteface.getNetworkInterfaceId();
+                    attachedENI = availableInteface;
 
                     // re-load the interface address for source ip check
                     controlInterfaceCache.invalidate(instance.getInstanceId());
                 }catch(final Exception ex) {
-                    LOG.warn("Failed to attach system vpc interface; will retry", ex);
+                    LOG.warn("Failed to attach user vpc interface; will retry", ex);
                     attachedENI = null;
                 }
             }while (attachedENI == null && i++ < MAX_RETRY);
             if(i>=MAX_RETRY) {
-                LOG.error("Failed to attach system VPC interface to ELB instance + " + vmInstance.getInstanceId());
+                LOG.error("Failed to attach user VPC interface to ELB instance + " + vmInstance.getInstanceId());
             }else {
-                LOG.debug(String.format("ELB system VPC interface %s is attached to %s",
+                LOG.debug(String.format("ELB user VPC interface %s is attached to %s",
                         attachedENI, vmInstance.getInstanceId()));
+            }
+
+            // 4. for non-internal ELB, allocate and associate EIP to the secondary interface
+            if( attachedENI!=null) {
+                if (lbView.getScheme() != LoadBalancer.Scheme.Internal) {
+                    final String allocationId = client.describeSystemAddresses(true).stream()
+                            .filter(addr -> addr.getAssociationId() == null
+                                    && addr.getInstanceId() == null
+                                    && addr.getNetworkInterfaceId() == null)
+                            .map(addr -> addr.getAllocationId())
+                            .findAny()
+                            .orElse(client.allocateSystemVpcAddress().getAllocationId());
+                    if (allocationId == null)
+                        throw Exceptions.toUndeclared("Failed to allocate EIP address to associate with ELB instances");
+
+                    client.associateSystemVpcAddress(allocationId, attachedENI.getNetworkInterfaceId());
+                } else {
+                    // if previously this ENI has the associated EIP, disassociate it
+                    try {
+                        if (attachedENI.getAssociation() != null && attachedENI.getAssociation().getPublicIp() != null) {
+                            client.disassociateSystemVpcAddress(attachedENI.getAssociation().getPublicIp());
+                        }
+                    }catch(final Exception ex) {
+                        LOG.warn("Failed to disassociate elastic IP from internal ELB's interface", ex);
+                    }
+                }
             }
         }
     }
@@ -446,15 +604,11 @@ public class LoadBalancingSystemVpcs {
         try {
             // 1. Look for the existing VPCs or create new VPCs
             final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
-            final List<String> availabilityZones = Lists.newArrayList(Collections2.transform(client.describeAvailabilityZones(),
-                    new Function<ClusterInfoType, String>() {
-                        @Nullable
-                        @Override
-                        public String apply(@Nullable ClusterInfoType clusterInfoType) {
-                            return clusterInfoType.getZoneName();
-                        }
-                    }));
-
+            final List<String> availabilityZones =
+                    Lists.newArrayList(client.describeAvailabilityZones().stream()
+                            .map(az -> az.getZoneName())
+                            .collect(Collectors.toList())
+                    );
             if (availabilityZones.size() > (int) (65536 / (double) NumberOfHostsPerSystemSubnet()) - 1) {
                 throw Exceptions.toUndeclared("Number of possible subnets is less than availability zones. Property HOSTS_PER_SYSTEM_SUBNET should be reduced");
             }
@@ -477,13 +631,10 @@ public class LoadBalancingSystemVpcs {
                 throw new Exception("Could not find some system VPCs");
             }
 
-            final Collection<String> systemVpcIds = Collections2.transform(cidrToVpc.values(),
-                    new Function<VpcType, String>() {
-                        @Override
-                        public String apply(VpcType vpcType) {
-                            return vpcType.getVpcId();
-                        }
-                    });
+            final List<String> systemVpcIds = cidrToVpc.values().stream()
+                    .map(vpc -> vpc.getVpcId())
+                    .collect(Collectors.toList());
+
             for (final String cidr : cidrToVpc.keySet()) {
                 final VpcType vpc = cidrToVpc.get(cidr);
                 vpcToCidr.put(vpc.getVpcId(), cidr);
@@ -566,10 +717,9 @@ public class LoadBalancingSystemVpcs {
             }
         }
         if (allocationId == null) {
-            final String ipAddress = client.allocateSystemVpcAddress();
-            addresses = client.describeSystemAddresses(true, ipAddress);
-            allocationId = addresses.get(0).getAllocationId();
+            allocationId = client.allocateSystemVpcAddress().getAllocationId();
         }
+
         return allocationId;
     }
 
@@ -723,15 +873,9 @@ public class LoadBalancingSystemVpcs {
 
 
                 final List<String> availabilityZones =
-                        Lists.newArrayList(Collections2.transform(
-                                EucalyptusActivityTasks.getInstance().describeAvailabilityZones(),
-                                new Function<ClusterInfoType, String>() {
-                                    @Nullable
-                                    @Override
-                                    public String apply(@Nullable ClusterInfoType clusterInfoType) {
-                                        return clusterInfoType.getZoneName();
-                                    }
-                                }));
+                        EucalyptusActivityTasks.getInstance().describeAvailabilityZones().stream()
+                        .map(az -> az.getZoneName())
+                        .collect(Collectors.toList());
 
                 for(final String az: availabilityZones) {
                     if(! KnownAvailabilityZones.contains(az)) {

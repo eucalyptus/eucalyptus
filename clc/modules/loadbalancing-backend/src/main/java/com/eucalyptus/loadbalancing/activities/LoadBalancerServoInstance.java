@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -33,6 +34,7 @@ import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
@@ -209,6 +211,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public LoadBalancerZoneCoreView getAvailabilityZone(){
     	return this.view.getZone();
     }
+
+	public LoadBalancerAutoScalingGroupCoreView getAutoScalingGroup() { return this.view.getAutoScalingGroup(); }
+
     public String getPrivateIp(){
     	return this.privateIp;
     }
@@ -324,6 +329,8 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		public LoadBalancerZoneCoreView getZone(){
 			return this.zone;
 		}
+
+		public LoadBalancerAutoScalingGroupCoreView getAutoScalingGroup() { return this.autoscaling_group; }
 	}
 	
 	// make sure  InService servo instance has its IP registered to DNS
@@ -363,23 +370,35 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 					if(!LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState())){
 						String ipAddr = null;
 						String privateIpAddr = null;
-						if(instance.getAddress()==null){
-							try{
-								List<RunningInstancesItemType> result = null;
-								result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
-								if(result!=null && result.size()>0){
-								  ipAddr = result.get(0).getIpAddress();
-								  privateIpAddr = result.get(0).getPrivateIpAddress();
-								}
-							}catch(Exception ex){
-								LOG.warn("failed to run describe-instances", ex);
-								continue;
+						if (LoadBalancingSystemVpcs.isCloudVpc()) { /// in vpc mode
+							final List<Optional<String>> userVpcInterfaceAddresses =
+									LoadBalancingSystemVpcs.getUserVpcInterfaceIps(instance.getInstanceId());
+							if(userVpcInterfaceAddresses!=null) {
+								final Optional<String> optPublicIp = userVpcInterfaceAddresses.get(0);
+								final Optional<String> optPrivateIp = userVpcInterfaceAddresses.get(1);
+								if(optPublicIp.isPresent())
+									ipAddr = optPublicIp.get();
+								if(optPrivateIp.isPresent())
+									privateIpAddr = optPrivateIp.get();
 							}
-						}else{
-							ipAddr = instance.getAddress();
-							privateIpAddr = instance.getPrivateIp();
+						}else { /// in classic mode
+							if (instance.getAddress() == null) {
+								try {
+									List<RunningInstancesItemType> result = null;
+									result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
+									if (result != null && result.size() > 0) {
+										ipAddr = result.get(0).getIpAddress();
+										privateIpAddr = result.get(0).getPrivateIpAddress();
+									}
+								} catch (Exception ex) {
+									LOG.warn("failed to run describe-instances", ex);
+									continue;
+								}
+							} else {
+								ipAddr = instance.getAddress();
+								privateIpAddr = instance.getPrivateIp();
+							}
 						}
-						
 						try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 							final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
 							update.setAddress(ipAddr);

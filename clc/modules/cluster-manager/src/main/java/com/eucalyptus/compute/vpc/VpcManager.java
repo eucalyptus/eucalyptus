@@ -658,7 +658,7 @@ public class VpcManager {
       @Override
       public NetworkInterface get( ) {
         try {
-          final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity() );
+          final Subnet subnet = subnets.lookupByName( null, subnetId, Functions.<Subnet>identity() );
           final Vpc vpc = subnet.getVpc( );
           final Set<NetworkGroup> groups = request.getGroupSet( )==null || request.getGroupSet( ).groupIds( ).isEmpty( ) ?
               Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkGroup>identity( ) ) ) :

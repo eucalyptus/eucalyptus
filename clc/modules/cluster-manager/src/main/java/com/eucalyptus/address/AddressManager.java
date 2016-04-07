@@ -312,7 +312,7 @@ public class AddressManager {
           try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
             final NetworkInterface eni = Entities.merge( networkInterface );
             internetGateways.lookupByVpc(
-                AccountFullName.getInstance( address.getOwnerAccountNumber( ) ),
+                null,
                 eni.getVpc( ).getDisplayName( ),
                 CloudMetadatas.toDisplayName( ) );
 
