@@ -34,10 +34,12 @@ import com.eucalyptus.loadbalancing.common.msgs.TagList;
 import com.eucalyptus.util.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -63,6 +65,21 @@ public class TagHelper {
     stackNameTag.setValue(stackEntity.getStackName());
     tags.add(stackNameTag);
     return tags;
+  }
+
+  public static boolean stackTagsEquals(VersionedStackEntity stackEntity1, VersionedStackEntity stackEntity2) throws CloudFormationException {
+    if (stackEntity1 == null && stackEntity2 == null) return true;
+    if (stackEntity1 != null && stackEntity2 == null) return false;
+    if (stackEntity1 == null && stackEntity2 != null) return false;
+    Map<String, String> tag1Map = Maps.newHashMap();
+    Map<String, String> tag2Map = Maps.newHashMap();
+    for (Tag tag: StackEntityHelper.jsonToTags(stackEntity1.getTagsJson())) {
+      tag1Map.put(tag.getKey(), tag.getValue());
+    }
+    for (Tag tag: StackEntityHelper.jsonToTags(stackEntity2.getTagsJson())) {
+      tag2Map.put(tag.getKey(), tag.getValue());
+    }
+    return tag1Map.equals(tag2Map);
   }
 
   public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(VersionedStackEntity stackEntity) throws CloudFormationException {

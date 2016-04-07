@@ -35,8 +35,6 @@ import com.eucalyptus.auth.euare.DeleteUserType;
 import com.eucalyptus.auth.euare.GroupType;
 import com.eucalyptus.auth.euare.ListGroupsForUserResponseType;
 import com.eucalyptus.auth.euare.ListGroupsForUserType;
-import com.eucalyptus.auth.euare.ListUsersResponseType;
-import com.eucalyptus.auth.euare.ListUsersType;
 import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
 import com.eucalyptus.auth.euare.PutUserPolicyType;
 import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
@@ -91,8 +89,8 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
 
   private static final String DEFAULT_PATH = "/";
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSIAMUserResourceAction otherAction = (AWSIAMUserResourceAction) resourceAction;
     if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

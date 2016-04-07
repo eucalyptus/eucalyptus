@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
@@ -155,7 +154,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) throws Exception {
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception {
     AWSEC2InstanceResourceAction otherAction = (AWSEC2InstanceResourceAction) resourceAction;
     if (info.getPhysicalResourceId() == null) {
       throw new ValidationErrorException("Can not call update on this instance.  It was never created");
@@ -170,7 +169,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
     RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
     boolean isVpc = runningInstancesItemType.getVpcId() != null;
     boolean isEbs = "ebs".equals(runningInstancesItemType.getRootDeviceType());
-    UpdateType updateType = UpdateType.NONE;
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     if (!Objects.equals(properties.getAdditionalInfo(), otherAction.properties.getAdditionalInfo())) {
       updateType = updateType.max(updateType, isEbs ? UpdateType.SOME_INTERRUPTION : UpdateType.NEEDS_REPLACEMENT);
     }

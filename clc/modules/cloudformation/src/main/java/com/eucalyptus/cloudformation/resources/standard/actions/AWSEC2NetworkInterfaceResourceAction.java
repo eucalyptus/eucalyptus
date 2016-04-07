@@ -21,8 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -87,7 +85,6 @@ import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -109,8 +106,8 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) throws ValidationErrorException {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws ValidationErrorException {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2NetworkInterfaceResourceAction otherAction = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
     if (!Objects.equals(properties.getDescription(), otherAction.properties.getDescription())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

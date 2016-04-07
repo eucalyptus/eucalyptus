@@ -34,15 +34,11 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AssociateDhcpOptionsResponseType;
-import com.eucalyptus.compute.common.AssociateDhcpOptionsType;
 import com.eucalyptus.compute.common.AttachInternetGatewayResponseType;
 import com.eucalyptus.compute.common.AttachInternetGatewayType;
 import com.eucalyptus.compute.common.AttachVpnGatewayResponseType;
 import com.eucalyptus.compute.common.AttachVpnGatewayType;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
-import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
@@ -77,8 +73,8 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2VPCGatewayAttachmentResourceAction otherAction = (AWSEC2VPCGatewayAttachmentResourceAction) resourceAction;
     if (!Objects.equals(properties.getInternetGatewayId(), otherAction.properties.getInternetGatewayId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

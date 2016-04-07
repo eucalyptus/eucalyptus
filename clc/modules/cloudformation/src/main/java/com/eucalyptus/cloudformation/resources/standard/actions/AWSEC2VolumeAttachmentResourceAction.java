@@ -78,8 +78,8 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2VolumeAttachmentResourceAction otherAction = (AWSEC2VolumeAttachmentResourceAction) resourceAction;
     if (!Objects.equals(properties.getDevice(), otherAction.properties.getDevice())) {
       updateType = UpdateType.max(updateType, UpdateType.UNSUPPORTED);

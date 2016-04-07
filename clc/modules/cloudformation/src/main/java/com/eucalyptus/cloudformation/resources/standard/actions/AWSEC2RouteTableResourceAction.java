@@ -75,8 +75,8 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2RouteTableResourceAction otherAction = (AWSEC2RouteTableResourceAction) resourceAction;
     if (!Objects.equals(properties.getVpcId(), otherAction.properties.getVpcId())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

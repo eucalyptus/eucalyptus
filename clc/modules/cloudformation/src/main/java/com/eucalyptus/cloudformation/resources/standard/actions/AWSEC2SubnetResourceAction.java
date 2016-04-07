@@ -87,8 +87,8 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2SubnetResourceAction otherAction = (AWSEC2SubnetResourceAction) resourceAction;
     if (!Objects.equals(properties.getAvailabilityZone(), otherAction.properties.getAvailabilityZone())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

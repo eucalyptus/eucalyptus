@@ -93,7 +93,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
     return UpdateType.UNSUPPORTED;
   }
   private static class BucketAndKey {

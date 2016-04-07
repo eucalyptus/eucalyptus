@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -68,8 +67,8 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2SubnetRouteTableAssociationResourceAction otherAction = (AWSEC2SubnetRouteTableAssociationResourceAction) resourceAction;
     if (!Objects.equals(properties.getRouteTableId(), otherAction.properties.getRouteTableId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

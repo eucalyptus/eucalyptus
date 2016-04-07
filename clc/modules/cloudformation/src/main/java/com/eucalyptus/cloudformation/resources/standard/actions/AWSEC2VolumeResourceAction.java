@@ -40,7 +40,6 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.CreateSnapshotType;
@@ -52,7 +51,6 @@ import com.eucalyptus.compute.common.DeleteTagsResponseType;
 import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DeleteVolumeResponseType;
 import com.eucalyptus.compute.common.DeleteVolumeType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
@@ -66,14 +64,12 @@ import com.eucalyptus.compute.common.ModifyVolumeAttributeType;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.async.AsyncRequest;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -105,8 +101,8 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2VolumeResourceAction otherAction = (AWSEC2VolumeResourceAction) resourceAction;
     if (!Objects.equals(properties.getAutoEnableIO(), otherAction.properties.getAutoEnableIO())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

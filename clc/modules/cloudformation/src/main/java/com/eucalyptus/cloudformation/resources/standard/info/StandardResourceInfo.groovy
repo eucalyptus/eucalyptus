@@ -39,6 +39,10 @@ public class AWSAutoScalingAutoScalingGroupResourceInfo extends ResourceInfo {
   public boolean supportsSignals() {
     return true;
   }
+  @Override
+  public boolean supportsTags() {
+    return true;
+  }
 }
 
 @ToString(includeNames=true)
@@ -131,6 +135,10 @@ public class AWSEC2DHCPOptionsResourceInfo extends ResourceInfo {
   public AWSEC2DHCPOptionsResourceInfo() {
     setType("AWS::EC2::DHCPOptions");
   }
+  @Override
+  public boolean supportsTags() {
+    return true;
+  }
 }
 
 
@@ -174,6 +182,10 @@ public class AWSEC2InstanceResourceInfo extends ResourceInfo {
   public boolean supportsSignals() {
     return true;
   }
+  @Override
+  public boolean supportsTags() {
+    return true;
+  }
 
 }
 
@@ -182,6 +194,10 @@ public class AWSEC2InstanceResourceInfo extends ResourceInfo {
 public class AWSEC2InternetGatewayResourceInfo extends ResourceInfo {
   public AWSEC2InternetGatewayResourceInfo() {
     setType("AWS::EC2::InternetGateway");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -197,6 +213,10 @@ public class AWSEC2NatGatewayResourceInfo extends ResourceInfo {
 public class AWSEC2NetworkAclResourceInfo extends ResourceInfo {
   public AWSEC2NetworkAclResourceInfo() {
     setType("AWS::EC2::NetworkAcl");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -217,6 +237,10 @@ public class AWSEC2NetworkInterfaceResourceInfo extends ResourceInfo {
   String secondaryPrivateIpAddresses
   public AWSEC2NetworkInterfaceResourceInfo() {
     setType("AWS::EC2::NetworkInterface");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -242,6 +266,10 @@ public class AWSEC2RouteTableResourceInfo extends ResourceInfo {
   public AWSEC2RouteTableResourceInfo() {
     setType("AWS::EC2::RouteTable");
   }
+  @Override
+  public boolean supportsTags() {
+    return true;
+  }
 }
 
 
@@ -251,6 +279,10 @@ public class AWSEC2SecurityGroupResourceInfo extends ResourceInfo {
   String groupId;
   public AWSEC2SecurityGroupResourceInfo() {
     setType("AWS::EC2::SecurityGroup");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -277,6 +309,10 @@ public class AWSEC2SubnetResourceInfo extends ResourceInfo {
   String availabilityZone;
   public AWSEC2SubnetResourceInfo() {
     setType("AWS::EC2::Subnet");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -311,6 +347,10 @@ public class AWSEC2VolumeResourceInfo extends ResourceInfo {
   public boolean supportsSnapshot() {
     return true;
   }
+  @Override
+  public boolean supportsTags() {
+    return true;
+  }
 }
 
 
@@ -332,6 +372,10 @@ public class AWSEC2VPCResourceInfo extends ResourceInfo {
   String defaultSecurityGroup;
   public AWSEC2VPCResourceInfo() {
     setType("AWS::EC2::VPC");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -365,6 +409,10 @@ public class AWSElasticLoadBalancingLoadBalancerResourceInfo extends ResourceInf
   String sourceSecurityGroupOwnerAlias;
   public AWSElasticLoadBalancingLoadBalancerResourceInfo() {
     setType("AWS::ElasticLoadBalancing::LoadBalancer");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
 
@@ -485,5 +533,9 @@ public class AWSS3BucketResourceInfo extends ResourceInfo {
   String websiteURL;
   public AWSS3BucketResourceInfo() {
     setType("AWS::S3::Bucket");
+  }
+  @Override
+  public boolean supportsTags() {
+    return true;
   }
 }
