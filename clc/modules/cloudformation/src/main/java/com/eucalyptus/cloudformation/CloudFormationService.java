@@ -233,12 +233,12 @@ public class CloudFormationService {
         // see if the workflow is open
         try {
           AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
-          StackWorkflowEntity deleteStackWorkflowEntity = continueUpdateRollbackWorkflows.get(0);
+          StackWorkflowEntity continueUpdateRollbackWorkflowEntity = continueUpdateRollbackWorkflows.get(0);
           DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
-          describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
+          describeWorkflowExecutionRequest.setDomain(continueUpdateRollbackWorkflowEntity.getDomain());
           WorkflowExecution execution = new WorkflowExecution();
-          execution.setRunId(deleteStackWorkflowEntity.getRunId());
-          execution.setWorkflowId(deleteStackWorkflowEntity.getWorkflowId());
+          execution.setRunId(continueUpdateRollbackWorkflowEntity.getRunId());
+          execution.setWorkflowId(continueUpdateRollbackWorkflowEntity.getWorkflowId());
           describeWorkflowExecutionRequest.setExecution(execution);
           WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
           if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
@@ -540,6 +540,12 @@ public class CloudFormationService {
           throw new AccessDeniedException( "Not authorized." );
         }
         final String stackAccountId = stackEntity.getAccountId( );
+
+
+        if (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
+          stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) {
+          throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
+        }
 
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
         boolean existingOpenDeleteWorkflow = false;
