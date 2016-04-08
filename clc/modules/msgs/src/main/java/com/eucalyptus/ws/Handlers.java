@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,7 +143,7 @@ public class Handlers {
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
-  private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
+  private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingHandler.context( BindingManager.getDefaultBinding( ) ) );
   private static final ChannelHandler                        httpResponseHeaderHandler= new HttpResponseHeaderHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( )  { { this.start( ); } };   //TODO:GRZE: configurable
 
@@ -288,9 +288,9 @@ public class Handlers {
       public BindingHandler load( String bindingName ) {
         String maybeBindingName = "";
         if ( BindingManager.isRegisteredBinding( bindingName ) ) {
-          return new BindingHandler( BindingManager.getBinding( bindingName ) );
+          return new BindingHandler( BindingHandler.context( BindingManager.getBinding( bindingName ) ) );
         } else if ( BindingManager.isRegisteredBinding( maybeBindingName = BindingManager.sanitizeNamespace( bindingName ) ) ) {
-          return new BindingHandler( BindingManager.getBinding( maybeBindingName ) );
+          return new BindingHandler( BindingHandler.context( BindingManager.getBinding( maybeBindingName ) ) );
         } else {
           throw Exceptions.trace( "Failed to find registerd binding for name: " + bindingName
                                   + ".  Also tried looking for sanitized name: "

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,8 @@ public class ExternalStorageControllerSoapPipeline extends FilteredPipeline {
     pipeline.addLast("ws-addressing", Handlers.newAddressingHandler("EucalyptusSC#"));
     pipeline.addLast("build-soap-envelope", Handlers.soapHandler());
     // pipeline.addLast( "binding", Handlers.bindingHandler( ) ); //
-    pipeline.addLast("binding", new BindingHandler(BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE)));
+    pipeline.addLast("binding",
+        new BindingHandler(BindingHandler.context(BindingManager.getBinding(SC_EXTERNAL_SOAP_NAMESPACE))));
     return pipeline;
   }
 
