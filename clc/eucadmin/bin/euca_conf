@@ -1,0 +1,74 @@
+#!/usr/bin/python -tt
+
+# Copyright (c) 2011-2016 Hewlett Packard Enterprise Development LP
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import sys
+
+
+def main():
+    replacement = None
+    if '--register-nodes' in sys.argv:
+        replacement = ("``clusteradmin-register-nodes'' and "
+                       "``clusteradmin-copy-keys''")
+    elif '--register-cluster' in sys.argv:
+        replacement = ("``euserv-register-service -t cluster'' and "
+                       "``clcadmin-copy-keys -z''")
+    elif '--register-sc' in sys.argv:
+        replacement = ("``euserv-register-service -t storage'' and "
+                       "``clcadmin-copy-keys -z''")
+    elif '--register-walrusbackend' in sys.argv:
+        replacement = ("``euserv-register-service -t walrusbackend'' and "
+                       "``clcadmin-copy-keys''")
+    elif '--register-service' in sys.argv:
+        replacement = "``euserv-register-service''"
+    elif '--deregister-nodes' in sys.argv:
+        replacement = "``clusteradmin-deregister-nodes''"
+    elif '--deregister-cluster' in sys.argv:
+        replacement = "``euserv-deregister-service -t cluster''"
+    elif '--deregister-sc' in sys.argv:
+        replacement = "``euserv-deregister-service -t storage''"
+    elif '--deregister-walrusbackend' in sys.argv:
+        replacement = "``euserv-deregister-service -t walrusbackend''"
+    elif '--get-credentials' in sys.argv:
+        replacement = ("``eval `clcadmin-assume-system-credentials`'' or "
+                       "``euare-useraddkey''")
+    elif '--synckey' in sys.argv:
+        replacement = "``clcadmin-copy-keys''"
+    elif any(arg.startswith('--list-') for arg in sys.argv):
+        replacement = "``euserv-describe-services''"
+    if replacement:
+        msg = ('error: euca_conf is no longer supported.  Use {0} for '
+               'this operation instead.'.format(replacement))
+    else:
+        msg = ('error: euca_conf is no longer supported.  See '
+               'eucalyptus-admin(7) and euca2ools(7) for a summary of '
+               'current command line tools.')
+    print >> sys.stderr, msg
+
+
+if __name__ == "__main__":
+    main()
+    sys.exit(1)
