@@ -139,6 +139,9 @@ public class StackEntityManager {
       } else {
         currentStackEntity.setNotificationARNsJson(null);
       }
+      if (request.getTags()!= null && request.getTags().getMember() != null) {
+        currentStackEntity.setTagsJson(StackEntityHelper.tagsToJson(request.getTags().getMember()));
+      }
       currentStackEntity.setStackVersion(previousStackVersion + 1);
       db.commit( );
       return currentStackEntity;

@@ -82,8 +82,8 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2DHCPOptionsResourceAction otherAction = (AWSEC2DHCPOptionsResourceAction) resourceAction;
     if (!Objects.equals(properties.getDomainName(), otherAction.properties.getDomainName())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

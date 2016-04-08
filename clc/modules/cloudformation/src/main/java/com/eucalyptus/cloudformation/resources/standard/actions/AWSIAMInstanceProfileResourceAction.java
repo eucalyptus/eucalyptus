@@ -28,9 +28,6 @@ import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
 import com.eucalyptus.auth.euare.GetInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.GetInstanceProfileType;
-import com.eucalyptus.auth.euare.InstanceProfileType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesType;
 import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
@@ -50,7 +47,6 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.util.async.AsyncRequest;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -72,8 +68,8 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSIAMInstanceProfileResourceAction otherAction = (AWSIAMInstanceProfileResourceAction) resourceAction;
     if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

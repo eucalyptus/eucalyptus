@@ -61,8 +61,8 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2VPCDHCPOptionsAssociationResourceAction otherAction = (AWSEC2VPCDHCPOptionsAssociationResourceAction) resourceAction;
     if (!Objects.equals(properties.getDhcpOptionsId(), otherAction.properties.getDhcpOptionsId())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

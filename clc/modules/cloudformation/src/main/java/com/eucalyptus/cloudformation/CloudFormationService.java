@@ -233,12 +233,12 @@ public class CloudFormationService {
         // see if the workflow is open
         try {
           AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
-          StackWorkflowEntity deleteStackWorkflowEntity = continueUpdateRollbackWorkflows.get(0);
+          StackWorkflowEntity continueUpdateRollbackWorkflowEntity = continueUpdateRollbackWorkflows.get(0);
           DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
-          describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
+          describeWorkflowExecutionRequest.setDomain(continueUpdateRollbackWorkflowEntity.getDomain());
           WorkflowExecution execution = new WorkflowExecution();
-          execution.setRunId(deleteStackWorkflowEntity.getRunId());
-          execution.setWorkflowId(deleteStackWorkflowEntity.getWorkflowId());
+          execution.setRunId(continueUpdateRollbackWorkflowEntity.getRunId());
+          execution.setWorkflowId(continueUpdateRollbackWorkflowEntity.getWorkflowId());
           describeWorkflowExecutionRequest.setExecution(execution);
           WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
           if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
@@ -540,6 +540,12 @@ public class CloudFormationService {
           throw new AccessDeniedException( "Not authorized." );
         }
         final String stackAccountId = stackEntity.getAccountId( );
+
+
+        if (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
+          stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) {
+          throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
+        }
 
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
         boolean existingOpenDeleteWorkflow = false;
@@ -1197,6 +1203,18 @@ public class CloudFormationService {
 
       int previousStackVersion = previousStackEntity.getStackVersion();
 
+      if (request.getTags()!= null && request.getTags().getMember() != null) {
+        for (Tag tag: request.getTags().getMember()) {
+          if (Strings.isNullOrEmpty(tag.getKey()) || Strings.isNullOrEmpty(tag.getValue())) {
+            throw new ValidationErrorException("Tags can not be null or empty");
+          } else if (tag.getKey().startsWith("aws:") ) {
+            throw new ValidationErrorException("Invalid tag key.  \"aws:\" is a reserved prefix.");
+          } else if (tag.getKey().startsWith("euca:") ) {
+            throw new ValidationErrorException("Invalid tag key.  \"euca:\" is a reserved prefix.");
+          }
+        }
+      }
+
       final PseudoParameterValues nextPseudoParameterValues = new PseudoParameterValues();
       nextPseudoParameterValues.setAccountId(accountId);
       nextPseudoParameterValues.setStackName(stackName);
@@ -1263,7 +1281,22 @@ public class CloudFormationService {
       else if (!previousTemplate.getResourceInfoMap().keySet().equals(nextTemplate.getResourceInfoMap().keySet())) {
         requiresUpdate = true;
       }
-      // 4) Differences in the metadata or properties for a given field
+      // 4) changes to tags
+      else if (request.getTags() !=null && request.getTags().getMember() != null) {
+        Map<String, String> previousTagsMap = Maps.newHashMap();
+        Map<String, String> nextTagsMap = Maps.newHashMap();
+        List<Tag> previousTags = StackEntityHelper.jsonToTags(previousStackEntity.getTagsJson());
+        for (Tag tag: previousTags) {
+          previousTagsMap.put(tag.getKey(), tag.getValue());
+        }
+        for (Tag tag: request.getTags().getMember()) {
+          nextTagsMap.put(tag.getKey(), tag.getValue());
+        }
+        if (!previousTagsMap.equals(nextTagsMap)) {
+          requiresUpdate = true;
+        }
+      }
+      // 5) Differences in the metadata or properties for a given field
       else {
         // Note: Ref: to resources will not work here, nor will Fn::GetAtt calls.  However, some items can be evaluated
         // before hand (like Ref: to parameters).  We will attempt to evaluate functions for the metadata and properties

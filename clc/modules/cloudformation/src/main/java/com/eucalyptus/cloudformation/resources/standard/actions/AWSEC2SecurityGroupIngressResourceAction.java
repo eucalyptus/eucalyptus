@@ -69,8 +69,8 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2SecurityGroupIngressResourceAction otherAction = (AWSEC2SecurityGroupIngressResourceAction) resourceAction;
     if (!Objects.equals(properties.getGroupName(), otherAction.properties.getGroupName())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

@@ -78,8 +78,8 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) throws ValidationErrorException {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws ValidationErrorException {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2NetworkInterfaceAttachmentResourceAction otherAction = (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
     if (!Objects.equals(properties.getDeleteOnTermination(), otherAction.properties.getDeleteOnTermination())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AccessKeyMetadataType;
 import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
 import com.eucalyptus.auth.euare.CreateAccessKeyType;
 import com.eucalyptus.auth.euare.DeleteAccessKeyResponseType;
@@ -70,8 +69,8 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSIAMAccessKeyResourceAction otherAction = (AWSIAMAccessKeyResourceAction) resourceAction;
     if (!Objects.equals(properties.getUserName(), otherAction.properties.getUserName())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

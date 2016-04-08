@@ -70,8 +70,8 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
 
   private static final String DEFAULT_PATH = "/";
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSIAMGroupResourceAction otherAction = (AWSIAMGroupResourceAction) resourceAction;
     if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

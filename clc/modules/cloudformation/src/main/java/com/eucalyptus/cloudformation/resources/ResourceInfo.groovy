@@ -32,6 +32,10 @@ public abstract class ResourceInfo {
   String updatePolicyJson;
   String deletionPolicy = "Delete";
 
+  public boolean supportsTags() {
+    return false;
+  }
+
   public boolean supportsSnapshot() {
     return false;
   }

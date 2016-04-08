@@ -258,8 +258,8 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSCloudWatchAlarmResourceAction otherAction = (AWSCloudWatchAlarmResourceAction) resourceAction;
     if (!Objects.equals(properties.getActionsEnabled(), otherAction.properties.getActionsEnabled())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

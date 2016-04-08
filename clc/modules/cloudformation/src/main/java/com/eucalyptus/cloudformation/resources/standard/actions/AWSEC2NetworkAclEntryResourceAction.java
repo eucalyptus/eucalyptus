@@ -69,8 +69,8 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2NetworkAclEntryResourceAction otherAction = (AWSEC2NetworkAclEntryResourceAction) resourceAction;
     if (!Objects.equals(properties.getCidrBlock(), otherAction.properties.getCidrBlock())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

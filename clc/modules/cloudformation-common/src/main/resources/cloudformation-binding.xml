@@ -432,6 +432,7 @@
     <value name="StackPolicyDuringUpdateBody" field="stackPolicyDuringUpdateBody" usage="optional"/>
     <value name="StackPolicyDuringUpdateURL" field="stackPolicyDuringUpdateURL" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.Tags"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
     <value name="UsePreviousTemplate" field="usePreviousTemplate" usage="optional"/>

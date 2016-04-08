@@ -45,6 +45,7 @@ import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.cloudformation.resources.standard.TagHelper
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
 import com.eucalyptus.cloudformation.template.AWSParameterTypeValidationHelper
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
@@ -748,8 +749,10 @@ public class StackActivityImpl implements StackActivity {
     ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
     ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
 
+    boolean stackTagsChanged = !TagHelper.stackTagsEquals(previousStackEntity, nextStackEntity);
+    boolean shouldCheckUpdateTypeForTags = previousResourceInfo.supportsTags() && stackTagsChanged;
 
-    if (nothingOutsidePropertiesChanged && !propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged()) {
+    if (nothingOutsidePropertiesChanged && !propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
       // nothing has changed, so copy the old values to the new one.
       StackResourceEntityManager.copyStackResourceEntityData(previousStackResourceEntity, nextStackResourceEntity);
       nextStackResourceEntity.setUpdateType("NONE"); // no update with replacement this time.
@@ -769,7 +772,7 @@ public class StackActivityImpl implements StackActivity {
     nextStackResourceEntity.setCreatedEnoughToDelete(previousStackResourceEntity.getCreatedEnoughToDelete());
     StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
 
-    if (!propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged()) {
+    if (!propertiesChanged && !previousResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
       nextStackResourceEntity.setUpdateType("NO_PROPERTIES");
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NO_PROPERTIES";
@@ -783,7 +786,7 @@ public class StackActivityImpl implements StackActivity {
     nextResourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(nextResourceInfo);
     ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
-    UpdateType updateType = previousResourceAction.getUpdateType(resourceAction);
+    UpdateType updateType = previousResourceAction.getUpdateType(resourceAction, stackTagsChanged);
     if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
       nextStackResourceEntity.setResourceStatusReason(null);

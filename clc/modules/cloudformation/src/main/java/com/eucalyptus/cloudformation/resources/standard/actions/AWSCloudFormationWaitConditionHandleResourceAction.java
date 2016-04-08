@@ -48,7 +48,6 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -62,7 +61,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
   private AWSCloudFormationWaitConditionHandleProperties properties = new AWSCloudFormationWaitConditionHandleProperties();
   private AWSCloudFormationWaitConditionHandleResourceInfo info = new AWSCloudFormationWaitConditionHandleResourceInfo();
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
     return UpdateType.UNSUPPORTED;
   }
 

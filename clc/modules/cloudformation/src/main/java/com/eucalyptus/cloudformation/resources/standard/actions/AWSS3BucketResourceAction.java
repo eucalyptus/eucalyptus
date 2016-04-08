@@ -96,8 +96,8 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
 
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSS3BucketResourceAction otherAction = (AWSS3BucketResourceAction) resourceAction;
     if (!Objects.equals(properties.getAccessControl(), otherAction.properties.getAccessControl())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

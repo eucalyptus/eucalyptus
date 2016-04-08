@@ -638,6 +638,8 @@ public class UpdateStackType extends CloudFormationMessage {
   String stackPolicyDuringUpdateBody;
   String stackPolicyDuringUpdateURL;
   String stackPolicyURL;
+  @JsonSerialize(using = TagsRemoveMemberSerializer.class, as=Tags.class)
+  Tags tags;
   String templateBody;
   String templateURL;
   Boolean usePreviousTemplate;

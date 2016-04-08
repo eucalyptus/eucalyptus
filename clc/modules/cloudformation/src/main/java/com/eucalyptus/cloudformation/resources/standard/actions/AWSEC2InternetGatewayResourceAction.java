@@ -74,8 +74,8 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2InternetGatewayResourceAction otherAction = (AWSEC2InternetGatewayResourceAction) resourceAction;
     if (!Objects.equals(properties.getTags(), otherAction.properties.getTags())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

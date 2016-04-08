@@ -30,7 +30,6 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -65,8 +64,8 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2SubnetNetworkAclAssociationResourceAction otherAction = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
     if (!Objects.equals(properties.getNetworkAclId(), otherAction.properties.getNetworkAclId())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

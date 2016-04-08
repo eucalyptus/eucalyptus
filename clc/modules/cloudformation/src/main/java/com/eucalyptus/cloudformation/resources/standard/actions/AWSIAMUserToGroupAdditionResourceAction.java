@@ -38,11 +38,8 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
@@ -62,8 +59,8 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
   }
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSIAMUserToGroupAdditionResourceAction otherAction = (AWSIAMUserToGroupAdditionResourceAction) resourceAction;
     if (!Objects.equals(properties.getGroupName(), otherAction.properties.getGroupName())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);

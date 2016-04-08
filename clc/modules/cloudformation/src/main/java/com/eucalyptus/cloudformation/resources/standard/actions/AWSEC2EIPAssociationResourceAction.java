@@ -76,8 +76,8 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2EIPAssociationResourceAction otherAction = (AWSEC2EIPAssociationResourceAction) resourceAction;
     if (!Objects.equals(properties.getAllocationId(), otherAction.properties.getAllocationId())) {
       // Update requires: Replacement if you also change the InstanceId or NetworkInterfaceId property. If not, update requires No interruption.

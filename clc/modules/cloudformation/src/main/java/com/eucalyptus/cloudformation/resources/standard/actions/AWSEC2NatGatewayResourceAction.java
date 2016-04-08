@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -32,40 +31,22 @@ import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.AddressInfoType;
-import com.eucalyptus.compute.common.AllocateAddressResponseType;
-import com.eucalyptus.compute.common.AllocateAddressType;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
-import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateNatGatewayResponseType;
 import com.eucalyptus.compute.common.CreateNatGatewayType;
 import com.eucalyptus.compute.common.DeleteNatGatewayType;
-import com.eucalyptus.compute.common.DescribeAddressesResponseType;
-import com.eucalyptus.compute.common.DescribeAddressesType;
-import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeNatGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeNatGatewaysType;
-import com.eucalyptus.compute.common.DescribeVolumesResponseType;
-import com.eucalyptus.compute.common.DescribeVolumesType;
-import com.eucalyptus.compute.common.DisassociateAddressResponseType;
-import com.eucalyptus.compute.common.DisassociateAddressType;
 import com.eucalyptus.compute.common.Filter;
-import com.eucalyptus.compute.common.ReleaseAddressResponseType;
-import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Objects;
 
 import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage;
@@ -87,8 +68,8 @@ public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
   }
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2NatGatewayResourceAction otherAction = (AWSEC2NatGatewayResourceAction) resourceAction;
     if (!Objects.equals(properties.getAllocationId(), otherAction.properties.getAllocationId())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

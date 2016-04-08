@@ -58,11 +58,8 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.DescribeVolumeAttributeResponseType;
-import com.eucalyptus.compute.common.DescribeVolumeAttributeType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
-import com.eucalyptus.compute.common.ModifyVolumeAttributeType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
@@ -103,8 +100,8 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSEC2SecurityGroupResourceAction otherAction = (AWSEC2SecurityGroupResourceAction) resourceAction;
     if (!Objects.equals(properties.getGroupDescription(), otherAction.properties.getGroupDescription())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);

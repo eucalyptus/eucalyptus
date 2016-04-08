@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -132,7 +131,6 @@ import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -157,8 +155,8 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
   }
 
   @Override
-  public UpdateType getUpdateType(ResourceAction resourceAction) {
-    UpdateType updateType = UpdateType.NONE;
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
     AWSElasticLoadBalancingLoadBalancerResourceAction otherAction = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
     if (!Objects.equals(properties.getAccessLoggingPolicy(), otherAction.properties.getAccessLoggingPolicy())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
