@@ -157,7 +157,12 @@ class Euctl(PropertiesRequest):
         if self.args.get('dump'):
             prop_name = self.args.get('prop_pairs')[0][0]
             self.log.info('dumping property value   %s', prop_name)
-            prop = self._get_unique_property(prop_name)
+            if self.args.get('format') == 'raw':
+                # We need to actively prevent this from being parsed.
+                prop_type = _Property
+            else:
+                prop_type = None
+            prop = self._get_unique_property(prop_name, prop_type=prop_type)
             formatter = self._get_formatter(prop)
             print formatter.dumps(prop.value).strip()
         elif self.args.get('edit'):
@@ -223,17 +228,20 @@ class Euctl(PropertiesRequest):
         response = request.main()
         return response.get('oldValue')
 
-    def _get_all_properties(self, prop_name):
+    def _get_all_properties(self, prop_name, prop_type=None):
+        # Note that prop_type must currently be able to parse *everything*,
+        # so it's probably only safe with the generic _Property class.
         request = DescribeProperties.from_other(self, Property=[prop_name])
         properties = []
         for prop_dict in request.main().get('properties') or []:
             properties.append(_build_property(prop_dict['name'],
                                               prop_dict.get('value'),
+                                              prop_type=prop_type,
                                               log=self.log))
         return properties
 
-    def _get_unique_property(self, prop_name):
-        properties = self._get_all_properties(prop_name)
+    def _get_unique_property(self, prop_name, prop_type=None):
+        properties = self._get_all_properties(prop_name, prop_type=prop_type)
         if len(properties) < 1:
             raise RuntimeError('no such variable: {0}'.format(prop_name))
         if len(properties) > 1:
