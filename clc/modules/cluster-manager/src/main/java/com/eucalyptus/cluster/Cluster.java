@@ -1164,7 +1164,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   protected ServiceConfiguration getLogServiceConfiguration( ) {
     final ComponentId glId = ComponentIds.lookup( GatherLogService.class );
     final ServiceConfiguration conf = this.getConfiguration( );
-    final URI glUri = ServiceUris.remote( GatherLogService.class, conf.getInetAddress( ) );
+    final URI glUri =
+        ServiceUris.remote( ComponentIds.lookup( GatherLogService.class ), conf.getInetAddress( ), conf.getPort( ) );
     return ServiceConfigurations.createEphemeral( glId, conf.getPartition( ), conf.getName( ), glUri );
   }
   
