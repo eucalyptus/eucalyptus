@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -35,11 +36,13 @@ import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 
 /**
  *
@@ -47,6 +50,13 @@ import com.google.common.base.Predicate;
 public interface Vpcs extends Lister<Vpc> {
 
   String DEFAULT_VPC_CIDR = "172.31.0.0/16";
+
+  ImmutableSet<Cidr> RESERVED_VPC_CIDRS = ImmutableSet.of(
+      Cidr.parse( "0.0.0.0/8" ),
+      Cidr.parse( "127.0.0.0/8" ),
+      Cidr.parse( "169.254.0.0/16" ),
+      Cidr.parse( "224.0.0.0/4" )
+  );
 
   <T> List<T> list( OwnerFullName ownerFullName,
                     Criterion criterion,
@@ -69,6 +79,11 @@ public interface Vpcs extends Lister<Vpc> {
                        OwnerFullName ownerFullName,
                        String key,
                        Callback<Vpc> updateCallback ) throws VpcMetadataException;
+
+  static boolean isReservedVpcCidr( @Nonnull final Cidr cidr ) {
+    return RESERVED_VPC_CIDRS.stream( ).anyMatch( reservedCidr -> reservedCidr.contains( cidr ) );
+  }
+
   @TypeMapper
   public enum VpcToVpcTypeTransform implements Function<Vpc,VpcType> {
     INSTANCE;
