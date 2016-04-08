@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,9 +28,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Strings;
-import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -104,10 +102,10 @@ public abstract class SoapPipeline extends FilteredPipeline {
     getAuthenticationStage( ).unrollStage( pipeline );
     pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
     pipeline.addLast( "binding",
-        new BindingHandler(
+        new BindingHandler( BindingHandler.context(
             BindingManager.getBinding( defaultNamespace, component ),
             Pattern.compile( namespacePattern ),
-            component ) );
+            component ) ) );
     return pipeline;
   }
 
