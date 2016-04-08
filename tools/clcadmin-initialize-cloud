@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 #
-# Copyright 2015 Eucalyptus Systems, Inc.
+# Copyright (c) 2015-2016 Hewlett Packard Enterprise Development
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -31,9 +31,12 @@ import shlex
 import subprocess
 import sys
 
+import selinux
+
 
 CONF_PATH = 'etc/eucalyptus/eucalyptus.conf'
 CLC_EXE_PATH = 'usr/sbin/eucalyptus-cloud'
+CLC_SELINUX_CONTEXT = 'system_u:system_r:eucalyptus_cloud_t:s0'
 DB_SYSCTLS_EXE_PATH = 'etc/eucalyptus/cloud.d/init.d/01_pg_kernel_params'
 
 
@@ -74,10 +77,15 @@ def initialize_cloud(opts):
     if not os.path.isfile(exepath):
         sys.exit('{0}: {1} does not exist'.format(
             os.path.basename(sys.argv[0]), exepath))
+    if selinux.is_selinux_enabled():
+        selinux.setexeccon(CLC_SELINUX_CONTEXT)
     try:
         subprocess.check_call([exepath, '--initialize'] + opts)
     except subprocess.CalledProcessError:
         sys.exit('{0}: cloud initialization failed'.format(sys.argv[0]))
+    finally:
+        if selinux.is_selinux_enabled():
+            selinux.setexeccon(None)
 
 
 def main():
