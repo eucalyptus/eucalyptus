@@ -177,6 +177,7 @@
   <mapping class="com.eucalyptus.cloudformation.CreateStackResult" abstract="true">
     <value name="StackId" field="stackId" usage="optional"/>
   </mapping>
+  <mapping class="com.eucalyptus.cloudformation.ContinueUpdateRollbackResult" abstract="true"/>
   <mapping class="com.eucalyptus.cloudformation.DeleteStackResult" abstract="true"/>
   <mapping class="com.eucalyptus.cloudformation.DescribeStackEventsResult" abstract="true">
     <value name="NextToken" field="nextToken" usage="optional"/>
@@ -256,6 +257,15 @@
   <mapping name="CancelUpdateStackResponse" class="com.eucalyptus.cloudformation.CancelUpdateStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
     <structure name="CancelUpdateStackResult" field="cancelUpdateStackResult" usage="required" type="com.eucalyptus.cloudformation.CancelUpdateStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  </mapping>
+  <mapping name="ContinueUpdateRollback" class="com.eucalyptus.cloudformation.ContinueUpdateRollbackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+    <value name="StackName" field="stackName" usage="required"/>
+  </mapping>
+  <mapping name="ContinueUpdateRollbackResponse" class="com.eucalyptus.cloudformation.ContinueUpdateRollbackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+    <structure name="ContinueUpdateRollbackResult" field="continueUpdateRollbackResult" usage="required" type="com.eucalyptus.cloudformation.ContinueUpdateRollbackResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
   </mapping>
   <mapping name="CreateStack" class="com.eucalyptus.cloudformation.CreateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
