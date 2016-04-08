@@ -140,7 +140,6 @@ import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
-import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
@@ -1586,29 +1585,22 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
 
-      String[] corsAllowedMethodArray = null;
-      corsAllowedMethodArray = extractCorsElementArray(parser, node, "AllowedMethod");
-      if (corsAllowedMethodArray != null) {
-        for (int idx = 0; idx < corsAllowedMethodArray.length; idx++) {
-          if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethodArray[idx]))) {
-            CorsConfigUnsupportedMethodException s3e = new CorsConfigUnsupportedMethodException(corsAllowedMethodArray[idx]);
+      List<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
+      if (corsAllowedMethods != null) {
+        for (String corsAllowedMethod : corsAllowedMethods) {
+          if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethod))) {
+            CorsConfigUnsupportedMethodException s3e = new CorsConfigUnsupportedMethodException(corsAllowedMethod);
             throw s3e;
           }
         }
       }
-      corsRule.setAllowedMethods(corsAllowedMethodArray);
+      corsRule.setAllowedMethods(corsAllowedMethods);
 
-      String[] corsAllowedOriginArray = null;
-      corsAllowedOriginArray = extractCorsElementArray(parser, node, "AllowedOrigin");
-      corsRule.setAllowedOrigins(corsAllowedOriginArray);
+      corsRule.setAllowedOrigins(extractCorsElementList(parser, node, "AllowedOrigin"));
 
-      String[] corsAllowedHeaderArray = null;
-      corsAllowedHeaderArray = extractCorsElementArray(parser, node, "AllowedHeader");
-      corsRule.setAllowedHeaders(corsAllowedHeaderArray);
+      corsRule.setAllowedHeaders(extractCorsElementList(parser, node, "AllowedHeader"));
 
-      String[] corsExposeHeaderArray = null;
-      corsExposeHeaderArray = extractCorsElementArray(parser, node, "ExposeHeader");
-      corsRule.setExposeHeaders(corsExposeHeaderArray);
+      corsRule.setExposeHeaders(extractCorsElementList(parser, node, "ExposeHeader"));
 
     } catch (S3Exception e) {
       throw e;
@@ -1621,8 +1613,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return corsRule;
   }
 
-  private String[] extractCorsElementArray(XMLParser parser, Node node, String element) throws S3Exception {
-    String[] elementArray = null;
+  private List<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
+    List<String> elementList = new ArrayList<String>();
     try {
 
       DTMNodeList elementNodes = parser.getNodes(node, element);
@@ -1632,10 +1624,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       int elementNodesSize = elementNodes.getLength();
 
       if (elementNodesSize > 0) {
-        elementArray = new String[elementNodesSize];
         for (int idx = 0; idx < elementNodes.getLength(); idx++) {
           Node elementNode = elementNodes.item(idx);
-          elementArray[idx] = elementNode.getFirstChild().getNodeValue();
+          elementList.add(elementNode.getFirstChild().getNodeValue());
         }
       }
     } catch (S3Exception e) {
@@ -1646,7 +1637,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       throw e;
     }
 
-    return elementArray;
+    return elementList;
   }
 
   private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
@@ -1657,11 +1648,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     String requestHeadersFromRequest = httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
     if (requestHeadersFromRequest != null) {
       String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
-      List<CorsHeader> requestHeaders = new ArrayList<CorsHeader>();
+      List<String> requestHeaders = new ArrayList<String>();
       for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
-        CorsHeader requestHeader = new CorsHeader();
-        requestHeader.setCorsHeader(requestHeadersArrayFromRequest[idx].trim());
-        requestHeaders.add(requestHeader);
+        requestHeaders.add(requestHeadersArrayFromRequest[idx]);
       }
       preflightRequest.setRequestHeaders(requestHeaders);
     }

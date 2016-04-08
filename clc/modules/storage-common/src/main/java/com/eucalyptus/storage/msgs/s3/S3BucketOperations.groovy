@@ -270,7 +270,7 @@ public class AllowedCorsMethods {
     methodList.add(HttpMethod.POST);
     methodList.add(HttpMethod.DELETE);
   }
-  
+
 }
 
 public class CorsConfiguration {
@@ -280,21 +280,11 @@ public class CorsConfiguration {
 public class CorsRule {
   String id;
   int sequence;
-  //TODO: Change these String arrays to List<String> which didn't work
-  //  with JiBX bindings for some reason.
-  String[] allowedOrigins;
-  String[] allowedMethods;
-  String[] allowedHeaders;
+  List<String> allowedOrigins;
+  List<String> allowedMethods;
+  List<String> allowedHeaders;
   int maxAgeSeconds;
-  String[] exposeHeaders;
-}
-
-public class CorsHeader {
-  String corsHeader;
-  
-  public String toString() {
-    return corsHeader;
-  }
+  List<String> exposeHeaders;
 }
 
 public class CorsMatchResult {
@@ -305,7 +295,7 @@ public class CorsMatchResult {
 public class PreflightRequest {
   String origin;
   String method;
-  List<CorsHeader> requestHeaders;
+  List<String> requestHeaders;
 
   public String toString() {
     StringBuffer output = new StringBuffer();
@@ -316,8 +306,8 @@ public class PreflightRequest {
     if (requestHeaders == null || requestHeaders.size() == 0) {
       output.append(" null");
     } else {
-      for (CorsHeader requestHeader : requestHeaders) {
-        output.append("\n  " + requestHeader.getCorsHeader());
+      for (String requestHeader : requestHeaders) {
+        output.append("\n  " + requestHeader);
       }
     }
     return output;
@@ -328,8 +318,8 @@ public class PreflightResponse {
   String origin;
   List<String> methods;
   int maxAgeSeconds;
-  List<CorsHeader> allowedHeaders;
-  List<CorsHeader> exposeHeaders;
+  List<String> allowedHeaders;
+  List<String> exposeHeaders;
 
   public String toString() {
     StringBuffer output = new StringBuffer();
@@ -341,8 +331,8 @@ public class PreflightResponse {
     if (allowedHeaders == null || allowedHeaders.size() == 0) {
       output.append(" null");
     } else {
-      for (CorsHeader allowedHeader : allowedHeaders) {
-        output.append("\n  " + allowedHeader.getCorsHeader());
+      for (String allowedHeader : allowedHeaders) {
+        output.append("\n  " + allowedHeader);
       }
     }
     output.append(
@@ -350,8 +340,8 @@ public class PreflightResponse {
     if (exposeHeaders == null || exposeHeaders.size() == 0) {
       output.append(" null");
     } else {
-      for (CorsHeader exposeHeader : exposeHeaders) {
-        output.append("\n  " + exposeHeader.getCorsHeader());
+      for (String exposeHeader : exposeHeaders) {
+        output.append("\n  " + exposeHeader);
       }
     }
     return output;

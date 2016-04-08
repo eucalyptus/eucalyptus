@@ -210,7 +210,6 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
-import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
@@ -2197,7 +2196,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // not the client's proposed CORS request would be allowed or not,
       // based on the CORS config. The actual CORS request can still fail
       // based on authentication, independent of CORS.
-      //LPT No!: Bucket bucket = getBucketAndCheckAuthorization(request);
+      // So, normally added to a method like this but not here:
+      // (left here commented out as an explainer)
+      // Bucket bucket = getBucketAndCheckAuthorization(request);
+      
       bucketName = request.getBucket();
       Bucket bucket = ensureBucketExists(bucketName);
       String key = request.getKey();
@@ -2226,7 +2228,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw s3e;     
       }
 
-      List<CorsHeader> requestHeaders = preflightRequest.getRequestHeaders();
+      List<String> requestHeaders = preflightRequest.getRequestHeaders();
       CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
       
       CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
@@ -2246,27 +2248,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // request. Matches AWS behavior and W3 spec: (strange but true)
       // https://www.w3.org/TR/cors/#resource-preflight-requests
       responseFields.setOrigin(corsMatchResult.getAnyOrigin() ? "*" : requestOrigin);
+
+      // Return all the CORS rule's allowed methods in the response
+      responseFields.setMethods(corsRuleMatch.getAllowedMethods());
       
-      List<String> methods = new ArrayList<String>();
-      String[] allowedMethods = corsRuleMatch.getAllowedMethods();
-      for (int idx = 0; idx < allowedMethods.length; idx++) {
-        methods.add(allowedMethods[idx]);
-      }
-      responseFields.setMethods(methods);
-      
+      // Return all of the request's Access-Control-Request-Headers ni the response
       responseFields.setAllowedHeaders(preflightRequest.getRequestHeaders());
 
-      String[] ruleExposeHeaders = corsRuleMatch.getExposeHeaders();
-      if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
-        List<CorsHeader> exposeHeaders = new ArrayList<CorsHeader>();
-        for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
-          CorsHeader exposeHeader = new CorsHeader();
-          exposeHeader.setCorsHeader(ruleExposeHeaders[idx]);
-          exposeHeaders.add(exposeHeader);
-        }
-        responseFields.setExposeHeaders(exposeHeaders);
-      }
-
+      // Return all of the CORS rule's expose headers in the response
+      responseFields.setExposeHeaders(corsRuleMatch.getExposeHeaders());
+      
       responseFields.setMaxAgeSeconds(corsRuleMatch.getMaxAgeSeconds());
 
       response.setStatus(HttpResponseStatus.OK);
@@ -2333,11 +2324,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       if (corsRuleMatch != null) {
         httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, corsMatchResult.getAnyOrigin() ? "*" : origin);
 
-        List<String> methodList = new ArrayList<String>();
-        String[] allowedMethods = corsRuleMatch.getAllowedMethods();
-        for (int idx = 0; idx < allowedMethods.length; idx++) {
-          methodList.add(allowedMethods[idx]);
-        }
+        List<String> methodList = corsRuleMatch.getAllowedMethods();
         if (methodList != null) {
           // Convert list into "[method1, method2, ...]"
           String methods = methodList.toString();
@@ -2347,22 +2334,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
             httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, methods);
           }
         }
-        String[] ruleExposeHeaders = corsRuleMatch.getExposeHeaders();
-        if (ruleExposeHeaders != null && ruleExposeHeaders.length > 0) {
-          List<CorsHeader> exposeHeadersList = new ArrayList<CorsHeader>();
-          for (int idx = 0; idx < ruleExposeHeaders.length; idx++) {
-            CorsHeader exposeHeader = new CorsHeader();
-            exposeHeader.setCorsHeader(ruleExposeHeaders[idx]);
-            exposeHeadersList.add(exposeHeader);
-          }
-          if (exposeHeadersList != null) {
-            // Convert list into "[exposeHeader1, exposeHeader2, ...]"
-            String exposeHeaders = exposeHeadersList.toString();
-            if (exposeHeaders.length() > 2) {
-              // Chop off brackets
-              exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
-              httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
-            }
+        List<String> exposeHeadersList = corsRuleMatch.getExposeHeaders();
+        if (exposeHeadersList != null) {
+          // Convert list into "[exposeHeader1, exposeHeader2, ...]"
+          String exposeHeaders = exposeHeadersList.toString();
+          if (exposeHeaders.length() > 2) {
+            // Chop off brackets
+            exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
+            httpResponse.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
           }
         }
         if (corsRuleMatch.getMaxAgeSeconds() > 0) {

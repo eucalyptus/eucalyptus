@@ -77,7 +77,6 @@ import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
-import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -114,7 +113,7 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
           }
         }
         
-        List<CorsHeader> allowHeadersList = preflightResponseFields.getAllowedHeaders();
+        List<String> allowHeadersList = preflightResponseFields.getAllowedHeaders();
         if (allowHeadersList != null) {
           // Convert list into "[allowHeader1, allowHeader2, ...]"
           String allowHeaders = allowHeadersList.toString();
@@ -125,7 +124,7 @@ public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
           }
         }
         
-        List<CorsHeader> exposeHeadersList = preflightResponseFields.getExposeHeaders();
+        List<String> exposeHeadersList = preflightResponseFields.getExposeHeaders();
         if (exposeHeadersList != null) {
           // Convert list into "[exposeHeader1, exposeHeader2, ...]"
           String exposeHeaders = exposeHeadersList.toString();

@@ -193,21 +193,17 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
     entity.setSequence(rule.getSequence());
     entity.setMaxAgeSeconds(rule.getMaxAgeSeconds());
 
-    entity.setAllowedMethodsJSON(convertCorsArrayToJSON(rule.getAllowedMethods()));
-    entity.setAllowedOriginsJSON(convertCorsArrayToJSON(rule.getAllowedOrigins()));
-    entity.setAllowedHeadersJSON(convertCorsArrayToJSON(rule.getAllowedHeaders()));
-    entity.setExposeHeadersJSON(convertCorsArrayToJSON(rule.getExposeHeaders()));
+    entity.setAllowedMethodsJSON(convertCorsListToJSON(rule.getAllowedMethods()));
+    entity.setAllowedOriginsJSON(convertCorsListToJSON(rule.getAllowedOrigins()));
+    entity.setAllowedHeadersJSON(convertCorsListToJSON(rule.getAllowedHeaders()));
+    entity.setExposeHeadersJSON(convertCorsListToJSON(rule.getExposeHeaders()));
 
     return entity;
   }
 
-  private String convertCorsArrayToJSON(String[] corsArray) {
+  private String convertCorsListToJSON(List<String> corsArray) {
     JSONArray corsJSON = new JSONArray();
-    if (corsArray != null) {
-      for (int idx = 0; idx < corsArray.length; idx++) {
-        corsJSON.add(corsArray[idx]);
-      }
-    }
+    corsJSON.addAll(corsArray);
     return corsJSON.toString();
   }
 
@@ -218,21 +214,19 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
     ruleResponse.setSequence(entity.getSequence());
     ruleResponse.setMaxAgeSeconds(entity.getMaxAgeSeconds());
 
-    ruleResponse.setAllowedMethods(convertCorsJSONToArray(entity.getAllowedMethodsJSON()));
-    ruleResponse.setAllowedOrigins(convertCorsJSONToArray(entity.getAllowedOriginsJSON()));
-    ruleResponse.setAllowedHeaders(convertCorsJSONToArray(entity.getAllowedHeadersJSON()));
-    ruleResponse.setExposeHeaders(convertCorsJSONToArray(entity.getExposeHeadersJSON()));
+    ruleResponse.setAllowedMethods(convertCorsJSONToList(entity.getAllowedMethodsJSON()));
+    ruleResponse.setAllowedOrigins(convertCorsJSONToList(entity.getAllowedOriginsJSON()));
+    ruleResponse.setAllowedHeaders(convertCorsJSONToList(entity.getAllowedHeadersJSON()));
+    ruleResponse.setExposeHeaders(convertCorsJSONToList(entity.getExposeHeadersJSON()));
 
     return ruleResponse;
   }
 
-  private String[] convertCorsJSONToArray(String corsJSONString) {
+  private List<String> convertCorsJSONToList(String corsJSONString) {
     JSONArray corsJSON = JSONArray.fromObject(corsJSONString);
-    String[] corsArray = new String[corsJSON.size()];
-    for (int idx = 0; idx < corsJSON.size(); idx++) {
-      corsArray[idx] = corsJSON.getString(idx);
-    }
-    return corsArray;
+    List<String> corsList = new ArrayList<String>();
+    corsList = (List<String>) corsJSON.toCollection(corsJSON, String.class);
+    return corsList;
   }
 
 }

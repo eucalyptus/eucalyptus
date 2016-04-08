@@ -66,6 +66,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -97,7 +98,6 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
-import com.eucalyptus.storage.msgs.s3.CorsHeader;
 import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -351,7 +351,7 @@ public class OSGUtil {
   }
   
   public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
-      String requestMethod, List<CorsHeader> requestHeaders) {
+      String requestMethod, List<String> requestHeaders) {
     CorsMatchResult corsMatchResult = new CorsMatchResult();
     boolean found = false;
     boolean anyOrigin = false;
@@ -366,15 +366,17 @@ public class OSGUtil {
       corsRuleMatch = corsRule; // will only be used if we find a match
       
       // Does the origin match any origin's regular expression in the rule?
-      String[] allowedOrigins = corsRule.getAllowedOrigins();
+      // Note: AWS matches origins case-sensitively! Even though URL domains
+      // are typically case-insensitive. Follow AWS's behavior.
+      List<String> allowedOrigins = corsRule.getAllowedOrigins();
       found = false;
-      for (int idx = 0; idx < allowedOrigins.length; idx++) {
-        String allowedOriginRegex = "\\Q" + allowedOrigins[idx].replace("*", "\\E.*?\\Q") + "\\E";
+      for (String allowedOrigin : allowedOrigins) {
+        String allowedOriginRegex = "\\Q" + allowedOrigin.replace("*", "\\E.*?\\Q") + "\\E";
         Pattern p = Pattern.compile(allowedOriginRegex);
         Matcher m = p.matcher(requestOrigin);
         boolean match = m.matches();
         if (match) {
-          anyOrigin = (allowedOrigins[idx].equals("*"));
+          anyOrigin = (allowedOrigin.equals("*"));
           found = true;
           break;  // stop looking through the origins for this rule
         }
@@ -384,10 +386,10 @@ public class OSGUtil {
       }
       
       // Does the HTTP verb match any verb in the rule?
-      String[] allowedMethods = corsRule.getAllowedMethods();
+      List<String> allowedMethods = corsRule.getAllowedMethods();
       found = false;
-      for (int idx = 0; idx < allowedMethods.length; idx++) {
-        if (requestMethod.equals(allowedMethods[idx])) {
+      for (String allowedMethod : allowedMethods) {
+        if (requestMethod.equals(allowedMethod)) {
           found = true;
           break;  // stop looking through the methods for this rule
         }
@@ -402,24 +404,25 @@ public class OSGUtil {
       if (requestHeaders == null || requestHeaders.size() == 0) {
         break;
       }
-      String[] allowedHeaders = corsRule.getAllowedHeaders();
-      if (allowedHeaders == null || allowedHeaders.length == 0) {
+      List<String> allowedHeaders = corsRule.getAllowedHeaders();
+      if (allowedHeaders == null || allowedHeaders.size() == 0) {
         break;
       }
 
       // Does every request header in the comma-delimited list in 
       // Access-Control-Request-Headers have a matching entry in the 
       // allowed headers in the rule?
+      // Headers are matched case-insensitively.
       found = false;
-      Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.length];
-      for (CorsHeader requestHeader : requestHeaders) {
+      Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.size()];
+      for (String requestHeader : requestHeaders) {
         found = false;
-        for (int idx = 0; idx < allowedHeaders.length; idx++) {
+        for (int idx = 0; idx < allowedHeaders.size(); idx++) {
           if (allowedHeaderRegexPattern[idx] == null) {
-            String allowedHeaderRegex = "\\Q" + allowedHeaders[idx].replace("*", "\\E.*?\\Q") + "\\E";
-            allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex);
+            String allowedHeaderRegex = "\\Q" + allowedHeaders.get(idx).replace("*", "\\E.*?\\Q") + "\\E";
+            allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
           }
-          Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader.getCorsHeader());
+          Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader);
           boolean match = matcher.matches();
           if (match) {
             found = true;
