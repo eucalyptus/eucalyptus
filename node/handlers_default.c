@@ -2904,7 +2904,8 @@ int attach_or_detach(bunchOfInstances **pHead, ncInstance *pInstance, void *pDat
                 pInstance->instanceId, pInstance->secNetCfgs[netIdx].interfaceId, pInstance->secNetCfgs[netIdx].attachmentId, netIdx, (EUCA_MAX_NICS-1));
         for(int gniIdx = 0; gniIdx < arraySize; gniIdx++) {
             gni_instance *gniNetworkInterface = arrayOfInterfaces[gniIdx];
-            if (!strncmp(gniNetworkInterface->attachmentId, pInstance->secNetCfgs[netIdx].attachmentId, ENI_ATTACHMENT_ID_LEN)) {
+
+            if (gniNetworkInterface && !strncmp(gniNetworkInterface->attachmentId, pInstance->secNetCfgs[netIdx].attachmentId, ENI_ATTACHMENT_ID_LEN)) {
                 LOGDEBUG("[%s][%s][%s] gni and local state contain network interface attachment, detach not required\n", gniNetworkInterface->instance_name.name, gniNetworkInterface->name, gniNetworkInterface->attachmentId)
                 found = TRUE;
                 arrayOfInterfaces[gniIdx] = NULL; //set to null since there shouldn't be any other action for this interface.
