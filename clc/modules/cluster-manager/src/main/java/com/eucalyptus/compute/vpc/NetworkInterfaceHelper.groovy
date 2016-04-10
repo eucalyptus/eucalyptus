@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,8 @@ class NetworkInterfaceHelper {
             VmInstances.dnsName( address.displayName, DomainNames.externalSubdomain( ) ) :
             null as String
     ) )
-    if ( instanceOption.present ) {
+    if ( instanceOption.present &&
+        networkInterface.isAttached( ) && networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {
       VmInstances.updatePublicAddress( instanceOption.get( ), address.displayName )
     }
   }

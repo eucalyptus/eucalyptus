@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -302,7 +302,7 @@ public class AddressManager {
               final NetworkInterface eni = Entities.merge( oldNetworkInterface );
               addresses.unassign( address, null );
               eni.disassociate( );
-              if ( eni.isAttached( ) ) {
+              if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
                 VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
               }
               tx.commit( );
@@ -320,7 +320,7 @@ public class AddressManager {
               PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getAvailabilityZone( ) );
               NetworkInterfaceHelper.releasePublic( eni );
               eni.disassociate( );
-              if ( eni.isAttached( ) ) {
+              if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
                 final VmInstance instance = eni.getAttachment( ).getInstance( );
                 VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP );
               }
@@ -396,10 +396,12 @@ public class AddressManager {
             if ( eni.isAttached( ) ) {
               final VmInstance vm = eni.getAttachment( ).getInstance( );
               PublicAddresses.markDirty( address.getAddress( ), vm.getPartition( ) );
-              VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
-              if ( !vm.isUsePrivateAddressing( ) &&
-                  ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-                NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+              if ( eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
+                VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
+                if ( !vm.isUsePrivateAddressing( ) &&
+                    ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+                  NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+                }
               }
             }
             tx.commit( );
