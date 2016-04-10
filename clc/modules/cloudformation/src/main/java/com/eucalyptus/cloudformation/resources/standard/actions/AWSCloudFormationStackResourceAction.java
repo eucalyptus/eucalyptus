@@ -102,7 +102,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
 
   @Override
   public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception {
-    AWSEC2InstanceResourceAction otherAction = (AWSEC2InstanceResourceAction) resourceAction;
+    AWSCloudFormationStackResourceAction otherAction = (AWSCloudFormationStackResourceAction) resourceAction;
     // always no interruption
     return UpdateType.NO_INTERRUPTION;
   }
