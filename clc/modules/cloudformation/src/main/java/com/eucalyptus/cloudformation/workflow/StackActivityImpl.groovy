@@ -572,7 +572,8 @@ public class StackActivityImpl implements StackActivity {
   public String getStackStatus(String stackId, String accountId, int stackVersion) {
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     if (stackEntity == null) {
-      throw new ValidationErrorException("No stack found with id " + stackId);
+      LOG.warn("No stack found with id " + stackId + " possibly due to a quick update after create.  Returning 'null' for status");
+      return null;
     }
     String status = stackEntity.getStackStatus().toString();
     LOG.info("status = " + status);
