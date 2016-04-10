@@ -469,11 +469,8 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
         AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
         AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(newAction.getStackEntity().getStackId(), newAction.getStackEntity().getAccountId());
-        if (outerStackArn == null) {
-          throw new ValidationErrorException("Unable to find outer stack for stack " + newAction.getStackEntity().getStackId());
-        }
-        StackUpdateWorkflowSignalEntityManager.addSignal(newAction.getStackEntity().getStackId(), newAction.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.ROLLBACK);
+        // physical resource id is inner stack arn, stack id is outer stack arn
+        StackUpdateWorkflowSignalEntityManager.addSignal(newAction.info.getPhysicalResourceId(), newAction.getStackEntity().getAccountId(), newAction.getStackEntity().getStackId(), StackUpdateWorkflowSignalEntity.Signal.ROLLBACK);
         return newAction;
       }
     },
@@ -527,11 +524,8 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
-        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId());
-        if (outerStackArn == null) {
-          throw new ValidationErrorException("Unable to find outer stack for stack " + action.getStackEntity().getStackId());
-        }
-        StackUpdateWorkflowSignalEntityManager.addSignal(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.CLEANUP);
+        // physical resource id is inner stack arn, stack id is outer stack arn
+        StackUpdateWorkflowSignalEntityManager.addSignal(action.info.getPhysicalResourceId(), action.getStackEntity().getAccountId(), action.getStackEntity().getStackId(), StackUpdateWorkflowSignalEntity.Signal.CLEANUP);
         return action;
       }
     },
@@ -581,11 +575,8 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
-        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId());
-        if (outerStackArn == null) {
-          throw new ValidationErrorException("Unable to find outer stack for stack " + action.getStackEntity().getStackId());
-        }
-        StackUpdateWorkflowSignalEntityManager.addSignal(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.ROLLBACK_CLEANUP);
+        // physical resource id is inner stack arn, stack id is outer stack arn
+        StackUpdateWorkflowSignalEntityManager.addSignal(action.info.getPhysicalResourceId(), action.getStackEntity().getAccountId(), action.getStackEntity().getStackId(), StackUpdateWorkflowSignalEntity.Signal.ROLLBACK_CLEANUP);
         return action;
       }
     },
