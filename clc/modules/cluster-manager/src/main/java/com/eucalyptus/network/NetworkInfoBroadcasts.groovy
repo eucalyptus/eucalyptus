@@ -229,6 +229,13 @@ class NetworkInfoBroadcasts {
     natGateways.forEach( { NatGatewayNetworkView natGateway ->
       if ( natGateway.state == NatGateway.State.available ) activeVpcs.add( natGateway.vpcId )
     } )
+    Set<String> activeDhcpOptionSets = (Set<String>) vpcs.inject( Sets.newHashSetWithExpectedSize( 500 ) ) {
+      Set<String> dhcpOptionSetIds, VpcNetworkView vpc ->
+        if ( activeVpcs.contains( vpc.id ) ) {
+          dhcpOptionSetIds.add( vpc.dhcpOptionSetId )
+        }
+        dhcpOptionSetIds
+    }
     Map<String,Collection<String>> vpcIdToInternetGatewayIds = (Map<String,Collection<String>> ) ((ArrayListMultimap<String,String>)internetGateways.inject(ArrayListMultimap.<String,String>create()){
       ListMultimap<String,String> map, InternetGatewayNetworkView internetGateway ->
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
@@ -330,7 +337,8 @@ class NetworkInfoBroadcasts {
 
     // populate dhcp option sets
     Iterable<DhcpOptionSetNetworkView> dhcpOptionSets = networkInfoSource.dhcpOptionSets
-    info.dhcpOptionSets.addAll( dhcpOptionSets.collect { DhcpOptionSetNetworkView dhcpOptionSet ->
+    info.dhcpOptionSets.addAll( dhcpOptionSets.findAll{ DhcpOptionSetNetworkView dhcpOptionSet -> activeDhcpOptionSets.contains( dhcpOptionSet.id ) }.collect { Object dhcpObj ->
+      DhcpOptionSetNetworkView dhcpOptionSet = (DhcpOptionSetNetworkView) dhcpObj
       new NIDhcpOptionSet(
           name: dhcpOptionSet.id,
           ownerId: dhcpOptionSet.ownerAccountNumber,
