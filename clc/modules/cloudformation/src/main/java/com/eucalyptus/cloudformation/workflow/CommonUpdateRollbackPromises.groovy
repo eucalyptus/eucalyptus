@@ -27,6 +27,7 @@ import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
@@ -238,25 +239,33 @@ public class CommonUpdateRollbackPromises {
     Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
-      waitFor(initPromise) { String result ->
-        if ("SKIP".equals(result)) {
-          return promiseFor("SUCCESS");
-        } else {
-          doTry {
-            waitFor(resourceAction.getUpdateRollbackCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)) {
-              return activities.finalizeUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
+      Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1)
+      waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase
+        if (innerStackUpdateSpecialCase == Boolean.TRUE) {
+          Promise<String> initPromise = activities.initUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1);
+          waitFor(initPromise) {
+            waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1)) {
+              return activities.finalizeUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1);
             }
-          }.withCatch { Throwable t ->
-            Throwable rootCause = Throwables.getRootCause(t);
-            return activities.failUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), rolledBackResourceVersion);
-          }.getResult();
+          }
+        } else {
+          Promise<String> initPromise = activities.initUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
+          waitFor(initPromise) { String result ->
+            if ("SKIP".equals(result)) {
+              return promiseFor("SUCCESS");
+            } else {
+              doTry {
+                waitFor(resourceAction.getUpdateRollbackCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)) {
+                  return activities.finalizeUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
+                }
+              }.withCatch { Throwable t ->
+                Throwable rootCause = Throwables.getRootCause(t);
+                return activities.failUpdateRollbackCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), rolledBackResourceVersion);
+              }.getResult();
+            }
+          }
         }
       }
     }
   }
-
-
-
-
 }

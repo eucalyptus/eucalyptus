@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.workflow.StackActivityClient
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
@@ -30,25 +31,25 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 9/28/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-class UpdateCleanupMultiStepPromise extends MultiStepPromise {
+class UpdateRollbackCleanupUpdateMultiStepPromise extends MultiStepPromise {
 
-  UpdateCleanupMultiStepPromise(
+  UpdateRollbackCleanupUpdateMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
-      final StepBasedResourceAction resourceAction
+      final AWSCloudFormationStackResourceAction resourceAction
   ) {
     super( workflowOperations, stepIds, resourceAction )
   }
 
   @Override
   protected Step getStep( final String stepId ) {
-    return resourceAction.getUpdateCleanupStep( stepId )
+    return ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdateStep( stepId )
   }
 
-  Promise<String> getUpdateCleanupPromise(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
+  Promise<String> getUpdateRollbackCleanupUpdatePromise(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
     getPromise( "Resource ${resourceId} cleanup failed for stack ${stackId}" as String) { String stepId ->
       // The item to perform update cleanup on is one step less than the resource version
-      activities.performUpdateCleanupStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
+      activities.performUpdateRollbackCleanupInnerStackUpdateStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
     }
   }
 

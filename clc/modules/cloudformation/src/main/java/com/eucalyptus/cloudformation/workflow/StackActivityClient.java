@@ -172,10 +172,21 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.waitForOuterStackRollbackCleanupSignal")
   Promise<String> waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn);
 
-  @Activity(name = "StackActivity.performUpdateCleanupStep")
-  Promise<Boolean> performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateCleanupResourceVersion);
+  @Activity(name = "StackActivity.checkInnerStackUpdate")
+  Promise<Boolean> checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 
-  @Activity(name = "StackActivity.performUpdateRollbackCleanupStep")
-  Promise<Boolean> performUpdateRollbackCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateRollbackCleanupResourceVersion);
+  @Activity(name = "StackActivity.initUpdateCleanupInnerStackUpdateResource")
+  Promise<String> initUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.finalizeUpdateCleanupInnerStackUpdateResource")
+  Promise<String> finalizeUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.performUpdateCleanupInnerStackUpdateStep")
+  Promise<Boolean> performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  @Activity(name = "StackActivity.initUpdateRollbackCleanupInnerStackUpdateResource")
+  Promise<String> initUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.finalizeUpdateRollbackCleanupInnerStackUpdateResource")
+  Promise<String> finalizeUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.performUpdateRollbackCleanupInnerStackUpdateStep")
+  Promise<Boolean> performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 
 }

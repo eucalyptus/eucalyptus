@@ -21,7 +21,9 @@
 package com.eucalyptus.cloudformation.workflow;
 
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Activity;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 
 @ActivityRegistrationOptions(
   defaultTaskScheduleToStartTimeoutSeconds = 900,
@@ -89,8 +91,15 @@ public interface StackActivity {
   public String waitForOuterStackRollbackOrCleanupSignal(String stackId, String accountId, String outerStackArn);
   public String waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn);
 
-  public Boolean performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateCleanupResourceVersion);
-  public Boolean performUpdateRollbackCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateRollbackCleanupResourceVersion);
+  public Boolean checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 
+  public String initUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String finalizeUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public Boolean performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+
+  public String initUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String finalizeUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public Boolean performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 
 }

@@ -39,7 +39,6 @@ import com.eucalyptus.cloudformation.UpdateStackResponseType;
 import com.eucalyptus.cloudformation.UpdateStackType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
-import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntity;
 import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntityManager;
@@ -55,9 +54,10 @@ import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateCleanupMultiStepPromise;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateCleanupUpdateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateRollbackCleanupUpdateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
@@ -67,11 +67,13 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -84,8 +86,18 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   public AWSCloudFormationStackResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
     setUpdateSteps(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION, fromUpdateEnum(UpdateRollbackNoInterruptionSteps.class));
-    setUpdateCleanupSteps(fromEnum(UpdateCleanupSteps.class));
-    setUpdateRollbackCleanupSteps(fromEnum(UpdateRollbackCleanupSteps.class));
+    clearAndPutIfNotNull(updateCleanupUpdateSteps, fromEnum(UpdateCleanupUpdateSteps.class));
+    clearAndPutIfNotNull(updateCleanupUpdateSteps, fromEnum(UpdateRollbackCleanupUpdateSteps.class));
+  }
+
+  protected Map<String, Step> updateCleanupUpdateSteps = Maps.newLinkedHashMap();
+  public final Step getUpdateCleanupUpdateStep(String stepId) {
+    return updateCleanupUpdateSteps.get(stepId);
+  }
+
+  protected Map<String, Step> updateRollbackCleanupUpdateSteps = Maps.newLinkedHashMap();
+  public final Step getUpdateRollbackCleanupUpdateStep(String stepId) {
+    return updateRollbackCleanupUpdateSteps.get(stepId);
   }
 
   @Override
@@ -505,7 +517,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     }
   }
 
-  private enum UpdateCleanupSteps implements Step {
+  private enum UpdateCleanupUpdateSteps implements Step {
     UPDATE_CLEANUP_STACK {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -559,7 +571,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     }
   }
 
-  private enum UpdateRollbackCleanupSteps implements Step {
+  private enum UpdateRollbackCleanupUpdateSteps implements Step {
     UPDATE_ROLLBACK_CLEANUP_STACK {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -634,16 +646,15 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     info = (AWSCloudFormationStackResourceInfo) resourceInfo;
   }
 
-  @Override
-  public Status getUpdateCleanupInProgressStatus() {
-    return Status.UPDATE_IN_PROGRESS;
+  public Promise<String> getUpdateCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    List<String> stepIds = Lists.newArrayList(updateCleanupUpdateSteps.keySet());
+    return new UpdateCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
 
-  @Override
-  public Status getUpdateRollbackCleanupInProgressStatus() {
-    return Status.UPDATE_IN_PROGRESS;
+  public Promise<String> getUpdateRollbackCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    List<String> stepIds = Lists.newArrayList(updateRollbackCleanupUpdateSteps.keySet());
+    return new UpdateRollbackCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateRollbackCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
-
 
 }
 

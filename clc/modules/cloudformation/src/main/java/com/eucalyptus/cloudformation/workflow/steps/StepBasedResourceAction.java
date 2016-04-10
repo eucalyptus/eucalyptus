@@ -1,7 +1,6 @@
 package com.eucalyptus.cloudformation.workflow.steps;
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.cloudformation.entity.Status;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
@@ -31,19 +30,6 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     return deleteSteps.get(stepId);
   }
 
-  protected Map<String, Step> updateCleanupSteps = Maps.newLinkedHashMap();
-
-  public final Step getUpdateCleanupStep(String stepId) {
-    return updateCleanupSteps.get(stepId);
-  }
-
-  protected Map<String, Step> updateRollbackCleanupSteps = Maps.newLinkedHashMap();
-
-  public final Step getUpdateRollbackCleanupStep(String stepId) {
-    return updateRollbackCleanupSteps.get(stepId);
-  }
-
-  
   protected EnumMap<UpdateTypeAndDirection, Map<String, UpdateStep>> updateStepEnumMap = Maps.newEnumMap(UpdateTypeAndDirection.class);
   public final UpdateStep getUpdateStep(UpdateTypeAndDirection updateTypeAndDirection, String stepId) {
     return updateStepEnumMap.get(updateTypeAndDirection).get(stepId);
@@ -66,8 +52,6 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION), addedUpdateNoInterruptionSteps);
     clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_SOME_INTERRUPTION), addedUpdateSomeInterruptionSteps);
     clearAndPutIfNotNull(updateStepEnumMap.get(UpdateTypeAndDirection.UPDATE_ROLLBACK_WITH_REPLACEMENT), Maps.<String, UpdateStep>newHashMap()); // by default, nothing to do.  (Cleanup will take care of it)
-    clearAndPutIfNotNull(updateCleanupSteps, addedDeleteSteps);
-    clearAndPutIfNotNull(updateRollbackCleanupSteps, addedDeleteSteps);
   }
 
   public void setCreateSteps(Map<String, Step> addedCreateSteps) {
@@ -78,20 +62,11 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     clearAndPutIfNotNull(deleteSteps, addedDeleteSteps);
   }
 
-  public void setUpdateCleanupSteps(Map<String, Step> addedUpdateCleanupSteps) {
-    clearAndPutIfNotNull(updateCleanupSteps, addedUpdateCleanupSteps);
-  }
-
-  public void setUpdateRollbackCleanupSteps(Map<String, Step> addedUpdateRollbackCleanupSteps) {
-    clearAndPutIfNotNull(updateRollbackCleanupSteps, addedUpdateRollbackCleanupSteps);
-  }
-
-
   public void setUpdateSteps(UpdateTypeAndDirection updateTypeAndDirection, Map<String, UpdateStep> addedUpdateSteps) {
     clearAndPutIfNotNull(updateStepEnumMap.get(updateTypeAndDirection), addedUpdateSteps);
   }
 
-  private static <T> void clearAndPutIfNotNull(Map<String, T> map, Map<String, T> addedMap){
+  protected static <T> void clearAndPutIfNotNull(Map<String, T> map, Map<String, T> addedMap){
     map.clear();
     if (addedMap != null) map.putAll(addedMap);
   }
@@ -159,28 +134,20 @@ public abstract class StepBasedResourceAction extends ResourceAction {
 
   @Override
   public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateCleanupSteps.keySet());
-    return new UpdateCleanupMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupPromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
+    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
 
   @Override
   public Promise<String> getUpdateRollbackCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateRollbackCleanupSteps.keySet());
-    return new UpdateRollbackCleanupMultiStepPromise(workflowOperations, stepIds, this).getUpdateRollbackCleanupPromise(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
+    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
+    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
   }
 
   @Override
   public Promise<String> getUpdatePromise(UpdateTypeAndDirection updateTypeAndDirection, WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     List<String> stepIds = Lists.newArrayList(updateStepEnumMap.get(updateTypeAndDirection).keySet());
     return new UpdateMultiStepPromise(workflowOperations, stepIds, this, updateTypeAndDirection).getUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
-  }
-
-  public Status getUpdateCleanupInProgressStatus() {
-    return Status.DELETE_IN_PROGRESS;
-  }
-
-  public Status getUpdateRollbackCleanupInProgressStatus() {
-    return Status.DELETE_IN_PROGRESS;
   }
 
 }

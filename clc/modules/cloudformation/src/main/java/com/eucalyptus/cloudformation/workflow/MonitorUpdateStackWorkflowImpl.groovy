@@ -30,6 +30,7 @@ import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.component.annotation.ComponentPart
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
@@ -200,20 +201,33 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
     Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, updatedResourceVersion - 1);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
-      waitFor(initPromise) { String result ->
-        if ("SKIP".equals(result)) {
-          return promiseFor("SUCCESS");
-        } else {
-          doTry {
-            waitFor(resourceAction.getUpdateCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)) {
-              return activities.finalizeUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+      Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)
+      waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase
+        if (innerStackUpdateSpecialCase == Boolean.TRUE) {
+          Promise<String> initPromise = activities.initUpdateCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+          waitFor(initPromise) {
+            waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)) {
+              return activities.finalizeUpdateCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
             }
-          }.withCatch { Throwable t ->
-            Throwable rootCause = Throwables.getRootCause(t);
-            return activities.failUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), updatedResourceVersion);
-          }.getResult();
+          }
+        } else {
+          Promise<String> initPromise = activities.initUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+          waitFor(initPromise) { String result ->
+            if ("SKIP".equals(result)) {
+              return promiseFor("SUCCESS");
+            } else {
+              doTry {
+                waitFor(resourceAction.getUpdateCleanupPromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)) {
+                  return activities.finalizeUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+                }
+              }.withCatch { Throwable t ->
+                Throwable rootCause = Throwables.getRootCause(t);
+                return activities.failUpdateCleanupResource(resourceId, stackId, accountId, effectiveUserId, rootCause.getMessage(), updatedResourceVersion);
+              }.getResult();
+            }
+          }
         }
+
       }
     }
   }
