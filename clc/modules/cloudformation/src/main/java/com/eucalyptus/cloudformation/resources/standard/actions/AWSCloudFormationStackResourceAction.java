@@ -334,7 +334,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
         UpdateStackType updateStackType = MessageHelper.createMessage(UpdateStackType.class, newAction.info.getEffectiveUserId());
-        String stackName = newAction.getDefaultPhysicalResourceId();
+        String stackName = newAction.info.getPhysicalResourceId();
         updateStackType.setStackName(stackName);
         if (newAction.properties.getNotificationARNs() != null) {
           ResourceList notificationARNs = new ResourceList();
