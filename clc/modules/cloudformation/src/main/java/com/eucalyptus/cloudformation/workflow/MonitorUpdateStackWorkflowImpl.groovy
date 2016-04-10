@@ -68,7 +68,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
           }
           waitFor(activities.getStackStatus(stackId, accountId, updatedStackVersion)) { String stackStatus ->
             waitFor(dealWithPrematureClosure(closedStatus, stackStatus, stackId, accountId, updatedStackVersion)) { String revisedStackStatus ->
-              determineRollbackOrCleanupAction(revisedStackStatus, outerStackArn, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion, outerStackArn);
+              determineRollbackOrCleanupAction(revisedStackStatus, outerStackArn, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
             }
           }
         }
