@@ -31,11 +31,8 @@ import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
-import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
-import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.component.annotation.ComponentPart
 import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
@@ -57,7 +54,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
   WorkflowUtils workflowUtils = new WorkflowUtils( workflowOperations )
 
   @Override
-  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
+  void monitorUpdateStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion, String outerStackArn) {
     try {
       doTry {
         Promise<String> closeStatusPromise = workflowUtils.fixedPollWithTimeout((int) TimeUnit.DAYS.toSeconds(365), 10) {
@@ -70,7 +67,9 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
             throw new InternalFailureException("Stack update timeout stack id ${stackId}");
           }
           waitFor(activities.getStackStatus(stackId, accountId, updatedStackVersion)) { String stackStatus ->
-            determineRollbackOrCleanupAction(closedStatus, stackStatus, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
+            waitFor(dealWithPrematureClosure(closedStatus, stackStatus, stackId, accountId, updatedStackVersion)) { String revisedStackStatus ->
+              determineRollbackOrCleanupAction(revisedStackStatus, outerStackArn, stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, updatedStackVersion, outerStackArn);
+            }
           }
         }
       } withCatch { Throwable t->
@@ -83,12 +82,9 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
     }
   }
 
-  private Promise<String> determineRollbackOrCleanupAction(String closedStatus, String stackStatus, String stackId, String accountId,
-                                                           String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion ) {
-    if (Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(stackStatus)) {
-      return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, updatedStackVersion ); // just done...
-    } else if (Status.UPDATE_IN_PROGRESS.toString().equals(stackStatus)) {
-      // Once here, stack creation has failed.  Only in some cases do we know why.
+  private Promise<String> dealWithPrematureClosure(String closedStatus, String stackStatus, String stackId, String accountId, int updatedStackVersion ) {
+    if (Status.UPDATE_IN_PROGRESS.toString().equals(stackStatus)) {
+      // Once here, stack update has failed.  Only in some cases do we know why.
       String statusReason = "";
       if ("CANCELED".equals(closedStatus)) {
         statusReason = "Stack update was canceled by user.";
@@ -99,7 +95,7 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
       } else if ("COMPLETED".equals(closedStatus)) {
         statusReason = "";
       } else if ("FAILED".equals(closedStatus)) {
-        statusReason = "Stack update workflow failed.";
+         statusReason = "Stack update workflow failed.";
       } else if ("CONTINUED_AS_NEW".equals(closedStatus)) {
         throw new InternalFailureException("Unsupported close status for workflow " + closedStatus);
       } else {
@@ -111,21 +107,34 @@ public class MonitorUpdateStackWorkflowImpl implements MonitorUpdateStackWorkflo
       };
       Promise<String> setStackStatusPromise = waitFor(cancelOutstandingUpdateResources) {
         activities.setStackStatus(stackId, accountId,
-          Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(), statusReason, updatedStackVersion)
+            Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(), statusReason, updatedStackVersion)
       };
       return waitFor(setStackStatusPromise) {
-        Promise<String> createGlobalStackEventPromise = activities.createGlobalStackEvent(stackId,
-          accountId, Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(), statusReason, updatedStackVersion);
-        waitFor(createGlobalStackEventPromise) {
-          int rolledBackStackVersion = updatedStackVersion + 1;
-          new CommonUpdateRollbackPromises(workflowOperations).performRollbackAndCleanup(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, false);
-        }
+        return promiseFor(Status.UPDATE_ROLLBACK_IN_PROGRESS.toString());
       }
-    } else if (Status.UPDATE_FAILED.toString().equals(stackStatus) || Status.UPDATE_ROLLBACK_IN_PROGRESS.toString().equals(stackStatus)) {
-      int rolledBackStackVersion = updatedStackVersion + 1;
-      return new CommonUpdateRollbackPromises(workflowOperations).performRollbackAndCleanup(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, false);
     } else {
-      throw new InternalFailureException("Unexpected stack status " + stackStatus + " during update monitoring");
+      return promiseFor(stackStatus);
+    }
+  }
+
+  private Promise<String> determineRollbackOrCleanupAction(String stackStatus, String outerStackArn, String stackId, String accountId,
+                                                           String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion ) {
+    Promise<String> waitForOuterStackRollbackOrCleanupSignalPromise = workflowUtils.fixedPollWithTimeout((int) TimeUnit.DAYS.toSeconds(365), 10) {
+      retry(new ExponentialRetryPolicy(2L).withMaximumAttempts(6)) {
+        activities.waitForOuterStackRollbackOrCleanupSignal(stackId, accountId, outerStackArn); // TODO: determine resource version?
+      }
+    };
+
+    waitFor(waitForOuterStackRollbackOrCleanupSignalPromise) { String action ->
+      if (action.equals("CLEANUP") || (action.equals("NORMAL") && Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(stackStatus))) {
+        return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, updatedStackVersion ); // just done...
+      } else if (action.equals("ROLLBACK") ||
+          (action.equals("NORMAL") && (Status.UPDATE_FAILED.toString().equals(stackStatus) || Status.UPDATE_ROLLBACK_IN_PROGRESS.toString().equals(stackStatus)))) {
+        int rolledBackStackVersion = updatedStackVersion + 1;
+        return new CommonUpdateRollbackPromises(workflowOperations, workflowUtils).performRollbackAndCleanup(stackId, accountId, outerStackArn, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, false);
+      } else {
+        throw new InternalFailureException("Unexpected stack status " + stackStatus + " during update monitoring");
+      }
     }
   }
 

@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.CreateStackResponseType;
 import com.eucalyptus.cloudformation.CreateStackType;
@@ -32,26 +33,41 @@ import com.eucalyptus.cloudformation.Outputs;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.Parameters;
 import com.eucalyptus.cloudformation.ResourceList;
+import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.cloudformation.Tags;
+import com.eucalyptus.cloudformation.UpdateStackResponseType;
+import com.eucalyptus.cloudformation.UpdateStackType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
+import com.eucalyptus.cloudformation.entity.StackResourceEntity;
+import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
+import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntity;
+import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntityManager;
 import com.eucalyptus.cloudformation.entity.Status;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSCloudFormationStackResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationStackProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
+import com.eucalyptus.cloudformation.workflow.StackActivityClient;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateCleanupMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -66,7 +82,17 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   private AWSCloudFormationStackResourceInfo info = new AWSCloudFormationStackResourceInfo();
 
   public AWSCloudFormationStackResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION, fromUpdateEnum(UpdateRollbackNoInterruptionSteps.class));
+    setUpdateCleanupSteps(fromEnum(UpdateCleanupSteps.class));
+    setUpdateRollbackCleanupSteps(fromEnum(UpdateRollbackCleanupSteps.class));
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception {
+    AWSEC2InstanceResourceAction otherAction = (AWSEC2InstanceResourceAction) resourceAction;
+    // always no interruption
+    return UpdateType.NO_INTERRUPTION;
   }
 
   private enum CreateSteps implements Step {
@@ -85,6 +111,18 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
           ResourceList notificationARNs = new ResourceList();
           notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
           createStackType.setNotificationARNs(notificationARNs);
+        }
+        if (action.properties.getTags() != null) {
+          Tags tags = new Tags();
+          for (CloudFormationResourceTag cloudFormationResourceTag: action.properties.getTags()) {
+            Tag tag = new Tag();
+            tag.setKey(cloudFormationResourceTag.getKey());
+            tag.setValue(cloudFormationResourceTag.getValue());
+            tags.getMember().add(tag);
+          }
+          ResourceList notificationARNs = new ResourceList();
+          notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
+          createStackType.setTags(tags);
         }
         createStackType.setDisableRollback(true); // Rollback will be handled by outer stack
         if (action.properties.getParameters() != null) {
@@ -276,6 +314,305 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     }
   }
 
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_STACK {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
+        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        UpdateStackType updateStackType = MessageHelper.createMessage(UpdateStackType.class, newAction.info.getEffectiveUserId());
+        String stackName = newAction.getDefaultPhysicalResourceId();
+        updateStackType.setStackName(stackName);
+        if (newAction.properties.getNotificationARNs() != null) {
+          ResourceList notificationARNs = new ResourceList();
+          notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
+          updateStackType.setNotificationARNs(notificationARNs);
+        }
+        if (newAction.properties.getTags() != null) {
+          Tags tags = new Tags();
+          for (CloudFormationResourceTag cloudFormationResourceTag: newAction.properties.getTags()) {
+            Tag tag = new Tag();
+            tag.setKey(cloudFormationResourceTag.getKey());
+            tag.setValue(cloudFormationResourceTag.getValue());
+            tags.getMember().add(tag);
+          }
+          ResourceList notificationARNs = new ResourceList();
+          notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
+          updateStackType.setTags(tags);
+        }
+        if (newAction.properties.getParameters() != null) {
+          Parameters parameters = new Parameters();
+          updateStackType.setParameters(parameters);
+          if (!newAction.properties.getParameters().isObject()) {
+            throw new ValidationErrorException("Invalid Parameters value " + newAction.properties.getParameters());
+          }
+          for (String paramName : Lists.newArrayList(newAction.properties.getParameters().fieldNames())) {
+            JsonNode paramValue = newAction.properties.getParameters().get(paramName);
+            if (!paramValue.isValueNode()) {
+              throw new ValidationErrorException("All Parameters must have String values for nested stacks");
+            } else {
+              Parameter parameter = new Parameter();
+              parameter.setParameterKey(paramName);
+              parameter.setParameterValue(paramValue.asText());
+              parameters.getMember().add(parameter);
+            }
+          }
+        }
+        updateStackType.setTemplateURL(newAction.properties.getTemplateURL());
+        // inherit outer stack capabilities
+        ResourceList capabilities = new ResourceList();
+        List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(newAction.getStackEntity().getCapabilitiesJson());
+        if (stackCapabilities != null) {
+          capabilities.getMember().addAll(stackCapabilities);
+        }
+        updateStackType.setCapabilities(capabilities);
+        UpdateStackResponseType createStackResponseType = AsyncRequests.<UpdateStackType, UpdateStackResponseType>sendSync(configuration, updateStackType);
+        newAction.info.setPhysicalResourceId(createStackResponseType.getUpdateStackResult().getStackId());
+        newAction.info.setCreatedEnoughToDelete(true);
+
+        return newAction;
+      }
+    },
+    WAIT_UNTIL_UPDATE_COMPLETE {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
+        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, newAction.info.getEffectiveUserId());
+        describeStacksType.setStackName(newAction.info.getPhysicalResourceId()); // actually the stack id...
+        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+        if (describeStacksResponseType.getDescribeStacksResult() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() != 1) {
+          throw new ResourceFailureException("Not exactly one stack returned for stack " + newAction.info.getPhysicalResourceId());
+        }
+        String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
+        String statusReason = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatusReason();
+        if (status == null) {
+          throw new ResourceFailureException("Null status for stack " + newAction.info.getPhysicalResourceId());
+        }
+        if (!status.startsWith("UPDATE")) {
+          throw new ResourceFailureException("Stack " + newAction.info.getPhysicalResourceId() + " is no longer being updated.");
+        }
+        if (status.startsWith("UPDATE_ROLLBACK") || status.startsWith("UPDATE_FAILED")) {
+          throw new ResourceFailureException("Failed to update stack " + newAction.info.getPhysicalResourceId() + "."  + statusReason);
+        }
+        if (status.equals(Status.UPDATE_IN_PROGRESS.toString())) {
+          throw new RetryAfterConditionCheckFailedException("Stack " + newAction.info.getPhysicalResourceId() + " is still being updated.");
+        }
+        return newAction;
+      }
+
+      @Override
+      public Integer getTimeout( ) {
+        // Wait as long as necessary for stacks
+        return MAX_TIMEOUT;
+      }
+    },
+    POPULATE_OUTPUTS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
+        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, newAction.info.getEffectiveUserId());
+        describeStacksType.setStackName(newAction.info.getPhysicalResourceId()); // actually the stack id...
+        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+        if (describeStacksResponseType.getDescribeStacksResult() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() != 1) {
+          throw new ResourceFailureException("Not exactly one stack returned for stack " + newAction.info.getPhysicalResourceId());
+        }
+
+        Outputs outputs = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getOutputs();
+        if (outputs != null && outputs.getMember() != null && !outputs.getMember().isEmpty()) {
+          for (Output output: outputs.getMember()) {
+            newAction.info.getOutputAttributes().put("Outputs." + output.getOutputKey(), JsonHelper.getStringFromJsonNode(new TextNode(output.getOutputValue())));
+          }
+        }
+        newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
+        return newAction;
+      }
+    };
+
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateRollbackNoInterruptionSteps implements UpdateStep {
+    UPDATE_ROLLBACK_STACK {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
+        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
+        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(newAction.getStackEntity().getStackId(), newAction.getStackEntity().getAccountId());
+        if (outerStackArn == null) {
+          throw new ValidationErrorException("Unable to find outer stack for stack " + newAction.getStackEntity().getStackId());
+        }
+        StackUpdateWorkflowSignalEntityManager.addSignal(newAction.getStackEntity().getStackId(), newAction.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.ROLLBACK);
+        return newAction;
+      }
+    },
+    WAIT_UNTIL_UPDATE_ROLLBACK_COMPLETE {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
+        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, newAction.info.getEffectiveUserId());
+        describeStacksType.setStackName(newAction.info.getPhysicalResourceId()); // actually the stack id...
+        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+        if (describeStacksResponseType.getDescribeStacksResult() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() != 1) {
+          throw new ResourceFailureException("Not exactly one stack returned for stack " + newAction.info.getPhysicalResourceId());
+        }
+        String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
+        String statusReason = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatusReason();
+        if (status == null) {
+          throw new ResourceFailureException("Null status for stack " + newAction.info.getPhysicalResourceId());
+        }
+        if (!status.startsWith("UPDATE")) {
+          throw new ResourceFailureException("Stack " + newAction.info.getPhysicalResourceId() + " is no longer being updated.");
+        }
+        if (status.equals(Status.UPDATE_ROLLBACK_FAILED.toString())) {
+          throw new ResourceFailureException("Failed to update rollback " + newAction.info.getPhysicalResourceId() + "."  + statusReason);
+        }
+        if (status.equals(Status.UPDATE_ROLLBACK_IN_PROGRESS.toString())) {
+          throw new RetryAfterConditionCheckFailedException("Stack " + newAction.info.getPhysicalResourceId() + " is still being rolled back.");
+        }
+        return newAction;
+      }
+
+      @Override
+      public Integer getTimeout( ) {
+        // Wait as long as necessary for stacks
+        return MAX_TIMEOUT;
+      }
+    };
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateCleanupSteps implements Step {
+    UPDATE_CLEANUP_STACK {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId());
+        if (outerStackArn == null) {
+          throw new ValidationErrorException("Unable to find outer stack for stack " + action.getStackEntity().getStackId());
+        }
+        StackUpdateWorkflowSignalEntityManager.addSignal(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.CLEANUP);
+        return action;
+      }
+    },
+    WAIT_UNTIL_UPDATE_CLEANUP_COMPLETE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
+        describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
+        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+        if (describeStacksResponseType.getDescribeStacksResult() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() != 1) {
+          throw new ResourceFailureException("Not exactly one stack returned for stack " + action.info.getPhysicalResourceId());
+        }
+        String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
+        String statusReason = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatusReason();
+        if (status == null) {
+          throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
+        }
+        if (!status.startsWith("UPDATE")) {
+          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is no longer being updated.");
+        }
+        if (status.equals(Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString())) {
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being cleaned up.");
+        }
+        return action;
+      }
+
+      @Override
+      public Integer getTimeout( ) {
+        // Wait as long as necessary for stacks
+        return MAX_TIMEOUT;
+      }
+    };
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
+  private enum UpdateRollbackCleanupSteps implements Step {
+    UPDATE_ROLLBACK_CLEANUP_STACK {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId());
+        if (outerStackArn == null) {
+          throw new ValidationErrorException("Unable to find outer stack for stack " + action.getStackEntity().getStackId());
+        }
+        StackUpdateWorkflowSignalEntityManager.addSignal(action.getStackEntity().getStackId(), action.getStackEntity().getAccountId(), outerStackArn, StackUpdateWorkflowSignalEntity.Signal.ROLLBACK_CLEANUP);
+        return action;
+      }
+    },
+    WAIT_UNTIL_UPDATE_CLEANUP_COMPLETE {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
+        describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
+        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+        if (describeStacksResponseType.getDescribeStacksResult() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() != 1) {
+          throw new ResourceFailureException("Not exactly one stack returned for stack " + action.info.getPhysicalResourceId());
+        }
+        String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
+        String statusReason = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatusReason();
+        if (status == null) {
+          throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
+        }
+        if (!status.startsWith("UPDATE")) {
+          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is no longer being updated.");
+        }
+        if (status.equals(Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString())) {
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being rolled back clean up.");
+        }
+        return action;
+      }
+
+      @Override
+      public Integer getTimeout( ) {
+        // Wait as long as necessary for stacks
+        return MAX_TIMEOUT;
+      }
+    };
+    @Nullable
+    @Override
+    public Integer getTimeout() {
+      return null;
+    }
+  }
+
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -297,6 +634,15 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     info = (AWSCloudFormationStackResourceInfo) resourceInfo;
   }
 
+  @Override
+  public Status getUpdateCleanupInProgressStatus() {
+    return Status.UPDATE_IN_PROGRESS;
+  }
+
+  @Override
+  public Status getUpdateRollbackCleanupInProgressStatus() {
+    return Status.UPDATE_IN_PROGRESS;
+  }
 
 
 }

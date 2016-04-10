@@ -219,6 +219,11 @@ public class CloudFormationService {
       if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
+
+      if (StackResourceEntityManager.findOuterStackArnIfExists(stackEntity.getStackId(), accountId) != null) {
+        throw new ValidationErrorException("Failed to rollback: RollbackUpdatedStack cannot be invoked on child stacks");
+      }
+
       final String stackAccountId = stackEntity.getAccountId( );
       if (stackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_FAILED) {
         throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not continue to update rollback.");
@@ -1317,6 +1322,18 @@ public class CloudFormationService {
           }
         }
       }
+      // 6) If this is a nested (or inner stack) always update.
+      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackId, accountId);
+      if (outerStackArn != null) {
+        requiresUpdate = true;
+      }
+      // 7) If this is an "outer" stack (that contains a nested stack) always update
+      for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
+        if (resourceInfo.getAllowedByCondition() == Boolean.TRUE && resourceInfo.getType().equals("AWS::CloudFormation::Stack")) {
+          requiresUpdate = true;
+          break;
+        }
+      }
       if (!requiresUpdate) {
         throw new ValidationErrorException("No updates are to be performed.");
       }
@@ -1360,7 +1377,7 @@ public class CloudFormationService {
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
         StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager()),
         nextStackEntity.getResourceDependencyManagerJson(),
-        userId, nextStackEntity.getStackVersion());
+        userId, nextStackEntity.getStackVersion(), outerStackArn != null ? outerStackArn : "");
 
 
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,

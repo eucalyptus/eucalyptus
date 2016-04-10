@@ -22,6 +22,7 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
+import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.resources.ResourceAction
@@ -29,6 +30,7 @@ import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
+import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
@@ -38,6 +40,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
 
+import java.util.concurrent.TimeUnit
+
 /**
  * Created by ethomas on 12/11/15.
  */
@@ -46,19 +50,28 @@ public class CommonUpdateRollbackPromises {
   private static final Logger LOG = Logger.getLogger(CommonUpdateRollbackPromises.class);
   @Delegate
   WorkflowOperations<StackActivityClient> workflowOperations;
+  WorkflowUtils workflowUtils;
 
 
-  public CommonUpdateRollbackPromises(WorkflowOperations<StackActivityClient> workflowOperations) {
+  public CommonUpdateRollbackPromises(WorkflowOperations<StackActivityClient> workflowOperations, WorkflowUtils workflowUtils) {
     this.workflowOperations = workflowOperations;
+    this.workflowUtils = workflowUtils;
   }
 
-  public Promise<String> performRollbackAndCleanup(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion, boolean continuingRollback) {
+  public Promise<String> performRollbackAndCleanup(String stackId, String accountId, String outerStackArn, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion, boolean continuingRollback) {
     Promise<String> recordUpdateRollbackInfo = continuingRollback ? promiseFor("") : activities.recordUpdateRollbackInfo(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, rolledBackStackVersion);
     waitFor(recordUpdateRollbackInfo) {
       Promise<String> rollbackResult = performRollback(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, continuingRollback);
       waitFor(rollbackResult) { String result ->
         if ("SUCCESS".equals(result)) {
-          return performRollbackCleanup(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
+          Promise<String> waitForOuterStackRollbackCleanupSignalPromise = workflowUtils.fixedPollWithTimeout((int) TimeUnit.DAYS.toSeconds(365), 10) {
+            retry(new ExponentialRetryPolicy(2L).withMaximumAttempts(6)) {
+              activities.waitForOuterStackRollbackCleanupSignal(stackId, accountId, outerStackArn);
+            }
+          };
+          waitFor(waitForOuterStackRollbackCleanupSignalPromise) {
+            return performRollbackCleanup(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
+          }
         } else return promiseFor("");
       }
     }

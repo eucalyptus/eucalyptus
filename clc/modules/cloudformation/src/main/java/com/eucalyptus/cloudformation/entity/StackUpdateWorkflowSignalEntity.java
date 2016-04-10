@@ -20,6 +20,9 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -28,39 +31,28 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 /**
- * Created by ethomas on 10/4/14.
+ * Created by ethomas on 4/9/16.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_workflows" )
-public class StackWorkflowEntity extends AbstractPersistent {
+@Table( name = "stack_update_workflow_signals" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class StackUpdateWorkflowSignalEntity extends AbstractPersistent {
 
-  @Column(name = "stack_id", nullable = false, length = 400 )
-  String stackId;
+  @Column(name = "stack_id", nullable = false, length = 400)
+  private String stackId;
+  @Column(name = "account_id", nullable = false)
+  private String accountId;
+  @Column(name = "outer_stack_arn", nullable = false, length = 400)
+  private String outerStackArn;
 
-  @Column(name = "domain", nullable = false )
-  String domain;
+  public enum Signal {ROLLBACK, CLEANUP, ROLLBACK_CLEANUP};
 
-  @Column(name = "workflow_id", nullable = false )
-  String workflowId;
-
-  @Column(name = "run_id", nullable = false )
-  String runId;
-
-  @Column(name = "workflow_type", nullable = false )
+  @Column(name = "signal", nullable = false )
   @Enumerated(EnumType.STRING)
-  WorkflowType workflowType;
+  private Signal signal;
 
-  public enum WorkflowType {
-    CREATE_STACK_WORKFLOW,
-    UPDATE_STACK_WORKFLOW,
-    DELETE_STACK_WORKFLOW,
-    MONITOR_CREATE_STACK_WORKFLOW,
-    MONITOR_UPDATE_STACK_WORKFLOW,
-    MONITOR_UPDATE_INNER_STACK_WORKFLOW,
-    CONTINUE_UPDATE_ROLLBACK_WORKFLOW
-  }
-  public StackWorkflowEntity() {
+  public StackUpdateWorkflowSignalEntity() {
   }
 
   public String getStackId() {
@@ -71,35 +63,27 @@ public class StackWorkflowEntity extends AbstractPersistent {
     this.stackId = stackId;
   }
 
-  public String getDomain() {
-    return domain;
+  public String getAccountId() {
+    return accountId;
   }
 
-  public void setDomain(String domain) {
-    this.domain = domain;
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
   }
 
-  public String getWorkflowId() {
-    return workflowId;
+  public String getOuterStackArn() {
+    return outerStackArn;
   }
 
-  public void setWorkflowId(String workflowId) {
-    this.workflowId = workflowId;
+  public void setOuterStackArn(String outerStackArn) {
+    this.outerStackArn = outerStackArn;
   }
 
-  public String getRunId() {
-    return runId;
+  public Signal getSignal() {
+    return signal;
   }
 
-  public void setRunId(String runId) {
-    this.runId = runId;
-  }
-
-  public WorkflowType getWorkflowType() {
-    return workflowType;
-  }
-
-  public void setWorkflowType(WorkflowType workflowType) {
-    this.workflowType = workflowType;
+  public void setSignal(Signal signal) {
+    this.signal = signal;
   }
 }

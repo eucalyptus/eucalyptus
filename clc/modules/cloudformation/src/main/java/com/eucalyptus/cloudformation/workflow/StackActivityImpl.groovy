@@ -37,6 +37,8 @@ import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
 import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntity
 import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntityManager
+import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntity
+import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntityManager
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
 import com.eucalyptus.cloudformation.entity.Status
@@ -1207,6 +1209,123 @@ public class StackActivityImpl implements StackActivity {
   public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId) {
     StackUpdateRollbackInfoEntityManager.addCompletedResource(stackId, accountId, resourceId);
     return "";
+  }
+  @Override
+  public String waitForOuterStackRollbackOrCleanupSignal(String stackId, String accountId, String outerStackArn) {
+    if (outerStackArn == null || outerStackArn.isEmpty()) return "NORMAL";
+    Collection<StackUpdateWorkflowSignalEntity> workflowSignals = StackUpdateWorkflowSignalEntityManager.getSignals(stackId, accountId, outerStackArn);
+    if (workflowSignals == null || workflowSignals.isEmpty()) return null; // nothing found yet.
+    for (StackUpdateWorkflowSignalEntity workflowSignal: workflowSignals) {
+      // find a CLEANUP or a ROLLBACK.  Otherwise we don't care.
+      if (workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.CLEANUP || workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.ROLLBACK) {
+        StackUpdateWorkflowSignalEntityManager.deleteSignal(stackId, accountId, outerStackArn, workflowSignal.getSignal());
+        return workflowSignal.getSignal().toString();
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public String waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn) {
+    if (outerStackArn == null || outerStackArn.isEmpty()) return "NORMAL";
+    Collection<StackUpdateWorkflowSignalEntity> workflowSignals = StackUpdateWorkflowSignalEntityManager.getSignals(stackId, accountId, outerStackArn);
+    if (workflowSignals == null || workflowSignals.isEmpty()) return null; // nothing found yet.
+    for (StackUpdateWorkflowSignalEntity workflowSignal: workflowSignals) {
+      // find a ROLLBACK_CLEANUP.  Otherwise we don't care.
+      if (workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.ROLLBACK_CLEANUP) {
+        StackUpdateWorkflowSignalEntityManager.deleteSignal(stackId, accountId, outerStackArn, workflowSignal.getSignal());
+        return workflowSignal.getSignal().toString();
+      }
+    }
+    return null;
+  }
+
+  public Boolean performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateCleanupResourceVersion) {
+    LOG.info("Performing update cleanup step " + stepId + " on resource " + resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updateCleanupResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updateCleanupResourceVersion);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    try {
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      boolean errorWithProperties = false;
+      try {
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      if (!errorWithProperties) {
+        // if we have errors with properties we had them on create too, so we didn't start (really)
+        if (!(resourceAction instanceof StepBasedResourceAction)) {
+          throw new ClassCastException("Calling performUpdateCleanupStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
+        }
+        Step updateCleanupStep = ((StepBasedResourceAction) resourceAction).getUpdateCleanupStep(stepId);
+        resourceAction = updateCleanupStep.perform(resourceAction);
+        resourceInfo = resourceAction.getResourceInfo();
+        stackResourceEntity.setResourceStatus(((StepBasedResourceAction) resourceAction).getUpdateCleanupInProgressStatus());
+        stackResourceEntity.setResourceStatusReason(null);
+        stackResourceEntity.setDescription(""); // deal later
+        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      }
+    } catch (NotAResourceFailureException ex) {
+      LOG.info("Update cleanup step not yet complete: ${ex.message}");
+      LOG.debug(ex, ex);
+      return false;
+    } catch (Exception ex) {
+      LOG.info("Error updating cleanup resource " + resourceId);
+      LOG.error(ex, ex);
+      Throwable rootCause = Throwables.getRootCause(ex);
+      throw new ResourceFailureException(rootCause.getMessage());
+      // Don't put the update cleanup failed step here as we need to return "failure" but this must be done in the caller
+    }
+    return true;
+
+  }
+  public Boolean performUpdateRollbackCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateRollbackCleanupResourceVersion) {
+    LOG.info("Performing update rollback RollbackCleanup step " + stepId + " on resource " + resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updateRollbackCleanupResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updateRollbackCleanupResourceVersion);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    try {
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      boolean errorWithProperties = false;
+      try {
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      if (!errorWithProperties) {
+        // if we have errors with properties we had them on create too, so we didn't start (really)
+        if (!(resourceAction instanceof StepBasedResourceAction)) {
+          throw new ClassCastException("Calling performUpdateRollbackCleanupStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
+        }
+        Step updateRollbackCleanupStep = ((StepBasedResourceAction) resourceAction).getUpdateRollbackCleanupStep(stepId);
+        resourceAction = updateRollbackCleanupStep.perform(resourceAction);
+        resourceInfo = resourceAction.getResourceInfo();
+        stackResourceEntity.setResourceStatus(((StepBasedResourceAction) resourceAction).getUpdateRollbackCleanupInProgressStatus());
+        stackResourceEntity.setResourceStatusReason(null);
+        stackResourceEntity.setDescription(""); // deal later
+        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      }
+    } catch (NotAResourceFailureException ex) {
+      LOG.info("Update rollback RollbackCleanup step not yet complete: ${ex.message}");
+      LOG.debug(ex, ex);
+      return false;
+    } catch (Exception ex) {
+      LOG.info("Error updating rollback RollbackCleanup resource " + resourceId);
+      LOG.error(ex, ex);
+      Throwable rootCause = Throwables.getRootCause(ex);
+      throw new ResourceFailureException(rootCause.getMessage());
+      // Don't put the update rollback RollbackCleanup failed step here as we need to return "failure" but this must be done in the caller
+    }
+    return true;
   }
 
 }

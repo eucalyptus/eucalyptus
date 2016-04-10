@@ -166,4 +166,16 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.addCompletedUpdateRollbackResource")
   Promise<String> addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
 
+  @Activity(name = "StackActivity.waitForOuterStackRollbackOrCleanupSignal")
+  Promise<String> waitForOuterStackRollbackOrCleanupSignal(String stackId, String accountId, String outerStackArn);
+
+  @Activity(name = "StackActivity.waitForOuterStackRollbackCleanupSignal")
+  Promise<String> waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn);
+
+  @Activity(name = "StackActivity.performUpdateCleanupStep")
+  Promise<Boolean> performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateCleanupResourceVersion);
+
+  @Activity(name = "StackActivity.performUpdateRollbackCleanupStep")
+  Promise<Boolean> performUpdateRollbackCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateRollbackCleanupResourceVersion);
+
 }

@@ -86,4 +86,11 @@ public interface StackActivity {
   public String checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId);
 
   public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
+  public String waitForOuterStackRollbackOrCleanupSignal(String stackId, String accountId, String outerStackArn);
+  public String waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn);
+
+  public Boolean performUpdateCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateCleanupResourceVersion);
+  public Boolean performUpdateRollbackCleanupStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updateRollbackCleanupResourceVersion);
+
+
 }

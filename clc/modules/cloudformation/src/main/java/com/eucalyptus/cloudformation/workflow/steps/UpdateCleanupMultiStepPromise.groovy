@@ -30,9 +30,9 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 9/28/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-class CleanupMultiStepPromise extends MultiStepPromise {
+class UpdateCleanupMultiStepPromise extends MultiStepPromise {
 
-  CleanupMultiStepPromise(
+  UpdateCleanupMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
       final StepBasedResourceAction resourceAction
@@ -42,13 +42,13 @@ class CleanupMultiStepPromise extends MultiStepPromise {
 
   @Override
   protected Step getStep( final String stepId ) {
-    return resourceAction.getDeleteStep( stepId )
+    return resourceAction.getUpdateCleanupStep( stepId )
   }
 
-  Promise<String> getCleanupPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
-    getPromise( "Resource ${resourceId} deletion failed for stack ${stackId}" as String) { String stepId ->
-      // The item to delete is one step less than the resource version
-      activities.performDeleteStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
+  Promise<String> getUpdateCleanupPromise(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
+    getPromise( "Resource ${resourceId} cleanup failed for stack ${stackId}" as String) { String stepId ->
+      // The item to perform update cleanup on is one step less than the resource version
+      activities.performUpdateCleanupStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
     }
   }
 

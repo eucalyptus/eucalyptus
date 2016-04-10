@@ -42,7 +42,7 @@ public class ContinueUpdateRollbackWorkflowImpl implements ContinueUpdateRollbac
   void continueUpdateRollback(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
     try {
       doTry {
-        return new CommonUpdateRollbackPromises(workflowOperations).performRollbackAndCleanup(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, true);
+        return new CommonUpdateRollbackPromises(workflowOperations, workflowUtils).performRollbackAndCleanup(stackId, accountId, "", oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion, true);
       } withCatch { Throwable t->
         ContinueUpdateRollbackWorkflowImpl.LOG.error(t);
         ContinueUpdateRollbackWorkflowImpl.LOG.debug(t, t);
