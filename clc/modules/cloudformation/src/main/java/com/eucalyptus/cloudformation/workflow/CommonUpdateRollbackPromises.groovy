@@ -240,7 +240,7 @@ public class CommonUpdateRollbackPromises {
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
       Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1)
-      waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase
+      waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase ->
         if (innerStackUpdateSpecialCase == Boolean.TRUE) {
           Promise<String> initPromise = activities.initUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1);
           waitFor(initPromise) {
