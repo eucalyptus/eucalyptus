@@ -101,6 +101,11 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   }
 
   @Override
+  public boolean mustCheckUpdateTypeEvenIfNoPropertiesChanged() {
+    return true;
+  }
+
+  @Override
   public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception {
     AWSCloudFormationStackResourceAction otherAction = (AWSCloudFormationStackResourceAction) resourceAction;
     // always no interruption
