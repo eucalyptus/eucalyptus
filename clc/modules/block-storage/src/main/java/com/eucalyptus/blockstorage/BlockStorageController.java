@@ -69,7 +69,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
+import com.eucalyptus.org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 

@@ -78,7 +78,7 @@
  *   permissions and limitations under the License.
  ************************************************************************/
 
-package org.apache.tools.ant.util;
+package com.eucalyptus.org.apache.tools.ant.util;
 
 import java.text.ChoiceFormat;
 import java.text.DateFormat;

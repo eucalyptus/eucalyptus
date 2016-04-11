@@ -74,7 +74,7 @@ import net.sf.json.JSONObject;
 import net.sf.json.groovy.JsonSlurper;
 
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
+import com.eucalyptus.org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPolicyDocumentException;

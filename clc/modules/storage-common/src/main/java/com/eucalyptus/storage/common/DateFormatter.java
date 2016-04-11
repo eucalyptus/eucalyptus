@@ -64,7 +64,7 @@ package com.eucalyptus.storage.common;
 
 import java.util.Date;
 
-import org.apache.tools.ant.util.DateUtils;
+import com.eucalyptus.org.apache.tools.ant.util.DateUtils;
 
 public class DateFormatter {
   /**
