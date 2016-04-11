@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,7 +115,7 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
   @JoinColumn( name = "metadata_vpc_id" )
   private Vpc vpc;
 
-  @ManyToOne( optional = false )
+  @ManyToOne( optional = false, fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_network_acl_id" )
   private NetworkAcl networkAcl;
 
@@ -137,7 +137,7 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
   @Column( name = "metadata_map_public_ip", nullable = false )
   private Boolean mapPublicIpOnLaunch;
 
-  @OneToOne( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "subnet" )
+  @OneToOne( cascade = CascadeType.REMOVE, mappedBy = "subnet" )
   private RouteTableAssociation routeTableAssociation;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "subnet" )

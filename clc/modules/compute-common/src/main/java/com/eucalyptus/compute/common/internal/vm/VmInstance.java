@@ -217,8 +217,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Set<NetworkGroup>    networkGroups    = Sets.newHashSet( );
 
   @ElementCollection
-  @CollectionTable( name = "metadata_vm_instance_groups" )
-  @JoinColumn( name = "metadata_vm_instance_id" )
+  @CollectionTable(
+      name = "metadata_vm_instance_groups",
+      joinColumns = @JoinColumn( name = "vminstance_id", referencedColumnName = "id" ),
+      indexes = @Index( name = "metadata_vm_instance_groups_vminstance_idx", columnList = "vminstance_id" )
+  )
   private Set<NetworkGroupId>  networkGroupIds = Sets.newHashSet( );
 
   @NotFound( action = NotFoundAction.IGNORE )

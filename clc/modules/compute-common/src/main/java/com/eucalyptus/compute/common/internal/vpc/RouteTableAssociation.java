@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,8 @@ package com.eucalyptus.compute.common.internal.vpc;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -34,7 +36,9 @@ import com.eucalyptus.entities.AbstractPersistent;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
-@Table( name = "metadata_route_table_associations" )
+@Table( name = "metadata_route_table_associations", indexes = {
+    @Index( name = "metadata_route_table_associations_subnet_idx", columnList = "metadata_subnet" ),
+} )
 public class RouteTableAssociation extends AbstractPersistent {
 
   private static final long serialVersionUID = 1L;
@@ -45,7 +49,7 @@ public class RouteTableAssociation extends AbstractPersistent {
   @Column( name = "metadata_main", nullable = false, updatable = false )
   private Boolean main;
 
-  @ManyToOne( optional = false )
+  @ManyToOne( optional = false, fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_route_table", nullable = false, updatable = false )
   private RouteTable routeTable;
 

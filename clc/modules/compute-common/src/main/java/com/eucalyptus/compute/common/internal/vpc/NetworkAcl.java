@@ -101,7 +101,7 @@ public class NetworkAcl extends AbstractOwnedPersistent implements NetworkAclMet
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "networkAcl" )
   private List<NetworkAclEntry> entries = Lists.newArrayList( );
 
-  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REFRESH , orphanRemoval = true, mappedBy = "networkAcl" )
+  @OneToMany( cascade = CascadeType.REFRESH , orphanRemoval = true, mappedBy = "networkAcl" )
   private Collection<Subnet> subnets;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkAcl" )

@@ -68,6 +68,7 @@ import com.google.common.collect.Sets;
     @Index( name = "metadata_network_interfaces_user_id_idx", columnList = "metadata_user_id" ),
     @Index( name = "metadata_network_interfaces_account_id_idx", columnList = "metadata_account_id" ),
     @Index( name = "metadata_network_interfaces_display_name_idx", columnList = "metadata_display_name" ),
+    @Index( name = "metadata_network_interfaces_instance_idx", columnList = "metadata_instance_id" ),
 }  )
 public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata {
 
