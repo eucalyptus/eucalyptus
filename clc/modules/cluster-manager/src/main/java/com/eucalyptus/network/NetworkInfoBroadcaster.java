@@ -272,7 +272,7 @@ public class NetworkInfoBroadcaster {
       if ( lastBroadcast != null && lastBroadcast.version == sourceFingerprint &&
           ( appliedVersion == null || appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) ) {
         encodedNetworkInfo = lastBroadcast.encodedNetworkInfo;
-        clearDirtyPublicAddresses( lastBroadcast.networkInfo );
+        clearDirtyPublicAddresses( networkConfiguration, lastBroadcast.networkInfo );
       } else {
         final int networkInfoFingerprint;
         final NetworkInfo info;
@@ -388,8 +388,13 @@ public class NetworkInfoBroadcaster {
     return hasher.hash( ).asInt( );
   }
 
-  private static void clearDirtyPublicAddresses( final NetworkInfo networkInfo ) {
-    if ( !Networking.getInstance( ).supports( NetworkingFeature.Vpc ) ) return;
+  private static void clearDirtyPublicAddresses(
+      final Optional<NetworkConfiguration> networkConfiguration,
+      final NetworkInfo networkInfo
+  ) {
+    final boolean vpcmido =
+        networkConfiguration.transform( config -> "VPCMIDO".equals( config.getMode( ) ) ).or( false );
+    if ( !vpcmido ) return;
 
     final Set<String> broadcastPublicIps = networkInfo.getInstances( ).stream( )
         .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
