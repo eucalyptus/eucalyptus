@@ -87,7 +87,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
     setUpdateSteps(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION, fromUpdateEnum(UpdateRollbackNoInterruptionSteps.class));
     clearAndPutIfNotNull(updateCleanupUpdateSteps, fromEnum(UpdateCleanupUpdateSteps.class));
-    clearAndPutIfNotNull(updateCleanupUpdateSteps, fromEnum(UpdateRollbackCleanupUpdateSteps.class));
+    clearAndPutIfNotNull(updateRollbackCleanupUpdateSteps, fromEnum(UpdateRollbackCleanupUpdateSteps.class));
   }
 
   protected Map<String, Step> updateCleanupUpdateSteps = Maps.newLinkedHashMap();
@@ -606,7 +606,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
           throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being rolled back clean up.");
         }
         return action;
-      }
+       }
 
       @Override
       public Integer getTimeout( ) {
