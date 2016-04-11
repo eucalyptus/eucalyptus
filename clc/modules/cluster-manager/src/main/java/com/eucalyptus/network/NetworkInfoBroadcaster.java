@@ -23,10 +23,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.NIInstance;
-import com.eucalyptus.cluster.NINetworkInterface;
 import com.eucalyptus.cluster.NetworkInfo;
-import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
@@ -38,15 +35,13 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.RouteTable;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
-import com.eucalyptus.compute.common.network.Networking;
-import com.eucalyptus.compute.common.network.NetworkingFeature;
-import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.network.NetworkInfoBroadcasts.NatGatewayNetworkView;
+import com.eucalyptus.network.applicator.ApplicatorException;
+import com.eucalyptus.network.applicator.Applicators;
 import com.eucalyptus.network.config.NetworkConfiguration;
 import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.network.NetworkInfoBroadcasts.VmInstanceNetworkView;
@@ -60,17 +55,12 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.InternetGatewayNetworkView;
 import com.eucalyptus.network.NetworkInfoBroadcasts.NetworkInterfaceNetworkView;
 import com.eucalyptus.network.NetworkInfoBroadcasts.NetworkInfoSource;
 import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LockResource;
-import com.eucalyptus.util.Pair;
+import com.eucalyptus.util.SemaphoreResource;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
-import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -78,7 +68,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Funnel;
 import com.google.common.hash.HashFunction;
@@ -86,34 +75,20 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.PrimitiveSink;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Ints;
-import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 
 import javax.annotation.Nullable;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN;
 import static com.google.common.hash.Hashing.goodFastHash;
@@ -126,9 +101,7 @@ public class NetworkInfoBroadcaster {
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
   private static final Lock lastBroadcastTimeLock = new ReentrantLock( );
-  private static final AtomicReference<LastBroadcastInfo> lastBroadcastInformation = new AtomicReference<>( );
-  private static final AtomicReference<Pair<Long,String>> lastAppliedNetworkInformation = new AtomicReference<>( );
-  private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.newConcurrentMap( );
+  private static final Semaphore activeBroadcastSemaphore = new Semaphore( 1 );
   private static final EntityCache<VmInstance,NetworkInfoBroadcasts.VmInstanceNetworkView> instanceCache = new EntityCache<>(
       VmInstance.named(null),
       Restrictions.not( VmInstance.criterion( TORNDOWN.array( ) ) ),
@@ -153,28 +126,6 @@ public class NetworkInfoBroadcaster {
       new EntityCache<>( NetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( NetworkInterface.class, NetworkInterfaceNetworkView.class )  );
   private static final EntityCache<NatGateway,NatGatewayNetworkView> natGatewayCache =
       new EntityCache<>( NatGateway.exampleWithOwner( null ), TypeMappers.lookup( NatGateway.class, NatGatewayNetworkView.class )  );
-
-  private static final class LastBroadcastInfo {
-    private final int version;
-    private final String appliedVersion;
-    private final NetworkInfo networkInfo;
-    private final String encodedNetworkInfo;
-    private final long lastConvergedTimestamp;
-
-    public LastBroadcastInfo(
-        final int version,
-        final String appliedVersion,
-        final NetworkInfo networkInfo,
-        final String encodedNetworkInfo,
-        final long lastConvergedTimestamp
-    ) {
-      this.version = version;
-      this.appliedVersion = appliedVersion;
-      this.networkInfo = networkInfo;
-      this.encodedNetworkInfo = encodedNetworkInfo;
-      this.lastConvergedTimestamp = lastConvergedTimestamp;
-    }
-  }
 
   private static NetworkInfoSource cacheSource( ) {
     final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier = Suppliers.memoize( instanceCache );
@@ -226,7 +177,8 @@ public class NetworkInfoBroadcaster {
           final long currentTime = System.currentTimeMillis( );
           final long lastBroadcast = lastBroadcastTime.get( );
           if ( requestedTime >= lastBroadcast &&
-              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
+              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime &&
+              activeBroadcastSemaphore.availablePermits( ) > 0 ) {
             if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
               shouldBroadcast = true;
             } else { // re-evaluate
@@ -257,8 +209,8 @@ public class NetworkInfoBroadcaster {
   }
 
   @SuppressWarnings("UnnecessaryQualifiedReference")
-  static void broadcastNetworkInfo( ){
-    try {
+  static void broadcastNetworkInfo( ) {
+    try ( final SemaphoreResource semaphore = SemaphoreResource.acquire( activeBroadcastSemaphore ) ) {
       // populate with info directly from configuration
       final Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.getNetworkConfiguration( );
       final List<com.eucalyptus.cluster.Cluster> clusters = Clusters.getInstance( ).listValues( );
@@ -266,24 +218,7 @@ public class NetworkInfoBroadcaster {
       final NetworkInfoSource source = cacheSource( );
       final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
       final int sourceFingerprint = fingerprint( source, clusters, dirtyPublicAddresses, NetworkGroups.NETWORK_CONFIGURATION );
-      final LastBroadcastInfo lastBroadcast = lastBroadcastInformation.get( );
-      final Pair<Long,String> appliedVersion = lastAppliedNetworkInformation.get( );
-      final String encodedNetworkInfo;
-      if ( lastBroadcast != null && lastBroadcast.version == sourceFingerprint &&
-          ( appliedVersion == null || appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) ) {
-        encodedNetworkInfo = lastBroadcast.encodedNetworkInfo;
-        clearDirtyPublicAddresses( networkConfiguration, lastBroadcast.networkInfo );
-      } else {
-        final int networkInfoFingerprint;
-        final NetworkInfo info;
-        final boolean converged = lastBroadcast != null &&
-            ( appliedVersion != null && !appliedVersion.getRight( ).equals( lastBroadcast.appliedVersion ) ) &&
-            ( System.currentTimeMillis() - lastBroadcast.lastConvergedTimestamp > TimeUnit.SECONDS.toMillis( 150 ) );
-        if ( converged ) {
-          info = lastBroadcast.networkInfo;
-          networkInfoFingerprint = lastBroadcast.version;
-        } else {
-          info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+      final NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
               networkConfiguration,
               source,
               Suppliers.ofInstance( clusters ),
@@ -303,59 +238,10 @@ public class NetworkInfoBroadcaster {
               dirtyPublicAddresses
           );
           info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
-          networkInfoFingerprint = sourceFingerprint;
-        }
-        if ( appliedVersion != null ) {
-          info.setAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) );
-          info.setAppliedVersion( appliedVersion.getRight( ) );
-        }
 
-        final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" );
-        final StringWriter writer = new StringWriter( 8192 );
-        jc.createMarshaller().marshal( info, writer );
+      Applicators.apply( clusters, info );
 
-        final String networkInfo = writer.toString( );
-        if ( logger.isTraceEnabled( ) ) {
-          logger.trace( "Broadcasting network information:\n${networkInfo}" );
-        }
-
-        final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.xml.temp" );
-        if ( newView.exists( ) && !newView.delete( ) ) {
-          logger.warn( "Error deleting stale network view " + newView.getAbsolutePath( ) );
-        }
-        com.google.common.io.Files.write( networkInfo, newView, Charsets.UTF_8 );
-        Files.move( newView.toPath( ), BaseDirectory.RUN.getChildFile( "global_network_info.xml" ).toPath( ), StandardCopyOption.REPLACE_EXISTING );
-
-        encodedNetworkInfo = new String( B64.standard.enc( networkInfo.getBytes( Charsets.UTF_8 ) ), Charsets.UTF_8 );
-        lastBroadcastInformation.set( new LastBroadcastInfo(
-            networkInfoFingerprint,
-            appliedVersion == null ? null : appliedVersion.getRight( ),
-            info,
-            encodedNetworkInfo,
-            info.getAppliedVersion( ) == null || info.getAppliedVersion( ).equals( info.getVersion( ) ) ? System.currentTimeMillis( ) : lastBroadcast == null ? 0 : lastBroadcast.lastConvergedTimestamp
-        ) );
-      }
-
-      final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( encodedNetworkInfo );
-      for ( final com.eucalyptus.cluster.Cluster cluster : clusters ) {
-        final Long broadcastTime = System.currentTimeMillis( );
-        if ( null == activeBroadcastMap.putIfAbsent( cluster.getPartition( ), broadcastTime ) ) {
-          try {
-            AsyncRequests.newRequest( callback.newInstance( ) ).then( new UnconditionalCallback<BroadcastNetworkInfoResponseType>() {
-              @Override
-              public void fire( ) {
-                activeBroadcastMap.remove( cluster.getPartition( ), broadcastTime );
-              }
-            } ).dispatch( cluster.getConfiguration( ) );
-          } catch ( Exception e ) {
-            activeBroadcastMap.remove( cluster.getPartition( ), broadcastTime );
-            logger.error( "Error broadcasting network information to cluster (" + cluster.getPartition() + ") ("+cluster.getName()+")", e );
-          }
-        } else {
-          logger.warn( "Skipping network information broadcast for active partition " + cluster.getPartition( ) );
-        }
-      }
-    } catch ( IOException | JAXBException e ) {
+    } catch ( ApplicatorException e ) {
       logger.error( "Error during network broadcast", e );
     }
   }
@@ -388,51 +274,8 @@ public class NetworkInfoBroadcaster {
     return hasher.hash( ).asInt( );
   }
 
-  private static void clearDirtyPublicAddresses(
-      final Optional<NetworkConfiguration> networkConfiguration,
-      final NetworkInfo networkInfo
-  ) {
-    final boolean vpcmido =
-        networkConfiguration.transform( config -> "VPCMIDO".equals( config.getMode( ) ) ).or( false );
-    if ( !vpcmido ) return;
-
-    final Set<String> broadcastPublicIps = networkInfo.getInstances( ).stream( )
-        .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
-        .map( NINetworkInterface::getPublicIp )
-        .filter( Objects::nonNull )
-        .collect( Collectors.toSet( ) );
-
-    PublicAddresses.dirtySnapshot( ).stream( )
-        .filter( publicIp -> !broadcastPublicIps.contains( publicIp ) )
-        .forEach( PublicAddresses::clearDirty );
-  }
-
-  public static class AppliedNetworkInfoEventListener implements EventListener<ClockTick> {
-
-    public static void register( ) {
-      Listeners.register( ClockTick.class, new AppliedNetworkInfoEventListener( ) );
-    }
-
-    @SuppressWarnings("UnnecessaryQualifiedReference")
-    @Override
-    public void fireEvent( final ClockTick event ) {
-      final Pair<Long,String> appliedVersion = lastAppliedNetworkInformation.get( );
-      final File newView = BaseDirectory.RUN.getChildFile( "global_network_info.version" );
-      if ( newView.isFile( ) && ( appliedVersion == null || appliedVersion.getLeft( ) != newView.lastModified( ) ) ) {
-        try {
-          final String version = com.google.common.io.Files.toString( newView, StandardCharsets.UTF_8 ).trim( );
-          lastAppliedNetworkInformation.set( Pair.pair( newView.lastModified( ), version ) );
-          requestNetworkInfoBroadcast( );
-        } catch ( IOException e ) {
-          logger.error( "Error reading last applied network broadcast version" );
-        }
-      }
-    }
-  }
-
   public static class NetworkInfoBroadcasterEventListener implements EventListener<ClockTick> {
     private final int intervalTicks = 3;
-    private final int activeBroadcastTimeoutMins = 3;
     private volatile int counter = 0;
 
     public static void register( ) {
@@ -442,13 +285,6 @@ public class NetworkInfoBroadcaster {
     @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     public void fireEvent( final ClockTick event ) {
-      for ( final Map.Entry<String,Long> entry : NetworkInfoBroadcaster.activeBroadcastMap.entrySet( ) ) {
-        if ( entry.getValue() + TimeUnit.MINUTES.toMillis( activeBroadcastTimeoutMins ) < System.currentTimeMillis( ) &&
-            NetworkInfoBroadcaster.activeBroadcastMap.remove( entry.getKey( ), entry.getValue( ) ) ) {
-          logger.warn( "Timed out active network information broadcast for partition" + entry.getKey( ) );
-        }
-      }
-
       if ( counter++%intervalTicks == 0 &&
           Topology.isEnabledLocally( Eucalyptus.class ) &&
           Hosts.isCoordinator( ) &&

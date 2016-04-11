@@ -17,39 +17,12 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
-
-import com.google.common.collect.Maps
-import com.google.common.collect.Sets
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+package com.eucalyptus.network.applicator;
 
 /**
  *
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+public interface ApplicatorChain {
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
-  }
-
-  static boolean clearDirty( Collection<String> inUse, String partition ) {
-    boolean cleared = false;
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        cleared = dirtyAddresses.remove( address ) || cleared
-      }
-    }
-    cleared
-  }
-
-  static boolean clearDirty( String address ) {
-    dirtyAddresses.remove( address )
-  }
-
-  static Set<String> dirtySnapshot( ) {
-    Sets.newHashSet( dirtyAddresses.keySet( ) )
-  }
+  void applyNext( ApplicatorContext context ) throws ApplicatorException;
 }
