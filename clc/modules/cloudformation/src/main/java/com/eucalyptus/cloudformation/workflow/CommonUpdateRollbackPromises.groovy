@@ -235,17 +235,17 @@ public class CommonUpdateRollbackPromises {
                                                   String accountId,
                                                   String effectiveUserId,
                                                   int rolledBackResourceVersion) {
-    // all of these items are from the previous stack version
+    // we know there is at least a resource in the previous stack version, so we check that for resource type
     Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, rolledBackResourceVersion - 1);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1)
+      Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)
       waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase ->
         if (innerStackUpdateSpecialCase == Boolean.TRUE) {
-          Promise<String> initPromise = activities.initUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1);
+          Promise<String> initPromise = activities.initUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
           waitFor(initPromise) {
-            waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1)) {
-              return activities.finalizeUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion - 1);
+            waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)) {
+              return activities.finalizeUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
             }
           }
         } else {
