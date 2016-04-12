@@ -1378,8 +1378,6 @@ public class CloudFormationService {
 
       MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = new MonitorUpdateStackWorkflowClient(monitorUpdateStackWorkflowClient);
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
-        previousResourceDependencyManagerJson,
-        nextStackEntity.getResourceDependencyManagerJson(),
         userId, nextStackEntity.getStackVersion(), outerStackArn);
 
 
