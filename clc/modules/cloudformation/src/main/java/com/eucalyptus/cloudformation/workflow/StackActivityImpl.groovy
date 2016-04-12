@@ -1080,7 +1080,6 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
     createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString(), "", rolledBackStackVersion);
-    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     return "SUCCESS";
   }
 
@@ -1183,7 +1182,6 @@ public class StackActivityImpl implements StackActivity {
         StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
       }
       StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
-      StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
       StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
     }
     return "";
