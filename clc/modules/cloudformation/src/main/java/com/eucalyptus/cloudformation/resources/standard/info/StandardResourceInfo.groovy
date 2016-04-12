@@ -95,6 +95,12 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
     Collection<String> copy = Lists.newArrayList(outputAttributes.keySet());
     return copy;
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
