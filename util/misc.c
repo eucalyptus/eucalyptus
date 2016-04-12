@@ -1912,6 +1912,15 @@ void log_argv(char **argv)
 //!
 int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv)
 {
+    return euca_execvp_fds(ppid, -1, stdin_fd, -1, stdout_fd, -1, stderr_fd, argv);
+}
+
+int euca_execvp_fds(pid_t * ppid,
+                    int stdin_fd_in, int *stdin_fd_out,
+                    int stdout_fd_in, int *stdout_fd_out,
+                    int stderr_fd_in, int *stderr_fd_out,
+                    char **argv)
+{
     int result = 0;
     int stdin_p[2];
     int stdout_p[2];
@@ -1921,22 +1930,25 @@ int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
     *ppid = -1;
 
     // set up the pipes, if requested
-    if (stdin_fd) {
-        *stdin_fd = -1;
+    if (stdin_fd_out) {
+        assert(stdin_fd_in < 0);
+        *stdin_fd_out = -1;
         if (pipe(stdin_p) != 0) {
             LOGERROR("pipe() failed\n");
             return (EUCA_ERROR);
         }
     }
-    if (stdout_fd) {
-        *stdout_fd = -1;
+    if (stdout_fd_out) {
+        assert(stdout_fd_in < 0);
+        *stdout_fd_out = -1;
         if (pipe(stdout_p) != 0) {
             LOGERROR("pipe() failed: %s\n", strerror(errno));
             return (EUCA_ERROR);
         }
     }
-    if (stderr_fd) {
-        *stderr_fd = -1;
+    if (stderr_fd_out) {
+        assert(stderr_fd_in < 0);
+        *stderr_fd_out = -1;
         if (pipe(stderr_p) != 0) {
             LOGERROR("pipe() failed: %s\n", strerror(errno));
             return (EUCA_ERROR);
@@ -1951,23 +1963,32 @@ int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
     if (*ppid == 0) {
         setpgid(0, 0);
         // arrange the file descriptors
-        if (stdin_fd) {
-            close(stdin_p[1]);
-            if (dup2(stdin_p[0], STDIN_FILENO) == -1) {
+        if (stdin_fd_out || stdin_fd_in>-1) {
+            if (stdin_fd_out) {
+                close(stdin_p[1]);
+                stdin_fd_in = stdin_p[0];
+            }
+            if (dup2(stdin_fd_in, STDIN_FILENO) == -1) {
                 LOGERROR("dup2() failed: %s\n", strerror(errno));
                 exit(1);
             }
         }
-        if (stdout_fd) {
-            close(stdout_p[0]);
-            if (dup2(stdout_p[1], STDOUT_FILENO) == -1) {
+        if (stdout_fd_out || stdout_fd_in>-1) {
+            if (stdout_fd_out) {
+                close(stdout_p[0]);
+                stdout_fd_in = stdout_p[1];
+            }
+            if (dup2(stdout_fd_in, STDOUT_FILENO) == -1) {
                 LOGERROR("dup2() failed: %s\n", strerror(errno));
                 exit(1);
             }
         }
-        if (stderr_fd) {
-            close(stderr_p[0]);
-            if (dup2(stderr_p[1], STDERR_FILENO) == -1) {
+        if (stderr_fd_out || stderr_fd_in>-1) {
+            if (stderr_fd_out) {
+                close(stderr_p[0]);
+                stderr_fd_in = stderr_p[1];
+            }
+            if (dup2(stderr_fd_in, STDERR_FILENO) == -1) {
                 LOGERROR("dup2() failed: %s\n", strerror(errno));
                 exit(1);
             }
@@ -1980,17 +2001,17 @@ int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, 
         exit(result);
     }
     // close the file descriptors on the parent appropriately
-    if (stdin_fd) {
+    if (stdin_fd_out) {
         close(stdin_p[0]);
-        *stdin_fd = stdin_p[1];
+        *stdin_fd_out = stdin_p[1];
     }
-    if (stdout_fd) {
+    if (stdout_fd_out) {
         close(stdout_p[1]);
-        *stdout_fd = stdout_p[0];
+        *stdout_fd_out = stdout_p[0];
     }
-    if (stderr_fd) {
+    if (stderr_fd_out) {
         close(stderr_p[1]);
-        *stderr_fd = stderr_p[0];
+        *stderr_fd_out = stderr_p[0];
     }
 
     return EUCA_OK;
@@ -2132,6 +2153,73 @@ int euca_execlp(int *pStatus, const char *file, ...)
         result = euca_waitpid(pid, pStatus);
     }
     free_char_list(argv);
+
+    return result;
+}
+
+int euca_execlp_redirect(int *pStatus,
+                         const char *stdin_path,
+                         const char *stdout_path, boolean stdout_append,
+                         const char *stderr_path, boolean stderr_append,
+                         const char *file, ...)
+{
+    int stdin_fd = -1;
+    int stdout_fd = -1;
+    int stderr_fd = -1;
+    int result = 0;
+    char **argv = NULL;
+
+    // Default the returned status to -1
+    if (pStatus != NULL)
+        (*pStatus) = -1;
+
+    {                                  // turn variable arguments into a array of strings for the execvp()
+        va_list va;
+        va_start(va, file);
+        argv = build_argv(file, va);
+        va_end(va);
+        if (argv == NULL)
+            return EUCA_INVALID_ERROR;
+    }
+
+    if (stdin_path) {
+        stdin_fd = open(stdin_path, O_RDONLY);
+        if (stdin_fd < 0) {
+            LOGERROR("open(O_RDONLY) of %s failed: %s\n", stdin_path, strerror(errno));
+            exit(1);
+        }
+    }
+    if (stdout_path) {
+        stdout_fd = open(stdout_path, O_WRONLY | O_CREAT | (stdout_append ? O_APPEND : O_TRUNC), 0777);
+        if (stdout_fd < 0) {
+            LOGERROR("open(O_WRONLY) of %s failed: %s\n", stdout_path, strerror(errno));
+            exit(1);
+        }
+    }
+    if (stderr_path) {
+        stderr_fd = open(stderr_path, O_WRONLY | O_CREAT | (stderr_append ? O_APPEND : O_TRUNC), 0777);
+        if (stdin_fd < 0) {
+            LOGERROR("open(O_WRONLY) of %s failed: %s\n", stderr_path, strerror(errno));
+            exit(1);
+        }
+    }
+
+    pid_t pid;
+    result = euca_execvp_fds(&pid, stdin_fd, NULL, stdout_fd, NULL, stderr_fd, NULL, argv);
+    if (result == EUCA_OK) {
+        result = euca_waitpid(pid, pStatus);
+    }
+    free_char_list(argv);
+
+    if (stdin_fd > -1) {
+        close(stdin_fd);
+    }
+    if (stdout_fd > -1) {
+        close(stdout_fd);
+    }
+    if (stderr_fd > -1) {
+        close(stderr_fd);
+    }
 
     return result;
 }
@@ -2765,6 +2853,27 @@ int main(int argc, char **argv)
         close(ifd);
         drain_fd("stdout:", ofd);
         waitpid(pid, NULL, 0);
+
+        printf("testing euca_execlp_redirect\n");
+        char f1[] = "/tmp/test-misc-redirect-file-1";
+        char f2[] = "/tmp/test-misc-redirect-file-2";
+        assert(euca_execlp_redirect(&pid, NULL, NULL, FALSE, NULL, FALSE, "/bin/echo", "echo to stdout 1", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, NULL, f1, FALSE, NULL, FALSE, "/bin/echo", "echo to stdout 2", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, NULL, f1, FALSE, NULL, FALSE, "/bin/echo", "echo to stdout 3", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, NULL, f1, TRUE, NULL, FALSE, "/bin/echo", "echo to stdout 4", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, f2, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f2, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, f1, FALSE, NULL, FALSE, "/bin/ls", "/file-not-found", NULL) != EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, f1, FALSE, f1, FALSE, "/bin/ls", "/file-not-found", NULL) != EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, f1, FALSE, f1, TRUE, "/bin/ls", "/file-not-found", NULL) != EUCA_OK);
+        assert(euca_execlp_redirect(&pid, f1, NULL, FALSE, NULL, FALSE, "/bin/cat", NULL) == EUCA_OK);
+        unlink(f1);
+        unlink(f2);
     }
 
     {
