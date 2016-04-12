@@ -146,7 +146,7 @@ public class CloudFormationService {
       final String userId = user.getUserId();
       final String accountId = ctx.getAccountNumber();
       final String accountAlias = ctx.getAccountAlias();
-      String stackName = request.getStackName();
+      final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
       if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
@@ -155,8 +155,6 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      // make sure stack name is REALLY stack name going forward.  (Nested stacks pass stackId)
-      stackName = stackEntity.getStackName();
 
       if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
@@ -1152,7 +1150,7 @@ public class CloudFormationService {
       final String accountId = user.getAccountNumber();
       final String accountAlias = ctx.getAccountAlias();
       // TODO: validate policy
-      final String stackName = request.getStackName();
+      String stackName = request.getStackName();
 
       if (stackName == null) {
         throw new ValidationErrorException("StackName must not be null");
@@ -1203,6 +1201,8 @@ public class CloudFormationService {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
       final String stackId = previousStackEntity.getStackId();
+      // make sure stack name is REALLY stack name going forward.  (Nested stacks pass stackId)
+      stackName = previousStackEntity.getStackName();
 
       // just a quick check here (no need to check parameters yet)
       if (previousStackEntity.getStackStatus() != Status.CREATE_COMPLETE && previousStackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
