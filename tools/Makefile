@@ -155,8 +155,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/get_sys_info
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/euca_ipt
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/populate_arp.pl
-	@$(RM) -f $(DESTDIR)$(sbindir)/euca_conf
-	@$(RM) -f $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
