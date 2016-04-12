@@ -75,7 +75,7 @@ public class UpdateRollbackStackWorkflowImpl implements UpdateRollbackStackWorkf
   }
 
   private Promise<String> performRollback(String stackId, String accountId, String oldResourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
-    Promise<String> rollbackInitialStackPromise = activities.rollbackStackState(stackId, accountId, rolledBackStackVersion);
+    Promise<String> rollbackInitialStackPromise = activities.initUpdateRollbackStack(stackId, accountId, rolledBackStackVersion);
     waitFor(rollbackInitialStackPromise) {
       DependencyManager oldResourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
         oldResourceDependencyManagerJson

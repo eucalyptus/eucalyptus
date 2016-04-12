@@ -151,8 +151,8 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.finalizeUpdateRollbackCleanupResource")
   Promise<String> finalizeUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
 
-  @Activity(name = "StackActivity.rollbackStackState")
-  Promise<String> rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
+  @Activity(name = "StackActivity.initUpdateRollbackStack")
+  Promise<String> initUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion);
 
   @Activity(name = "StackActivity.flattenStackForDelete")
   Promise<String> flattenStackForDelete(String stackId, String accountId);
