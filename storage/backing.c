@@ -1012,33 +1012,6 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     if (check_path(path))
         return (ret);
 
-    // to ensure that we are able to delete all blobs, we chown files back to 'eucalyptus'
-    // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
-    // VM is running and then chowns them to root after termination)
-    {
-        DIR *dir = NULL;
-        if ((dir = opendir(path)) == NULL) {
-            return (-1);
-        }
-
-        struct dirent *dir_entry;
-        while ((dir_entry = readdir(dir)) != NULL) {
-            char *entry_name = dir_entry->d_name;
-
-            if (!strcmp(".", entry_name) || !strcmp("..", entry_name))
-                continue;
-
-            // get the path of the directory item
-            char entry_path[BLOBSTORE_MAX_PATH];
-            snprintf(entry_path, sizeof(entry_path), "%s/%s", path, entry_name);
-
-            if (diskutil_ch(entry_path, get_username(), NULL, BACKING_FILE_PERM)) {
-                LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
-            }
-        }
-        closedir(dir);
-    }
-
     if (do_destroy_files) {
         set_id2(instance, "/.*", work_regex, sizeof(work_regex));
 
