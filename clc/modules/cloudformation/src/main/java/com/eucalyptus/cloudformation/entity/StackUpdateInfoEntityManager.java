@@ -59,6 +59,8 @@ public class StackUpdateInfoEntityManager {
       stackUpdateInfoEntity.setOldResourceDependencyManagerJson(oldResourceDependencyManagerJson);
       stackUpdateInfoEntity.setResourceDependencyManagerJson(resourceDependencyManagerJson);
       stackUpdateInfoEntity.setUpdatedStackVersion(updatedStackVersion);
+      stackUpdateInfoEntity.setStackName(stackName);
+      stackUpdateInfoEntity.setAccountAlias(accountAlias);
       Entities.persist(stackUpdateInfoEntity);
       db.commit( );
     }
