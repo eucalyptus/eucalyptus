@@ -1094,6 +1094,7 @@ public class StackActivityImpl implements StackActivity {
     // get rid of all non-current stack versions and resources
     StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, rolledBackStackVersion)
     StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, rolledBackStackVersion)
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackStackVersion);
     stackEntity.setStackStatus(Status.UPDATE_ROLLBACK_COMPLETE);
     stackEntity.setStackStatusReason(statusMessage);
