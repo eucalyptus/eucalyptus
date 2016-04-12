@@ -100,7 +100,6 @@ public class LoadBalancingSystemVpcs {
             cloudVpcTest = () -> result;
             return result;
         } catch (final Exception ex) {
-            LOG.debug("failed to check cloud's VPC", ex);
             return false;
         }
     };
@@ -597,7 +596,7 @@ public class LoadBalancingSystemVpcs {
         }
     }
 
-    static boolean prepareSystemVpc() {
+    static synchronized boolean prepareSystemVpc() {
         if (! Topology.isEnabled(Compute.class) )
             return false;
 
@@ -691,7 +690,8 @@ public class LoadBalancingSystemVpcs {
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         final List<NatGatewayType> gateways = client.describeSystemNatGateway(subnetId);
         for (final NatGatewayType gateway : gateways) {
-            if ("available".equals(gateway.getState()))
+            final String gwState = gateway.getState();
+            if ("available".equals(gwState) || "pending".equals(gwState))
                 return gateway.getNatGatewayId();
             else {
                 LOG.warn("Nat gateway for ELB system account is in invalid state: " +
@@ -870,7 +870,6 @@ public class LoadBalancingSystemVpcs {
                 if (elapsedSec < CHECK_INTERVAL_SEC)
                     return;
                 lastCheckTime = now;
-
 
                 final List<String> availabilityZones =
                         EucalyptusActivityTasks.getInstance().describeAvailabilityZones().stream()
