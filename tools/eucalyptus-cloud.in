@@ -227,12 +227,6 @@ do_start() {
 		local CLOUD_OPTS="--log-level=INFO"
 	fi
 
-	# basic checks
-	if [ ! -x $EUCALYPTUS/usr/sbin/euca_conf ]; then
-		echo "Some eucalyptus components are missing"
-		exit 1
-	fi
-
 	# see if we are missing Eucalyptus JARs or have them for more than one version
 	COUNT_EUCA_CORE_JARS=`ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/eucalyptus-core-*.jar | wc -l`
 	if [ "$COUNT_EUCA_CORE_JARS" -lt 1 ]; then

@@ -3726,10 +3726,12 @@ if test "${with_extra_version+set}" = set; then :
   withval=$with_extra_version; EXTRA_VERSION="${withval}"
 fi
 
+
 # Check whether --with-java-home was given.
-if test "${with_java_home+set}" = set; then
+if test "${with_java_home+set}" = set; then :
   withval=$with_java_home; JAVA_HOME="${withval}"
 fi
+
 
 # If we didn't specify the services directory, let's use the default
 if test -z "$AXIS2C_SERVICES" ; then
@@ -7686,7 +7688,7 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in cluster/eucalyptus-cluster node/eucalyptus-node tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/eucanetd:tools/eucanetd.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
+ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in cluster/eucalyptus-cluster node/eucalyptus-node tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/eucanetd:tools/eucanetd.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
 
 
 
@@ -8415,7 +8417,6 @@ do
     "util/eucalyptus-config.h") CONFIG_HEADERS="$CONFIG_HEADERS util/eucalyptus-config.h" ;;
     "Makedefs") CONFIG_FILES="$CONFIG_FILES Makedefs" ;;
     "clc/modules/postgresql/src/main/resources/postgresql-binaries.properties") CONFIG_FILES="$CONFIG_FILES clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in" ;;
-    "clc/eucadmin/bin/euca_conf") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in" ;;
     "clc/eucadmin/setup.cfg.template") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in" ;;
     "clc/eucadmin/eucadmin/__init__.py") CONFIG_FILES="$CONFIG_FILES clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in" ;;
     "clc/modules/bootstrap/src/main/native/arguments.ggo") CONFIG_FILES="$CONFIG_FILES clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in" ;;

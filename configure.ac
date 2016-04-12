@@ -271,7 +271,6 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs
                  clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in
-                 clc/eucadmin/bin/euca_conf:clc/eucadmin/bin/euca_conf.in
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in

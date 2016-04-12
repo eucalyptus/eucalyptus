@@ -28,7 +28,6 @@ clc/derby.log
 clc/test
 clc/.deprecated/*/build
 clc/deps
-clc/eucadmin/bin/euca_conf
 clc/eucadmin/eucadmin/__init__.py
 clc/eucadmin/build/
 clc/eucadmin/setup.cfg
@@ -38,6 +37,7 @@ clc/modules/authentication/conf/
 clc/modules/bootstrap/eucalyptus-cloud
 clc/modules/bootstrap/src/main/native/arguments.ggo
 clc/modules/bootstrap/src/main/native/eucalyptus-cloud
+clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
 clc/modules/bootstrap/src/main/resources/version.properties
 clc/modules/*/build
 clc/modules/msgs/src/main/resources/msgs-binding.xml
