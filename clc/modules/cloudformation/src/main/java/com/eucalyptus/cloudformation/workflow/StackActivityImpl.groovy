@@ -1018,14 +1018,9 @@ public class StackActivityImpl implements StackActivity {
     JsonNode nextProperties = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getPropertiesJson());
 
     boolean propertiesChanged = !Objects.equals(previousProperties, nextProperties);
-    if (nothingOutsidePropertiesChanged && !propertiesChanged) {
-      // nothing has changed, values should be the same (or correct)
-      return "NONE";
-    }
 
-    if (!propertiesChanged) {
-      return "NO_PROPERTIES";
-    }
+    boolean stackTagsChanged = !TagHelper.stackTagsEquals(rolledbackStackEntity, updatedStackEntity);
+    boolean shouldCheckUpdateTypeForTags = rolledbackResourceInfo.supportsTags() && stackTagsChanged;
 
     // Update the resource info.
     rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
@@ -1033,6 +1028,16 @@ public class StackActivityImpl implements StackActivity {
     rolledbackResourceAction.setStackEntity(rolledbackStackEntity);
     rolledbackResourceInfo.setEffectiveUserId(effectiveUserId);
     rolledbackResourceAction.setResourceInfo(rolledbackResourceInfo);
+
+    if (nothingOutsidePropertiesChanged && !propertiesChanged && !rolledbackResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
+      // nothing has changed, values should be the same (or correct)
+      return "NONE";
+    }
+
+    if (!propertiesChanged && !rolledbackResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
+      return "NO_PROPERTIES";
+    }
+
     boolean errorWithProperties = false;
     try {
       ResourcePropertyResolver.populateResourceProperties(rolledbackResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(rolledbackResourceInfo.getPropertiesJson()));
