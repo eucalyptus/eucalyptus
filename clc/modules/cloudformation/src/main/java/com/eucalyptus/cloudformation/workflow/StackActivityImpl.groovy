@@ -1166,12 +1166,9 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String initUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
     StackEntityManager.rollbackUpdateStack(stackId, accountId, rolledBackStackVersion);
-    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
-    if (nextStackResourceEntity.getStackStatus() != Status.UPDATE_ROLLBACK_IN_PROGRESS) {
-      nextStackResourceEntity.setResourceStatus(Status.UPDATE_ROLLBACK_IN_PROGRESS);
-      nextStackResourceEntity.setResourceStatusReason("");
-      nextStackResourceEntity.updateStackResource(previousStackResourceEntity);
-      nextStackResourceEntity.addStackEvent(previousStackResourceEntity);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackStackVersion);
+    if (nextStackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_IN_PROGRESS) {
+      createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(), "", rolledBackStackVersion);
     }
     return "";
   }
