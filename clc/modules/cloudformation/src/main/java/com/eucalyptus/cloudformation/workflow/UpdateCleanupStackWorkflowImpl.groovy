@@ -54,7 +54,7 @@ public class UpdateCleanupStackWorkflowImpl implements UpdateCleanupStackWorkflo
   void performUpdateCleanupStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
     try {
       doTry {
-        return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, oldResourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
+        return performCleanup(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
       } withCatch { Throwable t->
         UpdateCleanupStackWorkflowImpl.LOG.error(t);
         UpdateCleanupStackWorkflowImpl.LOG.debug(t, t);
