@@ -146,7 +146,7 @@ public class CloudFormationService {
       final String userId = user.getUserId();
       final String accountId = ctx.getAccountNumber();
       final String accountAlias = ctx.getAccountAlias();
-      final String stackName = request.getStackName();
+      String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
       if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
@@ -155,6 +155,9 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
+      // make sure stack name is REALLY stack name going forward.  (Nested stacks pass stackId)
+      stackName = stackEntity.getStackName();
+
       if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }

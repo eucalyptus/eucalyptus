@@ -382,8 +382,8 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
           capabilities.getMember().addAll(stackCapabilities);
         }
         updateStackType.setCapabilities(capabilities);
-        UpdateStackResponseType createStackResponseType = AsyncRequests.<UpdateStackType, UpdateStackResponseType>sendSync(configuration, updateStackType);
-        newAction.info.setPhysicalResourceId(createStackResponseType.getUpdateStackResult().getStackId());
+        UpdateStackResponseType updateStackResponseType = AsyncRequests.<UpdateStackType, UpdateStackResponseType>sendSync(configuration, updateStackType);
+        newAction.info.setPhysicalResourceId(updateStackResponseType.getUpdateStackResult().getStackId());
         newAction.info.setCreatedEnoughToDelete(true);
 
         return newAction;
