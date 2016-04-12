@@ -115,6 +115,9 @@ enum { GNI_ITERATE_PRINT, GNI_ITERATE_FREE };
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef struct gni_instance_t gni_instance;
+typedef struct gni_secgroup_t gni_secgroup;
+
 //! GNI element name structure
 typedef struct gni_name_t {
     char name[1024];                   //!< GNI element name string
@@ -134,26 +137,8 @@ typedef struct gni_rule_t {
     char groupOwnerId[16];
 } gni_rule;
 
-//! GNI Security Group Information structure
-typedef struct gni_secgroup_t {
-    char accountId[128];               //!< Security Group Account ID string
-    char name[SECURITY_GROUP_ID_LEN];  //!< Security Group Name string (i.e. sg-xxxxxxxx)
-    char chainname[32];                //!< Associated chain name TODO: Really needed?
-    gni_name *grouprules;              //!< List of associated rules with the group
-    int max_grouprules;                //!< Number of rules in the list
-    gni_rule *ingress_rules;
-    int max_ingress_rules;
-    gni_rule *egress_rules;
-    int max_egress_rules;
-    gni_name *instance_names;          //!< List of instance names
-    int max_instance_names;            //!< Number of instance names in the list
-    gni_name *interface_names;         //!< List of interface names
-    int max_interface_names;           //!< Number of interface names in the list
-    void *mido_present;
-} gni_secgroup;
-
 //! GNI Instance Information structure
-typedef struct gni_instance_t {
+struct gni_instance_t {
     char name[INTERFACE_ID_LEN];       //!< Instance ID string
     char ifname[INTERFACE_ID_LEN];     //!< Interface ID string
     char accountId[128];               //!< Instance Account ID string
@@ -171,8 +156,33 @@ typedef struct gni_instance_t {
     int max_secgroup_names;            //!< Number of security group names in the list
     gni_name *interface_names;         //!< List of associated interface names (only for instances)
     int max_interface_names;           //!< Number of interface names in the list
+    gni_secgroup **gnisgs;
     void *mido_present;                //!< mido datastructure that implements this gni_instance
-} gni_instance;
+    void *mido_vpc;
+    void *mido_vpcsubnet;
+};
+
+//! GNI Security Group Information structure
+struct gni_secgroup_t {
+    char accountId[128];               //!< Security Group Account ID string
+    char name[SECURITY_GROUP_ID_LEN];  //!< Security Group Name string (i.e. sg-xxxxxxxx)
+    char chainname[32];                //!< Associated chain name TODO: Really needed?
+    gni_name *grouprules;              //!< List of associated rules with the group
+    int max_grouprules;                //!< Number of rules in the list
+    gni_rule *ingress_rules;
+    int max_ingress_rules;
+    gni_rule *egress_rules;
+    int max_egress_rules;
+    //gni_name *instance_names;          //!< List of instance names
+    //int max_instance_names;            //!< Number of instance names in the list
+    //gni_name *interface_names;         //!< List of interface names
+    //int max_interface_names;           //!< Number of interface names in the list
+    gni_instance **instances;
+    int max_instances;
+    gni_instance **interfaces;
+    int max_interfaces;
+    void *mido_present;
+};
 
 //! GNI Subnet Information Structure
 typedef struct gni_subnet_t {
@@ -222,6 +232,7 @@ typedef struct gni_route_table_t {
     char accountId[128];
     gni_route_entry *entries;
     int max_entries;
+    int changed;
 } gni_route_table;
 
 typedef struct gni_internet_gateway_t {
@@ -248,6 +259,7 @@ typedef struct gni_vpcsubnet_t {
     char networkAcl_name[16];
     char routeTable_name[16];
     gni_instance **interfaces;
+    gni_route_table *routeTable;
     int max_interfaces;
     void *mido_present;
 } gni_vpcsubnet;
@@ -389,6 +401,13 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
 int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubnet,
         gni_instance **vpcinterfaces, int max_vpcinterfaces, gni_instance ***out_interfaces, int *max_out_interfaces);
 
+gni_vpc *gni_get_vpc(globalNetworkInfo *gni, char *name, int *startidx);
+gni_vpcsubnet *gni_get_vpcsubnet(gni_vpc *vpc, char *name, int *startidx);
+gni_instance *gni_get_interface(gni_vpcsubnet *vpcsubnet, char *name, int *startidx);
+gni_nat_gateway *gni_get_natgateway(gni_vpc *vpc, char *name, int *startidx);
+gni_route_table *gni_get_routetable(gni_vpc *vpc, char *name, int *startidx);
+gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx);
+
 int gni_validate(globalNetworkInfo * gni);
 int gni_netmode_validate(const char *psMode);
 int gni_subnet_validate(gni_subnet * subnet);
@@ -416,8 +435,8 @@ int cmp_gni_vpc(gni_vpc *a, gni_vpc *b);
 int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b);
 int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b);
 int cmp_gni_route_table(gni_route_table *a, gni_route_table *b);
-int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_match, int *egress_match, int *interfaces_match);
-int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_match, int *sdc_match, int *host_match);
+int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff);
+int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff);
 
 int ruleconvert(char *rulebuf, char *outrule);
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);

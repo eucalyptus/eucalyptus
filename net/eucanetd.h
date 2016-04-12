@@ -180,6 +180,10 @@ extern const char *asPeerRoleName[];
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+void *zalloc_check(size_t nmemb, size_t size);
+void *realloc_check(void *ptr, size_t nmemb, size_t size);
+void *append_ptrarr(void *arr, int *max_arr, void *ptr);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -209,6 +213,15 @@ extern const char *asPeerRoleName[];
 
 //! Macro to convert a peer enumeration to a string representation
 #define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
+
+#ifndef EUCA_APPEND_PTRARR
+#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
+#endif /* ! EUCA_APPEND_PTRARR */
+
+#ifndef EUCA_ZALLOC_C
+#define EUCA_ZALLOC_C(_nmemb, _size)             zalloc_check((_nmemb), (_size))
+#define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
+#endif /* ! EUCA_ZALLOC_C */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

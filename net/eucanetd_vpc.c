@@ -172,6 +172,7 @@
 
 /* Should preferably be handled in header file */
 extern int midonet_api_dirty_cache;
+extern int midonet_api_system_changed;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -187,9 +188,11 @@ extern int midonet_api_dirty_cache;
 
 //! Set to TRUE when driver is initialized
 static boolean gInitialized = FALSE;
+static boolean gTunnelZoneOk = FALSE;
 
 //! Midonet pluggin specific configuration
 mido_config *pMidoConfig = NULL;
+mido_config *pMidoConfig_c = NULL;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -288,6 +291,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
         return (0);
     }
 
+/*
     if ((pMidoConfig = EUCA_ZALLOC(1, sizeof (mido_config))) == NULL) {
         LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
         return (1);
@@ -300,6 +304,17 @@ static int network_driver_init(eucanetdConfig * pConfig)
         EUCA_FREE(pMidoConfig);
         return (1);
     }
+*/
+
+    pMidoConfig_c = EUCA_ZALLOC_C(1, sizeof (mido_config));
+    rc = initialize_mido(pMidoConfig_c, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
+            pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
+    if (rc) {
+        LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
+        EUCA_FREE(pMidoConfig_c);
+        return (1);
+    }
+    pMidoConfig = pMidoConfig_c;
     
     // Release unnecessary handlers
     if (pConfig->ipt) {
@@ -339,11 +354,18 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //!
 //! @note
 //!
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
+static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
 {
     int ret = 0;
 
-    LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
+    if (pMidoConfig_c) {
+        char *bgprecovery = NULL;
+        bgprecovery = discover_mido_bgps(pMidoConfig_c);
+        if (bgprecovery && strlen(bgprecovery)) {
+            LOGINFO("mido BGP configuration:\n%s\n", bgprecovery);
+        }
+        EUCA_FREE(bgprecovery);
+    }
     if (forceFlush) {
         if (network_driver_system_flush(pGni)) {
             LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
@@ -439,7 +461,8 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
 
     if (midonet_api_dirty_cache == 1) {
         // Cache is invalid. Let's pre-populate mido.
-        rc = do_midonet_maint(pMidoConfig);
+        rc = do_midonet_maint_c(pMidoConfig_c);
+        //rc = do_midonet_maint(pMidoConfig);
     }
     return (rc);
 }
@@ -467,10 +490,32 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
     char versionFile[EUCA_MAX_PATH];
+    int check_tz_attempts = 30;
     struct timeval tv;
-    
-    LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
+
     eucanetd_timer(&tv);
+    // Make sure midoname buffer is available
+    midonet_api_cache_midos_init();
+
+    if (!gTunnelZoneOk) {
+        LOGINFO("Checking MidoNet tunnel-zone.\n");
+        rc = 1;
+    }
+    while (!gTunnelZoneOk) {
+        // Check tunnel-zone
+        rc = check_mido_tunnelzone();
+        if (rc) {
+            if ((--check_tz_attempts) > 0) {
+                sleep(3);
+            } else {
+                LOGERROR("Cannot proceed without a valid tunnel-zone.\n");
+                return (EUCANETD_RUN_ERROR_API);
+            }
+        } else {
+            gTunnelZoneOk = TRUE;
+        }
+    }
+
     bzero(versionFile, EUCA_MAX_PATH);
 
     // Is the driver initialized?
@@ -484,14 +529,28 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
         return (ret);
     }
 
-    LOGDEBUG("midonet_api cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
+    LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
+    rc = do_midonet_update_c(pGni, pGniApplied, pMidoConfig_c);
+
+    if (rc != 0) {
+        LOGERROR("failed to update midonet: check log for details\n");
+        // Invalidate mido cache - force repopulate
+        midonet_api_dirty_cache = 1;
+        midonet_api_system_changed = 1;
+        ret = EUCANETD_RUN_ERROR_API;
+    } else {
+        LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
+    }
+/*
     if ((rc = do_midonet_update(pGni, pGniApplied, pMidoConfig)) != 0) {
         LOGERROR("could not update midonet: check log for details\n");
         // Invalidate mido cache - force repopulate
         midonet_api_dirty_cache = 1;
+        midonet_api_system_changed = 1;
         ret = EUCANETD_RUN_ERROR_API;
     } else {
         LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
+*/
     return (ret);
 }

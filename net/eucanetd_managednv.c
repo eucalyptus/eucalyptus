@@ -1052,7 +1052,7 @@ static int managednv_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClu
     // Install tunnel for each security group but only if they have instances
     for (i = 0, pSecGroup = pSecGroups; i < nbGroups; i++, pSecGroup++) {
         // Do we have any instances for this security-group?
-        if (pSecGroup->max_instance_names == 0)
+        if (pSecGroup->max_instances == 0)
             continue;
 
         // Make sure we find the matching subnet and bridge device
@@ -1183,7 +1183,7 @@ static int managednv_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClu
                     for (j = 0, found = FALSE, done = FALSE; ((j < nbGroups) && !done); j++) {
                         if (pSubnet == managed_find_subnet(pGni, &pSecGroups[j])) {
                             done = TRUE;
-                            if (pSecGroups[j].max_instance_names > 0) {
+                            if (pSecGroups[j].max_instances > 0) {
                                 found = TRUE;
                                 remove = FALSE;
                             }
