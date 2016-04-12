@@ -37,7 +37,7 @@ import javax.persistence.Table;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_update_rollback_info" )
+@Table( name = "stack_update_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackUpdateInfoEntity extends AbstractPersistent {
 
