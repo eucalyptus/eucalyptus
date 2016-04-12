@@ -35,10 +35,8 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntity
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntityManager
-import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntity
-import com.eucalyptus.cloudformation.entity.StackUpdateWorkflowSignalEntityManager
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
 import com.eucalyptus.cloudformation.entity.Status
@@ -895,6 +893,7 @@ public class StackActivityImpl implements StackActivity {
     // get rid of all non-current stack versions and resources
     StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, updatedStackVersion)
     StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, updatedStackVersion)
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedStackVersion);
     stackEntity.setStackStatus(Status.UPDATE_COMPLETE);
     stackEntity.setStackStatusReason(statusMessage);
@@ -971,7 +970,7 @@ public class StackActivityImpl implements StackActivity {
     // stack resource entity for rollback is still "behind" the updated version
     StackResourceEntity rolledbackStackResourceEntity;
 
-    if (StackUpdateRollbackInfoEntityManager.isStartedResource(stackId, accountId, resourceId)) {
+    if (StackUpdateInfoEntityManager.isRollbackStartedResource(stackId, accountId, resourceId)) {
       // we've already moved the resource version
       rolledbackStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
     } else {
@@ -982,7 +981,7 @@ public class StackActivityImpl implements StackActivity {
       }
       rolledbackStackResourceEntity.setResourceVersion(rolledBackResourceVersion);
       StackResourceEntityManager.updateStackResource(rolledbackStackResourceEntity);
-      StackUpdateRollbackInfoEntityManager.addStartedResource(stackId, accountId, resourceId);
+      StackUpdateInfoEntityManager.addRollbackStartedResource(stackId, accountId, resourceId);
     }
 
     ResourceInfo rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
@@ -1081,7 +1080,7 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
     createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString(), "", rolledBackStackVersion);
-    StackUpdateRollbackInfoEntityManager.deleteStackUpdateRollbackInfo(stackId, accountId);
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     return "SUCCESS";
   }
 
@@ -1171,35 +1170,31 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion) {
-    StackUpdateRollbackInfoEntityManager.createUpdateRollbackInfo(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, rolledBackStackVersion);
-    return "";
-  }
-
-  @Override
   public String flattenStackForDelete(String stackId, String accountId) {
     StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackId, accountId);
     if (stackEntity == null) {
       throw new ValidationErrorException("No such stack " + stackId);
     }
     if (stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_FAILED) {
-      StackUpdateRollbackInfoEntity stackUpdateRollbackInfoEntity = StackUpdateRollbackInfoEntityManager.getStackUpdateRollbackInfoEntity(stackId, accountId);
+      StackUpdateInfoEntity stackUpdateRollbackInfoEntity = StackUpdateInfoEntityManager.getStackUpdateInfoEntity(stackId, accountId);
       if (stackUpdateRollbackInfoEntity == null) {
         throw new ValidationErrorException("No stack update rollback record for stack " + stackId);
+      } else {
+        StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
       }
-      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getRolledBackStackVersion());
-      StackUpdateRollbackInfoEntityManager.deleteStackUpdateRollbackInfo(stackId, accountId);
-      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getRolledBackStackVersion());
+      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
+      StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
+      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
     }
     return "";
   }
 
   @Override
   public String checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId) {
-    if (StackUpdateRollbackInfoEntityManager.isCompletedResource(stackId, accountId, resourceId)) {
-      return StackUpdateRollbackInfoEntity.Resource.RollbackStatus.COMPLETED.toString();
-    } else if (StackUpdateRollbackInfoEntityManager.isStartedResource(stackId, accountId, resourceId)) {
-      return StackUpdateRollbackInfoEntity.Resource.RollbackStatus.STARTED.toString();
+    if (StackUpdateInfoEntityManager.isRollbackCompletedResource(stackId, accountId, resourceId)) {
+      return StackUpdateInfoEntity.RolledBackResource.RollbackStatus.COMPLETED.toString();
+    } else if (StackUpdateInfoEntityManager.isRollbackStartedResource(stackId, accountId, resourceId)) {
+      return StackUpdateInfoEntity.RolledBackResource.RollbackStatus.STARTED.toString();
     } else {
       return "";
     }
@@ -1207,37 +1202,8 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId) {
-    StackUpdateRollbackInfoEntityManager.addCompletedResource(stackId, accountId, resourceId);
+    StackUpdateInfoEntityManager.addRollbackCompletedResource(stackId, accountId, resourceId);
     return "";
-  }
-  @Override
-  public String waitForOuterStackRollbackOrCleanupSignal(String stackId, String accountId, String outerStackArn) {
-    if (outerStackArn == null || outerStackArn.isEmpty()) return "NORMAL";
-    Collection<StackUpdateWorkflowSignalEntity> workflowSignals = StackUpdateWorkflowSignalEntityManager.getSignals(stackId, accountId, outerStackArn);
-    if (workflowSignals == null || workflowSignals.isEmpty()) return null; // nothing found yet.
-    for (StackUpdateWorkflowSignalEntity workflowSignal: workflowSignals) {
-      // find a CLEANUP or a ROLLBACK.  Otherwise we don't care.
-      if (workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.CLEANUP || workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.ROLLBACK) {
-        StackUpdateWorkflowSignalEntityManager.deleteSignal(stackId, accountId, outerStackArn, workflowSignal.getSignal());
-        return workflowSignal.getSignal().toString();
-      }
-    }
-    return null;
-  }
-
-  @Override
-  public String waitForOuterStackRollbackCleanupSignal(String stackId, String accountId, String outerStackArn) {
-    if (outerStackArn == null || outerStackArn.isEmpty()) return "NORMAL";
-    Collection<StackUpdateWorkflowSignalEntity> workflowSignals = StackUpdateWorkflowSignalEntityManager.getSignals(stackId, accountId, outerStackArn);
-    if (workflowSignals == null || workflowSignals.isEmpty()) return null; // nothing found yet.
-    for (StackUpdateWorkflowSignalEntity workflowSignal: workflowSignals) {
-      // find a ROLLBACK_CLEANUP.  Otherwise we don't care.
-      if (workflowSignal.getSignal() == StackUpdateWorkflowSignalEntity.Signal.ROLLBACK_CLEANUP) {
-        StackUpdateWorkflowSignalEntityManager.deleteSignal(stackId, accountId, outerStackArn, workflowSignal.getSignal());
-        return workflowSignal.getSignal().toString();
-      }
-    }
-    return null;
   }
   @Override
   public Boolean checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
@@ -1388,6 +1354,22 @@ public class StackActivityImpl implements StackActivity {
     }
     return true;
   }
+  @Override
+  public String kickOffUpdateRollbackCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackCleanupStackWorkflow(stackId, accountId, effectiveUserId);
+    return "";
+  }
 
+  @Override
+  public String kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn,String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackStackWorkflow(stackId, accountId, outerStackArn, effectiveUserId);
+    return "";
+  }
+
+  @Override
+  public String kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateCleanupStackWorkflow(stackId, accountId, effectiveUserId);
+    return "";
+  }
 
 }

@@ -17,24 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow.updateinfo;
+package com.eucalyptus.cloudformation.workflow
+
+import com.netflix.glisten.InterfaceBasedWorkflowClient
 
 /**
-* Created by ethomas on 1/18/16.
-*/
-public enum UpdateTypeAndDirection {
-  UPDATE_NO_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.FORWARD),
-  UPDATE_SOME_INTERRUPTION(UpdateType.SOME_INTERRUPTION, UpdateDirection.FORWARD),
-  UPDATE_WITH_REPLACEMENT(UpdateType.NEEDS_REPLACEMENT, UpdateDirection.FORWARD),
-  UPDATE_ROLLBACK_NO_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK),
-  UPDATE_ROLLBACK_SOME_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK),
-  UPDATE_ROLLBACK_WITH_REPLACEMENT(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK);
+ * Created by ethomas on 6/9/44.
+ */
+class UpdateRollbackStackWorkflowClient implements UpdateRollbackStackWorkflow {
+  UpdateRollbackStackWorkflow workflow
 
-  private UpdateType updateType;
-  private UpdateDirection updateDirection;
-
-  UpdateTypeAndDirection(UpdateType updateType, UpdateDirection updateDirection) {
-    this.updateType = updateType;
-    this.updateDirection = updateDirection;
+  InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> getClient() {
+    return client
   }
+
+  InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> client;
+
+  UpdateRollbackStackWorkflowClient(InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> client ) {
+    this.client = client;
+    workflow = client.asWorkflow( ) as UpdateRollbackStackWorkflow
+  }
+
+  @Override
+  void performUpdateRollbackStack(String stackId, String accountId, String outerStackArn, String oldResourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
+    workflow.performUpdateRollbackStack(stackId, accountId, outerStackArn, oldResourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
+  }
+
+
 }

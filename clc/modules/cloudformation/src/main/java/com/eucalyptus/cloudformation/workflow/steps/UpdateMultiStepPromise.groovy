@@ -20,8 +20,8 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.cloudformation.workflow.StackActivityClient
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode

@@ -17,18 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow;
+package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
+import com.netflix.glisten.WorkflowDescriptionTemplate
 
 /**
- * Created by ethomas on 10/6/14.
+ * Created by ethomas on 7/23/14.
  */
-@Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
-public interface ContinueUpdateRollbackWorkflow {
-  @Execute(version = "1.0")
-  public void continueUpdateRollback(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion);
+class UpdateRollbackStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements UpdateRollbackStackWorkflow {
+
+  @Override
+  void performUpdateRollbackStack(String stackId, String accountId, String outerStackArn, String oldResourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
+    description="ContinueUpdateRollbackWorkflow";
+  }
 }

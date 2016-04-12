@@ -24,7 +24,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingNotificationTypes;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
@@ -35,8 +34,6 @@ import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
-import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesResponseType;
-import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesType;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationResponseType;

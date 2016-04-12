@@ -34,17 +34,17 @@ import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEntity;
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntity;
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntityManager;
-import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity;
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
 import com.eucalyptus.cloudformation.entity.Status;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.FunctionEvaluation;
 import com.eucalyptus.cloudformation.template.JsonHelper;
@@ -53,9 +53,6 @@ import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
 import com.eucalyptus.cloudformation.template.url.S3Helper;
 import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
-import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflow;
-import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.ContinueUpdateRollbackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
@@ -69,6 +66,9 @@ import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
+import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflow;
+import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflowClient;
+import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemplate;
@@ -220,7 +220,8 @@ public class CloudFormationService {
         throw new AccessDeniedException( "Not authorized." );
       }
 
-      if (StackResourceEntityManager.findOuterStackArnIfExists(stackEntity.getStackId(), accountId) != null) {
+      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackEntity.getStackId(), accountId);
+      if (outerStackArn != null) {
         throw new ValidationErrorException("Failed to rollback: RollbackUpdatedStack cannot be invoked on child stacks");
       }
 
@@ -230,7 +231,7 @@ public class CloudFormationService {
       }
       // check to see if there has been a continue update rollback stack workflow.  If one exists and is still going on, just quit:
       boolean existingOpenContinueUpdateRollbackWorkflow = false;
-      List<StackWorkflowEntity> continueUpdateRollbackWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.CONTINUE_UPDATE_ROLLBACK_WORKFLOW);
+      List<StackWorkflowEntity> continueUpdateRollbackWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW);
       if ( continueUpdateRollbackWorkflows != null && !continueUpdateRollbackWorkflows.isEmpty( ) ) {
         if (continueUpdateRollbackWorkflows.size() > 1) {
           throw new ValidationErrorException("More than one continue update rollback workflow exists for " + stackEntity.getStackId()); // TODO: InternalFailureException (?)
@@ -256,20 +257,20 @@ public class CloudFormationService {
       }
       if (!existingOpenContinueUpdateRollbackWorkflow) {
         String stackId = stackEntity.getStackId();
+        StackUpdateInfoEntity stackUpdateInfoEntity = StackUpdateInfoEntityManager.getStackUpdateInfoEntity(stackId, accountId);
         StackWorkflowTags stackWorkflowTags =
           new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
-         StackUpdateRollbackInfoEntity stackUpdateRollbackInfoEntity = StackUpdateRollbackInfoEntityManager.getStackUpdateRollbackInfoEntity(stackId, accountId);
          WorkflowClientFactory workflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-        WorkflowDescriptionTemplate workflowDescriptionTemplate = new ContinueUpdateRollbackWorkflowDescriptionTemplate();
-        InterfaceBasedWorkflowClient<ContinueUpdateRollbackWorkflow> client = workflowClientFactory
-          .getNewWorkflowClient(ContinueUpdateRollbackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
-        ContinueUpdateRollbackWorkflow continueUpdateRollbackWorkflow = new ContinueUpdateRollbackWorkflowClient(client);
-        continueUpdateRollbackWorkflow.continueUpdateRollback(stackId, accountId,
-          stackUpdateRollbackInfoEntity.getOldResourceDependencyManagerJson(),
-          stackUpdateRollbackInfoEntity.getResourceDependencyManagerJson(), userId,
-          stackUpdateRollbackInfoEntity.getRolledBackStackVersion().intValue());
+        WorkflowDescriptionTemplate workflowDescriptionTemplate = new UpdateRollbackStackWorkflowDescriptionTemplate();
+        InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> client = workflowClientFactory
+          .getNewWorkflowClient(UpdateRollbackStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
+        UpdateRollbackStackWorkflow updateRollbackStackWorkflow = new UpdateRollbackStackWorkflowClient(client);
+        updateRollbackStackWorkflow.performUpdateRollbackStack(stackId, accountId,
+          outerStackArn, stackUpdateInfoEntity.getOldResourceDependencyManagerJson(),
+          userId,
+          stackUpdateInfoEntity.getUpdatedStackVersion().intValue() + 1);
         StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
-          StackWorkflowEntity.WorkflowType.CONTINUE_UPDATE_ROLLBACK_WORKFLOW,
+          StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
           CloudFormationProperties.SWF_DOMAIN,
           client.getWorkflowExecution().getWorkflowId(),
           client.getWorkflowExecution().getRunId());
@@ -286,7 +287,7 @@ public class CloudFormationService {
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = ctx.getAccountNumber();
-      final String accountName = ctx.getAccountAlias();
+      final String accountAlias = ctx.getAccountAlias();
       final String stackName = request.getStackName();
       final String templateBody = request.getTemplateBody();
       final String templateUrl = request.getTemplateURL();
@@ -410,7 +411,7 @@ public class CloudFormationService {
               StackResourceEntityManager.addStackResource(stackResourceEntity);
             }
 
-            StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+            StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
             Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
             StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
             WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
@@ -1064,7 +1065,7 @@ public class CloudFormationService {
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccountNumber();
-      final String accountName = ctx.getAccountAlias();
+      final String accountAlias = ctx.getAccountAlias();
       final String stackName = request.getStackName();
       final String logicalResourceId = request.getLogicalResourceId();
       final String status = request.getStatus();
@@ -1146,7 +1147,7 @@ public class CloudFormationService {
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccountNumber();
-      final String accountName = ctx.getAccountAlias();
+      final String accountAlias = ctx.getAccountAlias();
       // TODO: validate policy
       final String stackName = request.getStackName();
 
@@ -1353,8 +1354,10 @@ public class CloudFormationService {
         stackResourceEntity.setResourceVersion(nextStackEntity.getStackVersion());
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
+      String previousResourceDependencyManagerJson = StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager());
+      StackUpdateInfoEntityManager.createUpdateInfo(stackId, accountId, previousResourceDependencyManagerJson, nextStackEntity.getResourceDependencyManagerJson(), nextStackEntity.getStackVersion(), stackName, accountAlias);
 
-      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountName);
+      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
       WorkflowClientFactory updateStackWorkflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
       WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new UpdateStackWorkflowDescriptionTemplate();
       InterfaceBasedWorkflowClient<UpdateStackWorkflow> updateStackWorkflowClient = updateStackWorkflowClientFactory
@@ -1375,9 +1378,9 @@ public class CloudFormationService {
 
       MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = new MonitorUpdateStackWorkflowClient(monitorUpdateStackWorkflowClient);
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
-        StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager()),
+        previousResourceDependencyManagerJson,
         nextStackEntity.getResourceDependencyManagerJson(),
-        userId, nextStackEntity.getStackVersion(), outerStackArn != null ? outerStackArn : "");
+        userId, nextStackEntity.getStackVersion(), outerStackArn);
 
 
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,

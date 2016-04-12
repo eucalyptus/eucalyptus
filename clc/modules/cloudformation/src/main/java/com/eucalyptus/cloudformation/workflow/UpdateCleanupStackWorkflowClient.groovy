@@ -17,24 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow.updateinfo;
+package com.eucalyptus.cloudformation.workflow
+
+import com.netflix.glisten.InterfaceBasedWorkflowClient
 
 /**
-* Created by ethomas on 1/18/16.
-*/
-public enum UpdateTypeAndDirection {
-  UPDATE_NO_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.FORWARD),
-  UPDATE_SOME_INTERRUPTION(UpdateType.SOME_INTERRUPTION, UpdateDirection.FORWARD),
-  UPDATE_WITH_REPLACEMENT(UpdateType.NEEDS_REPLACEMENT, UpdateDirection.FORWARD),
-  UPDATE_ROLLBACK_NO_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK),
-  UPDATE_ROLLBACK_SOME_INTERRUPTION(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK),
-  UPDATE_ROLLBACK_WITH_REPLACEMENT(UpdateType.NO_INTERRUPTION, UpdateDirection.ROLLBACK);
+ * Created by ethomas on 6/9/44.
+ */
+class UpdateCleanupStackWorkflowClient implements UpdateCleanupStackWorkflow {
+  UpdateCleanupStackWorkflow workflow
 
-  private UpdateType updateType;
-  private UpdateDirection updateDirection;
-
-  UpdateTypeAndDirection(UpdateType updateType, UpdateDirection updateDirection) {
-    this.updateType = updateType;
-    this.updateDirection = updateDirection;
+  InterfaceBasedWorkflowClient<UpdateCleanupStackWorkflow> getClient() {
+    return client
   }
+
+  InterfaceBasedWorkflowClient<UpdateCleanupStackWorkflow> client;
+
+  UpdateCleanupStackWorkflowClient(InterfaceBasedWorkflowClient<UpdateCleanupStackWorkflow> client ) {
+    this.client = client;
+    workflow = client.asWorkflow( ) as UpdateCleanupStackWorkflow
+  }
+
+  @Override
+  void performUpdateCleanupStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
+    workflow.performUpdateCleanupStack(stackId, accountId, oldResourceDependencyManagerJson, effectiveUserId, updatedStackVersion);
+  }
+
+
 }
