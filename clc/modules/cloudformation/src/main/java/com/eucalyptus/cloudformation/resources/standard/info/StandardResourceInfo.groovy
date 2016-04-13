@@ -108,7 +108,6 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
     return capabilities;
   }
 
-  public final static String EUCA_NO_UPDATES_TO_PERFORM = "Euca.NoUpdatesToPerform";
   public final static String EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
   public final static String EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
 }

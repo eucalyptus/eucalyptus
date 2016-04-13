@@ -126,6 +126,7 @@ import java.util.UUID;
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationService {
 
+  public static final String NO_UPDATES_ARE_TO_BE_PERFORMED = "No updates are to be performed.";
   @ConfigurableField(initial = "", description = "The value of AWS::Region and value in CloudFormation ARNs for Region")
   public static volatile String REGION = "";
 
@@ -1291,19 +1292,8 @@ public class CloudFormationService {
         requiresUpdate = true;
       }
       // 4) changes to tags
-      else if (request.getTags() !=null && request.getTags().getMember() != null) {
-        Map<String, String> previousTagsMap = Maps.newHashMap();
-        Map<String, String> nextTagsMap = Maps.newHashMap();
-        List<Tag> previousTags = StackEntityHelper.jsonToTags(previousStackEntity.getTagsJson());
-        for (Tag tag: previousTags) {
-          previousTagsMap.put(tag.getKey(), tag.getValue());
-        }
-        for (Tag tag: request.getTags().getMember()) {
-          nextTagsMap.put(tag.getKey(), tag.getValue());
-        }
-        if (!previousTagsMap.equals(nextTagsMap)) {
-          requiresUpdate = true;
-        }
+      else if (tagsHaveChanged(request, previousStackEntity)) {
+        requiresUpdate = true;
       }
       // 5) Differences in the metadata or properties for a given field
       else {
@@ -1326,12 +1316,7 @@ public class CloudFormationService {
           }
         }
       }
-      // 6) If this is a nested (or inner stack) always update.
-      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackId, accountId);
-      if (outerStackArn != null) {
-        requiresUpdate = true;
-      }
-      // 7) If this is an "outer" stack (that contains a nested stack) always update
+      // 6) If this is an "outer" stack (that contains a nested stack) always update
       for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
         if (resourceInfo.getAllowedByCondition() == Boolean.TRUE && resourceInfo.getType().equals("AWS::CloudFormation::Stack")) {
           requiresUpdate = true;
@@ -1339,11 +1324,12 @@ public class CloudFormationService {
         }
       }
       if (!requiresUpdate) {
-        throw new ValidationErrorException("No updates are to be performed.");
+        throw new ValidationErrorException(NO_UPDATES_ARE_TO_BE_PERFORMED);
       }
 
       // don't add the record until we check the stack status though and update it.
       final StackEntity nextStackEntity = StackEntityManager.checkValidUpdateStatusAndUpdateStack(stackId, accountId, nextTemplate, nextTemplateText, request, previousStackVersion);
+      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackId, accountId);
 
       // Create the new stack resources
       for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
@@ -1402,6 +1388,25 @@ public class CloudFormationService {
     }
     return reply;
   }
+
+  private boolean tagsHaveChanged(UpdateStackType request, StackEntity previousStackEntity) throws CloudFormationException {
+    Map<String, String> previousTagsMap = Maps.newHashMap();
+    Map<String, String> nextTagsMap = Maps.newHashMap();
+    if (request.getTags() !=null && request.getTags().getMember() != null) {
+      for (Tag tag : request.getTags().getMember()) {
+        nextTagsMap.put(tag.getKey(), tag.getValue());
+      }
+      List<Tag> previousTags = StackEntityHelper.jsonToTags(previousStackEntity.getTagsJson());
+      for (Tag tag: previousTags) {
+        previousTagsMap.put(tag.getKey(), tag.getValue());
+      }
+      if (!previousTagsMap.equals(nextTagsMap)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   private JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
     JsonNode metadataJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getMetadataJson());
