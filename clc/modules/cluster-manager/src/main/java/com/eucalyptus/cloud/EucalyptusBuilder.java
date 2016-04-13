@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,20 +138,15 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         + config.getFullName( )
         + " is not currently the coordinator "
         + Hosts.list( ) ) );
-    } else if ( config.isVmLocal() && Hosts.isCoordinator() ) {
-      Databases.Locks.DISABLED.delete();
     }
   }
   
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-	  if (!Hosts.isCoordinator()) {
-      Databases.Locks.DISABLED.create();
-	  }
   }
   
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException { }
   
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +75,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.*;
 import org.apache.log4j.Logger;
@@ -118,18 +116,16 @@ import com.google.common.primitives.Longs;
 @ConfigurableClass( root = "bootstrap.hosts",
                     description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
+  private static final Logger                    LOG                        = Logger.getLogger( Hosts.class );
 
-  private static int                             REJOIN_BACKOFF_SECS        = Integer.parseInt( System.getProperty( "euca.bootstrap.rejoin.backoff", "30" ) );//GRZE: do not want to mess w/ this unless necessary -- its here just in case.
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
                       readonly = true )
   public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
                       readonly = true )
   public static final Long                       STATE_INITIALIZE_TIMEOUT   = 120000L;
-  private static final Logger                            LOG                        = Logger.getLogger( Hosts.class );
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
-  private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
 
   public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
     return new Predicate<ServiceConfiguration>( ) {
@@ -288,23 +284,6 @@ public class Hosts {
       }
       
     },
-    SWITCH_COORDINATOR( 10 ) {
-      private volatile boolean wasStoppedLocally = false;
-
-      @Override
-      public void run( ) {
-        final boolean wasStoppedPreviously = wasStoppedLocally;
-        final boolean stoppedLocally = wasStoppedLocally = eucalyptusStoppedLocally( );
-        if ( wasStoppedPreviously &&
-            stoppedLocally &&
-            Hosts.isCoordinator( ) && 
-            Hosts.listDatabases( ).size( ) > 1 ) {
-          LOG.info( "Relinquishing coordinator role: " + Hosts.getCoordinator() );
-          Coordinator.INSTANCE.reset( );
-        }
-      }
-
-    }
     ;
     private final long                            interval;
     private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
@@ -418,12 +397,6 @@ public class Hosts {
       LOG.debug( ex );
       Logs.extreme( ).debug( ex, ex );
     }
-  }
-
-  private static boolean eucalyptusStoppedLocally( ) {
-    return !Iterables.isEmpty( ServiceConfigurations.filter(
-        Eucalyptus.class,
-        Predicates.and( ServiceConfigurations.filterHostLocal(), State.STOPPED ) ) );
   }
 
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
@@ -555,8 +528,6 @@ public class Hosts {
         @Override
         public void run( ) {
           try {
-            Map<String, View> partitions = Maps.newHashMap( );
-            View localView = null;
             for ( View v : ( ( MergeView ) mergeView ).getSubgroups( ) ) {
               LOG.info( logPrefix( v ) + " localhost-member=" + v.containsMember( Hosts.getLocalGroupAddress( ) )
                         + "coordinator=[ group=" + v.getViewId( ).getCreator( )
@@ -567,68 +538,11 @@ public class Hosts {
               /**
                * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
                */
-              Address viewCoordinator = v.getMembers().get( 0 );
-              if ( viewCoordinator.equals( Hosts.getLocalGroupAddress( ) ) ) {
-                localView = v;
-              }
               try {
                 HostManager.getMembershipChannel().getState( v.getMembers().get( 0 ), 0L );
               } catch ( Exception e ) {
                 LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
                 Logs.extreme().error( e, e );
-              }
-
-              /**
-               * Make a map of all group members and their views
-               */
-              for ( Address addr : v.getMembers() ) {
-                partitions.put( addr.toString(), v );
-              }
-            }
-            /**
-             * At this point local state is up-to-date and only CLCs need to proceed
-             */
-            if ( BootstrapArgs.isCloudController( ) ) {
-              boolean partitioned = false;
-              /**
-               * Check if any DB was partitioned from the local view.
-               */
-              Set<View> dbViews = Sets.newHashSet( );//used only for logging
-              for ( Host db : Hosts.listDatabases() ) {
-                View dbView = partitions.get( db.getDisplayName( ) );
-                if ( !dbView.equals( localView ) ) {
-                  partitioned = true;
-                }
-                dbViews.add( dbView );
-              }
-              /**
-               * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
-               */
-              Host newCoordinator = Coordinator.INSTANCE.get( );
-              if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
-                partitioned = true;
-              }
-              
-              if ( !partitioned ) {//no partition, keep going ==> happy time.
-                return;
-              } else if ( !newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator, am not now ==> failstop
-                LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
-                LOG.error( "PARTITION FAIL-STOP: " + printMap( "Hosts.handleMergeView():" ) );
-                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
-                Databases.Locks.PARTITIONED.failStop( );
-              } else if ( newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator and continue to be ==> backup and keep going
-                LOG.error( "PARTITION CONTINUE:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
-              } else if ( !newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, still am not AND someone else is ==> restart to resync data
-                LOG.error( "PARTITION RESTART:  Possibility for stale data copy detected for Host: " + Hosts.localHost() );
-                LOG.error( "PARTITION RESTART: " + printMap( "Hosts.handleMergeView():" ) );
-                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found different coordinator " + newCoordinator );
-                Databases.Locks.PARTITIONED.failStop( );
-//              SystemBootstrapper.restart( );
-              } else if ( newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, but somehow am now (wtf?) ==> pretty sure this is badness ==> failstop
-                LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
-                LOG.error( "PARTITION FAIL-STOP: " + printMap( "Hosts.handleMergeView():" ) );
-                Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
-                Databases.Locks.PARTITIONED.failStop( );
               }
             }
           } catch ( Exception ex ) {
@@ -1409,43 +1323,10 @@ public class Hosts {
     INSTANCE;
 
     @Override
-    public boolean apply( Host c ) {
-      if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
-        LOG.info( "Found system view with database: " + c );
-        /**
-         * Ensure that cloud controller is not too aggressive about rejoining
-         * membership group. A host which leaves the system and returns to the
-         * group too quickly will race with fault detection time outs.
-         *
-         * Here a CLC which is joining a group which has a coordinator already (so, an ENABLED CLC)
-         * will wait at least {@code 10*REJOIN_BACKOFF_SECS} (150 seconds, by default) after the
-         * declared {@code coordinator.getStartedTime()} to ensure that everyone's timeout has
-         * popped and
-         * service state has settled.
-         *
-         * In case of emergency adjust value using -Deuca.bootstrap.rejoin.backoff
-         */
-        long now = System.currentTimeMillis( );
-        long coordTime = c.getStartedTime( );
-        long earliestJoin = coordTime + ( REJOIN_BACKOFF_SECS * 5L * 1000L );
-        if ( now > earliestJoin ) {
-          return false;
-        } else {
-          try {
-            LOG.info( "Waiting for system view to settle till "
-                      + earliestJoin
-                      + " for coordinator "
-                      + coordTime
-                      + " ("
-                      + ( earliestJoin - now )
-                      / 1000l
-                      + " secs)." );
-            TimeUnit.SECONDS.sleep( REJOIN_BACKOFF_SECS );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-          }
-          return true;
-        }
+    public boolean apply( Host coordinator ) {
+      if ( coordinator != null && ( coordinator.isLocalHost( ) || coordinator.hasBootstrapped( ) ) ) {
+        LOG.info( "Found system view with database: " + coordinator );
+        return false;
       } else {
         try {
           TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
@@ -1471,7 +1352,6 @@ public class Hosts {
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
       while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
-      TimeUnit.SECONDS.sleep( REJOIN_BACKOFF_SECS );
     }
   }
 
