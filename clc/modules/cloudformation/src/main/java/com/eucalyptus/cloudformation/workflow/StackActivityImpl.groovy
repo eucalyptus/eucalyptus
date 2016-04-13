@@ -39,6 +39,7 @@ import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity
 import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
+import com.eucalyptus.cloudformation.entity.StacksWithNoUpdateToPerformEntityManager
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
@@ -505,6 +506,10 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
+    StackWorkflowEntityManager.deleteStackWorkflowEntities(stackId);
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
+    StacksWithNoUpdateToPerformEntityManager.deleteStackWithNoUpdateToPerform(stackId, accountId);
+    SignalEntityManager.deleteSignals(stackId, accountId);
     LOG.info("Finished deleting all stack records");
     return ""; // promiseFor() doesn't work on void return types
   }
@@ -1191,8 +1196,8 @@ public class StackActivityImpl implements StackActivity {
       } else {
         StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
       }
-      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
-      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion());
+      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion() + 1);
+      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion() + 1);
     }
     return "";
   }
