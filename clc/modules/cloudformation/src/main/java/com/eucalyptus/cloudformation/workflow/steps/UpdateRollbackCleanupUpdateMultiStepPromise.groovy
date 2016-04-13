@@ -31,7 +31,7 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 9/28/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-class UpdateRollbackCleanupUpdateMultiStepPromise extends MultiStepPromise {
+class UpdateRollbackCleanupUpdateMultiStepPromise extends MultiUpdateStepPromise {
 
   UpdateRollbackCleanupUpdateMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
@@ -42,7 +42,7 @@ class UpdateRollbackCleanupUpdateMultiStepPromise extends MultiStepPromise {
   }
 
   @Override
-  protected Step getStep( final String stepId ) {
+  protected UpdateStep getStep( final String stepId ) {
     return ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdateStep( stepId )
   }
 

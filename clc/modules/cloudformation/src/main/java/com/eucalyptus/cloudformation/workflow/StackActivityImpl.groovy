@@ -1254,33 +1254,48 @@ public class StackActivityImpl implements StackActivity {
 
   public Boolean performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     LOG.info("Performing update cleanup inner stack update step " + stepId + " on resource " + resourceId);
-    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo nextResourceInfo = StackResourceEntityManager.getResourceInfo(nextStackResourceEntity);
+    VersionedStackEntity previousStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion - 1);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
     try {
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
+      ResourceAction nextResourceAction = new ResourceResolverManager().resolveResourceAction(nextResourceInfo.getType());
+      nextResourceAction.setStackEntity(nextStackEntity);
+      nextResourceInfo.setEffectiveUserId(effectiveUserId);
+      nextResourceAction.setResourceInfo(nextResourceInfo);
+      ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
+      previousResourceAction.setStackEntity(previousStackEntity);
+      previousResourceInfo.setEffectiveUserId(effectiveUserId);
+      previousResourceAction.setResourceInfo(previousResourceInfo);
       boolean errorWithProperties = false;
       try {
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+        ResourcePropertyResolver.populateResourceProperties(nextResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      try {
+        ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
       } catch (Exception ex) {
         errorWithProperties = true;
       }
       if (!errorWithProperties) {
         // if we have errors with properties we had them on create too, so we didn't start (really)
-        if (!(resourceAction instanceof AWSCloudFormationStackResourceAction)) {
-          throw new ClassCastException("Calling performUpdateCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + resourceAction.getClass().getName());
+        if (!(nextResourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + nextResourceAction.getClass().getName());
         }
-        Step updateCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateCleanupUpdateStep(stepId);
-        resourceAction = updateCleanupInnerStackUpdateStep.perform(resourceAction);
-        resourceInfo = resourceAction.getResourceInfo();
-        stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-        stackResourceEntity.setResourceStatusReason(null);
-        stackResourceEntity.setDescription(""); // deal later
-        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+        if (!(previousResourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + previousResourceAction.getClass().getName());
+        }
+        UpdateStep updateCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) previousResourceAction).getUpdateCleanupUpdateStep(stepId);
+        nextResourceAction = updateCleanupInnerStackUpdateStep.perform(previousResourceAction, nextResourceAction);
+        nextResourceInfo = nextResourceAction.getResourceInfo();
+        nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+        nextStackResourceEntity.setResourceStatusReason(null);
+        nextStackResourceEntity.setDescription(""); // deal later
+        nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+        StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       }
     } catch (NotAResourceFailureException ex) {
       LOG.info("Update cleanup Inner Stack Update step not yet complete: ${ex.message}");
@@ -1321,33 +1336,49 @@ public class StackActivityImpl implements StackActivity {
 
   public Boolean performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
     LOG.info("Performing update Rollback Cleanup inner stack update step " + stepId + " on resource " + resourceId);
-    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
-    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo nextResourceInfo = StackResourceEntityManager.getResourceInfo(nextStackResourceEntity);
+    VersionedStackEntity previousStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion - 1);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
     try {
-      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-      resourceAction.setStackEntity(stackEntity);
-      resourceInfo.setEffectiveUserId(effectiveUserId);
-      resourceAction.setResourceInfo(resourceInfo);
+      ResourceAction nextResourceAction = new ResourceResolverManager().resolveResourceAction(nextResourceInfo.getType());
+      nextResourceAction.setStackEntity(nextStackEntity);
+      nextResourceInfo.setEffectiveUserId(effectiveUserId);
+      nextResourceAction.setResourceInfo(nextResourceInfo);
+      ResourceAction previousResourceAction = new ResourceResolverManager().resolveResourceAction(previousResourceInfo.getType());
+      previousResourceAction.setStackEntity(previousStackEntity);
+      previousResourceInfo.setEffectiveUserId(effectiveUserId);
+      previousResourceAction.setResourceInfo(previousResourceInfo);
       boolean errorWithProperties = false;
       try {
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+        ResourcePropertyResolver.populateResourceProperties(nextResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      try {
+        ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
       } catch (Exception ex) {
         errorWithProperties = true;
       }
       if (!errorWithProperties) {
         // if we have errors with properties we had them on create too, so we didn't start (really)
-        if (!(resourceAction instanceof AWSCloudFormationStackResourceAction)) {
-          throw new ClassCastException("Calling performUpdateRollbackCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + resourceAction.getClass().getName());
+        if (!(nextResourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateRollbackCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + nextResourceAction.getClass().getName());
         }
-        Step updateRollbackCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdateStep(stepId);
-        resourceAction = updateRollbackCleanupInnerStackUpdateStep.perform(resourceAction);
-        resourceInfo = resourceAction.getResourceInfo();
-        stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-        stackResourceEntity.setResourceStatusReason(null);
-        stackResourceEntity.setDescription(""); // deal later
-        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
-        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+        // if we have errors with properties we had them on create too, so we didn't start (really)
+        if (!(previousResourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateRollbackCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + previousResourceAction.getClass().getName());
+        }
+        UpdateStep updateRollbackCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) previousResourceAction).getUpdateRollbackCleanupUpdateStep(stepId);
+        nextResourceAction = updateRollbackCleanupInnerStackUpdateStep.perform(previousResourceAction, nextResourceAction);
+        nextResourceInfo = nextResourceAction.getResourceInfo();
+        nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+        nextStackResourceEntity.setResourceStatusReason(null);
+        nextStackResourceEntity.setDescription(""); // deal later
+        nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+        StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       }
     } catch (NotAResourceFailureException ex) {
       LOG.info("Update RollbackCleanup Inner Stack Update step not yet complete: ${ex.message}");
