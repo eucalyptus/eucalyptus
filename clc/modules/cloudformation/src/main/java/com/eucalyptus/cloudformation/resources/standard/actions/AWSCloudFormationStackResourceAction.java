@@ -86,17 +86,17 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   public AWSCloudFormationStackResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
     setUpdateSteps(UpdateTypeAndDirection.UPDATE_ROLLBACK_NO_INTERRUPTION, fromUpdateEnum(UpdateRollbackNoInterruptionSteps.class));
-    clearAndPutIfNotNull(updateCleanupUpdateSteps, fromUpdateEnum(UpdateCleanupUpdateSteps.class));
-    clearAndPutIfNotNull(updateRollbackCleanupUpdateSteps, fromUpdateEnum(UpdateRollbackCleanupUpdateSteps.class));
+    clearAndPutIfNotNull(updateCleanupUpdateSteps, fromEnum(UpdateCleanupUpdateSteps.class));
+    clearAndPutIfNotNull(updateRollbackCleanupUpdateSteps, fromEnum(UpdateRollbackCleanupUpdateSteps.class));
   }
 
-  protected Map<String, UpdateStep> updateCleanupUpdateSteps = Maps.newLinkedHashMap();
-  public final UpdateStep getUpdateCleanupUpdateStep(String stepId) {
+  protected Map<String, Step> updateCleanupUpdateSteps = Maps.newLinkedHashMap();
+  public final Step getUpdateCleanupUpdateStep(String stepId) {
     return updateCleanupUpdateSteps.get(stepId);
   }
 
-  protected Map<String, UpdateStep> updateRollbackCleanupUpdateSteps = Maps.newLinkedHashMap();
-  public final UpdateStep getUpdateRollbackCleanupUpdateStep(String stepId) {
+  protected Map<String, Step> updateRollbackCleanupUpdateSteps = Maps.newLinkedHashMap();
+  public final Step getUpdateRollbackCleanupUpdateStep(String stepId) {
     return updateRollbackCleanupUpdateSteps.get(stepId);
   }
 
@@ -590,6 +590,12 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
         AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
         if (oldAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+
+          // Hack: forward the value along ( we can't save the value to the other action during update and the new action is the only
+          // one we have to check during rollback
+          newAction.info.getEucaAttributes().put(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM,
+            oldAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM));
+
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
             oldAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
           if (noUpdatesToPerform) return newAction;
@@ -604,9 +610,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
         AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
         AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        if (oldAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+        if (newAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
-            oldAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
+            newAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
           if (noUpdatesToPerform) return newAction;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
@@ -673,48 +679,46 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
   }
 
 
-  private enum UpdateCleanupUpdateSteps implements UpdateStep {
+  private enum UpdateCleanupUpdateSteps implements Step {
     UPDATE_CLEANUP_STACK {
       @Override
-      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
-        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
-        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        if (newAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
-            newAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
-          if (noUpdatesToPerform) return newAction;
+            action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
+          if (noUpdatesToPerform) return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        String status = getStackStatusAndReason(newAction, configuration).getStatus();
+        String status = getStackStatusAndReason(action, configuration).getStatus();
         if (!Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
-          throw new ResourceFailureException("Update cleanup stack called when status is " + status + " for stack " + newAction.info.getPhysicalResourceId());
+          throw new ResourceFailureException("Update cleanup stack called when status is " + status + " for stack " + action.info.getPhysicalResourceId());
         }
-        UpdateStackPartsWorkflowKickOff.kickOffUpdateCleanupStackWorkflow(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId(), newAction.info.getEffectiveUserId());
-        return newAction;
+        UpdateStackPartsWorkflowKickOff.kickOffUpdateCleanupStackWorkflow(action.info.getPhysicalResourceId(), action.info.getAccountId(), action.info.getEffectiveUserId());
+        return action;
       }
     },
     WAIT_UNTIL_UPDATE_CLEANUP_COMPLETE {
       @Override
-      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
-        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
-        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        if (newAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
-            newAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
-          if (noUpdatesToPerform) return newAction;
+            action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
+          if (noUpdatesToPerform) return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        String status = getStackStatusAndReason(newAction, configuration).getStatus();
+        String status = getStackStatusAndReason(action, configuration).getStatus();
         if (status == null) {
-          throw new ResourceFailureException("Null status for stack " + newAction.info.getPhysicalResourceId());
+          throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
         }
         if (!status.startsWith("UPDATE")) {
-          throw new ResourceFailureException("Stack " + newAction.info.getPhysicalResourceId() + " is no longer being updated.");
+          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is no longer being updated.");
         }
         if (status.equals(Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString())) {
-          throw new RetryAfterConditionCheckFailedException("Stack " + newAction.info.getPhysicalResourceId() + " is still being cleaned up.");
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being cleaned up.");
         }
-        return newAction;
+        return action;
       }
 
       @Override
@@ -730,48 +734,46 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     }
   }
 
-  private enum UpdateRollbackCleanupUpdateSteps implements UpdateStep {
+  private enum UpdateRollbackCleanupUpdateSteps implements Step {
     UPDATE_ROLLBACK_CLEANUP_STACK {
       @Override
-      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
-        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
-        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        if (oldAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
-            oldAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
-          if (noUpdatesToPerform) return newAction;
+            action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
+          if (noUpdatesToPerform) return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        String status = getStackStatusAndReason(newAction, configuration).getStatus();
+        String status = getStackStatusAndReason(action, configuration).getStatus();
         if (!Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
-          throw new ResourceFailureException("Update rollback cleanup stack called when status is " + status + " for stack " + newAction.info.getPhysicalResourceId());
+          throw new ResourceFailureException("Update rollback cleanup stack called when status is " + status + " for stack " + action.info.getPhysicalResourceId());
         }
-        UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackCleanupStackWorkflow(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId(), newAction.info.getEffectiveUserId());
-        return newAction;
+        UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackCleanupStackWorkflow(action.info.getPhysicalResourceId(), action.info.getAccountId(), action.info.getEffectiveUserId());
+        return action;
       }
     },
     WAIT_UNTIL_UPDATE_ROLLBACK_CLEANUP_COMPLETE {
       @Override
-      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
-        AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
-        AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
-        if (oldAction.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)) {
           boolean noUpdatesToPerform = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
-            oldAction.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
-          if (noUpdatesToPerform) return newAction;
+            action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM)).asText());
+          if (noUpdatesToPerform) return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        String status = getStackStatusAndReason(newAction, configuration).getStatus();
+        String status = getStackStatusAndReason(action, configuration).getStatus();
         if (status == null) {
-          throw new ResourceFailureException("Null status for stack " + newAction.info.getPhysicalResourceId());
+          throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
         }
         if (!status.startsWith("UPDATE")) {
-          throw new ResourceFailureException("Stack " + newAction.info.getPhysicalResourceId() + " is no longer being updated.");
+          throw new ResourceFailureException("Stack " + action.info.getPhysicalResourceId() + " is no longer being updated.");
         }
         if (status.equals(Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString())) {
-          throw new RetryAfterConditionCheckFailedException("Stack " + newAction.info.getPhysicalResourceId() + " is still being rolled back clean up.");
+          throw new RetryAfterConditionCheckFailedException("Stack " + action.info.getPhysicalResourceId() + " is still being rolled back clean up.");
         }
-        return newAction;
+        return action;
        }
 
       @Override
