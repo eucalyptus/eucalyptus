@@ -1034,7 +1034,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  private static String validateAndGetStackPolicy(User user, String stackPolicyBody, String stackPolicyUrl) throws ValidationErrorException {
+  private String validateAndGetStackPolicy(User user, String stackPolicyBody, String stackPolicyUrl) throws ValidationErrorException {
     if (stackPolicyBody != null && stackPolicyUrl != null) throw new ValidationErrorException("You cannot specify both StackPolicyURL and StackPolicyBody");
 
     if (stackPolicyBody != null) {
@@ -1046,7 +1046,7 @@ public class CloudFormationService {
     return (stackPolicyBody != null) ? stackPolicyBody : (stackPolicyUrl != null ? extractStackPolicyFromURL(stackPolicyUrl, user) : null);
   }
 
-  private static String validateAndGetStackPolicyDuringUpdate(User user, String stackPolicyDuringUpdateBody, String stackPolicyDuringUpdateUrl) throws ValidationErrorException {
+  private String validateAndGetStackPolicyDuringUpdate(User user, String stackPolicyDuringUpdateBody, String stackPolicyDuringUpdateUrl) throws ValidationErrorException {
     if (stackPolicyDuringUpdateBody != null && stackPolicyDuringUpdateUrl != null) throw new ValidationErrorException("You cannot specify both StackPolicyDuringUpdateURL and StackPolicyDuringUpdateBody");
 
     if (stackPolicyDuringUpdateBody != null) {
@@ -1140,45 +1140,22 @@ public class CloudFormationService {
     return reply;
   }
 
-  public static class SomeUpdateStackVars {
-    private String stackId;
-    private boolean requiresUpdate;
-    private String realStackName;
-    private Template nextTemplate;
-    private String nextTemplateText;
-    private int previousStackVersion;
-    private Template previousTemplate;
+  public UpdateStackResponseType updateStack(UpdateStackType request)
+    throws CloudFormationException {
+    UpdateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccountNumber();
+      final String accountAlias = ctx.getAccountAlias();
+      // TODO: validate policy
+      String stackName = request.getStackName();
 
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
 
-    public String getRealStackName() {
-      return realStackName;
-    }
-
-    public String getStackId() {
-      return stackId;
-    }
-
-    public boolean isRequiresUpdate() {
-      return requiresUpdate;
-    }
-
-    public Template getNextTemplate() {
-      return nextTemplate;
-    }
-
-    public String getNextTemplateText() {
-      return nextTemplateText;
-    }
-
-    public int getPreviousStackVersion() {
-      return previousStackVersion;
-    }
-
-    public Template getPreviousTemplate() {
-      return previousTemplate;
-    }
-
-    public void populate(UpdateStackType request, User user, String accountId, String userId) throws CloudFormationException {
       List<Parameter> nextParameters = null;
       if (request.getParameters() != null && request.getParameters().getMember() != null) {
         nextParameters = request.getParameters().getMember();
@@ -1215,16 +1192,17 @@ public class CloudFormationService {
         throw new ValidationErrorException("You must specify either Template Body or Template URL");
       }
 
+      checkStackPermission( ctx, stackName, accountId );
       // get the original stack (needed for many things)
       final StackEntity previousStackEntity = StackEntityManager.getNonDeletedStackByNameOrId(
-        request.getStackName(),
+        stackName,
         accountId); // no administrator check here because update requires user on original account stack.
       if (previousStackEntity == null) {
-        throw new ValidationErrorException("Stack " + request.getStackName() + " does not exist");
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      stackId = previousStackEntity.getStackId();
+      final String stackId = previousStackEntity.getStackId();
       // make sure stack name is REALLY stack name going forward.  (Nested stacks pass stackId)
-      realStackName = previousStackEntity.getStackName();
+      stackName = previousStackEntity.getStackName();
 
       // just a quick check here (no need to check parameters yet)
       if (previousStackEntity.getStackStatus() != Status.CREATE_COMPLETE && previousStackEntity.getStackStatus() != Status.UPDATE_COMPLETE &&
@@ -1232,7 +1210,7 @@ public class CloudFormationService {
         throw new ValidationErrorException("Stack:" + stackId + " is in " + previousStackEntity.getStackStatus().toString() + " state and can not be updated.");
       }
 
-      previousStackVersion = previousStackEntity.getStackVersion();
+      int previousStackVersion = previousStackEntity.getStackVersion();
 
       if (request.getTags()!= null && request.getTags().getMember() != null) {
         for (Tag tag: request.getTags().getMember()) {
@@ -1248,7 +1226,7 @@ public class CloudFormationService {
 
       final PseudoParameterValues nextPseudoParameterValues = new PseudoParameterValues();
       nextPseudoParameterValues.setAccountId(accountId);
-      nextPseudoParameterValues.setStackName(realStackName);
+      nextPseudoParameterValues.setStackName(stackName);
       nextPseudoParameterValues.setStackId(stackId);
       ArrayList<String> nextNotificationArns = null;
       if (request.getNotificationARNs() != null && request.getNotificationARNs().getMember() != null) {
@@ -1260,7 +1238,7 @@ public class CloudFormationService {
       }
       nextPseudoParameterValues.setRegion(getRegion());
 
-      nextTemplateText = (usePreviousTemplate ?
+      final String nextTemplateText = (usePreviousTemplate ?
         previousStackEntity.getTemplateBody() :
         (nextTemplateBody != null) ? nextTemplateBody : extractTemplateTextFromURL(nextTemplateUrl, user));
 
@@ -1272,8 +1250,8 @@ public class CloudFormationService {
       List<String> previousCapabilities = StackEntityHelper.jsonToCapabilities(previousStackEntity.getCapabilitiesJson());
       PseudoParameterValues previousPseudoParameterValues = getPseudoParameterValues(previousStackEntity);
 
-      previousTemplate = new TemplateParser().parse(previousTemplateText, previousParameters, previousCapabilities, previousPseudoParameterValues, userId);
-      nextTemplate = new TemplateParser().parse(nextTemplateText, nextParameters, nextCapabilities, nextPseudoParameterValues, userId);
+      final Template previousTemplate = new TemplateParser().parse(previousTemplateText, previousParameters, previousCapabilities, previousPseudoParameterValues, userId);
+      final Template nextTemplate = new TemplateParser().parse(nextTemplateText, nextParameters, nextCapabilities, nextPseudoParameterValues, userId);
 
       // see if any of the resources has changed types (this is a no-no)
 
@@ -1289,7 +1267,7 @@ public class CloudFormationService {
       if (!changedTypeResources.isEmpty()) {
         throw new ValidationErrorException("Update of resource type is not permitted. The new template modifies resource type of the following resources: " + changedTypeResources);
       }
-      requiresUpdate = false;
+      boolean requiresUpdate = false;
       // Things that can trigger update.
       // 1) Changes to Notification ARN.  Experimentation shows order doesn't matter but multiplicity does.  Use Multisets
       Multiset<String> previousNotificationArnsMS = HashMultiset.create();
@@ -1333,7 +1311,7 @@ public class CloudFormationService {
         // before hand (like Ref: to parameters).  We will attempt to evaluate functions for the metadata and properties
         // fields.  Presumably, however, if a Ref: (resource) or a Fn::GetAtt value changes, it is because a different
         // resource has also changed, so we will evaluate where we can, and leave the value raw if we can not evaluate all functions.
-        for (String fieldName: previousTemplate.getResourceInfoMap().keySet()) {
+        for (String fieldName:previousTemplate.getResourceInfoMap().keySet()) {
           JsonNode previousMetadataJson = tryEvaluateFunctionsInMetadata(previousTemplate, fieldName, userId);
           JsonNode nextMetadataJson = tryEvaluateFunctionsInMetadata(nextTemplate, fieldName, userId);
           if (!equalsJson(previousMetadataJson, nextMetadataJson)) {
@@ -1348,48 +1326,17 @@ public class CloudFormationService {
           }
         }
       }
-      // 6) If this is an "outer" stack (that contains a nested stack) always update
+      // 6) If this is a nested (or inner stack) always update.
+      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackId, accountId);
+      if (outerStackArn != null) {
+        requiresUpdate = true;
+      }
+      // 7) If this is an "outer" stack (that contains a nested stack) always update
       for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
         if (resourceInfo.getAllowedByCondition() == Boolean.TRUE && resourceInfo.getType().equals("AWS::CloudFormation::Stack")) {
           requiresUpdate = true;
           break;
         }
-      }
-
-    }
-  }
-  public UpdateStackResponseType updateStack(UpdateStackType request)
-    throws CloudFormationException {
-    UpdateStackResponseType reply = request.getReply();
-    try {
-      final Context ctx = Contexts.lookup();
-      final User user = ctx.getUser();
-      final String userId = user.getUserId();
-      final String accountId = user.getAccountNumber();
-      final String accountAlias = ctx.getAccountAlias();
-      // TODO: validate policy
-
-      if (request.getStackName() == null) {
-        throw new ValidationErrorException("StackName must not be null");
-      }
-
-      checkStackPermission( ctx, request.getStackName(), accountId );
-      SomeUpdateStackVars someUpdateStackVars = new SomeUpdateStackVars();
-      someUpdateStackVars.populate(request, user, accountId, userId);
-
-      final String stackId = someUpdateStackVars.getStackId();
-      final String realStackName = someUpdateStackVars.getRealStackName();
-      final Template nextTemplate = someUpdateStackVars.getNextTemplate();
-      final String nextTemplateText = someUpdateStackVars.getNextTemplateText();
-      int previousStackVersion = someUpdateStackVars.getPreviousStackVersion();
-      final Template previousTemplate = someUpdateStackVars.getPreviousTemplate();
-
-      boolean requiresUpdate = someUpdateStackVars.isRequiresUpdate();
-
-      // 7) If this is a nested (or inner stack) always update.
-      String outerStackArn = StackResourceEntityManager.findOuterStackArnIfExists(stackId, accountId);
-      if (outerStackArn != null) {
-        requiresUpdate = true;
       }
       if (!requiresUpdate) {
         throw new ValidationErrorException("No updates are to be performed.");
@@ -1405,15 +1352,15 @@ public class CloudFormationService {
         stackResourceEntity.setDescription(""); // TODO: maybe on resource info?
         stackResourceEntity.setResourceStatus(Status.NOT_STARTED);
         stackResourceEntity.setStackId(stackId);
-        stackResourceEntity.setStackName(realStackName);
+        stackResourceEntity.setStackName(stackName);
         stackResourceEntity.setRecordDeleted(Boolean.FALSE);
         stackResourceEntity.setResourceVersion(nextStackEntity.getStackVersion());
         StackResourceEntityManager.addStackResource(stackResourceEntity);
       }
       String previousResourceDependencyManagerJson = StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager());
-      StackUpdateInfoEntityManager.createUpdateInfo(stackId, accountId, previousResourceDependencyManagerJson, nextStackEntity.getResourceDependencyManagerJson(), nextStackEntity.getStackVersion(), realStackName, accountAlias);
+      StackUpdateInfoEntityManager.createUpdateInfo(stackId, accountId, previousResourceDependencyManagerJson, nextStackEntity.getResourceDependencyManagerJson(), nextStackEntity.getStackVersion(), stackName, accountAlias);
 
-      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, realStackName, accountId, accountAlias);
+      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
       WorkflowClientFactory updateStackWorkflowClientFactory = new WorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
       WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new UpdateStackWorkflowDescriptionTemplate();
       InterfaceBasedWorkflowClient<UpdateStackWorkflow> updateStackWorkflowClient = updateStackWorkflowClientFactory
@@ -1456,27 +1403,27 @@ public class CloudFormationService {
     return reply;
   }
 
-  private static JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
+  private JsonNode tryEvaluateFunctionsInMetadata(Template template, String fieldName, String userId) throws CloudFormationException {
     JsonNode metadataJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getMetadataJson());
     metadataJson = FunctionEvaluation.evaluateFunctionsPreResourceResolution(metadataJson, template, userId);
     return metadataJson;
   }
 
-  private static JsonNode tryEvaluateFunctionsInProperties(Template template, String fieldName, String userId) throws CloudFormationException {
+  private JsonNode tryEvaluateFunctionsInProperties(Template template, String fieldName, String userId) throws CloudFormationException {
     JsonNode propertiesJson = JsonHelper.getJsonNodeFromString(template.getResourceInfoMap().get(fieldName).getPropertiesJson());
     propertiesJson = FunctionEvaluation.evaluateFunctionsPreResourceResolution(propertiesJson, template, userId);
     return propertiesJson;
   }
 
 
-  private static boolean equalsJson(JsonNode node1, JsonNode node2) {
+  private boolean equalsJson(JsonNode node1, JsonNode node2) {
     if (node1 == null && node2 == null) return true; // TODO: not sure about this case...
     if (node1 != null && node2 == null) return false;
     if (node1 == null && node2 != null) return false;
     return node1.equals(node2);
   }
 
-  private static boolean stackPolicyIsDifferent(String previousStackPolicy, String nextStackPolicy) throws ValidationErrorException {
+  private boolean stackPolicyIsDifferent(String previousStackPolicy, String nextStackPolicy) throws ValidationErrorException {
     if (nextStackPolicy == null) return false;
     if (previousStackPolicy == null && previousStackPolicy != null) return true;
     ObjectMapper objectMapper = new ObjectMapper();
@@ -1501,7 +1448,7 @@ public class CloudFormationService {
     return equalsJsonUnorderedLists(previousStackPolicyNode, nextStackPolicyNode);
   }
 
-  private static boolean equalsJsonUnorderedLists(JsonNode node1, JsonNode node2) {
+  private boolean equalsJsonUnorderedLists(JsonNode node1, JsonNode node2) {
     if (node1 == null && node2 == null) return true; // TODO: not sure about this case...
     if (node1 != null && node2 == null) return false;
     if (node1 == null && node2 != null) return false;
@@ -1547,7 +1494,7 @@ public class CloudFormationService {
   }
 
 
-  private static PseudoParameterValues getPseudoParameterValues(VersionedStackEntity stackEntity) throws CloudFormationException {
+  private PseudoParameterValues getPseudoParameterValues(VersionedStackEntity stackEntity) throws CloudFormationException {
     PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
     pseudoParameterValues.setAccountId(stackEntity.getAccountId());
     pseudoParameterValues.setStackId(stackEntity.getStackId());
@@ -1568,7 +1515,7 @@ public class CloudFormationService {
   }
 
 
-  private static void validateAndUpdateParameters(List<Parameter> previousParameters, List<Parameter> nextParameters) throws ValidationErrorException {
+  private void validateAndUpdateParameters(List<Parameter> previousParameters, List<Parameter> nextParameters) throws ValidationErrorException {
     Map<String, String> previousParameterMap = Maps.newHashMap();
     for (Parameter previousParameter: previousParameters) {
       previousParameterMap.put(previousParameter.getParameterKey(), previousParameter.getParameterValue());
@@ -1589,7 +1536,7 @@ public class CloudFormationService {
   }
 
 
-  private static List<Parameter> convertToParameters(ArrayList<StackEntity.Parameter> stackEntityParameters) {
+  private List<Parameter> convertToParameters(ArrayList<StackEntity.Parameter> stackEntityParameters) {
     List<Parameter> parameters = Lists.newArrayList();
     if (stackEntityParameters != null) {
       for (StackEntity.Parameter stackEntityParameter : stackEntityParameters) {
