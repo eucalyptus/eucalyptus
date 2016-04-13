@@ -23,8 +23,10 @@ package com.eucalyptus.ws.handlers.http;
 import java.lang.Exception;
 import java.lang.Override;
 import java.util.Date;
+import java.util.Optional;
 
 import com.eucalyptus.crypto.util.Timestamps;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
@@ -47,6 +49,12 @@ public class HttpResponseHeaderHandler extends MessageStackHandler {
       // If previous handler has already set the Date header, leave it as is.
       if (!resp.containsHeader(HttpHeaders.Names.DATE)) {
         resp.setHeader(HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp(new Date()));
+      }
+
+      // If server already set then do not overwrite
+      final Optional<String> header = StackConfiguration.getServerHeader( );
+      if ( !resp.containsHeader(HttpHeaders.Names.SERVER) && header.isPresent( ) ) {
+        resp.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
       }
     }
   }

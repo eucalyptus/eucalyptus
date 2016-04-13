@@ -101,6 +101,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
@@ -245,6 +246,10 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );
     response.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buffer.readableBytes() ) );
     response.setHeader( HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp( new Date()));
+    final java.util.Optional<String> header = StackConfiguration.getServerHeader( );
+    if ( header.isPresent( ) ) {
+      response.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
+    }
     for ( final Map.Entry<String,String> headerEntry : headers.entrySet( ) ) {
       response.setHeader( headerEntry.getKey( ), headerEntry.getValue( ) );
     }
