@@ -78,7 +78,14 @@ def initialize_cloud(opts):
         sys.exit('{0}: {1} does not exist'.format(
             os.path.basename(sys.argv[0]), exepath))
     if selinux.is_selinux_enabled():
-        selinux.setexeccon(CLC_SELINUX_CONTEXT)
+        try:
+            selinux.setexeccon(CLC_SELINUX_CONTEXT)
+        except OSError:
+            print ('{0}: notice: selinux is enabled, but eucalyptus '
+                   'policy does not appear to be loaded.  '
+                   'Initialization will proceed without selinux '
+                   'support.').format(os.path.basename(sys.argv[0]))
+            sys.exit(1)
     try:
         subprocess.check_call([exepath, '--initialize'] + opts)
     except subprocess.CalledProcessError:
