@@ -76,6 +76,8 @@
 
   <mapping name="BroadcastNetworkInfo" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="version" field="version" usage="required" />
+    <value name="appliedVersion" field="appliedVersion" usage="optional" />
     <value name="networkInfo" field="networkInfo" usage="required" />
   </mapping>
 

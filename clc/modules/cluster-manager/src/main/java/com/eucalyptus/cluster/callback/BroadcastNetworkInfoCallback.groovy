@@ -31,12 +31,23 @@ class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInf
 
   private static Logger logger = Logger.getLogger( BroadcastNetworkInfoCallback.class );
 
-  final String networkInfo
+  private final String networkInfo
+  private final String version
+  private final String appliedVersion
 
-  public BroadcastNetworkInfoCallback( final String encodedNetworkInfo ) {
+  public BroadcastNetworkInfoCallback(
+      final String encodedNetworkInfo,
+      final String version,
+      final String appliedVersion
+  ) {
     this.networkInfo = encodedNetworkInfo
+    this.version = version
+    this.appliedVersion = appliedVersion
+
     this.setRequest( new BroadcastNetworkInfoType(
-        networkInfo: encodedNetworkInfo
+        networkInfo: encodedNetworkInfo,
+        version: version,
+        appliedVersion: appliedVersion
     ) )
   }
 
@@ -55,11 +66,11 @@ class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInf
 
   @Override
   public BroadcastCallback<BroadcastNetworkInfoType, BroadcastNetworkInfoResponseType> newInstance( ) {
-    return new BroadcastNetworkInfoCallback( this.networkInfo );
+    return new BroadcastNetworkInfoCallback( this.networkInfo, this.version, this.appliedVersion );
   }
 
   @Override
   public String toString( ) {
-    return "BroadcastNetworkInfoCallback " + this.networkInfo;
+    return "BroadcastNetworkInfoCallback " + this.version + "/" + this.appliedVersion;
   }
 }

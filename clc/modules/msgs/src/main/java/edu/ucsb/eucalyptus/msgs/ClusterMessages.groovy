@@ -132,6 +132,8 @@ public class ClusterMigrateInstancesType extends CloudClusterMessage {
 public class ClusterMigrateInstancesResponseType extends CloudClusterMessage {}
 
 class BroadcastNetworkInfoType extends CloudClusterMessage {
+  String version
+  String appliedVersion
   String networkInfo
 }
 

@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ClockTick;
@@ -45,11 +46,16 @@ public class BroadcastingApplicator implements Applicator {
 
   @Override
   public void apply( final ApplicatorContext context, final ApplicatorChain chain ) throws ApplicatorException {
+    final NetworkInfo netInfo = context.getNetworkInfo( );
     final String networkInfo = MarshallingApplicatorHelper.getMarshalledNetworkInfo( context );
     final String encodedNetworkInfo =
         new String( B64.standard.enc( networkInfo.getBytes( Charsets.UTF_8 ) ), Charsets.UTF_8 );
 
-    final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( encodedNetworkInfo );
+    final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback(
+        encodedNetworkInfo,
+        netInfo.getVersion( ),
+        netInfo.getAppliedVersion( )
+    );
     for ( final com.eucalyptus.cluster.Cluster cluster : context.getClusters( ) ) {
       final Long broadcastTime = System.currentTimeMillis( );
       if ( null == activeBroadcastMap.putIfAbsent( cluster.getPartition( ), broadcastTime ) ) {
