@@ -276,7 +276,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)) {
           boolean deleteStatusUpdateCompleteCleanupInProgress = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
             action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)).asText());
-          if (!deleteStatusUpdateCompleteCleanupInProgress) {
+          if (deleteStatusUpdateCompleteCleanupInProgress) {
             ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
             StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
             String status = statusAndReason.getStatus();
@@ -320,7 +320,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS)) {
           boolean deleteStatusUpdateCompleteCleanupInProgress = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
             action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS)).asText());
-          if (!deleteStatusUpdateCompleteCleanupInProgress) {
+          if (deleteStatusUpdateCompleteCleanupInProgress) {
             ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
             StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
             String status = statusAndReason.getStatus();
