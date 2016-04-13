@@ -1313,19 +1313,8 @@ public class CloudFormationService {
         requiresUpdate = true;
       }
       // 4) changes to tags
-      else if (request.getTags() !=null && request.getTags().getMember() != null) {
-        Map<String, String> previousTagsMap = Maps.newHashMap();
-        Map<String, String> nextTagsMap = Maps.newHashMap();
-        List<Tag> previousTags = StackEntityHelper.jsonToTags(previousStackEntity.getTagsJson());
-        for (Tag tag: previousTags) {
-          previousTagsMap.put(tag.getKey(), tag.getValue());
-        }
-        for (Tag tag: request.getTags().getMember()) {
-          nextTagsMap.put(tag.getKey(), tag.getValue());
-        }
-        if (!previousTagsMap.equals(nextTagsMap)) {
-          requiresUpdate = true;
-        }
+      else if (tagsHaveChanged(request, previousStackEntity)) {
+        requiresUpdate = true;
       }
       // 5) Differences in the metadata or properties for a given field
       else {
@@ -1358,6 +1347,25 @@ public class CloudFormationService {
 
     }
   }
+
+  private static boolean tagsHaveChanged(UpdateStackType request, StackEntity previousStackEntity) throws CloudFormationException {
+    Map<String, String> previousTagsMap = Maps.newHashMap();
+    Map<String, String> nextTagsMap = Maps.newHashMap();
+    if (request.getTags() !=null && request.getTags().getMember() != null) {
+      for (Tag tag : request.getTags().getMember()) {
+        nextTagsMap.put(tag.getKey(), tag.getValue());
+      }
+      List<Tag> previousTags = StackEntityHelper.jsonToTags(previousStackEntity.getTagsJson());
+      for (Tag tag: previousTags) {
+        previousTagsMap.put(tag.getKey(), tag.getValue());
+      }
+      if (!previousTagsMap.equals(nextTagsMap)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public UpdateStackResponseType updateStack(UpdateStackType request)
     throws CloudFormationException {
     UpdateStackResponseType reply = request.getReply();
