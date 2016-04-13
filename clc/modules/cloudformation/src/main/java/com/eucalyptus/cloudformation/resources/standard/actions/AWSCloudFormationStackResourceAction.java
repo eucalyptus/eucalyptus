@@ -492,7 +492,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         CloudFormationService.SomeUpdateStackVars someUpdateStackVars = new CloudFormationService.SomeUpdateStackVars();
         someUpdateStackVars.populate(updateStackType, Accounts.lookupPrincipalByUserId(newAction.info.getEffectiveUserId()), newAction.info.getAccountId(), newAction.info.getEffectiveUserId());
         newAction.info.getEucaAttributes().put(AWSCloudFormationStackResourceInfo.EUCA_NO_UPDATES_TO_PERFORM,
-          JsonHelper.getStringFromJsonNode(new TextNode(Boolean.toString(!someUpdateStackVars.isRequiresUpdate()))));
+          JsonHelper.getStringFromJsonNode(new TextNode(Boolean.toString(!!someUpdateStackVars.isRequiresUpdate()))));
 
 
         if (someUpdateStackVars.isRequiresUpdate()) {
