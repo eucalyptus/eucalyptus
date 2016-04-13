@@ -68,7 +68,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
 
   private Promise<String> determineRollbackAction(String closedStatus, String stackStatus, String stackId, String accountId,
    String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
-    if ("CREATE_COMPLETE".equals(stackStatus)) {
+    if ("CREATE_COMPLETE".equals(stackStatus) || (stackStatus == null)) { // stackStatus == null could happen if we did an update just after a create
       return promiseFor(""); // just done...
     } else if ("CREATE_IN_PROGRESS".equals(stackStatus)) {
       // Once here, stack creation has failed.  Only in some cases do we know why.

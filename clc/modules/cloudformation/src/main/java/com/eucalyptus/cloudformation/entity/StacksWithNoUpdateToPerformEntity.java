@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2016 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,49 +22,29 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.entities.AbstractPersistent;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 /**
- * Created by ethomas on 3/30/16.
+ * Created by ethomas on 4/4/16.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_resource_signals" )
+@Table( name = "stacks_with_no_update_to_perform" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class SignalEntity extends AbstractPersistent {
+public class StacksWithNoUpdateToPerformEntity extends AbstractPersistent {
 
   @Column(name = "stack_id", nullable = false, length = 400)
-  private String stackId;
-
+  String stackId;
   @Column(name = "account_id", nullable = false)
-  private String accountId;
-
-  @Column(name = "logical_resource_id", nullable = false )
-  private String logicalResourceId;
-
-  @Column(name = "resource_version")
-  private Integer resourceVersion;
-
-  @Column(name = "unique_id", nullable = false)
-  private String uniqueId;
-
-  public enum Status {SUCCESS, FAILURE}
-
-  @Column(name = "status", nullable = false )
-  @Enumerated(EnumType.STRING)
-  private Status status;
-
-  @Column(name = "processed", nullable = false )
-  Boolean processed = false;
-
-  public SignalEntity() {
-  }
+  String accountId;
 
   public String getStackId() {
     return stackId;
@@ -82,45 +62,6 @@ public class SignalEntity extends AbstractPersistent {
     this.accountId = accountId;
   }
 
-  public String getLogicalResourceId() {
-    return logicalResourceId;
+  public StacksWithNoUpdateToPerformEntity() {
   }
-
-  public Boolean getProcessed() {
-    return processed;
-  }
-
-  public void setProcessed(Boolean processed) {
-    this.processed = processed;
-  }
-
-  public void setLogicalResourceId(String logicalResourceId) {
-    this.logicalResourceId = logicalResourceId;
-  }
-
-  public Integer getResourceVersion() {
-    return resourceVersion;
-  }
-
-  public void setResourceVersion(Integer resourceVersion) {
-    this.resourceVersion = resourceVersion;
-  }
-
-  public String getUniqueId() {
-    return uniqueId;
-  }
-
-  public void setUniqueId(String uniqueId) {
-    this.uniqueId = uniqueId;
-  }
-
-  public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(Status status) {
-    this.status = status;
-  }
-
-
 }

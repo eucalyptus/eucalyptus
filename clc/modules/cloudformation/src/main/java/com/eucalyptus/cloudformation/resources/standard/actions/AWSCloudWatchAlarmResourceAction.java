@@ -29,10 +29,10 @@ import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudWa
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudWatchMetricDimension;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
-import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.AlarmNames;
 import com.eucalyptus.cloudwatch.common.msgs.DeleteAlarmsResponseType;

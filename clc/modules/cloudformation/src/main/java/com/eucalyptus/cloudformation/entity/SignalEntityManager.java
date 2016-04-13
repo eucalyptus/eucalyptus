@@ -25,13 +25,7 @@ import com.google.common.collect.Lists;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
-import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
 /**

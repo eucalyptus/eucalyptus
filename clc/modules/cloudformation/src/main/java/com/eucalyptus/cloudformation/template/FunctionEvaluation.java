@@ -22,8 +22,8 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
+import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

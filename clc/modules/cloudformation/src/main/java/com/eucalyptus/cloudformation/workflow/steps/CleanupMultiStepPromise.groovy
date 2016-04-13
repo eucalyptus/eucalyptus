@@ -45,9 +45,9 @@ class CleanupMultiStepPromise extends MultiStepPromise {
     return resourceAction.getDeleteStep( stepId )
   }
 
-  Promise<String> getCleanupPromise( String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
+  Promise<String> getCleanupPromise(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
     getPromise( "Resource ${resourceId} deletion failed for stack ${stackId}" as String) { String stepId ->
-      // The item to delete is one step less than the resource version
+      // The item to perform delete on is one step less than the resource version
       activities.performDeleteStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
     }
   }

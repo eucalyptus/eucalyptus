@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources
 
-import com.eucalyptus.cloudformation.resources.annotations.Property
-import com.eucalyptus.cloudformation.resources.annotations.Required
 import com.eucalyptus.compute.common.CidrIpType
 import com.eucalyptus.compute.common.IpPermissionType
 import com.eucalyptus.compute.common.UserIdGroupPairType

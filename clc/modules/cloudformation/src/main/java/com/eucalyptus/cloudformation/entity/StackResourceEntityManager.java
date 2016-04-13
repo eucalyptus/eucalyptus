@@ -371,4 +371,27 @@ public class StackResourceEntityManager {
       db.commit();
     }
   }
+
+  public static String findOuterStackArnIfExists(String stackId, String accountId) throws ValidationErrorException {
+    String returnValue = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("physicalResourceId", stackId)) // inner stack ARN == physical resource id
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackResourceEntity> stackResourceEntityList = criteria.list();
+      if (stackResourceEntityList != null) {
+        for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
+          if (returnValue == null) {
+            returnValue = stackResourceEntity.getStackId();
+          }
+          if (!returnValue.equals(stackResourceEntity.getStackId())) {
+            throw new ValidationErrorException("Stack " + stackId + " is a resource in more than one stack:" + returnValue + " and " + stackResourceEntity.getStackId());
+          }
+        }
+      }
+      return returnValue;
+    }
+  }
 }

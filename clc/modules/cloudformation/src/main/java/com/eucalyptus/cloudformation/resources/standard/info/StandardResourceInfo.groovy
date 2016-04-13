@@ -66,35 +66,50 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
   }
 
   Map<String, String> outputAttributes = Maps.newLinkedHashMap();
+  Map<String, String> eucaAttributes = Maps.newLinkedHashMap();
 
   @Override
   boolean isAttributeAllowed(String attributeName) {
-    return attributeName != null && (attributeName.startsWith("Outputs."));
+    return attributeName != null && (attributeName.startsWith("Euca.") || attributeName.startsWith("Outputs."));
   }
 
   @Override
   String getResourceAttributeJson(String attributeName) throws CloudFormationException {
-    if (!outputAttributes.containsKey(attributeName)) {
-      throw new ValidationErrorException("Stack does not have an attribute named " + attributeName);
-    } else {
+    if (outputAttributes.containsKey(attributeName)) {
       return outputAttributes.get(attributeName);
+    } else if (eucaAttributes.containsKey(attributeName)) {
+      return eucaAttributes.get(attributeName);
+    } else {
+      throw new ValidationErrorException("Stack does not have an attribute named " + attributeName);
     }
   }
 
   @Override
   void setResourceAttributeJson(String attributeName, String attributeValueJson) throws CloudFormationException {
-    if (attributeName == null || !(attributeName.startsWith("Outputs."))) {
+    if (attributeName == null || (!attributeName.startsWith("Outputs.") && !attributeName.startsWith("Euca."))) {
       throw new ValidationErrorException("Stack can not have an attribute named " + attributeName);
-    } else {
+    } else if (attributeName.startsWith("Outputs.")) {
       outputAttributes.put(attributeName, attributeValueJson);
+    } else if (attributeName.startsWith("Euca.")) {
+      eucaAttributes.put(attributeName, attributeValueJson)
     }
   }
 
   @Override
   Collection<String> getAttributeNames() throws CloudFormationException {
     Collection<String> copy = Lists.newArrayList(outputAttributes.keySet());
+    copy.addAll(eucaAttributes.keySet());
     return copy;
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
+
+  public final static String EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
+  public final static String EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
 }
 
 

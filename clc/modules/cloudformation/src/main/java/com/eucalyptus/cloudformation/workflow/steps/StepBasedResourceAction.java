@@ -66,7 +66,7 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     clearAndPutIfNotNull(updateStepEnumMap.get(updateTypeAndDirection), addedUpdateSteps);
   }
 
-  private static <T> void clearAndPutIfNotNull(Map<String, T> map, Map<String, T> addedMap){
+  protected static <T> void clearAndPutIfNotNull(Map<String, T> map, Map<String, T> addedMap){
     map.clear();
     if (addedMap != null) map.putAll(addedMap);
   }
@@ -149,4 +149,5 @@ public abstract class StepBasedResourceAction extends ResourceAction {
     List<String> stepIds = Lists.newArrayList(updateStepEnumMap.get(updateTypeAndDirection).keySet());
     return new UpdateMultiStepPromise(workflowOperations, stepIds, this, updateTypeAndDirection).getUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
   }
+
 }
