@@ -20,9 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import java.util.List;
-import java.util.Objects;
-
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
@@ -60,6 +57,8 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Objects;
 
 
 /**

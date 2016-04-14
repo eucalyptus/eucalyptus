@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
@@ -37,6 +35,9 @@ import com.eucalyptus.event.Listeners;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *

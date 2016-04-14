@@ -78,12 +78,27 @@ public interface StackActivity {
   public String failUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int rolledBackResourceVersion);
   public String finalizeUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
 
-  public String rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
+  public String initUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion);
 
-  public String recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion);
   public String flattenStackForDelete(String stackId, String accountId);
 
   public String checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId);
 
   public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
+
+  public Boolean checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  public String initUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String finalizeUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public Boolean performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+
+  public String initUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public String finalizeUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public Boolean performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  public String kickOffUpdateRollbackCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
+  public String kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn, String effectiveUserId);
+  public String kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
+
 }

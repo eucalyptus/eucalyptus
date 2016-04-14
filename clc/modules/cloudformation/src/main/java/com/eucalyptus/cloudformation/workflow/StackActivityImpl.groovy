@@ -35,10 +35,11 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntity
-import com.eucalyptus.cloudformation.entity.StackUpdateRollbackInfoEntityManager
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager
+import com.eucalyptus.cloudformation.entity.StacksWithNoUpdateToPerformEntityManager
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity
 import com.eucalyptus.cloudformation.resources.ResourceAction
@@ -46,7 +47,7 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.resources.standard.TagHelper
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSCloudFormationWaitConditionProperties
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.template.AWSParameterTypeValidationHelper
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
@@ -505,6 +506,10 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
+    StackWorkflowEntityManager.deleteStackWorkflowEntities(stackId);
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
+    StacksWithNoUpdateToPerformEntityManager.deleteStackWithNoUpdateToPerform(stackId, accountId);
+    SignalEntityManager.deleteSignals(stackId, accountId);
     LOG.info("Finished deleting all stack records");
     return ""; // promiseFor() doesn't work on void return types
   }
@@ -570,7 +575,8 @@ public class StackActivityImpl implements StackActivity {
   public String getStackStatus(String stackId, String accountId, int stackVersion) {
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
     if (stackEntity == null) {
-      throw new ValidationErrorException("No stack found with id " + stackId);
+      LOG.warn("No stack found with id " + stackId + " possibly due to a quick update after create.  Returning 'null' for status");
+      return null;
     }
     String status = stackEntity.getStackStatus().toString();
     LOG.info("status = " + status);
@@ -892,6 +898,7 @@ public class StackActivityImpl implements StackActivity {
     // get rid of all non-current stack versions and resources
     StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, updatedStackVersion)
     StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, updatedStackVersion)
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedStackVersion);
     stackEntity.setStackStatus(Status.UPDATE_COMPLETE);
     stackEntity.setStackStatusReason(statusMessage);
@@ -907,7 +914,6 @@ public class StackActivityImpl implements StackActivity {
     // Delete if:
     // previous entity exists, in something other than a DELETE_COMPLETE or NOT_STARTED state, and
     // the next entity either does not exist, is in state NOT_STARTED, or was updated via replacement.
-    // internal physical resource uuid that is different in the needs update case...
     boolean previousEntityExists = previousStackResourceEntity != null;
     boolean previousEntityState = previousStackResourceEntity == null ? null : previousStackResourceEntity.getResourceStatus();
     boolean previousEntityInAppropriateState = (previousEntityState != Status.DELETE_COMPLETE) && (previousEntityState != Status.NOT_STARTED);
@@ -969,7 +975,7 @@ public class StackActivityImpl implements StackActivity {
     // stack resource entity for rollback is still "behind" the updated version
     StackResourceEntity rolledbackStackResourceEntity;
 
-    if (StackUpdateRollbackInfoEntityManager.isStartedResource(stackId, accountId, resourceId)) {
+    if (StackUpdateInfoEntityManager.isRollbackStartedResource(stackId, accountId, resourceId)) {
       // we've already moved the resource version
       rolledbackStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, rolledBackResourceVersion);
     } else {
@@ -980,7 +986,7 @@ public class StackActivityImpl implements StackActivity {
       }
       rolledbackStackResourceEntity.setResourceVersion(rolledBackResourceVersion);
       StackResourceEntityManager.updateStackResource(rolledbackStackResourceEntity);
-      StackUpdateRollbackInfoEntityManager.addStartedResource(stackId, accountId, resourceId);
+      StackUpdateInfoEntityManager.addRollbackStartedResource(stackId, accountId, resourceId);
     }
 
     ResourceInfo rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
@@ -1017,14 +1023,9 @@ public class StackActivityImpl implements StackActivity {
     JsonNode nextProperties = JsonHelper.getJsonNodeFromString(updatedStackResourceEntity.getPropertiesJson());
 
     boolean propertiesChanged = !Objects.equals(previousProperties, nextProperties);
-    if (nothingOutsidePropertiesChanged && !propertiesChanged) {
-      // nothing has changed, values should be the same (or correct)
-      return "NONE";
-    }
 
-    if (!propertiesChanged) {
-      return "NO_PROPERTIES";
-    }
+    boolean stackTagsChanged = !TagHelper.stackTagsEquals(rolledbackStackEntity, updatedStackEntity);
+    boolean shouldCheckUpdateTypeForTags = rolledbackResourceInfo.supportsTags() && stackTagsChanged;
 
     // Update the resource info.
     rolledbackResourceInfo = StackResourceEntityManager.getResourceInfo(rolledbackStackResourceEntity);
@@ -1032,6 +1033,16 @@ public class StackActivityImpl implements StackActivity {
     rolledbackResourceAction.setStackEntity(rolledbackStackEntity);
     rolledbackResourceInfo.setEffectiveUserId(effectiveUserId);
     rolledbackResourceAction.setResourceInfo(rolledbackResourceInfo);
+
+    if (nothingOutsidePropertiesChanged && !propertiesChanged && !rolledbackResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
+      // nothing has changed, values should be the same (or correct)
+      return "NONE";
+    }
+
+    if (!propertiesChanged && !rolledbackResourceAction.mustCheckUpdateTypeEvenIfNoPropertiesChanged() && !shouldCheckUpdateTypeForTags) {
+      return "NO_PROPERTIES";
+    }
+
     boolean errorWithProperties = false;
     try {
       ResourcePropertyResolver.populateResourceProperties(rolledbackResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(rolledbackResourceInfo.getPropertiesJson()));
@@ -1079,7 +1090,6 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
     createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString(), "", rolledBackStackVersion);
-    StackUpdateRollbackInfoEntityManager.deleteStackUpdateRollbackInfo(stackId, accountId);
     return "SUCCESS";
   }
 
@@ -1094,6 +1104,7 @@ public class StackActivityImpl implements StackActivity {
     // get rid of all non-current stack versions and resources
     StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, rolledBackStackVersion)
     StackResourceEntityManager.reallyDeleteAllVersionsExcept(stackId, accountId, rolledBackStackVersion)
+    StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackStackVersion);
     stackEntity.setStackStatus(Status.UPDATE_ROLLBACK_COMPLETE);
     stackEntity.setStackStatusReason(statusMessage);
@@ -1163,14 +1174,12 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String rollbackStackState(String stackId, String accountId, int rolledBackStackVersion) {
+  public String initUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion) {
     StackEntityManager.rollbackUpdateStack(stackId, accountId, rolledBackStackVersion);
-    return "";
-  }
-
-  @Override
-  public String recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion) {
-    StackUpdateRollbackInfoEntityManager.createUpdateRollbackInfo(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, rolledBackStackVersion);
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, rolledBackStackVersion);
+    if (nextStackEntity.getStackStatus() != Status.UPDATE_ROLLBACK_IN_PROGRESS) {
+      createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_IN_PROGRESS.toString(), "", rolledBackStackVersion);
+    }
     return "";
   }
 
@@ -1181,23 +1190,24 @@ public class StackActivityImpl implements StackActivity {
       throw new ValidationErrorException("No such stack " + stackId);
     }
     if (stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_FAILED) {
-      StackUpdateRollbackInfoEntity stackUpdateRollbackInfoEntity = StackUpdateRollbackInfoEntityManager.getStackUpdateRollbackInfoEntity(stackId, accountId);
+      StackUpdateInfoEntity stackUpdateRollbackInfoEntity = StackUpdateInfoEntityManager.getStackUpdateInfoEntity(stackId, accountId);
       if (stackUpdateRollbackInfoEntity == null) {
         throw new ValidationErrorException("No stack update rollback record for stack " + stackId);
+      } else {
+        StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
       }
-      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getRolledBackStackVersion());
-      StackUpdateRollbackInfoEntityManager.deleteStackUpdateRollbackInfo(stackId, accountId);
-      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getRolledBackStackVersion());
+      StackResourceEntityManager.flattenResources(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion() + 1);
+      StackEntityManager.reallyDeleteAllStackVersionsExcept(stackId, accountId, stackUpdateRollbackInfoEntity.getUpdatedStackVersion() + 1);
     }
     return "";
   }
 
   @Override
   public String checkResourceAlreadyRolledBackOrStartedRollback(String stackId, String accountId, String resourceId) {
-    if (StackUpdateRollbackInfoEntityManager.isCompletedResource(stackId, accountId, resourceId)) {
-      return StackUpdateRollbackInfoEntity.Resource.RollbackStatus.COMPLETED.toString();
-    } else if (StackUpdateRollbackInfoEntityManager.isStartedResource(stackId, accountId, resourceId)) {
-      return StackUpdateRollbackInfoEntity.Resource.RollbackStatus.STARTED.toString();
+    if (StackUpdateInfoEntityManager.isRollbackCompletedResource(stackId, accountId, resourceId)) {
+      return StackUpdateInfoEntity.RolledBackResource.RollbackStatus.COMPLETED.toString();
+    } else if (StackUpdateInfoEntityManager.isRollbackStartedResource(stackId, accountId, resourceId)) {
+      return StackUpdateInfoEntity.RolledBackResource.RollbackStatus.STARTED.toString();
     } else {
       return "";
     }
@@ -1205,7 +1215,173 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId) {
-    StackUpdateRollbackInfoEntityManager.addCompletedResource(stackId, accountId, resourceId);
+    StackUpdateInfoEntityManager.addRollbackCompletedResource(stackId, accountId, resourceId);
+    return "";
+  }
+  @Override
+  public Boolean checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    if (previousStackResourceEntity != null && nextStackResourceEntity != null &&
+        previousStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE &&
+        previousStackResourceEntity.getResourceStatus() != Status.NOT_STARTED &&
+        nextStackResourceEntity.getResourceStatus() != Status.DELETE_COMPLETE &&
+        nextStackResourceEntity.getResourceStatus() != Status.NOT_STARTED &&
+        previousStackResourceEntity.getResourceType().equals("AWS::CloudFormation::Stack")) {
+      LOG.info("Resource " + resourceId + " is a stack that needs updating during cleanup");
+      return Boolean.TRUE;
+    } else {
+      return Boolean.FALSE;
+    }
+  }
+  @Override
+  public String initUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    LOG.info("Resource " + resourceId + " is a stack that needs updating during cleanup");
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    previousStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+    previousStackResourceEntity.setResourceStatusReason(null);
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+  }
+  @Override
+  public String finalizeUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.UPDATE_COMPLETE);
+    previousStackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+    LOG.info("Finished updating resource " + resourceId);
+    return "SUCCESS";
+  }
+
+  public Boolean performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    LOG.info("Performing update cleanup inner stack update step " + stepId + " on resource " + resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    try {
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      boolean errorWithProperties = false;
+      try {
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      if (!errorWithProperties) {
+        // if we have errors with properties we had them on create too, so we didn't start (really)
+        if (!(resourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + resourceAction.getClass().getName());
+        }
+        Step updateCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateCleanupUpdateStep(stepId);
+        resourceAction = updateCleanupInnerStackUpdateStep.perform(resourceAction);
+        resourceInfo = resourceAction.getResourceInfo();
+        stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+        stackResourceEntity.setResourceStatusReason(null);
+        stackResourceEntity.setDescription(""); // deal later
+        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      }
+    } catch (NotAResourceFailureException ex) {
+      LOG.info("Update cleanup Inner Stack Update step not yet complete: ${ex.message}");
+      LOG.debug(ex, ex);
+      return false;
+    } catch (Exception ex) {
+      LOG.info("Error updating resource " + resourceId);
+      LOG.error(ex, ex);
+      Throwable rootCause = Throwables.getRootCause(ex);
+      throw new ResourceFailureException(rootCause.getMessage());
+      // Don't put the update failed step here as we need to return "failure" but this must be done in the caller
+    }
+    return true;
+  }
+
+  @Override
+  public String initUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    LOG.info("Resource " + resourceId + " is a stack that needs updating during rollback cleanup");
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    previousStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+    previousStackResourceEntity.setResourceStatusReason(null);
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+  }
+  @Override
+  public String finalizeUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    StackResourceEntity previousStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion - 1);
+    ResourceInfo previousResourceInfo = StackResourceEntityManager.getResourceInfo(previousStackResourceEntity);
+    previousResourceInfo.setEffectiveUserId(effectiveUserId);
+    previousStackResourceEntity = StackResourceEntityManager.updateResourceInfo(previousStackResourceEntity, previousResourceInfo);
+    previousStackResourceEntity.setResourceStatus(Status.UPDATE_COMPLETE);
+    previousStackResourceEntity.setResourceStatusReason("");
+    StackResourceEntityManager.updateStackResource(previousStackResourceEntity);
+    StackEventEntityManager.addStackEvent(previousStackResourceEntity);
+    LOG.info("Finished updating resource " + resourceId);
+    return "SUCCESS";
+  }
+
+  public Boolean performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
+    LOG.info("Performing update Rollback Cleanup inner stack update step " + stepId + " on resource " + resourceId);
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    try {
+      ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+      resourceAction.setStackEntity(stackEntity);
+      resourceInfo.setEffectiveUserId(effectiveUserId);
+      resourceAction.setResourceInfo(resourceInfo);
+      boolean errorWithProperties = false;
+      try {
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      } catch (Exception ex) {
+        errorWithProperties = true;
+      }
+      if (!errorWithProperties) {
+        // if we have errors with properties we had them on create too, so we didn't start (really)
+        if (!(resourceAction instanceof AWSCloudFormationStackResourceAction)) {
+          throw new ClassCastException("Calling performUpdateRollbackCleanupInnerStackUpdateStep against a resource action that does not extend AWSCloudFormationStackResourceAction: " + resourceAction.getClass().getName());
+        }
+        Step updateRollbackCleanupInnerStackUpdateStep = ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdateStep(stepId);
+        resourceAction = updateRollbackCleanupInnerStackUpdateStep.perform(resourceAction);
+        resourceInfo = resourceAction.getResourceInfo();
+        stackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+        stackResourceEntity.setResourceStatusReason(null);
+        stackResourceEntity.setDescription(""); // deal later
+        stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      }
+    } catch (NotAResourceFailureException ex) {
+      LOG.info("Update RollbackCleanup Inner Stack Update step not yet complete: ${ex.message}");
+      LOG.debug(ex, ex);
+      return false;
+    } catch (Exception ex) {
+      LOG.info("Error updating resource " + resourceId);
+      LOG.error(ex, ex);
+      Throwable rootCause = Throwables.getRootCause(ex);
+      throw new ResourceFailureException(rootCause.getMessage());
+      // Don't put the update failed step here as we need to return "failure" but this must be done in the caller
+    }
+    return true;
+  }
+  @Override
+  public String kickOffUpdateRollbackCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackCleanupStackWorkflow(stackId, accountId, effectiveUserId);
+    return "";
+  }
+
+  @Override
+  public String kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn,String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackStackWorkflow(stackId, accountId, outerStackArn, effectiveUserId);
+    return "";
+  }
+
+  @Override
+  public String kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId) {
+    UpdateStackPartsWorkflowKickOff.kickOffUpdateCleanupStackWorkflow(stackId, accountId, effectiveUserId);
     return "";
   }
 

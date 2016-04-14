@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -57,7 +58,9 @@ public class StackWorkflowEntity extends AbstractPersistent {
     DELETE_STACK_WORKFLOW,
     MONITOR_CREATE_STACK_WORKFLOW,
     MONITOR_UPDATE_STACK_WORKFLOW,
-    CONTINUE_UPDATE_ROLLBACK_WORKFLOW
+    UPDATE_ROLLBACK_STACK_WORKFLOW,
+    UPDATE_CLEANUP_STACK_WORKFLOW,
+    UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW,
   }
   public StackWorkflowEntity() {
   }

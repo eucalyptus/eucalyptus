@@ -117,6 +117,8 @@ public class AWSCloudFormationStackProperties implements ResourceProperties {
   List<String> notificationARNs = Lists.newArrayList();
   @Property
   JsonNode parameters;
+  @Property
+  List<CloudFormationResourceTag> tags = Lists.newArrayList();
   @Required
   @Property
   String templateURL;

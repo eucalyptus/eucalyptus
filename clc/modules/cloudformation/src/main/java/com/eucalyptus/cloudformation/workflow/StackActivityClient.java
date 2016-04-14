@@ -151,11 +151,8 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.finalizeUpdateRollbackCleanupResource")
   Promise<String> finalizeUpdateRollbackCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
 
-  @Activity(name = "StackActivity.rollbackStackState")
-  Promise<String> rollbackStackState(String stackId, String accountId, int rolledBackStackVersion);
-
-  @Activity(name = "StackActivity.recordUpdateRollbackInfo")
-  Promise<String> recordUpdateRollbackInfo(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, Integer rolledBackStackVersion);
+  @Activity(name = "StackActivity.initUpdateRollbackStack")
+  Promise<String> initUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion);
 
   @Activity(name = "StackActivity.flattenStackForDelete")
   Promise<String> flattenStackForDelete(String stackId, String accountId);
@@ -166,4 +163,29 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.addCompletedUpdateRollbackResource")
   Promise<String> addCompletedUpdateRollbackResource(String stackId, String accountId, String resourceId);
 
+  @Activity(name = "StackActivity.checkInnerStackUpdate")
+  Promise<Boolean> checkInnerStackUpdate(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  @Activity(name = "StackActivity.initUpdateCleanupInnerStackUpdateResource")
+  Promise<String> initUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.finalizeUpdateCleanupInnerStackUpdateResource")
+  Promise<String> finalizeUpdateCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.performUpdateCleanupInnerStackUpdateStep")
+  Promise<Boolean> performUpdateCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  @Activity(name = "StackActivity.initUpdateRollbackCleanupInnerStackUpdateResource")
+  Promise<String> initUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.finalizeUpdateRollbackCleanupInnerStackUpdateResource")
+  Promise<String> finalizeUpdateRollbackCleanupInnerStackUpdateResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  @Activity(name = "StackActivity.performUpdateRollbackCleanupInnerStackUpdateStep")
+  Promise<Boolean> performUpdateRollbackCleanupInnerStackUpdateStep(String stepId, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+
+  @Activity(name = "StackActivity.kickOffUpdateRollbackCleanupStackWorkflow")
+  Promise<String> kickOffUpdateRollbackCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.kickOffUpdateRollbackStackWorkflow")
+  Promise<String> kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn, String effectiveUserId);
+
+  @Activity(name = "StackActivity.kickOffUpdateCleanupStackWorkflow")
+  Promise<String> kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
 }

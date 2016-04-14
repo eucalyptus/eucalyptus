@@ -24,10 +24,10 @@ import com.netflix.glisten.WorkflowDescriptionTemplate
 /**
  * Created by ethomas on 7/23/14.
  */
-class ContinueUpdateRollbackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements ContinueUpdateRollbackWorkflow {
+class UpdateCleanupStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements UpdateCleanupStackWorkflow {
 
   @Override
-  void continueUpdateRollback(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
-    description="ContinueUpdateRollbackWorkflow";
+  void performUpdateCleanupStack(String stackId, String accountId, String oldResourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion) {
+    description="UpdateCleanupStackWorkflow";
   }
 }

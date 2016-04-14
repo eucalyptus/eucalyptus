@@ -20,39 +20,40 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import com.google.common.collect.Sets;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
-import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import java.util.Set;
 
 /**
  * Created by ethomas on 4/4/16.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "stack_update_rollback_info" )
+@Table( name = "stack_update_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class StackUpdateRollbackInfoEntity extends AbstractPersistent {
+public class StackUpdateInfoEntity extends AbstractPersistent {
 
 
   @Column(name = "stack_id", nullable = false, length = 400)
   String stackId;
   @Column(name = "account_id", nullable = false)
   String accountId;
+
+  // For stack tags:
+  @Column(name = "stack_name", nullable = false)
+  String stackName;
+
+  // For stack tags:
+  @Column(name = "account_alias", nullable = false)
+  String accountAlias;
 
   @Column(name = "old_resource_dependency_manager_json" )
   @Lob
@@ -64,14 +65,25 @@ public class StackUpdateRollbackInfoEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String resourceDependencyManagerJson;
 
-  @Column(name = "rolled_back_stack_version")
-  Integer rolledBackStackVersion;
+  @Column(name = "updated_stack_version")
+  Integer updatedStackVersion;
+
+  @Column(name = "has_called_rollback_stack_state")
+  Boolean hasCalledRollbackStackState = false;
+
+  public Boolean getHasCalledRollbackStackState() {
+    return hasCalledRollbackStackState;
+  }
+
+  public void setHasCalledRollbackStackState(Boolean hasCalledRollbackStackState) {
+    this.hasCalledRollbackStackState = hasCalledRollbackStackState;
+  }
 
   @Entity
   @PersistenceContext( name = "eucalyptus_cloudformation" )
-  @Table( name = "stack_update_rollback_info_resources" )
+  @Table( name = "stack_update_info_rolledback_resources" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  public static class Resource extends AbstractPersistent {
+  public static class RolledBackResource extends AbstractPersistent {
 
     @Column(name = "stack_id", nullable = false, length = 400)
     String stackId;
@@ -89,7 +101,7 @@ public class StackUpdateRollbackInfoEntity extends AbstractPersistent {
     @Column(name = "rollback_status", nullable = false)
     private RollbackStatus rollbackStatusValue;
 
-    public Resource() {
+    public RolledBackResource() {
     }
 
     public String getStackId() {
@@ -125,7 +137,7 @@ public class StackUpdateRollbackInfoEntity extends AbstractPersistent {
     }
   }
 
-  public StackUpdateRollbackInfoEntity() {
+  public StackUpdateInfoEntity() {
   }
 
   public String getStackId() {
@@ -160,12 +172,27 @@ public class StackUpdateRollbackInfoEntity extends AbstractPersistent {
     this.resourceDependencyManagerJson = resourceDependencyManagerJson;
   }
 
-  public Integer getRolledBackStackVersion() {
-    return rolledBackStackVersion;
+  public Integer getUpdatedStackVersion() {
+    return updatedStackVersion;
   }
 
-  public void setRolledBackStackVersion(Integer rolledBackStackVersion) {
-    this.rolledBackStackVersion = rolledBackStackVersion;
+  public void setUpdatedStackVersion(Integer updatedStackVersion) {
+    this.updatedStackVersion = updatedStackVersion;
   }
 
+  public String getStackName() {
+    return stackName;
+  }
+
+  public void setStackName(String stackName) {
+    this.stackName = stackName;
+  }
+
+  public String getAccountAlias() {
+    return accountAlias;
+  }
+
+  public void setAccountAlias(String accountAlias) {
+    this.accountAlias = accountAlias;
+  }
 }

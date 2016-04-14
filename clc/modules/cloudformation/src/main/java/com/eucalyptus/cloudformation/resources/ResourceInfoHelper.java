@@ -21,21 +21,14 @@
 package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.template.JsonHelper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
 import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class ResourceInfoHelper {
   private static final Logger LOG = Logger.getLogger(ResourceInfoHelper.class);

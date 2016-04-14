@@ -20,8 +20,9 @@
 package com.eucalyptus.cloudformation.workflow.steps
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
+import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSCloudFormationStackResourceAction
 import com.eucalyptus.cloudformation.workflow.StackActivityClient
-import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.netflix.glisten.WorkflowOperations
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
@@ -30,28 +31,32 @@ import groovy.transform.TypeCheckingMode
  * Created by ethomas on 9/28/14.
  */
 @CompileStatic(TypeCheckingMode.SKIP)
-class UpdateMultiStepPromise extends MultiUpdateStepPromise {
+class UpdateRollbackCleanupUpdateMultiStepPromise extends MultiStepPromise {
 
-  UpdateTypeAndDirection updateTypeAndDirection;
-
-  UpdateMultiStepPromise(
+  UpdateRollbackCleanupUpdateMultiStepPromise(
       final WorkflowOperations<StackActivityClient> workflowOperations,
       final Collection<String> stepIds,
-      final StepBasedResourceAction resourceAction,
-      final UpdateTypeAndDirection updateTypeAndDirection
+      final AWSCloudFormationStackResourceAction resourceAction
   ) {
     super( workflowOperations, stepIds, resourceAction )
-    this.updateTypeAndDirection = updateTypeAndDirection;
   }
 
   @Override
-  protected UpdateStep getStep( final String stepId ) {
-    return resourceAction.getUpdateStep( updateTypeAndDirection, stepId )
+  protected Step getStep( final String stepId ) {
+    return ((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdateStep( stepId )
   }
 
-  Promise<String> getUpdatePromise( String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion ) {
-    getPromise( "Resource ${resourceId} failed to update for stack ${stackId}" as String) { String stepId ->
-      activities.performUpdateStep(updateTypeAndDirection.toString(), stepId, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)
+  Promise<String> getUpdateRollbackCleanupUpdatePromise(String resourceId, String stackId, String accountId, String effectiveUserId, int resourceVersion ) {
+    getPromise( "Resource ${resourceId} cleanup failed for stack ${stackId}" as String) { String stepId ->
+      // The item to perform update cleanup on is one step less than the resource version
+      activities.performUpdateRollbackCleanupInnerStackUpdateStep(stepId, resourceId, stackId, accountId, effectiveUserId, resourceVersion - 1)
+    }
+  }
+
+  @Override
+  def <T> Promise<T> invoke(final Closure<Promise<T>> activity) {
+    retry( new ExponentialRetryPolicy( 1L ).withMaximumAttempts( 6 ) ) {
+      activity.call( )
     }
   }
 }

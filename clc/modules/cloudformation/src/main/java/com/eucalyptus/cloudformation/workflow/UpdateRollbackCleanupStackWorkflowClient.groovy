@@ -24,23 +24,23 @@ import com.netflix.glisten.InterfaceBasedWorkflowClient
 /**
  * Created by ethomas on 6/9/44.
  */
-class ContinueUpdateRollbackWorkflowClient implements ContinueUpdateRollbackWorkflow {
-  ContinueUpdateRollbackWorkflow workflow
+class UpdateRollbackCleanupStackWorkflowClient implements UpdateRollbackCleanupStackWorkflow {
+  UpdateRollbackCleanupStackWorkflow workflow
 
-  InterfaceBasedWorkflowClient<ContinueUpdateRollbackWorkflow> getClient() {
+  InterfaceBasedWorkflowClient<UpdateRollbackCleanupStackWorkflow> getClient() {
     return client
   }
 
-  InterfaceBasedWorkflowClient<ContinueUpdateRollbackWorkflow> client;
+  InterfaceBasedWorkflowClient<UpdateRollbackCleanupStackWorkflow> client;
 
-  ContinueUpdateRollbackWorkflowClient(InterfaceBasedWorkflowClient<ContinueUpdateRollbackWorkflow> client ) {
+  UpdateRollbackCleanupStackWorkflowClient(InterfaceBasedWorkflowClient<UpdateRollbackCleanupStackWorkflow> client ) {
     this.client = client;
-    workflow = client.asWorkflow( ) as ContinueUpdateRollbackWorkflow
+    workflow = client.asWorkflow( ) as UpdateRollbackCleanupStackWorkflow
   }
 
   @Override
-  void continueUpdateRollback(String stackId, String accountId, String oldResourceDependencyManagerJson, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
-    workflow.continueUpdateRollback(stackId, accountId, oldResourceDependencyManagerJson, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
+  void performUpdateRollbackCleanupStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
+    workflow.performUpdateRollbackCleanupStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
   }
 
 
