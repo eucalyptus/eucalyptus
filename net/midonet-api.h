@@ -112,7 +112,7 @@
 #define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
 
 #define MIDONAME_LIST_CAPACITY_STEP            1000
-#define MIDONAME_LIST_RELEASES_B4INVALIDATE    5000
+#define MIDONAME_LIST_RELEASES_B4INVALIDATE    1000
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -844,6 +844,7 @@ int mido_refresh_resource_c(midoname *resc, char *apistr);
 int mido_cmp_midoname_to_input(midoname * name, ...);
 int mido_cmp_midoname_to_input_json(midoname * name, ...);
 int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al);
+int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type);
 char *mido_get_json(char *tenant, ...);
 char *mido_jsonize(char *tenant, va_list * al);
 
@@ -866,7 +867,6 @@ int midonet_api_cache_refresh(void);
 
 int midonet_api_cache_refresh_hosts(midonet_api_cache *cache);
 int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache);
-int midonet_api_midocache_iphostmap_populate(void);
 
 midonet_api_tunnelzone *midonet_api_cache_lookup_tunnelzone(midoname *tzone);
 midonet_api_host *midonet_api_cache_lookup_host(midoname *name);
@@ -929,6 +929,8 @@ int midonet_api_host_free(midonet_api_host *host);
 int midonet_api_ipaddrgroup_free(midonet_api_ipaddrgroup *ipaddrgroup);
 int midonet_api_portgroup_free(midonet_api_portgroup *portgroup);
 int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone);
+
+int midonet_api_delete_all(void);
 
 int compare_iphostmap_entry(const void *p1, const void *p2);
 int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2);

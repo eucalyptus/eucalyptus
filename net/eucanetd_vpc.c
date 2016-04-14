@@ -358,14 +358,6 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
 {
     int ret = 0;
 
-    if (pMidoConfig_c) {
-        char *bgprecovery = NULL;
-        bgprecovery = discover_mido_bgps(pMidoConfig_c);
-        if (bgprecovery && strlen(bgprecovery)) {
-            LOGINFO("mido BGP configuration:\n%s\n", bgprecovery);
-        }
-        EUCA_FREE(bgprecovery);
-    }
     if (forceFlush) {
         if (network_driver_system_flush(pGni)) {
             LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
@@ -407,17 +399,16 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
         return (1);
     }
 
-    //    if (PEER_IS_NC(eucanetdPeer)) {
-        if (pMidoConfig) {
-            if ((rc = do_midonet_teardown(pMidoConfig)) != 0) {
-                ret = 1;
-            } else {
-                EUCA_FREE(pMidoConfig);
-                pMidoConfig = NULL;
-                gInitialized = FALSE;
-            }
+    if (pMidoConfig) {
+        rc = do_midonet_teardown_c(pMidoConfig);
+        if (rc != 0) {
+            ret = 1;
+        } else {
+            EUCA_FREE(pMidoConfig);
+            pMidoConfig = NULL;
+            gInitialized = FALSE;
         }
-        //    }
+    }
 
     return (0);
 }

@@ -128,6 +128,13 @@ typedef enum eucanetd_peer_t {
     PEER_MAX = 5,                      //!< This is an invalid role use to detect initialization errors (couldn't set the role)
 } eucanetd_peer;
 
+enum eucanetd_debug_level_t {
+    EUCANETD_DEBUG_NONE = 0,
+    EUCANETD_DEBUG_TRACE = 1,
+    EUCANETD_DEBUG_DEBUG = 2,
+    EUCANETD_DEBUG_INFO = 3,
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |

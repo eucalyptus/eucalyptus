@@ -295,6 +295,8 @@ int do_midonet_update_pass3_insts_byvpc(globalNetworkInfo * gni, mido_config * m
 int do_midonet_update_pass3_insts_c(globalNetworkInfo *gni, mido_config *mido);
 
 int do_midonet_teardown(mido_config * mido);
+int do_midonet_teardown_c(mido_config *mido);
+int do_midonet_delete_all_c(mido_config *mido);
 
 int do_metaproxy_setup(mido_config * mido);
 int do_metaproxy_teardown(mido_config * mido);

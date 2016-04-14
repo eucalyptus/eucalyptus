@@ -1232,14 +1232,84 @@ int do_midonet_teardown(mido_config * mido) {
         delete_mido_vpc_secgroup(mido, &(mido->vpcsecgroups[i]));
     }
 
+    char *bgprecovery = NULL;
+    bgprecovery = discover_mido_bgps(mido);
+    if (bgprecovery && strlen(bgprecovery)) {
+        LOGINFO("mido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+    }
+    EUCA_FREE(bgprecovery);
+
     if (mido->flushmode == FLUSH_ALL) {
-        LOGDEBUG("deleting mido core\n");
+        LOGINFO("deleting mido core\n");
         delete_mido_core(mido, mido->midocore);
     } else {
         LOGDEBUG("skipping the delete of midocore - FLUSH_DYNAMIC selected.\n");
     }
 
+    return (ret);
+}
+
+/**
+ * Teardown all artifacts created by VPCMIDO driver.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return 0 on success. Positive integer on any error.
+ */
+int do_midonet_teardown_c(mido_config * mido) {
+    int ret = 0, rc = 0, i = 0;
+
+    rc = do_midonet_populate_c(mido);
+    if (rc) {
+        LOGERROR("cannot populate prior to teardown: check midonet health\n");
+        return (1);
+    }
+
+    rc = do_metaproxy_teardown(mido);
+    if (rc) {
+        LOGERROR("cannot teardown meta proxies: see above log for details\n");
+    }
+
+    for (i = 0; i < mido->max_vpcs; i++) {
+        delete_mido_vpc_c(mido, &(mido->vpcs[i]));
+    }
+
+    for (i = 0; i < mido->max_vpcsecgroups; i++) {
+        delete_mido_vpc_secgroup_c(mido, &(mido->vpcsecgroups[i]));
+    }
+
+    char *bgprecovery = NULL;
+    bgprecovery = discover_mido_bgps(mido);
+    if (bgprecovery && strlen(bgprecovery)) {
+        LOGINFO("mido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+    }
+    EUCA_FREE(bgprecovery);
+
+    if (mido->flushmode == FLUSH_ALL) {
+        LOGINFO("deleting mido core\n");
+        delete_mido_core_c(mido, mido->midocore);
+    } else {
+        LOGDEBUG("skipping the delete of midocore - FLUSH_DYNAMIC selected.\n");
+    }
+
+    do_midonet_delete_all_c(mido);
     free_mido_config(mido);
+
+    return (ret);
+}
+
+/**
+ * Removes all bridges, routers, chains, and ip-address-groups from mido
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return 0 on success. Positive integer on any error.
+ */
+int do_midonet_delete_all_c(mido_config *mido) {
+    int ret = 0, rc = 0;
+
+    rc = midonet_api_cache_refresh();
+    if (rc) {
+        LOGERROR("cannot populate midocache prior to cleanup: check midonet health\n");
+        return (1);
+    }
+    midonet_api_delete_all();
 
     return (ret);
 }
@@ -9881,7 +9951,7 @@ char *discover_mido_bgps(mido_config *mido) {
                     continue;
                 }
                 resptr = &(res[strlen(res)]);
-                snprintf(resptr, 2048, "router $EUCART port $GW[%d] add bgp local-AS %s peer-AS %s peer %s\n", i, localAS, peerAS, peerAddr);
+                snprintf(resptr, 2048, "router EUCART port GW[%d] add bgp local-AS %s peer-AS %s peer %s\n", i, localAS, peerAS, peerAddr);
                 rc = mido_get_bgp_routes_c(bgps[0], &bgp_routes, &max_bgp_routes);
                 if (!rc && bgp_routes && max_bgp_routes) {
                     for (int j = 0; j < max_bgp_routes; j++) {
@@ -9892,7 +9962,7 @@ char *discover_mido_bgps(mido_config *mido) {
                             continue;
                         }
                         resptr = &(res[strlen(res)]);
-                        snprintf(resptr, 2048, "router $EUCART port $GW[%d] bgp bgp0 add route net %s/%s\n", i, nwPrefix, prefixLength);
+                        snprintf(resptr, 2048, "router EUCART port GW[%d] bgp bgp0 add route net %s/%s\n", i, nwPrefix, prefixLength);
                         EUCA_FREE(nwPrefix);
                         EUCA_FREE(prefixLength);
                     }

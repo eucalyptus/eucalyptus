@@ -358,15 +358,15 @@ int main(int argc, char **argv)
     while ((opt = getopt(argc, argv, "dhFf")) != -1) {
         switch (opt) {
         case 'd':
-            config->debug = 1;
+            config->debug = EUCANETD_DEBUG_TRACE;
             break;
         case 'F':
             config->flushmode = FLUSH_ALL;
-            config->debug = 1;
+            config->debug = EUCANETD_DEBUG_INFO;
             break;
         case 'f':
             config->flushmode = FLUSH_DYNAMIC;
-            config->debug = 1;
+            config->debug = EUCANETD_DEBUG_INFO;
             break;
         case 'h':
         default:
@@ -796,7 +796,7 @@ static int eucanetd_daemonize(void)
     char pidfile[EUCA_MAX_PATH];
     FILE *FH = NULL;
 
-    if (!config->debug) {
+    if (config->debug == EUCANETD_DEBUG_NONE) {
         pid = fork();
         if (pid) {
             exit(0);
@@ -835,7 +835,7 @@ static int eucanetd_daemonize(void)
         exit(1);
     }
 
-    if (!config->debug) {
+    if (config->debug == EUCANETD_DEBUG_NONE) {
         close(STDIN_FILENO);
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
@@ -987,24 +987,35 @@ static int eucanetd_read_config_bootstrap(void)
     config->eucauser = strdup(user);
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
-    if (!config->debug) {
-        snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile, NULL);
-        log_params_set(EUCA_LOG_INFO, 0, 100000);
+    switch (config->debug) {
+        case EUCANETD_DEBUG_NONE:
+            snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+            log_file_set(logfile, NULL);
+            log_params_set(EUCA_LOG_INFO, 0, 100000);
 
-        pwent = getpwnam(config->eucauser);
-        if (!pwent) {
-            fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
-            exit(1);
-        }
+            pwent = getpwnam(config->eucauser);
+            if (!pwent) {
+                fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
+                exit(1);
+            }
 
-        if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
-            perror("chown()");
-            fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
-            exit(1);
-        }
-    } else {
-        log_params_set(EUCA_LOG_TRACE, 0, 100000);
+            if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
+                perror("chown()");
+                fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
+                exit(1);
+            }
+            break;
+        case EUCANETD_DEBUG_TRACE:
+            log_params_set(EUCA_LOG_TRACE, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_DEBUG:
+            log_params_set(EUCA_LOG_DEBUG, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_INFO:
+            log_params_set(EUCA_LOG_INFO, 0, 100000);
+            break;
+        default:
+            log_params_set(EUCA_LOG_TRACE, 0, 100000);
     }
 
     return (ret);
@@ -1371,17 +1382,29 @@ static int eucanetd_initialize_logs(void)
     char *log_prefix = NULL;
     char logfile[EUCA_MAX_PATH] = "";
 
-    if (!config->debug) {
-        snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-        log_file_set(logfile, NULL);
+    switch (config->debug) {
+        case EUCANETD_DEBUG_NONE:
+            snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+            log_file_set(logfile, NULL);
 
-        configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
+            configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
 
-        log_params_set(log_level, log_roll_number, log_max_size_bytes);
-        log_prefix_set(log_prefix);
-        EUCA_FREE(log_prefix);
-    } else {
-        log_params_set(EUCA_LOG_TRACE, 0, 100000);
+            log_params_set(log_level, log_roll_number, log_max_size_bytes);
+            log_prefix_set(log_prefix);
+            EUCA_FREE(log_prefix);
+            break;
+        case EUCANETD_DEBUG_TRACE:
+            log_params_set(EUCA_LOG_TRACE, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_DEBUG:
+            log_params_set(EUCA_LOG_DEBUG, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_INFO:
+            log_params_set(EUCA_LOG_INFO, 0, 100000);
+            break;
+        default:
+            log_params_set(EUCA_LOG_TRACE, 0, 100000);
+            break;
     }
 
     return (0);

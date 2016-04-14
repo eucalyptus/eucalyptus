@@ -6032,7 +6032,6 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
 {
     va_list ala = { {0} };
     char *jsonbuf = NULL;
-    json_object *srcjobj = NULL, *dstjobj = NULL;
     int ret = 0;
 
     va_copy(ala, *al);
@@ -6043,34 +6042,57 @@ int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
     LOGTRACE("old=%s\n", SP(name->jsonbuf));
 
     if (jsonbuf && name->jsonbuf) {
-
-        dstjobj = json_tokener_parse(name->jsonbuf);
-        srcjobj = json_tokener_parse(jsonbuf);
-
-        // special case el removal
-        if (!strcmp(name->resource_type, "rules")) {
-            // for chain rules, remove the position element
-            json_object_object_del(srcjobj, "position");
-            json_object_object_del(dstjobj, "position");
-        }
-
-        if (json_object_cmp(srcjobj, dstjobj)) {
-            ret = 1;
-        } else {
-            ret = 0;
-        }
-
+        ret = mido_cmp_jsons(jsonbuf, name->jsonbuf, name->resource_type);
     } else {
         ret = 1;
     }
 
-    if (srcjobj)
-        json_object_put(srcjobj);
-    if (dstjobj)
-        json_object_put(dstjobj);
-
-    //    LOGTRACE("RETURNING %d\n", ret);
     EUCA_FREE(jsonbuf);
+    return (ret);
+}
+
+/**
+ * Compares 2 json strings that represent mido objects. All jsonsrc elements needs
+ * a matching element in jsondst (jsondst may have more elements).
+ * @param jsonsrc a string containing a json that represents a mido object.
+ * @param jsondst a string containing a json that represents another mido object.
+ * @param type type of mido object.
+ * @return 0 if all elements in jsonsrc has a matching element in jsondst. 1 otherwise.
+ */
+int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type) {
+    json_object *srcjobj = NULL;
+    json_object *dstjobj = NULL;
+    int ret = 0;
+
+    if (!jsonsrc && !jsondst) {
+        return (0);
+    }
+    if (!jsonsrc || !jsondst) {
+        return (1);
+    }
+
+    dstjobj = json_tokener_parse(jsondst);
+    srcjobj = json_tokener_parse(jsonsrc);
+
+    // special case el removal
+    if (!strcmp(type, "rules")) {
+        // for chain rules, remove the position element
+        json_object_object_del(srcjobj, "position");
+        json_object_object_del(dstjobj, "position");
+    }
+
+    if (json_object_cmp(srcjobj, dstjobj)) {
+        ret = 1;
+    } else {
+        ret = 0;
+    }
+
+    if (srcjobj) {
+        json_object_put(srcjobj);
+    }
+    if (dstjobj) {
+        json_object_put(dstjobj);
+    }
     return (ret);
 }
 
@@ -7236,6 +7258,19 @@ int midonet_api_cache_flush(void) {
  * @return 0 on success. 1 on any failure.
  */
 int midonet_api_cache_populate(void) {
+    int mnapiok = 0;
+    for (int x = 0; x < 30 && !mnapiok; x++) {
+        int rc = mido_check_state();
+        if (rc) {
+            sleep(1);
+        } else {
+            mnapiok = 1;
+        }
+    }
+    if (!mnapiok) {
+        LOGERROR("Unable to access midonet-api.\n");
+        return (1);
+    }
     if ((midocache_midos != NULL) && (midocache_midos->released > MIDONAME_LIST_RELEASES_B4INVALIDATE)) {
         midonet_api_cache_flush();
     }
@@ -7592,17 +7627,6 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
     // recover midocache state
     midocache = midocache_bak;
     return (0);
-}
-
-/**
- * Populates the midocache iphostmap table.
- * @return 0 on success. 1 on any failure.
- */
-int midonet_api_midocache_iphostmap_populate(void) {
-    if (midocache == NULL) {
-        return (1);
-    }
-    return (midonet_api_cache_iphostmap_populate(midocache));
 }
 
 /**
@@ -8672,6 +8696,51 @@ int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone) {
     return (0);
 }
 
+/**
+ * Delete all bridges, routers, ip-address-groups, and chains with names consistent
+ * @return always 0.
+ */
+int midonet_api_delete_all(void) {
+    
+    // Refresh midocache
+    midonet_api_cache_refresh();
+    
+    // Delete all ip-address-groups
+    for (int i = 0; i < midocache->max_ipaddrgroups; i++) {
+        if (strstr(midocache->ipaddrgroups[i]->obj->name, "sg_") ||
+                strstr(midocache->ipaddrgroups[i]->obj->name, "elip_")) {
+            mido_delete_resource(NULL, midocache->ipaddrgroups[i]->obj);
+        }
+    }
+    
+    // Delete all chains
+    for (int i = 0; i < midocache->max_chains; i++) {
+        LOGINFO("processing %s\n", midocache->chains[i]->obj->name);
+        if (strstr(midocache->chains[i]->obj->name, "sg_") ||
+                strstr(midocache->chains[i]->obj->name, "ic_") ||
+                strstr(midocache->chains[i]->obj->name, "vc_") ||
+                strstr(midocache->chains[i]->obj->name, "natc_")) {
+            mido_delete_resource(NULL, midocache->chains[i]->obj);
+        }
+    }
+
+    // Delete all bridges
+    for (int i = 0; i < midocache->max_bridges; i++) {
+        if (strstr(midocache->bridges[i]->obj->name, "vb_vpc")) {
+            mido_delete_resource(NULL, midocache->bridges[i]->obj);
+        }
+    }
+
+    // Delete all routers
+    for (int i = 0; i < midocache->max_routers; i++) {
+        if (strstr(midocache->routers[i]->obj->name, "vr_vpc") ||
+                strstr(midocache->routers[i]->obj->name, "natr_nat")) {
+            mido_delete_resource(NULL, midocache->routers[i]->obj);
+        }
+    }
+
+    return (0);
+}
 
 /**
  * Comparator function for mido_iphostmap_entry structures.
