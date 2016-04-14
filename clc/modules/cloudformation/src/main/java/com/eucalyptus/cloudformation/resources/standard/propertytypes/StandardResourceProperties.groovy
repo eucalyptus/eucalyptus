@@ -53,7 +53,7 @@ public class AWSAutoScalingAutoScalingGroupProperties implements ResourcePropert
   @Property
   Integer minSize;
   @Property
-  AutoScalingNotificationConfiguration notificationConfiguration;
+  List<AutoScalingNotificationConfiguration> notificationConfigurations = Lists.newArrayList();
   @Property
   List<AutoScalingTag> tags = Lists.newArrayList();
   @Property

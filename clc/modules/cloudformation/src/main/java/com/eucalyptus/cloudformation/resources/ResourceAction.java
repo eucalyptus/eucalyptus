@@ -68,9 +68,7 @@ public abstract class ResourceAction {
   public void refreshAttributes() throws Exception {
     return; // Most resources will not support this action
   }
-  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception {
-    return UpdateType.NONE; // TODO: make this method abstract once all resources implement their update logic.
-  }
+  public abstract UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception;
 
   public boolean mustCheckUpdateTypeEvenIfNoPropertiesChanged() { // there are a couple of cases, specifically EIP and EIPAssociation if instance has been 'updated'
     return false;
