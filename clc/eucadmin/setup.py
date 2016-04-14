@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-# Copyright (c) 2011-2016 Hewlett Packard Enterprise Development LP
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -33,6 +33,7 @@ from distutils.sysconfig import get_python_lib
 import fileinput
 import glob
 import os
+import sys
 
 
 cfg = ConfigParser.ConfigParser()
@@ -64,6 +65,42 @@ class build_scripts_with_path_headers(build_scripts):
                 print line.rstrip()
 
 admin_scripts = ["bin/euca_conf",
+                 "bin/euca-deregister-arbitrator",
+                 "bin/euca-deregister-cloud",
+                 "bin/euca-deregister-cluster",
+                 "bin/euca-deregister-storage-controller",
+                 "bin/euca-deregister-walrusbackend",
+                 "bin/euca-deregister-service",
+                 "bin/euca-describe-arbitrators",
+                 "bin/euca-describe-autoscaling",
+                 "bin/euca-describe-clouds",
+                 "bin/euca-describe-cloudformation",
+                 "bin/euca-describe-cloudwatch",
+                 "bin/euca-describe-clusters",
+                 "bin/euca-describe-components",
+                 "bin/euca-describe-compute",
+                 "bin/euca-describe-euare",
+                 "bin/euca-describe-loadbalancing",
+                 "bin/euca-describe-nodes",
+                 "bin/euca-describe-object-storage-gateways",
+                 "bin/euca-describe-properties",
+                 "bin/euca-describe-services",
+                 "bin/euca-describe-storage-controllers",
+                 "bin/euca-describe-tokens",
+                 "bin/euca-describe-walrusbackends",
+                 "bin/euca-describe-service-types",
+                 "bin/euca-migrate-instances",
+                 "bin/euca-modify-cluster",
+                 "bin/euca-modify-property",
+                 "bin/euca-modify-service",
+                 "bin/euca-modify-storage-controller",
+                 "bin/euca-modify-walrus",
+                 "bin/euca-register-arbitrator",
+                 "bin/euca-register-cloud",
+                 "bin/euca-register-cluster",
+                 "bin/euca-register-storage-controller",
+                 "bin/euca-register-walrusbackend",
+                 "bin/euca-register-service",
                  "bin/eureport-delete-data",
                  "bin/eureport-export-data",
                  "bin/eureport-generate-report",
@@ -85,7 +122,13 @@ setup(name="eucadmin",
                       'Operating System :: OS Independent',
                       'Topic :: Internet',
                       ],
+      install_requires=[
+          "argparse",
+          "PyYAML",
+          "paramiko",
+          "PyGreSQL",
+          "M2Crypto",
+      ],
       cmdclass={'build_scripts': build_scripts_with_path_headers},
       scripts=admin_scripts,
-      data_files=[('share/man/man8', glob.glob('man/*.8'))]
       )

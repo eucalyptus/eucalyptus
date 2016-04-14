@@ -182,7 +182,9 @@ def do_restore(options):
             logging.warning("No database dir found...proceeding with restore...")
     logging.info("Initializing a clean database. This will take a while...")
     if forreal:
-        p = os.popen("su %s -c '%s/usr/sbin/clcadmin-initialize-cloud'" % (options.euca_user, euca_home))
+        os.popen("sudo " + euca_home + "usr/sbin/euca_conf --setup")
+        #this is needed because euca_conf --initialize hijacks out/err and we get a nasty error
+        p = os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (options.euca_user, euca_home))
         p.read()
     logging.info("Starting PostreSQL DB...")
     if forreal:

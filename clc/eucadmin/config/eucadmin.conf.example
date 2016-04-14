@@ -1,0 +1,16 @@
+# validator_config_path is a colon-separated list of yaml files.
+# These files tell the validator which scripts to run for each
+# component/stage. Alternatively, you can set the EUCA_VALIDATOR_CFG_PATH
+# environment variable.
+validator_config_path=/etc/eucadmin/validator.yaml
+
+# validator_script_path is a colon-separated list of directories where
+# validation scripts live.  The list will be searched in order, and the first
+# script found with a matching name wins. Alternatively, you can set the
+# EUCA_VALIDATOR_SCRIPT_PATH environment variable.
+validator_script_path=/usr/local/lib/eucadmin/validator-scripts:/usr/lib/eucadmin/validator-scripts
+
+# eucalyptus_home is used to set the home directory of the eucalyptus
+# installation.  This is primarily used to find eucalyptus.conf.
+# Alternatively, you can set the EUCALYPTUS environment variable.
+# eucalyptus_home=/opt/eucalyptus

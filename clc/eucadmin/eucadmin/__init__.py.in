@@ -1,4 +1,4 @@
-# Copyright (c) 2011-2016 Hewlett Packard Enterprise Development LP
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -23,15 +23,29 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os.path
 import re
 import sys
 import urlparse
 
-from boto.roboto.awsqueryservice import AWSQueryService
+from boto.roboto.awsqueryservice import AWSQueryService, NoCredentialsError
+from boto.roboto.awsqueryrequest import AWSQueryRequest
 from boto.roboto.param import Param
+import boto.utils
 
 
 __version__ = '@EUCA_VERSION@'
+
+
+class EC2(AWSQueryService):
+    Name = 'ec2'
+    Description = 'compute service'
+    APIVersion = '2012-07-20'
+    Authentication = 'sign-v2'
+    Path = '/services/compute'
+    Port = 8773
+    Provider = 'aws'
+    EnvURL = 'EC2_URL'
 
 
 class EucAdmin(AWSQueryService):
@@ -70,6 +84,50 @@ class EucAdmin(AWSQueryService):
         sys.exit(1)
 
 
+class EucadminRequest(AWSQueryRequest):
+    __enabled_debugging = False
+
+    def send(self, verb='GET', **args):
+        # We have to handle debug specially because AWSQueryRequest.send gets
+        # debug=True it adds another stream logger, resulting in duplicate log
+        # messages going to the console when debugging is enabled.
+        if 'debug' in args:
+            debug = args.pop('debug')
+            self.args.pop('debug', None)
+        else:
+            debug = self.args.pop('debug', 0)
+        if EucadminRequest.__enabled_debugging:
+            # Debugging is already on; make sure we don't enable it again.
+            debug = 0
+        elif debug > 0:
+            EucadminRequest.__enabled_debugging = True
+
+        try:
+            return AWSQueryRequest.send(self, verb=verb, debug=debug, **args)
+        except NoCredentialsError:
+            # Try local authentication
+            if 'EUCALYPTUS' in os.environ:
+                euca_home = os.environ['EUCALYPTUS']
+            elif os.path.exists(os.path.join(self.ServiceClass.InstallPath,
+                                             'var/lib/eucalyptus/keys')):
+                # self.ServiceClass.InstallPath is the eucalyptus home
+                euca_home = self.ServiceClass.InstallPath
+            else:
+                # out of ideas
+                raise
+            url = 'http://localhost:8773/services/Eucalyptus'
+            gc_cls = boto.utils.find_class('eucadmin.getcredentials',
+                                           'GetCredentials')
+            obj = gc_cls(euca_home=euca_home, account='eucalyptus',
+                         user='admin', zipfile='notused')
+            key_id, secret_key = obj.get_accesskey_secretkey().split('\t')
+            args['aws_access_key_id']     = key_id
+            args['aws_secret_access_key'] = secret_key
+            args['url'] = url
+            response = AWSQueryRequest.send(self, verb=verb, **args)
+            return response
+
+
 def print_version_if_necessary():
     """
     If '--version' appears in sys.argv then print the version and exit
@@ -80,3 +138,18 @@ def print_version_if_necessary():
     if '--version' in sys.argv:
         print 'eucalyptus', __version__
         sys.exit()
+
+
+class EucaFormat():
+    SERVICE_TYPE = ['%-18s']
+    PARTITION = ['%-10s']
+    SERVICE_NAME = ['%-21s']
+    PREFIX = ['%s']
+    PREFIX_LINE = PREFIX + SERVICE_TYPE + PARTITION + SERVICE_NAME
+    STATE = ['%-8s']
+    URI = ['%-35s']
+    FULLNAME = ['%-35s']
+
+    def __init__(self):
+        pass
+

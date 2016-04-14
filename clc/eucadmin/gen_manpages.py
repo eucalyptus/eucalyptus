@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
-#
-# Copyright (c) 2011-2016 Hewlett Packard Enterprise Development LP
+
+# Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import subprocess
+from eucadmin.command import Command
 
 def gen_manpages():
     if not os.path.isdir('man'):
@@ -35,8 +35,11 @@ def gen_manpages():
     for file in os.listdir('man'):
         os.unlink(os.path.join('man', file))
     for file in os.listdir('bin'):
-        cmd_string = """help2man -n "Eucalyptus Admin tool: %s" -N -o man/%s.8 bin/%s""" % (file, file, file)
-        subprocess.check_call(cmd_string, shell=True)
+        cmd_string = """help2man -n "Eucalyptus Admin tool: %s" -o man/%s.1 bin/%s""" % (file, file, file)
+        cmd = Command(cmd_string)
+        if cmd.status != 0:
+            print 'error encountered'
+            print cmd.stderr
 
 if __name__ == "__main__":
     gen_manpages()

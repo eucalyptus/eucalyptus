@@ -1,6 +1,6 @@
-#!/usr/bin/python -tt
-#
-# Copyright (c) 2011-2016 Hewlett Packard Enterprise Development LP
+#!/usr/bin/python
+
+# Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -30,5 +30,6 @@ import sys
 from eucadmin.exportreportdata import ExportReportData
 
 if __name__ == "__main__":
+    print >> sys.stderr, 'warning: eureport-export-data is deprecated'
     r = ExportReportData()
     r.main_cli()

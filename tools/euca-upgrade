@@ -62,9 +62,9 @@
 
 #set -o nounset
 set -e
-unset UP_DB UP_KEYS UP_FORCE UP_LOG UP_SAMEVERSION
+unset UP_DB UP_KEYS UP_CONF UP_FORCE UP_LOG UP_SAMEVERSION
 unset NEW_EUCA OLD_EUCA NEW_EUCA_VERSION OLD_EUCA_VERSION
-LEGAL_LONG_OPTS="help old new keys db force copyonly sameversion user"
+LEGAL_LONG_OPTS="help old new conf keys db force copyonly sameversion user"
 KEYDIR="/var/lib/eucalyptus/keys"
 DBDIR="/var/lib/eucalyptus/db"
 NEW_EUCA="/"
@@ -79,6 +79,7 @@ usage() {
 	echo "   -o|--old <euca_dir>         The value of \${EUCALYPTUS} for the OLD installation."
 #	echo "   -b|--backup <euca_dir>      create a backup of an existing eucalyptus installation"
 	echo "   -f|--force                  Attempt the upgrade even if a database is detected"
+	echo "   -c|--conf                   Upgrade the conf file"
 	echo "   -d|--db                     Upgrade the database"
 	echo "   -k|--keys                   Upgrade the keys"
 	echo "   -s|--sameversion            Versions unchanged or no db changes."
@@ -115,6 +116,18 @@ get_euca_version() {
 
 sameversion() {
   SAME_VERSION=1
+}
+
+upgrade_conf() {
+  if [ -n "${SAME_VERSION}" ]; then 
+    cp --preserve -a ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf ${NEW_EUCA}/etc/eucalyptus/eucalyptus.conf
+    return
+  fi
+  if [ ! -x ${NEW_EUCA}/usr/sbin/euca_conf ]; then
+    echo "Cannot find new ${NEW_EUCA}/usr/sbin/euca_conf! Skipping automatic upgrade."; exit 1
+  fi
+  # upgrade the conf file
+  ${EUCALYPTUS}/usr/sbin/euca_conf -d ${EUCALYPTUS} --upgrade-conf ${OLD_EUCA}/etc/eucalyptus/eucalyptus.conf 
 }
 
 upgrade_keys() {
@@ -190,6 +203,7 @@ while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
     f) UP_FORCE="force";;
     d) UP_DB="upgrade_db";;
     k) UP_KEYS="upgrade_keys";;
+    c) UP_CONF="upgrade_conf";;
     s) UP_SAMEVERSION="sameversion";;
     u) EUCA_USER=${OPTARG};;
   esac
@@ -207,10 +221,11 @@ log "#==========================================================================
 log "# Old Version:              %-12.12s" "${OLD_EUCA_VERSION}"
 log "# New Version:              %-12.12s" "${NEW_EUCA_VERSION}"
 log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_KEYS})" ${UP_KEYS}
+log "# Upgrade configuration:    %-12.12s       using: %-15.15s" "$(boole ${UP_CONF})" ${UP_CONF}
 log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_DB})" ${UP_DB}
 log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
 
-for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB}); do
+for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
   log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
   if ! $f; then
     log "ERROR:  Upgrading failed for ${f//upgrade_/}.  See ${UP_LOG} for details."

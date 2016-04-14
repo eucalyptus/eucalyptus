@@ -48,7 +48,7 @@ clean:
 	@$(RM) -fr ./dist ./build tags TAGS
 
 distclean: clean
-	@$(RM) -f setup.cfg setup.cfg.template
+	@$(RM) -f setup.cfg setup.cfg.template bin/euca_conf
 
 uninstall:
 	@echo uninstall

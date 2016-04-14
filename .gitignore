@@ -28,6 +28,7 @@ clc/derby.log
 clc/test
 clc/.deprecated/*/build
 clc/deps
+clc/eucadmin/bin/euca_conf
 clc/eucadmin/eucadmin/__init__.py
 clc/eucadmin/build/
 clc/eucadmin/setup.cfg

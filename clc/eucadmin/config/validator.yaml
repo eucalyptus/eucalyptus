@@ -1,0 +1,71 @@
+preinstall:
+  CLC:
+    - selinux
+  WS:
+    - selinux
+  SC:
+    - selinux
+  CC:
+    - selinux
+  NC:
+    - selinux
+    - kvm
+  UI:
+postinstall:
+  CLC:
+    - selinux
+    - eucaconf
+  WS:
+    - selinux
+    - eucaconf
+  SC:
+    - selinux
+    - eucaconf
+  CC:
+    - selinux
+    - eucaconf
+  NC:
+    - selinux
+    - kvm
+    - eucaconf
+  UI:
+    - selinux
+registration:
+  CLC:
+    - selinux
+    - eucaconf
+  WS:
+    - selinux
+    - eucaconf
+  SC:
+    - selinux
+    - eucaconf
+  CC:
+    - selinux
+    - eucaconf
+  NC:
+    - selinux
+    - kvm
+    - eucaconf
+  UI:
+    - selinux
+monitor:
+  CLC:
+    - selinux
+    - eucaconf
+  WS:
+    - selinux
+    - eucaconf
+  SC:
+    - selinux
+    - eucaconf
+  CC:
+    - selinux
+    - eucaconf
+  NC:
+    - selinux
+    - kvm
+    - eucaconf
+  UI:
+    - selinux
+
