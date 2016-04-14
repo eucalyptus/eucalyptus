@@ -299,6 +299,7 @@ struct driver_handler_t managedDriverHandler = {
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\

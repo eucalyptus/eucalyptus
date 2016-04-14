@@ -128,6 +128,7 @@
 #include <config.h>
 #include <sequence_executor.h>
 #include <atomic_file.h>
+#include <signal.h>
 
 #include "ipt_handler.h"
 #include "ips_handler.h"
@@ -214,6 +215,7 @@ static int network_driver_system_flush(globalNetworkInfo *pGni);
 static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
 static u32 network_driver_system_scrub(globalNetworkInfo *pGni,
         globalNetworkInfo *pGniApplied, lni_t *pLni);
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -245,6 +247,7 @@ struct driver_handler_t midoVpcDriverHandler = {
     .implement_network = NULL,
     .implement_sg = NULL,
     .implement_addressing = NULL,
+    .handle_signal = network_driver_handle_signal,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -456,6 +459,54 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         //rc = do_midonet_maint(pMidoConfig);
     }
     return (rc);
+}
+
+//!
+//! This API is invoked when eucanetd catches an USR1 or USR2 signal.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//! @param[in] signal received signal
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!     - pGni must not be NULL
+//!     - The driver must be initialized prior to calling this API.
+//!
+//! @post
+//!
+//! @note
+//!
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal)
+{
+    LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to handle signal. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Is the global network view structure NULL?
+    if (!pGni) {
+        LOGERROR("Failed to handle signal for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        return (1);
+    }
+
+    switch (signal) {
+        case SIGUSR1:
+            mido_info_http_count_total();
+            mido_info_midocache();
+            break;
+        case SIGUSR2:
+            LOGINFO("Going to refresh midocache\n");
+            midonet_api_cache_refresh();
+            break;
+        default:
+            break;
+    }
+    return (0);
 }
 
 //!

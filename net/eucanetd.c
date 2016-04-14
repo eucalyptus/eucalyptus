@@ -272,6 +272,10 @@ static globalNetworkInfo *gni_b = NULL;
 //! Main loop termination condition
 static volatile boolean gIsRunning = FALSE;
 
+//! USR1 and USR2 signals
+static volatile boolean gUsr1Caught = FALSE;
+static volatile boolean gUsr2Caught = FALSE;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -280,6 +284,8 @@ static volatile boolean gIsRunning = FALSE;
 
 static void eucanetd_sigterm_handler(int signal);
 static void eucanetd_sighup_handler(int signal);
+static void eucanetd_sigusr1_handler(int signal);
+static void eucanetd_sigusr2_handler(int signal);
 static void eucanetd_install_signal_handlers(void);
 
 static int eucanetd_daemonize(void);
@@ -623,6 +629,18 @@ int main(int argc, char **argv)
             }
         }
         epoch_checks++;
+        if (gUsr1Caught) {
+            if (pDriverHandler->handle_signal) {
+                pDriverHandler->handle_signal(pGni, SIGUSR1);
+            }
+            gUsr1Caught = FALSE;
+        }
+        if (gUsr2Caught) {
+            if (pDriverHandler->handle_signal) {
+                pDriverHandler->handle_signal(pGni, SIGUSR2);
+            }
+            gUsr2Caught = FALSE;
+        }
 
         if (epoch_timer >= 300) {
             LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
@@ -658,7 +676,7 @@ int main(int argc, char **argv)
             }
         }
 
-        epoch_timer += config->polling_frequency;        
+        epoch_timer += config->polling_frequency;
         
     }
 
@@ -715,6 +733,24 @@ static void eucanetd_sighup_handler(int signal)
     config->flushmode = FLUSH_NONE;
 }
 
+/**
+ * Handles SIGUSR1 signal.
+ * @param signal received signal number.
+ */
+static void eucanetd_sigusr1_handler(int signal) {
+    LOGDEBUG("eucanetd caught a SIGUSR1 (%d) signal.\n", signal);
+    gUsr1Caught = TRUE;
+}
+
+/**
+ * Handles SIGUSR1 signal.
+ * @param signal received signal number.
+ */
+static void eucanetd_sigusr2_handler(int signal) {
+    LOGDEBUG("eucanetd caught a SIGUSR2 (%d) signal.\n", signal);
+    gUsr2Caught = TRUE;
+}
+
 //!
 //! Installs signal handlers for this application
 //!
@@ -726,8 +762,7 @@ static void eucanetd_sighup_handler(int signal)
 //!
 //! @note
 //!
-static void eucanetd_install_signal_handlers(void)
-{
+static void eucanetd_install_signal_handlers(void) {
     struct sigaction act = { {0} };
 
     // Install the SIGTERM signal handler
@@ -742,6 +777,20 @@ static void eucanetd_install_signal_handlers(void)
     act.sa_handler = &eucanetd_sighup_handler;
     if (sigaction(SIGHUP, &act, NULL) < 0) {
         LOGERROR("Failed to install SIGTERM handler");
+        exit(1);
+    }
+    // Install the SIGUSR1 signal handler
+    bzero(&act, sizeof(struct sigaction));
+    act.sa_handler = &eucanetd_sigusr1_handler;
+    if (sigaction(SIGUSR1, &act, NULL) < 0) {
+        LOGERROR("Failed to install SIGUSR1 handler");
+        exit(1);
+    }
+    // Install the SIGUSR1 signal handler
+    bzero(&act, sizeof(struct sigaction));
+    act.sa_handler = &eucanetd_sigusr2_handler;
+    if (sigaction(SIGUSR2, &act, NULL) < 0) {
+        LOGERROR("Failed to install SIGUSR2 handler");
         exit(1);
     }
 }

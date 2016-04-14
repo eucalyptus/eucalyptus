@@ -154,6 +154,7 @@ typedef struct driver_handler_t {
     int (*implement_network) (globalNetworkInfo *pGni, lni_t *pLni);        //!< Takes care of network devices, tunnels, etc.
     int (*implement_sg) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Takes care of security group implementations and membership
     int (*implement_addressing) (globalNetworkInfo *pGni, lni_t *pLni);     //!< Takes care of IP addressing, Elastic IPs, etc.
+    int (*handle_signal) (globalNetworkInfo *pGni, int signal);             //!< Forward signals (USR1 and USR2) to driver
 } driver_handler;
 
 /*----------------------------------------------------------------------------*\

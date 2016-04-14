@@ -5165,7 +5165,6 @@ int do_midonet_update_c(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, m
     }
     LOGINFO("\tinstances processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
-    mido_info_midocache();
     mido_info_http_count();
     return (ret);
 }

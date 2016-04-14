@@ -247,6 +247,7 @@ struct driver_handler_t edgeDriverHandler = {
     .implement_network = NULL,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\

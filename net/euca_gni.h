@@ -93,8 +93,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define MAX_NETWORK_INFO_LEN_DUMMY               10485760   //!< The maximum length of the network info string in GNI structure
-#define MAX_NETWORK_INFO_LEN                     8          //!< The maximum length of the network info string in GNI structure
+#define MAX_NETWORK_INFO_LEN                 52428800   //!< The maximum length of the network info string in GNI structure
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
