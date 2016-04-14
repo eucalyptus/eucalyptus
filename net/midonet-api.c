@@ -7258,19 +7258,6 @@ int midonet_api_cache_flush(void) {
  * @return 0 on success. 1 on any failure.
  */
 int midonet_api_cache_populate(void) {
-    int mnapiok = 0;
-    for (int x = 0; x < 30 && !mnapiok; x++) {
-        int rc = mido_check_state();
-        if (rc) {
-            sleep(1);
-        } else {
-            mnapiok = 1;
-        }
-    }
-    if (!mnapiok) {
-        LOGERROR("Unable to access midonet-api.\n");
-        return (1);
-    }
     if ((midocache_midos != NULL) && (midocache_midos->released > MIDONAME_LIST_RELEASES_B4INVALIDATE)) {
         midonet_api_cache_flush();
     }
@@ -8610,6 +8597,9 @@ int midonet_api_dhcp_free(midonet_api_dhcp *dhcp) {
 int midonet_api_bridge_free(midonet_api_bridge *bridge) {
     if (bridge == NULL) {
         return (1);
+    }
+    for (int i = 0; i < bridge->max_dhcps; i++) {
+        midonet_api_dhcp_free(bridge->dhcps[i]);
     }
     EUCA_FREE(bridge->dhcps);
     EUCA_FREE(bridge->ports);
