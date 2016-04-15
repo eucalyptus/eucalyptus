@@ -65,10 +65,12 @@ package com.eucalyptus.ws;
 import java.lang.Object;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Optional;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -204,7 +206,10 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
-  
+
+  @ConfigurableField( description = "HTTP server header for responses (use 'default' for standard)", initial = "default" )
+  public static String        HTTP_SERVER_HEADER                = "default";
+
   @ConfigurableField( description = "Use DNS delegation for eucarc." )
   @Deprecated  //GRZE: this field will be superceded by new DNS and eucarc support in 3.4: DO NOT USE IT!
   public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
@@ -253,8 +258,20 @@ public class StackConfiguration extends AbstractPersistent {
       changeListener = WebServices.ComponentListPropertyChangeListener.class )
   public static volatile String DISABLED_SOAP_API_COMPONENTS    = "";
 
+  private static final String DEFAULT_SERVER_HEADER = "Eucalyptus/" + BillOfMaterials.getVersion( );
+
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
-  
+
+  public static Optional<String> getServerHeader( ) {
+    String headerValue = HTTP_SERVER_HEADER.trim( );
+    if ( "default".equals( headerValue ) ) {
+      headerValue = DEFAULT_SERVER_HEADER;
+    } else if ( headerValue.isEmpty( ) ) {
+      headerValue = null;
+    }
+    return Optional.ofNullable( headerValue );
+  }
+
   public enum BasicTransport implements TransportDefinition {
     HTTP {
       @Override
