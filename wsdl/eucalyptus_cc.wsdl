@@ -577,6 +577,8 @@
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="version" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="appliedVersion" type="xs:string"/>
 	      <xs:element minOccurs="1" maxOccurs="1" name="networkInfo" type="xs:string"/>
 	    </xs:sequence>
 	  </xs:extension>

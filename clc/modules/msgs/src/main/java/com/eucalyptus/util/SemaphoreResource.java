@@ -17,39 +17,37 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.util;
 
-import com.google.common.collect.Maps
-import com.google.common.collect.Sets
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+import java.util.concurrent.Semaphore;
 
 /**
- *
+ * Semaphore helper supporting try-with-resources use
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+public class SemaphoreResource implements AutoCloseable {
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
+  private final Semaphore semaphore;
+  private final boolean acquired;
+
+  private SemaphoreResource( final Semaphore semaphore,
+                             final boolean acquired ) {
+    this.semaphore = semaphore;
+    this.acquired = acquired;
   }
 
-  static boolean clearDirty( Collection<String> inUse, String partition ) {
-    boolean cleared = false;
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        cleared = dirtyAddresses.remove( address ) || cleared
-      }
+  public static SemaphoreResource acquire( final Semaphore semaphore ) {
+    semaphore.acquireUninterruptibly( );
+    return new SemaphoreResource( semaphore, true );
+  }
+
+  public boolean isAcquired( ) {
+    return acquired;
+  }
+
+  @Override
+  public void close( ) {
+    if ( isAcquired( ) ) {
+      semaphore.release( );
     }
-    cleared
-  }
-
-  static boolean clearDirty( String address ) {
-    dirtyAddresses.remove( address )
-  }
-
-  static Set<String> dirtySnapshot( ) {
-    Sets.newHashSet( dirtyAddresses.keySet( ) )
   }
 }

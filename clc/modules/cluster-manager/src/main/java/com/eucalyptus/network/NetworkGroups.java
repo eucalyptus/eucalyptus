@@ -130,25 +130,27 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
 
   @ConfigurableField( description = "Default max network index." )
-  public static Long          GLOBAL_MAX_NETWORK_INDEX      = 4096l;
+  public static volatile Long         GLOBAL_MAX_NETWORK_INDEX      = 4096l;
   @ConfigurableField( description = "Default min network index." )
-  public static Long          GLOBAL_MIN_NETWORK_INDEX      = 2l;
+  public static volatile Long         GLOBAL_MIN_NETWORK_INDEX      = 2l;
   @ConfigurableField( description = "Default max vlan tag." )
-  public static Integer       GLOBAL_MAX_NETWORK_TAG        = 4096;
+  public static volatile Integer      GLOBAL_MAX_NETWORK_TAG        = 4096;
   @ConfigurableField( description = "Default min vlan tag." )
-  public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
+  public static volatile Integer      GLOBAL_MIN_NETWORK_TAG        = 1;
   @ConfigurableField( description = "Minutes before a pending tag allocation timesout and is released." )
-  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
+  public static volatile Integer      NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
-  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
+  public static volatile Integer      NETWORK_INDEX_PENDING_TIMEOUT = 35;
   @ConfigurableField( description = "Minutes before a pending system public address allocation timesout and is released.", initial = "35" )
-  public static Integer       ADDRESS_PENDING_TIMEOUT = 35;
+  public static volatile Integer      ADDRESS_PENDING_TIMEOUT       = 35;
   @ConfigurableField(
       description = "Network configuration document.",
       changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
-  public static String        NETWORK_CONFIGURATION = "";
+  public static volatile String       NETWORK_CONFIGURATION         = "";
   @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
-  public static Integer       MIN_BROADCAST_INTERVAL = 5;
+  public static volatile Integer      MIN_BROADCAST_INTERVAL        = 5;
+  @ConfigurableField( description = "Maximum time to apply network information (seconds)." )
+  public static volatile Integer      MAX_BROADCAST_APPLY           = 120;
 
   public static class NetworkRangeConfiguration {
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
