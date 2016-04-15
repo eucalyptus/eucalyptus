@@ -80,12 +80,14 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <dirent.h>
 #include <errno.h>
-#include <signal.h>
 
+#include <signal.h>
 #include <eucalyptus.h>
 #include <misc.h>
 #include <euca_string.h>
@@ -299,6 +301,7 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet);
 static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet);
 static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean * update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo * pGni);
+static int eucanetd_dummy_udpsock(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -907,8 +910,7 @@ static int eucanetd_daemonize(void)
 //!
 //! @note
 //!
-static int eucanetd_initialize(void)
-{
+static int eucanetd_initialize(void) {
     if (!config) {
         config = EUCA_ZALLOC(1, sizeof(eucanetdConfig));
         if (!config) {
@@ -919,6 +921,11 @@ static int eucanetd_initialize(void)
 
     config->polling_frequency = 5;
     config->init = 1;
+    
+    config->udpsock = eucanetd_dummy_udpsock();
+    if (config->udpsock == -1) {
+        exit (1);
+    }
 
 /*
     if (!globalnetworkinfo) {
@@ -1689,6 +1696,32 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni)
     }
 
     return (PEER_NONE);
+}
+
+/**
+ * Creates an UDP socket listening on UDP port EUCAN (38226). If bind fails, another
+ * instance of eucanetd is likely to be running.
+ * @return file descriptor of the newly created socket. -1 on error.
+ */
+static int eucanetd_dummy_udpsock(void) {
+    struct sockaddr_in dummysock;
+    int s = -1;
+
+    s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (s == -1) {
+        LOGERROR("Failed to create eucanetd udp socket.\n");
+        return (-1);
+    }
+
+    bzero(&dummysock, sizeof(struct sockaddr_in));
+    dummysock.sin_family = AF_INET;
+    dummysock.sin_port = htons(EUCANETD_DUMMY_UDP_PORT);
+    inet_aton("127.0.0.1", &(dummysock.sin_addr));
+    if (bind(s, (struct sockaddr *) &dummysock, sizeof(dummysock)) == -1) {
+        LOGERROR("Cannot start eucanetd: check for another running instance\n");
+        return (-1);
+    }
+    return (s);
 }
 
 /**
