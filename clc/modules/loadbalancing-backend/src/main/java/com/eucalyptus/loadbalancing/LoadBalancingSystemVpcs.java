@@ -104,8 +104,12 @@ public class LoadBalancingSystemVpcs {
         }
     };
 
-    public static boolean isCloudVpc() {
-        return cloudVpcTest.get();
+    public static Optional<Boolean> isCloudVpc() {
+        if (Topology.isEnabled(Compute.class)) {
+            return Optional.of(cloudVpcTest.get());
+        } else {
+            return Optional.empty();
+        }
     }
 
     @ConfigurableField(displayName = "number_of_hosts_in_vpc_subnet",
@@ -453,7 +457,7 @@ public class LoadBalancingSystemVpcs {
     }
 
     public static Set<String> getControlInterfaceAddresses(final LoadBalancerServoInstance instance) {
-        if(!isCloudVpc())
+        if(!isCloudVpc().isPresent() || !isCloudVpc().get())
             return null;
         try{
             return controlInterfaceCache.get(instance.getInstanceId());
@@ -465,7 +469,7 @@ public class LoadBalancingSystemVpcs {
 
     // list[0]: public IP, list[1]
     public static List<Optional<String>> getUserVpcInterfaceIps(final String instanceId) {
-        if (!isCloudVpc())
+        if (!isCloudVpc().isPresent() || !isCloudVpc().get())
             return null;
 
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
@@ -497,7 +501,7 @@ public class LoadBalancingSystemVpcs {
 
     // if the primary interface is for system VPC, the secondary interface is attached to user VPC
     public static void setupUserVpcInterface(final String instanceId) {
-        if(!isCloudVpc())
+        if(!isCloudVpc().isPresent() || !isCloudVpc().get())
             return;
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         final Optional<RunningInstancesItemType> vmInstanceOpt =
@@ -864,7 +868,7 @@ public class LoadBalancingSystemVpcs {
             if (Bootstrap.isFinished() &&
                     Topology.isEnabledLocally(LoadBalancingBackend.class) &&
                     Topology.isEnabled(Compute.class) &&
-                    isCloudVpc()) {
+                    isCloudVpc().isPresent() && isCloudVpc().get()) {
                 final Date now = new Date(System.currentTimeMillis());
                 final int elapsedSec = (int) ((now.getTime() - lastCheckTime.getTime()) / 1000.0);
                 if (elapsedSec < CHECK_INTERVAL_SEC)

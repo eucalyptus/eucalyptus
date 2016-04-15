@@ -107,9 +107,12 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
             return false;
         }
         try{
-            if(LoadBalancingSystemVpcs.isCloudVpc()) {
-                if (!LoadBalancingSystemVpcs.prepareSystemVpc())
+            if (LoadBalancingSystemVpcs.isCloudVpc().isPresent() ) {
+                if (LoadBalancingSystemVpcs.isCloudVpc().get() &&
+                        !LoadBalancingSystemVpcs.prepareSystemVpc())
                     return false;
+            } else {
+                return false;
             }
         } catch (final Exception ex) {
             LOG.error("Failed to prepare system VPC for loadbalancing service", ex);

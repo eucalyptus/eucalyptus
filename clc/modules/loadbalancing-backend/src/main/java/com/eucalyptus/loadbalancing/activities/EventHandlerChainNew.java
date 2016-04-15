@@ -831,7 +831,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 					}catch(Exception ex){
 						LOG.error("Failed to persist the servo instance record", ex);
 					}
-					if (LoadBalancingSystemVpcs.isCloudVpc()) {
+					if (LoadBalancingSystemVpcs.isCloudVpc().isPresent()
+							&& LoadBalancingSystemVpcs.isCloudVpc().get()) {
 						try {
 							newServos.stream()
 									.filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
@@ -925,7 +926,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 							}
 							if (LoadBalancerServoInstance.STATE.InService.equals(newState)) {
 								try {
-									if(LoadBalancingSystemVpcs.isCloudVpc()) {
+									if(LoadBalancingSystemVpcs.isCloudVpc().isPresent() &&
+											LoadBalancingSystemVpcs.isCloudVpc().get()) {
 										LoadBalancingSystemVpcs.setupUserVpcInterface(instance.getInstanceId());
 										updateIpAddressesInVpc(instance.getInstanceId());
 									}

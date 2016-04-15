@@ -230,7 +230,8 @@ public class LoadBalancingBackendService {
 
   private void isValidServoRequest(final LoadBalancerServoInstance instance, String remoteHost) throws LoadBalancingException{
 	  try{
-        if(LoadBalancingSystemVpcs.isCloudVpc()) {
+        if(LoadBalancingSystemVpcs.isCloudVpc().isPresent() &&
+                LoadBalancingSystemVpcs.isCloudVpc().get()) {
           final Set<String> validAddresses =
                   LoadBalancingSystemVpcs.getControlInterfaceAddresses(instance);
           if(validAddresses == null) {

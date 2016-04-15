@@ -370,7 +370,8 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 					if(!LoadBalancerServoInstance.DNS_STATE.Registered.equals(instance.getDnsState())){
 						String ipAddr = null;
 						String privateIpAddr = null;
-						if (LoadBalancingSystemVpcs.isCloudVpc()) { /// in vpc mode
+						if (LoadBalancingSystemVpcs.isCloudVpc().isPresent()&&
+								LoadBalancingSystemVpcs.isCloudVpc().get()) { /// in vpc mode
 							final List<Optional<String>> userVpcInterfaceAddresses =
 									LoadBalancingSystemVpcs.getUserVpcInterfaceIps(instance.getInstanceId());
 							if(userVpcInterfaceAddresses!=null) {
