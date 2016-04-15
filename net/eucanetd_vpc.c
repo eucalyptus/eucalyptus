@@ -194,7 +194,6 @@ static boolean gTunnelZoneOk = FALSE;
 
 //! Midonet pluggin specific configuration
 mido_config *pMidoConfig = NULL;
-mido_config *pMidoConfig_c = NULL;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -310,15 +309,15 @@ static int network_driver_init(eucanetdConfig * pConfig)
     }
 */
 
-    pMidoConfig_c = EUCA_ZALLOC_C(1, sizeof (mido_config));
-    rc = initialize_mido(pMidoConfig_c, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
+    pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
+    rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
             pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
     if (rc) {
         LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
-        EUCA_FREE(pMidoConfig_c);
+        EUCA_FREE(pMidoConfig);
         return (1);
     }
-    pMidoConfig = pMidoConfig_c;
+    //pMidoConfig = pMidoConfig_c;
     
     // Release unnecessary handlers
     if (pConfig->ipt) {
@@ -455,9 +454,7 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
     }
 
     if (midonet_api_dirty_cache == 1) {
-        // Cache is invalid. Let's pre-populate mido.
-        rc = do_midonet_maint_c(pMidoConfig_c);
-        //rc = do_midonet_maint(pMidoConfig);
+        rc = do_midonet_maint_c(pMidoConfig);
     }
     return (rc);
 }
@@ -480,8 +477,8 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
 //!
 //! @note
 //!
-static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal)
-{
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
+    int rc = 0;
     LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
 
     // Is the driver initialized?
@@ -502,7 +499,11 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal)
             break;
         case SIGUSR2:
             LOGINFO("Going to invalidate midocache\n");
-            midocache_invalid = 1;
+            rc = do_midonet_populate_c(pMidoConfig);
+            if (rc) {
+                LOGERROR("failed to populate euca VPC models\n");
+                midocache_invalid = 1;
+            }
             break;
         default:
             break;
@@ -573,7 +574,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
     }
 
     LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
-    rc = do_midonet_update_c(pGni, pGniApplied, pMidoConfig_c);
+    rc = do_midonet_update_c(pGni, pGniApplied, pMidoConfig);
 
     if (rc != 0) {
         LOGERROR("failed to update midonet: check log for details\n");

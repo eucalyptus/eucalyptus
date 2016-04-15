@@ -2222,31 +2222,12 @@ int gni_populate_interfaces(globalNetworkInfo *gni, xmlXPathContextPtr ctxptr)
                 EUCA_FREE(results[j]);
             }
             gni->max_interfaces += max_results;
-            EUCA_FREE(results);
         } else {
             LOGDEBUG("No interfaces for %s in GNI.\n", gni->instances[i].name);
         }
-    }
-    //snprintf(expression, 2048, "/network-data/instances/*/networkInterfaces/networkInterface");
-    /*
-    rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-    gni->interfaces = EUCA_ZALLOC(max_results, sizeof (gni_instance));
-    if (gni->interfaces == NULL) {
-        LOGERROR("out of memory.\n");
-        return (1);
-    }
-        for (i = 0; i < max_results; i++) {
-            LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->interfaces[i].name, INTERFACE_ID_LEN, "%s", results[i]);
-            EUCA_FREE(results[i]);
-        }
-    gni->max_interfaces = max_results;
         EUCA_FREE(results);
+    }
 
-    for (i = 0; i < gni->max_interfaces; i++) {
-        gni_populate_instance_interface(&(gni->interfaces[i]), expression, ctxptr);
-        }
-    */
     return 0;
 }
 
