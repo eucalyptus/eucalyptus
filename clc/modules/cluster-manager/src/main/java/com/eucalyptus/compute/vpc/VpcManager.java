@@ -339,6 +339,14 @@ public class VpcManager {
                     throw new ClientComputeException( "InvalidParameterValue", "Device index in use" );
                   }
                 }
+                if ( !vm.getPartition( ).equals( networkInterface.getAvailabilityZone( ) ) ) {
+                  throw new ClientComputeException( "InvalidParameterValue", "Network interface zone invalid for instance" );
+                }
+                final String instanceVpcId = vm.getVpcId( );
+                if ( !ctx.isPrivileged( ) && instanceVpcId!=null &&
+                    !instanceVpcId.equals( networkInterface.getVpc( ).getDisplayName( ) ) ) {
+                  throw new ClientComputeException( "InvalidParameterValue", "Network interface vpc invalid for instance" );
+                }
                 final int interfaceCount = vm.getNetworkInterfaces( ).size( ) + 1;
                 final int maxInterfaces = VmTypes.lookup( vm.getInstanceType( ) ).getNetworkInterfaces( );
                 if ( interfaceCount > maxInterfaces ) {

@@ -23,6 +23,7 @@ import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.auth.AuthContext
 import com.eucalyptus.auth.principal.AccountFullName
+import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
@@ -810,6 +811,7 @@ class VmInstanceLifecycleHelpers {
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final RunInstancesType runInstances = (RunInstancesType) allocation.request
+      final boolean allowMultiVpc = Principals.systemUser( ).name.equals( runInstances.effectiveUserId )
 
       final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface =
           getPrimaryNetworkInterface( runInstances )
@@ -961,6 +963,9 @@ class VmInstanceLifecycleHelpers {
               if ( !subnetPrivateAddresses.add( Pair.pair( secondarySubnet.displayName, secondaryPrivateIp ) ) ) {
                 throw new InvalidMetadataException("Network interface duplicate private address (${secondaryPrivateIp})" )
               }
+            }
+            if ( !allowMultiVpc && subnet.vpc.displayName != secondarySubnet.vpc.displayName ) {
+              throw new InvalidMetadataException( "Network interface vpc (${secondarySubnet.vpc.displayName}) for ${secondarySubnet.displayName} not valid for instance vpc ${subnet.vpc.displayName}" )
             }
             if ( secondarySubnet.availabilityZone != subnet.availabilityZone ) {
               throw new InvalidMetadataException( "Network interface availability zone (${secondarySubnet.availabilityZone}) for ${secondarySubnet.displayName} not valid for subnet ${subnet.displayName} zone ${subnet.availabilityZone}" )
