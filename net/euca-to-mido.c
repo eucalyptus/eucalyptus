@@ -1012,14 +1012,19 @@ int do_midonet_populate_c(mido_config * mido) {
     mido_vpc *vpc = NULL;
     struct timeval tv;
 
-    eucanetd_timer(&tv);
-    // Populate midocache
-    rc = midonet_api_cache_populate();
+    eucanetd_timer_usec(&tv);
+    rc = midonet_api_cache_refresh();
     if (rc) {
         LOGERROR("failed to retrieve objects from MidoNet.\n");
         return (1);
     }
     LOGINFO("\tMidoNet objects cached in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    rc = reinitialize_mido(mido);
+    if (rc) {
+        LOGERROR("failed to initialize euca-mido model data structures.\n");
+    }
+    LOGINFO("\treinitialize_mido() in %ld us.\n", eucanetd_timer_usec(&tv));
 
     // populated core
     rc = populate_mido_core_c(mido, mido->midocore);
@@ -2154,6 +2159,9 @@ int do_midonet_update_pass2_c(globalNetworkInfo *gni, mido_config *mido) {
                     if (rc) {
                         LOGWARN("Failed to remove %s from ip address group\n", iag->ips[k]->name);
                     }
+                    if (iag->max_ips == 0) {
+                        break;
+                    }
                 }
             }
 
@@ -2181,6 +2189,9 @@ int do_midonet_update_pass2_c(globalNetworkInfo *gni, mido_config *mido) {
                     rc = mido_delete_ipaddrgroup_ip_c(iag, iag->ips[k]);
                     if (rc) {
                         LOGWARN("Failed to remove %s from ip address group\n", iag->ips[k]->name);
+                    }
+                    if (iag->max_ips == 0) {
+                        break;
                     }
                 }
             }
@@ -4965,18 +4976,20 @@ int do_midonet_maint(mido_config *mido) {
  * @return 0 on success. 1 otherwise.
  */
 int do_midonet_maint_c(mido_config *mido) {
-    int rc = 0, ret = 0;
-    struct timeval tv;
+    //int rc = 0;
+    int ret = 0;
+    //struct timeval tv;
 
     if (!mido) {
         return (1);
     }
 
+/*
     eucanetd_timer_usec(&tv);
-    if (midonet_api_system_changed) {
+    if (0 && midonet_api_system_changed) {
         eucanetd_timer_usec(&tv);
         rc = reinitialize_mido(mido);
-        LOGINFO("reinitialize_mido() in %ld us.\n", eucanetd_timer_usec(&tv));
+        LOGINFO("\treinitialize_mido() in %ld us.\n", eucanetd_timer_usec(&tv));
 
         rc = do_midonet_populate_c(mido);
         if (rc) {
@@ -4987,6 +5000,7 @@ int do_midonet_maint_c(mido_config *mido) {
         mido_info_http_count();
         midonet_api_system_changed = 0;
     }
+*/
     return (ret);
 }
 
@@ -5098,17 +5112,7 @@ int do_midonet_update_c(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, m
         clear_mido_gnitags(mido);
         LOGINFO("\tgni/mido tags cleared in %ld us.\n", eucanetd_timer_usec(&tv));
     } else {
-        rc = midonet_api_cache_refresh();
-        LOGINFO("\tmidocache populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         midocache_invalid = 0;
-        midonet_api_system_changed = 1;
-    }
-    //mido_info_midocache();
-
-    if (midonet_api_system_changed) {
-        eucanetd_timer_usec(&tv);
-        rc = reinitialize_mido(mido);
-        LOGINFO("\treinitialize_mido() in %ld us.\n", eucanetd_timer_usec(&tv));
 
         rc = do_midonet_populate_c(mido);
         if (rc) {

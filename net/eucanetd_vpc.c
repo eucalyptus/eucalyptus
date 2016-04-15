@@ -174,6 +174,7 @@
 /* Should preferably be handled in header file */
 extern int midonet_api_dirty_cache;
 extern int midonet_api_system_changed;
+extern int midocache_invalid;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -500,8 +501,8 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal)
             mido_info_midocache();
             break;
         case SIGUSR2:
-            LOGINFO("Going to refresh midocache\n");
-            midonet_api_cache_refresh();
+            LOGINFO("Going to invalidate midocache\n");
+            midocache_invalid = 1;
             break;
         default:
             break;
