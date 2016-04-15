@@ -134,7 +134,6 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 int cc_broadcastNetworkInfo(char *networkInfo, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
-int cc_describePublicAddresses(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_describeResources(axutil_env_t * env, axis2_stub_t * pStub);

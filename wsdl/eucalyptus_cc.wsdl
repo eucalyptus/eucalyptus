@@ -676,33 +676,6 @@
 	</xs:sequence>
       </xs:complexType>
 
-      <xs:complexType name="describePublicAddressesType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-
-      <xs:complexType name="publicAddressType">
-	<xs:sequence>
-	  <xs:element minOccurs="1" maxOccurs="1" name="uuid" type="xs:string" />
-	  <xs:element minOccurs="1" maxOccurs="1" name="sourceAddress" type="xs:string" />
-	  <xs:element minOccurs="1" maxOccurs="1" name="destAddress" type="xs:string" />
-	</xs:sequence>
-      </xs:complexType>
-
-      <xs:complexType name="describePublicAddressesResponseType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-	      <xs:element minOccurs="0" maxOccurs="unbounded" name="addresses" type="tns:publicAddressType"/>
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-
       <xs:complexType name="configureNetworkType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -1097,9 +1070,6 @@
       <xs:element name="DescribeNetworks" nillable="true" type="tns:describeNetworksType"/>
       <xs:element name="DescribeNetworksResponse" nillable="true" type="tns:describeNetworksResponseType"/>
 
-      <xs:element name="DescribePublicAddresses" nillable="true" type="tns:describePublicAddressesType"/>
-      <xs:element name="DescribePublicAddressesResponse" nillable="true" type="tns:describePublicAddressesResponseType"/>
-
       <xs:element name="DescribeInstances" nillable="true" type="tns:describeInstancesType"/>
       <xs:element name="DescribeInstancesResponse" nillable="true" type="tns:describeInstancesResponseType"/>
 
@@ -1252,11 +1222,6 @@
 
   <wsdl:message name="DescribeNetworksResponse">
     <wsdl:part element="tns:DescribeNetworksResponse" name="DescribeNetworksResponse">
-    </wsdl:part>
-  </wsdl:message>
-
-  <wsdl:message name="DescribePublicAddressesResponse">
-    <wsdl:part element="tns:DescribePublicAddressesResponse" name="DescribePublicAddressesResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -1417,11 +1382,6 @@
 
   <wsdl:message name="DescribeNetworks">
     <wsdl:part element="tns:DescribeNetworks" name="DescribeNetworks">
-    </wsdl:part>
-  </wsdl:message>
-
-  <wsdl:message name="DescribePublicAddresses">
-    <wsdl:part element="tns:DescribePublicAddresses" name="DescribePublicAddresses">
     </wsdl:part>
   </wsdl:message>
 
@@ -1650,12 +1610,6 @@
       </wsdl:output>
     </wsdl:operation>
 
-    <wsdl:operation name="DescribePublicAddresses">
-      <wsdl:input message="tns:DescribePublicAddresses" name="DescribePublicAddresses">
-      </wsdl:input>
-      <wsdl:output message="tns:DescribePublicAddressesResponse" name="DescribePublicAddressesResponse">
-      </wsdl:output>
-    </wsdl:operation>
 
     <wsdl:operation name="DescribeInstances">
       <wsdl:input message="tns:DescribeInstances" name="DescribeInstances">
@@ -1974,16 +1928,6 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DescribeNetworksResponse">
-        <soap:body use="literal"/>
-      </wsdl:output>
-    </wsdl:operation>
-
-    <wsdl:operation name="DescribePublicAddresses">
-      <soap:operation soapAction="EucalyptusCC#DescribePublicAddresses" style="document"/>
-      <wsdl:input name="DescribePublicAddresses">
-        <soap:body use="literal"/>
-      </wsdl:input>
-      <wsdl:output name="DescribePublicAddressesResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

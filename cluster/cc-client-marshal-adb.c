@@ -864,56 +864,6 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * 
     return (0);
 }
 
-//!
-//! Marshalls and invokes the describe public addresses request
-//!
-//! @param[in] env pointer to the AXIS2 environment structure
-//! @param[in] pStub a pointer to the AXIS2 stub structure
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-int cc_describePublicAddresses(axutil_env_t * env, axis2_stub_t * pStub)
-{
-    int i = 0;
-    int len = 0;
-    char *ip = NULL;
-    char *dstip = NULL;
-    char *uuid = NULL;
-    adb_publicAddressType_t *addr = NULL;
-    adb_DescribePublicAddresses_t *input = NULL;
-    adb_DescribePublicAddressesResponse_t *output = NULL;
-    adb_describePublicAddressesType_t *sn = NULL;
-    adb_describePublicAddressesResponseType_t *snrt = NULL;
-
-    sn = adb_describePublicAddressesType_create(env);
-    input = adb_DescribePublicAddresses_create(env);
-
-    EUCA_MESSAGE_MARSHAL(describePublicAddressesType, sn, (&mymeta));
-    adb_DescribePublicAddresses_set_DescribePublicAddresses(input, env, sn);
-
-    output = axis2_stub_op_EucalyptusCC_DescribePublicAddresses(pStub, env, input);
-    if (!output) {
-        printf("ERROR: describePublicAddresses returned NULL\n");
-        return (1);
-    }
-    snrt = adb_DescribePublicAddressesResponse_get_DescribePublicAddressesResponse(output, env);
-    len = adb_describePublicAddressesResponseType_sizeof_addresses(snrt, env);
-    for (i = 0; i < len; i++) {
-        addr = adb_describePublicAddressesResponseType_get_addresses_at(snrt, env, i);
-        ip = adb_publicAddressType_get_sourceAddress(addr, env);
-        dstip = adb_publicAddressType_get_destAddress(addr, env);
-        uuid = adb_publicAddressType_get_uuid(addr, env);
-
-        printf("UUID: %s IP: %s ALLOC: %s\n", uuid, ip, dstip);
-    }
-    return (0);
-}
-
-//!
 //! Marshalls and invokes the start network request
 //!
 //! @param[in] vlan the Virtual LAN (VLAN) identifier
