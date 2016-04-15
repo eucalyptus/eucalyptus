@@ -179,8 +179,9 @@ public class BindingCache {
       final Properties oldProps = new Properties( );
       if ( BindingFileSearch.CACHE_LIST.exists( ) ) {
         try {
-          Reader propIn = Files.newReader( BindingFileSearch.CACHE_LIST, Charset.defaultCharset( ) );
-          oldProps.load( propIn );
+          try ( final Reader propIn = Files.newReader( BindingFileSearch.CACHE_LIST, Charset.defaultCharset( ) ) ) {
+            oldProps.load( propIn );
+          }
         } catch ( Exception ex ) {
           LOG.debug( ex, ex );
         }
