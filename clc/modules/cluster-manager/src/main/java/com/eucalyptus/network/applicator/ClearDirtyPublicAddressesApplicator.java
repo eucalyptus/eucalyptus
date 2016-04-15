@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import com.eucalyptus.cluster.NIInstance;
 import com.eucalyptus.cluster.NINetworkInterface;
+import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.network.NetworkMode;
 import com.eucalyptus.network.PublicAddresses;
 import com.eucalyptus.util.FUtils;
@@ -46,15 +47,18 @@ public class ClearDirtyPublicAddressesApplicator extends ModeSpecificApplicator 
       final ApplicatorChain chain
   ) throws ApplicatorException {
 
-    final Set<String> broadcastPublicIps = context.getNetworkInfo( ).getInstances( ).stream( )
-        .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
-        .map( NINetworkInterface::getPublicIp )
-        .filter( Objects::nonNull )
-        .collect( Collectors.toSet( ) );
+    final NetworkInfo networkInfo = context.getNetworkInfo( );
+    if ( networkInfo.getVersion( ) != null && networkInfo.getVersion().equals( networkInfo.getAppliedVersion( ) ) ) {
+      final Set<String> broadcastPublicIps = networkInfo.getInstances( ).stream( )
+          .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
+          .map( NINetworkInterface::getPublicIp )
+          .filter( Objects::nonNull )
+          .collect( Collectors.toSet( ) );
 
-    PublicAddresses.dirtySnapshot( ).stream( )
-        .filter( publicIp -> !broadcastPublicIps.contains( publicIp ) )
-        .forEach( PublicAddresses::clearDirty );
+      PublicAddresses.dirtySnapshot( ).stream( )
+          .filter( publicIp -> !broadcastPublicIps.contains( publicIp ) )
+          .forEach( PublicAddresses::clearDirty );
+    }
 
     chain.applyNext( context );
   }
