@@ -232,7 +232,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 	@ElementCollection
 	@CollectionTable( name = "metadata_loadbalancer_security_groups" )
-	@JoinColumn( name = "metadata_loadbalancer_id" )
 	@OrderColumn( name = "metadata_security_group_ordinal")
 	private List<LoadBalancerSecurityGroupRef> securityGroupRefs = Lists.newArrayList( );
 

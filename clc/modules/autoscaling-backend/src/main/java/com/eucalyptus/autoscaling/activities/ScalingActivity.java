@@ -89,7 +89,6 @@ public class ScalingActivity extends AbstractOwnedPersistent implements ScalingA
 
   @ElementCollection
   @CollectionTable( name = "metadata_scaling_activity_causes" )
-  @JoinColumn( name = "metadata_scaling_activity_id" )
   @OrderColumn( name = "metadata_cause_index")
   private List<ActivityCause> causes = Lists.newArrayList( );
 

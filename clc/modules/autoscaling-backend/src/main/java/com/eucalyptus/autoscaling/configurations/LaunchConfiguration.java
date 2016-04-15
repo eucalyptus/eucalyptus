@@ -29,7 +29,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
@@ -70,7 +69,6 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @ElementCollection
   @CollectionTable( name = "metadata_launch_configuration_security_groups" )
   @Column( name = "metadata_security_group" )
-  @JoinColumn( name = "metadata_launch_configuration_id" )
   @OrderColumn( name = "metadata_security_group_index")
   private List<String> securityGroups = Lists.newArrayList();
 
@@ -84,7 +82,6 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   
   @ElementCollection  
   @CollectionTable( name = "metadata_launch_configuration_block_device_mappings" )
-  @JoinColumn( name = "metadata_launch_configuration_id" )
   @OrderColumn( name = "metadata_device_mapping_index")
   private List<BlockDeviceMapping> blockDeviceMappings = Lists.newArrayList();
 

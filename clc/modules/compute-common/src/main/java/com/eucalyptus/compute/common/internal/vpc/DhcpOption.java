@@ -51,7 +51,6 @@ public class DhcpOption extends AbstractPersistent {
   @ElementCollection
   @CollectionTable( name = "metadata_dhcp_option_values" )
   @Column( name = "metadata_value" )
-  @JoinColumn( name = "metadata_dhcp_option_id" )
   @OrderColumn( name = "metadata_value_index")
   private List<String> values;
 

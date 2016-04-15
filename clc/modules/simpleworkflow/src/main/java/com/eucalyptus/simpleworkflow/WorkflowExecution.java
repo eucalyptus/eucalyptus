@@ -160,7 +160,6 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   @ElementCollection
   @CollectionTable( name = "swf_workflow_execution_tags" )
   @Column( name = "tag", length = 256 )
-  @JoinColumn( name = "workflow_execution_id" )
   @OrderColumn( name = "tag_index")
   private List<String> tagList;
 
