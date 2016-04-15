@@ -172,7 +172,6 @@
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
-extern int midonet_api_dirty_cache;
 extern int midonet_api_system_changed;
 extern int midocache_invalid;
 
@@ -403,7 +402,7 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
     }
 
     if (pMidoConfig) {
-        rc = do_midonet_teardown_c(pMidoConfig);
+        rc = do_midonet_teardown(pMidoConfig);
         if (rc != 0) {
             ret = 1;
         } else {
@@ -453,8 +452,8 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         return (1);
     }
 
-    if (midonet_api_dirty_cache == 1) {
-        rc = do_midonet_maint_c(pMidoConfig);
+    if (midonet_api_system_changed == 1) {
+        rc = do_midonet_maint(pMidoConfig);
     }
     return (rc);
 }
@@ -499,7 +498,7 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
             break;
         case SIGUSR2:
             LOGINFO("Going to invalidate midocache\n");
-            rc = do_midonet_populate_c(pMidoConfig);
+            rc = do_midonet_populate(pMidoConfig);
             if (rc) {
                 LOGERROR("failed to populate euca VPC models\n");
                 midocache_invalid = 1;
@@ -573,28 +572,17 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
         return (ret);
     }
 
-    LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
-    rc = do_midonet_update_c(pGni, pGniApplied, pMidoConfig);
+    LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_system_changed == 0 ? "CLEAN" : "DIRTY");
+    rc = do_midonet_update(pGni, pGniApplied, pMidoConfig);
 
     if (rc != 0) {
         LOGERROR("failed to update midonet: check log for details\n");
         // Invalidate mido cache - force repopulate
-        midonet_api_dirty_cache = 1;
         midonet_api_system_changed = 1;
         ret = EUCANETD_RUN_ERROR_API;
     } else {
         LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
-/*
-    if ((rc = do_midonet_update(pGni, pGniApplied, pMidoConfig)) != 0) {
-        LOGERROR("could not update midonet: check log for details\n");
-        // Invalidate mido cache - force repopulate
-        midonet_api_dirty_cache = 1;
-        midonet_api_system_changed = 1;
-        ret = EUCANETD_RUN_ERROR_API;
-    } else {
-        LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
-    }
-*/
+
     return (ret);
 }

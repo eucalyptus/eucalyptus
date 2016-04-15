@@ -400,70 +400,68 @@ int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, i
 
 int mido_check_state(void);
 
-int mido_get_tunnelzones_c(char *tenant, midoname ***outnames, int *outnames_max);
-int mido_get_tunnelzone_hosts_c(midoname *tzone, midoname ***outnames, int *outnames_max);
+int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnames_max);
 
-midonet_api_bridge *mido_create_bridge_c(char *tenant, char *name, midoname **outname);
+midonet_api_bridge *mido_create_bridge(char *tenant, char *name, midoname **outname);
 int mido_update_bridge(midoname * name, ...);
 int mido_print_bridge(midoname * name);
-int mido_delete_bridge_c(midoname * name);
-int mido_get_bridges_c(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_delete_bridge(midoname * name);
+int mido_get_bridges(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_bridge *mido_get_bridge(char *name);
 
-midonet_api_router *mido_create_router_c(char *tenant, char *name, midoname **outname);
+midonet_api_router *mido_create_router(char *tenant, char *name, midoname **outname);
 int mido_update_router(midoname * name, ...);
-int mido_delete_router_c(midoname * name);
+int mido_delete_router(midoname * name);
 int mido_print_router(midoname * name);
-int mido_get_routers_c(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_get_routers(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_router *mido_get_router(char *name);
 
 int mido_find_route_from_list(midoname **routes, int max_routes, midoname *rport,
         char *src, char *src_slashnet, char *dst, char *dst_slashnet, char *next_hop_ip,
         char *weight, int *foundidx);
-int mido_create_route_c(midonet_api_router *rt, midoname *router, midoname *rport, char *src, char *src_slashnet,
+int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport, char *src, char *src_slashnet,
         char *dst, char *dst_slashnet, char *next_hop_ip, char *weight, midoname **outname);
-int mido_delete_route_c(midonet_api_router *router, midoname *name);
-int mido_get_routes_c(midoname *router, midoname ***outnames, int *outnames_max);
+int mido_delete_route(midonet_api_router *router, midoname *name);
+int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max);
 
-int mido_get_bgps_c(midoname *port, midoname ***outnames, int *outnames_max);
-int mido_get_bgp_routes_c(midoname *bgp, midoname ***outnames, int *outnames_max);
+int mido_get_bgps(midoname *port, midoname ***outnames, int *outnames_max);
+int mido_get_bgp_routes(midoname *bgp, midoname ***outnames, int *outnames_max);
 
 int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char *slashnet,
         char *gw, u32 *dnsServers, int max_dnsServers, int *foundidx);
-int mido_create_dhcp_c(midonet_api_bridge *br, midoname *devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname **outname);
-//int mido_read_dhcp(midoname * name);
+int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname **outname);
 int mido_update_dhcp(midoname * name, ...);
 int mido_print_dhcp(midoname * name);
-int mido_delete_dhcp_c(midonet_api_bridge *devname, midoname *name);
-int mido_get_dhcps_c(midoname *devname, midoname ***outnames, int *outnames_max);
+int mido_delete_dhcp(midonet_api_bridge *devname, midoname *name);
+int mido_get_dhcps(midoname *devname, midoname ***outnames, int *outnames_max);
 
 int mido_find_dhcphost_from_list(midoname **dhcphosts, int max_dhcphosts, char *name,
         char *mac, char *ip, char *dns_domain, int *foundidx);
-int mido_create_dhcphost_c(midonet_api_bridge *bridge, midoname *dhcp, char *name, char *mac, char *ip, char *dns_domain, midoname **outname);
-int mido_delete_dhcphost_c(midoname *bridge, midoname *dhcp, midoname *name);
-int mido_get_dhcphosts_c(midoname *devname, midoname *dhcp, midoname ***outnames, int *outnames_max);
+int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name, char *mac, char *ip, char *dns_domain, midoname **outname);
+int mido_delete_dhcphost(midoname *bridge, midoname *dhcp, midoname *name);
+int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, int *outnames_max);
 
-int mido_create_portgroup_c(char *tenant, char *name, midoname **outname);
+int mido_create_portgroup(char *tenant, char *name, midoname **outname);
 int mido_update_portgroup(midoname * name, ...);
-int mido_delete_portgroup_c(midoname *name);
+int mido_delete_portgroup(midoname *name);
 int mido_print_portgroup(midoname * name);
-int mido_get_portgroups_c(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_get_portgroups(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_portgroup *mido_get_portgroup(char *name);
 
-int mido_create_portgroup_port_c(midoname *portgroup, midoname *port, midoname **outname);
-int mido_delete_portgroup_port_c(midoname *portgroup, midoname *port);
-int mido_get_portgroup_ports_c(midoname *portgroup, midoname ***outnames, int *outnames_max);
+int mido_create_portgroup_port(midoname *portgroup, midoname *port, midoname **outname);
+int mido_delete_portgroup_port(midoname *portgroup, midoname *port);
+int mido_get_portgroup_ports(midoname *portgroup, midoname ***outnames, int *outnames_max);
 
-int mido_create_port_c(midoname *devname, char *port_type, char *ip, char *nw, char *slashnet, char *mac, midoname **outname);
-int mido_create_bridge_port_c(midonet_api_bridge *br, midoname *devname, midoname **outname);
-int mido_create_router_port_c(midonet_api_router *rt, midoname *devname, char *ip, char *nw, char *slashnet, char *mac, midoname **outname);
-//int mido_read_port(midoname * name);
+int mido_create_port(midoname *devname, char *port_type, char *ip, char *nw, char *slashnet, char *mac, midoname **outname);
+int mido_create_bridge_port(midonet_api_bridge *br, midoname *devname, midoname **outname);
+int mido_create_router_port(midonet_api_router *rt, midoname *devname, char *ip, char *nw, char *slashnet, char *mac, midoname **outname);
 int mido_find_port_from_list(midoname **ports, int max_ports, char *ip, char *nw, char *slashnet, char *mac, int *foundidx);
 int mido_update_port(midoname * name, ...);
 int mido_print_port(midoname * name);
-int mido_delete_bridge_port_c(midonet_api_bridge *bridge, midoname *port);
-int mido_delete_router_port_c(midonet_api_router *router, midoname *port);
-int mido_get_ports_c(midoname *devname, midoname ***outnames, int *outnames_max);
+int mido_delete_bridge_port(midonet_api_bridge *bridge, midoname *port);
+int mido_delete_router_port(midonet_api_router *router, midoname *port);
+int mido_get_ports(midoname *devname, midoname ***outnames, int *outnames_max);
 int mido_refresh_port(midoname *port);
 
 int mido_get_device_ports(midoname **ports, int max_ports, midoname *device, midoname ***outports, int *outports_max);
@@ -474,50 +472,50 @@ int mido_link_ports(midoname *a, midoname *b);
 int mido_link_host_port(midoname *host, char *interface, midoname *device, midoname *port);
 int mido_unlink_host_port(midoname *host, midoname *port);
 
-int mido_get_hosts_c(midoname ***outnames, int *outnames_max);
+int mido_get_hosts(midoname ***outnames, int *outnames_max);
 midonet_api_host *mido_get_host(char *name, char *uuid);
 midonet_api_host *mido_get_host_byip(char *ip);
 int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max);
 int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
 
-midonet_api_chain *mido_create_chain_c(char *tenant, char *name, midoname **outname);
+midonet_api_chain *mido_create_chain(char *tenant, char *name, midoname **outname);
 int mido_update_chain(midoname * name, ...);
 int mido_print_chain(midoname * name);
-int mido_delete_chain_c(midoname *name);
-int mido_get_chains_c(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_delete_chain(midoname *name);
+int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_chain *mido_get_chain(char *name);
 
-int mido_create_rule_c(midonet_api_chain *ch, midoname *chain, midoname **outname, int *next_position, ...);
+int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname, int *next_position, ...);
 int mido_find_rule_from_list(midoname **rules, int max_rules, midoname **outrule, ...);
 int mido_find_rule_from_list_v(midoname **rules, int max_rules, midoname **outrule, va_list *al);
 int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
-int mido_delete_rule_c(midonet_api_chain *chain, midoname *rule);
-int mido_get_rules_c(midoname *chainname, midoname ***outnames, int *outnames_max);
-int mido_get_jump_rules_c(midonet_api_chain *chain, midoname ***outnames, int *outnames_max,
+int mido_delete_rule(midonet_api_chain *chain, midoname *rule);
+int mido_get_rules(midoname *chainname, midoname ***outnames, int *outnames_max);
+int mido_get_jump_rules(midonet_api_chain *chain, midoname ***outnames, int *outnames_max,
         char ***jumptargets, int *jumptargets_max);
-int mido_clear_rules_c(midonet_api_chain *chain);
+int mido_clear_rules(midonet_api_chain *chain);
 
-midonet_api_ipaddrgroup *mido_create_ipaddrgroup_c(char *tenant, char *name, midoname **outname);
+midonet_api_ipaddrgroup *mido_create_ipaddrgroup(char *tenant, char *name, midoname **outname);
 int mido_update_ipaddrgroup(midoname * name, ...);
-int mido_delete_ipaddrgroup_c(midoname *name);
+int mido_delete_ipaddrgroup(midoname *name);
 int mido_print_ipaddrgroup(midoname * name);
-int mido_get_ipaddrgroups_c(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_get_ipaddrgroups(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_ipaddrgroup *mido_get_ipaddrgroup(char *name);
 
-int mido_create_ipaddrgroup_ip_c(midonet_api_ipaddrgroup *ipag, midoname *ipaddrgroup, char *ip, midoname **outname);
+int mido_create_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipag, midoname *ipaddrgroup, char *ip, midoname **outname);
 int mido_find_ipaddrgroup_ip_from_list(midoname **ips, int max_ips, char *ip, midoname **outip);
-int mido_delete_ipaddrgroup_ip_c(midonet_api_ipaddrgroup *ipaddrgroup, midoname *ipaddrgroup_ip);
-int mido_get_ipaddrgroup_ips_c(midoname *ipaddrgroup, midoname ***outnames, int *outnames_max);
-midoname *mido_get_ipaddrgroup_ip_c(midonet_api_ipaddrgroup *ipaddrgroup, int pos);
+int mido_delete_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipaddrgroup, midoname *ipaddrgroup_ip);
+int mido_get_ipaddrgroup_ips(midoname *ipaddrgroup, midoname ***outnames, int *outnames_max);
+midoname *mido_get_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipaddrgroup, int pos);
 
-int mido_create_resource_c(midoname *parents, int max_parents, midoname *newname, midoname **outname, ...);
-int mido_create_resource_v_c(midoname *parents, int max_parents, midoname *newname, midoname **outname, va_list * al);
+int mido_create_resource(midoname *parents, int max_parents, midoname *newname, midoname **outname, ...);
+int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname, midoname **outname, va_list * al);
 int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al);
 int mido_print_resource(char *resource_type, midoname * name);
 int mido_delete_resource(midoname * parentname, midoname * name);
-int mido_get_resources_c(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ***outnames, int *outnames_max);
-int mido_refresh_resource_c(midoname *resc, char *apistr);
+int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ***outnames, int *outnames_max);
+int mido_refresh_resource(midoname *resc, char *apistr);
 
 int mido_cmp_midoname_to_input(midoname * name, ...);
 int mido_cmp_midoname_to_input_json(midoname * name, ...);
