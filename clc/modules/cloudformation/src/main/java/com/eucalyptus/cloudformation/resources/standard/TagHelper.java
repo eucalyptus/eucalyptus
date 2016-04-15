@@ -147,7 +147,7 @@ public class TagHelper {
   }
 
   private static List<String> reservedPrefixes = Lists.newArrayList("euca:","aws:");
-  public static void checkReservedAutoScalingTemplateTags(List<AutoScalingTag> tags) throws ValidationErrorException {
+  public static void checkReservedAutoScalingTemplateTags(Collection<AutoScalingTag> tags) throws ValidationErrorException {
     if (tags == null) return;
     List<String> tagNames = Lists.newArrayList();
     for (AutoScalingTag tag: tags) {

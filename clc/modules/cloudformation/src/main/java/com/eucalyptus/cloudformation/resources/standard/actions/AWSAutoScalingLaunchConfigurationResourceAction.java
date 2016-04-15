@@ -40,6 +40,7 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -49,6 +50,7 @@ import com.google.common.collect.Lists;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -59,7 +61,57 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
   private AWSAutoScalingLaunchConfigurationResourceInfo info = new AWSAutoScalingLaunchConfigurationResourceInfo();
 
   public AWSAutoScalingLaunchConfigurationResourceAction() {
+    // all updates are of type replacement
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null);
+  }
+
+  @Override
+  public UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) {
+    UpdateType updateType = info.supportsTags() && stackTagsChanged ? UpdateType.NO_INTERRUPTION : UpdateType.NONE;
+    AWSAutoScalingLaunchConfigurationResourceAction otherAction = (AWSAutoScalingLaunchConfigurationResourceAction) resourceAction;
+    if (!Objects.equals(properties.getAssociatePublicIpAddress(), otherAction.properties.getAssociatePublicIpAddress())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getBlockDeviceMappings(), otherAction.properties.getBlockDeviceMappings())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getEbsOptimized(), otherAction.properties.getEbsOptimized())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getIamInstanceProfile(), otherAction.properties.getIamInstanceProfile())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getImageId(), otherAction.properties.getImageId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getInstanceId(), otherAction.properties.getInstanceId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getInstanceMonitoring(), otherAction.properties.getInstanceMonitoring())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getInstanceType(), otherAction.properties.getInstanceType())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getKernelId(), otherAction.properties.getKernelId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getKeyName(), otherAction.properties.getKeyName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getRamDiskId(), otherAction.properties.getRamDiskId())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getSecurityGroups(), otherAction.properties.getSecurityGroups())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getSpotPrice(), otherAction.properties.getSpotPrice())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getUserData(), otherAction.properties.getUserData())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    return updateType;
   }
 
   private enum CreateSteps implements Step {
