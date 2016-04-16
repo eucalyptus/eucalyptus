@@ -1699,7 +1699,7 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni)
 }
 
 /**
- * Creates an UDP socket listening on UDP port EUCAN (38226). If bind fails, another
+ * Creates an UDP socket listening on UDP port NEUCA (63822). If bind fails, another
  * instance of eucanetd is likely to be running.
  * @return file descriptor of the newly created socket. -1 on error.
  */

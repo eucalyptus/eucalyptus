@@ -1373,14 +1373,35 @@ int mido_get_ipaddrgroups(char *tenant, midoname ***outnames, int *outnames_max)
  * @return pointer to the data structure that represents the ipaddrgroup, when found. NULL otherwise.
  */
 midonet_api_ipaddrgroup *mido_get_ipaddrgroup(char *name) {
-    midoname tmp;
-    midonet_api_ipaddrgroup *res = NULL;
     if (midocache != NULL) {
+        if (midocache->sorted_ipaddrgroups == 0) {
+            qsort(midocache->ipaddrgroups, midocache->max_ipaddrgroups,
+                    sizeof (midonet_api_ipaddrgroup *), compare_midonet_api_ipaddrgroup);
+            midocache->sorted_ipaddrgroups = 1;
+        }
+        midoname tmp;
+        tmp.name = strdup(name);
+        midonet_api_ipaddrgroup ipag;
+        ipag.obj = &tmp;
+        midonet_api_ipaddrgroup *pipag = &ipag;
+        midonet_api_ipaddrgroup **res = (midonet_api_ipaddrgroup **) bsearch(&pipag,
+                midocache->ipaddrgroups, midocache->max_ipaddrgroups,
+                sizeof (midonet_api_ipaddrgroup *), compare_midonet_api_ipaddrgroup);
+        EUCA_FREE(tmp.name);
+        if (res) {
+            return (*res);
+        }
+    }
+/*
+    if (midocache != NULL) {
+        midoname tmp;
+        midonet_api_ipaddrgroup *res = NULL;
         tmp.name = strdup(name);
         res = midonet_api_cache_lookup_ipaddrgroup(&tmp, NULL);
         EUCA_FREE(tmp.name);
         return (res);
     }
+*/
     return (NULL);
 }
 
@@ -1773,6 +1794,35 @@ int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, 
     mido_free_midoname_list(parents, 2);
 
     return (rc);
+}
+
+/**
+ * Retrieves a midonet object that represents the dhcphost in the argument from midocache.
+ * @param dhcp [in] the bridge dhcp where the dhcphost of interest will be searched.
+ * @param dhcphostname [in] dhcphost of interest.
+ * @return pointer to the data structure that represents the dhcphost, when found. NULL otherwise.
+ */
+midoname *mido_get_dhcphost(midonet_api_dhcp *dhcp, char *dhcphostname) {
+    if (!dhcphostname) {
+        LOGWARN("Invalid argument: cannot retrieve NULL dhcphost.\n");
+        return (NULL);
+    }
+    if (midocache != NULL) {
+        if (dhcp->sorted_dhcphosts == 0) {
+            qsort(dhcp->dhcphosts, dhcp->max_dhcphosts, sizeof (midoname *), compare_midoname_name);
+            dhcp->sorted_dhcphosts = 1;
+        }
+        midoname dhn;
+        dhn.name = strdup(dhcphostname);
+        midoname *pdhn = &dhn;
+        midoname **res = (midoname **) bsearch(&pdhn, dhcp->dhcphosts, dhcp->max_dhcphosts,
+                sizeof (midoname *), compare_midoname_name);
+        EUCA_FREE(dhn.name);
+        if (res) {
+            return (*res);
+        }
+    }
+    return (NULL);
 }
 
 /**
@@ -5033,14 +5083,35 @@ int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max) {
  * @return pointer to the data structure that represents the chain, when found. NULL otherwise.
  */
 midonet_api_chain *mido_get_chain(char *name) {
-    midoname tmp;
-    midonet_api_chain *res = NULL;
     if (midocache != NULL) {
+        if (midocache->sorted_chains == 0) {
+            qsort(midocache->chains, midocache->max_chains,
+                    sizeof (midonet_api_chain *), compare_midonet_api_chain);
+            midocache->sorted_chains = 1;
+        }
+        midoname tmp;
+        tmp.name = strdup(name);
+        midonet_api_chain ch;
+        ch.obj = &tmp;
+        midonet_api_chain *pch = &ch;
+        midonet_api_chain **res = (midonet_api_chain **) bsearch(&pch,
+                midocache->chains, midocache->max_chains,
+                sizeof (midonet_api_chain *), compare_midonet_api_chain);
+        EUCA_FREE(tmp.name);
+        if (res) {
+            return (*res);
+        }
+    }
+/*
+    if (midocache != NULL) {
+        midoname tmp;
+        midonet_api_chain *res = NULL;
         tmp.name = strdup(name);
         res = midonet_api_cache_lookup_chain(&tmp, NULL);
         EUCA_FREE(tmp.name);
         return (res);
     }
+*/
     return (NULL);
 }
 
@@ -6481,6 +6552,7 @@ midonet_api_dhcp *midonet_api_cache_lookup_dhcp_byparam(midonet_api_bridge *brid
  */
 int midonet_api_cache_add_dhcp_host(midonet_api_dhcp *dhcp, midoname *dhcphost) {
     dhcp->dhcphosts = EUCA_APPEND_PTRARR(dhcp->dhcphosts, &(dhcp->max_dhcphosts), dhcphost);
+    dhcp->sorted_dhcphosts = 0;
     return (0);
 }
 
@@ -6497,6 +6569,7 @@ int midonet_api_cache_del_dhcp_host(midonet_api_dhcp *dhcp, midoname *dhcphost) 
     if (todel) {
         // midoname data structure should be released with midocache_midos
         dhcp->dhcphosts[idx] = NULL;
+        dhcp->sorted_dhcphosts = 0;
         (midocache_midos->released)++;
         return (0);
     }
@@ -6829,6 +6902,7 @@ midonet_api_chain *midonet_api_cache_add_chain(midoname *chain) {
     newchain = EUCA_ZALLOC_C(1, sizeof (midonet_api_chain));
     newchain->obj = chain;
     midocache->chains = EUCA_APPEND_PTRARR(midocache->chains, &(midocache->max_chains), newchain);
+    midocache->sorted_chains = 0;
     return (newchain);
 }
 
@@ -6850,6 +6924,7 @@ int midonet_api_cache_del_chain(midoname *chain) {
         }
         midonet_api_chain_free(todel);
         midocache->chains[idx] = NULL;
+        midocache->sorted_chains = 0;
         (midocache_midos->released)++;
         return (0);
     }
@@ -6935,6 +7010,7 @@ midonet_api_ipaddrgroup *midonet_api_cache_add_ipaddrgroup(midoname *ipaddrgroup
     newipaddrgroup = EUCA_ZALLOC_C(1, sizeof (midonet_api_ipaddrgroup));
     newipaddrgroup->obj = ipaddrgroup;
     midocache->ipaddrgroups = EUCA_APPEND_PTRARR(midocache->ipaddrgroups, &(midocache->max_ipaddrgroups), newipaddrgroup);
+    midocache->sorted_ipaddrgroups = 0;
     return (newipaddrgroup);
 }
 
@@ -6956,6 +7032,7 @@ int midonet_api_cache_del_ipaddrgroup(midoname *ipaddrgroup) {
         }
         midonet_api_ipaddrgroup_free(todel);
         midocache->ipaddrgroups[idx] = NULL;
+        midocache->sorted_ipaddrgroups = 0;
         (midocache_midos->released)++;
         return (0);
     }
@@ -7219,7 +7296,7 @@ int midonet_api_delete_all(void) {
 /**
  * Comparator function for midonet_api_iphostmap_entry structures.
  * @param p1 [in] pointer to midonet_api_iphostmap_entry 1.
- * @param p2 [in] pointer to midonet_api_iphostmap_entry 1.
+ * @param p2 [in] pointer to midonet_api_iphostmap_entry 2.
  * @return 0 iff p1->ip == p2->ip. -1 iff p1->ip < p2->ip. 1 iff p1->ip > p2->ip.
  */
 int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2) {
@@ -7234,6 +7311,131 @@ int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2) {
     } else {
         return 1;
     }
+}
+
+/**
+ * Comparator function for midoname structures. Comparison is base on name property.
+ * @param p1 [in] pointer to midoname pointer 1.
+ * @param p2 [in] pointer to midoname pointer 2.
+ * @return 0 iff p1->name == p2->name. -1 iff p1->name < p2->name. 1 iff p1->name > p2->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_midoname_name(const void *p1, const void *p2) {
+    midoname **pp1 = NULL;
+    midoname **pp2 = NULL;
+    midoname *e1 = NULL;
+    midoname *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL midoname\n");
+        return (0);
+    }
+    pp1 = (midoname **) p1;
+    pp2 = (midoname **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->name && strlen(e1->name)) {
+        name1 = e1->name;
+    }
+    if (e2 && e2->name && strlen(e2->name)) {
+        name2 = e2->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
+}
+
+/**
+ * Comparator function for midonet_api_ipaddrgroup structures. Comparison is base on name property.
+ * @param p1 [in] pointer to midonet_api_ipaddrgroup pointer 1.
+ * @param p2 [in] pointer to midonet_api_ipaddrgroup pointer 2.
+ * @return 0 iff p1->.->obj->name == p2->.->obj->name. -1 iff p1->.->obj->name < p2->.->obj->name.
+ * 1 iff p1->.->obj->name > p2->.->obj->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2) {
+    midonet_api_ipaddrgroup **pp1 = NULL;
+    midonet_api_ipaddrgroup **pp2 = NULL;
+    midonet_api_ipaddrgroup *e1 = NULL;
+    midonet_api_ipaddrgroup *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL midonet_api_ipaddrgroup\n");
+        return (0);
+    }
+    pp1 = (midonet_api_ipaddrgroup **) p1;
+    pp2 = (midonet_api_ipaddrgroup **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->obj && e1->obj->name && strlen(e1->obj->name)) {
+        name1 = e1->obj->name;
+    }
+    if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
+        name2 = e2->obj->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
+}
+
+/**
+ * Comparator function for midonet_api_chain structures. Comparison is base on name property.
+ * @param p1 [in] pointer to midonet_api_chain pointer 1.
+ * @param p2 [in] pointer to midonet_api_chain pointer 2.
+ * @return 0 iff p1->.->obj->name == p2->.->obj->name. -1 iff p1->.->obj->name < p2->.->obj->name.
+ * 1 iff p1->.->obj->name > p2->.->obj->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_midonet_api_chain(const void *p1, const void *p2) {
+    midonet_api_chain **pp1 = NULL;
+    midonet_api_chain **pp2 = NULL;
+    midonet_api_chain *e1 = NULL;
+    midonet_api_chain *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL midonet_api_chain\n");
+        return (0);
+    }
+    pp1 = (midonet_api_chain **) p1;
+    pp2 = (midonet_api_chain **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->obj && e1->obj->name && strlen(e1->obj->name)) {
+        name1 = e1->obj->name;
+    }
+    if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
+        name2 = e2->obj->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
 }
 
 

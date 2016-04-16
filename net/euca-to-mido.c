@@ -4229,7 +4229,13 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
             dhcp = vpcsubnet->subnetbr->dhcps[0];
             dhcphosts = dhcp->dhcphosts;
             max_dhcphosts = dhcp->max_dhcphosts;
+            midoname *tmpmn = mido_get_dhcphost(dhcp, vpcinstance->name);
+            if (tmpmn) {
+                LOGTRACE("Found dhcp host %s\n", tmpmn->name);
+                vpcinstance->midos[INST_VPCBR_DHCPHOST] = tmpmn;
+            }
         }
+/*
         for (i = 0; i < max_dhcphosts && !found; i++) {
             if (dhcphosts[i] == NULL) {
                 continue;
@@ -4243,6 +4249,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
             }
             EUCA_FREE(tmpstr);
         }
+*/
     }
 
     // process public IP

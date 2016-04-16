@@ -266,6 +266,7 @@ typedef struct midonet_api_dhcp_t {
     midoname *obj;
     midoname **dhcphosts;
     int max_dhcphosts;
+    int sorted_dhcphosts;
 } midonet_api_dhcp;
 
 typedef struct midonet_api_bridge_t {
@@ -331,10 +332,12 @@ typedef struct midonet_api_cache_t {
     int max_bridges;
     midonet_api_chain **chains;
     int max_chains;
+    int sorted_chains;
     midonet_api_host **hosts;
     int max_hosts;
     midonet_api_ipaddrgroup **ipaddrgroups;
     int max_ipaddrgroups;
+    int sorted_ipaddrgroups;
     midonet_api_portgroup **portgroups;
     int max_portgroups;
     midonet_api_tunnelzone **tunnelzones;
@@ -441,6 +444,7 @@ int mido_find_dhcphost_from_list(midoname **dhcphosts, int max_dhcphosts, char *
 int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name, char *mac, char *ip, char *dns_domain, midoname **outname);
 int mido_delete_dhcphost(midoname *bridge, midoname *dhcp, midoname *name);
 int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, int *outnames_max);
+midoname *mido_get_dhcphost(midonet_api_dhcp *dhcp, char *dhcphostname);
 
 int mido_create_portgroup(char *tenant, char *name, midoname **outname);
 int mido_update_portgroup(midoname * name, ...);
@@ -609,6 +613,9 @@ int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone);
 int midonet_api_delete_all(void);
 
 int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2);
+int compare_midoname_name(const void *p1, const void *p2);
+int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2);
+int compare_midonet_api_chain(const void *p1, const void *p2);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
