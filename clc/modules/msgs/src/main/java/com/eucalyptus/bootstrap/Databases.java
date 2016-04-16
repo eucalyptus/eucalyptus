@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,8 +64,6 @@ package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -80,7 +78,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Database;
@@ -88,7 +85,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
-import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
@@ -119,84 +115,6 @@ public class Databases {
     public DatabaseStateException( String string ) {
       super( string );
     }
-
-  }
-
-  public enum Locks {
-    DISABLED {
-      @Override
-      void isLocked() {
-        File dbLockFile = this.getLockFile();
-        if ( dbLockFile.exists() && Hosts.isCoordinator() ) {
-          this.failStop();
-        }
-      }
-
-      @Override
-      public void failStop() {
-        Faults.forComponent( Eucalyptus.class ).havingId( 1010 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
-        LOG.error( "WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE " + this.getLockName() + "FILE TO PROCEED WITH RISK" );
-        System.exit( 1 );
-      }
-
-    },
-    PARTITIONED {
-      @Override
-      void isLocked() {
-        if ( this.getLockFile().exists() ) {
-          failStop();
-        }
-      }
-
-      @Override
-      public void failStop() {
-        Faults.forComponent( Eucalyptus.class ).havingId( 1011 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
-        LOG.error( "PARTITION DETECTED -- FAIL-STOP TO AVOID POSSIBLE INCONSISTENCY." );
-        LOG.error( "PARTITION DETECTED -- Shutting down CLC after experiencing a possible split-brain partition." );
-        LOG.error( "PARTITION DETECTED -- See cloud-fault.log for guidance." );
-        System.exit( 1 );
-      }
-
-      @Override
-      public void create() {
-        super.create();
-        Faults.forComponent( Eucalyptus.class ).havingId( 1011 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
-      }
-    };
-    public static final String DB_LOCK_FILE = "DB_LOCK_FILE";
-
-    public void delete( ) {
-      this.getLockFile( ).delete();
-      LOG.debug( "The " + this.getLockFile( ).getAbsolutePath( ) + " file was deleted" );
-    }
-
-    protected String getLockName() {
-      return this.name().toLowerCase() + ".lock";
-    }
-
-    abstract void isLocked( );
-
-    public abstract void failStop( );
-
-    protected File getLockFile( ) {
-      return SubDirectory.DB.getChildFile( "data", this.getLockName() );
-    }
-
-    public void create( String reason ) {
-      LOG.error( this.getLockName( ) + ": Caused by: " + reason );
-      this.create( );
-    }
-
-    public void create( ) {
-      try {
-        if ( getLockFile( ).createNewFile( ) ) {
-          LOG.debug( this.getLockName( ) + ": The " + this.getLockFile( ).getAbsolutePath( ) + " file was created." );
-        }
-      } catch ( IOException e ) {
-        LOG.debug("Unable to create the " + this.getLockFile( ).getAbsolutePath( ) + " file: " + e.getMessage());
-      }
-    }
-
 
   }
 
@@ -236,8 +154,6 @@ public class Databases {
     @Override
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
-      Locks.DISABLED.isLocked( );
-      Locks.PARTITIONED.isLocked( );
 
       Groovyness.run( "setup_dbpool.groovy" );
       return true;
