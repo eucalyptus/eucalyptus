@@ -31,7 +31,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "bucket_tags", indexes = {
-    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+    @Index(name = "IDX_bucket_tags_bucket_uuid", columnList = "bucket_uuid")
 })
 public class BucketTags extends AbstractPersistent {
 

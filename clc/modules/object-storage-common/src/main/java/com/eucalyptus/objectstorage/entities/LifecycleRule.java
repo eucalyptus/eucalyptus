@@ -75,7 +75,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "lifecycle_rules", indexes = {
-    @Index(name = "IDX_bucket_uuid", columnList = "bucket_uuid")
+    @Index(name = "IDX_lifecycle_bucket_uuid", columnList = "bucket_uuid")
 })
 public class LifecycleRule extends AbstractPersistent {
 
