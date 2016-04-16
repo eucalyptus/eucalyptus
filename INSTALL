@@ -187,7 +187,7 @@ tar -cvJf $EUCARPM/SOURCES/eucalyptus.tar.xz --exclude .git --exclude eucalyptus
 
 >>>>> Commands 4d: 
 # cd $EUCAGIT/eucalyptus-cloud-libs && \
-tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz --exclude .git --exclude HI --exclude tests --exclude README .
+tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz *.jar licenses
 >>>>> (end of commands)
 
 Now rpmbuild will do all of the build and packaging, in one command:
