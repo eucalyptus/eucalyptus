@@ -541,6 +541,7 @@ int midoname_list_get_midonames(midoname_list *list, midoname ***outnames, int m
 midonet_api_cache *midonet_api_cache_init(void);
 midoname_list *midonet_api_cache_midos_init(void);
 
+int midonet_api_cache_check(void);
 int midonet_api_cache_flush(void);
 int midonet_api_cache_populate(void);
 int midonet_api_cache_refresh(void);

@@ -189,6 +189,8 @@ extern const char *asPeerRoleName[];
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+int eucanetd_dummy_udpsock(void);
+int eucanetd_dummy_udpsock_close(void);
 
 void *zalloc_check(size_t nmemb, size_t size);
 void *realloc_check(void *ptr, size_t nmemb, size_t size);

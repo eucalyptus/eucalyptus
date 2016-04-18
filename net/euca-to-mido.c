@@ -335,6 +335,8 @@ int do_metaproxy_maintain(mido_config * mido, int mode) {
         }
     }
 
+    // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
+    eucanetd_dummy_udpsock_close();
     se_print(&cmds);
     rc = se_execute(&cmds);
     if (rc) {
@@ -342,6 +344,7 @@ int do_metaproxy_maintain(mido_config * mido, int mode) {
         ret = 1;
     }
     se_free(&cmds);
+    eucanetd_dummy_udpsock();
 
     return (ret);
 }
@@ -2498,14 +2501,16 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
  * @return 0 on success. 1 otherwise.
  */
 int do_midonet_maint(mido_config *mido) {
-    //int rc = 0;
+//    int rc = 0;
     int ret = 0;
-    //struct timeval tv;
+//    struct timeval tv;
 
     if (!mido) {
         return (1);
     }
 
+    // Check for number of midoname releases in midocache_midos
+    midonet_api_cache_check();
 /*
     eucanetd_timer_usec(&tv);
     if (0 && midonet_api_system_changed) {

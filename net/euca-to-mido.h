@@ -81,6 +81,8 @@
 #include <eucanetd_config.h>
 
 #include "euca_gni.h"
+#include "euca_lni.h"
+#include "eucanetd.h"
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -239,6 +241,7 @@ typedef struct mido_config_t {
     mido_vpc_secgroup *vpcsecgroups;
     int max_vpcsecgroups;
 
+    int udpsock;
     int router_ids[MAX_RTID];
 } mido_config;
 

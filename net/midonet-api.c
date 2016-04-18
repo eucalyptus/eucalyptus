@@ -141,6 +141,7 @@ struct mem_params_t {
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
+extern int midocache_invalid;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -5800,6 +5801,19 @@ int midonet_api_cache_flush(void) {
     midoname_list_free(midocache_midos);
     midocache_midos = NULL;
     
+    return (0);
+}
+
+/**
+ * Raises the midocache invalid flag if the number of midocache_midos releases reaches
+ * a threshold.
+ * 
+ * @return 0 on success. 1 on any failure.
+ */
+int midonet_api_cache_check(void) {
+    if ((midocache_midos != NULL) && (midocache_midos->released > MIDONAME_LIST_RELEASES_B4INVALIDATE)) {
+        midocache_invalid = 1;
+    }
     return (0);
 }
 

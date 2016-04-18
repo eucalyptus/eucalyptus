@@ -278,6 +278,9 @@ static volatile boolean gIsRunning = FALSE;
 static volatile boolean gUsr1Caught = FALSE;
 static volatile boolean gUsr2Caught = FALSE;
 
+//! Dummy UDP socket
+int eucanetd_dummysock = 0;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -301,7 +304,6 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet);
 static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet);
 static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean * update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo * pGni);
-static int eucanetd_dummy_udpsock(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -922,8 +924,8 @@ static int eucanetd_initialize(void) {
     config->polling_frequency = 5;
     config->init = 1;
     
-    config->udpsock = eucanetd_dummy_udpsock();
-    if (config->udpsock == -1) {
+    int rc = eucanetd_dummy_udpsock();
+    if (rc == -1) {
         exit (1);
     }
 
@@ -1701,9 +1703,9 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni)
 /**
  * Creates an UDP socket listening on UDP port NEUCA (63822). If bind fails, another
  * instance of eucanetd is likely to be running.
- * @return file descriptor of the newly created socket. -1 on error.
+ * @return 0 on success. -1 on error.
  */
-static int eucanetd_dummy_udpsock(void) {
+int eucanetd_dummy_udpsock(void) {
     struct sockaddr_in dummysock;
     int s = -1;
 
@@ -1721,7 +1723,19 @@ static int eucanetd_dummy_udpsock(void) {
         LOGERROR("Cannot start eucanetd: check for another running instance\n");
         return (-1);
     }
-    return (s);
+    eucanetd_dummysock = s;
+    return (0);
+}
+
+/**
+ * Closes the UDP socket listening on UDP port NEUCA (63822).
+ * @return 0 on success. -1 on error.
+ */
+int eucanetd_dummy_udpsock_close(void) {
+    if (eucanetd_dummysock > 0) {
+        return (close(eucanetd_dummysock));
+    }
+    return (1);
 }
 
 /**
