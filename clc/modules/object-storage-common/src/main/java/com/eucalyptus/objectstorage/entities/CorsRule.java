@@ -80,6 +80,9 @@ public class CorsRule extends AbstractPersistent {
   @Column(name = "bucket_uuid")
   private String bucketUuid;
 
+  @Column(name = "sequence")
+  private Integer sequence;
+
   @Column(name = "rule_id")
   private String ruleId;
 
@@ -112,6 +115,14 @@ public class CorsRule extends AbstractPersistent {
 
   public void setRuleId(String ruleId) {
     this.ruleId = ruleId;
+  }
+
+  public Integer getSequence() {
+    return sequence;
+  }
+
+  public void setSequence(Integer sequence) {
+    this.sequence = sequence;
   }
 
   public String getAllowedMethodsJSON() {
