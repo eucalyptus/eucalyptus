@@ -41,6 +41,7 @@ import com.eucalyptus.cloudformation.UpdateStackResponseType;
 import com.eucalyptus.cloudformation.UpdateStackType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
+import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.StacksWithNoUpdateToPerformEntityManager;
 import com.eucalyptus.cloudformation.entity.Status;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -505,6 +506,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
           return newAction;
         }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
+          return newAction;
+        }
         DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, newAction.info.getEffectiveUserId());
         describeStacksType.setStackName(newAction.info.getPhysicalResourceId()); // actually the stack id...
         DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
@@ -545,6 +549,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
           return newAction;
         }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
+          return newAction;
+        }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
         DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, newAction.info.getEffectiveUserId());
         describeStacksType.setStackName(newAction.info.getPhysicalResourceId()); // actually the stack id...
@@ -583,6 +590,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
           return newAction;
         }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
+          return newAction;
+        }
         UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackStackWorkflow(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId(),
           newAction.getStackEntity().getStackId(), newAction.info.getEffectiveUserId());
         return newAction;
@@ -594,6 +604,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         AWSCloudFormationStackResourceAction newAction = (AWSCloudFormationStackResourceAction) newResourceAction;
         AWSCloudFormationStackResourceAction oldAction = (AWSCloudFormationStackResourceAction) oldResourceAction;
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
+          return newAction;
+        }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(newAction.info.getPhysicalResourceId(), newAction.info.getAccountId())) {
           return newAction;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
@@ -668,6 +681,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
           return action;
         }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
+          return action;
+        }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
         String status = getStackStatusAndReason(action, configuration).getStatus();
         if (!Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
@@ -682,6 +698,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
+          return action;
+        }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
           return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
@@ -719,6 +738,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
           return action;
         }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
+          return action;
+        }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
         String status = getStackStatusAndReason(action, configuration).getStatus();
         if (!Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
@@ -733,6 +755,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         if (StacksWithNoUpdateToPerformEntityManager.isStackWithNoUpdateToPerform(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
+          return action;
+        }
+        if (StackUpdateInfoEntityManager.hasNoUpdateInfoRecord(action.info.getPhysicalResourceId(), action.info.getAccountId())) {
           return action;
         }
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
