@@ -4170,9 +4170,6 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     long long timer=0;
 
     timer = time_usec();
-    if (!strstr(url, "system_state")) {
-        //mido_check_state();
-    }
     *out_payload = NULL;
 
     curl = curl_easy_init();
@@ -4250,7 +4247,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
 
     timer = time_usec();
 
-    //mido_check_state();
+    mido_check_state();
 
     mem_reader_params.mem = payload;
     mem_reader_params.size = strlen(payload) + 1;
@@ -4364,7 +4361,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
 
     timer = time_usec();
 
-    //mido_check_state();
+    mido_check_state();
 
     *out_payload = NULL;
 
@@ -4445,7 +4442,7 @@ int midonet_http_delete(char *url)
 
     timer = time_usec();
 
-    //mido_check_state();
+    mido_check_state();
         
     curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
