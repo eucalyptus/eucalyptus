@@ -1217,8 +1217,14 @@ public class AutoScalingBackendService {
                   Sets.newLinkedHashSet( Iterables.filter(
                       Iterables.transform( request.terminationPolicies( ), FUtils.valueOfFunction( TerminationPolicyType.class ) ),
                       Predicates.not( Predicates.isNull( ) ) ) ) ) );
-            if ( request.getDesiredCapacity() != null ) {
-              Integer updatedDesiredCapacity = Numbers.intValue( request.getDesiredCapacity( ) );
+            if ( request.getDesiredCapacity() != null ||
+                ( request.getDesiredCapacity() == null && autoScalingGroup.getDesiredCapacity() < autoScalingGroup.getMinSize( ) ) ||
+                ( request.getDesiredCapacity() == null && autoScalingGroup.getDesiredCapacity() > autoScalingGroup.getMaxSize( ) ) ) {
+              Integer updatedDesiredCapacity = request.getDesiredCapacity() != null ?
+                  Numbers.intValue( request.getDesiredCapacity( ) ) :
+                  Math.min(
+                      Math.max( autoScalingGroup.getDesiredCapacity( ), autoScalingGroup.getMinSize( ) ),
+                      autoScalingGroup.getMaxSize( ) );
               autoScalingGroup.updateDesiredCapacity(
                   updatedDesiredCapacity,
                   String.format("a user request update of AutoScalingGroup constraints to min: %1$d, max: %2$d, desired: %4$d changing the desired capacity from %3$d to %4$d",
