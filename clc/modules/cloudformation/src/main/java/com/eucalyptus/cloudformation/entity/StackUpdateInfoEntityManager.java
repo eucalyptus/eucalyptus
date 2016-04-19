@@ -177,4 +177,8 @@ public class StackUpdateInfoEntityManager {
       db.commit();
     }
   }
+
+  public static boolean hasNoUpdateInfoRecord(String stackId, String accountId) throws CloudFormationException {
+    return getStackUpdateInfoEntity(stackId, accountId) == null;
+  }
 }
