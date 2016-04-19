@@ -39,6 +39,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Statistics;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import net.sf.json.JSONException;
 import net.sf.json.JSONSerializer;
 
@@ -49,6 +50,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public class CloudWatchServiceFieldValidator {
@@ -128,6 +130,7 @@ public class CloudWatchServiceFieldValidator {
       throw new MissingParameterException("The parameter " + name + " is required.");
     }
     validateDimensions(metricDatum.getDimensions(), name + ".Dimensions");
+    validateDimensionsNoDuplicateKeys(metricDatum.getDimensions());
     validateMetricName(metricDatum.getMetricName(), name + ".MetricName",
         true);
     validateWithinTwoWeeks(metricDatum.getTimestamp(), name + "Timestamp");
@@ -135,6 +138,19 @@ public class CloudWatchServiceFieldValidator {
     validateValueAndStatisticSet(metricDatum.getValue(), name + ".Value",
           metricDatum.getStatisticValues(), name + ".StatisticValues");
     return metricDatum;
+  }
+
+  static void validateDimensionsNoDuplicateKeys(Dimensions dimensions) throws InvalidParameterValueException {
+    Set<String> seenDimensionNames = Sets.newHashSet();
+    if (dimensions != null && dimensions.getMember() != null) {
+      for (Dimension dimension: dimensions.getMember()) {
+        if (seenDimensionNames.contains(dimension.getName())) {
+          throw new InvalidParameterValueException("No Metric may specify the same dimension twice.");
+        } else {
+          seenDimensionNames.add(dimension.getName());
+        }
+      }
+    }
   }
 
   static void validateWithinTwoWeeks(Date timestamp, String name) throws CloudWatchException {

@@ -34,6 +34,7 @@ import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsForMetricResp
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsForMetricType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsType;
+import com.eucalyptus.cloudwatch.common.backend.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DisableAlarmActionsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DisableAlarmActionsType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.EnableAlarmActionsResponseType;
@@ -67,12 +68,14 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -110,6 +113,17 @@ public class CloudWatchBackendService {
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       final Boolean actionsEnabled = CloudWatchBackendServiceFieldValidator.validateActionsEnabled(request.getActionsEnabled(), true);
+      // we do this here as the check is not done at AWS on describe alarms for metric for some reason
+      Set<String> seenDimensionNames = Sets.newHashSet();
+      if (request.getDimensions() != null && request.getDimensions().getMember() != null) {
+        for (Dimension dimension: request.getDimensions().getMember()) {
+          if (seenDimensionNames.contains(dimension.getName())) {
+            throw new InvalidParameterValueException("Dimension names must be unique.");
+          } else {
+            seenDimensionNames.add(dimension.getName());
+          }
+        }
+      }
       final Map<String, String> dimensionMap = TransformationFunctions.DimensionsToMap.INSTANCE
           .apply(CloudWatchBackendServiceFieldValidator.validateDimensions(request.getDimensions()));
       final Collection<String> alarmActions = CloudWatchBackendServiceFieldValidator.validateActions(
