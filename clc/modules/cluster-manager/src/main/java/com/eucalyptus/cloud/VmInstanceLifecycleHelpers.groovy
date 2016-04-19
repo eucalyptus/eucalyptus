@@ -821,7 +821,9 @@ class VmInstanceLifecycleHelpers {
       final String subnetId = normalizeIdentifier( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
       final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
-      if ( !Strings.isNullOrEmpty( subnetId ) || instanceNetworkInterface != null ) {
+      if ( !Strings.isNullOrEmpty( subnetId ) ||
+          instanceNetworkInterface != null ||
+          !Iterables.isEmpty( secondaryNetworkInterfaces ) ) {
         if (!networkingFeatures.contains(NetworkingFeature.Vpc)) {
           throw new InvalidMetadataException("EC2-VPC not supported, for EC2-Classic do not specify subnet or network interface")
         }
