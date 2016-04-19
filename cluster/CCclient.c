@@ -484,12 +484,6 @@ int main(int argc, char **argv)
                 printf("cc_createImage() failed\n");
                 exit(1);
             }
-        } else if (!strcmp(argv[2], "describePublicAddresses")) {
-            rc = cc_describePublicAddresses(env, stub);
-            if (rc != 0) {
-                printf("cc_describePublicAddresses() failed\n");
-                exit(1);
-            }
         } else if (!strcmp(argv[2], "killallInstances")) {
             rc = cc_killallInstances(env, stub);
             if (rc != 0) {
