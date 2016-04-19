@@ -336,7 +336,13 @@ int do_metaproxy_maintain(mido_config * mido, int mode) {
     }
 
     // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
-    eucanetd_dummy_udpsock_close();
+    int do_dummyudp = 0;
+    if (cmds.max_commands > 0) {
+        do_dummyudp = 1;
+    }
+    if (do_dummyudp) {
+        eucanetd_dummy_udpsock_close();
+    }
     se_print(&cmds);
     rc = se_execute(&cmds);
     if (rc) {
@@ -344,7 +350,10 @@ int do_metaproxy_maintain(mido_config * mido, int mode) {
         ret = 1;
     }
     se_free(&cmds);
-    eucanetd_dummy_udpsock();
+    // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
+    if (do_dummyudp) {
+        eucanetd_dummy_udpsock();
+    }
 
     return (ret);
 }
@@ -2040,8 +2049,11 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             LOGTRACE("12095:\t%s host did not change\n", gniif->name);
         } else {
             gni_instance_node = mido_get_host_byip(gniif->node);
-            if (vpcif->midos[INST_VMHOST] && vpcif->midos[INST_VMHOST]->init) {
-                if (gni_instance_node) {
+            if (!gni_instance_node) {
+                LOGERROR("\thost %s not found: check midonet and/or midolman health\n", gniif->node);
+                continue;
+            } else {
+                if (vpcif->midos[INST_VMHOST] && vpcif->midos[INST_VMHOST]->init) {
                     if ((gni_instance_node->obj == vpcif->midos[INST_VMHOST]) ||
                             (!strcmp(gni_instance_node->obj->uuid, vpcif->midos[INST_VMHOST]->uuid))) {
                         LOGTRACE("12095:\t%s host did not change.\n", gniif->name);
@@ -2050,12 +2062,9 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                         LOGINFO("\t%s vmhost change detected.\n", gniif->name);
                         disconnect_mido_vpc_instance(vpcsubnet, vpcif);
                     }
-                } else {
-                    LOGERROR("\t%s host %s not found: check midonet and/or midolman health\n", gniif->name, gniif->node);
-                    continue;
                 }
+                vpcif->midos[INST_VMHOST] = gni_instance_node->obj;
             }
-            vpcif->midos[INST_VMHOST] = gni_instance_node->obj;
         }
 
         // do instance/interface-host connection
