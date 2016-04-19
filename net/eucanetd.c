@@ -926,6 +926,7 @@ static int eucanetd_initialize(void) {
     
     int rc = eucanetd_dummy_udpsock();
     if (rc == -1) {
+        LOGERROR("Cannot start eucanetd: check for another running instance\n");
         exit (1);
     }
 
@@ -1720,9 +1721,9 @@ int eucanetd_dummy_udpsock(void) {
     dummysock.sin_port = htons(EUCANETD_DUMMY_UDP_PORT);
     inet_aton("127.0.0.1", &(dummysock.sin_addr));
     if (bind(s, (struct sockaddr *) &dummysock, sizeof(dummysock)) == -1) {
-        LOGERROR("Cannot start eucanetd: check for another running instance\n");
         return (-1);
     }
+    shutdown(s, 0);
     eucanetd_dummysock = s;
     return (0);
 }
@@ -1732,8 +1733,14 @@ int eucanetd_dummy_udpsock(void) {
  * @return 0 on success. -1 on error.
  */
 int eucanetd_dummy_udpsock_close(void) {
+    int rc = 0;
     if (eucanetd_dummysock > 0) {
-        return (close(eucanetd_dummysock));
+        rc = close(eucanetd_dummysock);
+        if (rc) {
+            LOGWARN("Failed to close eucanetd_dummysock\n");
+        }
+        eucanetd_dummysock = -1;
+        return (rc);
     }
     return (1);
 }
