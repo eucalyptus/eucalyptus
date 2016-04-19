@@ -247,6 +247,7 @@ struct driver_handler_t edgeDriverHandler = {
     .implement_network = NULL,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -448,13 +449,13 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         ret = 1;
         LOGERROR("Failed to flush public IP address(es) in '%s' networking mode.\n", DRIVER_NAME());
     } else {
-        for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
+        for (i = 0; i < pGni->max_public_ips; i++) {
             for (j = 0; j < max_nets; j++) {
-                if (ips[j] == globalnetworkinfo->public_ips[i]) {
+                if (ips[j] == pGni->public_ips[i]) {
                     // this global public IP is assigned to the public interface
                     se_init(&cmds, config->cmdprefix, 2, 1);
 
-                    strptra = hex2dot(globalnetworkinfo->public_ips[i]);
+                    strptra = hex2dot(pGni->public_ips[i]);
                     snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
                     EUCA_FREE(strptra);
 
@@ -1062,12 +1063,12 @@ static int update_private_ips(globalNetworkInfo * pGni)
 #ifdef USE_IP_ROUTE_HANDLER
     // Make sure we can install our private and public subnet routes if NC_PROXY is enabled
     if (config->nc_proxy) {
-        if ((rc = install_private_routes(globalnetworkinfo)) != 0) {
+        if ((rc = install_private_routes(pGni)) != 0) {
             LOGERROR("unable to generate private IP routes: check above log errors for details\n");
             return (1);
         }
 
-        if ((rc = install_public_routes(globalnetworkinfo)) != 0) {
+        if ((rc = install_public_routes(pGni)) != 0) {
             LOGERROR("unable to generate private IP routes: check above log errors for details\n");
             return (1);
         }
@@ -1297,12 +1298,12 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
             nms = NULL;
         }
 
-        for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
+        for (i = 0; i < pGni->max_public_ips; i++) {
             found = 0;
             // only clear IPs that are not assigned to instances running on this node
             if (!found && max_instances > 0) {
                 for (j = 0; j < max_instances && !found; j++) {
-                    if (instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
+                    if (instances[j].publicIp == pGni->public_ips[i]) {
                         // this global public IP is assigned to an instance on this node, do not delete
                         found = 1;
                     }
@@ -1313,7 +1314,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
             if (!found && max_nets > 0) {
                 found = 1;
                 for (j = 0; j < max_nets && found; j++) {
-                    if (ips[j] == globalnetworkinfo->public_ips[i]) {
+                    if (ips[j] == pGni->public_ips[i]) {
                         // this global public IP is assigned to the public interface currently (but not to an instance) - do the delete
                         found = 0;
                     }
@@ -1323,7 +1324,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
             if (!found) {
                 se_init(&cmds, config->cmdprefix, 2, 1);
 
-                strptra = hex2dot(globalnetworkinfo->public_ips[i]);
+                strptra = hex2dot(pGni->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
                 EUCA_FREE(strptra);
 
@@ -1429,9 +1430,9 @@ static int update_l2_addressing(globalNetworkInfo * pGni)
     //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
     //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
 
-    rc = gni_find_self_node(globalnetworkinfo, &myself);
+    rc = gni_find_self_node(pGni, &myself);
     if (!rc) {
-        rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+        rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     }
 
     gwip = hex2dot(config->vmGatewayIP);
@@ -2020,13 +2021,13 @@ static int update_host_arp(void)
     LOGDEBUG("updating ARP rules for peers\n");
 
     rc = ebt_handler_repopulate(config->ebt);
-    if ((rc = gni_find_self_node(globalnetworkinfo, &pNode)) == 0) {
+    if ((rc = gni_find_self_node(pGni, &pNode)) == 0) {
         if ((rc = se_init(&arpExecutor, config->cmdprefix, 2, 1)) != 0) {
             LOGERROR("Failed to initialize our sequence executor!\n");
             return (1);
         }
 
-        if ((rc = gni_node_get_instances(globalnetworkinfo, pNode, NULL, 0, NULL, 0, &pInstances, &maxInstances)) == 0) {
+        if ((rc = gni_node_get_instances(pGni, pNode, NULL, 0, NULL, 0, &pInstances, &maxInstances)) == 0) {
             if ((psBridgeMac = INTFC2MAC(config->bridgeDev)) != NULL) {
                 if ((bridgeMacLen = strlen(psBridgeMac)) > 0) {
                     // Conver the MAC to a trimmed down version for EB table comparison

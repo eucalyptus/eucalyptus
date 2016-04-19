@@ -203,10 +203,12 @@ static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
 static int network_driver_system_maint(globalNetworkInfo * pGni, lni_t * pLni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni,
+        globalNetworkInfo * pGniApplied, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
+static int network_driver_handle_signal(globalNetworkInfo * pGni, int signal);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -238,6 +240,7 @@ struct driver_handler_t templateDriverHandler = {
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = network_driver_handle_signal,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -425,7 +428,7 @@ static int network_driver_system_maint(globalNetworkInfo * pGni, lni_t * pLni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni, globalNetworkInfo * pGniApplied, lni_t * pLni)
 {
     u32 ret = EUCANETD_RUN_NO_API;
 
@@ -588,3 +591,40 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
 
     return (0);
 }
+
+//!
+//! This API is invoked when eucanetd catches an USR1 or USR2 signal.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//! @param[in] signal received signal
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!     - pGni must not be NULL
+//!     - The driver must be initialized prior to calling this API.
+//!
+//! @post
+//!
+//! @note
+//!
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal)
+{
+    LOGINFO("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to handle signal. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Is the global network view structure NULL?
+    if (!pGni) {
+        LOGERROR("Failed to handle signal for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        return (1);
+    }
+
+    return (0);
+}
+

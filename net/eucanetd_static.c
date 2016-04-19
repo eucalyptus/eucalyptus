@@ -207,7 +207,8 @@ static boolean gInitialized = FALSE;
 static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni,
+        globalNetworkInfo * pGniApplied, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
@@ -243,6 +244,7 @@ struct driver_handler_t staticDriverHandler = {
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -394,7 +396,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni, globalNetworkInfo * pGniApplied, lni_t * pLni)
 {
     u32 ret = EUCANETD_RUN_NO_API;
 

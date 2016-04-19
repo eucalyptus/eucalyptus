@@ -201,6 +201,7 @@ typedef struct eucanetdConfig_t {
 
     int debug;
     int flushmode;
+    int udpsock;
     boolean init;
 } eucanetdConfig;
 

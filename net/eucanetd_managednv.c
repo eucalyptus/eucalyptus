@@ -203,7 +203,8 @@ static boolean gInitialized = FALSE;
 static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni,
+        globalNetworkInfo * pGniApplied, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
@@ -256,6 +257,7 @@ struct driver_handler_t managedNoVlanDriverHandler = {
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -519,7 +521,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni, globalNetworkInfo * pGniApplied, lni_t * pLni)
 {
     int i = 0;
     int rc = 0;
@@ -1051,7 +1053,7 @@ static int managednv_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClu
     // Install tunnel for each security group but only if they have instances
     for (i = 0, pSecGroup = pSecGroups; i < nbGroups; i++, pSecGroup++) {
         // Do we have any instances for this security-group?
-        if (pSecGroup->max_instance_names == 0)
+        if (pSecGroup->max_instances == 0)
             continue;
 
         // Make sure we find the matching subnet and bridge device
@@ -1182,7 +1184,7 @@ static int managednv_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClu
                     for (j = 0, found = FALSE, done = FALSE; ((j < nbGroups) && !done); j++) {
                         if (pSubnet == managed_find_subnet(pGni, &pSecGroups[j])) {
                             done = TRUE;
-                            if (pSecGroups[j].max_instance_names > 0) {
+                            if (pSecGroups[j].max_instances > 0) {
                                 found = TRUE;
                                 remove = FALSE;
                             }

@@ -306,7 +306,7 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
     int i = 0;
     
     if (!gni || !vpc || !out_interfaces || !max_out_interfaces) {
-        LOGWARN("Invalid argument: NULL pointer.\n");
+        LOGWARN("Invalid argument: NULL pointer - failed to get vpc interfaces.\n");
         return (1);
     }
     LOGTRACE("Searching VPC interfaces.\n");
@@ -317,6 +317,59 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
             LOGTRACE("%s in %s: Y\n", gni->interfaces[i].name, vpc->name);
             result = EUCA_REALLOC(result, max_result + 1, sizeof (gni_instance *));
             result[max_result] = &(gni->interfaces[i]);
+            max_result++;
+        }
+    }
+    *out_interfaces = result;
+    *max_out_interfaces = max_result;
+    return (0);
+}
+
+//!
+//! Searches and returns an array of pointers to gni_instance data structures (holding
+//! interface information) that are associated with the given VPC subnet.
+//!
+//! @param[in]  gni a pointer to the global network information structure
+//! @param[in]  vpcsubnet a pointer to the vpcsubnet gni data structure of interest
+//! @param[in]  vpcinterfaces a list of pointers to interfaces to search
+//! @param[in]  max_vpcinterfaces number of interfaces found
+//! @param[out] out_interfaces a list of pointers to interfaces of interest
+//! @param[out] max_out_interfaces number of interfaces found
+//!
+//! @return 0 if the search is successfully executed - 0 interfaces found is still
+//!         a successful search. 1 otherwise. 
+//!
+//! @see
+//!
+//! @pre
+//!     gni data structure is assumed to be populated.
+//!     out_interfaces should be free of memory allocations.
+//!
+//! @post
+//!     memory allocated to hold the resulting list of interfaces should be released
+//!     by the caller.
+//!
+//! @note
+//!
+int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubnet,
+        gni_instance **vpcinterfaces, int max_vpcinterfaces, gni_instance ***out_interfaces, int *max_out_interfaces) {
+    gni_instance **result = NULL;
+    int max_result = 0;
+    int i = 0;
+    
+    if (!gni || !vpcsubnet || !vpcinterfaces || !out_interfaces || !max_out_interfaces) {
+        LOGWARN("Invalid argument: NULL pointer - failed to get subnet interfaces.\n");
+        return (1);
+    }
+    
+    LOGTRACE("Searching VPC subnet interfaces.\n");
+    for (i = 0; i < max_vpcinterfaces; i++) {
+        if (strcmp(vpcinterfaces[i]->subnet, vpcsubnet->name)) {
+            LOGTRACE("%s in %s: N\n", vpcinterfaces[i]->name, vpcsubnet->name);
+        } else {
+            LOGTRACE("%s in %s: Y\n", vpcinterfaces[i]->name, vpcsubnet->name);
+            result = EUCA_REALLOC(result, max_result + 1, sizeof (gni_instance *));
+            result[max_result] = vpcinterfaces[i];
             max_result++;
         }
     }
@@ -1621,7 +1674,7 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
 int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
                                int *out_max_instance_names, gni_instance ** out_instances, int *out_max_instances)
 {
-    int ret = 0, getall = 0, i = 0, j = 0, k = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
+    int ret = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
     gni_instance *ret_instances = NULL;
     char **ret_instance_names = NULL;
 
@@ -1641,63 +1694,42 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
         LOGDEBUG("nothing to do, both output variables are NULL\n");
         return (0);
     }
-    if (secgroup->max_instance_names == 0) {
+    if (secgroup->max_instances == 0) {
         LOGDEBUG("nothing to do, no instance associated with %s\n", secgroup->name);
         return (0);
     }
     if (do_outnames) {
-        *out_instance_names = NULL;
+        *out_instance_names = EUCA_ZALLOC(secgroup->max_instances, sizeof(char *));
         *out_max_instance_names = 0;
+        ret_instance_names = *out_instance_names;
     }
     if (do_outstructs) {
-        *out_instances = NULL;
+        *out_instances = EUCA_ZALLOC(secgroup->max_instances, sizeof(gni_instance));
         *out_max_instances = 0;
+        ret_instances = *out_instances;
     }
 
     if ((instance_names == NULL) || (!strcmp(instance_names[0], "*"))) {
         getall = 1;
-        if (do_outnames)
-            *out_instance_names = EUCA_ZALLOC(secgroup->max_instance_names, sizeof(char *));
-        if (do_outstructs)
-            *out_instances = EUCA_ZALLOC(secgroup->max_instance_names, sizeof(gni_instance));
     }
 
-    if (do_outnames)
-        ret_instance_names = *out_instance_names;
-    if (do_outstructs)
-        ret_instances = *out_instances;
-
     retcount = 0;
-    for (i = 0; i < secgroup->max_instance_names; i++) {
+    for (i = 0; i < secgroup->max_instances; i++) {
         if (getall) {
             if (do_outnames)
-                ret_instance_names[i] = strdup(secgroup->instance_names[i].name);
+                ret_instance_names[i] = strdup(secgroup->instances[i]->name);
             if (do_outstructs) {
-                for (k = 0; k < gni->max_instances; k++) {
-                    if (!strcmp(gni->instances[k].name, secgroup->instance_names[i].name)) {
-                        memcpy(&(ret_instances[i]), &(gni->instances[k]), sizeof(gni_instance));
-                        break;
-                    }
-                }
+                memcpy(&(ret_instances[i]), secgroup->instances[i], sizeof(gni_instance));
             }
             retcount++;
         } else {
             for (j = 0; j < max_instance_names; j++) {
-                if (!strcmp(instance_names[j], secgroup->instance_names[i].name)) {
+                if (!strcmp(instance_names[j], secgroup->instances[i]->name)) {
                     if (do_outnames) {
-                        *out_instance_names = realloc(*out_instance_names, sizeof(char *) * (retcount + 1));
-                        ret_instance_names = *out_instance_names;
-                        ret_instance_names[retcount] = strdup(secgroup->instance_names[i].name);
+                        ret_instance_names[retcount] = strdup(secgroup->instances[i]->name);
                     }
                     if (do_outstructs) {
-                        for (k = 0; k < gni->max_instances; k++) {
-                            if (!strcmp(gni->instances[k].name, secgroup->instance_names[i].name)) {
-                                *out_instances = realloc(*out_instances, sizeof(gni_instance) * (retcount + 1));
-                                ret_instances = *out_instances;
-                                memcpy(&(ret_instances[retcount]), &(gni->instances[k]), sizeof(gni_instance));
-                                break;
-                            }
-                        }
+                        memcpy(&(ret_instances[retcount]), secgroup->instances[i], sizeof(gni_instance));
                     }
                     retcount++;
                 }
@@ -1721,7 +1753,7 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
 //! @param[in]  max_interface_names number of interfaces specified
 //! @param[out] out_interface_names array of interface names that were found
 //! @param[out] out_max_interface_names number of interfaces found
-//! @param[out] out_interfaces array of found interface structure
+//! @param[out] out_interfaces array of found interface structure pointers
 //! @param[out] out_max_interfaces number of found interfaces
 //!
 //! @return
@@ -1736,15 +1768,14 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
 //!
 int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup,
         char **interface_names, int max_interface_names, char ***out_interface_names,
-        int *out_max_interface_names, gni_instance ** out_interfaces, int *out_max_interfaces)
+        int *out_max_interface_names, gni_instance *** out_interfaces, int *out_max_interfaces)
 {
-    int ret = 0, getall = 0, i = 0, j = 0, k = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
-    int found = 0;
-    gni_instance *ret_interfaces = NULL;
+    int ret = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
+    gni_instance **ret_interfaces = NULL;
     char **ret_interface_names = NULL;
 
     if (!gni || !secgroup) {
-        LOGERROR("Invalid argument: gni or secgroup is NULL\n");
+        LOGERROR("Invalid argument: gni or secgroup is NULL - cannot get interfaces\n");
         return (1);
     }
 
@@ -1758,26 +1789,30 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         LOGDEBUG("nothing to do, both output variables are NULL\n");
         return (0);
     }
-    if (secgroup->max_interface_names == 0) {
+    if (secgroup->max_interfaces == 0) {
         LOGDEBUG("nothing to do, no instances/interfaces associated with %s\n", secgroup->name);
         return (0);
     }
 
     if (do_outnames) {
-        *out_interface_names = NULL;
+        *out_interface_names = EUCA_ZALLOC(secgroup->max_interfaces, sizeof(char **));
+        if (*out_interface_names == NULL) {
+            LOGFATAL("out of memory: failed to allocate out_interface_names\n");
+            do_outnames = 0;
+        }
         *out_max_interface_names = 0;
     }
     if (do_outstructs) {
-        *out_interfaces = NULL;
+        *out_interfaces = EUCA_ZALLOC(secgroup->max_interfaces, sizeof(gni_instance *));
+        if (*out_interfaces == NULL) {
+            LOGFATAL("out of memory: failed to allocate out_interfaces\n");
+            do_outstructs = 0;
+        }
         *out_max_interfaces = 0;
     }
 
     if ((interface_names == NULL) || (!strcmp(interface_names[0], "*"))) {
         getall = 1;
-        if (do_outnames)
-            *out_interface_names = EUCA_ZALLOC(secgroup->max_interface_names, sizeof(char *));
-        if (do_outstructs)
-            *out_interfaces = EUCA_ZALLOC(secgroup->max_interface_names, sizeof(gni_instance));
     }
 
     if (do_outnames)
@@ -1786,53 +1821,22 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         ret_interfaces = *out_interfaces;
 
     retcount = 0;
-    for (i = 0; i < secgroup->max_interface_names; i++) {
+    for (i = 0; i < secgroup->max_interfaces; i++) {
         if (getall) {
             if (do_outnames)
-                ret_interface_names[i] = strdup(secgroup->interface_names[i].name);
+                ret_interface_names[i] = strdup(secgroup->interfaces[i]->name);
             if (do_outstructs) {
-                // Check both GNI instances and interfaces
-                found = 0;
-                for (k = 0; (k < gni->max_instances) && !found; k++) {
-                    if (!strcmp(gni->instances[k].name, secgroup->interface_names[i].name)) {
-                        memcpy(&(ret_interfaces[i]), &(gni->instances[k]), sizeof(gni_instance));
-                        found = 1;
-                    }
-                }
-                for (k = 0; (k < gni->max_interfaces) && !found; k++) {
-                    if (!strcmp(gni->interfaces[k].name, secgroup->interface_names[i].name)) {
-                        memcpy(&(ret_interfaces[i]), &(gni->interfaces[k]), sizeof(gni_instance));
-                        found = 1;
-                    }
-                }
+                ret_interfaces[i] = secgroup->interfaces[i];
             }
             retcount++;
         } else {
             for (j = 0; j < max_interface_names; j++) {
-                if (!strcmp(interface_names[j], secgroup->interface_names[i].name)) {
+                if (!strcmp(interface_names[j], secgroup->interfaces[i]->name)) {
                     if (do_outnames) {
-                        *out_interface_names = realloc(*out_interface_names, sizeof(char *) * (retcount + 1));
-                        ret_interface_names = *out_interface_names;
-                        ret_interface_names[retcount] = strdup(secgroup->interface_names[i].name);
+                        ret_interface_names[retcount] = strdup(secgroup->interfaces[i]->name);
                     }
                     if (do_outstructs) {
-                        found = 0;
-                        for (k = 0; (k < gni->max_instances) && !found; k++) {
-                            if (!strcmp(gni->instances[k].name, secgroup->interface_names[i].name)) {
-                                *out_interfaces = realloc(*out_interfaces, sizeof(gni_instance) * (retcount + 1));
-                                ret_interfaces = *out_interfaces;
-                                memcpy(&(ret_interfaces[retcount]), &(gni->instances[k]), sizeof(gni_instance));
-                                found = 1;
-                            }
-                        }
-                        for (k = 0; (k < gni->max_interfaces) && !found; k++) {
-                            if (!strcmp(gni->interfaces[k].name, secgroup->interface_names[i].name)) {
-                                *out_interfaces = realloc(*out_interfaces, sizeof(gni_instance) * (retcount + 1));
-                                ret_interfaces = *out_interfaces;
-                                memcpy(&(ret_interfaces[retcount]), &(gni->interfaces[k]), sizeof(gni_instance));
-                                found = 1;
-                            }
-                        }
+                        ret_interfaces[retcount] = secgroup->interfaces[i];
                     }
                     retcount++;
                 }
@@ -1955,27 +1959,18 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
     return (0);
 }
 
-//!
-//! Allocates an initialize a new globalNetworkInfo structure.
-//!
-//! @return A pointer to the newly allocated structure or NULL if any memory failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-globalNetworkInfo *gni_init()
-{
+/**
+ * Allocates and initializes a new globalNetworkInfo structure.
+ * @return A pointer to the newly allocated structure or NULL if any failure occurred.
+ */
+globalNetworkInfo *gni_init() {
     globalNetworkInfo *gni = NULL;
-    gni = EUCA_ZALLOC(1, sizeof(globalNetworkInfo));
+    gni = EUCA_ZALLOC(1, sizeof (globalNetworkInfo));
     if (!gni) {
-
+        LOGFATAL("out of memory - allocating memory for GNI\n");
+        exit(1);
     } else {
-        bzero(gni, sizeof(globalNetworkInfo));
+        //bzero(gni, sizeof(globalNetworkInfo));
         gni->init = 1;
     }
     return (gni);
@@ -2060,14 +2055,32 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     xmlFreeDoc(docptr);
     xmlCleanupParser();
 
+    // Populate VPC and subnet interfaces
+    for (int i = 0; i < gni->max_vpcs; i++) {
+        gni_vpc *vpc = &(gni->vpcs[i]);
+        rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
+        if (rc) {
+            LOGWARN("Failed to populate gni %s interfaces.\n", vpc->name);
+            continue;
+        }
+        for (int j = 0; j < vpc->max_subnets; j++) {
+            gni_vpcsubnet *gnisubnet = &(vpc->subnets[j]);
+            rc = gni_vpcsubnet_get_interfaces(gni, gnisubnet, vpc->interfaces, vpc->max_interfaces,
+                    &(gnisubnet->interfaces), &(gnisubnet->max_interfaces));
+            if (rc) {
+                LOGWARN("Failed to populate gni %s interfaces.\n", gnisubnet->name);
+            }
+        }
+    }
     LOGDEBUG("end parsing XML into data structures\n");
 
+    eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
     if (rc) {
         LOGDEBUG("could not validate GNI after XML parse: check network config\n");
         return (1);
     }
-    LOGTRACE("gni validated in %ld us.\n", eucanetd_timer_usec(&tv));
+    LOGINFO("gni validated in %ld us.\n", eucanetd_timer_usec(&tv));
 
     LOGINFO("gni populated in %.2f ms.\n", eucanetd_timer_usec(&ttv) / 1000.0);
     return (0);
@@ -2250,31 +2263,12 @@ int gni_populate_interfaces(globalNetworkInfo *gni, xmlXPathContextPtr ctxptr)
                 EUCA_FREE(results[j]);
             }
             gni->max_interfaces += max_results;
-            EUCA_FREE(results);
         } else {
             LOGDEBUG("No interfaces for %s in GNI.\n", gni->instances[i].name);
         }
-    }
-    //snprintf(expression, 2048, "/network-data/instances/*/networkInterfaces/networkInterface");
-    /*
-    rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-    gni->interfaces = EUCA_ZALLOC(max_results, sizeof (gni_instance));
-    if (gni->interfaces == NULL) {
-        LOGERROR("out of memory.\n");
-        return (1);
-    }
-        for (i = 0; i < max_results; i++) {
-            LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->interfaces[i].name, INTERFACE_ID_LEN, "%s", results[i]);
-            EUCA_FREE(results[i]);
-        }
-    gni->max_interfaces = max_results;
         EUCA_FREE(results);
+    }
 
-    for (i = 0; i < gni->max_interfaces; i++) {
-        gni_populate_instance_interface(&(gni->interfaces[i]), expression, ctxptr);
-        }
-    */
     return 0;
 }
 
@@ -2325,39 +2319,32 @@ int gni_populate_sgs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
     EUCA_FREE(results);
 
     for (j = 0; j < gni->max_secgroups; j++) {
+        gni_secgroup *gsg = &(gni->secgroups[j]);
+        gni_instance *gi = NULL;
         // populate secgroup's instance_names
-        gni->secgroups[j].max_instance_names = 0;
-        //gni->secgroups[j].instance_names = EUCA_ZALLOC(gni->max_instances, sizeof(gni_name));
-        gni->secgroups[j].instance_names = NULL;
+        gsg->instances = EUCA_ZALLOC(gni->max_instances, sizeof (gni_instance *));
+        gsg->max_instances = 0;
         for (k = 0; k < gni->max_instances; k++) {
             for (l = 0; l < gni->instances[k].max_secgroup_names; l++) {
-                if (!strcmp(gni->instances[k].secgroup_names[l].name, gni->secgroups[j].name)) {
-                    //      gni->secgroups[j].instance_names = realloc(gni->secgroups[j].instance_names, sizeof(gni_name) * (gni->secgroups[j].max_instance_names + 1));
-                    gni->secgroups[j].instance_names = EUCA_REALLOC(gni->secgroups[j].instance_names, (gni->secgroups[j].max_instance_names + 1), sizeof(gni_name));
-                    if (gni->secgroups[j].instance_names == NULL) {
-                        LOGERROR("out of memory.\n");
-                        return (1);
-                    }
-                    bzero(&(gni->secgroups[j].instance_names[gni->secgroups[j].max_instance_names]), sizeof(gni_name));
-                    snprintf(gni->secgroups[j].instance_names[gni->secgroups[j].max_instance_names].name, 1024, "%s", gni->instances[k].name);
-                    gni->secgroups[j].max_instance_names++;
+                gi = &(gni->instances[k]);
+                if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
+                    gsg->instances[gsg->max_instances] = gi;
+                    gsg->max_instances++;
                 }
             }
         }
         // populate secgroup's interface_names
-        gni->secgroups[j].max_interface_names = 0;
-        gni->secgroups[j].interface_names = NULL;
-        for (k = 0; k < gni->max_interfaces; k++) {
-            for (l = 0; l < gni->interfaces[k].max_secgroup_names; l++) {
-                if (!strcmp(gni->interfaces[k].secgroup_names[l].name, gni->secgroups[j].name)) {
-                    gni->secgroups[j].interface_names = EUCA_REALLOC(gni->secgroups[j].interface_names, (gni->secgroups[j].max_interface_names + 1), sizeof(gni_name));
-                    if (gni->secgroups[j].interface_names == NULL) {
-                        LOGERROR("out of memory.\n");
-                        return (1);
+        if (IS_NETMODE_VPCMIDO(gni)) {
+            gsg->interfaces = EUCA_ZALLOC(gni->max_interfaces, sizeof (gni_instance *));
+            gsg->max_interfaces = 0;
+            for (k = 0; k < gni->max_interfaces; k++) {
+                gi = &(gni->interfaces[k]);
+                for (l = 0; l < gi->max_secgroup_names; l++) {
+                    if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
+                        gi->gnisgs[l] = gsg;
+                        gsg->interfaces[gsg->max_interfaces] = gi;
+                        gsg->max_interfaces++;
                     }
-                    bzero(&(gni->secgroups[j].interface_names[gni->secgroups[j].max_interface_names]), sizeof(gni_name));
-                    snprintf(gni->secgroups[j].interface_names[gni->secgroups[j].max_interface_names].name, 1024, "%s", gni->interfaces[k].name);
-                    gni->secgroups[j].max_interface_names++;
                 }
             }
         }
@@ -2691,54 +2678,6 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
         gni->vpcs[j].max_subnets = max_results;
         EUCA_FREE(results);
 
-        for (k = 0; k < gni->vpcs[j].max_subnets; k++) {
-            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/ownerId", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
-            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].accountId, 128, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
-            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cidr", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
-            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].cidr, 24, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
-            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cluster", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
-            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].cluster_name, HOSTNAME_LEN, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
-            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/networkAcl", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
-            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].networkAcl_name, 16, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
-            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/routeTable", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
-            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->vpcs[j].subnets[k].routeTable_name, 16, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
-        }
-
         snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/routeTables/routeTable/@name", gni->vpcs[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
         gni->vpcs[j].routeTables = EUCA_ZALLOC(max_results, sizeof (gni_route_table));
@@ -2750,7 +2689,6 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
         gni->vpcs[j].max_routeTables = max_results;
         EUCA_FREE(results);
         for (k = 0; k < gni->vpcs[j].max_routeTables; k++) {
-
             snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/routeTables/routeTable[@name='%s']/ownerId", gni->vpcs[j].name, gni->vpcs[j].routeTables[k].name);
             rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
@@ -2809,6 +2747,58 @@ int gni_populate_vpcs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr)
                     EUCA_FREE(results);
                 }
             }
+        }
+
+        for (k = 0; k < gni->vpcs[j].max_subnets; k++) {
+            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/ownerId", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->vpcs[j].subnets[k].accountId, 128, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cidr", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->vpcs[j].subnets[k].cidr, 24, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/cluster", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->vpcs[j].subnets[k].cluster_name, HOSTNAME_LEN, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/networkAcl", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->vpcs[j].subnets[k].networkAcl_name, 16, "%s", results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/subnets/subnet[@name='%s']/routeTable", gni->vpcs[j].name, gni->vpcs[j].subnets[k].name);
+            rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("after function: %d: %s\n", i, results[i]);
+                snprintf(gni->vpcs[j].subnets[k].routeTable_name, 16, "%s", results[i]);
+                gni->vpcs[j].subnets[k].routeTable = gni_vpc_get_routeTable(&(gni->vpcs[j]), results[i]);
+                if (gni->vpcs[j].subnets[k].routeTable == NULL) {
+                    LOGWARN("Failed to find GNI %s for %s\n", results[i], gni->vpcs[j].subnets[k].name)
+                }
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
         }
 
         snprintf(expression, 2048, "/network-data/vpcs/vpc[@name='%s']/internetGateways/value", gni->vpcs[j].name);
@@ -3484,6 +3474,7 @@ int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath,
     snprintf(expression, 2048, "%s[@name='%s']/securityGroups/value", xmlpath, instance->name);
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
     instance->secgroup_names = EUCA_ZALLOC(max_results, sizeof (gni_name));
+    instance->gnisgs = EUCA_ZALLOC(max_results, sizeof (gni_secgroup *));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
         snprintf(instance->secgroup_names[i].name, 1024, "%s", results[i]);
@@ -3886,8 +3877,10 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
     }
 
     if (mode == GNI_ITERATE_FREE) {
-        bzero(gni, sizeof (globalNetworkInfo));
+        //bzero(gni, sizeof (globalNetworkInfo));
         gni->init = 1;
+        gni->networkInfo[0] = '\0';
+        memset(&(gni->version), 0, sizeof (globalNetworkInfo) - sizeof (gni->init) - sizeof (gni->networkInfo));
     }
 
     return (0);
@@ -4328,6 +4321,7 @@ int gni_instance_clear(gni_instance * instance)
 
     EUCA_FREE(instance->secgroup_names);
     EUCA_FREE(instance->interface_names);
+    EUCA_FREE(instance->gnisgs);
 
     bzero(instance, sizeof(gni_instance));
 
@@ -4359,8 +4353,8 @@ int gni_secgroup_clear(gni_secgroup * secgroup)
     EUCA_FREE(secgroup->ingress_rules);
     EUCA_FREE(secgroup->egress_rules);
     EUCA_FREE(secgroup->grouprules);
-    EUCA_FREE(secgroup->instance_names);
-    EUCA_FREE(secgroup->interface_names);
+    EUCA_FREE(secgroup->instances);
+    EUCA_FREE(secgroup->interfaces);
 
     bzero(secgroup, sizeof(gni_secgroup));
 
@@ -4389,20 +4383,208 @@ int gni_vpc_clear(gni_vpc * vpc)
         return (0);
     }
 
+    for (i = 0; i < vpc->max_subnets; i++) {
+        EUCA_FREE(vpc->subnets[i].interfaces);
+    }
     EUCA_FREE(vpc->subnets);
     EUCA_FREE(vpc->networkAcls);
-    if (vpc->max_routeTables > 0) {
-        for (i = 0; i < vpc->max_routeTables; i++) {
-            EUCA_FREE(vpc->routeTables[i].entries);
-        }
+    for (i = 0; i < vpc->max_routeTables; i++) {
+        EUCA_FREE(vpc->routeTables[i].entries);
     }
     EUCA_FREE(vpc->routeTables);
     EUCA_FREE(vpc->natGateways);
     EUCA_FREE(vpc->internetGatewayNames);
+    EUCA_FREE(vpc->interfaces);
 
     bzero(vpc, sizeof(gni_vpc));
 
     return (0);
+}
+
+/**
+ * Searches and returns the VPC that matches the name in the argument, if found.
+ * @param gni [in] globalNetworkInfo structure that holds the network state to search.
+ * @param name [in] name of the VPC of interest.
+ * @param startidx [i/o] start index to the array of VPCs in gni. If a matching VPC
+ * is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpc of interest when found. NULL otherwise.
+ */
+gni_vpc *gni_get_vpc(globalNetworkInfo *gni, char *name, int *startidx) {
+    gni_vpc *vpcs = NULL;
+    int start = 0;
+
+    if ((gni == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    vpcs = gni->vpcs;
+    for (int i = start; i < gni->max_vpcs; i++) {
+        if (!strcmp(name, vpcs[i].name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return &(vpcs[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches and returns the VPC subnet that matches the name in the argument, if found.
+ * @param vpc [in] gni_vpc that contains the subnet to search.
+ * @param name [in] name of the VPC subnet of interest.
+ * @param startidx [i/o] start index to the array of VPC subnets in gni. If a matching VPC
+ * subnet is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpcsubnet of interest when found. NULL otherwise.
+ */
+gni_vpcsubnet *gni_get_vpcsubnet(gni_vpc *vpc, char *name, int *startidx) {
+    gni_vpcsubnet *vpcsubnets = NULL;
+    int start = 0;
+
+    if ((vpc == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    vpcsubnets = vpc->subnets;
+    for (int i = start; i < vpc->max_subnets; i++) {
+        if (!strcmp(name, vpcsubnets[i].name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return &(vpcsubnets[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches and returns the VPC subnet interface that matches the name in the argument, if found.
+ * @param vpcsubnet [in] gni_vpcsubnet structure that contains the interface to search.
+ * @param name [in] name of the interface of interest.
+ * @param startidx [i/o] start index to the array of VPC subnets interfaces in gni. If a matching VPC
+ * subnet interface is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpcsubnet of interest when found. NULL otherwise.
+ */
+gni_instance *gni_get_interface(gni_vpcsubnet *vpcsubnet, char *name, int *startidx) {
+    gni_instance **interfaces = NULL;
+    int start = 0;
+
+    if ((vpcsubnet == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    interfaces = vpcsubnet->interfaces;
+    for (int i = start; i < vpcsubnet->max_interfaces; i++) {
+        if (!strcmp(name, interfaces[i]->name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return (interfaces[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches and returns the VPC natgateway that matches the name in the argument, if found.
+ * @param vpc [in] gni_vpc that contains the natgateway to search.
+ * @param name [in] name of the VPC natgateway of interest.
+ * @param startidx [i/o] start index to the array of VPC natgateways in gni. If a matching VPC
+ * natgateway is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpcnatgateway of interest when found. NULL otherwise.
+ */
+gni_nat_gateway *gni_get_natgateway(gni_vpc *vpc, char *name, int *startidx) {
+    gni_nat_gateway *vpcnatgateways = NULL;
+    int start = 0;
+
+    if ((vpc == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    vpcnatgateways = vpc->natGateways;
+    for (int i = start; i < vpc->max_natGateways; i++) {
+        if (!strcmp(name, vpcnatgateways[i].name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return &(vpcnatgateways[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches and returns the VPC routetable that matches the name in the argument, if found.
+ * @param vpc [in] gni_vpc that contains the routetable to search.
+ * @param name [in] name of the VPC routetable of interest.
+ * @param startidx [i/o] start index to the array of VPC routetables in gni. If a matching VPC
+ * routetable is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpcroutetable of interest when found. NULL otherwise.
+ */
+gni_route_table *gni_get_routetable(gni_vpc *vpc, char *name, int *startidx) {
+    gni_route_table *vpcroutetables = NULL;
+    int start = 0;
+
+    if ((vpc == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    vpcroutetables = vpc->routeTables;
+    for (int i = start; i < vpc->max_routeTables; i++) {
+        if (!strcmp(name, vpcroutetables[i].name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return &(vpcroutetables[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches and returns the security group that matches the name in the argument, if found.
+ * @param gni [in] globalNetworkInfo structure that holds the network state to search.
+ * @param name [in] name of the security group of interest.
+ * @param startidx [i/o] start index to the array of VPCs in gni. If a matching security group
+ * is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_secgroup of interest when found. NULL otherwise.
+ */
+gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx) {
+    gni_secgroup *secgroups = NULL;
+    int start = 0;
+
+    if ((gni == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    secgroups = gni->secgroups;
+    for (int i = start; i < gni->max_secgroups; i++) {
+        if (!strcmp(name, secgroups[i].name)) {
+            if (startidx) {
+                *startidx = i + 1;
+                return &(secgroups[i]);
+            }
+        }
+    }
+    return (NULL);
 }
 
 //!
@@ -4992,12 +5174,12 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
         }
     }
 
-    if (!secgroup->max_instance_names || !secgroup->instance_names) {
+    if (!secgroup->max_instances || !secgroup->instances) {
         LOGWARN("secgroup %s: no instances\n", secgroup->name);
         return (0);
     } else {
-        for (i = 0; i < secgroup->max_instance_names; i++) {
-            if (!strlen(secgroup->instance_names[i].name)) {
+        for (i = 0; i < secgroup->max_instances; i++) {
+            if (!strlen(secgroup->instances[i]->name)) {
                 LOGWARN("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
                 return (1);
             }
@@ -5087,11 +5269,11 @@ void gni_sg_print(gni_secgroup *sg, int loglevel)
     EUCALOG(loglevel, "\tgrouprules   = %d rules\n", sg->max_grouprules);
     EUCALOG(loglevel, "\tingress      = %d rules\n", sg->max_ingress_rules);
     EUCALOG(loglevel, "\tegress       = %d rules\n", sg->max_egress_rules);
-    for (i = 0; i < sg->max_instance_names; i++) {
-        EUCALOG(loglevel, "\tinstance[%d] = %s\n", i, sg->instance_names[i].name);
+    for (i = 0; i < sg->max_instances; i++) {
+        EUCALOG(loglevel, "\tinstance[%d] = %s\n", i, sg->instances[i]->name);
     }
-    for (i = 0; i < sg->max_interface_names; i++) {
-        EUCALOG(loglevel, "\tinterface[%d] = %s\n", i, sg->interface_names[i].name);
+    for (i = 0; i < sg->max_interfaces; i++) {
+        EUCALOG(loglevel, "\tinterface[%d] = %s\n", i, sg->interfaces[i]->name);
     }
 }
 
@@ -5163,4 +5345,323 @@ int cmpipaddr(const void *p1, const void *p2)
         return -1;
     else
         return 1;
+}
+
+//!
+//! Compares two gni_vpc structures in the argument.
+//!
+//! @param[in] a gni_vpc structure of interest.
+//! @param[in] b gni_vpc structure of interest.
+//! @return 0 if name and number of entries match. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        return (1);
+    }
+    if (strcmp(a->dhcpOptionSet, b->dhcpOptionSet)) {
+        return (1);
+    }
+    if ((a->max_internetGatewayNames == b->max_internetGatewayNames) &&
+            (a->max_natGateways == b->max_natGateways) &&
+            (a->max_networkAcls == b->max_networkAcls) &&
+            (a->max_routeTables == b->max_routeTables) &&
+            (a->max_subnets == b->max_subnets)) {
+        return (0);
+    }
+    return (1);
+}
+
+//!
+//! Compares two gni_vpcsubnet structures in the argument.
+//!
+//! @param[in] a gni_vpcsubnet structure of interest.
+//! @param[in] b gni_vpcsubnet structure of interest.
+//! @return 0 if name, routeTable_name and networkAcl_name match. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        return (1);
+    }
+    if ((!strcmp(a->routeTable_name, b->routeTable_name)) &&
+            (!strcmp(a->networkAcl_name, b->networkAcl_name)) &&
+            (!cmp_gni_route_table(a->routeTable, b->routeTable))) {
+        return (0);
+    }
+    return (1);
+}
+
+//!
+//! Compares two gni_nat_gateway structures in the argument.
+//!
+//! @param[in] a gni_nat_gateway structure of interest.
+//! @param[in] b gni_nat_gateway structure of interest.
+//! @return 0 if name matches. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (!strcmp(a->name, b->name)) {
+        return (0);
+    }
+    return (1);
+}
+
+//!
+//! Compares two gni_route_table structures in the argument.
+//!
+//! @param[in] a gni_route_table structure of interest.
+//! @param[in] b gni_route_table structure of interest.
+//! @return 0 if name and route entries match. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        return (1);
+    }
+    if (a->max_entries != b->max_entries) {
+        return (1);
+    }
+    for (int i = 0; i < a->max_entries; i++) {
+        if ((strcmp(a->entries[i].destCidr, b->entries[i].destCidr)) ||
+                (strcmp(a->entries[i].target, b->entries[i].target))) {
+            return (1);
+        }
+    }
+    return (0);
+}
+
+//!
+//! Compares two gni_secgroup structures in the argument.
+//!
+//! @param[in]  a gni_secgroup structure of interest.
+//! @param[in]  b gni_secgroup structure of interest.
+//! @param[out] ingress_diff set to 1 iff ingress rules of a and b differ.
+//! @param[out] egress_diff set to 1 iff egress rules of a and b differ.
+//! @param[out] interfaces_diff set to 1 iff member interfaces of a and b differ.
+//! @return 0 if name and rule entries match. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note order of rules are assumed to be the same for both a and b.
+//!
+int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff) {
+    int abmatch = 1;
+    if (a == b) {
+        if (ingress_diff) *ingress_diff = 0;
+        if (egress_diff) *egress_diff = 0;
+        if (interfaces_diff) *interfaces_diff = 0;
+        return (0);
+    }
+
+    if (ingress_diff) *ingress_diff = 1;
+    if (egress_diff) *egress_diff = 1;
+    if (interfaces_diff) *interfaces_diff = 1;
+
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        abmatch = 0;
+    } else {
+        if (a->max_ingress_rules == b->max_ingress_rules) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_ingress_rules && !diffound; i++) {
+                if ((a->ingress_rules[i].cidrNetaddr != b->ingress_rules[i].cidrNetaddr) ||
+                        (a->ingress_rules[i].cidrSlashnet != b->ingress_rules[i].cidrSlashnet) ||
+                        (a->ingress_rules[i].protocol != b->ingress_rules[i].protocol) ||
+                        (a->ingress_rules[i].fromPort != b->ingress_rules[i].fromPort) ||
+                        (a->ingress_rules[i].toPort != b->ingress_rules[i].toPort) ||
+                        (a->ingress_rules[i].icmpCode != b->ingress_rules[i].icmpCode) ||
+                        (a->ingress_rules[i].icmpType != b->ingress_rules[i].icmpType) ||
+                        (strcmp(a->ingress_rules[i].groupId, b->ingress_rules[i].groupId))) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                if (ingress_diff) *ingress_diff = 0;
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
+        if (a->max_egress_rules == b->max_egress_rules) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_egress_rules && !diffound; i++) {
+                if ((a->egress_rules[i].cidrNetaddr != b->egress_rules[i].cidrNetaddr) ||
+                        (a->egress_rules[i].cidrSlashnet != b->egress_rules[i].cidrSlashnet) ||
+                        (a->egress_rules[i].protocol != b->egress_rules[i].protocol) ||
+                        (a->egress_rules[i].fromPort != b->egress_rules[i].fromPort) ||
+                        (a->egress_rules[i].toPort != b->egress_rules[i].toPort) ||
+                        (a->egress_rules[i].icmpCode != b->egress_rules[i].icmpCode) ||
+                        (a->egress_rules[i].icmpType != b->egress_rules[i].icmpType) ||
+                        (strcmp(a->egress_rules[i].groupId, b->egress_rules[i].groupId))) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                if (egress_diff) *egress_diff = 0;
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
+        if (a->max_interfaces == b->max_interfaces) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_interfaces && !diffound; i++) {
+                if (strcmp(a->interfaces[i]->name, b->interfaces[i]->name)) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                if (interfaces_diff) *interfaces_diff = 0;
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
+    }
+
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
+}
+
+//!
+//! Compares two gni_interface structures in the argument.
+//!
+//! @param[in]  a gni_interface structure of interest.
+//! @param[in]  b gni_interface structure of interest.
+//! @param[out] pubip_diff set to 1 iff public IP of a and b differ.
+//! @param[out] sdc_diff set to 1 iff src/dst check flag of a and b differ.
+//! @param[out] host_diff set to 1 iff host/node of a and b differ.
+//! @param[out] sg_diff set to 1 iff list of security group names of a and b differ.
+//! @return 0 if name and other properties of a and b match. Non-zero otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note order of rules are assumed to be the same for both a and b.
+//!
+int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff) {
+    int abmatch = 1;
+    int sgmatch = 1;
+    if (a == b) {
+        if (pubip_diff) *pubip_diff = 0;
+        if (sdc_diff) *sdc_diff = 0;
+        if (host_diff) *host_diff = 0;
+        if (sg_diff) *sg_diff = 0;
+        return (0);
+    }
+
+    if (pubip_diff) *pubip_diff = 1;
+    if (sdc_diff) *sdc_diff = 1;
+    if (host_diff) *host_diff = 1;
+    if (sg_diff) *sg_diff = 1;
+
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        abmatch = 0;
+    } else {
+        if (a->srcdstcheck == b->srcdstcheck) {
+            if (sdc_diff) *sdc_diff = 0;
+        } else {
+            abmatch = 0;
+        }
+        if (a->publicIp == b->publicIp) {
+            if (pubip_diff) *pubip_diff = 0;
+        } else {
+            abmatch = 0;
+        }
+        if (!strcmp(a->node, b->node)) {
+            if (host_diff) *host_diff = 0;
+        } else {
+            abmatch = 0;
+        }
+        if (a->max_secgroup_names != b->max_secgroup_names) {
+            abmatch = 0;
+            sgmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_secgroup_names; i++) {
+                if (strcmp(a->secgroup_names[i].name, b->secgroup_names[i].name)) {
+                    abmatch = 0;
+                    sgmatch = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (sg_diff && (sgmatch == 1)) {
+        *sg_diff = 0;
+    }
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
 }

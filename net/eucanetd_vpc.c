@@ -128,6 +128,7 @@
 #include <config.h>
 #include <sequence_executor.h>
 #include <atomic_file.h>
+#include <signal.h>
 
 #include "ipt_handler.h"
 #include "ips_handler.h"
@@ -171,7 +172,8 @@
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
-extern int midonet_api_dirty_cache;
+extern int midonet_api_system_changed;
+extern int midocache_invalid;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -187,6 +189,7 @@ extern int midonet_api_dirty_cache;
 
 //! Set to TRUE when driver is initialized
 static boolean gInitialized = FALSE;
+static boolean gTunnelZoneOk = FALSE;
 
 //! Midonet pluggin specific configuration
 mido_config *pMidoConfig = NULL;
@@ -209,7 +212,9 @@ static int network_driver_init(eucanetdConfig *pConfig);
 static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(globalNetworkInfo *pGni);
 static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni,
+        globalNetworkInfo *pGniApplied, lni_t *pLni);
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -241,6 +246,7 @@ struct driver_handler_t midoVpcDriverHandler = {
     .implement_network = NULL,
     .implement_sg = NULL,
     .implement_addressing = NULL,
+    .handle_signal = network_driver_handle_signal,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -287,6 +293,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
         return (0);
     }
 
+/*
     if ((pMidoConfig = EUCA_ZALLOC(1, sizeof (mido_config))) == NULL) {
         LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
         return (1);
@@ -299,6 +306,17 @@ static int network_driver_init(eucanetdConfig * pConfig)
         EUCA_FREE(pMidoConfig);
         return (1);
     }
+*/
+
+    pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
+    rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
+            pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
+    if (rc) {
+        LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
+        EUCA_FREE(pMidoConfig);
+        return (1);
+    }
+    //pMidoConfig = pMidoConfig_c;
     
     // Release unnecessary handlers
     if (pConfig->ipt) {
@@ -338,11 +356,10 @@ static int network_driver_init(eucanetdConfig * pConfig)
 //!
 //! @note
 //!
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
+static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
 {
     int ret = 0;
 
-    LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
     if (forceFlush) {
         if (network_driver_system_flush(pGni)) {
             LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
@@ -384,17 +401,16 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
         return (1);
     }
 
-    //    if (PEER_IS_NC(eucanetdPeer)) {
-        if (pMidoConfig) {
-            if ((rc = do_midonet_teardown(pMidoConfig)) != 0) {
-                ret = 1;
-            } else {
-                EUCA_FREE(pMidoConfig);
-                pMidoConfig = NULL;
-                gInitialized = FALSE;
-            }
+    if (pMidoConfig) {
+        rc = do_midonet_teardown(pMidoConfig);
+        if (rc != 0) {
+            ret = 1;
+        } else {
+            EUCA_FREE(pMidoConfig);
+            pMidoConfig = NULL;
+            gInitialized = FALSE;
         }
-        //    }
+    }
 
     return (0);
 }
@@ -436,11 +452,62 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         return (1);
     }
 
-    if (midonet_api_dirty_cache == 1) {
-        // Cache is invalid. Let's pre-populate mido.
+    if (midonet_api_system_changed == 1) {
         rc = do_midonet_maint(pMidoConfig);
     }
     return (rc);
+}
+
+//!
+//! This API is invoked when eucanetd catches an USR1 or USR2 signal.
+//!
+//! @param[in] pGni a pointer to the Global Network Information structure
+//! @param[in] signal received signal
+//!
+//! @return 0 on success, 1 otherwise.
+//!
+//! @see
+//!
+//! @pre
+//!     - pGni must not be NULL
+//!     - The driver must be initialized prior to calling this API.
+//!
+//! @post
+//!
+//! @note
+//!
+static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
+    int rc = 0;
+    LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to handle signal. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Is the global network view structure NULL?
+    if (!pGni) {
+        LOGERROR("Failed to handle signal for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+        return (1);
+    }
+
+    switch (signal) {
+        case SIGUSR1:
+            mido_info_http_count_total();
+            mido_info_midocache();
+            break;
+        case SIGUSR2:
+            LOGINFO("Going to invalidate midocache\n");
+            rc = do_midonet_populate(pMidoConfig);
+            if (rc) {
+                LOGERROR("failed to populate euca VPC models\n");
+                midocache_invalid = 1;
+            }
+            break;
+        default:
+            break;
+    }
+    return (0);
 }
 
 //!
@@ -461,15 +528,37 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
 //!
 //! @note
 //!
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni)
 {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
     char versionFile[EUCA_MAX_PATH];
+    int check_tz_attempts = 30;
     struct timeval tv;
-    
-    LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
+
     eucanetd_timer(&tv);
+    // Make sure midoname buffer is available
+    midonet_api_cache_midos_init();
+
+    if (!gTunnelZoneOk) {
+        LOGINFO("Checking MidoNet tunnel-zone.\n");
+        rc = 1;
+    }
+    while (!gTunnelZoneOk) {
+        // Check tunnel-zone
+        rc = check_mido_tunnelzone();
+        if (rc) {
+            if ((--check_tz_attempts) > 0) {
+                sleep(3);
+            } else {
+                LOGERROR("Cannot proceed without a valid tunnel-zone.\n");
+                return (EUCANETD_RUN_ERROR_API);
+            }
+        } else {
+            gTunnelZoneOk = TRUE;
+        }
+    }
+
     bzero(versionFile, EUCA_MAX_PATH);
 
     // Is the driver initialized?
@@ -483,12 +572,17 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, lni_t *pLni)
         return (ret);
     }
 
-    LOGDEBUG("midonet_api cache state: %s\n", midonet_api_dirty_cache == 0 ? "CLEAN" : "DIRTY");
-    if ((rc = do_midonet_update(pGni, pMidoConfig)) != 0) {
-        LOGERROR("could not update midonet: check log for details\n");
+    LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_system_changed == 0 ? "CLEAN" : "DIRTY");
+    rc = do_midonet_update(pGni, pGniApplied, pMidoConfig);
+
+    if (rc != 0) {
+        LOGERROR("failed to update midonet: check log for details\n");
+        // Invalidate mido cache - force repopulate
+        midonet_api_system_changed = 1;
         ret = EUCANETD_RUN_ERROR_API;
     } else {
-        LOGINFO("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
+        LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }
+
     return (ret);
 }

@@ -106,6 +106,8 @@
 
 //! @}
 
+#define EUCANETD_DUMMY_UDP_PORT                  63822
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -128,6 +130,13 @@ typedef enum eucanetd_peer_t {
     PEER_MAX = 5,                      //!< This is an invalid role use to detect initialization errors (couldn't set the role)
 } eucanetd_peer;
 
+enum eucanetd_debug_level_t {
+    EUCANETD_DEBUG_NONE = 0,
+    EUCANETD_DEBUG_TRACE = 1,
+    EUCANETD_DEBUG_DEBUG = 2,
+    EUCANETD_DEBUG_INFO = 3,
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -142,10 +151,12 @@ typedef struct driver_handler_t {
     int (*upgrade) (globalNetworkInfo *pGni);                               //!< This is optional when upgrade tasks are required.
     int (*system_flush) (globalNetworkInfo *pGni);                          //!< Responsible for the flushing of all euca networking artifacts
     int (*system_maint) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Maintenance actions when eucanetd is idle (e.g., no GNI changes)
-    u32 (*system_scrub) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Works on detecting what is changing
+    u32 (*system_scrub) (globalNetworkInfo *pGni,
+            globalNetworkInfo *pGniApplied, lni_t *pLni);                   //!< Works on detecting what is changing
     int (*implement_network) (globalNetworkInfo *pGni, lni_t *pLni);        //!< Takes care of network devices, tunnels, etc.
     int (*implement_sg) (globalNetworkInfo *pGni, lni_t *pLni);             //!< Takes care of security group implementations and membership
     int (*implement_addressing) (globalNetworkInfo *pGni, lni_t *pLni);     //!< Takes care of IP addressing, Elastic IPs, etc.
+    int (*handle_signal) (globalNetworkInfo *pGni, int signal);             //!< Forward signals (USR1 and USR2) to driver
 } driver_handler;
 
 /*----------------------------------------------------------------------------*\
@@ -165,7 +176,7 @@ extern struct driver_handler_t staticDriverHandler;         //!< STATIC network 
 //! @}
 
 //! Global Network Information structure pointer.
-extern globalNetworkInfo *globalnetworkinfo;
+//extern globalNetworkInfo *globalnetworkinfo;
 
 //! Role of the component running alongside this eucanetd service
 extern eucanetd_peer eucanetdPeer;
@@ -178,6 +189,12 @@ extern const char *asPeerRoleName[];
  |                             EXPORTED PROTOTYPES                            |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+int eucanetd_dummy_udpsock(void);
+int eucanetd_dummy_udpsock_close(void);
+
+void *zalloc_check(size_t nmemb, size_t size);
+void *realloc_check(void *ptr, size_t nmemb, size_t size);
+void *append_ptrarr(void *arr, int *max_arr, void *ptr);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -208,6 +225,15 @@ extern const char *asPeerRoleName[];
 
 //! Macro to convert a peer enumeration to a string representation
 #define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
+
+#ifndef EUCA_APPEND_PTRARR
+#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
+#endif /* ! EUCA_APPEND_PTRARR */
+
+#ifndef EUCA_ZALLOC_C
+#define EUCA_ZALLOC_C(_nmemb, _size)             zalloc_check((_nmemb), (_size))
+#define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
+#endif /* ! EUCA_ZALLOC_C */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

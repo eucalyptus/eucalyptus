@@ -242,7 +242,8 @@ static int network_driver_init(eucanetdConfig * pConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
 static int network_driver_upgrade(globalNetworkInfo * pGni); // TODO: Needed for 4.2.0 and remove in 4.3.0
 static int network_driver_system_flush(globalNetworkInfo * pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni,
+        globalNetworkInfo * pGniApplied, lni_t * pLni);
 static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
 static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
@@ -298,6 +299,7 @@ struct driver_handler_t managedDriverHandler = {
     .implement_network = network_driver_implement_network,
     .implement_sg = network_driver_implement_sg,
     .implement_addressing = network_driver_implement_addressing,
+    .handle_signal = NULL,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -714,7 +716,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni) {
 //! @note
 //!
 
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni) {
+static u32 network_driver_system_scrub(globalNetworkInfo * pGni, globalNetworkInfo * pGniApplied, lni_t * pLni) {
     int i = 0;
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
@@ -2345,7 +2347,7 @@ boolean managed_has_tunnel_changed(globalNetworkInfo * pGni, gni_secgroup * pSec
     }
     // Figure out how many instances with 1 instance or more do we have
     for (i = 0; i < nbGroups; i++) {
-        if (pSecGroups[i].max_instance_names > 0)
+        if (pSecGroups[i].max_instances > 0)
             nbActiveGroups++;
     }
 
@@ -3137,7 +3139,7 @@ static int managed_attach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
     // Install tunnel for each security group but only if they have instances
     for (i = 0, pSecGroup = pSecGroups; i < nbGroups; i++, pSecGroup++) {
         // Do we have any instances for this security-group?
-        if (pSecGroup->max_instance_names == 0)
+        if (pSecGroup->max_instances == 0)
             continue;
 
         // Make sure we find the matching subnet and bridge device
@@ -3336,7 +3338,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
                     for (j = 0, found = FALSE, done = FALSE; ((j < nbGroups) && !done); j++) {
                         if (!strcmp(pSecGroups[j].name, psBridgeName)) {
                             done = TRUE;
-                            if (pSecGroups[j].max_instance_names > 0) {
+                            if (pSecGroups[j].max_instances > 0) {
                                 found = TRUE;
                                 remove = FALSE;
                             }
