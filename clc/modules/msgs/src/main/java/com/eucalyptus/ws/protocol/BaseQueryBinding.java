@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,6 +95,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -327,17 +328,28 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
             subParams = params;
           } else {
             for ( final String item : Sets.newHashSet( params.keySet( ) ) ) {
-              if ( item.startsWith( e.getKey( ) ) ) {
-                params.get( item );
+              if ( item.startsWith( e.getKey( ) + "." ) || item.equals( e.getKey( ) ) ) {
                 subParams.put( item.replace( e.getKey( ) + ".", "" ), params.remove( item ) );
               }
             }
           }
           if ( !subParams.isEmpty( ) ) {
-            this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
-            obj.setProperty( e.getValue(), newInstance );
-            if ( subParams != params ) for ( Map.Entry<String,String> entry : subParams.entrySet( ) ) {
-              params.put( e.getKey( ) + "." + entry.getKey( ), entry.getValue( ) );
+            if ( httpEmbedded == null && subParams.size( ) == 1 && subParams.keySet( ).contains( e.getKey( ) ) ) {
+              try {
+                if ( populateValue( declaredType, (GroovyObject) newInstance, Iterables.getOnlyElement( subParams.values( ) ) ).isEmpty( ) ) {
+                  obj.setProperty( e.getValue( ), newInstance );
+                  subParams.clear( );
+                }
+              } catch ( final IllegalArgumentException e2 ) { /*param not bound error occurs for this failure*/ }
+              if ( subParams != params ) for ( Map.Entry<String, String> entry : subParams.entrySet( ) ) {
+                params.put( entry.getKey( ), entry.getValue( ) );
+              }
+            } else {
+              this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
+              obj.setProperty( e.getValue( ), newInstance );
+              if ( subParams != params ) for ( Map.Entry<String, String> entry : subParams.entrySet( ) ) {
+                params.put( e.getKey( ) + "." + entry.getKey( ), entry.getValue( ) );
+              }
             }
           } else if ( params.containsKey( e.getKey( ) ) ) {
             obj.setProperty( e.getValue(), newInstance );
@@ -487,15 +499,22 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
 
   private List<String> populateEmbedded( final Class<?> genericType, final String value, @SuppressWarnings( "rawtypes" ) final ArrayList theList ) throws InstantiationException, IllegalAccessException {
     final GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
+    final List<String> embeddedFailures = populateValue( genericType, embedded, value );
+    if ( embeddedFailures.isEmpty( ) ) {
+      theList.add( embedded );
+    }
+    return embeddedFailures;
+  }
+
+  private List<String> populateValue( final Class<?> genericType, final GroovyObject targetObject, final String value ) throws InstantiationException, IllegalAccessException {
     final Field valueField = this.findValueField( genericType );
     if ( valueField == null ) {
       throw new IllegalArgumentException( "Simple type cannot be mapped for " + genericType.getSimpleName( ) );
     }
     final List<String> embeddedFailures = this.populateObject(
-        embedded,
+        targetObject,
         Maps.newHashMap( Collections.singletonMap( "value", valueField.getName() ) ),
         Maps.newHashMap( Collections.singletonMap( "value", value ) ) );
-    if ( embeddedFailures.isEmpty( ) ) theList.add( embedded );
 
     return embeddedFailures;
   }

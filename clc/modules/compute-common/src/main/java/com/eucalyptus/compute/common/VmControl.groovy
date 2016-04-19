@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -795,6 +795,7 @@ public class ModifyInstanceAttributeType extends VmControlMessage {
   AttributeBooleanValueType sourceDestCheck
   @HttpEmbedded
   GroupIdSetType groupIdSet
+  @HttpParameterMapping(parameter = ["EbsOptimized", "EbsOptimized.Value"])
   AttributeBooleanFlatValueType ebsOptimized
   AttributeBooleanValueType sriovNetSupport
 }
