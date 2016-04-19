@@ -144,7 +144,7 @@ import com.google.common.io.Resources;
 
 public class BootstrapClassLoader extends URLClassLoader {
   private static Logger               LOG       = Logger.getLogger( BootstrapClassLoader.class );
-  private static BootstrapClassLoader singleton = null;
+  private static volatile BootstrapClassLoader singleton;
   
   public static BootstrapClassLoader init( ) {
     try {

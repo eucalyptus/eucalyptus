@@ -136,7 +136,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
                     description = "Properties controlling the handling of service topology" )
 public class Topology {
   private static Logger                                         LOG                            = Logger.getLogger( Topology.class );
-  private static Topology                                       singleton                      = null;                                                                   //TODO:GRZE:handle differently for remote case?
+  private static volatile Topology                              singleton;                                                                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch                   = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
   @ConfigurableField( description = "Backoff between service state checks (in seconds)." )
   public static Integer                                         COORDINATOR_CHECK_BACKOFF_SECS = 10;
@@ -389,17 +389,15 @@ public class Topology {
   }
   
   private static Topology getInstance( ) {
-    if ( singleton != null ) {
-      return singleton;
-    } else {
-      synchronized ( Topology.class ) {
-        if ( singleton != null ) {
-          return singleton;
-        } else {
-          return ( singleton = new Topology( Hosts.maxEpoch( ) ) );
+    if (singleton == null) {
+      synchronized (Topology.class) {
+        if (singleton == null) {
+          singleton = new Topology( Hosts.maxEpoch( ) );
         }
       }
     }
+
+    return singleton;
   }
   
   private Integer getEpoch( ) {

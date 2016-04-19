@@ -370,19 +370,22 @@ public class SystemCredentials {
       
     }
 
-    private static KeyStore singleton      = EucaKeyStore.getInstance( );
+    private static volatile KeyStore singleton      = EucaKeyStore.getInstance( );
     
     public static KeyStore getInstance( ) {
-      synchronized ( EucaKeyStore.class ) {
-        if ( EucaKeyStore.singleton == null ) {
-          try {
-            singleton = new EucaKeyStore( );
-          } catch ( final Exception e ) {
-            LOG.error( e, e );
+      if (singleton == null) {
+        synchronized (EucaKeyStore.class) {
+          if (EucaKeyStore.singleton == null) {
+            try {
+              singleton = new EucaKeyStore();
+            } catch (final Exception e) {
+              LOG.error(e, e);
+            }
           }
         }
       }
-      return EucaKeyStore.singleton;
+
+      return singleton;
     }
     
     public static KeyStore getCleanInstance( ) throws Exception {

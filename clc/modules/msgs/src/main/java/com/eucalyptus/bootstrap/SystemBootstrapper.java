@@ -105,20 +105,22 @@ public class SystemBootstrapper {
   
   static Logger                     LOG = Logger.getLogger( SystemBootstrapper.class );
   
-  private static SystemBootstrapper singleton;
+  private static volatile SystemBootstrapper singleton;
   private static ThreadGroup        singletonGroup;
   public static final PrintStream   out = System.out;
   public static final PrintStream   err = System.err;
   
   public static SystemBootstrapper getInstance( ) {
-    synchronized ( SystemBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new SystemBootstrapper( );
-        LOG.info( "Creating Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning Bootstrapper instance." );
+    if (singleton == null) {
+      synchronized(SystemBootstrapper.class) {
+        if (singleton == null) {
+          LOG.info( "Creating Bootstrapper instance." );
+          singleton = new SystemBootstrapper( );
+        }
       }
     }
+
+    LOG.info( "Returning Bootstrapper instance." );
     return singleton;
   }
   

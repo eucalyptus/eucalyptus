@@ -94,14 +94,11 @@ import com.google.common.collect.Multimap;
 
 public class ListenerRegistry {
   private static Logger                                           LOG       = Logger.getLogger( ListenerRegistry.class );
-  private static ListenerRegistry                                 singleton = getInstance( );
+  private static ListenerRegistry                                 singleton = new ListenerRegistry();
   private final Map<Class, ReentrantListenerRegistry>             registryMap;
   private final ReentrantListenerRegistry<Class<? extends Event>> eventMap;
   
   public static ListenerRegistry getInstance( ) {
-    synchronized ( ListenerRegistry.class ) {
-      if ( singleton == null ) singleton = new ListenerRegistry( );
-    }
     return singleton;
   }
   
