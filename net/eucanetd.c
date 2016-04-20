@@ -1721,6 +1721,7 @@ int eucanetd_dummy_udpsock(void) {
     dummysock.sin_port = htons(EUCANETD_DUMMY_UDP_PORT);
     inet_aton("127.0.0.1", &(dummysock.sin_addr));
     if (bind(s, (struct sockaddr *) &dummysock, sizeof(dummysock)) == -1) {
+        close(s);
         return (-1);
     }
     shutdown(s, 0);

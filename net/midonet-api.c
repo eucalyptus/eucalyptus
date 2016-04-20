@@ -1446,23 +1446,31 @@ int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char
     dnsjson = mido_get_json(NULL, "dnsServerAddrs", "jsonarr",
             "dnsServerAddrs:LIST", dnslist, "dnsServerAddrs:END", "END", NULL);
     char *dnssrvs = strchr(dnsjson, ']');
-    dnssrvs[1] = '\0';
-    dnssrvs = strchr(dnsjson, '[');
-
-    found = 0;
-    for (i = 0; i < max_dhcps && !found; i++) {
-        if ((dhcps[i] == NULL) || (dhcps[i]->init == 0)) {
-            continue;
-        }
-        rc = mido_cmp_midoname_to_input(dhcps[i], "subnetPrefix", subnet, "subnetLength", slashnet,
-                "defaultGateway", gw, "dnsServerAddrs", dnssrvs, NULL);
-        if (!rc) {
-            found = 1;
-            if (foundidx) {
-                *foundidx = i;
+    if (dnssrvs == NULL) {
+        LOGWARN("possible bug in dns servers json\n");
+    } else {
+        dnssrvs[1] = '\0';
+        dnssrvs = strchr(dnsjson, '[');
+        if (dnssrvs == NULL) {
+            LOGWARN("possible bug in dns servers json.\n");
+        } else {
+            found = 0;
+            for (i = 0; i < max_dhcps && !found; i++) {
+                if ((dhcps[i] == NULL) || (dhcps[i]->init == 0)) {
+                    continue;
+                }
+                rc = mido_cmp_midoname_to_input(dhcps[i], "subnetPrefix", subnet, "subnetLength", slashnet,
+                        "defaultGateway", gw, "dnsServerAddrs", dnssrvs, NULL);
+                if (!rc) {
+                    found = 1;
+                    if (foundidx) {
+                        *foundidx = i;
+                    }
+                }
             }
         }
     }
+
     if (found) {
         ret = 0;
     } else {
@@ -1502,7 +1510,7 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
     int max_dhcps = 0;
     midoname *out = NULL;
     
-    if ((devname == NULL) && (br == NULL)) {
+    if (devname == NULL) {
         LOGWARN("Invalid argument: cannot create dhcp for NULL\n");
         return (1);
     }
@@ -1771,7 +1779,8 @@ int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, 
         } else {
             midonet_api_dhcp *dh = midonet_api_cache_lookup_dhcp(br, dhcp, NULL);
             if (dh == NULL) {
-                LOGWARN("MIDOCACHE: %s not found in %s\n", dhcp->name, devname->name)
+                LOGWARN("MIDOCACHE: %s not found in %s\n", dhcp->name, devname->name);
+                return (1);
             }
             if (dh->max_dhcphosts > 0) {
                 *outnames = EUCA_ZALLOC_C(dh->max_dhcphosts, sizeof (midoname *));
@@ -5871,6 +5880,7 @@ int midonet_api_cache_refresh(void) {
     }
     if (!mnapiok) {
         LOGERROR("Unable to access midonet-api.\n");
+        EUCA_FREE(cache);
         return (1);
     }
 
@@ -5899,17 +5909,21 @@ int midonet_api_cache_refresh(void) {
             LOGEXTREME("Cached router %s\n", router->obj->name);
             rc = mido_get_device_ports(cache->ports, cache->max_ports, router->obj,
                     &(router->ports), &(router->max_ports));
-            for (j = 0; j < router->max_ports; j++) {
+            for (j = 0; j < router->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
             }
             rc = mido_get_routes(router->obj, &(router->routes), &(router->max_routes));
-            for (j = 0; j < router->max_routes; j++) {
+            for (j = 0; j < router->max_routes && !rc; j++) {
                 LOGEXTREME("\tCached route %s\n", router->routes[j]->jsonbuf);
             }
         }
         cache->max_routers = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido routers\n");
+        }
     }
+    EUCA_FREE(l1names);
 
     // get all bridges
     l1names = NULL;
@@ -5925,7 +5939,7 @@ int midonet_api_cache_refresh(void) {
             LOGEXTREME("Cached bridge %s\n", bridge->obj->name);
             rc = mido_get_device_ports(cache->ports, cache->max_ports, bridge->obj,
                     &(bridge->ports), &(bridge->max_ports));
-            for (j = 0; j < bridge->max_ports; j++) {
+            for (j = 0; j < bridge->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
             }
             l2names = NULL;
@@ -5941,7 +5955,7 @@ int midonet_api_cache_refresh(void) {
                     LOGEXTREME("\tCached bridge %s dhcp %s\n", bridge->obj->name, dhcp->obj->jsonbuf);
                     rc = mido_get_dhcphosts(bridge->obj, dhcp->obj,
                             &(dhcp->dhcphosts), &(dhcp->max_dhcphosts));
-                    for (k = 0; k < dhcp->max_dhcphosts; k++) {
+                    for (k = 0; k < dhcp->max_dhcphosts && !rc; k++) {
                         LOGEXTREME("\t\tCached dhcphost %s\n", dhcp->dhcphosts[k]->jsonbuf);
                     }
                 }
@@ -5950,8 +5964,12 @@ int midonet_api_cache_refresh(void) {
             }
         }
         cache->max_bridges = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido bridges\n");
+        }
     }
+    EUCA_FREE(l1names);
 
     // get all chains
     l1names = NULL;
@@ -5967,16 +5985,23 @@ int midonet_api_cache_refresh(void) {
             LOGEXTREME("Cached chain %s\n", chain->obj->name);
             rc = mido_get_rules(chain->obj, &(chain->rules), &(chain->max_rules));
             chain->rules_count = chain->max_rules;
-            for (j = 0; j < chain->max_rules; j++) {
+            for (j = 0; j < chain->max_rules && !rc; j++) {
                 LOGEXTREME("\tCached rule %s\n", chain->rules[j]->jsonbuf);
             }
         }
         cache->max_chains = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido chains\n");
+        }
     }
+    EUCA_FREE(l1names);
 
     // get all hosts
     rc = midonet_api_cache_iphostmap_populate(cache);
+    if (rc) {
+        LOGWARN("failed to populate mido ip-host map\n");
+    }
 /*
     l1names = NULL;
     max_l1names = 0;
@@ -6000,8 +6025,10 @@ int midonet_api_cache_refresh(void) {
             }
         }
         cache->max_hosts = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        LOGWARN("Failed to retrieve mido hosts\n");
     }
+    EUCA_FREE(l1names);
 */
     
     // get all IP address groups
@@ -6019,7 +6046,7 @@ int midonet_api_cache_refresh(void) {
             rc = mido_get_ipaddrgroup_ips(ipaddrgroup->obj, &(ipaddrgroup->ips), &(ipaddrgroup->max_ips));
             ipaddrgroup->ips_count = ipaddrgroup->max_ips;
             ipaddrgroup->hexips = EUCA_REALLOC_C(ipaddrgroup->hexips, ipaddrgroup->max_ips, sizeof (u32));
-            for (j = 0; j < ipaddrgroup->max_ips; j++) {
+            for (j = 0; j < ipaddrgroup->max_ips && !rc; j++) {
                 char *ipaddr = NULL;
                 LOGEXTREME("\tCached IP %s\n", ipaddrgroup->ips[j]->jsonbuf);
                 mido_getel_midoname(ipaddrgroup->ips[j], "addr", &ipaddr);
@@ -6032,8 +6059,12 @@ int midonet_api_cache_refresh(void) {
             }
         }
         cache->max_ipaddrgroups = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido ip-address-groups\n");
+        }
     }
+    EUCA_FREE(l1names);
     
     // get all port-groups
     l1names = NULL;
@@ -6048,13 +6079,17 @@ int midonet_api_cache_refresh(void) {
             portgroup->obj = l1names[i];
             LOGEXTREME("Cached port-group %s\n", portgroup->obj->name);
             rc = mido_get_portgroup_ports(portgroup->obj, &(portgroup->ports), &(portgroup->max_ports));
-            for (j = 0; j < portgroup->max_ports; j++) {
+            for (j = 0; j < portgroup->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", portgroup->ports[j]->jsonbuf);
             }
         }
         cache->max_portgroups = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido port-groups\n");
+        }
     }
+    EUCA_FREE(l1names);
 
     // get all tunnel-zones
     l1names = NULL;
@@ -6069,13 +6104,17 @@ int midonet_api_cache_refresh(void) {
             tunnelzone->obj = l1names[i];
             LOGEXTREME("Cached tunnel-zone %s\n", tunnelzone->obj->name);
             rc = mido_get_tunnelzone_hosts(tunnelzone->obj, &(tunnelzone->hosts), &(tunnelzone->max_hosts));
-            for (j = 0; j < tunnelzone->max_hosts; j++) {
+            for (j = 0; j < tunnelzone->max_hosts && !rc; j++) {
                 LOGEXTREME("\tCached host %s\n", tunnelzone->hosts[j]->jsonbuf);
             }
         }
         cache->max_tunnelzones = max_l1names;
-        EUCA_FREE(l1names);
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido tunnel-zones\n");
+        }
     }
+    EUCA_FREE(l1names);
 
     // Enable midocache
     midocache = cache;
@@ -6119,17 +6158,17 @@ int midonet_api_cache_refresh_hosts(midonet_api_cache *cache) {
             LOGEXTREME("Cached host %s\n", host->obj->name);
             rc = mido_get_host_ports(cache->ports, cache->max_ports, host->obj,
                     &(host->ports), &(host->max_ports));
-            for (int j = 0; j < host->max_ports; j++) {
+            for (int j = 0; j < host->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", host->ports[j]->jsonbuf);
             }
             rc = mido_get_addresses(host->obj, &(host->addresses), &(host->max_addresses));
-            for (int j = 0; j < host->max_addresses; j++) {
+            for (int j = 0; j < host->max_addresses && !rc; j++) {
                 LOGEXTREME("\tCached address %u\n", host->addresses[j]);
             }
         }
         cache->max_hosts = max_l1names;
-        EUCA_FREE(l1names);
     }
+    EUCA_FREE(l1names);
     // recover midocache state
     midocache = midocache_bak;
     return (0);
