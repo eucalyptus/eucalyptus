@@ -1795,7 +1795,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
     }
 
     if (do_outnames) {
-        *out_interface_names = EUCA_ZALLOC(secgroup->max_interfaces, sizeof(char **));
+        *out_interface_names = EUCA_ZALLOC(secgroup->max_interfaces, sizeof (char *));
         if (*out_interface_names == NULL) {
             LOGFATAL("out of memory: failed to allocate out_interface_names\n");
             do_outnames = 0;
@@ -1803,7 +1803,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         *out_max_interface_names = 0;
     }
     if (do_outstructs) {
-        *out_interfaces = EUCA_ZALLOC(secgroup->max_interfaces, sizeof(gni_instance *));
+        *out_interfaces = EUCA_ZALLOC(secgroup->max_interfaces, sizeof (gni_instance *));
         if (*out_interfaces == NULL) {
             LOGFATAL("out of memory: failed to allocate out_interfaces\n");
             do_outstructs = 0;
@@ -3880,7 +3880,8 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
         //bzero(gni, sizeof (globalNetworkInfo));
         gni->init = 1;
         gni->networkInfo[0] = '\0';
-        memset(&(gni->version), 0, sizeof (globalNetworkInfo) - sizeof (gni->init) - sizeof (gni->networkInfo));
+        char *version_addr = (char *) gni + (sizeof (gni->init) + sizeof (gni->networkInfo));
+        memset(version_addr, 0, sizeof (globalNetworkInfo) - sizeof (gni->init) - sizeof (gni->networkInfo));
     }
 
     return (0);

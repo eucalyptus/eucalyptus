@@ -3579,8 +3579,8 @@ int find_mido_portgroup_ports(midoname **ports, int max_ports, midoname *portgro
             }
             EUCA_FREE(portuuid);
         }
-        EUCA_FREE(pgports);
     }
+    EUCA_FREE(pgports);
     if (pgports_max != *outports_max) {
         LOGWARN("Found %d members for portgroup %s (expected %d)\n", *outports_max, portgroup->name, pgports_max);
     }
@@ -4598,7 +4598,7 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
                     continue;
                 }
                 rc = mido_getel_midoname(eucart->routes[j], "dstNetworkAddr", &tmpstr);
-                if (!strcmp(pubip, tmpstr)) {
+                if (!rc && !strcmp(pubip, tmpstr)) {
                     LOGTRACE("Found %s route %s\n", pubip, eucart->routes[j]->name);
                     natgateway->midos[NATG_ELIP_ROUTE] = eucart->routes[j];
                     foundcnt = 1;
@@ -5183,6 +5183,11 @@ char *discover_mido_bgps(mido_config *mido) {
         mido_getel_midoname(midocore->gwports[i], "portMac", &portMac);
         if (!interfaceName || !networkAddress || !networkLength || !portAddress || !portMac) {
             LOGWARN("failed to retrieve gateway port information\n");
+            EUCA_FREE(interfaceName);
+            EUCA_FREE(networkAddress);
+            EUCA_FREE(networkLength);
+            EUCA_FREE(portAddress);
+            EUCA_FREE(portMac);
             continue;
         }
         resptr = &(res[strlen(res)]);
