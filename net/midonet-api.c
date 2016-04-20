@@ -5919,7 +5919,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_routers = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido routers\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido routers\n");
+        }
     }
     EUCA_FREE(l1names);
 
@@ -5963,7 +5965,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_bridges = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido bridges\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido bridges\n");
+        }
     }
     EUCA_FREE(l1names);
 
@@ -5987,7 +5991,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_chains = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido chains\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido chains\n");
+        }
     }
     EUCA_FREE(l1names);
 
@@ -6054,7 +6060,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_ipaddrgroups = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido ip-address-groups\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido ip-address-groups\n");
+        }
     }
     EUCA_FREE(l1names);
     
@@ -6077,7 +6085,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_portgroups = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido port-groups\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido port-groups\n");
+        }
     }
     EUCA_FREE(l1names);
 
@@ -6100,7 +6110,9 @@ int midonet_api_cache_refresh(void) {
         }
         cache->max_tunnelzones = max_l1names;
     } else {
-        LOGWARN("Failed to retrieve mido tunnel-zones\n");
+        if (rc) {
+            LOGWARN("Failed to retrieve mido tunnel-zones\n");
+        }
     }
     EUCA_FREE(l1names);
 

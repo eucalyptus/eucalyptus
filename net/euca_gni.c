@@ -358,6 +358,9 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
     int i = 0;
     
     if (!gni || !vpcsubnet || !vpcinterfaces || !out_interfaces || !max_out_interfaces) {
+        if (max_vpcinterfaces == 0) {
+            return (0);
+        } 
         LOGWARN("Invalid argument: NULL pointer - failed to get subnet interfaces.\n");
         return (1);
     }
