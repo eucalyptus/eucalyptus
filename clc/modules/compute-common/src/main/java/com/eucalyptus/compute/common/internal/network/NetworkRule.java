@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -209,13 +209,17 @@ public class NetworkRule extends AbstractPersistent {
     this.protocol = protocol;
     this.protocolNumber = protocolNumber;
     if ( Protocol.tcp.equals( protocol ) || Protocol.udp.equals( protocol ) ) {
-      if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
+      if ( lowPort == null || highPort == null ) {
+        throw new IllegalArgumentException( "Must specify both from and to ports with TCP/UDP." );
+      } else if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
         throw new IllegalArgumentException( "Provided ports must be greater than " + RULE_MIN_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
       } else if ( lowPort > RULE_MAX_PORT || highPort > RULE_MAX_PORT ) {
         throw new IllegalArgumentException( "Provided ports must be less than " + RULE_MAX_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
       } else if ( lowPort > highPort ) {
         throw new IllegalArgumentException( "Provided lowPort is greater than highPort: lowPort=" + lowPort + " highPort=" + highPort );
       }
+    } else if ( Protocol.icmp.equals( protocol ) && ( lowPort == null || highPort == null ) ) {
+      throw new IllegalArgumentException( "Must specify both type and code for ICMP." );
     }
 
     //Only allow ports for icmp, tcp, and udp. This is consistent with AWS EC2|VPC behavior
