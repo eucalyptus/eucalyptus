@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -179,20 +179,53 @@ class BaseQueryBindingTest {
     assertEquals( "Data value", [ new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["a","b","c"], ints: [3,2,1] ) ), new HttpEmbeddedData( httpEmbeddedData2: new HttpEmbeddedData2( member: ["z","y","x"], ints: [1,2,3] ) ) ], httpEmbeddedAnnotated.data )
   }
 
+  @Test
+  void testHttpValueMessageProperty() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding( ) )
+    Object HttpValueTypesObject = bind( binding, "/service?Operation=HttpValueTypes&DataValue=value" )
+    assertTrue( "Bound type", HttpValueTypesObject instanceof HttpValueTypes )
+    HttpValueTypes httpValueTypes = (HttpValueTypes) HttpValueTypesObject
+    assertEquals( "Data value", "value", httpValueTypes?.dataValue?.value  )
+    assertNull( "Data value wrapper", httpValueTypes.dataValueWrapper  )
+  }
+
+  @Test
+  void testHttpValueMessageNestedProperty( ) {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding( ) )
+    Object HttpValueTypesObject = bind( binding, "/service?Operation=HttpValueTypes&DataValueWrapper.DataValue=value" )
+    assertTrue( "Bound type", HttpValueTypesObject instanceof HttpValueTypes )
+    HttpValueTypes httpValueTypes = (HttpValueTypes) HttpValueTypesObject
+    assertEquals( "Data value wrapper", "value", httpValueTypes?.dataValueWrapper?.dataValue?.value  )
+    assertNull( "Data value", httpValueTypes.dataValue  )
+  }
+
+  @Test
+  void testHttpValueMessageNestedAliasProperty( ) {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding( ) )
+    Object HttpValueTypesObject = bind( binding, "/service?Operation=HttpValueTypes&DataValueWrapper.DataValue.Value=value" )
+    assertTrue( "Bound type", HttpValueTypesObject instanceof HttpValueTypes )
+    HttpValueTypes httpValueTypes = (HttpValueTypes) HttpValueTypesObject
+    assertEquals( "Data value wrapper", "value", httpValueTypes?.dataValueWrapper?.dataValue?.value  )
+    assertNull( "Data value", httpValueTypes.dataValue  )
+  }
+
   Object bind( BaseQueryBinding binding, String url ) {
     binding.bind( new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, url ) )
   }
 
   static class TestBinding extends Binding {
     private List<Class> requestMessageClasses = [
-        SingleSimpleTypes.class,
-        MultipleSimpleTypes.class,
-        HttpParameterAnnotated.class,
-        HttpEmbeddedAnnotated.class,
-        HttpEmbeddedData.class,
-        HttpEmbeddedData2.class,
-        HttpEmbeddedVersioned.class,
-        NestedData.class,
+        SingleSimpleTypes,
+        MultipleSimpleTypes,
+        HttpParameterAnnotated,
+        HttpEmbeddedAnnotated,
+        HttpEmbeddedData,
+        HttpEmbeddedData2,
+        HttpEmbeddedVersioned,
+        NestedData,
+        HttpValueTypes,
+        DataValue,
+        DataValueWrapper
     ]
 
     TestBinding() {
@@ -346,6 +379,11 @@ class NestedData extends EucalyptusMessage {
   }
 }
 
+class HttpValueTypes extends EucalyptusMessage {
+  DataValue dataValue
+  DataValueWrapper dataValueWrapper
+}
+
 class NestedDataChild extends EucalyptusData {
   @HttpParameterMapping(parameter="child")
   NestedDataGrandChild child
@@ -391,6 +429,16 @@ class NestedDataGrandChild extends EucalyptusData {
     result = 31 * result + ints.hashCode()
     return result
   }
+}
+
+class DataValueWrapper extends EucalyptusData {
+  @HttpParameterMapping(parameter = [ "DataValue", "DataValue.Value" ])
+  DataValue dataValue
+}
+
+class DataValue extends EucalyptusData {
+  @HttpValue
+  String value
 }
 
 class NestedDataGrandChildValue extends EucalyptusData {
