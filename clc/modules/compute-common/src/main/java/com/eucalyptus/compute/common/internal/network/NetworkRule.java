@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -184,9 +184,9 @@ public class NetworkRule extends AbstractPersistent {
   private Protocol          protocol;
   @Column( name = "metadata_network_rule_protocol_number" )
   private Integer           protocolNumber;
-  @Column( name = "metadata_network_rule_low_port", updatable = false  )
+  @Column( name = "metadata_network_rule_low_port" )
   private Integer           lowPort;
-  @Column( name = "metadata_network_rule_high_port", updatable = false  )
+  @Column( name = "metadata_network_rule_high_port" )
   private Integer           highPort;
   
   @ElementCollection
@@ -209,13 +209,17 @@ public class NetworkRule extends AbstractPersistent {
     this.protocol = protocol;
     this.protocolNumber = protocolNumber;
     if ( Protocol.tcp.equals( protocol ) || Protocol.udp.equals( protocol ) ) {
-      if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
+      if ( lowPort == null || highPort == null ) {
+        throw new IllegalArgumentException( "Must specify both from and to ports with TCP/UDP." );
+      } else if ( lowPort < RULE_MIN_PORT || highPort < RULE_MIN_PORT ) {
         throw new IllegalArgumentException( "Provided ports must be greater than " + RULE_MIN_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
       } else if ( lowPort > RULE_MAX_PORT || highPort > RULE_MAX_PORT ) {
         throw new IllegalArgumentException( "Provided ports must be less than " + RULE_MAX_PORT + ": lowPort=" + lowPort + " highPort=" + highPort );
       } else if ( lowPort > highPort ) {
         throw new IllegalArgumentException( "Provided lowPort is greater than highPort: lowPort=" + lowPort + " highPort=" + highPort );
       }
+    } else if ( Protocol.icmp.equals( protocol ) && ( lowPort == null || highPort == null ) ) {
+      throw new IllegalArgumentException( "Must specify both type and code for ICMP." );
     }
 
     //Only allow ports for icmp, tcp, and udp. This is consistent with AWS EC2|VPC behavior
@@ -530,9 +534,48 @@ public class NetworkRule extends AbstractPersistent {
         }
         tx.commit( );
       } catch (Exception ex) {
-        logger.error( "Error creating network rule indexes", ex );
+        logger.error( "Error adding protocol numbers to rules", ex );
       }
     }
   }
+
+  @Upgrades.EntityUpgrade( entities = NetworkRule.class, since = Upgrades.Version.v4_3_0, value = Eucalyptus.class)
+  public enum NetworkRuleUpgrade430 implements Predicate<Class> {
+    INSTANCE;
+    private static final Logger logger = Logger.getLogger( NetworkRuleUpgrade430.class );
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      setPortsForIcmpRules( );
+      return true;
+    }
+
+    /**
+     * Any imcp rules created without ports should have the values updated to -1 (any)
+     */
+    private void setPortsForIcmpRules( ) {
+      try ( final TransactionResource tx = Entities.distinctTransactionFor( NetworkRule.class ) ) {
+        for ( final NetworkRule rule :
+            Entities.criteriaQuery( Entities.restriction( NetworkRule.class ).any(
+                Entities.restriction( NetworkRule.class ).isNull( NetworkRule_.lowPort ).build( ),
+                Entities.restriction( NetworkRule.class ).isNull( NetworkRule_.highPort ).build( )
+            ).equal( NetworkRule_.protocol, Protocol.icmp ) ).list( )
+        ) {
+          logger.info( "Updating ports for icmp rule in group " +
+              rule.getGroup( ).getGroupId( ) + "/" + rule.getGroup( ).getDisplayName( ) );
+          if ( rule.getLowPort( ) == null ) {
+            rule.setLowPort( -1 );
+          }
+          if ( rule.getHighPort( ) == null ) {
+            rule.setHighPort( -1 );
+          }
+        }
+        tx.commit( );
+      } catch (Exception ex) {
+        logger.error( "Error updating ports for icmp rules", ex );
+      }
+    }
+  }
+
 
 }

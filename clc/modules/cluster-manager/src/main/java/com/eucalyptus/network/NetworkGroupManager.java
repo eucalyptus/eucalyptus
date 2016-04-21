@@ -99,6 +99,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -293,8 +294,11 @@ public class NetworkGroupManager {
             if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
             }
-            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) && (ipPerm.getFromPort( ) > 255 || ipPerm.getToPort( ) > 255)) {
-              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" + ( ( ipPerm.getFromPort( ) > 255 ) ? ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
+            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) &&
+                ( MoreObjects.firstNonNull( ipPerm.getFromPort( ), 0 ) > 255 || MoreObjects.firstNonNull( ipPerm.getToPort( ), 0 ) > 255)) {
+              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" +
+                  ( ( MoreObjects.firstNonNull( ipPerm.getFromPort( ), 0 ) > 255 ) ?
+                      ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
                         "out of range. Supported range for ICMP code and type is 0 to 255" );
             }
             if ( ipPerm.getIpProtocol( ) != null && !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
@@ -363,8 +367,11 @@ public class NetworkGroupManager {
             if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
             }
-            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) && (ipPerm.getFromPort( ) > 255 || ipPerm.getToPort( ) > 255)) {
-              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" + ( ( ipPerm.getFromPort( ) > 255 ) ? ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
+            if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) &&
+                ( MoreObjects.firstNonNull( ipPerm.getFromPort( ), 0 ) > 255 || MoreObjects.firstNonNull( ipPerm.getToPort( ), 0 ) > 255)) {
+              throw new ClientComputeException( "InvalidParameterValue", "ICMP code (" +
+                  ( ( MoreObjects.firstNonNull( ipPerm.getFromPort( ), 0 ) > 255 ) ?
+                      ipPerm.getFromPort( ) : ipPerm.getToPort( ) ) + ") " +
                       "out of range. Supported range for ICMP code and type is 0 to 255" );
             }
             if ( ipPerm.getIpProtocol( ) == null || !NetworkRule.PROTOCOL_PATTERN.matcher( ipPerm.getIpProtocol( ) ).matches( ) ) {
