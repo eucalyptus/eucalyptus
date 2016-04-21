@@ -69,19 +69,19 @@ LDFLAGS =  -ldl -lpthread -lm
 JAVACFLAGS = 
 RANLIB = ranlib
 LDCMD = gcc
-
+GENGETOPT = eucalyptus-opts.h eucalyptus-opts.c
 OBJS =  eucalyptus-bootstrap.o eucalyptus-opts.o
 all: eucalyptus-cloud
 build: eucalyptus-cloud
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-eucalyptus-cloud: eucalyptus-opts.h $(OBJS)
+eucalyptus-cloud: eucalyptus-opts.c $(OBJS)
 	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)
 
-eucalyptus-opts.c: eucalyptus-opts.h
+eucalyptus-opts.c: arguments.ggo
 
-eucalyptus-opts.h:
+arguments.ggo:
 	gengetopt --input=arguments.ggo --file-name=eucalyptus-opts --func-name=arguments --arg-struct-name=eucalyptus_opts
 
 install: eucalyptus-cloud
@@ -91,10 +91,12 @@ install: eucalyptus-cloud
 indent:
 
 clean:
-	@$(RM) -f $(OBJS) eucalyptus-cloud
+	@$(RM) -f $(OBJS) eucalyptus-cloud $(GENGETOPT)
 
 distclean: clean
-	@$(RM) -f $(OBJS) eucalyptus-cloud arguments.ggo
+	@$(RM) -f $(OBJS) eucalyptus-cloud arguments.ggo $(GENGETOPT)
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud
+
+.PHONY: arguments.ggo
