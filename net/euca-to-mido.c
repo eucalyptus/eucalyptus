@@ -1431,7 +1431,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
         LOGEXTREME("processing %s\n", vpcsecgroup->name);
         if (!vpcsecgroup->gnipresent) {
             LOGINFO("\tdeleting %s\n", vpcsecgroup->name);
-            rc = delete_mido_vpc_secgroup(mido, vpcsecgroup);
+            ret += delete_mido_vpc_secgroup(mido, vpcsecgroup);
         } else {
             LOGTRACE("pass2: mido VPC SECGROUP %s in global: Y\n", vpcsecgroup->name);
 
@@ -1486,6 +1486,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                     rc = mido_delete_ipaddrgroup_ip(iag, iag->ips[k]);
                     if (rc) {
                         LOGWARN("Failed to remove %s from ip address group\n", iag->ips[k]->name);
+                        ret += rc;
                     }
                     if (iag->max_ips == 0) {
                         break;
@@ -1517,6 +1518,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                     rc = mido_delete_ipaddrgroup_ip(iag, iag->ips[k]);
                     if (rc) {
                         LOGWARN("Failed to remove %s from ip address group\n", iag->ips[k]->name);
+                        ret += rc;
                     }
                     if (iag->max_ips == 0) {
                         break;
@@ -1553,6 +1555,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                     rc = mido_delete_ipaddrgroup_ip(iag, iag->ips[k]);
                     if (rc) {
                         LOGWARN("Failed to remove %s from ip address group\n", iag->ips[k]->name);
+                        ret += rc;
                     }
                     if (iag->max_ips == 0) {
                         break;
@@ -1582,7 +1585,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                 }
                 if (!vpc->gnipresent || !vpcsubnet->gnipresent || !vpcnatgateway->gnipresent) {
                     LOGINFO("\tdeleting %s\n", vpcnatgateway->name);
-                    rc = delete_mido_vpc_natgateway(mido, vpcsubnet, vpcnatgateway);
+                    ret += delete_mido_vpc_natgateway(mido, vpcsubnet, vpcnatgateway);
                 } else {
                     LOGTRACE("pass2: mido VPC NAT gateway %s in global: Y\n", vpcnatgateway->name);
                 }
@@ -1594,14 +1597,14 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                 }
                 if (!vpc->gnipresent || !vpcsubnet->gnipresent || !vpcinstance->gnipresent) {
                     LOGINFO("\tdeleting %s\n", vpcinstance->name);
-                    rc = delete_mido_vpc_instance(mido, vpc, vpcsubnet, vpcinstance);
+                    ret += delete_mido_vpc_instance(mido, vpc, vpcsubnet, vpcinstance);
                 } else {
                     LOGTRACE("pass2: mido VPC INSTANCE %s in global: Y\n", vpcinstance->name);
                 }
             }
             if (!vpc->gnipresent || !vpcsubnet->gnipresent) {
                 LOGINFO("\tdeleting %s\n", vpcsubnet->name);
-                rc = delete_mido_vpc_subnet(mido, vpc, vpcsubnet);
+                ret += delete_mido_vpc_subnet(mido, vpc, vpcsubnet);
             } else {
                 LOGTRACE("pass2: mido VPC SUBNET %s in global: Y\n", vpcsubnet->name);
             }
@@ -1611,9 +1614,9 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
             rc = do_metaproxy_teardown(mido);
             if (rc) {
                 LOGERROR("cannot teardown metadata proxies: see above log for details\n");
-                ret = 1;
+                ret += rc;
             }
-            rc = delete_mido_vpc(mido, vpc);
+            ret += delete_mido_vpc(mido, vpc);
         } else {
             LOGTRACE("pass2: mido VPC %s in global: Y\n", vpc->name);
         }
@@ -1726,7 +1729,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             }
             if (rc) {
                 LOGERROR("failed to create VPC %s subnet %s: check midonet health\n", gnivpc->name, gnivpcsubnet->name);
-                ret = 1;
+                ret++;
                 rc = delete_mido_vpc_subnet(mido, vpc, vpcsubnet);
                 if (rc) {
                     LOGERROR("Failed to delete subnet %s. Check for duplicate midonet objects.\n", vpcsubnet->name);
@@ -1768,7 +1771,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                             subnet_buf, slashnet_buf, gni_rtable, gnivpc);
                     if (rc) {
                         LOGWARN("Failed to create %s for %s\n", gnivpcsubnet->routeTable_name, gnivpcsubnet->name);
-                        ret = 1;
+                        ret++;
                     }
                 } else {
                     LOGTRACE("12095: skipping pass3 for %s\n", gni_rtable->name);
@@ -1821,7 +1824,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
     rc = do_metaproxy_setup(mido);
     if (rc) {
         LOGERROR("cannot set up metadata proxies: see above log for details\n");
-        ret = 1;
+        ret++;
     }
 
     return (ret);
@@ -1870,7 +1873,7 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
             rc = create_mido_vpc_secgroup(mido, vpcsecgroup);
             if (rc) {
                 LOGERROR("cannot create mido security group %s: check midonet health\n", vpcsecgroup->name);
-                ret = 1;
+                ret++;
                 continue;
             }
         }
@@ -2584,6 +2587,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         if (rc) {
             LOGERROR("failed to populate euca VPC models.\n");
             ret++;
+            return (ret);
         }
         LOGINFO("\tmidonet populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         mido_info_http_count();
@@ -2594,6 +2598,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
     if (rc) {
         LOGERROR("pass1: failed update - check midonet health\n");
         ret++;
+        return (ret);
     }
     LOGINFO("\tgni/mido tagging processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
@@ -2601,6 +2606,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
     if (rc) {
         LOGERROR("pass2: failed update - check midonet health\n");
         ret++;
+        return (ret);
     }
     LOGINFO("\tremove anything in mido not in gni processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
@@ -2617,21 +2623,24 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
     rc = do_midonet_update_pass3_vpcs(gni, mido);
     if (rc) {
         LOGERROR("pass3_vpcs: failed update - check midonet health\n");
-        return (1);
+        ret++;
+        return (ret);
     }
     LOGINFO("\tvpcs processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     rc = do_midonet_update_pass3_sgs(gni, mido);
     if (rc) {
         LOGERROR("pass3_sgs: failed update - check midonet health\n");
-        return (1);
+        ret++;
+        return (ret);
     }
     LOGINFO("\tsgs processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     rc = do_midonet_update_pass3_insts(gni, mido);
     if (rc) {
         LOGERROR("pass3_insts: failed update - check midonet health\n");
-        return (1);
+        ret++;
+        return (ret);
     }
     LOGINFO("\tinstances processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
