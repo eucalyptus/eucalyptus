@@ -1899,7 +1899,6 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
                     }
                 } else {
                     LOGWARN("failed to parse %s egress rule at idx %d\n", gnisecgroup->name, j);
-                    ret++;
                 }
             }
         }
@@ -1921,7 +1920,6 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
                     }
                 } else {
                     LOGWARN("failed to parse %s ingress rule at idx %d\n", gnisecgroup->name, j);
-                    ret++;
                 }
             }
         }
