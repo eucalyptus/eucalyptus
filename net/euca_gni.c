@@ -2076,6 +2076,7 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
         }
     }
     LOGDEBUG("end parsing XML into data structures\n");
+    LOGTRACE("gni populate vpc/subnet interfaces %ld us.\n", eucanetd_timer_usec(&tv));
 
     eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
@@ -4609,6 +4610,7 @@ gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx
 int gni_validate(globalNetworkInfo * gni)
 {
     int i = 0;
+    int j = 0;
 
     // this is going to be messy, until we get XML validation in place
     if (!gni) {
@@ -4755,6 +4757,37 @@ int gni_validate(globalNetworkInfo * gni)
         }
     }
 
+    // Validate VPCMIDO elements
+    if (IS_NETMODE_VPCMIDO(gni)) {
+        // Validate VPCs
+        for (i = 0; i < gni->max_vpcs; i++) {
+            if (gni_vpc_validate(&(gni->vpcs[i]))) {
+                LOGWARN("invalid vpc set at idx %d\n", i);
+                return (1);
+            }
+            // Validate subnets
+            for (j = 0; j < gni->vpcs[i].max_subnets; j++) {
+                if (gni_vpcsubnet_validate(&(gni->vpcs[i].subnets[j]))) {
+                    LOGWARN("invalid vpcsubnet set at idx %d\n", i);
+                    return (1);
+                }
+            }
+            // Validate NAT gateways
+            for (j = 0; j < gni->vpcs[i].max_natGateways; j++) {
+                if (gni_nat_gateway_validate(&(gni->vpcs[i].natGateways[j]))) {
+                    LOGWARN("invalid NAT gateway set at idx %d\n", i);
+                    return (1);
+                }
+            }
+            // Validate route tables
+            for (j = 0; j < gni->vpcs[i].max_routeTables; j++) {
+                if (gni_route_table_validate(&(gni->vpcs[i].routeTables[j]))) {
+                    LOGWARN("invalid route table set at idx %d\n", i);
+                    return (1);
+                }
+            }
+        }
+    }
     return (0);
 }
 
@@ -5179,18 +5212,193 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
     }
 
     if (!secgroup->max_instances || !secgroup->instances) {
-        LOGWARN("secgroup %s: no instances\n", secgroup->name);
-        return (0);
+        LOGTRACE("secgroup %s: no instances\n", secgroup->name);
     } else {
         for (i = 0; i < secgroup->max_instances; i++) {
             if (!strlen(secgroup->instances[i]->name)) {
-                LOGWARN("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
+                LOGWARN("secgroup %s: empty instance_name set at idx %d\n", secgroup->name, i);
+                return (1);
+            }
+        }
+    }
+
+    if (!secgroup->max_interfaces || !secgroup->interfaces) {
+        LOGTRACE("secgroup %s: no interfaces\n", secgroup->name);
+    } else {
+        for (i = 0; i < secgroup->max_interfaces; i++) {
+            if (!strlen(secgroup->interfaces[i]->name)) {
+                LOGWARN("secgroup %s: empty interface_name set at idx %d\n", secgroup->name, i);
                 return (1);
             }
         }
     }
 
     //gni_sg_print(secgroup, EUCA_LOG_TRACE);
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the vpc structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_vpc_validate(gni_vpc *vpc) {
+    if (!vpc) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(vpc->name)) {
+        LOGWARN("no vpc name\n");
+        return (1);
+    }
+
+    if (!strlen(vpc->accountId)) {
+        LOGWARN("vpc %s: no accountId\n", vpc->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the vpcsubnet structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_vpcsubnet_validate(gni_vpcsubnet *vpcsubnet) {
+    if (!vpcsubnet) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(vpcsubnet->name)) {
+        LOGWARN("no vpc name\n");
+        return (1);
+    }
+
+    if (!strlen(vpcsubnet->accountId)) {
+        LOGWARN("vpc %s: no accountId\n", vpcsubnet->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the nat_gateway structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_nat_gateway_validate(gni_nat_gateway *natg) {
+    if (!natg) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(natg->name)) {
+        LOGWARN("no natg name\n");
+        return (1);
+    }
+
+    if (!strlen(natg->accountId)) {
+        LOGWARN("natg %s: no accountId\n", natg->name);
+        return (1);
+    }
+
+    if (!maczero(natg->macAddress)) {
+        LOGWARN("natg %s: no macAddress\n", natg->name);
+    }
+
+    if (!natg->publicIp) {
+        LOGDEBUG("natg %s: no publicIp set (ignore if natg was run with private only addressing)\n", natg->name);
+    }
+
+    if (!natg->privateIp) {
+        LOGWARN("natg %s: no privateIp\n", natg->name);
+        return (1);
+    }
+
+    if (!strlen(natg->vpc)) {
+        LOGWARN("natg %s: no vpc\n", natg->name);
+        return (1);
+    }
+    
+    if (!strlen(natg->subnet)) {
+        LOGWARN("natg %s: no vpc subnet\n", natg->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given route_table structure content
+ *
+ * @param vpc [in] a pointer to the route_table structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_route_table_validate(gni_route_table *rtable) {
+    if (!rtable) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(rtable->name)) {
+        LOGWARN("no route table name\n");
+        return (1);
+    }
+
+    if (!strlen(rtable->accountId)) {
+        LOGWARN("route table %s: no accountId\n", rtable->name);
+        return (1);
+    }
+
+    for (int i = 0; i < rtable->max_entries; i++) {
+        if (!strlen(rtable->entries[i].destCidr) || !strlen(rtable->entries[i].target)) {
+            LOGWARN("route table %s: invalid route entry at idx %d\n", rtable->name, i);
+            return (1);
+        }
+    }
     return (0);
 }
 
@@ -5453,7 +5661,8 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
 //!
 //! Compares two gni_route_table structures in the argument.
 //!
-//! @param[in] a gni_route_table structure of interest.
+//! @param[in] a gni_route_table structure of interest. Check for route entries
+//!            applied flags.
 //! @param[in] b gni_route_table structure of interest.
 //! @return 0 if name and route entries match. Non-zero otherwise.
 //!
@@ -5479,6 +5688,9 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
         return (1);
     }
     for (int i = 0; i < a->max_entries; i++) {
+        if (a->entries[i].applied == 0) {
+            return (1);
+        }
         if ((strcmp(a->entries[i].destCidr, b->entries[i].destCidr)) ||
                 (strcmp(a->entries[i].target, b->entries[i].target))) {
             return (1);

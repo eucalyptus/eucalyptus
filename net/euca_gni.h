@@ -226,6 +226,7 @@ typedef struct gni_network_acl_t {
 typedef struct gni_route_entry_t {
     char destCidr[16];
     char target[32];
+    int applied;
 } gni_route_entry;
 
 typedef struct gni_route_table_t {
@@ -419,6 +420,10 @@ int gni_node_validate(gni_node * node);
 int gni_instance_validate(gni_instance * instance);
 int gni_interface_validate(gni_instance * interface);
 int gni_secgroup_validate(gni_secgroup * secgroup);
+int gni_vpc_validate(gni_vpc *vpc);
+int gni_vpcsubnet_validate(gni_vpcsubnet *vpcsubnet);
+int gni_nat_gateway_validate(gni_nat_gateway *natg);
+int gni_route_table_validate(gni_route_table *rtable);
 
 int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
