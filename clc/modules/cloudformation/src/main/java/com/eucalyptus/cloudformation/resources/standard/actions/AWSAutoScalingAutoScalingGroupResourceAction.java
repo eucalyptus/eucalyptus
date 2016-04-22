@@ -1060,7 +1060,16 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
               TerminateInstanceInAutoScalingGroupType terminateInstanceInAutoScalingGroupType = MessageHelper.createMessage(TerminateInstanceInAutoScalingGroupType.class, newAction.info.getEffectiveUserId());
               terminateInstanceInAutoScalingGroupType.setInstanceId(terminatingInstanceId);
               terminateInstanceInAutoScalingGroupType.setShouldDecrementDesiredCapacity(false);
-              sendSyncWithRetryOnScalingEvent(configuration, terminateInstanceInAutoScalingGroupType);
+              try {
+                sendSyncWithRetryOnScalingEvent(configuration, terminateInstanceInAutoScalingGroupType);
+              } catch (final Exception e) {
+                final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+                if (error.isPresent()) switch (Strings.nullToEmpty(error.get().getCode())) {
+                  case "ValidationError":
+                    continue; // already terminated
+                }
+                throw e;
+              }
             }
             if (isLastRound) {
               // now set back to original size
