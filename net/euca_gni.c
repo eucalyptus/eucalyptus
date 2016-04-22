@@ -86,6 +86,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <ifaddrs.h>
 
 #include <eucalyptus.h>
 #include <misc.h>
@@ -416,7 +417,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
         // check to see if local host is the enabled cluster controller
         strptra = hex2dot(gni->clusters[i].enabledCCIp);
         if (strptra) {
-            if (!gni_is_self(strptra)) {
+            if (!gni_is_self_getifaddrs(strptra)) {
                 EUCA_FREE(strptra);
                 *outclusterptr = &(gni->clusters[i]);
                 return (0);
@@ -426,7 +427,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
         // otherwise, check to see if local host is a node in the cluster
         for (j = 0; j < gni->clusters[i].max_nodes; j++) {
             //      if (!strcmp(gni->clusters[i].nodes[j].name, outnodeptr->name)) {
-            if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+            if (!gni_is_self_getifaddrs(gni->clusters[i].nodes[j].name)) {
                 *outclusterptr = &(gni->clusters[i]);
                 return (0);
             }
@@ -571,7 +572,7 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
 
     for (i = 0; i < gni->max_clusters; i++) {
         for (j = 0; j < gni->clusters[i].max_nodes; j++) {
-            if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+            if (!gni_is_self_getifaddrs(gni->clusters[i].nodes[j].name)) {
                 *outnodeptr = &(gni->clusters[i].nodes[j]);
                 return (0);
             }
@@ -639,6 +640,56 @@ int gni_is_self(const char *test_ip)
     }
     closedir(DH);
 
+    return (1);
+}
+
+//!
+//! Validates if the given test_ip is a local IP address on this system. This function
+//! is based on getifaddrs() call.
+//! @param[in] test_ip a string containing the IP to validate
+//!
+//! @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_is_self_getifaddrs(const char *test_ip) {
+    struct ifaddrs *ifas = NULL;
+    struct ifaddrs *elem = NULL;
+    int found = 0;
+    int rc = 0;
+    
+    if (!test_ip) {
+        LOGERROR("invalid input: cannot check NULL IP\n");
+        return (1);
+    }
+
+    rc = getifaddrs(&ifas);
+    if (rc) {
+        LOGERROR("unable to retrieve system IPv4 addresses.\n");
+        freeifaddrs(ifas);
+        return (1);
+    }
+
+    elem = ifas;
+    while (elem && !found) {
+        if (elem->ifa_addr && elem->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *saddr = (struct sockaddr_in *) elem->ifa_addr;
+            if (!strcmp(test_ip, inet_ntoa(saddr->sin_addr))) {
+                found = 1;
+            }
+        }
+        elem = elem->ifa_next;
+    }
+    freeifaddrs(ifas);
+    if (found) {
+        return (0);
+    }
     return (1);
 }
 
@@ -1979,28 +2030,34 @@ globalNetworkInfo *gni_init() {
     return (gni);
 }
 
-//!
-//! Populates a given globalNetworkInfo structure from the content of an XML file
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] xmlpath path the XML file use to be used to populate
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath)
-{
+/**
+ * Populates a given globalNetworkInfo structure from the content of an XML file
+ * @param gni [in] a pointer to the global network information structure
+ * @param host_info [in] a pointer to the hostname info data structure (only relevant to VPCMIDO - to be deprecated)
+ * @param xmlpath [in] path to the XML file to be used to populate
+ * @return 0 on success or 1 on failure
+ */
+int gni_populate(globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath) {
+    return (gni_populate_v(GNI_POPULATE_ALL, gni, host_info, xmlpath));
+}
+
+/**
+ * Populates a given globalNetworkInfo structure from the content of an XML file
+ * @param mode [in] mode what to populate GNI_POPULATE_ALL || GNI_POPULATE_CONFIG || GNI_POPULATE_NONE
+ * @param gni [in] a pointer to the global network information structure
+ * @param host_info [in] a pointer to the hostname info data structure (only relevant to VPCMIDO - to be deprecated)
+ * @param xmlpath [in] path to the XML file to be used to populate
+ * @return 0 on success or 1 on failure
+ */
+int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath) {
     int rc = 0;
     xmlDocPtr docptr;
     xmlXPathContextPtr ctxptr;
     struct timeval tv, ttv;
+
+    if (mode == GNI_POPULATE_NONE) {
+        return (0);
+    }
 
     eucanetd_timer_usec(&ttv);
     eucanetd_timer_usec(&tv);
@@ -2035,20 +2092,22 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     LOGTRACE("gni version populated in %ld us.\n", eucanetd_timer_usec(&tv));
     
     // Instances
-    rc = gni_populate_instances(gni, ctxptr);
-    LOGTRACE("gni instances populated in %ld us.\n", eucanetd_timer_usec(&tv));
+    if (mode == GNI_POPULATE_ALL) {
+        rc = gni_populate_instances(gni, ctxptr);
+        LOGTRACE("gni instances populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // Interfaces
-    rc = gni_populate_interfaces(gni, ctxptr);
-    LOGTRACE("gni interfaces populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // Interfaces
+        rc = gni_populate_interfaces(gni, ctxptr);
+        LOGTRACE("gni interfaces populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // Security Groups
-    rc = gni_populate_sgs(gni, ctxptr);
-    LOGTRACE("gni sgs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // Security Groups
+        rc = gni_populate_sgs(gni, ctxptr);
+        LOGTRACE("gni sgs populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // VPCs
-    rc = gni_populate_vpcs(gni, ctxptr);
-    LOGTRACE("gni vpcs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // VPCs
+        rc = gni_populate_vpcs(gni, ctxptr);
+        LOGTRACE("gni vpcs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+    }
 
     // Configuration
     rc = gni_populate_configuration(gni, host_info, ctxptr);
@@ -2058,20 +2117,22 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     xmlFreeDoc(docptr);
     xmlCleanupParser();
 
-    // Populate VPC and subnet interfaces
-    for (int i = 0; i < gni->max_vpcs; i++) {
-        gni_vpc *vpc = &(gni->vpcs[i]);
-        rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
-        if (rc) {
-            LOGWARN("Failed to populate gni %s interfaces.\n", vpc->name);
-            continue;
-        }
-        for (int j = 0; j < vpc->max_subnets; j++) {
-            gni_vpcsubnet *gnisubnet = &(vpc->subnets[j]);
-            rc = gni_vpcsubnet_get_interfaces(gni, gnisubnet, vpc->interfaces, vpc->max_interfaces,
-                    &(gnisubnet->interfaces), &(gnisubnet->max_interfaces));
+    if (mode == GNI_POPULATE_ALL) {
+        // Populate VPC and subnet interfaces
+        for (int i = 0; i < gni->max_vpcs; i++) {
+            gni_vpc *vpc = &(gni->vpcs[i]);
+            rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
             if (rc) {
-                LOGWARN("Failed to populate gni %s interfaces.\n", gnisubnet->name);
+                LOGWARN("Failed to populate gni %s interfaces.\n", vpc->name);
+                continue;
+            }
+            for (int j = 0; j < vpc->max_subnets; j++) {
+                gni_vpcsubnet *gnisubnet = &(vpc->subnets[j]);
+                rc = gni_vpcsubnet_get_interfaces(gni, gnisubnet, vpc->interfaces, vpc->max_interfaces,
+                        &(gnisubnet->interfaces), &(gnisubnet->max_interfaces));
+                if (rc) {
+                    LOGWARN("Failed to populate gni %s interfaces.\n", gnisubnet->name);
+                }
             }
         }
     }
