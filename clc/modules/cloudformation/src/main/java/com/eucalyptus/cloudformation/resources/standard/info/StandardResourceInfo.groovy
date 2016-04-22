@@ -32,6 +32,7 @@ import groovy.transform.ToString
 public class AWSAutoScalingAutoScalingGroupResourceInfo extends ResourceInfo {
   @AttributeJson
   String eucaCreateStartTime; // used to check against timeout
+
   public AWSAutoScalingAutoScalingGroupResourceInfo() {
     setType("AWS::AutoScaling::AutoScalingGroup");
   }

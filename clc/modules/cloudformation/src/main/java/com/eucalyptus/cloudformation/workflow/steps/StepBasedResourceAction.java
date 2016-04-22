@@ -13,11 +13,20 @@ import javax.annotation.Nullable;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ethomas on 12/4/15.
  */
 public abstract class StepBasedResourceAction extends ResourceAction {
+
+  public Integer getMultiUpdateStepTimeoutPollMaximumInterval() {
+    return (int) TimeUnit.SECONDS.toSeconds(30);
+  }
+
+  public Integer getMultiStepTimeoutPollMaximumInterval() {
+    return (int) TimeUnit.SECONDS.toSeconds(30);
+  }
 
   protected Map<String, Step> createSteps = Maps.newLinkedHashMap();
   public final Step getCreateStep(String stepId) {
