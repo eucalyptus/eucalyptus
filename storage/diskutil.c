@@ -115,9 +115,10 @@
  |                                ENUMERATIONS                                |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
+// Don't add new helpers to the head of this list
 enum {
-    CHMOD = 0,
+    ROOTWRAP = 0,
+    CHMOD,
     CHOWN,
     CP,
     DD,
@@ -128,7 +129,6 @@ enum {
     MKSWAP,
     PARTED,
     TUNE2FS,
-    ROOTWRAP,
     LASTHELPER
 };
 
@@ -158,7 +158,9 @@ enum {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+// Don't add new helpers to the head of this list
 static char *helpers[LASTHELPER] = {
+    "euca_rootwrap",
     "chmod",
     "chown",
     "cp",
@@ -170,7 +172,6 @@ static char *helpers[LASTHELPER] = {
     "mkswap",
     "parted",
     "tune2fs",
-    "euca_rootwrap",
 };
 
 static char *helpers_path[LASTHELPER] = { NULL };
@@ -271,19 +272,20 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
 //!
 //!
 //!
-//! @param[in] require_grub FALSE = not required, TRUE = required
+//! @param[in] check_first - validate presence of first X helpers, validate all if 0
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int diskutil_init()
+int diskutil_init(int check_first)
 {
    int ret = EUCA_OK;
    int missing_handlers = 0;
+   int handlers_to_test = (check_first == 0) ? LASTHELPER : check_first++;
    if (!initialized) {
         bzero(helpers_path, sizeof(helpers_path));
-        missing_handlers = verify_helpers(helpers, helpers_path, LASTHELPER);
+        missing_handlers = verify_helpers(helpers, helpers_path, handlers_to_test);
         if (missing_handlers) {
-            for (int i = 0; i < LASTHELPER; i++) {
+            for (int i = 0; i < handlers_to_test; i++) {
                 if (helpers_path[i] == NULL) {
                     LOGERROR("ERROR: missing a required handler: %s\n", helpers[i]);
                     ret = EUCA_ERROR;
@@ -1435,7 +1437,8 @@ int main(int argc, char *argv[])
 
     logfile(NULL, EUCA_LOG_TRACE, 4);
     log_prefix_set("%T %L %t9 |");
-    assert(diskutil_init(FALSE) == EUCA_OK);
+    assert(diskutil_init(3) == EUCA_OK);
+    assert(diskutil_init(0) == EUCA_OK);
 
     printf("%s: starting\n", argv[0]);
     output = execlp_output(TRUE, "/bin/echo", "hi", NULL);

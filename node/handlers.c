@@ -2454,7 +2454,7 @@ static int init(void)
         //        return (EUCA_FATAL_ERROR);
     }
     // check on dependencies (3rd-party programs that NC invokes)
-    if (diskutil_init()) {
+    if (diskutil_init(0)) {
         LOGFATAL("failed to find required dependencies for disk operations\n");
         return (EUCA_FATAL_ERROR);
     }

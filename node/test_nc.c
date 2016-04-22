@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
     add_euca_to_path(eucahome);
 
     fprintf(stderr, "looking for system utilities...\n");
-    if (diskutil_init()) {
+    if (diskutil_init(0)) {
         EUCA_FREE(eucahome);
         exit(1);
     }
