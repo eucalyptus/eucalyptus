@@ -23,10 +23,8 @@ package com.eucalyptus.objectstorage.providers.s3;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -203,8 +201,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       credentials = mapCredentials(requestUser);
     } catch (Exception e) {
       LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
-      throw new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: "
-          + (requestUser != null ? requestUser.getUserId() : "null"), e);
+      throw new InternalErrorException(
+          "Cannot construct s3client due to inability to map credentials for user: " + (requestUser != null ? requestUser.getUserId() : "null"), e);
     }
 
     if (this.backendClient == null) {
@@ -212,9 +210,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         if (this.backendClient == null) {
           try {
             // Create new one
-            this.backendClient =
-                new OsgInternalS3Client(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(),
-                    providerConfig.getS3UseBackendDns());
+            this.backendClient = new OsgInternalS3Client(credentials, this.getUpstreamEndpoint().toASCIIString(), providerConfig.getS3UseHttps(),
+                providerConfig.getS3UseBackendDns());
             return this.backendClient;
           } catch (Exception e) {
             LOG.error("exception thrown retrieving internal s3 client", e);
@@ -335,12 +332,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
    * @throws IllegalArgumentException
    */
   protected BasicAWSCredentials mapCredentials(User requestUser) throws Exception {
-    return new BasicAWSCredentials(ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3AccessKey(), ConfigurationCache
-        .getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
+    return new BasicAWSCredentials(ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3AccessKey(),
+        ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
   }
 
   private static final List<String> copyableHeaders = Collections.unmodifiableList(Lists.newArrayList(
-  // per REST API PUT Object docs as of 10/13/2014
+      // per REST API PUT Object docs as of 10/13/2014
       HttpHeaders.Names.CACHE_CONTROL, "Content-Disposition", // strangely not included
       HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Names.EXPIRES));
 
@@ -394,52 +391,62 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   @Override
   public void initialize() throws EucalyptusCloudException {
-    LOG.debug("Initializing");
+    LOG.debug("Initializing S3ProviderClient");
     // Prime the cache, initializes defaults etc. This is a bit ugly but needs to be provider-specific
     ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
     check();
     LOG.debug("Initialization completed successfully");
   }
 
-  protected int httpHeadToRootReturnCode() {
-    return HttpResponseStatus.METHOD_NOT_ALLOWED.getCode();
-  }
-
   @Override
   public void check() throws EucalyptusCloudException {
-    LOG.debug("Checking");
-    try {
-      // HEAD request to / is not supported and HTTP 405 should be returned
-      if ( httpHeadToRootReturnCode() != excuteHeadRequest( this.getUpstreamEndpoint() ) )
-        throw new EucalyptusCloudException("Unable to connect to S3 Endpoint Please check configuration and network connection");
-    } catch (URISyntaxException e) {
-      // it is safe to do this because we won't try to execute an operation until enable returns successfully.
-      throw new EucalyptusCloudException("Unable to connect to S3 Endpoint Please check configuration and network connection");
-    }
-    LOG.debug("Check completed successfully");
+    // HEAD to / returns HTTP 405 for S3, RiakCS. 200 for Ceph-RGW. Response value can be configured
+    checkConnectivityUsingHead(ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3EndpointHeadResponse());
   }
 
-  private static int excuteHeadRequest(URI targetURI) {
-    LOG.debug("HEAD request to " + targetURI);
+  protected void checkConnectivityUsingHead(int expectedResponse) throws EucalyptusCloudException {
+    LOG.debug("Checking connectivity to S3 endpoint");
+    try {
+      int headResponse = excuteHeadRequest(this.getUpstreamEndpoint());
+      if (headResponse != expectedResponse) {
+        LOG.warn("Connectivity check to S3 endpoint failed. Expected HEAD op against " + this.getUpstreamEndpoint() + " to return HTTP response "
+            + expectedResponse + ", but got " + headResponse);
+        throw new EucalyptusCloudException(
+            "Connectivity check to S3 endpoint failed. Expected HEAD op against " + this.getUpstreamEndpoint() + " to return HTTP response "
+                + expectedResponse + ", but got " + headResponse + ". Please check configuration and network connection to S3 endpoint");
+      } else {
+        LOG.debug("Connectivity check to S3 endpoint completed successfully. HEAD op against " + this.getUpstreamEndpoint()
+            + " returned expected HTTP response " + headResponse);
+      }
+    } catch (Exception e) {
+      // it is safe to do this because we won't try to execute an operation until enable returns successfully.
+      LOG.warn("Connectivity check to S3 endpoint failed", e);
+      throw new EucalyptusCloudException("Connectivity check to S3 endpoint failed. Please check configuration and network connection to S3 endpoint",
+          e);
+    }
+  }
+
+  protected int excuteHeadRequest(URI targetURI) {
+    LOG.trace("Executing HEAD op on " + targetURI);
     HttpURLConnection connection = null;
     int code = 500;
     try {
-      connection = (HttpURLConnection)targetURI.toURL().openConnection();
+      connection = (HttpURLConnection) targetURI.toURL().openConnection();
       connection.setRequestMethod("HEAD");
       connection.setUseCaches(false);
       try {
         connection.getInputStream();
         code = connection.getResponseCode();
-      } catch(IOException ex) {
+      } catch (IOException ex) {
         code = connection.getResponseCode();
       }
-      LOG.debug("Code is: " + code);
+      LOG.trace("HEAD op response HTTP " + code);
       return code;
     } catch (Exception ex) {
-      LOG.error(ex);
+      LOG.warn("Failed to execute HEAD operation on " + targetURI, ex);
       return code;
     } finally {
-      if(connection != null) {
+      if (connection != null) {
         connection.disconnect();
       }
     }
@@ -698,9 +705,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
       for (S3ObjectSummary obj : response.getObjectSummaries()) {
         // Add entry, note that the canonical user is set based on requesting user, not returned user
-        reply.getContents().add(
-            new ListEntry(obj.getKey(), DateFormatter.dateToHeaderFormattedString(obj.getLastModified()), obj.getETag(), obj.getSize(),
-                getCanonicalUser(requestUser), obj.getStorageClass()));
+        reply.getContents().add(new ListEntry(obj.getKey(), DateFormatter.dateToHeaderFormattedString(obj.getLastModified()), obj.getETag(),
+            obj.getSize(), getCanonicalUser(requestUser), obj.getStorageClass()));
       }
 
       if (response.getCommonPrefixes() != null && response.getCommonPrefixes().size() > 0) {
@@ -991,9 +997,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     try {
       internalS3Client = getS3Client(requestUser);
       AmazonS3Client s3Client = internalS3Client.getS3Client();
-      ListVersionsRequest listVersionsRequest =
-          new ListVersionsRequest(request.getBucket(), request.getPrefix(), request.getKeyMarker(), request.getVersionIdMarker(),
-              request.getDelimiter(), Integer.parseInt(request.getMaxKeys()));
+      ListVersionsRequest listVersionsRequest = new ListVersionsRequest(request.getBucket(), request.getPrefix(), request.getKeyMarker(),
+          request.getVersionIdMarker(), request.getDelimiter(), Integer.parseInt(request.getMaxKeys()));
       VersionListing result = s3Client.listVersions(listVersionsRequest);
 
       CanonicalUser owner = getCanonicalUser(requestUser);
@@ -1291,9 +1296,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       List<CommonPrefixesEntry> prefixes = reply.getCommonPrefixes();
 
       for (MultipartUpload multipartUpload : multipartUploads) {
-        uploads.add(new com.eucalyptus.storage.msgs.s3.Upload(multipartUpload.getKey(), multipartUpload.getUploadId(), new Initiator(multipartUpload
-            .getInitiator().getId(), multipartUpload.getInitiator().getDisplayName()), new CanonicalUser(multipartUpload.getOwner().getId(),
-            multipartUpload.getOwner().getDisplayName()), multipartUpload.getStorageClass(), multipartUpload.getInitiated()));
+        uploads.add(new com.eucalyptus.storage.msgs.s3.Upload(multipartUpload.getKey(), multipartUpload.getUploadId(),
+            new Initiator(multipartUpload.getInitiator().getId(), multipartUpload.getInitiator().getDisplayName()),
+            new CanonicalUser(multipartUpload.getOwner().getId(), multipartUpload.getOwner().getDisplayName()), multipartUpload.getStorageClass(),
+            multipartUpload.getInitiated()));
       }
       for (String commonPrefix : commonPrefixes) {
         prefixes.add(new CommonPrefixesEntry(commonPrefix));

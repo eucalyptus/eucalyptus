@@ -57,6 +57,8 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   private static final boolean DEFAULT_BACKEND_DNS = false;
   @Transient
   private static final Boolean DEFAULT_BACKEND_HTTPS = false;
+  @Transient
+  private static final String DEFAULT_S3_HEAD_RESPONSE = "405";
 
   @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = "s3.amazonaws.com")
   @Column(name = "endpoint")
@@ -76,10 +78,15 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Column(name = "use_https")
   protected Boolean S3UseHttps;
 
-  @ConfigurableField(description = "Use DNS virtual-hosted-style bucket names for communication to service backend.",
-      displayName = "use_backend_dns", initial = "false")
+  @ConfigurableField(description = "Use DNS virtual-hosted-style bucket names for communication to service backend.", displayName = "use_backend_dns",
+      initial = "false")
   @Column(name = "use_backend_dns")
   protected Boolean S3UseBackendDns;
+
+  @ConfigurableField(description = "HTTP response code for HEAD operation on S3 endpoint. Default value is 405",
+      displayName = "s3_endpoint_heartbeat_response", initial = DEFAULT_S3_HEAD_RESPONSE)
+  @Column(name = "endpoint_head_response")
+  protected Integer S3EndpointHeadResponse;
 
   public boolean getS3UseBackendDns() {
     return S3UseBackendDns;
@@ -137,11 +144,20 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   public void setS3Endpoint(String endPoint) {
     S3Endpoint = endPoint;
   }
+  
+  public Integer getS3EndpointHeadResponse() {
+    return S3EndpointHeadResponse;
+  }
+
+  public void setS3EndpointHeadResponse(Integer s3EndpointHeadResponse) {
+    S3EndpointHeadResponse = s3EndpointHeadResponse;
+  }
 
   public S3ProviderConfiguration initializeDefaults() {
     this.setS3Endpoint(DEFAULT_S3_ENDPOINT);
     this.setS3UserBackendDns(DEFAULT_BACKEND_DNS);
     this.setS3UseHttps(DEFAULT_BACKEND_HTTPS);
+    this.setS3EndpointHeadResponse(Integer.valueOf(DEFAULT_S3_HEAD_RESPONSE));
     return this;
   }
 

@@ -23,7 +23,7 @@ package com.eucalyptus.objectstorage.providers.s3;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 
 /**
- * Implementation for RiakCS. Add any additional RiakCS specific behavior here.
+ * Implementation for Ceph RGW. Add any additional Ceph RGW specific behavior here.
  */
 @ObjectStorageProviderClientProperty("ceph-rgw")
 public class CephRGWProviderClient extends S3ProviderClient {
