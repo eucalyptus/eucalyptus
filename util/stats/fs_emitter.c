@@ -184,8 +184,8 @@ int init_emitter(const char *euca_home) {
         LOGERROR("Cannot init fs emitter. User group not found %s\n", DATA_OUTPUT_GROUP);
         return EUCA_ERROR;
     }
-    
-    if(diskutil_init() != EUCA_OK) {
+    // only diskutil_ch is used by emitter, the diskutil_ch requires first three dist utils helpers
+    if(diskutil_init(3) != EUCA_OK) {
         LOGERROR("Diskutil init failed. Cannot initialize fs emitter\n");
         return EUCA_ERROR;
     }

@@ -133,7 +133,7 @@ struct partition_table_entry {
 int imaging_init(const char *new_euca_home_path, const char *new_cloud_cert_path, const char *new_service_key_path);
 int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes);
 
-int diskutil_init();
+int diskutil_init(int check_first);
 int diskutil_cleanup(void);
 int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill);
 int diskutil_dd(const char *in, const char *out, const int bs, const long long count);
