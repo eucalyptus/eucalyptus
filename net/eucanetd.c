@@ -426,25 +426,20 @@ int main(int argc, char **argv)
                 LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s)\n", pGni->sMode, config->netMode);
                 rc = 1;
                 sleep(1);
+                continue;
             }
-            if (check_peer_attempts > 0) {
-                eucanetdPeer = eucanetd_detect_peer(pGni);
-                if (PEER_IS_NONE(eucanetdPeer)) {
-                    // PEER_NONE should be only valid for VPCMIDO
-                    if (!IS_NETMODE_VPCMIDO(pGni)) {
+            if (!IS_NETMODE_VPCMIDO(pGni)) {
+                if (check_peer_attempts > 0) {
+                    eucanetdPeer = eucanetd_detect_peer(pGni);
+                    if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_VALID(eucanetdPeer))) {
                         LOGTRACE("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.\n", config->netMode);
                         rc = 1;
                         check_peer_attempts--;
                         sleep(3);
                     }
-                } else if (!PEER_IS_VALID(eucanetdPeer)) {
-                    LOGTRACE("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
-                    rc = 1;
-                    check_peer_attempts--;
-                    sleep(3);
+                } else {
+                    LOGWARN("Unable to detect service peer during pre-flight checks.\n");
                 }
-            } else {
-                LOGWARN("Unable to detect service peer during pre-flight checks.\n");
             }
             eucanetdPeer = PEER_INVALID;
         }
@@ -500,13 +495,17 @@ int main(int argc, char **argv)
         }
 
         if (eucanetdPeer == PEER_INVALID) {
-            eucanetdPeer = eucanetd_detect_peer(pGni);
-            if (!PEER_IS_VALID(eucanetdPeer)) {
-                LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
-                update_globalnet = FALSE;
-                update_globalnet_failed = TRUE;
-                sleep(1);
-                continue;
+            if (!IS_NETMODE_VPCMIDO(pGni)) {
+                eucanetdPeer = eucanetd_detect_peer(pGni);
+                if (!PEER_IS_VALID(eucanetdPeer)) {
+                    LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
+                    update_globalnet = FALSE;
+                    update_globalnet_failed = TRUE;
+                    sleep(1);
+                    continue;
+                }
+            } else {
+                eucanetdPeer = PEER_NONE;
             }
             // Initialize our network driver
             rc = eucanetd_initialize_network_drivers(config);
@@ -1170,7 +1169,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         return (1);
     }
 
-    rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
+    rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {

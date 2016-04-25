@@ -66,6 +66,7 @@ import com.eucalyptus.compute.common.internal.vpc.RouteTable
 import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
 import com.eucalyptus.compute.common.internal.vpc.Subnet
 import com.eucalyptus.compute.common.internal.vpc.Vpc
+import com.eucalyptus.compute.vpc.RouteKey
 import com.eucalyptus.network.config.Cluster as ConfigCluster;
 import com.eucalyptus.network.config.EdgeSubnet
 import com.eucalyptus.network.config.ManagedSubnet
@@ -77,7 +78,7 @@ import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.Strings as EucaStrings;
 import com.eucalyptus.vm.VmInstances
 import com.google.common.base.Function
-import com.google.common.base.Objects
+import com.google.common.base.MoreObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -88,6 +89,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.Iterables
 import com.google.common.collect.ListMultimap
 import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NodeInfo
@@ -114,7 +116,8 @@ class NetworkInfoBroadcasts {
                                                 final Supplier<List<Cluster>> clusterSupplier,
                                                 final Supplier<String> clcHostSupplier,
                                                 final Function<List<String>,List<String>> systemNameserverLookup,
-                                                final Set<String> dirtyPublicAddresses ) {
+                                                final Set<String> dirtyPublicAddresses,
+                                                final Set<RouteKey> invalidStateRoutes /*out*/ ) {
     Iterable<Cluster> clusters = clusterSupplier.get( )
     Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
         Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
@@ -241,7 +244,8 @@ class NetworkInfoBroadcasts {
         if ( internetGateway.vpcId ) map.put( internetGateway.vpcId, internetGateway.id )
         map
     }).asMap( )
-    Predicate<RouteNetworkView> activeRoutePredicate = activeRoutePredicate( internetGateways, natGateways, instances )
+    Predicate<RouteNetworkView> activeRoutePredicate =
+        activeRoutePredicate( internetGateways, natGateways, instances, networkInterfaces, invalidStateRoutes )
     info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
       final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
       new NIVpc(
@@ -418,9 +422,19 @@ class NetworkInfoBroadcasts {
   private static Predicate<RouteNetworkView> activeRoutePredicate(
       final Iterable<InternetGatewayNetworkView> internetGateways,
       final Iterable<NatGatewayNetworkView> natGateways,
-      final Iterable<VmInstanceNetworkView> instances
+      final Iterable<VmInstanceNetworkView> instances,
+      final Iterable<NetworkInterfaceNetworkView> networkInterfaces,
+      final Set<RouteKey> invalidRoutes
   ) {
-    final Set<String> instanceIds = Sets.newHashSet( instances.collect{ VmInstanceNetworkView vm -> vm.id } )
+    final Map<String,String> networkInterfaceAndInstanceIds = networkInterfaces
+        .findAll{ NetworkInterfaceNetworkView eni -> eni.instanceId }
+        .collectEntries( Maps.newHashMapWithExpectedSize( 500 ) ){
+      Object eniObj -> NetworkInterfaceNetworkView eni = (NetworkInterfaceNetworkView)eniObj
+            [ eni.id, eni.instanceId ]
+    }
+    final Set<String> instanceIds = Sets.newHashSet( instances
+        .findAll{ VmInstanceNetworkView vm -> vm.state == VmInstance.VmState.RUNNING }
+        .collect{ Object vm -> ((VmInstanceNetworkView)vm).id } )
     final Set<String> internetGatewayIds = Sets.newHashSet( internetGateways
         .findAll{ InternetGatewayNetworkView ig -> ig.vpcId } // only attached gateways have active routes
         .collect{ Object ig -> ((InternetGatewayNetworkView)ig).id } )
@@ -428,10 +442,17 @@ class NetworkInfoBroadcasts {
         .findAll{ NatGatewayNetworkView ng -> ng.state == NatGateway.State.available }
         .collect{ Object ng -> ((NatGatewayNetworkView)ng).id } )
     return { RouteNetworkView routeNetworkView ->
-      (!routeNetworkView.gatewayId && !routeNetworkView.networkInterfaceId) || // local route
+      final boolean active =
+          (!routeNetworkView.gatewayId && !routeNetworkView.networkInterfaceId &&
+           !routeNetworkView.instanceId && !routeNetworkView.natGatewayId) || // local route
           internetGatewayIds.contains( routeNetworkView.gatewayId ) ||
           natGatewayIds.contains( routeNetworkView.natGatewayId ) ||
-          instanceIds.contains( routeNetworkView.instanceId )
+          ( networkInterfaceAndInstanceIds.containsKey( routeNetworkView.networkInterfaceId ) &&
+              instanceIds.contains( networkInterfaceAndInstanceIds.get( routeNetworkView.networkInterfaceId ) ) )
+      if ( active != routeNetworkView.active ) {
+          invalidRoutes << new RouteKey( routeNetworkView.routeTableId, routeNetworkView.destinationCidr )
+      }
+      active
     } as Predicate<RouteNetworkView>
   }
 
@@ -660,7 +681,7 @@ class NetworkInfoBroadcasts {
           instance.instanceId,
           instance.version,
           instance.state,
-          Objects.firstNonNull( instance.runtimeState.zombie, false ) || !validInstanceMetadata( instance ),
+          MoreObjects.firstNonNull( instance.runtimeState.zombie, false ) || !validInstanceMetadata( instance ),
           instance.ownerAccountNumber,
           instance.bootRecord.vpcId,
           instance.bootRecord.subnetId,
@@ -947,6 +968,7 @@ class NetworkInfoBroadcasts {
   @Immutable
   static class RouteNetworkView {
     boolean active
+    String routeTableId
     String destinationCidr
     String gatewayId
     String natGatewayId
@@ -980,6 +1002,7 @@ class NetworkInfoBroadcasts {
     RouteNetworkView apply(@Nullable final Route route) {
       new RouteNetworkView(
           route.state == Route.State.active,
+          route.routeTable.displayName,
           route.destinationCidr,
           route.internetGatewayId,
           route.natGatewayId,

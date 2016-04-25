@@ -76,7 +76,7 @@ abstract class MultiUpdateStepPromise {
 
   def <T> Promise<T> invokeOrPoll( Integer timeout, Closure<Promise<T>> activity ) {
     if ( timeout ) {
-      workflowUtils.exponentialPollWithTimeout( timeout, 10, 1.15, (int)TimeUnit.MINUTES.toSeconds( 2 ), activity )
+      workflowUtils.exponentialPollWithTimeout( timeout, 5, 1.15, resourceAction.getMultiStepTimeoutPollMaximumInterval(), activity )
     } else {
       invoke( activity )
     }

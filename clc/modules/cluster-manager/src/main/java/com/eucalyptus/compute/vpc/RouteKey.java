@@ -17,14 +17,28 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.compute.vpc;
 
-package com.eucalyptus.objectstorage.providers.s3;
-
-import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
+import javax.annotation.Nonnull;
+import com.eucalyptus.util.Pair;
 
 /**
- * Implementation for Ceph RGW. Add any additional Ceph RGW specific behavior here.
+ *
  */
-@ObjectStorageProviderClientProperty("ceph-rgw")
-public class CephRGWProviderClient extends S3ProviderClient {
+public class RouteKey extends Pair<String,String> {
+
+  /**
+   *
+   */
+  public RouteKey( @Nonnull final String routeTableId, @Nonnull final String cidr ) {
+    super( routeTableId, cidr );
+  }
+
+  public String getRouteTableId( ) {
+    return getLeft( );
+  }
+
+  public String getCidr( ) {
+    return getRight( );
+  }
 }

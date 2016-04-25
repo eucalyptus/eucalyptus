@@ -28,12 +28,9 @@ import com.eucalyptus.autoscaling.common.msgs.AutoScalingNotificationTypes;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
-import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteNotificationConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DeleteTagsType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
@@ -46,19 +43,25 @@ import com.eucalyptus.autoscaling.common.msgs.Filters;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames;
 import com.eucalyptus.autoscaling.common.msgs.NotificationConfiguration;
-import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.ProcessNames;
 import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.ResumeProcessesType;
+import com.eucalyptus.autoscaling.common.msgs.SuspendProcessesType;
+import com.eucalyptus.autoscaling.common.msgs.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
+import com.eucalyptus.autoscaling.common.msgs.TerminateInstanceInAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
-import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.Values;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntity;
+import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntityManager;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
+import com.eucalyptus.cloudformation.entity.Status;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
@@ -67,10 +70,11 @@ import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoS
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSAutoScalingAutoScalingGroupProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingNotificationConfiguration;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AutoScalingTag;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.CreationPolicy;
 import com.eucalyptus.cloudformation.template.JsonHelper;
+import com.eucalyptus.cloudformation.template.UpdatePolicy;
 import com.eucalyptus.cloudformation.util.MessageHelper;
+import com.eucalyptus.cloudformation.workflow.NotAResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -79,19 +83,32 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -103,6 +120,10 @@ import java.util.concurrent.TimeUnit;
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResourceAction {
+//  @Override
+//  public Integer getMultiUpdateStepTimeoutPollMaximumInterval() {
+//    return (int) TimeUnit.SECONDS.toSeconds(10); // this is to allow rolling update to complete sooner
+//  }
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an autoscaling group to have zero instances during delete")
   public static volatile Integer AUTOSCALING_GROUP_ZERO_INSTANCES_MAX_DELETE_RETRY_SECS = 300;
@@ -110,11 +131,73 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for an autoscaling group to be deleted after deletion)")
   public static volatile Integer AUTOSCALING_GROUP_DELETED_MAX_DELETE_RETRY_SECS = 300;
 
-  private AWSAutoScalingAutoScalingGroupProperties properties = new AWSAutoScalingAutoScalingGroupProperties();
-  private AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
+  private static int MAX_SIGNAL_TIMEOUT = (int) TimeUnit.HOURS.toSeconds(12);
+
+  AWSAutoScalingAutoScalingGroupProperties properties = new AWSAutoScalingAutoScalingGroupProperties();
+  AWSAutoScalingAutoScalingGroupResourceInfo info = new AWSAutoScalingAutoScalingGroupResourceInfo();
 
   public AWSAutoScalingAutoScalingGroupResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+  }
+
+  private static Map<String, String> getSubnetMap(Collection<String> instanceIds, String effectiveUserId) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Compute.class);
+    DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, effectiveUserId);
+    describeInstancesType.getFilterSet( ).add( com.eucalyptus.compute.common.Filter.filter("instance-id", instanceIds));
+    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
+    Map<String, String> subnetMap = Maps.newHashMap();
+    if (describeInstancesResponseType.getReservationSet() != null) {
+      for (ReservationInfoType reservationInfoType: describeInstancesResponseType.getReservationSet()) {
+        if (reservationInfoType.getInstancesSet() != null) {
+          for (RunningInstancesItemType runningInstancesItemType: reservationInfoType.getInstancesSet()) {
+            subnetMap.put(runningInstancesItemType.getInstanceId(), runningInstancesItemType.getSubnetId());
+          }
+        }
+      }
+    }
+    return subnetMap;
+  }
+
+  private static boolean doesInstanceNeedReplacement(Instance instance, Map<String, String> subnetMap, AutoScalingGroupType autoScalingGroupType) {
+    if (!instance.getLaunchConfigurationName().equals(autoScalingGroupType.getLaunchConfigurationName())) {
+      return true;
+    }
+    // if AZ's not set, don't check, but otherwise make sure it matches.
+    if (autoScalingGroupType.getAvailabilityZones() != null &&
+      autoScalingGroupType.getAvailabilityZones().getMember() != null &&
+      !autoScalingGroupType.getAvailabilityZones().getMember().isEmpty() &&
+      !autoScalingGroupType.getAvailabilityZones().getMember().contains(instance.getAvailabilityZone())) {
+      return true;
+    }
+    Splitter commaSplitterAndTrim = Splitter.on(',').omitEmptyStrings().trimResults();
+    // check subnet (VPCZoneIdentifier)
+    if (autoScalingGroupType.getVpcZoneIdentifier() != null && !autoScalingGroupType.getVpcZoneIdentifier().isEmpty()) {
+      // get subnet from instance
+      if (!commaSplitterAndTrim.splitToList(autoScalingGroupType.getVpcZoneIdentifier()).contains(subnetMap.get(instance.getInstanceId()))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean doesInstanceNeedReplacement(Instance instance, Map<String, String> subnetMap, AWSAutoScalingAutoScalingGroupResourceAction newAction) {
+    if (!instance.getLaunchConfigurationName().equals(newAction.properties.getLaunchConfigurationName())) {
+      return true;
+    }
+    // if AZ's not set, don't check, but otherwise make sure it matches.
+    if (newAction.properties.getAvailabilityZones() != null &&
+      !newAction.properties.getAvailabilityZones().isEmpty() &&
+      !newAction.properties.getAvailabilityZones().contains(instance.getAvailabilityZone())) {
+      return true;
+    }
+
+    if (newAction.properties.getVpcZoneIdentifier() != null && !newAction.properties.getVpcZoneIdentifier().isEmpty()) {
+      // get subnet from instance
+      if (!newAction.properties.getVpcZoneIdentifier().contains(subnetMap.get(instance.getInstanceId()))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -217,7 +300,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber(Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber()).getUserId();
         CreateOrUpdateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateOrUpdateTagsType.class, effectiveAdminUserId);
         createSystemTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(action.info.getPhysicalResourceId(), TagHelper.getAutoScalingSystemTags(action.info, action.getStackEntity())));
-        AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createSystemTagsType);
+        sendSyncWithRetryOnScalingEvent(configuration, createSystemTagsType);
         // Create non-system tags as regular user
         List<AutoScalingTag> tags = TagHelper.getAutoScalingStackTags(action.getStackEntity());
         if (action.properties.getTags() != null && !action.properties.getTags().isEmpty()) {
@@ -227,7 +310,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (!tags.isEmpty()) {
           CreateOrUpdateTagsType createOrUpdateTagsType = MessageHelper.createMessage(CreateOrUpdateTagsType.class, action.info.getEffectiveUserId());
           createOrUpdateTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(action.info.getPhysicalResourceId(), tags));
-          AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createOrUpdateTagsType);
+          sendSyncWithRetryOnScalingEvent(configuration, createOrUpdateTagsType);
         }
         return action;
       }
@@ -247,7 +330,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
             ArrayList<String> member = Lists.newArrayList(notificationConfiguration.getNotificationTypes());
             autoScalingNotificationTypes.setMember(member);
             putNotificationConfigurationType.setNotificationTypes(autoScalingNotificationTypes);
-            AsyncRequests.<PutNotificationConfigurationType, PutNotificationConfigurationResponseType>sendSync(configuration, putNotificationConfigurationType);
+            sendSyncWithRetryOnScalingEvent(configuration, putNotificationConfigurationType);
           }
         }
         return action;
@@ -318,7 +401,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       @Nullable
       @Override
       public Integer getTimeout() {
-        return (int) TimeUnit.HOURS.toSeconds(12);
+        return (int) MAX_SIGNAL_TIMEOUT;
       }
     };
     // no retries on most steps
@@ -340,8 +423,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         updateAutoScalingGroupType.setMaxSize(0);
         updateAutoScalingGroupType.setDesiredCapacity(0);
         updateAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
-        updateAutoScalingGroupType.setEffectiveUserId(action.info.getEffectiveUserId());
-        AsyncRequests.<UpdateAutoScalingGroupType, UpdateAutoScalingGroupResponseType>sendSync(configuration, updateAutoScalingGroupType);
+        sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
         return action;
       }
     },
@@ -382,7 +464,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (groupDoesNotExist(configuration, action)) return action;
         DeleteAutoScalingGroupType deleteAutoScalingGroupType = MessageHelper.createMessage(DeleteAutoScalingGroupType.class, action.info.getEffectiveUserId());
         deleteAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
-        AsyncRequests.<DeleteAutoScalingGroupType,DeleteAutoScalingGroupResponseType> sendSync(configuration, deleteAutoScalingGroupType);
+        sendSyncWithRetryOnScalingEvent(configuration, deleteAutoScalingGroupType);
         return action;
       }
     },
@@ -422,7 +504,85 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     }
   }
 
+
+
+
+  private static final Logger LOG = Logger.getLogger(AWSAutoScalingAutoScalingGroupResourceAction.class);
   private enum UpdateNoInterruptionSteps implements UpdateStep {
+    CHECK_ROLLING_UPDATE_AND_SUSPEND {
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction oldAction = (AWSAutoScalingAutoScalingGroupResourceAction) oldResourceAction;
+        AWSAutoScalingAutoScalingGroupResourceAction newAction = (AWSAutoScalingAutoScalingGroupResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (newAction.info.getUpdatePolicyJson() == null) return newAction;
+        UpdatePolicy updatePolicy = UpdatePolicy.parse(newAction.info.getUpdatePolicyJson());
+        if (updatePolicy.getAutoScalingRollingUpdate() == null) return newAction;
+
+        RollingUpdateStateEntityManager.deleteRollingUpdateStateEntity(newAction.info.getAccountId(),
+          newAction.getStackEntity().getStackId(), newAction.info.getLogicalResourceId());
+        RollingUpdateStateEntity rollingUpdateStateEntity = RollingUpdateStateEntityManager.createRollingUpdateStateEntity(newAction.info.getAccountId(),
+          newAction.getStackEntity().getStackId(), newAction.info.getLogicalResourceId());
+
+
+        AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+        // check suspended processes even if we don't terminate instances (AWS does this)
+
+        Set<String> badSuspendedProcesses = Sets.newHashSet();
+        Set<String> possibleBadSuspendedProcesses = ImmutableSet.of("Launch", "Terminate");
+        Set<String> alreadySuspendedProcesses = Sets.newHashSet();
+        if (autoScalingGroupType.getSuspendedProcesses() != null && autoScalingGroupType.getSuspendedProcesses().getMember() != null) {
+          for (SuspendedProcessType suspendedProcessType: autoScalingGroupType.getSuspendedProcesses().getMember()) {
+            alreadySuspendedProcesses.add(suspendedProcessType.getProcessName());
+          }
+        }
+
+        for (String possibleBadSuspendedProcess: possibleBadSuspendedProcesses) {
+          if (alreadySuspendedProcesses.contains(possibleBadSuspendedProcess) ||
+            updatePolicy.getAutoScalingRollingUpdate().getSuspendProcesses().contains(possibleBadSuspendedProcess)) {
+            badSuspendedProcesses.add(possibleBadSuspendedProcess);
+          }
+        }
+        if (!badSuspendedProcesses.isEmpty()) {
+          throw new ResourceFailureException("Autoscaling rolling updates cannot be performed because the " +
+            badSuspendedProcesses + " process(es) have been suspended; please resume these processes and then retry the update.");
+        }
+
+        // check to see if rolling updates apply,.(if we have one 'bad' one say)
+        Set<String> instanceIds = Sets.newHashSet();
+        for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+          instanceIds.add(instance.getInstanceId());
+        }
+        Map<String, String> subnetMap = getSubnetMap(instanceIds, newAction.info.getEffectiveUserId());
+        for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+          if (doesInstanceNeedReplacement(instance, subnetMap, newAction)) {
+            rollingUpdateStateEntity.setNeedsRollbackUpdate(true);
+            RollingUpdateStateEntityManager.updateRollingUpdateStateEntity(rollingUpdateStateEntity);
+            break;
+          }
+        }
+
+        if (rollingUpdateStateEntity.getNeedsRollbackUpdate() != Boolean.TRUE) return newAction;
+
+        // otherwise start by suspending processes
+        rollingUpdateStateEntity.setAlreadySuspendedProcessNames(Joiner.on(',').join(alreadySuspendedProcesses));
+        if (!updatePolicy.getAutoScalingRollingUpdate().getSuspendProcesses().isEmpty()) {
+          SuspendProcessesType suspendProcessesType = MessageHelper.createMessage(SuspendProcessesType.class, newAction.info.getEffectiveUserId());
+          suspendProcessesType.setAutoScalingGroupName(newAction.info.getPhysicalResourceId());
+          ProcessNames processNames = new ProcessNames();
+          for (String suspendProcess : updatePolicy.getAutoScalingRollingUpdate().getSuspendProcesses()) {
+            if (!alreadySuspendedProcesses.contains(suspendProcess)) {
+              processNames.getMember().add(suspendProcess);
+            }
+          }
+          if (!processNames.getMember().isEmpty()) {
+            sendSyncWithRetryOnScalingEvent(configuration, suspendProcessesType);
+          }
+        }
+
+        RollingUpdateStateEntityManager.updateRollingUpdateStateEntity(rollingUpdateStateEntity);
+        return newAction;
+      }
+    },
     UPDATE_GROUP {
       @Override
       public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
@@ -441,6 +601,13 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (newAction.properties.getAvailabilityZones() != null) {
           updateAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(newAction.properties.getAvailabilityZones()));
         }
+        if (newAction.info.getUpdatePolicyJson() != null) {
+          UpdatePolicy updatePolicy = UpdatePolicy.parse(newAction.info.getUpdatePolicyJson());
+          if (updatePolicy != null && updatePolicy.getAutoScalingRollingUpdate() != null &&
+            updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService() >= newAction.properties.getMaxSize() ) {
+            throw new ValidationErrorException("MinInstancesInService must be less than the autoscaling group's MaxSize");
+          }
+        }
         updateAutoScalingGroupType.setDefaultCooldown(newAction.properties.getCooldown());
         updateAutoScalingGroupType.setDesiredCapacity(newAction.properties.getDesiredCapacity());
         updateAutoScalingGroupType.setHealthCheckGracePeriod(newAction.properties.getHealthCheckGracePeriod());
@@ -454,7 +621,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (newAction.properties.getVpcZoneIdentifier() != null) {
           updateAutoScalingGroupType.setVpcZoneIdentifier(Strings.emptyToNull(Joiner.on(",").join(newAction.properties.getVpcZoneIdentifier())));
         }
-        AsyncRequests.<UpdateAutoScalingGroupType, UpdateAutoScalingGroupResponseType>sendSync(configuration, updateAutoScalingGroupType);
+        sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
         return newAction;
       }
     },
@@ -500,7 +667,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (!onlyNewTags.isEmpty()) {
           CreateOrUpdateTagsType createOrUpdateTagsType = MessageHelper.createMessage(CreateOrUpdateTagsType.class, newAction.info.getEffectiveUserId());
           createOrUpdateTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(newAction.info.getPhysicalResourceId(), onlyNewTags));
-          AsyncRequests.<CreateOrUpdateTagsType, CreateOrUpdateTagsResponseType>sendSync(configuration, createOrUpdateTagsType);
+          sendSyncWithRetryOnScalingEvent(configuration, createOrUpdateTagsType);
         }
         //  Get old tags...
         Set<AutoScalingTag> oldTags = Sets.newLinkedHashSet();
@@ -517,7 +684,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (!tagsToRemove.isEmpty()) {
           DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
           deleteTagsType.setTags(convertAutoScalingTagsToCreateOrUpdateTags(newAction.info.getPhysicalResourceId(), tagsToRemove));
-          AsyncRequests.<DeleteTagsType, DeleteTagsResponseType>sendSync(configuration, deleteTagsType);
+          sendSyncWithRetryOnScalingEvent(configuration, deleteTagsType);
         }
         return newAction;
       }
@@ -528,7 +695,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         AWSAutoScalingAutoScalingGroupResourceAction oldAction = (AWSAutoScalingAutoScalingGroupResourceAction) oldResourceAction;
         AWSAutoScalingAutoScalingGroupResourceAction newAction = (AWSAutoScalingAutoScalingGroupResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-
         Map<String, Collection<String>> existingNotificationConfigurations = Maps.newHashMap();
         DescribeNotificationConfigurationsType describeNotificationConfigurationsType = MessageHelper.createMessage(DescribeNotificationConfigurationsType.class, newAction.info.getEffectiveUserId());
         AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
@@ -570,7 +736,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
             ArrayList<String> member = Lists.newArrayList(newNotificationConfigurations.get(topicArn));
             autoScalingNotificationTypes.setMember(member);
             putNotificationConfigurationType.setNotificationTypes(autoScalingNotificationTypes);
-            AsyncRequests.<PutNotificationConfigurationType, PutNotificationConfigurationResponseType>sendSync(configuration, putNotificationConfigurationType);
+            sendSyncWithRetryOnScalingEvent(configuration, putNotificationConfigurationType);
           }
         }
 
@@ -580,10 +746,36 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
             DeleteNotificationConfigurationType deleteNotificationConfigurationType = MessageHelper.createMessage(DeleteNotificationConfigurationType.class, newAction.info.getEffectiveUserId());
             deleteNotificationConfigurationType.setAutoScalingGroupName(newAction.info.getPhysicalResourceId());
             deleteNotificationConfigurationType.setTopicARN(topicArn);
-            AsyncRequests.sendSync(configuration, deleteNotificationConfigurationType);
+            sendSyncWithRetryOnScalingEvent(configuration, deleteNotificationConfigurationType);
           }
         }
         return newAction;
+      }
+    },
+    ROLLING_UPDATE_EVENT_LOOP {
+
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSAutoScalingAutoScalingGroupResourceAction oldAction = (AWSAutoScalingAutoScalingGroupResourceAction) oldResourceAction;
+        AWSAutoScalingAutoScalingGroupResourceAction newAction = (AWSAutoScalingAutoScalingGroupResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        if (newAction.info.getUpdatePolicyJson() == null) return newAction;
+        UpdatePolicy updatePolicy = UpdatePolicy.parse(newAction.info.getUpdatePolicyJson());
+        if (updatePolicy.getAutoScalingRollingUpdate() == null) return newAction;
+        RollingUpdateStateEntity rollingUpdateStateEntity = RollingUpdateStateEntityManager.getRollingUpdateStateEntity(newAction.info.getAccountId(), newAction.getStackEntity().getStackId(), newAction.info.getLogicalResourceId());
+        if (rollingUpdateStateEntity.getNeedsRollbackUpdate() != Boolean.TRUE) return newAction;
+        while (rollingUpdateStateEntity.getState() != UpdateRollbackInfo.State.DONE) {
+          LOG.info("Evaluating loop action on state " + rollingUpdateStateEntity.getState());
+          rollingUpdateStateEntity = (rollingUpdateStateEntity.getState().apply(newAction, configuration, updatePolicy, rollingUpdateStateEntity));
+          rollingUpdateStateEntity = RollingUpdateStateEntityManager.updateRollingUpdateStateEntity(rollingUpdateStateEntity);
+        }
+        return newAction;
+      }
+
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return MAX_SIGNAL_TIMEOUT;
       }
     };
 
@@ -592,7 +784,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     public Integer getTimeout() {
       return null;
     }
-
   }
 
   private static Tags convertAutoScalingTagsToCreateOrUpdateTags(String physicalResourceId, Collection<AutoScalingTag> autoScalingTags) {
@@ -640,7 +831,444 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
   }
 
 
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSyncWithRetryOnScalingEvent( ServiceConfiguration config, final A msg ) throws Exception {
+    // TODO: library.  configurable.
+    int numTriesLeft = 30;
+    long sleepTimeMS = 10000L;
+    while (true) {
+      try {
+        return AsyncRequests.sendSync(config, msg);
+      } catch (final Exception e) {
+        final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+        if (error.isPresent()) switch (Strings.nullToEmpty(error.get().getCode())) {
+          case "ScalingActivityInProgress":
+            if (--numTriesLeft <= 0) throw e;
+            Thread.sleep(sleepTimeMS);
+            break;
+          default:
+            throw e;
+        }
+        else {
+          throw e;
+        }
+      }
+    }
+  }
 
+  private static AutoScalingGroupType getExistingUniqueAutoscalingGroupType(ServiceConfiguration configuration, AWSAutoScalingAutoScalingGroupResourceAction action) throws Exception {
+    DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
+    AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
+    autoScalingGroupNames.getMember().add(action.info.getPhysicalResourceId());
+    describeAutoScalingGroupsType.setAutoScalingGroupNames(autoScalingGroupNames);
+    DescribeAutoScalingGroupsResponseType describeAutoScalingGroupResponseType = AsyncRequests.sendSync(configuration, describeAutoScalingGroupsType);
+    if (describeAutoScalingGroupResponseType == null || describeAutoScalingGroupResponseType.getDescribeAutoScalingGroupsResult() == null ||
+      describeAutoScalingGroupResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups() == null ||
+      describeAutoScalingGroupResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember() == null ||
+      describeAutoScalingGroupResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size() != 1) {
+      throw new ValidationErrorException(action.info.getPhysicalResourceId() + " refers to either a non-existant or non-unique autoscaling group");
+    }
+    return describeAutoScalingGroupResponseType.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+  }
+
+  public static class UpdateRollbackInfo {
+    public enum State {
+      NOT_STARTED {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+
+          // Find out how many signals we expect.  This is the new desired capacity - # of running, "good" instances
+          AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+
+          int numExpectedSignals = autoScalingGroupType.getDesiredCapacity();
+          Set<String> allRunningInstanceIds = Sets.newHashSet();
+          if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+            Set<String> instanceIds = Sets.newHashSet();
+            for (Instance instance : autoScalingGroupType.getInstances().getMember()) {
+              instanceIds.add(instance.getInstanceId());
+            }
+            Map<String, String> subnetMap = getSubnetMap(instanceIds, newAction.info.getEffectiveUserId());
+            for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+              if (instance.getLifecycleState().equals("InService")) {
+                allRunningInstanceIds.add(instance.getInstanceId());
+                if (!doesInstanceNeedReplacement(instance, subnetMap, autoScalingGroupType)) {
+                  numExpectedSignals--;
+                }
+              }
+            }
+          }
+          rollingUpdateStateEntity.setPreviousRunningInstanceIds(Joiner.on(',').join(allRunningInstanceIds));
+          rollingUpdateStateEntity.setNumExpectedTotalSignals(numExpectedSignals);
+          rollingUpdateStateEntity.setState(State.FIRST_WAIT_TO_SETTLE);
+          return rollingUpdateStateEntity;
+        }
+      },
+      FIRST_WAIT_TO_SETTLE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          return commonWaitToSettleLogic(newAction, configuration, updatePolicy, rollingUpdateStateEntity, State.FIRST_WAIT_FOR_SIGNALS, State.DETERMINE_TERMINATE_INFO_AND_RESIZE);
+        }
+      },
+      FIRST_WAIT_FOR_SIGNALS {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          return commonWaitForSignalsLogic(newAction, configuration, updatePolicy, rollingUpdateStateEntity, State.DETERMINE_TERMINATE_INFO_AND_RESIZE);
+        }
+      },
+      DETERMINE_TERMINATE_INFO_AND_RESIZE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+
+          // Record info from group before we change size
+          rollingUpdateStateEntity.setMinSize(autoScalingGroupType.getMinSize());
+          rollingUpdateStateEntity.setMaxSize(autoScalingGroupType.getMaxSize());
+          rollingUpdateStateEntity.setDesiredCapacity(autoScalingGroupType.getDesiredCapacity());
+
+          // figure out which instances are 'bad'
+          if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+            Set<String> instanceIds = Sets.newHashSet();
+            for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+              instanceIds.add(instance.getInstanceId());
+            }
+            Map<String, String> subnetMap = getSubnetMap(instanceIds, newAction.info.getEffectiveUserId());
+            Set<String> obsoleteInstanceIds = Sets.newHashSet();
+            for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+              if (doesInstanceNeedReplacement(instance, subnetMap, autoScalingGroupType)) {
+                obsoleteInstanceIds.add(instance.getInstanceId());
+              }
+            }
+            rollingUpdateStateEntity.setNumOriginalObsoleteInstances(obsoleteInstanceIds.size());
+            rollingUpdateStateEntity.setObsoleteInstanceIds(Joiner.on(',').join(obsoleteInstanceIds));
+
+            Set<String> previousRunningInstanceIds = Sets.newHashSet();
+            for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+              if (instance.getLifecycleState().equals("InService")) {
+                previousRunningInstanceIds.add(instance.getInstanceId());
+              }
+            }
+            rollingUpdateStateEntity.setPreviousRunningInstanceIds(Joiner.on(',').join(previousRunningInstanceIds));
+
+          } else {
+            rollingUpdateStateEntity.setNumOriginalObsoleteInstances(0);
+            rollingUpdateStateEntity.setObsoleteInstanceIds("");
+            rollingUpdateStateEntity.setPreviousRunningInstanceIds("");
+          }
+
+          if (rollingUpdateStateEntity.getNumOriginalObsoleteInstances() == 0) {
+            rollingUpdateStateEntity.setState(State.RESUME_PROCESSES);
+            return rollingUpdateStateEntity;
+          }
+
+          // We try to make the batch size as big as we can, but we have some restrictions.
+          // 1) It can't be bigger than the number of obsolete instances
+          // 2) It can't be bigger than the max batch size.
+          // 3) It would seem as though it couldn't be bigger than desiredCapacity - minRunningInstances, but it can if we increase the size
+          //    of the group temporarily.  In that case the value it can't be bigger than is desiredCapacity - minRunningInstances + number of non obsolete instances
+
+          int batchSize = Math.min(
+            Math.min(rollingUpdateStateEntity.getNumOriginalObsoleteInstances(), updatePolicy.getAutoScalingRollingUpdate().getMaxBatchSize()),
+            rollingUpdateStateEntity.getDesiredCapacity() - updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService()
+              + (rollingUpdateStateEntity.getDesiredCapacity() - rollingUpdateStateEntity.getNumOriginalObsoleteInstances()));
+
+          // Once we set the batch size, we need to make sure the group size is correct.  Either 'desiredCapacity' or (if we need to increase the size, batchSize + minRunningInstances)
+
+          int tempDesiredCapacity = Math.max(batchSize + updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService(), rollingUpdateStateEntity.getDesiredCapacity());
+          rollingUpdateStateEntity.setBatchSize(batchSize);
+          rollingUpdateStateEntity.setTempDesiredCapacity(tempDesiredCapacity);
+
+          StringBuilder message = new StringBuilder("Rollling update initiated.  " +
+            "Terminating " + rollingUpdateStateEntity.getNumOriginalObsoleteInstances() + " instance(s) in batches of " + batchSize);
+          if (updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService() > 0) {
+            message.append(", while keeping at least " + updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService() + " in service.");
+          } else {
+            message.append(".");
+          }
+
+          if (updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()) {
+            message.append("  Waiting on resource signals with a timeout of " + updatePolicy.getAutoScalingRollingUpdate().getPauseTime() + " when new instances are added to the autoscaling group.");
+          } else if (Duration.parse(updatePolicy.getAutoScalingRollingUpdate().getPauseTime()).getSeconds() > 0) {
+            message.append("  Pausing for " + updatePolicy.getAutoScalingRollingUpdate().getPauseTime() + " when new instances are added to the autoscaling group.");
+          }
+          addStackEventForRollingUpdate(newAction, message.toString());
+
+          // now set the new size of the group (to allow adds or deletes)
+          UpdateAutoScalingGroupType updateAutoScalingGroupType = MessageHelper.createMessage(UpdateAutoScalingGroupType.class, newAction.info.getEffectiveUserId());
+          updateAutoScalingGroupType.setAutoScalingGroupName(newAction.info.getPhysicalResourceId());
+          updateAutoScalingGroupType.setDesiredCapacity(tempDesiredCapacity);
+          updateAutoScalingGroupType.setMinSize(tempDesiredCapacity);
+          sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
+          addStackEventForRollingUpdate(newAction, "Temporarily setting autoscaling group MinSize and DesiredCapacity to " + tempDesiredCapacity + ".");
+
+          // This size change may result in new instances needing to be spun up
+          rollingUpdateStateEntity.setState(State.WAIT_TO_SETTLE);
+          return rollingUpdateStateEntity;
+        }
+      },
+      WAIT_TO_SETTLE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          return commonWaitToSettleLogic(newAction, configuration, updatePolicy, rollingUpdateStateEntity, State.WAIT_FOR_SIGNALS, State.TRY_TERMINATE);
+        }
+      },
+      WAIT_FOR_SIGNALS {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          return commonWaitForSignalsLogic(newAction, configuration, updatePolicy, rollingUpdateStateEntity, State.TRY_TERMINATE);
+        }
+      },
+      TRY_TERMINATE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          Set<String> obsoleteInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getObsoleteInstanceIds()));
+          AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+          if (obsoleteInstanceIds.isEmpty()) {
+            rollingUpdateStateEntity.setState(State.RESUME_PROCESSES);
+            return rollingUpdateStateEntity;
+          } else {
+            boolean isLastRound = (obsoleteInstanceIds.size() <= rollingUpdateStateEntity.getBatchSize());
+            Set<String> terminatingInstanceIds = Sets.newHashSet();
+            int numToTerminate = 0;
+            for (String obsoleteInstanceId: obsoleteInstanceIds) {
+              terminatingInstanceIds.add(obsoleteInstanceId);
+              if (++numToTerminate == rollingUpdateStateEntity.getBatchSize()) break;
+            }
+            obsoleteInstanceIds.removeAll(terminatingInstanceIds);
+            rollingUpdateStateEntity.setTerminatingInstanceIds(Joiner.on(',').join(terminatingInstanceIds));
+            rollingUpdateStateEntity.setObsoleteInstanceIds(Joiner.on(',').join(obsoleteInstanceIds));
+
+            Set<String> allRunningInstanceIds = Sets.newHashSet();
+            if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+              for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+                if (instance.getLifecycleState().equals("InService")) {
+                  allRunningInstanceIds.add(instance.getInstanceId());
+                }
+              }
+            }
+            // how many will we replace it with?  If we are not in the last round, we replace with as many as we terminate.
+            // If we are in the last round we have (# running instances - # terminating instances) " good instances and we want
+            // to add as many as we need to to get to the desired capacity... We want to remove X and leave original desired capacity
+            // if we already have 'too many' good ones, we don't have any
+            int replacementNum;
+            if (!isLastRound) {
+              replacementNum = terminatingInstanceIds.size();
+            } else {
+              int numGood = allRunningInstanceIds.size() - terminatingInstanceIds.size();
+              replacementNum = numGood > rollingUpdateStateEntity.getDesiredCapacity() ? 0 : rollingUpdateStateEntity.getDesiredCapacity() - numGood;
+            }
+            addStackEventForRollingUpdate(newAction, "Terminating instance(s) " + terminatingInstanceIds + "; replacing with " + replacementNum + " new instance(s).");
+            for (String terminatingInstanceId: terminatingInstanceIds) {
+              TerminateInstanceInAutoScalingGroupType terminateInstanceInAutoScalingGroupType = MessageHelper.createMessage(TerminateInstanceInAutoScalingGroupType.class, newAction.info.getEffectiveUserId());
+              terminateInstanceInAutoScalingGroupType.setInstanceId(terminatingInstanceId);
+              terminateInstanceInAutoScalingGroupType.setShouldDecrementDesiredCapacity(false);
+              try {
+                sendSyncWithRetryOnScalingEvent(configuration, terminateInstanceInAutoScalingGroupType);
+              } catch (final Exception e) {
+                final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+                if (error.isPresent()) switch (Strings.nullToEmpty(error.get().getCode())) {
+                  case "ValidationError":
+                    continue; // already terminated
+                }
+                throw e;
+              }
+            }
+            if (isLastRound) {
+              // now set back to original size
+              // now set the new size of the group (to allow adds or deletes)
+              UpdateAutoScalingGroupType updateAutoScalingGroupType = MessageHelper.createMessage(UpdateAutoScalingGroupType.class, newAction.info.getEffectiveUserId());
+              updateAutoScalingGroupType.setAutoScalingGroupName(newAction.info.getPhysicalResourceId());
+              updateAutoScalingGroupType.setDesiredCapacity(rollingUpdateStateEntity.getDesiredCapacity());
+              updateAutoScalingGroupType.setMinSize(rollingUpdateStateEntity.getMinSize());
+              sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
+            }
+            rollingUpdateStateEntity.setState(State.WAIT_FOR_TERMINATE);
+            return rollingUpdateStateEntity;
+          }
+        }
+      },
+      WAIT_FOR_TERMINATE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          Set<String> terminatingInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getTerminatingInstanceIds()));
+          Set<String> obsoleteInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getObsoleteInstanceIds()));
+          if (!isAllTerminated(terminatingInstanceIds, newAction.info.getEffectiveUserId())) {
+            throw new NotAResourceFailureException("Still waiting on terminating instances");
+          } else {
+            int progress = rollingUpdateStateEntity.getNumOriginalObsoleteInstances() == 0 ? 100 : 100 * (rollingUpdateStateEntity.getNumOriginalObsoleteInstances() - obsoleteInstanceIds.size()) / rollingUpdateStateEntity.getNumOriginalObsoleteInstances();
+            addStackEventForRollingUpdate(newAction, "Successfully terminated instance(s) " + terminatingInstanceIds + " (Progress " + progress + "%).");
+            rollingUpdateStateEntity.setTerminatingInstanceIds("");
+            rollingUpdateStateEntity.setState(State.WAIT_TO_SETTLE);
+            return rollingUpdateStateEntity;
+          }
+        }
+      },
+      RESUME_PROCESSES {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          Set<String> alreadySuspendedProcesses = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getAlreadySuspendedProcessNames()));
+          if (!updatePolicy.getAutoScalingRollingUpdate().getSuspendProcesses().isEmpty()) {
+            ResumeProcessesType resumeProcessesType = MessageHelper.createMessage(ResumeProcessesType.class, newAction.info.getEffectiveUserId());
+            resumeProcessesType.setAutoScalingGroupName(newAction.info.getPhysicalResourceId());
+            ProcessNames processNames = new ProcessNames();
+            for (String suspendProcess : updatePolicy.getAutoScalingRollingUpdate().getSuspendProcesses()) {
+              if (!alreadySuspendedProcesses.contains(suspendProcess)) {
+                processNames.getMember().add(suspendProcess);
+              }
+            }
+            if (!processNames.getMember().isEmpty()) {
+              sendSyncWithRetryOnScalingEvent(configuration, resumeProcessesType);
+            }
+          }
+          rollingUpdateStateEntity.setState(State.DONE);
+          return rollingUpdateStateEntity;
+        }
+      },
+      DONE {
+        @Override
+        public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
+          rollingUpdateStateEntity.setState(State.DONE);
+          return rollingUpdateStateEntity;
+        }
+      };
+      abstract RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception;
+    }
+
+    private static RollingUpdateStateEntity commonWaitToSettleLogic(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity, State nextSignalState, State nextNonSignalState) throws Exception {
+      if (!settled(configuration, newAction)) {
+        throw new NotAResourceFailureException("Autoscaling group is not yet settled, trying again");
+      }
+      Set<String> previousInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getPreviousRunningInstanceIds()));
+      AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+      Set<String> allRunningInstanceIds = Sets.newHashSet();
+      if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+        for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+          if (instance.getLifecycleState().equals("InService")) {
+            allRunningInstanceIds.add(instance.getInstanceId());
+          }
+        }
+      }
+      // update previousInstanceIds
+      rollingUpdateStateEntity.setPreviousRunningInstanceIds(Joiner.on(',').join(allRunningInstanceIds));
+      Set<String> newInstanceIds = Sets.difference(allRunningInstanceIds, previousInstanceIds);
+      if (!newInstanceIds.isEmpty()) {
+        if (updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()) {
+          addStackEventForRollingUpdate(newAction, "New instance(s) added to autoscaling group - Waiting on " + newInstanceIds.size() + " resource signal(s) with a timeout of " + updatePolicy.getAutoScalingRollingUpdate().getPauseTime() + ".");
+          rollingUpdateStateEntity.setNumNeededSignalsThisBatch(newInstanceIds.size());
+          rollingUpdateStateEntity.setNumReceivedSignalsThisBatch(0);
+          rollingUpdateStateEntity.setSignalCutoffTimestamp(new Date(System.currentTimeMillis() +
+            TimeUnit.SECONDS.toMillis(Duration.parse(updatePolicy.getAutoScalingRollingUpdate().getPauseTime()).getSeconds())));
+        } else {
+          if (Duration.parse(updatePolicy.getAutoScalingRollingUpdate().getPauseTime()).getSeconds() > 0) {
+            addStackEventForRollingUpdate(newAction, "New instance(s) added to autoscaling group - Pausing for " + updatePolicy.getAutoScalingRollingUpdate().getPauseTime() + ".");
+          }
+          rollingUpdateStateEntity.setSignalCutoffTimestamp(new Date(System.currentTimeMillis() +
+            TimeUnit.SECONDS.toMillis(Duration.parse(updatePolicy.getAutoScalingRollingUpdate().getPauseTime()).getSeconds())));
+        }
+        rollingUpdateStateEntity.setState(nextSignalState);
+      } else {
+        rollingUpdateStateEntity.setState(nextNonSignalState);
+      }
+      return rollingUpdateStateEntity;
+    }
+
+    private static RollingUpdateStateEntity commonWaitForSignalsLogic(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity, State nextState) throws Exception {
+      if (!updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()) {
+        if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
+          throw new NotAResourceFailureException("still pausing");
+        } else {
+          rollingUpdateStateEntity.setState(nextState);
+          return rollingUpdateStateEntity;
+        }
+      }
+      // Otherwise we wait for signals?
+      AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
+      Set<String> allRunningInstanceIds = Sets.newHashSet();
+      if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+        for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+          if (instance.getLifecycleState().equals("InService")) {
+            allRunningInstanceIds.add(instance.getInstanceId());
+          }
+        }
+      }
+      Collection<SignalEntity> signals = SignalEntityManager.getSignals(newAction.getStackEntity().getStackId(), newAction.info.getAccountId(), newAction.info.getLogicalResourceId(),
+        newAction.getStackEntity().getStackVersion());
+      for (SignalEntity signal : signals) {
+        if (signal.getProcessed()) continue;
+        // Ignore signals with ids not from the list of instance ids.
+        if (!allRunningInstanceIds.contains(signal.getUniqueId())) continue;
+        StackEventEntityManager.addSignalStackEvent(signal);
+        signal.setProcessed(true);
+        SignalEntityManager.updateSignal(signal);
+        if (signal.getStatus() == SignalEntity.Status.FAILURE) {
+          rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + 1);
+        } else {
+          rollingUpdateStateEntity.setNumSuccessSignals(rollingUpdateStateEntity.getNumSuccessSignals() + 1);
+        }
+        rollingUpdateStateEntity.setNumReceivedSignalsThisBatch(rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() + 1);
+      }
+      if (rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() < rollingUpdateStateEntity.getNumNeededSignalsThisBatch()) {
+        if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
+          throw new NotAResourceFailureException("Still waiting for resource signals");
+        } else {
+          addStackEventForRollingUpdate(newAction, "Failed to receive " + rollingUpdateStateEntity.getNumNeededSignalsThisBatch() + ".  Each resource signal timeout is counted as a FAILURE." );
+          rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + rollingUpdateStateEntity.getNumNeededSignalsThisBatch() - rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+        }
+      }
+      if (rollingUpdateStateEntity.getNumFailureSignals() > rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100) {
+        throw new ResourceFailureException("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
+          " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
+      }
+      // otherwise continue
+      rollingUpdateStateEntity.setState(nextState);
+      return rollingUpdateStateEntity;
+    }
+
+    private static boolean settled(ServiceConfiguration configuration, AWSAutoScalingAutoScalingGroupResourceAction action) throws Exception {
+      AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, action);
+      int numInServiceInstances = 0;
+      if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
+        for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
+          if (instance.getLifecycleState().equals("InService")) {
+            numInServiceInstances++;
+          }
+        }
+      }
+      return (numInServiceInstances == autoScalingGroupType.getDesiredCapacity());
+    }
+
+    public static void addStackEventForRollingUpdate(AWSAutoScalingAutoScalingGroupResourceAction action, String message) {
+      Date timestamp = new Date();
+      String eventId = action.info.getLogicalResourceId() + "-" + Status.UPDATE_IN_PROGRESS + "-" + timestamp.getTime();
+      StackEventEntityManager.addStackEvent(action.info.getAccountId(), eventId, action.info.getLogicalResourceId(),
+        action.info.getPhysicalResourceId(), action.info.getPropertiesJson(),
+        Status.UPDATE_IN_PROGRESS, message, action.info.getType(), action.getStackEntity().getStackId(),
+        action.getStackEntity().getStackName(), timestamp);
+    }
+
+    private static boolean isAllTerminated(Collection<String> instanceIds, String effectiveUserId) throws Exception {
+      Map<String, String> stateMap = Maps.newHashMap();
+      ServiceConfiguration configuration = Topology.lookup(Compute.class);
+      DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, effectiveUserId);
+      describeInstancesType.getFilterSet( ).add( com.eucalyptus.compute.common.Filter.filter("instance-id", instanceIds));
+      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
+      if (describeInstancesResponseType.getReservationSet() != null) {
+        for (ReservationInfoType reservationInfoType: describeInstancesResponseType.getReservationSet()) {
+          if (reservationInfoType.getInstancesSet() != null) {
+            for (RunningInstancesItemType runningInstancesItemType: reservationInfoType.getInstancesSet()) {
+              stateMap.put(runningInstancesItemType.getInstanceId(), runningInstancesItemType.getStateName());
+            }
+          }
+        }
+      }
+      for (String instanceId: instanceIds) {
+        if (stateMap.containsKey(instanceId) && !"terminated".equals(stateMap.get(instanceId))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+
+  }
 }
 
 

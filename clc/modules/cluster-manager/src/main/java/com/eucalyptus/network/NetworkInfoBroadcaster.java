@@ -35,6 +35,9 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.RouteTable;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
+import com.eucalyptus.compute.vpc.EventFiringVpcRouteStateInvalidator;
+import com.eucalyptus.compute.vpc.RouteKey;
+import com.eucalyptus.compute.vpc.VpcRouteStateInvalidator;
 import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Listeners;
@@ -58,6 +61,7 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LockResource;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.SemaphoreResource;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -126,6 +130,7 @@ public class NetworkInfoBroadcaster {
       new EntityCache<>( NetworkInterface.exampleWithOwner( null ), TypeMappers.lookup( NetworkInterface.class, NetworkInterfaceNetworkView.class )  );
   private static final EntityCache<NatGateway,NatGatewayNetworkView> natGatewayCache =
       new EntityCache<>( NatGateway.exampleWithOwner( null ), TypeMappers.lookup( NatGateway.class, NatGatewayNetworkView.class )  );
+  private static final VpcRouteStateInvalidator vpcRouteStateInvalidator = new EventFiringVpcRouteStateInvalidator( );
 
   private static NetworkInfoSource cacheSource( ) {
     final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier = Suppliers.memoize( instanceCache );
@@ -217,6 +222,7 @@ public class NetworkInfoBroadcaster {
 
       final NetworkInfoSource source = cacheSource( );
       final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
+      final Set<RouteKey> invalidStateRoutes = Sets.newHashSetWithExpectedSize( 50 );
       final int sourceFingerprint = fingerprint( source, clusters, dirtyPublicAddresses, NetworkGroups.NETWORK_CONFIGURATION );
       final NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
               networkConfiguration,
@@ -235,9 +241,14 @@ public class NetworkInfoBroadcaster {
                   return NetworkConfigurations.loadSystemNameservers( defaultServers );
                 }
               },
-              dirtyPublicAddresses
+              dirtyPublicAddresses,
+              invalidStateRoutes
           );
           info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
+
+      if ( !invalidStateRoutes.isEmpty( ) ) {
+        vpcRouteStateInvalidator.accept( invalidStateRoutes );
+      }
 
       Applicators.apply( clusters, info );
 

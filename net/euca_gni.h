@@ -109,6 +109,12 @@
 
 enum { GNI_ITERATE_PRINT, GNI_ITERATE_FREE };
 
+enum gni_populate_mode_t {
+    GNI_POPULATE_ALL,
+    GNI_POPULATE_CONFIG,
+    GNI_POPULATE_NONE,
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -226,6 +232,7 @@ typedef struct gni_network_acl_t {
 typedef struct gni_route_entry_t {
     char destCidr[16];
     char target[32];
+    int applied;
 } gni_route_entry;
 
 typedef struct gni_route_table_t {
@@ -351,7 +358,8 @@ int gni_free(globalNetworkInfo * gni);
 int gni_clear(globalNetworkInfo * gni);
 int gni_print(globalNetworkInfo * gni);
 int gni_iterate(globalNetworkInfo * gni, int mode);
-int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath);
+int gni_populate(globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
+int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
 int gni_populate_instances(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
 int gni_populate_interfaces(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
 int gni_populate_sgs(globalNetworkInfo * gni, xmlXPathContextPtr ctxptr);
@@ -362,6 +370,7 @@ int gni_populate_configuration(globalNetworkInfo * gni, gni_hostname_info *host_
 int gni_populate_instance_interface(gni_instance *instance, const char *xmlpath, xmlXPathContextPtr ctxptr);
 
 int gni_is_self(const char *test_ip);
+int gni_is_self_getifaddrs(const char *test_ip);
 
 int gni_cluster_clear(gni_cluster *cluster);
 int gni_node_clear(gni_node *node);
@@ -419,6 +428,10 @@ int gni_node_validate(gni_node * node);
 int gni_instance_validate(gni_instance * instance);
 int gni_interface_validate(gni_instance * interface);
 int gni_secgroup_validate(gni_secgroup * secgroup);
+int gni_vpc_validate(gni_vpc *vpc);
+int gni_vpcsubnet_validate(gni_vpcsubnet *vpcsubnet);
+int gni_nat_gateway_validate(gni_nat_gateway *natg);
+int gni_route_table_validate(gni_route_table *rtable);
 
 int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);

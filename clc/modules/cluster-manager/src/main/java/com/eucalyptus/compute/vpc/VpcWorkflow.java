@@ -22,6 +22,8 @@ package com.eucalyptus.compute.vpc;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
@@ -33,11 +35,16 @@ import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vpc.InternetGateway;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
 import com.eucalyptus.compute.common.internal.vpc.NatGateway;
 import com.eucalyptus.compute.common.internal.vpc.NatGateways;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
+import com.eucalyptus.compute.common.internal.vpc.Route;
+import com.eucalyptus.compute.common.internal.vpc.RouteTable;
+import com.eucalyptus.compute.common.internal.vpc.RouteTables;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataException;
@@ -45,6 +52,7 @@ import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.compute.vpc.persist.PersistenceInternetGateways;
 import com.eucalyptus.compute.vpc.persist.PersistenceNatGateways;
 import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces;
+import com.eucalyptus.compute.vpc.persist.PersistenceRouteTables;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionResource;
@@ -56,6 +64,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -64,10 +73,13 @@ public class VpcWorkflow {
 
   private static final Logger logger = Logger.getLogger( VpcWorkflow.class );
 
+  private static final Set<RouteKey> routesToCheck = Sets.newConcurrentHashSet( );
+
   private final VpcInvalidator vpcInvalidator;
   private final InternetGateways internetGateways;
   private final NatGateways natGateways;
   private final NetworkInterfaces networkInterfaces;
+  private final RouteTables routeTables;
 
   private final List<WorkflowTask> workflowTasks = ImmutableList.<WorkflowTask>builder()
       .add( new WorkflowTask(  10, "NatGateway.SetupNetworkInterface" ) { @Override void doWork( ) throws Exception { natGatewaySetupNetworkInterface( ); } } )
@@ -75,18 +87,21 @@ public class VpcWorkflow {
       .add( new WorkflowTask(  10, "NatGateway.Delete"                ) { @Override void doWork( ) throws Exception { natGatewayDelete( ); } } )
       .add( new WorkflowTask(  30, "NatGateway.FailureCleanup"        ) { @Override void doWork( ) throws Exception { natGatewayFailureCleanup( ); } } )
       .add( new WorkflowTask( 300, "NatGateway.Timeout"               ) { @Override void doWork( ) throws Exception { natGatewayTimeout( ); } } )
+      .add( new WorkflowTask(  10, "Route.StateCheck"                 ) { @Override void doWork( ) throws Exception { routeStateCheck( ); } } )
       .build( );
 
   public VpcWorkflow(
       final VpcInvalidator vpcInvalidator,
       final InternetGateways internetGateways,
       final NatGateways natGateways,
-      final NetworkInterfaces networkInterfaces
+      final NetworkInterfaces networkInterfaces,
+      final RouteTables routeTables
   ) {
     this.vpcInvalidator = vpcInvalidator;
     this.internetGateways = internetGateways;
     this.natGateways = natGateways;
     this.networkInterfaces = networkInterfaces;
+    this.routeTables = routeTables;
   }
 
   private void doWorkflow( ) {
@@ -290,6 +305,88 @@ public class VpcWorkflow {
     natGateway.setNetworkInterface( null );
   }
 
+  /**
+   * WARNING, route states here must be consistent with those calculated in NetworkInfoBroadcasts
+   */
+  private void routeStateCheck( ) {
+    final List<RouteKey> keysToProcess = routesToCheck.stream( ).limit( 500 ).collect( Collectors.toList( ) );
+    routesToCheck.removeAll( keysToProcess );
+    for ( final RouteKey routeKey : keysToProcess ) {
+      try ( final TransactionResource tx = Entities.transactionFor( RouteTable.class ) ) {
+        final RouteTable routeTable =
+            routeTables.lookupByName( null, routeKey.getRouteTableId( ), Functions.identity( ) );
+        final java.util.Optional<Route> routeOptional = routeTable.getRoutes( ).stream( )
+            .filter( route -> route.getDestinationCidr( ).equals( routeKey.getCidr( ) ) )
+            .findFirst( );
+        if ( routeOptional.isPresent( ) ) {
+          final Route route = routeOptional.get( );
+          Route.State newState = route.getState( );
+          if ( route.getInternetGatewayId( ) != null ) {  // Internet gateway route
+            try {
+              final InternetGateway internetGateway =
+                  internetGateways.lookupByName( null, route.getInternetGatewayId( ), Functions.identity( ) );
+              newState = internetGateway.getVpc( ) != null ? Route.State.active : Route.State.blackhole;
+            } catch ( final VpcMetadataNotFoundException e ) {
+              newState = Route.State.blackhole;
+            }
+          } else if ( route.getNatGatewayId( ) != null ) { // NAT gateway route
+            try {
+              final NatGateway natGateway =
+                  natGateways.lookupByName( null, route.getNatGatewayId( ), Functions.identity( ) );
+              newState = natGateway.getState( ) == NatGateway.State.available ?
+                  Route.State.active :
+                  Route.State.blackhole;
+            } catch ( final VpcMetadataNotFoundException e ) {
+              newState = Route.State.blackhole;
+            }
+          } else if ( route.getNetworkInterfaceId( ) != null ) { // NAT instance route
+            try {
+              final NetworkInterface eni =
+                  networkInterfaces.lookupByName( null, route.getNetworkInterfaceId( ), Functions.identity( ) );
+              if ( !eni.isAttached( ) ) {
+                if ( route.getInstanceId( ) != null || route.getInstanceAccountNumber( ) != null ) {
+                  route.setInstanceId( null );
+                  route.setInstanceAccountNumber( null );
+                  routeTable.updateTimeStamps( );
+                }
+                newState = Route.State.blackhole;
+              } else {
+                if ( !eni.getInstance( ).getInstanceId( ).equals( route.getInstanceId( ) ) ) {
+                  route.setInstanceId( eni.getInstance( ).getInstanceId( ) );
+                  route.setInstanceAccountNumber( eni.getInstance( ).getOwnerAccountNumber( ) );
+                  routeTable.updateTimeStamps( );
+                }
+                newState = VmInstance.VmState.RUNNING.apply( eni.getInstance( ) ) ?
+                    Route.State.active :
+                    Route.State.blackhole;
+              }
+            } catch ( final VpcMetadataNotFoundException e ) {
+              if ( route.getInstanceId( ) != null ) {
+                route.setInstanceId( null );
+                route.setInstanceAccountNumber( null );
+                routeTable.updateTimeStamps( );
+              }
+              newState = Route.State.blackhole;
+            }
+          } // else local route, always active
+          if ( route.getState( ) != newState ) {
+            route.setState( newState );
+            routeTable.updateTimeStamps( );
+          }
+        }
+        tx.commit( );
+      } catch ( final VpcMetadataNotFoundException e ) {
+        logger.debug( "Route table not found checking route state for " + routeKey );
+      } catch ( Exception e ) {
+        if ( PersistenceExceptions.isStaleUpdate( e ) ) {
+          logger.debug( "Conflict checking route state for " + routeKey + " (will retry)" );
+        } else {
+          logger.error( "Error checking route state for " + routeKey, e );
+        }
+      }
+    }
+  }
+
   private static abstract class WorkflowTask {
     private volatile int count = 0;
     private final int factor;
@@ -320,7 +417,8 @@ public class VpcWorkflow {
         new EventFiringVpcInvalidator( ),
         new PersistenceInternetGateways( ),
         new PersistenceNatGateways( ),
-        new PersistenceNetworkInterfaces( )
+        new PersistenceNetworkInterfaces( ),
+        new PersistenceRouteTables( )
     );
 
     public static void register( ) {
@@ -333,6 +431,22 @@ public class VpcWorkflow {
           Topology.isEnabledLocally( Eucalyptus.class ) &&
           Topology.isEnabled( Compute.class ) ) {
         vpcWorkflow.doWorkflow( );
+      }
+    }
+  }
+
+  public static class VpcRouteStateInvalidationEventListener implements EventListener<VpcRouteStateInvalidationEvent> {
+
+    public static void register( ) {
+      Listeners.register( VpcRouteStateInvalidationEvent.class, new VpcRouteStateInvalidationEventListener( ) );
+    }
+
+    @Override
+    public void fireEvent( final VpcRouteStateInvalidationEvent event ) {
+      if ( Bootstrap.isOperational( ) &&
+          Topology.isEnabledLocally( Eucalyptus.class ) &&
+          Topology.isEnabled( Compute.class ) ) {
+        routesToCheck.addAll( event.getMessage( ) );
       }
     }
   }

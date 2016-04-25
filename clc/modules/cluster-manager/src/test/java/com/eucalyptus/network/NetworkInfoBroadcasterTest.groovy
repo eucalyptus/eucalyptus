@@ -45,6 +45,7 @@ import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.compute.common.internal.vpc.NatGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
+import com.eucalyptus.compute.vpc.RouteKey
 import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.EdgeSubnet
 import com.eucalyptus.network.config.ManagedSubnet
@@ -155,7 +156,8 @@ class NetworkInfoBroadcasterTest {
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
       { '1.1.1.1' } as Supplier<String>,
       { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
-      [] as Set<String>
+      [] as Set<String>,
+      [] as Set<RouteKey>
     )
     assertEquals( 'basic broadcast', new NetworkInfo(
         configuration: new NIConfiguration(
@@ -273,7 +275,8 @@ class NetworkInfoBroadcasterTest {
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
-        [] as Set<String>
+        [] as Set<String>,
+        [] as Set<RouteKey>
     )
     assertEquals( 'broadcast defaults', new NetworkInfo(
         configuration: new NIConfiguration(
@@ -474,7 +477,7 @@ class NetworkInfoBroadcasterTest {
           }
           @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
             [ routeTable( 'rtb-00000001', '000000000002', 'vpc-00000001', true, [ 'subnet-00000001' ], [
-              route( '192.168.0.0/16', 'igw-00000001' )
+              route( 'rtb-00000001', '192.168.0.0/16', 'igw-00000001' )
             ] ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
@@ -493,7 +496,8 @@ class NetworkInfoBroadcasterTest {
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
-        [] as Set<String>
+        [] as Set<String>,
+        [] as Set<RouteKey>,
     )
 
     assertEquals( 'broadcast vpc midonet', new NetworkInfo(
@@ -625,7 +629,7 @@ class NetworkInfoBroadcasterTest {
           }
           @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
             [ routeTable( 'rtb-00000001', '000000000002', 'vpc-00000001', true, [ 'subnet-00000001' ], [
-                route( '0.0.0.0/0', null, 'nat-00000000000000001' )
+                route( 'rtb-00000001', '0.0.0.0/0', null, 'nat-00000000000000001' )
             ] ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
@@ -644,7 +648,8 @@ class NetworkInfoBroadcasterTest {
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
-        [] as Set<String>
+        [] as Set<String>,
+        [] as Set<RouteKey>
     )
 
     assertEquals( 'broadcast vpc midonet', new NetworkInfo(
@@ -792,7 +797,8 @@ class NetworkInfoBroadcasterTest {
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
-        [] as Set<String>
+        [] as Set<String>,
+        [] as Set<RouteKey>
     )
 
     assertEquals( 'broadcast managed', new NetworkInfo(
@@ -948,9 +954,10 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcasts.RouteNetworkView route( String cidr, String internetGatewayId, String natGatewayId = null ) {
+  private static NetworkInfoBroadcasts.RouteNetworkView route( String routeTableId, String cidr, String internetGatewayId, String natGatewayId = null ) {
     new NetworkInfoBroadcasts.RouteNetworkView(
         true,
+        routeTableId,
         cidr,
         internetGatewayId,
         natGatewayId,

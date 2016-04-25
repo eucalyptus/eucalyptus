@@ -86,6 +86,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <ifaddrs.h>
 
 #include <eucalyptus.h>
 #include <misc.h>
@@ -416,7 +417,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
         // check to see if local host is the enabled cluster controller
         strptra = hex2dot(gni->clusters[i].enabledCCIp);
         if (strptra) {
-            if (!gni_is_self(strptra)) {
+            if (!gni_is_self_getifaddrs(strptra)) {
                 EUCA_FREE(strptra);
                 *outclusterptr = &(gni->clusters[i]);
                 return (0);
@@ -426,7 +427,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
         // otherwise, check to see if local host is a node in the cluster
         for (j = 0; j < gni->clusters[i].max_nodes; j++) {
             //      if (!strcmp(gni->clusters[i].nodes[j].name, outnodeptr->name)) {
-            if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+            if (!gni_is_self_getifaddrs(gni->clusters[i].nodes[j].name)) {
                 *outclusterptr = &(gni->clusters[i]);
                 return (0);
             }
@@ -571,7 +572,7 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
 
     for (i = 0; i < gni->max_clusters; i++) {
         for (j = 0; j < gni->clusters[i].max_nodes; j++) {
-            if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+            if (!gni_is_self_getifaddrs(gni->clusters[i].nodes[j].name)) {
                 *outnodeptr = &(gni->clusters[i].nodes[j]);
                 return (0);
             }
@@ -639,6 +640,56 @@ int gni_is_self(const char *test_ip)
     }
     closedir(DH);
 
+    return (1);
+}
+
+//!
+//! Validates if the given test_ip is a local IP address on this system. This function
+//! is based on getifaddrs() call.
+//! @param[in] test_ip a string containing the IP to validate
+//!
+//! @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
+//!
+//! @see
+//!
+//! @pre
+//!
+//! @post
+//!
+//! @note
+//!
+int gni_is_self_getifaddrs(const char *test_ip) {
+    struct ifaddrs *ifas = NULL;
+    struct ifaddrs *elem = NULL;
+    int found = 0;
+    int rc = 0;
+    
+    if (!test_ip) {
+        LOGERROR("invalid input: cannot check NULL IP\n");
+        return (1);
+    }
+
+    rc = getifaddrs(&ifas);
+    if (rc) {
+        LOGERROR("unable to retrieve system IPv4 addresses.\n");
+        freeifaddrs(ifas);
+        return (1);
+    }
+
+    elem = ifas;
+    while (elem && !found) {
+        if (elem->ifa_addr && elem->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *saddr = (struct sockaddr_in *) elem->ifa_addr;
+            if (!strcmp(test_ip, inet_ntoa(saddr->sin_addr))) {
+                found = 1;
+            }
+        }
+        elem = elem->ifa_next;
+    }
+    freeifaddrs(ifas);
+    if (found) {
+        return (0);
+    }
     return (1);
 }
 
@@ -1979,28 +2030,34 @@ globalNetworkInfo *gni_init() {
     return (gni);
 }
 
-//!
-//! Populates a given globalNetworkInfo structure from the content of an XML file
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] xmlpath path the XML file use to be used to populate
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xmlpath)
-{
+/**
+ * Populates a given globalNetworkInfo structure from the content of an XML file
+ * @param gni [in] a pointer to the global network information structure
+ * @param host_info [in] a pointer to the hostname info data structure (only relevant to VPCMIDO - to be deprecated)
+ * @param xmlpath [in] path to the XML file to be used to populate
+ * @return 0 on success or 1 on failure
+ */
+int gni_populate(globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath) {
+    return (gni_populate_v(GNI_POPULATE_ALL, gni, host_info, xmlpath));
+}
+
+/**
+ * Populates a given globalNetworkInfo structure from the content of an XML file
+ * @param mode [in] mode what to populate GNI_POPULATE_ALL || GNI_POPULATE_CONFIG || GNI_POPULATE_NONE
+ * @param gni [in] a pointer to the global network information structure
+ * @param host_info [in] a pointer to the hostname info data structure (only relevant to VPCMIDO - to be deprecated)
+ * @param xmlpath [in] path to the XML file to be used to populate
+ * @return 0 on success or 1 on failure
+ */
+int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath) {
     int rc = 0;
     xmlDocPtr docptr;
     xmlXPathContextPtr ctxptr;
     struct timeval tv, ttv;
+
+    if (mode == GNI_POPULATE_NONE) {
+        return (0);
+    }
 
     eucanetd_timer_usec(&ttv);
     eucanetd_timer_usec(&tv);
@@ -2035,20 +2092,22 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     LOGTRACE("gni version populated in %ld us.\n", eucanetd_timer_usec(&tv));
     
     // Instances
-    rc = gni_populate_instances(gni, ctxptr);
-    LOGTRACE("gni instances populated in %ld us.\n", eucanetd_timer_usec(&tv));
+    if (mode == GNI_POPULATE_ALL) {
+        rc = gni_populate_instances(gni, ctxptr);
+        LOGTRACE("gni instances populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // Interfaces
-    rc = gni_populate_interfaces(gni, ctxptr);
-    LOGTRACE("gni interfaces populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // Interfaces
+        rc = gni_populate_interfaces(gni, ctxptr);
+        LOGTRACE("gni interfaces populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // Security Groups
-    rc = gni_populate_sgs(gni, ctxptr);
-    LOGTRACE("gni sgs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // Security Groups
+        rc = gni_populate_sgs(gni, ctxptr);
+        LOGTRACE("gni sgs populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // VPCs
-    rc = gni_populate_vpcs(gni, ctxptr);
-    LOGTRACE("gni vpcs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+        // VPCs
+        rc = gni_populate_vpcs(gni, ctxptr);
+        LOGTRACE("gni vpcs populated in %ld us.\n", eucanetd_timer_usec(&tv));
+    }
 
     // Configuration
     rc = gni_populate_configuration(gni, host_info, ctxptr);
@@ -2058,24 +2117,27 @@ int gni_populate(globalNetworkInfo * gni, gni_hostname_info *host_info, char *xm
     xmlFreeDoc(docptr);
     xmlCleanupParser();
 
-    // Populate VPC and subnet interfaces
-    for (int i = 0; i < gni->max_vpcs; i++) {
-        gni_vpc *vpc = &(gni->vpcs[i]);
-        rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
-        if (rc) {
-            LOGWARN("Failed to populate gni %s interfaces.\n", vpc->name);
-            continue;
-        }
-        for (int j = 0; j < vpc->max_subnets; j++) {
-            gni_vpcsubnet *gnisubnet = &(vpc->subnets[j]);
-            rc = gni_vpcsubnet_get_interfaces(gni, gnisubnet, vpc->interfaces, vpc->max_interfaces,
-                    &(gnisubnet->interfaces), &(gnisubnet->max_interfaces));
+    if (mode == GNI_POPULATE_ALL) {
+        // Populate VPC and subnet interfaces
+        for (int i = 0; i < gni->max_vpcs; i++) {
+            gni_vpc *vpc = &(gni->vpcs[i]);
+            rc = gni_vpc_get_interfaces(gni, vpc, &(vpc->interfaces), &(vpc->max_interfaces));
             if (rc) {
-                LOGWARN("Failed to populate gni %s interfaces.\n", gnisubnet->name);
+                LOGWARN("Failed to populate gni %s interfaces.\n", vpc->name);
+                continue;
+            }
+            for (int j = 0; j < vpc->max_subnets; j++) {
+                gni_vpcsubnet *gnisubnet = &(vpc->subnets[j]);
+                rc = gni_vpcsubnet_get_interfaces(gni, gnisubnet, vpc->interfaces, vpc->max_interfaces,
+                        &(gnisubnet->interfaces), &(gnisubnet->max_interfaces));
+                if (rc) {
+                    LOGWARN("Failed to populate gni %s interfaces.\n", gnisubnet->name);
+                }
             }
         }
     }
     LOGDEBUG("end parsing XML into data structures\n");
+    LOGTRACE("gni populate vpc/subnet interfaces %ld us.\n", eucanetd_timer_usec(&tv));
 
     eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
@@ -4609,6 +4671,7 @@ gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx
 int gni_validate(globalNetworkInfo * gni)
 {
     int i = 0;
+    int j = 0;
 
     // this is going to be messy, until we get XML validation in place
     if (!gni) {
@@ -4755,6 +4818,37 @@ int gni_validate(globalNetworkInfo * gni)
         }
     }
 
+    // Validate VPCMIDO elements
+    if (IS_NETMODE_VPCMIDO(gni)) {
+        // Validate VPCs
+        for (i = 0; i < gni->max_vpcs; i++) {
+            if (gni_vpc_validate(&(gni->vpcs[i]))) {
+                LOGWARN("invalid vpc set at idx %d\n", i);
+                return (1);
+            }
+            // Validate subnets
+            for (j = 0; j < gni->vpcs[i].max_subnets; j++) {
+                if (gni_vpcsubnet_validate(&(gni->vpcs[i].subnets[j]))) {
+                    LOGWARN("invalid vpcsubnet set at idx %d\n", i);
+                    return (1);
+                }
+            }
+            // Validate NAT gateways
+            for (j = 0; j < gni->vpcs[i].max_natGateways; j++) {
+                if (gni_nat_gateway_validate(&(gni->vpcs[i].natGateways[j]))) {
+                    LOGWARN("invalid NAT gateway set at idx %d\n", i);
+                    return (1);
+                }
+            }
+            // Validate route tables
+            for (j = 0; j < gni->vpcs[i].max_routeTables; j++) {
+                if (gni_route_table_validate(&(gni->vpcs[i].routeTables[j]))) {
+                    LOGWARN("invalid route table set at idx %d\n", i);
+                    return (1);
+                }
+            }
+        }
+    }
     return (0);
 }
 
@@ -5179,18 +5273,193 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
     }
 
     if (!secgroup->max_instances || !secgroup->instances) {
-        LOGWARN("secgroup %s: no instances\n", secgroup->name);
-        return (0);
+        LOGTRACE("secgroup %s: no instances\n", secgroup->name);
     } else {
         for (i = 0; i < secgroup->max_instances; i++) {
             if (!strlen(secgroup->instances[i]->name)) {
-                LOGWARN("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
+                LOGWARN("secgroup %s: empty instance_name set at idx %d\n", secgroup->name, i);
+                return (1);
+            }
+        }
+    }
+
+    if (!secgroup->max_interfaces || !secgroup->interfaces) {
+        LOGTRACE("secgroup %s: no interfaces\n", secgroup->name);
+    } else {
+        for (i = 0; i < secgroup->max_interfaces; i++) {
+            if (!strlen(secgroup->interfaces[i]->name)) {
+                LOGWARN("secgroup %s: empty interface_name set at idx %d\n", secgroup->name, i);
                 return (1);
             }
         }
     }
 
     //gni_sg_print(secgroup, EUCA_LOG_TRACE);
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the vpc structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_vpc_validate(gni_vpc *vpc) {
+    if (!vpc) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(vpc->name)) {
+        LOGWARN("no vpc name\n");
+        return (1);
+    }
+
+    if (!strlen(vpc->accountId)) {
+        LOGWARN("vpc %s: no accountId\n", vpc->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the vpcsubnet structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_vpcsubnet_validate(gni_vpcsubnet *vpcsubnet) {
+    if (!vpcsubnet) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(vpcsubnet->name)) {
+        LOGWARN("no vpc name\n");
+        return (1);
+    }
+
+    if (!strlen(vpcsubnet->accountId)) {
+        LOGWARN("vpc %s: no accountId\n", vpcsubnet->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given gni_vpc structure content
+ *
+ * @param vpc [in] a pointer to the nat_gateway structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_nat_gateway_validate(gni_nat_gateway *natg) {
+    if (!natg) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(natg->name)) {
+        LOGWARN("no natg name\n");
+        return (1);
+    }
+
+    if (!strlen(natg->accountId)) {
+        LOGWARN("natg %s: no accountId\n", natg->name);
+        return (1);
+    }
+
+    if (!maczero(natg->macAddress)) {
+        LOGWARN("natg %s: no macAddress\n", natg->name);
+    }
+
+    if (!natg->publicIp) {
+        LOGDEBUG("natg %s: no publicIp set (ignore if natg was run with private only addressing)\n", natg->name);
+    }
+
+    if (!natg->privateIp) {
+        LOGWARN("natg %s: no privateIp\n", natg->name);
+        return (1);
+    }
+
+    if (!strlen(natg->vpc)) {
+        LOGWARN("natg %s: no vpc\n", natg->name);
+        return (1);
+    }
+    
+    if (!strlen(natg->subnet)) {
+        LOGWARN("natg %s: no vpc subnet\n", natg->name);
+        return (1);
+    }
+
+    return (0);
+}
+
+/**
+ * Validates a given route_table structure content
+ *
+ * @param vpc [in] a pointer to the route_table structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int gni_route_table_validate(gni_route_table *rtable) {
+    if (!rtable) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    if (!strlen(rtable->name)) {
+        LOGWARN("no route table name\n");
+        return (1);
+    }
+
+    if (!strlen(rtable->accountId)) {
+        LOGWARN("route table %s: no accountId\n", rtable->name);
+        return (1);
+    }
+
+    for (int i = 0; i < rtable->max_entries; i++) {
+        if (!strlen(rtable->entries[i].destCidr) || !strlen(rtable->entries[i].target)) {
+            LOGWARN("route table %s: invalid route entry at idx %d\n", rtable->name, i);
+            return (1);
+        }
+    }
     return (0);
 }
 
@@ -5453,7 +5722,8 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
 //!
 //! Compares two gni_route_table structures in the argument.
 //!
-//! @param[in] a gni_route_table structure of interest.
+//! @param[in] a gni_route_table structure of interest. Check for route entries
+//!            applied flags.
 //! @param[in] b gni_route_table structure of interest.
 //! @return 0 if name and route entries match. Non-zero otherwise.
 //!
@@ -5479,6 +5749,9 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
         return (1);
     }
     for (int i = 0; i < a->max_entries; i++) {
+        if (a->entries[i].applied == 0) {
+            return (1);
+        }
         if ((strcmp(a->entries[i].destCidr, b->entries[i].destCidr)) ||
                 (strcmp(a->entries[i].target, b->entries[i].target))) {
             return (1);

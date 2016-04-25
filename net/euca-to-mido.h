@@ -101,6 +101,94 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+enum vpc_sg_midos_t {
+    VPCSG_INGRESS,
+    VPCSG_EGRESS,
+    VPCSG_IAGPRIV,
+    VPCSG_IAGPUB,
+    VPCSG_IAGALL,
+    VPCSG_END
+};
+
+enum vpc_nat_gateway_midos_t {
+    NATG_RT,
+    NATG_SUBNBR,
+    NATG_EUCART,
+    NATG_EUCABR,
+    NATG_EUCABR_DOWNLINK,
+    NATG_RT_UPLINK,
+    NATG_RT_BRPORT,
+    NATG_SUBNBR_RTPORT,
+    NATG_ELIP_PRE_IPADDRGROUP,
+    NATG_ELIP_PRE_IPADDRGROUP_IP,
+    NATG_ELIP_ROUTE,
+    NATG_RT_INCHAIN,
+    NATG_RT_OUTCHAIN,
+    NATG_END
+};
+
+enum vpc_instance_midos_t {
+    INST_VMHOST,
+    INST_VPCBR_VMPORT,
+    INST_VPCBR_DHCPHOST,
+    INST_PRECHAIN,
+    INST_POSTCHAIN,
+    INST_ELIP_PRE_IPADDRGROUP,
+    INST_ELIP_POST_IPADDRGROUP,
+    INST_ELIP_PRE_IPADDRGROUP_IP,
+    INST_ELIP_POST_IPADDRGROUP_IP,
+    INST_ELIP_PRE,
+    INST_ELIP_POST,
+    INST_ELIP_ROUTE,
+    INST_END
+};
+
+enum vpc_subnet_midos_t {
+    SUBN_BR,
+    SUBN_BR_RTPORT,
+    SUBN_VPCRT_BRPORT,
+    SUBN_BR_DHCP,
+    SUBN_BR_METAPORT,
+    SUBN_BR_METAHOST,
+    SUBN_END
+};
+
+enum vpc_midos_t {
+    VPC_VPCRT,
+    VPC_EUCABR_DOWNLINK,
+    VPC_VPCRT_UPLINK,
+    VPC_VPCRT_UPLINK_PRECHAIN,
+    VPC_VPCRT_UPLINK_POSTCHAIN,
+    VPC_VPCRT_PREELIPCHAIN,
+    VPC_END
+};
+
+enum mido_core_midos_t {
+    CORE_EUCART,
+    CORE_EUCABR,
+    CORE_EUCART_BRPORT,
+    CORE_EUCABR_RTPORT,
+    CORE_METADATA_IPADDRGROUP,
+    CORE_GWPORTGROUP,
+    CORE_END
+};
+
+enum vpc_route_entry_target_t {
+    VPC_TARGET_LOCAL,
+    VPC_TARGET_INTERNET_GATEWAY,
+    VPC_TARGET_VPRIVATE_GATEWAY,
+    VPC_TARGET_ENI,
+    VPC_TARGET_PEERING,
+    VPC_TARGET_NAT_GATEWAY,
+    VPC_TARGET_INVALID
+};
+
+enum mido_rule_type_t {
+    MIDO_RULE_INVALID,
+    MIDO_RULE_SG_EGRESS,
+    MIDO_RULE_SG_INGRESS
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
