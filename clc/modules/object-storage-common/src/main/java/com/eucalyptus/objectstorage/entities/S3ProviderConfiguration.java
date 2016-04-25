@@ -26,6 +26,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -144,7 +146,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   public void setS3Endpoint(String endPoint) {
     S3Endpoint = endPoint;
   }
-  
+
   public Integer getS3EndpointHeadResponse() {
     return S3EndpointHeadResponse;
   }
@@ -159,6 +161,14 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
     this.setS3UseHttps(DEFAULT_BACKEND_HTTPS);
     this.setS3EndpointHeadResponse(Integer.valueOf(DEFAULT_S3_HEAD_RESPONSE));
     return this;
+  }
+
+  @PrePersist
+  @PreUpdate
+  public void updateDefaults() {
+    if (this.S3EndpointHeadResponse == null) {
+      this.S3EndpointHeadResponse = Integer.valueOf(DEFAULT_S3_HEAD_RESPONSE);
+    }
   }
 
   public static S3ProviderConfiguration getS3ProviderConfiguration() {
