@@ -45,4 +45,7 @@ public abstract class AbstractEventHandler<T extends LoadbalancingEvent> impleme
 	public boolean skipRemaining(){
 		return false;
 	}
+
+	@Override
+	public void checkVersion(T evt) throws EventHandlerException { }
 }

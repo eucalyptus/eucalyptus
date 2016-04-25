@@ -173,46 +173,66 @@ public class LoadBalancers {
 			throw new NoSuchElementException( );
 		}
 	}
+
+	public static Predicate<LoadBalancer> v4_2_0 = (lb) -> {
+		return versionOnOrLater(lb, DeploymentVersion.v4_2_0);
+	};
+
+	public static Predicate<LoadBalancer> v4_3_0 = (lb) -> {
+		return versionOnOrLater(lb, DeploymentVersion.v4_3_0);
+	};
+
+	private static boolean versionOnOrLater(final LoadBalancer lb, DeploymentVersion version) {
+		if (lb.getLoadbalancerDeploymentVersion() == null) {
+			return false;
+		} else {
+			return DeploymentVersion.getVersion(
+					lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(version);
+		}
+	}
 	
 	public enum DeploymentVersion {
-	 v4_1_0,
-	 v4_2_0; // the version is checked from 4.2.0
-	 
-	 public String toVersionString(){
-	   return this.name( ).substring( 1 ).replace( "_", "." );
-	 }
-	 
-	 public static DeploymentVersion getVersion(final String version) {
-	   if( version == null || version.length() <= 0)
-	     return DeploymentVersion.v4_1_0;
-	   
-	   return DeploymentVersion.valueOf( "v" + version.replace( ".", "_" ) );
-	 }
-	 
-	 public boolean isLaterThan(final DeploymentVersion other) {
-	   if(other==null)
-	     return false;
-	   
-	   String[] thisVersionDigits = this.name().substring(1).split("_");
-	   String[] otherVersionDigits = other.name().substring(1).split("_");
-	   
-	   for(int i=0; i<thisVersionDigits.length; i++){
-	     int thisDigit = Integer.parseInt(thisVersionDigits[i]);
-	     int otherDigit = 0;
-	     if(i < otherVersionDigits.length)
-	       otherDigit = Integer.parseInt(otherVersionDigits[i]);
-	     
-	     if(thisDigit > otherDigit)
-	       return true;
-	     else if(thisDigit < otherDigit)
-	       return false;
-	   }
-	   return false;
-	 }
-	 
-	 public boolean isEqualOrLaterThan(final DeploymentVersion other) {
-	   return this.equals(other) || this.isLaterThan(other);
-	 }
+		v4_1_0,
+		v4_2_0, // the version is checked from 4.2.0
+		v4_3_0;
+
+		public static DeploymentVersion Latest = v4_3_0;
+
+		public String toVersionString(){
+			return this.name( ).substring( 1 ).replace( "_", "." );
+		}
+
+		public static DeploymentVersion getVersion(final String version) {
+			if( version == null || version.length() <= 0)
+				return DeploymentVersion.v4_1_0;
+
+			return DeploymentVersion.valueOf( "v" + version.replace( ".", "_" ) );
+		}
+
+		public boolean isLaterThan(final DeploymentVersion other) {
+			if(other==null)
+				return false;
+
+			String[] thisVersionDigits = this.name().substring(1).split("_");
+			String[] otherVersionDigits = other.name().substring(1).split("_");
+
+			for(int i=0; i<thisVersionDigits.length; i++){
+				int thisDigit = Integer.parseInt(thisVersionDigits[i]);
+				int otherDigit = 0;
+				if(i < otherVersionDigits.length)
+					otherDigit = Integer.parseInt(otherVersionDigits[i]);
+
+				if(thisDigit > otherDigit)
+					return true;
+				else if(thisDigit < otherDigit)
+					return false;
+			}
+			return false;
+		}
+
+		public boolean isEqualOrLaterThan(final DeploymentVersion other) {
+			return this.equals(other) || this.isLaterThan(other);
+		}
 	}
 
   public static LoadBalancer addLoadbalancer(
@@ -263,7 +283,7 @@ public class LoadBalancers {
         lb.setScheme( scheme );
         lb.setSecurityGroupRefs( refs );
         lb.setTags( tags );
-        lb.setLoadbalancerDeploymentVersion(DeploymentVersion.v4_2_0.toVersionString());
+        lb.setLoadbalancerDeploymentVersion(DeploymentVersion.Latest.toVersionString());
         Entities.persist( lb );
         db.commit( );
         return lb;

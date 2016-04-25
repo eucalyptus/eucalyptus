@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-/**
- * @author Sang-Min Park (spark@eucalyptus.com)
- *
- */
-public interface EventHandler<T extends LoadbalancingEvent> {
-	public void apply(T evt) throws EventHandlerException;
-	public void rollback() throws EventHandlerException;
-	public boolean skipRemaining();
-	public EventHandlerChain<? extends T> getChain();
-	public void checkVersion(T evt) throws EventHandlerException;
+import com.eucalyptus.loadbalancing.LoadBalancers;
+public class LoadBalancerVersionException extends EventHandlerException {
+    public LoadBalancerVersionException( final LoadBalancers.DeploymentVersion minVersion ) {
+           super(String.format("The API is not supported for loadbalancers created prior to Eucalyptus %s. Please create a new loadbalancer.",
+                minVersion.toVersionString()));
+    }
 }

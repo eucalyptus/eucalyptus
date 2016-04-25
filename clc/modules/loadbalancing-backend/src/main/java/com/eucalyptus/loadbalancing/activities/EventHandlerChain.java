@@ -43,6 +43,7 @@ public abstract class EventHandlerChain<T extends LoadbalancingEvent> {
 	public void execute(T evt) throws EventHandlerChainException {
 		for (EventHandler<? super T> handler : this.handlers){
 			try{
+				handler.checkVersion(evt);
 				reverseHandler.addFirst(handler); // failed handler will rollback too
 				handler.apply(evt);
 				if(handler.skipRemaining()){

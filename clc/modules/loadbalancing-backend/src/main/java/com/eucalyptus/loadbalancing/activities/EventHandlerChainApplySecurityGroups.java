@@ -54,6 +54,21 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
     }
 
     @Override
+    public void checkVersion(ApplySecurityGroupsEvent evt) throws EventHandlerException {
+      LoadBalancer lb;
+      try{
+        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+      }catch(NoSuchElementException ex){
+        throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+      }catch(Exception ex){
+        throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+      }
+
+      if(!LoadBalancers.v4_3_0.apply(lb) && lb.getVpcId()!= null)
+        throw new LoadBalancerVersionException(LoadBalancers.DeploymentVersion.v4_3_0);
+    }
+
+    @Override
     public void apply( final ApplySecurityGroupsEvent evt ) throws EventHandlerException {
       final LoadBalancer lb;
       try{

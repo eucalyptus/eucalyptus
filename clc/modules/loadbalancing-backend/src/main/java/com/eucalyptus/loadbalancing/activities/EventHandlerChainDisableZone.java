@@ -68,7 +68,24 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 		protected CheckAndModifyRequest(EventHandlerChain<DisabledZoneEvent> chain) {
 			super(chain);
 		}
-		
+
+		@Override
+		public void checkVersion(DisabledZoneEvent evt) throws EventHandlerException {
+			LoadBalancer lb;
+			try{
+				lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+			}catch(NoSuchElementException ex){
+				throw new EventHandlerException("Could not find the loadbalancer with name="+evt.getLoadBalancer(), ex);
+			}catch(Exception ex){
+				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
+			}
+
+			if(!LoadBalancers.v4_2_0.apply(lb))
+				throw new LoadBalancerVersionException(DeploymentVersion.v4_2_0);
+			if(!LoadBalancers.v4_3_0.apply(lb) && lb.getVpcId()!= null)
+				throw new LoadBalancerVersionException(DeploymentVersion.v4_3_0);
+		}
+
 		@Override
 		public void apply(DisabledZoneEvent evt) throws EventHandlerException {
 			//  check if the current zone contains the requested zone
@@ -80,12 +97,7 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 			}catch(Exception ex){
 				throw new EventHandlerException("Error while looking for loadbalancer with name="+evt.getLoadBalancer(), ex);
 			}	
-			if(lb.getLoadbalancerDeploymentVersion() == null || 
-          ! DeploymentVersion.getVersion(
-              lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(DeploymentVersion.v4_2_0)) {
-        throw new EventHandlerException("Disabling zone is not supported for loadbalancers created prior to 4.2. Please create a new loadbalancer.");
-      }
-			
+
 			final List<LoadBalancerZoneCoreView> currentZones = 
 					Lists.newArrayList(Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView>(){
 						@Override
@@ -93,7 +105,6 @@ public class EventHandlerChainDisableZone extends EventHandlerChain<DisabledZone
 							return arg0.getState().equals(LoadBalancerZone.STATE.InService);
 						}
 			}));
-		
 			
 			final List<String> availableZones = Lists.newArrayList(Collections2.transform(currentZones, 
 					new Function<LoadBalancerZoneCoreView, String>(){
