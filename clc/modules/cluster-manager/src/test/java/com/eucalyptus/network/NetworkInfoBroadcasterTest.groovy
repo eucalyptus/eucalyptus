@@ -38,6 +38,7 @@ import com.eucalyptus.cluster.NINodes
 import com.eucalyptus.cluster.NIProperty
 import com.eucalyptus.cluster.NIRoute
 import com.eucalyptus.cluster.NIRouteTable
+import com.eucalyptus.cluster.NISecurityGroup
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NIVpc
@@ -123,7 +124,7 @@ class NetworkInfoBroadcasterTest {
           [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.2', '10.0.0.0' ) ]
         }
         @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
-          [ group( 'sg-00000001', '000000000002', [], [], [] ) ]
+          [ group( 'sg-00000001', '000000000002', null, [], [], [] ) ]
         }
         @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
           []
@@ -461,7 +462,8 @@ class NetworkInfoBroadcasterTest {
             [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
-            []
+            [ group( 'sg-00000001', '000000000002', 'vpc-00000001', [], [], [] ),
+              group( 'sg-00000002', '000000000002', 'vpc-00000001', [ '-P -1' ], [permission( 'sg-00000001', '000000000002' ),permission( 'sg-00000003', '000000000002' )], [] ) ]
           }
           @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
             [ vpc( 'vpc-00000001', '000000000002' ) ]
@@ -597,7 +599,15 @@ class NetworkInfoBroadcasterTest {
                 ]
             )
         ],
-        securityGroups: [ ]
+        securityGroups: [
+          new NISecurityGroup(
+              name: 'sg-00000001',
+              ownerId: '000000000002',
+              rules: [],
+              ingressRules: [],
+              egressRules: []
+          )
+        ]
     ), info )
   }
 
@@ -969,6 +979,7 @@ class NetworkInfoBroadcasterTest {
   private static NetworkInfoBroadcasts.NetworkGroupNetworkView group(
       String id,
       String ownerAccountNumber,
+      String vpcId,
       List<String> rules,
       List<NetworkInfoBroadcasts.IPPermissionNetworkView> ingressRules,
       List<NetworkInfoBroadcasts.IPPermissionNetworkView> egressRules
@@ -977,9 +988,22 @@ class NetworkInfoBroadcasterTest {
       id,
       1,
       ownerAccountNumber,
+      vpcId,
       rules,
       ingressRules,
       egressRules
     )
+  }
+
+  private static NetworkInfoBroadcasts.IPPermissionNetworkView permission( String groupId, String groupOwnerAccountNumber ) {
+    new NetworkInfoBroadcasts.IPPermissionNetworkView(
+        protocol: -1,
+        fromPort: null,
+        toPort: null,
+        icmpType: null,
+        icmpCode: null,
+        groupId: groupId,
+        groupOwnerAccountNumber: groupOwnerAccountNumber,
+        cidr: null )
   }
 }
