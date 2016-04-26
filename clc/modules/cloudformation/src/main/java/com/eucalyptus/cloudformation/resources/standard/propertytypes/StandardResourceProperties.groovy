@@ -29,7 +29,6 @@ import groovy.transform.ToString
 
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupProperties implements ResourceProperties {
-  @Required
   @Property
   List<String> availabilityZones = Lists.newArrayList();
   @Property

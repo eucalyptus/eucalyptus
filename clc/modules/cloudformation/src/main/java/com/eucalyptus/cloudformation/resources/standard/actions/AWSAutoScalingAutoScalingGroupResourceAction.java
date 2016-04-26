@@ -162,13 +162,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     if (!instance.getLaunchConfigurationName().equals(autoScalingGroupType.getLaunchConfigurationName())) {
       return true;
     }
-    // if AZ's not set, don't check, but otherwise make sure it matches.
-    if (autoScalingGroupType.getAvailabilityZones() != null &&
-      autoScalingGroupType.getAvailabilityZones().getMember() != null &&
-      !autoScalingGroupType.getAvailabilityZones().getMember().isEmpty() &&
-      !autoScalingGroupType.getAvailabilityZones().getMember().contains(instance.getAvailabilityZone())) {
-      return true;
-    }
     Splitter commaSplitterAndTrim = Splitter.on(',').omitEmptyStrings().trimResults();
     // check subnet (VPCZoneIdentifier)
     if (autoScalingGroupType.getVpcZoneIdentifier() != null && !autoScalingGroupType.getVpcZoneIdentifier().isEmpty()) {
@@ -184,13 +177,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     if (!instance.getLaunchConfigurationName().equals(newAction.properties.getLaunchConfigurationName())) {
       return true;
     }
-    // if AZ's not set, don't check, but otherwise make sure it matches.
-    if (newAction.properties.getAvailabilityZones() != null &&
-      !newAction.properties.getAvailabilityZones().isEmpty() &&
-      !newAction.properties.getAvailabilityZones().contains(instance.getAvailabilityZone())) {
-      return true;
-    }
-
     if (newAction.properties.getVpcZoneIdentifier() != null && !newAction.properties.getVpcZoneIdentifier().isEmpty()) {
       // get subnet from instance
       if (!newAction.properties.getVpcZoneIdentifier().contains(subnetMap.get(instance.getInstanceId()))) {
