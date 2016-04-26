@@ -576,11 +576,7 @@ int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_va
             jarr_len = json_object_array_length(jarr);
             LOGEXTREME("\tfound %d\n", jarr_len);
             if (jarr_len > 0) {
-                res = EUCA_ZALLOC(jarr_len, sizeof (char *));
-                if (res == NULL) {
-                    LOGFATAL("out of memory.\n");
-                    return (1);
-                }
+                res = EUCA_ZALLOC_C(jarr_len, sizeof (char *));
                 for (int i = 0; i < jarr_len; i++) {
                     jarrel = json_object_array_get_idx(jarr, i);
                     res[i] = strdup(json_object_get_string(jarrel));
@@ -4212,7 +4208,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
 
     if (!ret) {
         if (mem_writer_params.mem && mem_writer_params.size > 0) {
-            *out_payload = calloc(mem_writer_params.size + 1, sizeof(char));
+            *out_payload = EUCA_ZALLOC_C(mem_writer_params.size + 1, sizeof(char));
             memcpy(*out_payload, mem_writer_params.mem, mem_writer_params.size + 1);
         } else {
             LOGERROR("ERROR: no data to return after successful curl operation\n");
@@ -4328,12 +4324,12 @@ static size_t header_find_location(char *content, size_t size, size_t nmemb, voi
     char *buf = NULL;
     char **loc = (char **)params;
 
-    buf = calloc((size * nmemb) + 1, sizeof(char));
+    buf = EUCA_ZALLOC_C((size * nmemb) + 1, sizeof(char));
     memcpy(buf, content, size * nmemb);
     buf[size * nmemb] = '\0';
 
     if (buf && strstr(buf, "Location: ")) {
-        *loc = calloc(strlen(buf), sizeof(char));
+        *loc = EUCA_ZALLOC_C(strlen(buf), sizeof(char));
         sscanf(buf, "Location: %s", *loc);
     }
     free(buf);
@@ -5168,7 +5164,6 @@ int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *r
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 names_max = 0;
-                //names = calloc(json_object_array_length(jobj), sizeof(midoname));
                 midoname_list_get_midonames(midocache_midos, &names, json_object_array_length(jobj));
 
                 for (i = 0; i < json_object_array_length(jobj); i++) {
@@ -5289,7 +5284,6 @@ int mido_get_hosts(midoname ***outnames, int *outnames_max) {
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 names_max = 0;
-                //names = calloc(json_object_array_length(jobj), sizeof(midoname));
                 midoname_list_get_midonames(midocache_midos, &names, json_object_array_length(jobj));
                 for (i = 0; i < json_object_array_length(jobj); i++) {
                     host = json_object_array_get_idx(jobj, i);
@@ -5438,7 +5432,7 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
         } else {
             if (json_object_is_type(jobj, json_type_array)) {
                 names_max = 0;
-                names = EUCA_ZALLOC(json_object_array_length(jobj), sizeof (midoname));
+                names = EUCA_ZALLOC_C(json_object_array_length(jobj), sizeof (midoname));
                 for (i = 0; i < json_object_array_length(jobj); i++) {
                     interface = json_object_array_get_idx(jobj, i);
                     if (interface) {
@@ -5563,11 +5557,7 @@ int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max)
             rc = mido_getarr_midoname(&(names[i]), "addresses", &addrs, &max_addrs);
             LOGTRACE("%s %s - max_addrs: %d\n", host->name, names[i].name, max_addrs);
             if ((rc == 0) && (max_addrs > 0)) {
-                hips = EUCA_REALLOC(hips, *outnames_max + max_addrs, sizeof (u32));
-                if (hips == NULL) {
-                    LOGFATAL("out of memory - onmax %d, maxa %d.\n", *outnames_max, max_addrs);
-                    return (1);
-                }
+                hips = EUCA_REALLOC_C(hips, *outnames_max + max_addrs, sizeof (u32));
                 bzero(&(hips[*outnames_max]), max_addrs * sizeof (u32));
                 for (int j = 0; j < max_addrs; j++) {
                     if (strlen(addrs[j]) > 16) {
@@ -6191,7 +6181,9 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
     for (int i = 0; i < cache->max_hosts; i++) {
         iphm->entries = EUCA_REALLOC_C(iphm->entries, iphm->max_entries + cache->hosts[i]->max_addresses,
                 sizeof (midonet_api_iphostmap_entry));
-        bzero(&(iphm->entries[iphm->max_entries]), cache->hosts[i]->max_addresses * sizeof (midonet_api_iphostmap_entry));
+        if (iphm->entries) {
+            bzero(&(iphm->entries[iphm->max_entries]), cache->hosts[i]->max_addresses * sizeof (midonet_api_iphostmap_entry));
+        }
         for (int j = 0; j < cache->hosts[i]->max_addresses; j++) {
             iphm->entries[iphm->max_entries].ip = cache->hosts[i]->addresses[j];
             iphm->entries[iphm->max_entries].host = cache->hosts[i];

@@ -913,11 +913,7 @@ static int eucanetd_daemonize(void)
 //!
 static int eucanetd_initialize(void) {
     if (!config) {
-        config = EUCA_ZALLOC(1, sizeof(eucanetdConfig));
-        if (!config) {
-            LOGFATAL("out of memory\n");
-            exit(1);
-        }
+        config = EUCA_ZALLOC_C(1, sizeof(eucanetdConfig));
     }
 
     config->polling_frequency = 5;
@@ -1333,11 +1329,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ipt = EUCA_ZALLOC(1, sizeof(ipt_handler));
-    if (!config->ipt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ipt = EUCA_ZALLOC_C(1, sizeof(ipt_handler));
 
     rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
     if (rc) {
@@ -1345,11 +1337,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ips = EUCA_ZALLOC(1, sizeof(ips_handler));
-    if (!config->ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ips = EUCA_ZALLOC_C(1, sizeof(ips_handler));
 
     rc = ips_handler_init(config->ips, config->cmdprefix);
     if (rc) {
@@ -1358,10 +1346,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
 #ifdef USE_IP_ROUTE_HANDLER
-    if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ipr = EUCA_ZALLOC_C(1, sizeof(ipr_handler));
 
     if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
         LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
@@ -1369,11 +1354,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 #endif /* USE_IP_ROUTE_HANDLER */
 
-    config->ebt = EUCA_ZALLOC(1, sizeof(ebt_handler));
-    if (!config->ebt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ebt = EUCA_ZALLOC_C(1, sizeof(ebt_handler));
 
     rc = ebt_handler_init(config->ebt, config->cmdprefix);
     if (rc) {
@@ -1382,7 +1363,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
     //
-    // If an error has occured we need to clean up temporary files
+    // If an error has occurred we need to clean up temporary files
     // that were created for the iptables, ebtables, ipset
     // and possibly ipr (if compiled)
     //

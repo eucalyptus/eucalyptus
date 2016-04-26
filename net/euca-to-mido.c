@@ -720,7 +720,7 @@ int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name,
     snprintf(cmd, EUCA_MAX_PATH, "vn0_%s", sid);
     if (dev_exist(cmd)) {
         LOGDEBUG("subnet device (%s) already exists, skipping\n", cmd);
-        *tapiface = calloc(16, sizeof (char));
+        *tapiface = EUCA_ZALLOC_C(16, sizeof (char));
         snprintf(*tapiface, 16, "vn0_%s", sid);
         return (0);
     }
@@ -757,7 +757,7 @@ int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name,
         *tapiface = NULL;
         ret = 1;
     } else {
-        *tapiface = calloc(16, sizeof (char));
+        *tapiface = EUCA_ZALLOC_C(16, sizeof (char));
         snprintf(*tapiface, 16, "vn0_%s", sid);
     }
     se_free(&cmds);
@@ -3085,7 +3085,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     }
                 }
                 if (valid) {
-                    retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
+                    retroutes = EUCA_REALLOC_C(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
                     mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
                     mido_copy_midoname(&(retroutes[max_retroutes].rport), vpc->midos[VPC_VPCRT_UPLINK]);
@@ -3129,7 +3129,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     }
                 }
                 if (valid) {
-                    retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
+                    retroutes = EUCA_REALLOC_C(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
                     mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
                     mido_copy_midoname(&(retroutes[max_retroutes].rport), ifvpcsubnet->midos[SUBN_VPCRT_BRPORT]);
@@ -3178,7 +3178,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     snprintf(natgw, 32, "%s", tmpstr);
                     EUCA_FREE(tmpstr);
 
-                    retroutes = EUCA_REALLOC(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
+                    retroutes = EUCA_REALLOC_C(retroutes, max_retroutes + 1, sizeof (mido_parsed_route));
                     bzero(&(retroutes[max_retroutes]), sizeof (mido_parsed_route));
                     mido_copy_midoname(&(retroutes[max_retroutes].router), vpc->midos[VPC_VPCRT]);
                     mido_copy_midoname(&(retroutes[max_retroutes].rport), natgatewaysubnet->midos[SUBN_VPCRT_BRPORT]);
@@ -3241,156 +3241,6 @@ int find_mido_vpc(mido_config * mido, char *vpcname, mido_vpc ** outvpc) {
 
     return (1);
 }
-
-//!
-//! Searches the ports discovered in MidoNet for the ones that belong to the
-//! router in the argument.
-//!
-//! @param[in] mido data structure holding all discovered MidoNet resources.
-//! @param[in] device router of interest - it is assumed that this is indeed a router,
-//! checks are not performed.
-//! @param[out] outports reference to midoname data structure of the ports that
-//! belong to the given device. Memory is allocated. Caller should release once
-//! done.
-//! @param[out] outports_max number of ports that belong to the router of interest.
-//!
-//! @return 0 if port(s) that belong(s) to the given device is/are found among
-//! discovered Midonet ports. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre mido_config data structure should have been populated.
-//!
-//! @post
-//!
-//! @note
-//!
-/*
-int find_mido_router_ports(mido_config *mido, midoname *device, midoname **outports, int *outports_max) {
-    int i;
-    int rc;
-    int ret = 1;
-    int startindex = 0;
-    char *rtuuid = NULL;
-    midoname *rtport = NULL;
-    midoname *retports = NULL;
-
-    if (!mido || !outports || !outports_max || !device) {
-        return (1);
-    }
-    if (!device->init) {
-        return (1);
-    }
-
- *outports_max = 0;
-    LOGDEBUG("Searching for ports of router %s\n", device->name);
-    for (i = 0; (i < mido->max_rtports) && (ret); i++) {
-        rtport = &(mido->rtports[i]);
-        rc = mido_getel_midoname(rtport, "deviceId", &rtuuid);
-        if ((rc == 0) && (!strcmp(rtuuid, device->uuid))) {
-            LOGDEBUG("Found device port %s\n", rtport->name);
-            if (*outports_max == 0) {
-                startindex = i;
-            }
-            (*outports_max)++;
-        } else {
-            if (*outports_max != 0) {
-                ret = 0;
-            }
-        }
-        EUCA_FREE(rtuuid);
-        rtuuid = NULL;
-    }
-    if (*outports_max != 0) {
-        retports = EUCA_ZALLOC(*outports_max, sizeof(midoname));
-        if (!retports) {
-            LOGERROR("out of memory.\n");
- *outports_max = 0;
-            return (1);
-        }
-        for (i = 0; i < (*outports_max); i++) {
-            mido_copy_midoname(&(retports[i]), &(mido->rtports[startindex + i]));
-        }
- *outports = retports;
-    }
-    return (ret);
-}
- */
-
-//!
-//! Searches the ports discovered in MidoNet for the ones that belong to the
-//! bridge in the argument.
-//!
-//! @param[in] mido data structure holding all discovered MidoNet resources.
-//! @param[in] bridge of interest - it is assumed that this is indeed a bridge,
-//! checks are not performed.
-//! @param[out] outports reference to midoname data structure of the ports that
-//! belong to the given device. Memory is allocated. Caller should release once
-//! done.
-//! @param[out] outports_max number of ports that belong to the bridge of interest.
-//!
-//! @return 0 if port(s) that belong(s) to the given device is/are found among
-//! discovered Midonet ports. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre mido_config data structure should have been populated.
-//!
-//! @post
-//!
-//! @note
-//!
-/*
-int find_mido_bridge_ports(mido_config *mido, midoname *device, midoname **outports, int *outports_max) {
-    int i;
-    int rc;
-    int ret = 1;
-    int startindex = 0;
-    char *bruuid = NULL;
-    midoname *brport = NULL;
-    midoname *retports = NULL;
-
-    if (!mido || !outports || !outports_max || !device) {
-        return (1);
-    }
-    if (!device->init) {
-        return (1);
-    }
-
- *outports_max = 0;
-    LOGDEBUG("Searching for ports of bridge %s\n", device->name);
-    for (i = 0; (i < mido->max_brports) && (ret); i++) {
-        brport = &(mido->brports[i]);
-        rc = mido_getel_midoname(brport, "deviceId", &bruuid);
-        if ((rc == 0) && (!strcmp(bruuid, device->uuid))) {
-            LOGDEBUG("Found device port %s\n", brport->name);
-            if (*outports_max == 0) {
-                startindex = i;
-            }
-            (*outports_max)++;
-        } else {
-            if (*outports_max != 0) {
-                ret = 0;
-            }
-        }
-        EUCA_FREE(bruuid);
-        bruuid = NULL;
-    }
-    if (*outports_max != 0) {
-        retports = EUCA_ZALLOC(*outports_max, sizeof(midoname));
-        if (!retports) {
-            LOGERROR("out of memory.\n");
- *outports_max = 0;
-            return (1);
-        }
-        for (i = 0; i < (*outports_max); i++) {
-            mido_copy_midoname(&(retports[i]), &(mido->brports[startindex + i]));
-        }
- *outports = retports;
-    }
-    return (ret);
-}
- */
 
 /**
  * Searches a bridge for the port that matches the given interface name.
@@ -3472,7 +3322,7 @@ int find_mido_device_ports(midoname **ports, int max_ports, midoname *device, mi
         }
         rc = mido_getel_midoname(port, "deviceId", &devuuid);
         if ((rc == 0) && (!strcmp(devuuid, device->uuid))) {
-            retports = EUCA_REALLOC(retports, *outports_max + 1, sizeof (midoname *));
+            retports = EUCA_REALLOC_C(retports, *outports_max + 1, sizeof (midoname *));
             retports[*outports_max] = port;
             (*outports_max)++;
         }
@@ -3526,7 +3376,7 @@ int find_mido_host_ports(midoname **ports, int max_ports, midoname *host, midona
         }
         rc = mido_getel_midoname(port, "hostId", &hostuuid);
         if ((rc == 0) && (!strcmp(hostuuid, host->uuid))) {
-            retports = EUCA_REALLOC(retports, *outports_max + 1, sizeof (midoname *));
+            retports = EUCA_REALLOC_C(retports, *outports_max + 1, sizeof (midoname *));
             retports[*outports_max] = port;
             (*outports_max)++;
         }
@@ -5029,7 +4879,7 @@ int initialize_mido(mido_config * mido, char *eucahome, int flushmode, int disab
     mido->int_rtnw = dot2hex(int_rtnetwork); // strdup(int_rtnetwork);
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
-    mido->midocore = EUCA_ZALLOC(1, sizeof (mido_core));
+    mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
     LOGDEBUG("mido initialized: mido->ext_eucanetdhostname=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
             SP(mido->ext_eucanetdhostname), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
             SP(int_rtslashnet));

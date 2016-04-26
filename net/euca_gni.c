@@ -316,7 +316,7 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
             LOGTRACE("%s in %s: N\n", gni->interfaces[i].name, vpc->name);
         } else {
             LOGTRACE("%s in %s: Y\n", gni->interfaces[i].name, vpc->name);
-            result = EUCA_REALLOC(result, max_result + 1, sizeof (gni_instance *));
+            result = EUCA_REALLOC_C(result, max_result + 1, sizeof (gni_instance *));
             result[max_result] = &(gni->interfaces[i]);
             max_result++;
         }
@@ -372,7 +372,7 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
             LOGTRACE("%s in %s: N\n", vpcinterfaces[i]->name, vpcsubnet->name);
         } else {
             LOGTRACE("%s in %s: Y\n", vpcinterfaces[i]->name, vpcsubnet->name);
-            result = EUCA_REALLOC(result, max_result + 1, sizeof (gni_instance *));
+            result = EUCA_REALLOC_C(result, max_result + 1, sizeof (gni_instance *));
             result[max_result] = vpcinterfaces[i];
             max_result++;
         }
@@ -749,9 +749,9 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
     if (!strcmp(cluster_names[0], "*")) {
         getall = 1;
         if (do_outnames)
-            *out_cluster_names = EUCA_ZALLOC(gni->max_clusters, sizeof (char *));
+            *out_cluster_names = EUCA_ZALLOC_C(gni->max_clusters, sizeof (char *));
         if (do_outstructs)
-            *out_clusters = EUCA_ZALLOC(gni->max_clusters, sizeof (gni_cluster));
+            *out_clusters = EUCA_ZALLOC_C(gni->max_clusters, sizeof (gni_cluster));
     }
 
     if (do_outnames)
@@ -771,12 +771,12 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
             for (j = 0; j < max_cluster_names; j++) {
                 if (!strcmp(cluster_names[j], gni->clusters[i].name)) {
                     if (do_outnames) {
-                        *out_cluster_names = realloc(*out_cluster_names, sizeof (char *) * (retcount + 1));
+                        *out_cluster_names = EUCA_REALLOC_C(*out_cluster_names, (retcount + 1), sizeof (char *));
                         ret_cluster_names = *out_cluster_names;
                         ret_cluster_names[retcount] = strdup(gni->clusters[i].name);
                     }
                     if (do_outstructs) {
-                        *out_clusters = realloc(*out_clusters, sizeof (gni_cluster) * (retcount + 1));
+                        *out_clusters = EUCA_REALLOC_C(*out_clusters, (retcount + 1), sizeof (gni_cluster));
                         ret_clusters = *out_clusters;
                         memcpy(&(ret_clusters[retcount]), &(gni->clusters[i]), sizeof (gni_cluster));
                     }
@@ -856,9 +856,9 @@ int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, in
     if (psSecGroupNames == NULL || !strcmp(psSecGroupNames[0], "*")) {
         getAll = TRUE;
         if (doOutNames)
-            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof (char *));
+            *psOutSecGroupNames = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (char *));
         if (doOutStructs)
-            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof (gni_secgroup));
+            *pOutSecGroups = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (gni_secgroup));
     }
     // Setup our returning name list pointer
     if (doOutNames)
@@ -880,13 +880,13 @@ int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, in
         } else {
             if (!strcmp(psSecGroupNames[x], pGni->secgroups[i].name)) {
                 if (doOutNames) {
-                    *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
+                    *psOutSecGroupNames = EUCA_REALLOC_C(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
                     psRetSecGroupNames = *psOutSecGroupNames;
                     psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
                 }
 
                 if (doOutStructs) {
-                    *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
+                    *pOutSecGroups = EUCA_REALLOC_C(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
                     pRetSecGroup = *pOutSecGroups;
                     memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof (gni_secgroup));
                 }
@@ -959,7 +959,7 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
         *out_max_nodes = 0;
     }
 
-    cluster_names = EUCA_ZALLOC(1, sizeof (char *));
+    cluster_names = EUCA_ZALLOC_C(1, sizeof (char *));
     cluster_names[0] = cluster->name;
     rc = gni_cloud_get_clusters(gni, cluster_names, 1, NULL, NULL, &out_clusters, &out_max_clusters);
     if (rc || out_max_clusters <= 0) {
@@ -972,9 +972,9 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     if ((node_names == NULL) || !strcmp(node_names[0], "*")) {
         getall = 1;
         if (do_outnames)
-            *out_node_names = EUCA_ZALLOC(cluster->max_nodes, sizeof (char *));
+            *out_node_names = EUCA_ZALLOC_C(cluster->max_nodes, sizeof (char *));
         if (do_outstructs)
-            *out_nodes = EUCA_ZALLOC(cluster->max_nodes, sizeof (gni_node));
+            *out_nodes = EUCA_ZALLOC_C(cluster->max_nodes, sizeof (gni_node));
     }
 
     if (do_outnames)
@@ -997,12 +997,12 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
             for (j = 0; j < max_node_names; j++) {
                 if (!strcmp(node_names[j], out_clusters[0].nodes[i].name)) {
                     if (do_outnames) {
-                        *out_node_names = realloc(*out_node_names, sizeof (char *) * (retcount + 1));
+                        *out_node_names = EUCA_REALLOC_C(*out_node_names, (retcount + 1), sizeof (char *));
                         ret_node_names = *out_node_names;
                         ret_node_names[retcount] = strdup(out_clusters[0].nodes[i].name);
                     }
                     if (do_outstructs) {
-                        *out_nodes = realloc(*out_nodes, sizeof (gni_node) * (retcount + 1));
+                        *out_nodes = EUCA_REALLOC_C(*out_nodes, (retcount + 1), sizeof (gni_node));
                         ret_nodes = *out_nodes;
                         memcpy(&(ret_nodes[retcount]), &(out_clusters[0].nodes[i]), sizeof (gni_node));
                     }
@@ -1100,9 +1100,9 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
     if (psInstanceNames == NULL || !strcmp(psInstanceNames[0], "*")) {
         getAll = TRUE;
         if (doOutNames)
-            *psOutInstanceNames = EUCA_ZALLOC(nbInstances, sizeof (char *));
+            *psOutInstanceNames = EUCA_ZALLOC_C(nbInstances, sizeof (char *));
         if (doOutStructs)
-            *pOutInstances = EUCA_ZALLOC(nbInstances, sizeof (gni_instance));
+            *pOutInstances = EUCA_ZALLOC_C(nbInstances, sizeof (gni_instance));
     }
 
     if (doOutNames)
@@ -1130,7 +1130,7 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
                 for (x = 0; x < nbInstanceNames; x++) {
                     if (!strcmp(psInstanceNames[x], pCluster->nodes[i].instance_names[k].name)) {
                         if (doOutNames) {
-                            *psOutInstanceNames = EUCA_REALLOC(*psOutInstanceNames, (retCount + 1), sizeof (char *));
+                            *psOutInstanceNames = EUCA_REALLOC_C(*psOutInstanceNames, (retCount + 1), sizeof (char *));
                             psRetInstanceNames = *psOutInstanceNames;
                             psRetInstanceNames[retCount] = strdup(pCluster->nodes[i].instance_names[k].name);
                         }
@@ -1138,7 +1138,7 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
                         if (doOutStructs) {
                             for (y = 0; y < pGni->max_instances; y++) {
                                 if (!strcmp(pGni->instances[y].name, pCluster->nodes[i].instance_names[k].name)) {
-                                    *pOutInstances = EUCA_REALLOC(*pOutInstances, (retCount + 1), sizeof (gni_instance));
+                                    *pOutInstances = EUCA_REALLOC_C(*pOutInstances, (retCount + 1), sizeof (gni_instance));
                                     pRetInstances = *pOutInstances;
                                     memcpy(&(pRetInstances[retCount]), &(pGni->instances[y]), sizeof (gni_instance));
                                     break;
@@ -1238,14 +1238,14 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
         EUCA_FREE(pInstances);
         return (0);
     }
-    // Allocate memory for all the groups if there is no search criterias
+    // Allocate memory for all the groups if there is no search criteria
     if ((psSecGroupNames == NULL) || !strcmp(psSecGroupNames[0], "*")) {
         getAll = TRUE;
         if (doOutNames)
-            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof (char *));
+            *psOutSecGroupNames = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (char *));
 
         if (doOutStructs)
-            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof (gni_secgroup));
+            *pOutSecGroups = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (gni_secgroup));
     }
     // Setup our returning name pointer
     if (doOutNames)
@@ -1290,13 +1290,13 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
                 // If we have any instance using this group, then copy it
                 if (found) {
                     if (doOutNames) {
-                        *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
+                        *psOutSecGroupNames = EUCA_REALLOC_C(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
                         psRetSecGroupNames = *psOutSecGroupNames;
                         psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
                     }
 
                     if (doOutStructs) {
-                        *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
+                        *pOutSecGroups = EUCA_REALLOC_C(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
                         pRetSecGroup = *pOutSecGroups;
                         memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof (gni_secgroup));
                     }
@@ -1373,9 +1373,9 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
     if (instance_names == NULL || !strcmp(instance_names[0], "*")) {
         getall = 1;
         if (do_outnames)
-            *out_instance_names = EUCA_ZALLOC(node->max_instance_names, sizeof (char *));
+            *out_instance_names = EUCA_ZALLOC_C(node->max_instance_names, sizeof (char *));
         if (do_outstructs)
-            *out_instances = EUCA_ZALLOC(node->max_instance_names, sizeof (gni_instance));
+            *out_instances = EUCA_ZALLOC_C(node->max_instance_names, sizeof (gni_instance));
     }
 
     if (do_outnames)
@@ -1401,14 +1401,14 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
             for (j = 0; j < max_instance_names; j++) {
                 if (!strcmp(instance_names[j], node->instance_names[i].name)) {
                     if (do_outnames) {
-                        *out_instance_names = realloc(*out_instance_names, sizeof (char *) * (retcount + 1));
+                        *out_instance_names = EUCA_REALLOC_C(*out_instance_names, (retcount + 1), sizeof (char *));
                         ret_instance_names = *out_instance_names;
                         ret_instance_names[retcount] = strdup(node->instance_names[i].name);
                     }
                     if (do_outstructs) {
                         for (k = 0; k < gni->max_instances; k++) {
                             if (!strcmp(gni->instances[k].name, node->instance_names[i].name)) {
-                                *out_instances = realloc(*out_instances, sizeof (gni_instance) * (retcount + 1));
+                                *out_instances = EUCA_REALLOC_C(*out_instances, (retcount + 1), sizeof (gni_instance));
                                 ret_instances = *out_instances;
                                 memcpy(&(ret_instances[retcount]), &(gni->instances[k]), sizeof (gni_instance));
                                 break;
@@ -1504,14 +1504,14 @@ int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psS
         EUCA_FREE(pInstances);
         return (0);
     }
-    // Allocate memory for all the groups if there is no search criterias
+    // Allocate memory for all the groups if there is no search criteria
     if ((psSecGroupNames == NULL) || !strcmp(psSecGroupNames[0], "*")) {
         getAll = TRUE;
         if (doOutNames)
-            *psOutSecGroupNames = EUCA_ZALLOC(pGni->max_secgroups, sizeof (char *));
+            *psOutSecGroupNames = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (char *));
 
         if (doOutStructs)
-            *pOutSecGroups = EUCA_ZALLOC(pGni->max_secgroups, sizeof (gni_secgroup));
+            *pOutSecGroups = EUCA_ZALLOC_C(pGni->max_secgroups, sizeof (gni_secgroup));
     }
     // Setup our returning name pointer
     if (doOutNames)
@@ -1556,13 +1556,13 @@ int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psS
                 // If we have any instance using this group, then copy it
                 if (found) {
                     if (doOutNames) {
-                        *psOutSecGroupNames = EUCA_REALLOC(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
+                        *psOutSecGroupNames = EUCA_REALLOC_C(*psOutSecGroupNames, (retCount + 1), sizeof (char *));
                         psRetSecGroupNames = *psOutSecGroupNames;
                         psRetSecGroupNames[retCount] = strdup(pGni->secgroups[i].name);
                     }
 
                     if (doOutStructs) {
-                        *pOutSecGroups = EUCA_REALLOC(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
+                        *pOutSecGroups = EUCA_REALLOC_C(*pOutSecGroups, (retCount + 1), sizeof (gni_instance));
                         pRetSecGroup = *pOutSecGroups;
                         memcpy(&(pRetSecGroup[retCount]), &(pGni->secgroups[i]), sizeof (gni_secgroup));
                     }
@@ -1639,9 +1639,9 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
     if ((secgroup_names == NULL) || !strcmp(secgroup_names[0], "*")) {
         getall = 1;
         if (do_outnames)
-            *out_secgroup_names = EUCA_ZALLOC(instance->max_secgroup_names, sizeof (char *));
+            *out_secgroup_names = EUCA_ZALLOC_C(instance->max_secgroup_names, sizeof (char *));
         if (do_outstructs)
-            *out_secgroups = EUCA_ZALLOC(instance->max_secgroup_names, sizeof (gni_secgroup));
+            *out_secgroups = EUCA_ZALLOC_C(instance->max_secgroup_names, sizeof (gni_secgroup));
     }
 
     if (do_outnames)
@@ -1667,14 +1667,14 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
             for (j = 0; j < max_secgroup_names; j++) {
                 if (!strcmp(secgroup_names[j], instance->secgroup_names[i].name)) {
                     if (do_outnames) {
-                        *out_secgroup_names = realloc(*out_secgroup_names, sizeof (char *) * (retcount + 1));
+                        *out_secgroup_names = EUCA_REALLOC_C(*out_secgroup_names, (retcount + 1), sizeof (char *));
                         ret_secgroup_names = *out_secgroup_names;
                         ret_secgroup_names[retcount] = strdup(instance->secgroup_names[i].name);
                     }
                     if (do_outstructs) {
                         for (k = 0; k < gni->max_secgroups; k++) {
                             if (!strcmp(gni->secgroups[k].name, instance->secgroup_names[i].name)) {
-                                *out_secgroups = realloc(*out_secgroups, sizeof (gni_secgroup) * (retcount + 1));
+                                *out_secgroups = EUCA_REALLOC_C(*out_secgroups, (retcount + 1), sizeof (gni_secgroup));
                                 ret_secgroups = *out_secgroups;
                                 memcpy(&(ret_secgroups[retcount]), &(gni->secgroups[k]), sizeof (gni_secgroup));
                                 break;
@@ -1744,12 +1744,12 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
         return (0);
     }
     if (do_outnames) {
-        *out_instance_names = EUCA_ZALLOC(secgroup->max_instances, sizeof (char *));
+        *out_instance_names = EUCA_ZALLOC_C(secgroup->max_instances, sizeof (char *));
         *out_max_instance_names = 0;
         ret_instance_names = *out_instance_names;
     }
     if (do_outstructs) {
-        *out_instances = EUCA_ZALLOC(secgroup->max_instances, sizeof (gni_instance));
+        *out_instances = EUCA_ZALLOC_C(secgroup->max_instances, sizeof (gni_instance));
         *out_max_instances = 0;
         ret_instances = *out_instances;
     }
@@ -1839,7 +1839,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
     }
 
     if (do_outnames) {
-        *out_interface_names = EUCA_ZALLOC(secgroup->max_interfaces, sizeof (char *));
+        *out_interface_names = EUCA_ZALLOC_C(secgroup->max_interfaces, sizeof (char *));
         if (*out_interface_names == NULL) {
             LOGFATAL("out of memory: failed to allocate out_interface_names\n");
             do_outnames = 0;
@@ -1847,7 +1847,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         *out_max_interface_names = 0;
     }
     if (do_outstructs) {
-        *out_interfaces = EUCA_ZALLOC(secgroup->max_interfaces, sizeof (gni_instance *));
+        *out_interfaces = EUCA_ZALLOC_C(secgroup->max_interfaces, sizeof (gni_instance *));
         if (*out_interfaces == NULL) {
             LOGFATAL("out of memory: failed to allocate out_interfaces\n");
             do_outstructs = 0;
@@ -1913,8 +1913,7 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
 //!
 //! @note
 //!
-int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results)
-{
+int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results) {
     int i, max_nodes = 0, result_count = 0;
     xmlXPathObjectPtr objptr;
     char **retresults;
@@ -1928,7 +1927,7 @@ int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char **
     } else {
         if (objptr->nodesetval) {
             max_nodes = (int) objptr->nodesetval->nodeNr;
-            *results = EUCA_ZALLOC(max_nodes, sizeof (char *));
+            *results = EUCA_ZALLOC_C(max_nodes, sizeof (char *));
             retresults = *results;
             for (i = 0; i < max_nodes; i++) {
                 if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->children && objptr->nodesetval->nodeTab[i]->children->content) {
@@ -1968,8 +1967,8 @@ int evaluate_xpath_property_c(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodeP
 
     *max_results = 0;
 
-    if (!ctxptr) {
-        LOGWARN("Invalid argument: null xmlXPathContext\n");
+    if ((!ctxptr) || (!doc) || (!results)) {
+        LOGWARN("Invalid argument: null xmlXPathContext, xmlDoc, or results\n");
         res = 1;
     } else {
         ctxptr->node = startnode;
@@ -1981,7 +1980,7 @@ int evaluate_xpath_property_c(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodeP
         } else {
             if (objptr->nodesetval) {
                 max_nodes = (int) objptr->nodesetval->nodeNr;
-                *results = EUCA_ZALLOC(max_nodes, sizeof (char *));
+                *results = EUCA_ZALLOC_C(max_nodes, sizeof (char *));
                 retresults = *results;
                 for (i = 0; i < max_nodes; i++) {
                     if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->children && objptr->nodesetval->nodeTab[i]->children->content) {
@@ -2036,7 +2035,7 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
     } else {
         if (objptr->nodesetval) {
             max_nodes = (int) objptr->nodesetval->nodeNr;
-            *results = EUCA_ZALLOC(max_nodes, sizeof (char *));
+            *results = EUCA_ZALLOC_C(max_nodes, sizeof (char *));
             retresults = *results;
             for (i = 0; i < max_nodes; i++) {
                 if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->properties && objptr->nodesetval->nodeTab[i]->properties->children
@@ -2076,8 +2075,8 @@ int evaluate_xpath_element_c(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePt
 
     *max_results = 0;
 
-    if (!ctxptr) {
-        LOGERROR("Invalid argument: NULL xpath context\n");
+    if ((!ctxptr) || (!doc) || (!results)) {
+        LOGERROR("Invalid argument: NULL xpath context, xmlDoc, or results\n");
         res = 1;
     } else {
         ctxptr->node = startnode;
@@ -2089,7 +2088,7 @@ int evaluate_xpath_element_c(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePt
         } else {
             if (objptr->nodesetval) {
                 max_nodes = (int) objptr->nodesetval->nodeNr;
-                *results = EUCA_ZALLOC(max_nodes, sizeof (char *));
+                *results = EUCA_ZALLOC_C(max_nodes, sizeof (char *));
                 retresults = *results;
                 for (i = 0; i < max_nodes; i++) {
                     if (objptr->nodesetval->nodeTab[i] && objptr->nodesetval->nodeTab[i]->properties && objptr->nodesetval->nodeTab[i]->properties->children
@@ -2130,8 +2129,8 @@ int evaluate_xpath_nodeset(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr 
         return (1);
     }
     bzero(nodeset, sizeof (xmlNodeSet));
-    if (!ctxptr) {
-        LOGERROR("Invalid argument: NULL xpath context\n");
+    if ((!ctxptr) || (!doc) || (!nodeset)) {
+        LOGERROR("Invalid argument: NULL xpath context, xmlDoc, or nodeset\n");
         res = 1;
     } else {
         ctxptr->node = startnode;
@@ -2143,7 +2142,7 @@ int evaluate_xpath_nodeset(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr 
             if (objptr->nodesetval) {
                 nodeset->nodeNr = objptr->nodesetval->nodeNr;
                 nodeset->nodeMax = objptr->nodesetval->nodeMax;
-                nodeset->nodeTab = EUCA_ZALLOC(nodeset->nodeMax, sizeof (xmlNodePtr));
+                nodeset->nodeTab = EUCA_ZALLOC_C(nodeset->nodeMax, sizeof (xmlNodePtr));
                 memcpy(nodeset->nodeTab, objptr->nodesetval->nodeTab, nodeset->nodeMax * sizeof (xmlNodePtr));
             }
         }
@@ -2158,14 +2157,9 @@ int evaluate_xpath_nodeset(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr 
  */
 globalNetworkInfo *gni_init() {
     globalNetworkInfo *gni = NULL;
-    gni = EUCA_ZALLOC(1, sizeof (globalNetworkInfo));
-    if (!gni) {
-        LOGFATAL("out of memory - allocating memory for GNI\n");
-        exit(1);
-    } else {
-        //bzero(gni, sizeof(globalNetworkInfo));
-        gni->init = 1;
-    }
+    gni = EUCA_ZALLOC_C(1, sizeof (globalNetworkInfo));
+
+    gni->init = 1;
     return (gni);
 }
 
@@ -4270,7 +4264,7 @@ int gni_populate_instances_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPat
     snprintf(expression, 2048, "./instance");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->instances = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_instance));
+        gni->instances = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_instance));
         gni->max_instances = nodeset.nodeNr;
     }
     LOGTRACE("Found %d instances\n", gni->max_instances);
@@ -4320,7 +4314,7 @@ int gni_populate_interfaces_c(globalNetworkInfo *gni, gni_instance *instance, xm
     snprintf(expression, 2048, "./networkInterfaces/networkInterface");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->interfaces = EUCA_REALLOC(gni->interfaces, gni->max_interfaces + nodeset.nodeNr, sizeof (gni_instance));
+        gni->interfaces = EUCA_REALLOC_C(gni->interfaces, gni->max_interfaces + nodeset.nodeNr, sizeof (gni_instance));
         bzero(&(gni->interfaces[gni->max_interfaces]), nodeset.nodeNr * sizeof (gni_instance));
         LOGTRACE("Found %d interfaces\n", nodeset.nodeNr);
         for (i = 0; i < nodeset.nodeNr; i++) {
@@ -4432,8 +4426,8 @@ int gni_populate_instance_interface_c(gni_instance *instance, xmlNodePtr xmlnode
 
     snprintf(expression, 2048, "./securityGroups/value");
     rc = evaluate_xpath_property_c(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    instance->secgroup_names = EUCA_ZALLOC(max_results, sizeof (gni_name));
-    instance->gnisgs = EUCA_ZALLOC(max_results, sizeof (gni_secgroup *));
+    instance->secgroup_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
+    instance->gnisgs = EUCA_ZALLOC_C(max_results, sizeof (gni_secgroup *));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
         snprintf(instance->secgroup_names[i].name, 1024, "%s", results[i]);
@@ -4455,12 +4449,10 @@ int gni_populate_instance_interface_c(gni_instance *instance, xmlNodePtr xmlnode
         // Populate interfaces.
         snprintf(expression, 2048, "./networkInterfaces/networkInterface");
         rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-        instance->interface_names = EUCA_REALLOC(instance->interface_names, instance->max_interface_names + max_results, sizeof (gni_name));
-        if (instance->interface_names == NULL) {
-            LOGERROR("out of memory: re(allocating) instance->interface_names.\n");
-            return (1);
+        instance->interface_names = EUCA_REALLOC_C(instance->interface_names, instance->max_interface_names + max_results, sizeof (gni_name));
+        if (instance->interface_names) {
+            bzero(&(instance->interface_names[instance->max_interface_names]), max_results * sizeof (gni_name));
         }
-        bzero(&(instance->interface_names[instance->max_interface_names]), max_results * sizeof (gni_name));
         for (i = 0; i < max_results; i++) {
             LOGTRACE("\t\tafter function: %d: %s\n", i, results[i]);
             snprintf(instance->interface_names[instance->max_interface_names + i].name, 1024, "%s", results[i]);
@@ -4532,7 +4524,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
     snprintf(expression, 2048, "./securityGroup");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->secgroups = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_secgroup));
+        gni->secgroups = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_secgroup));
         gni->max_secgroups = nodeset.nodeNr;
     }
     LOGTRACE("Found %d security groups\n", gni->max_secgroups);
@@ -4552,7 +4544,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
                 for (l = 0; l < gni->instances[k].max_secgroup_names; l++) {
                     gi = &(gni->instances[k]);
                     if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
-                        gsg->instances = EUCA_REALLOC(gsg->instances, gsg->max_instances + 1, sizeof (gni_instance *));
+                        gsg->instances = EUCA_REALLOC_C(gsg->instances, gsg->max_instances + 1, sizeof (gni_instance *));
                         gsg->instances[gsg->max_instances] = gi;
                         gsg->max_instances++;
                     }
@@ -4565,7 +4557,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
                     gi = &(gni->interfaces[k]);
                     for (l = 0; l < gi->max_secgroup_names; l++) {
                         if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
-                            gsg->interfaces = EUCA_REALLOC(gsg->interfaces, gsg->max_interfaces + 1, sizeof (gni_instance *));
+                            gsg->interfaces = EUCA_REALLOC_C(gsg->interfaces, gsg->max_interfaces + 1, sizeof (gni_instance *));
                             gi->gnisgs[l] = gsg;
                             gsg->interfaces[gsg->max_interfaces] = gi;
                             gsg->max_interfaces++;
@@ -4585,7 +4577,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
 
             snprintf(expression, 2048, "./rules/value");
             rc = evaluate_xpath_property_c(ctxptr, doc, sgnode, expression, &results, &max_results);
-            gni->secgroups[j].grouprules = EUCA_ZALLOC(max_results, sizeof (gni_name));
+            gni->secgroups[j].grouprules = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
             for (i = 0; i < max_results; i++) {
                 char newrule[2048];
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
@@ -4603,7 +4595,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
             snprintf(expression, 2048, "./ingressRules/rule");
             rc = evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &ingressNodeset);
             if (ingressNodeset.nodeNr > 0) {
-                gni->secgroups[j].ingress_rules = EUCA_ZALLOC(ingressNodeset.nodeNr, sizeof (gni_rule));
+                gni->secgroups[j].ingress_rules = EUCA_ZALLOC_C(ingressNodeset.nodeNr, sizeof (gni_rule));
                 gni->secgroups[j].max_ingress_rules = ingressNodeset.nodeNr;
             }
             LOGTRACE("\tFound %d ingress rules\n", gni->secgroups[j].max_ingress_rules);
@@ -4620,7 +4612,7 @@ int gni_populate_sgs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathConte
             snprintf(expression, 2048, "./egressRules/rule");
             rc = evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &egressNodeset);
             if (egressNodeset.nodeNr > 0) {
-                gni->secgroups[j].egress_rules = EUCA_ZALLOC(egressNodeset.nodeNr, sizeof (gni_rule));
+                gni->secgroups[j].egress_rules = EUCA_ZALLOC_C(egressNodeset.nodeNr, sizeof (gni_rule));
                 gni->secgroups[j].max_egress_rules = egressNodeset.nodeNr;
             }
             LOGTRACE("\tFound %d egress rules\n", gni->secgroups[j].max_egress_rules);
@@ -4771,7 +4763,7 @@ int gni_populate_vpcs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCont
     snprintf(expression, 2048, "./vpc");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->vpcs = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_vpc));
+        gni->vpcs = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_vpc));
         gni->max_vpcs = nodeset.nodeNr;
     }
     LOGTRACE("Found %d vpcs\n", gni->max_vpcs);
@@ -4797,7 +4789,7 @@ int gni_populate_vpcs_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCont
 
     snprintf(expression, 2048, "/network-data/internetGateways/internetGateway/@name");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    gni->vpcIgws = EUCA_ZALLOC(max_results, sizeof (gni_internet_gateway));
+    gni->vpcIgws = EUCA_ZALLOC_C(max_results, sizeof (gni_internet_gateway));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
         snprintf(gni->vpcIgws[i].name, 16, "%s", results[i]);
@@ -4875,7 +4867,7 @@ int gni_populate_vpc_c(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxp
     snprintf(expression, 2048, "./routeTables/routeTable");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        vpc->routeTables = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_route_table));
+        vpc->routeTables = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_route_table));
         vpc->max_routeTables = nodeset.nodeNr;
     }
     LOGTRACE("\tFound %d vpc route tables\n", vpc->max_routeTables);
@@ -4897,7 +4889,7 @@ int gni_populate_vpc_c(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxp
     snprintf(expression, 2048, "./subnets/subnet");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        vpc->subnets = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_vpcsubnet));
+        vpc->subnets = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_vpcsubnet));
         vpc->max_subnets = nodeset.nodeNr;
     }
     LOGTRACE("\tFound %d vpc subnets\n", vpc->max_subnets);
@@ -4917,7 +4909,7 @@ int gni_populate_vpc_c(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxp
 
     snprintf(expression, 2048, "./internetGateways/value");
     rc = evaluate_xpath_property_c(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    vpc->internetGatewayNames = EUCA_ZALLOC(max_results, sizeof (gni_name));
+    vpc->internetGatewayNames = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
     for (int i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
         snprintf(vpc->internetGatewayNames[i].name, 16, "%s", results[i]);
@@ -4931,7 +4923,7 @@ int gni_populate_vpc_c(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxp
     snprintf(expression, 2048, "./natGateways/natGateway");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        vpc->natGateways = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_nat_gateway));
+        vpc->natGateways = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_nat_gateway));
         vpc->max_natGateways = nodeset.nodeNr;
     }
     LOGTRACE("\tFound %d vpc nat gateways\n", vpc->max_natGateways);
@@ -4954,7 +4946,7 @@ int gni_populate_vpc_c(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxp
     snprintf(expression, 2048, "./networkAcls/networkAcl");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        vpc->networkAcls = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_network_acl));
+        vpc->networkAcls = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_network_acl));
         vpc->max_networkAcls = nodeset.nodeNr;
     }
     LOGTRACE("\tFound %d vpc network acls\n", vpc->max_networkAcls);
@@ -5013,7 +5005,7 @@ int gni_populate_routetable_c(gni_vpc *vpc, gni_route_table *routetable, xmlNode
     snprintf(expression, 2048, "./routes/route");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        routetable->entries = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_route_entry));
+        routetable->entries = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_route_entry));
         routetable->max_entries = nodeset.nodeNr;
     }
     LOGTRACE("\t\tFound %d vpc route table entries\n", routetable->max_entries);
@@ -5287,7 +5279,7 @@ int gni_populate_networkacl_c(gni_network_acl *netacl, xmlNodePtr xmlnode, xmlXP
     snprintf(expression, 2048, "./ingressEntries/entry");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        netacl->ingress = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_acl_entry));
+        netacl->ingress = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_acl_entry));
         netacl->max_ingress = nodeset.nodeNr;
     }
     LOGTRACE("\t\tFound %d ingress entries\n", netacl->max_ingress);
@@ -5304,7 +5296,7 @@ int gni_populate_networkacl_c(gni_network_acl *netacl, xmlNodePtr xmlnode, xmlXP
     snprintf(expression, 2048, "./egressEntries/entry");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        netacl->egress = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_acl_entry));
+        netacl->egress = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_acl_entry));
         netacl->max_egress = nodeset.nodeNr;
     }
     LOGTRACE("\t\tFound %d egress entries\n", netacl->max_egress);
@@ -5451,7 +5443,7 @@ int gni_populate_internetgateways_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, 
     snprintf(expression, 2048, "./internetGateway");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->vpcIgws = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_internet_gateway));
+        gni->vpcIgws = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_internet_gateway));
         gni->max_vpcIgws = nodeset.nodeNr;
     }
     LOGTRACE("Found %d Internet Gateways\n", gni->max_vpcIgws);
@@ -5510,7 +5502,7 @@ int gni_populate_dhcpos_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCo
     snprintf(expression, 2048, "./dhcpOptionSet");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->dhcpos = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_dhcp_os));
+        gni->dhcpos = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_dhcp_os));
         gni->max_dhcpos = nodeset.nodeNr;
     }
     LOGTRACE("Found %d DHCP Option Sets\n", gni->max_dhcpos);
@@ -5534,7 +5526,7 @@ int gni_populate_dhcpos_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCo
 
             snprintf(expression, 2048, "./property[@name='domain-name']/value");
             rc = evaluate_xpath_property_c(ctxptr, doc, dhnode, expression, &results, &max_results);
-            gdh->domains = EUCA_ZALLOC(max_results, sizeof (gni_name));
+            gdh->domains = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 snprintf(gdh->domains[i].name, 1024, "%s", results[i]);
@@ -5545,7 +5537,7 @@ int gni_populate_dhcpos_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCo
 
             snprintf(expression, 2048, "./property[@name='domain-name-servers']/value");
             rc = evaluate_xpath_property_c(ctxptr, doc, dhnode, expression, &results, &max_results);
-            gdh->dns = EUCA_ZALLOC(max_results, sizeof (u32));
+            gdh->dns = EUCA_ZALLOC_C(max_results, sizeof (u32));
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 gdh->dns[i] = dot2hex(results[i]);
@@ -5556,7 +5548,7 @@ int gni_populate_dhcpos_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCo
 
             snprintf(expression, 2048, "./property[@name='ntp-servers']/value");
             rc = evaluate_xpath_property_c(ctxptr, doc, dhnode, expression, &results, &max_results);
-            gdh->ntp = EUCA_ZALLOC(max_results, sizeof (u32));
+            gdh->ntp = EUCA_ZALLOC_C(max_results, sizeof (u32));
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 gdh->ntp[i] = dot2hex(results[i]);
@@ -5567,7 +5559,7 @@ int gni_populate_dhcpos_c(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCo
 
             snprintf(expression, 2048, "./property[@name='netbios-name-servers']/value");
             rc = evaluate_xpath_property_c(ctxptr, doc, dhnode, expression, &results, &max_results);
-            gdh->netbios_ns = EUCA_ZALLOC(max_results, sizeof (u32));
+            gdh->netbios_ns = EUCA_ZALLOC_C(max_results, sizeof (u32));
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 gdh->netbios_ns[i] = dot2hex(results[i]);
@@ -5827,7 +5819,7 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
             endb = dot2hex(end);
             if ((startb <= endb) && (startb != localhost) && (endb != localhost)) {
                 numi = (int) (endb - startb) + 1;
-                outlistbuf = realloc(outlistbuf, sizeof (u32) * (max_outlistbuf + numi));
+                outlistbuf = EUCA_REALLOC_C(outlistbuf, (max_outlistbuf + numi), sizeof (u32));
                 outidx = max_outlistbuf;
                 max_outlistbuf += numi;
                 for (idxb = startb; idxb <= endb; idxb++) {
@@ -5849,7 +5841,7 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
 
     if (max_outlistbuf > 0) {
         *outmax = max_outlistbuf;
-        *outlist = malloc(sizeof (u32) * *outmax);
+        *outlist = EUCA_ZALLOC_C(*outmax, sizeof (u32));
         memcpy(*outlist, outlistbuf, sizeof (u32) * max_outlistbuf);
     }
     EUCA_FREE(outlistbuf);
@@ -8053,7 +8045,7 @@ void gni_dhcpos_print(gni_dhcp_os *dhcpos, int loglevel) {
 
 
 gni_hostname_info *gni_init_hostname_info(void) {
-    gni_hostname_info *hni = EUCA_ZALLOC(1, sizeof (gni_hostname_info));
+    gni_hostname_info *hni = EUCA_ZALLOC_C(1, sizeof (gni_hostname_info));
     hni->max_hostnames = 0;
     return (hni);
 }

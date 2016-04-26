@@ -837,7 +837,7 @@ long int eucanetd_timer_usec(struct timeval *t)
  */
 void *zalloc_check(size_t nmemb, size_t size) {
     void *ret = calloc(nmemb, size);
-    if (ret == NULL) {
+    if ((ret == NULL) && ((nmemb * size) != 0)) {
         LOGFATAL("out of memory - alloc nmemb %zd, size %zd\n", nmemb, size);
         LOGFATAL("Shutting down eucanetd.\n");
         get_stack_trace();
@@ -854,7 +854,7 @@ void *zalloc_check(size_t nmemb, size_t size) {
  */
 void *realloc_check(void *ptr, size_t nmemb, size_t size) {
     void *ret = realloc(ptr, nmemb * size);
-    if (ret == NULL) {
+    if ((ret == NULL) && ((nmemb * size) != 0)) {
         LOGFATAL("out of memory - realloc nmemb %zd, size %zd.\n", nmemb, size);
         LOGFATAL("Shutting down eucanetd.\n");
         get_stack_trace();
