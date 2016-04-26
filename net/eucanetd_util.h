@@ -156,6 +156,11 @@ long int timer_get_interval_usec(struct timeval *ts, struct timeval *te);
 long int eucanetd_timer(struct timeval *t);
 long int eucanetd_timer_usec(struct timeval *t);
 
+void *zalloc_check(size_t nmemb, size_t size);
+void *realloc_check(void *ptr, size_t nmemb, size_t size);
+void *append_ptrarr(void *arr, int *max_arr, void *ptr);
+void get_stack_trace ();
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -167,6 +172,15 @@ long int eucanetd_timer_usec(struct timeval *t);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#ifndef EUCA_ZALLOC_C
+#define EUCA_ZALLOC_C(_nmemb, _size)             zalloc_check((_nmemb), (_size))
+#define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
+#endif /* ! EUCA_ZALLOC_C */
+
+#ifndef EUCA_GET_STACK_TRACE
+#define EUCA_GET_STACK_TRACE()                   get_stack_trace()
+#endif /* ! EUCA_GET_STACK_TRACE */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

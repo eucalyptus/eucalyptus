@@ -5848,6 +5848,16 @@ int midonet_api_cache_populate(void) {
  * @return 0 on success. 1 on any failure.
  */
 int midonet_api_cache_refresh(void) {
+    return (midonet_api_cache_refresh_v(MIDO_CACHE_REFRESH_ALL));
+}
+
+/**
+ * Clear the current midocache and populates the midonet_api_cache data structure.
+ * @param refreshmode [in] specify whether to populate hosts (MIDO_CACHE_REFRESH_ALL)
+ * or not (MIDO_CACHE_REFRESH_NOHOSTS).
+ * @return 0 on success. 1 on any failure.
+ */
+int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
     int rc = 0;
     int ret = 0;
     int i = 0;
@@ -5998,38 +6008,12 @@ int midonet_api_cache_refresh(void) {
     EUCA_FREE(l1names);
 
     // get all hosts
-    rc = midonet_api_cache_iphostmap_populate(cache);
-    if (rc) {
-        LOGWARN("failed to populate mido ip-host map\n");
-    }
-/*
-    l1names = NULL;
-    max_l1names = 0;
-    rc = mido_get_hosts(&l1names, &max_l1names);
-    if (!rc && max_l1names) {
-        cache->hosts = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_host *));
-        midonet_api_host *host = NULL;
-        for (i = 0; i < max_l1names; i++) {
-            host = EUCA_ZALLOC_C(1, sizeof (midonet_api_host));
-            cache->hosts[i] = host;
-            host->obj = l1names[i];
-            LOGEXTREME("Cached host %s\n", host->obj->name);
-            rc = mido_get_host_ports(cache->ports, cache->max_ports, host->obj,
-                    &(host->ports), &(host->max_ports));
-            for (j = 0; j < host->max_ports; j++) {
-                LOGEXTREME("\tCached port %s\n", host->ports[j]->jsonbuf);
-            }
-            rc = mido_get_addresses(host->obj, &(host->addresses), &(host->max_addresses));
-            for (j = 0; j < host->max_addresses; j++) {
-                LOGEXTREME("\tCached address %u\n", host->addresses[j]);
-            }
+    if (refreshmode == MIDO_CACHE_REFRESH_ALL) {
+        rc = midonet_api_cache_iphostmap_populate(cache);
+        if (rc) {
+            LOGWARN("failed to populate mido ip-host map\n");
         }
-        cache->max_hosts = max_l1names;
-    } else {
-        LOGWARN("Failed to retrieve mido hosts\n");
     }
-    EUCA_FREE(l1names);
-*/
     
     // get all IP address groups
     l1names = NULL;
@@ -7302,32 +7286,52 @@ int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone) {
  * @return always 0.
  */
 int midonet_api_delete_all(void) {
-    
     // Refresh midocache
-    midonet_api_cache_refresh();
-    
+    int rc = midonet_api_cache_refresh_v(MIDO_CACHE_REFRESH_NOHOSTS);
+    if (rc) {
+        LOGERROR("cannot populate midocache prior to cleanup: check midonet health\n");
+        return (1);
+    }
+
     // Delete all ip-address-groups
     for (int i = 0; i < midocache->max_ipaddrgroups; i++) {
         if (strstr(midocache->ipaddrgroups[i]->obj->name, "sg_") ||
                 strstr(midocache->ipaddrgroups[i]->obj->name, "elip_")) {
+            LOGINFO("\t\t%s del\n", midocache->ipaddrgroups[i]->obj->name);
             mido_delete_resource(NULL, midocache->ipaddrgroups[i]->obj);
         }
     }
     
     // Delete all chains
     for (int i = 0; i < midocache->max_chains; i++) {
-        LOGINFO("processing %s\n", midocache->chains[i]->obj->name);
         if (strstr(midocache->chains[i]->obj->name, "sg_") ||
                 strstr(midocache->chains[i]->obj->name, "ic_") ||
                 strstr(midocache->chains[i]->obj->name, "vc_") ||
                 strstr(midocache->chains[i]->obj->name, "natc_")) {
+            LOGINFO("\t\t%s del\n", midocache->chains[i]->obj->name);
             mido_delete_resource(NULL, midocache->chains[i]->obj);
         }
+    }
+
+    // Delete all ports that are not connected
+    for (int i = 0; i < midocache->max_ports; i++) {
+        char *peerId = NULL;
+        char *interfaceName = NULL;
+        mido_getel_midoname(midocache->ports[i], "peerId", &peerId);
+        mido_getel_midoname(midocache->ports[i], "interfaceName", &interfaceName);
+        
+        if (!peerId && !interfaceName) {
+            LOGINFO("\t\tport %s del\n", midocache->ports[i]->name);
+            mido_delete_resource(NULL, midocache->ports[i]);
+        }
+        EUCA_FREE(peerId);
+        EUCA_FREE(interfaceName);
     }
 
     // Delete all bridges
     for (int i = 0; i < midocache->max_bridges; i++) {
         if (strstr(midocache->bridges[i]->obj->name, "vb_vpc")) {
+            LOGINFO("\t\t%s del\n", midocache->bridges[i]->obj->name);
             mido_delete_resource(NULL, midocache->bridges[i]->obj);
         }
     }
@@ -7336,6 +7340,7 @@ int midonet_api_delete_all(void) {
     for (int i = 0; i < midocache->max_routers; i++) {
         if (strstr(midocache->routers[i]->obj->name, "vr_vpc") ||
                 strstr(midocache->routers[i]->obj->name, "natr_nat")) {
+            LOGINFO("\t\t%s del\n", midocache->routers[i]->obj->name);
             mido_delete_resource(NULL, midocache->routers[i]->obj);
         }
     }

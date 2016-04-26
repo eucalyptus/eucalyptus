@@ -1032,14 +1032,7 @@ int do_midonet_teardown(mido_config * mido) {
  * @return 0 on success. Positive integer on any error.
  */
 int do_midonet_delete_all(mido_config *mido) {
-    int ret = 0, rc = 0;
-
-    rc = midonet_api_cache_refresh();
-    if (rc) {
-        LOGERROR("cannot populate midocache prior to cleanup: check midonet health\n");
-        return (1);
-    }
-    midonet_api_delete_all();
+    int ret = midonet_api_delete_all();
 
     return (ret);
 }
@@ -5216,7 +5209,7 @@ char *discover_mido_bgps(mido_config *mido) {
             continue;
         }
         resptr = &(res[strlen(res)]);
-        snprintf(resptr, 2048, "$GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
+        snprintf(resptr, 2048, "GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
         EUCA_FREE(interfaceName);
         EUCA_FREE(networkAddress);
         EUCA_FREE(networkLength);

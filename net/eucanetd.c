@@ -1169,7 +1169,8 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         return (1);
     }
 
-    rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
+    rc = gni_populate_v_c(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
+    //rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1572,7 +1573,8 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
         LOGWARN("Invalid argument: update_globalnet is null.\n");
         return (1);
     }
-    rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
+    rc = gni_populate_c(pGni, host_info, config->global_network_info_file.dest);
+    //rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
       LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
       ret = 1;
@@ -1743,58 +1745,5 @@ int eucanetd_dummy_udpsock_close(void) {
         return (rc);
     }
     return (1);
-}
-
-/**
- * Invokes calloc() and perform error checking.
- * @param nmemb [in] see calloc() man pages.
- * @param size [in] see calloc() man pages.
- * @return pointer to the allocated memory.
- */
-void *zalloc_check(size_t nmemb, size_t size) {
-    void *ret = calloc(nmemb, size);
-    if (ret == NULL) {
-        LOGFATAL("out of memory - check calling function with log level DEBUG\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit(1);
-    }
-    return (ret);
-}
-
-/**
- * Invokes realloc() and perform error checking.
- * @param nmemb [in] see calloc() man pages.
- * @param size [in] see calloc() man pages.
- * @return pointer to the allocated memory.
- */
-void *realloc_check(void *ptr, size_t nmemb, size_t size) {
-    void *ret = realloc(ptr, nmemb * size);
-    if (ret == NULL) {
-        LOGFATAL("out of memory - check calling function with log level DEBUG\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit(1);
-    }
-    return (ret);
-}
-
-/**
- * Appends pointer ptr to the end of the given pointer array arr. The array should
- * have been malloc'd. The allocation is adjusted as needed.
- * @param arr [i/o] arr pointer to an array of pointers
- * @param max_arr [i/o] max_arr the number of array entries.
- * @param ptr (in] pointer to be appended to the array.
- * @return 0 on success. 1 otherwise.
- */
-void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
-    arr = EUCA_REALLOC(arr, *max_arr + 1, sizeof (void *));
-    if (arr == NULL) {
-        LOGFATAL("out of memory: failed to (re)allocate array of pointers\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit (1);
-    }
-    void **parr = arr;
-    parr[*max_arr] = ptr;
-    (*max_arr)++;
-    return (arr);    
 }
 

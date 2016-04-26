@@ -71,9 +71,7 @@
 #include "ebt_handler.h"
 #include "dev_handler.h"
 #include "eucanetd_config.h"
-#include "euca_gni.h"
-#include "euca_lni.h"
-#include "eucanetd.h"
+#include "eucanetd_util.h"
 
 //!
 //! @file net/midonet-api.h
@@ -140,6 +138,12 @@ enum mido_chain_rule_elements_t {
     MIDO_CRULE_TPD_END,
     MIDO_CRULE_GRPUUID,
     MIDO_CRULE_END
+};
+
+enum mido_cache_refresh_mode_t {
+    MIDO_CACHE_REFRESH_ALL,
+    MIDO_CACHE_REFRESH_NOHOSTS,
+    MIDO_CACHE_REFRESH_NONE
 };
 
 /*----------------------------------------------------------------------------*\
@@ -458,6 +462,7 @@ int midonet_api_cache_check(void);
 int midonet_api_cache_flush(void);
 int midonet_api_cache_populate(void);
 int midonet_api_cache_refresh(void);
+int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode);
 
 int midonet_api_cache_refresh_hosts(midonet_api_cache *cache);
 int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache);
