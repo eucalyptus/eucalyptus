@@ -313,7 +313,7 @@ sub get_disk_by_id_path {
   my $scsi_id = shift(@output);
   chomp $scsi_id;
   return $scsi_id if (is_null_or_empty($scsi_id));
-  if ($scsi_id =~ m{(/dev/disk/by-id/[dm-uuid-mpath|scsi]-\S+)}) {
+  if ($scsi_id =~ m{(/dev/disk/by-id/(dm-uuid-mpath|scsi)-\S+)}) {
     return $1;
   } else {
     return "";
