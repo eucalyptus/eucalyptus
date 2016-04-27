@@ -1,6 +1,8 @@
 ===================================
 Building and Installing from Source
 
+Eucalyptus v4.2.x maintenance branch
+
 This is the Eucalyptus process for developers wishing to understand or
 modify Eucalyptus source code. It allows them to obtain and build the
 Eucalyptus source code into installable packages.
@@ -83,22 +85,22 @@ Install the following tools and repos needed for building:
 Install the Eucalyptus repository that will allow yum to find the packages
 needed for building Eucalyptus that are not in the other repos. Point your
 Web browser to:
-http://downloads.eucalyptus.com/software/eucalyptus/nightly/devel
+http://downloads.eucalyptus.com/software/eucalyptus/nightly/4.2
 
 Drill down to find the latest version of the RPM for your desired Linux
 platform, for "x86_64" (not "source"). As of this writing, the subdirs "6",
-"6Server", and "6Workstation" all point to the same repositories. Look for
+"6Server", and "6Workstation" all point to the same repositories. Look for:
 the latest version of:
 
-eucalyptus-release-nightly-<...>.rpm
+eucalyptus-release-nightly-4.2<...>.rpm  
 
 >>>>> Command 1c: 
 # yum install <that URL>
 
 Similarly, install the euca2ools repository from:
-http://downloads.eucalyptus.com/software/euca2ools/nightly/devel
-Drill down to find the latest:
-euca2ools-release-nightly-<...>.rpm
+http://downloads.eucalyptus.com/software/euca2ools/3.3
+Drill down to find:
+euca2ools-release-3.3<...>.rpm
 
 >>>>> Command 1d: 
 # yum install <that URL>
@@ -110,21 +112,30 @@ next build-only steps and proceed to Step 6 (Install Eucalyptus).
 2. Get the source code (build system only)
 ======================
 
-Get the Eucalyptus source code repository:
+Get the Eucalyptus source code repository, and switch to the maint-4.2
+branch: 
 
 >>>>> Command 2a: 
-# git clone https://github.com/eucalyptus/eucalyptus.git $EUCAGIT/eucalyptus
+# git clone https://github.com/eucalyptus/eucalyptus.git $EUCAGIT/eucalyptus && \
+cd $EUCAGIT/eucalyptus && \
+git checkout maint-4.2
 
 Get the repository containing the RPM build spec and a few other files
-needed to build and install the source code:
+needed to build and install the source code, and switch to the maint-4.2
+branch:
 
 >>>>> Command 2b: 
-# git clone https://github.com/eucalyptus/eucalyptus-rpmspec.git $EUCAGIT/eucalyptus-rpmspec
+# git clone https://github.com/eucalyptus/eucalyptus-rpmspec.git $EUCAGIT/eucalyptus-rpmspec && \
+cd $EUCAGIT/eucalyptus-rpmspec && \
+git checkout maint-4.2
 
-Get the Eucalyptus-specific libraries needed to build and run:
+Get the Eucalyptus-specific libraries needed to build and run, and switch to
+the maint-4.2 branch:
 
 >>>>> Command 2c: 
-# git clone https://github.com/eucalyptus/eucalyptus-cloud-libs.git $EUCAGIT/eucalyptus-cloud-libs
+# git clone https://github.com/eucalyptus/eucalyptus-cloud-libs.git $EUCAGIT/eucalyptus-cloud-libs && \
+cd $EUCAGIT/eucalyptus-cloud-libs && \
+git checkout maint-4.2
 
 
 3. Install build dependencies (build system only)
@@ -229,12 +240,12 @@ still choose which components to configure and run on each system.
 For the build system (if you're installing onto it):
 
 >>>>> Command 6a: 
-# yum install $EUCARPM/RPMS/noarch/* $EUCARPM/RPMS/x86_64/*
+# yum install --nogpgcheck $EUCARPM/RPMS/noarch/* $EUCARPM/RPMS/x86_64/*
 
 For all other systems:
 
 >>>>> Command 6a: 
-# yum install $EUCAPKGS/noarch/* $EUCAPKGS/x86_64/*
+# yum install --nogpgcheck $EUCAPKGS/noarch/* $EUCAPKGS/x86_64/*
 
 The yum command may install many other Linux packages on which the
 Eucalyptus packages depend.

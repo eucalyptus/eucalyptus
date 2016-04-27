@@ -675,7 +675,7 @@ static void check_enforce(void) {
     int fd;
     char buf[CHAR_BUFFER_SIZE] = "";
     if (euca_execlp_fd(&pid, NULL, &fd, NULL, "/usr/sbin/getenforce", NULL) == EUCA_OK) {
-        if (read(fd, &buf, CHAR_BUFFER_SIZE) > 0 && strstr(buf ,"Permissive")) {
+        if (read(fd, &buf, CHAR_BUFFER_SIZE-1) > 0 && strstr(buf ,"Permissive")) {
             LOGWARN("SELinux is in Permissive mode. Some functionality like migration would not work.\n");
         }
         waitpid(pid, NULL, 0);
