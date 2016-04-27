@@ -4011,7 +4011,7 @@ int gni_populate_configuration_c(globalNetworkInfo *gni, gni_hostname_info *host
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
         LOGINFO("Found %d managed subnets\n", nodeset.nodeNr);
-        gni->managedSubnet = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_subnet));
+        gni->managedSubnet = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_subnet));
         gni->max_managedSubnets = nodeset.nodeNr;
 
         for (j = 0; j < gni->max_managedSubnets; j++) {
@@ -4071,7 +4071,7 @@ int gni_populate_configuration_c(globalNetworkInfo *gni, gni_hostname_info *host
     snprintf(expression, 2048, "./property[@name='subnets']/subnet");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->subnets = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_subnet));
+        gni->subnets = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_subnet));
         gni->max_subnets = nodeset.nodeNr;
 
         for (j = 0; j < gni->max_subnets; j++) {
@@ -4111,7 +4111,7 @@ int gni_populate_configuration_c(globalNetworkInfo *gni, gni_hostname_info *host
     snprintf(expression, 2048, "./property[@name='clusters']/cluster");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->clusters = EUCA_ZALLOC(nodeset.nodeNr, sizeof (gni_cluster));
+        gni->clusters = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_cluster));
         gni->max_clusters = nodeset.nodeNr;
 
         for (j = 0; j < gni->max_clusters; j++) {
@@ -4187,7 +4187,7 @@ int gni_populate_configuration_c(globalNetworkInfo *gni, gni_hostname_info *host
                 snprintf(expression, 2048, "./property[@name='nodes']/node");
                 rc = evaluate_xpath_nodeset(ctxptr, doc, startnode, expression, &nnodeset);
                 if (nnodeset.nodeNr > 0) {
-                    gni->clusters[j].nodes = EUCA_ZALLOC(nnodeset.nodeNr, sizeof (gni_node));
+                    gni->clusters[j].nodes = EUCA_ZALLOC_C(nnodeset.nodeNr, sizeof (gni_node));
                     gni->clusters[j].max_nodes = nnodeset.nodeNr;
 
                     for (k = 0; k < nnodeset.nodeNr; k++) {
@@ -4200,7 +4200,7 @@ int gni_populate_configuration_c(globalNetworkInfo *gni, gni_hostname_info *host
 
                         snprintf(expression, 2048, "./instanceIds/value");
                         rc = evaluate_xpath_property_c(ctxptr, doc, nstartnode, expression, &results, &max_results);
-                        gni->clusters[j].nodes[k].instance_names = EUCA_ZALLOC(max_results, sizeof (gni_name));
+                        gni->clusters[j].nodes[k].instance_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
                         for (i = 0; i < max_results; i++) {
                             LOGTRACE("\t\t\tafter function: %d: %s\n", i, results[i]);
                             snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
@@ -6973,11 +6973,6 @@ int gni_validate(globalNetworkInfo * gni) {
     }
     // Make sure we have a valid mode
     if (gni_netmode_validate(gni->sMode)) {
-        if (strlen(gni->sMode) > 0) {
-            LOGWARN("Invalid network mode (%s) provided: cannot validate XML\n", gni->sMode);
-        } else {
-            LOGDEBUG("Empty network mode provided: cannot validate XML\n");
-        }
         return (1);
     }
 
@@ -7006,22 +7001,25 @@ int gni_validate(globalNetworkInfo * gni) {
         }
     }
     // We should have some public IPs set if not, we'll just warn the user
-    if (!gni->max_public_ips || !gni->public_ips) {
-        LOGTRACE("no public_ips set: cannot validate XML\n");
-    } else {
-        // Make sure none of the public IPs is 0.0.0.0
-        for (i = 0; i < gni->max_public_ips; i++) {
-            if (gni->public_ips[i] == 0) {
-                LOGWARN("empty public_ip set at idx %d: cannot validate XML\n", i);
-                return (1);
+    // public IPs is irrelevant in VPCMIDO (see publicNetworkCidr in mido section)
+    if (!IS_NETMODE_VPCMIDO(gni)) {
+        if (!gni->max_public_ips || !gni->public_ips) {
+            LOGTRACE("no public_ips set\n");
+        } else {
+            // Make sure none of the public IPs is 0.0.0.0
+            for (i = 0; i < gni->max_public_ips; i++) {
+                if (gni->public_ips[i] == 0) {
+                    LOGWARN("empty public_ip set at idx %d: cannot validate XML\n", i);
+                    return (1);
+                }
             }
         }
     }
 
     // Now we have different behavior between managed and managed-novlan
-    if (!strcmp(gni->sMode, NETMODE_MANAGED) || !strcmp(gni->sMode, NETMODE_MANAGED_NOVLAN)) {
+    if (IS_NETMODE_MANAGED(gni) || IS_NETMODE_MANAGED_NOVLAN(gni)) {
         // We must have 1 managed subnet declaration
-        if ((gni->max_managedSubnets != 1) || !gni->subnets) {
+        if ((gni->max_managedSubnets != 1) || !gni->managedSubnet) {
             LOGWARN("invalid number of managed subnets set '%d'.\n", gni->max_managedSubnets);
             return (1);
         }
@@ -7030,18 +7028,8 @@ int gni_validate(globalNetworkInfo * gni) {
             LOGWARN("invalid managed subnet: cannot validate XML\n");
             return (1);
         }
-        // Validate the clusters
-        if (!gni->max_clusters || !gni->clusters) {
-            LOGTRACE("no clusters set\n");
-        } else {
-            for (i = 0; i < gni->max_clusters; i++) {
-                if (gni_cluster_validate(&(gni->clusters[i]), TRUE)) {
-                    LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
-                    return (1);
-                }
-            }
-        }
-    } else {
+    }
+    if (IS_NETMODE_EDGE(gni)) {
         //
         // This is for the EDGE case. We should have a valid list of subnets and our clusters
         // should be valid for an EDGE mode
@@ -7056,16 +7044,16 @@ int gni_validate(globalNetworkInfo * gni) {
                 }
             }
         }
+    }
 
-        // Validate the clusters
-        if (!gni->max_clusters || !gni->clusters) {
-            LOGTRACE("no clusters set\n");
-        } else {
-            for (i = 0; i < gni->max_clusters; i++) {
-                if (gni_cluster_validate(&(gni->clusters[i]), FALSE)) {
-                    LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
-                    return (1);
-                }
+    // Validate the clusters
+    if (!gni->max_clusters || !gni->clusters) {
+        LOGTRACE("no clusters set\n");
+    } else {
+        for (i = 0; i < gni->max_clusters; i++) {
+            if (gni_cluster_validate(&(gni->clusters[i]), gni->nmCode)) {
+                LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
+                return (1);
             }
         }
     }
@@ -7167,10 +7155,6 @@ int gni_netmode_validate(const char *psMode)
 {
     int i = 0;
 
-    //
-    // In the globalNetworkInfo structure, the mode is a static string. But just in case
-    // some bozo passed us a NULL pointer.
-    //
     if (!psMode) {
         LOGERROR("invalid input\n");
         return (1);
@@ -7270,24 +7254,17 @@ int gni_managed_subnet_validate(gni_managedsubnet * pSubnet)
     return (0);
 }
 
-//!
-//! Validate a gni_cluster structure content
-//!
-//! @param[in] cluster a pointer to the cluster structure to validate
-//! @param[in] isManaged set to TRUE if this is a MANAGED style cluster or FALSE for EDGE
-//!
-//! @return 0 if the structure is valid or 1 if it isn't
-//!
-//! @see gni_node_validate()
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_cluster_validate(gni_cluster * cluster, boolean isManaged)
-{
+/**
+ * Validate a gni_cluster structure content
+ *
+ * @param cluster [in] a pointer to the cluster structure to validate
+ * @param nmode [in] valid euca_netmode enumeration value
+ *
+ * @return 0 if the structure is valid or 1 if it isn't
+ *
+ * @see gni_node_validate()
+ */
+int gni_cluster_validate(gni_cluster * cluster, euca_netmode nmode) {
     int i = 0;
 
     // Make sure our pointer is valid
@@ -7311,10 +7288,10 @@ int gni_cluster_validate(gni_cluster * cluster, boolean isManaged)
         return (1);
     }
     //
-    // For non-MANAGED modes, we need to validate the subnet and the private IPs which
+    // For EDGE, we need to validate the subnet and the private IPs which
     // aren't provided in MANAGED mode
     //
-    if (!isManaged) {
+    if (nmode == NM_EDGE) {
         // Validate the given private subnet
         if (gni_subnet_validate(&(cluster->private_subnet))) {
             LOGWARN("cluster %s: invalid cluster private_subnet\n", cluster->name);

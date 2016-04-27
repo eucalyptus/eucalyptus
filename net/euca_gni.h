@@ -498,7 +498,7 @@ int gni_validate(globalNetworkInfo * gni);
 int gni_netmode_validate(const char *psMode);
 int gni_subnet_validate(gni_subnet * subnet);
 int gni_managed_subnet_validate(gni_managedsubnet * pSubnet);
-int gni_cluster_validate(gni_cluster * cluster, boolean isManaged);
+int gni_cluster_validate(gni_cluster * cluster, euca_netmode nmode);
 int gni_node_validate(gni_node * node);
 int gni_instance_validate(gni_instance * instance);
 int gni_interface_validate(gni_instance * interface);
