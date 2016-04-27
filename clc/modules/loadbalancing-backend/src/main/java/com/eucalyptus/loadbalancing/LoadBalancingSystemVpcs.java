@@ -467,10 +467,9 @@ public class LoadBalancingSystemVpcs {
         }
     }
 
-    // list[0]: public IP, list[1]
-    public static List<Optional<String>> getUserVpcInterfaceIps(final String instanceId) {
+    public static Optional<InstanceNetworkInterfaceSetItemType> getUserVpcInterface(final String instanceId) {
         if (!isCloudVpc().isPresent() || !isCloudVpc().get())
-            return null;
+            return Optional.empty();
 
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         final Optional<RunningInstancesItemType> vmInstanceOpt =
@@ -482,8 +481,18 @@ public class LoadBalancingSystemVpcs {
         final RunningInstancesItemType vmInstance = vmInstanceOpt.get();
         final Optional<InstanceNetworkInterfaceSetItemType> userVpcEni =
                 vmInstance.getNetworkInterfaceSet().getItem().stream()
-                .filter(netif -> !systemVpcs().contains(netif.getVpcId()))
-                .findAny();
+                        .filter(netif -> !systemVpcs().contains(netif.getVpcId()))
+                        .findAny();
+        return userVpcEni;
+    }
+
+    // list[0]: public IP, list[1]
+    public static List<Optional<String>> getUserVpcInterfaceIps(final String instanceId) {
+        if (!isCloudVpc().isPresent() || !isCloudVpc().get())
+            return null;
+
+        final Optional<InstanceNetworkInterfaceSetItemType> userVpcEni =
+                getUserVpcInterface(instanceId);
         if(! userVpcEni.isPresent())
             return null;
 

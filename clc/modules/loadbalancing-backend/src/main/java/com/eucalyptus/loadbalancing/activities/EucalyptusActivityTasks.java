@@ -977,6 +977,14 @@ public class EucalyptusActivityTasks {
 						networkInterfaceId, instanceId, deviceIndex));
 	}
 
+	public void modifyNetworkInterfaceSecurityGroups(final String networkInterfaceId, final List<String> securityGroupIds) {
+		checkResult(
+				new EucaModifyNetworkInterfaceAttribute(networkInterfaceId, securityGroupIds),
+				new ComputeSystemActivity(),
+				String.format("failed to modify network interface %s", networkInterfaceId)
+		);
+	}
+
 	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
@@ -1389,6 +1397,35 @@ public class EucalyptusActivityTasks {
 		List<NetworkInterfaceType> extractResult(ComputeMessage resp) {
 			final DescribeNetworkInterfacesResponseType response = (DescribeNetworkInterfacesResponseType) resp;
 			return response.getNetworkInterfaceSet().getItem();
+		}
+	}
+
+	private class EucaModifyNetworkInterfaceAttribute extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String networkInterfaceId = null;
+		private List<String> securityGroupIds = null;
+
+		private EucaModifyNetworkInterfaceAttribute(final String networkInterfaceId, final List<String> securityGroupIds) {
+			this.networkInterfaceId = networkInterfaceId;
+			this.securityGroupIds = securityGroupIds;
+		}
+		@Override
+		ComputeMessage getRequest() {
+			final ModifyNetworkInterfaceAttributeType req = new ModifyNetworkInterfaceAttributeType();
+			req.setNetworkInterfaceId(this.networkInterfaceId);
+			if(this.securityGroupIds!=null) {
+				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
+				groupIds.setItem(new ArrayList(
+						this.securityGroupIds.stream()
+								.map(id -> {
+									final SecurityGroupIdSetItemType item =
+											new SecurityGroupIdSetItemType();
+									item.setGroupId(id);
+									return item;
+								})
+								.collect(Collectors.toList())));
+				req.setGroupSet(groupIds);
+			}
+			return req;
 		}
 	}
 

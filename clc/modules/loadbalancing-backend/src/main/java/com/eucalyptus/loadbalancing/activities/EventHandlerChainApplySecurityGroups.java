@@ -19,21 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResult;
 import com.eucalyptus.autoscaling.common.msgs.Instance;
+import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 
 /**
  *
  */
 public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<ApplySecurityGroupsEvent> {
+  private static Logger LOG  = Logger.getLogger( EventHandlerChainApplySecurityGroups.class );
 
   @Override
   public EventHandlerChain<ApplySecurityGroupsEvent> build( ) {
@@ -92,12 +98,33 @@ public class EventHandlerChainApplySecurityGroups extends EventHandlerChain<Appl
               !autoScalingGroupsType.getMember( ).isEmpty( ) &&
               autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ) != null ) {
             for ( final Instance instance : autoScalingGroupsType.getMember( ).get( 0 ).getInstances( ).getMember( ) ) {
-              EucalyptusActivityTasks.getInstance( ).modifySecurityGroups(
-                  instance.getInstanceId( ),
-                  evt.getSecurityGroupIdsToNames( ).keySet( ), lb.useSystemAccount() );
+              final String userVpcEni = lookupSecondaryNetworkInterface(instance.getInstanceId());
+              if (userVpcEni == null) {
+                throw new EventHandlerException("Failed to lookup user VPC network interface");
+              }
+              try {
+                final List<String> sgroupIds = Lists.newArrayList(evt.getSecurityGroupIdsToNames().keySet());
+                EucalyptusActivityTasks.getInstance().modifyNetworkInterfaceSecurityGroups(userVpcEni, sgroupIds);
+              }catch(final Exception ex) {
+                throw new EventHandlerException("Failed to set security groups to network interface", ex);
+              }
             }
           }
         }
+      }
+    }
+
+    private String lookupSecondaryNetworkInterface(final String instanceId) {
+      try{
+        final Optional<InstanceNetworkInterfaceSetItemType> optEni =
+                LoadBalancingSystemVpcs.getUserVpcInterface(instanceId);
+        if(optEni.isPresent()) {
+          return optEni.get().getNetworkInterfaceId();
+        }
+        return null;
+      }catch(final Exception ex) {
+        LOG.error("Failed to lookup secondary network interface for instance: " + instanceId);
+        return null;
       }
     }
 
