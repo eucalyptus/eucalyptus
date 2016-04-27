@@ -647,7 +647,7 @@ int main(int argc, char **argv)
         }
 
         if (epoch_timer >= 300) {
-            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
+            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d\n\tsuccess_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
                     epoch_updates + epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
             epoch_checks = epoch_updates = epoch_failed_updates = epoch_timer = 0;
         }
