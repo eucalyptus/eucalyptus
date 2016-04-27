@@ -290,7 +290,7 @@ public class LoadBalancingServoCache {
       newEntities.backendServerDescs = backendServers;
       
       final Long exitVersion = recordVersion.get(servoInstanceId);
-      if (exitVersion!=enteringVersion) {
+      if (exitVersion.longValue() != enteringVersion.longValue()) {
         // in case cache is invalidated while it was read from DB
         return loadEntities(servoInstanceId);
       } else {

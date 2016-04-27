@@ -177,7 +177,7 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
       if ( other.instancePort != null ) {
         return false;
       }
-    } else if ( this.instancePort != other.instancePort ) {
+    } else if ( !this.instancePort.equals(other.instancePort)) {
       return false;
     }
     
