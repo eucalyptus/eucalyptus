@@ -369,23 +369,40 @@ class NetworkInfoBroadcasts {
     } )
 
     // populate security groups
-    Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
-      Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
-    }
-    networkInterfaces.inject( activeSecurityGroups ){ Set<String> groups, NetworkInterfaceNetworkView networkInterface ->
-      if ( networkInterface.instanceId && activeInstances.contains( networkInterface.instanceId ) ) {
-        groups.addAll( networkInterface.securityGroupIds )
-      }
-      groups
-    }
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
+    Set<String> securityGroupIds = (Set<String>) groups.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
+      Set<String> groupIds, NetworkGroupNetworkView securityGroup -> groupIds.addAll( securityGroup.id ); groupIds
+    }
+    Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
+      Set<String> activeGroups, VmInstanceNetworkView instance -> activeGroups.addAll( instance.securityGroupIds ); activeGroups
+    }
+    networkInterfaces.inject( activeSecurityGroups ){ Set<String> activeGroups, NetworkInterfaceNetworkView networkInterface ->
+      if ( networkInterface.instanceId && activeInstances.contains( networkInterface.instanceId ) ) {
+        activeGroups.addAll( networkInterface.securityGroupIds )
+      }
+      activeGroups
+    }
+    groups.inject( activeSecurityGroups ){  Set<String> activeGroups, NetworkGroupNetworkView securityGroup ->
+      Iterables.concat( securityGroup.egressPermissions, securityGroup.ingressPermissions ).each {
+        IPPermissionNetworkView permission ->
+        if ( securityGroup.id != permission.groupId && securityGroupIds.contains( permission.groupId ) &&
+             (!securityGroup.vpcId || activeVpcs.contains(securityGroup.vpcId))) {
+          activeGroups.add( permission.groupId )
+        }
+      }
+      activeGroups
+    }
     info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
       NetworkGroupNetworkView group = (NetworkGroupNetworkView) groupObj
       new NISecurityGroup(
           name: group.id,
           ownerId: group.ownerAccountNumber,
           rules: group.rules,
-          ingressRules: group.ingressPermissions.collect{ IPPermissionNetworkView ipPermission ->
+          ingressRules: group.ingressPermissions
+          .findAll{ IPPermissionNetworkView ipPermission ->
+                      !ipPermission.groupId || activeSecurityGroups.contains( ipPermission.groupId ) }
+          .collect{ Object ipPermissionObj ->
+              IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
             new NISecurityGroupIpPermission(
                 ipPermission.protocol,
                 ipPermission.fromPort,
@@ -397,7 +414,11 @@ class NetworkInfoBroadcasts {
                 ipPermission.cidr
             )
           } as List<NISecurityGroupIpPermission>,
-          egressRules: group.egressPermissions.collect{ IPPermissionNetworkView ipPermission ->
+          egressRules: group.egressPermissions
+          .findAll{ IPPermissionNetworkView ipPermission ->
+                      !ipPermission.groupId || activeSecurityGroups.contains( ipPermission.groupId ) }
+          .collect{ Object ipPermissionObj ->
+              IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
             new NISecurityGroupIpPermission(
                 ipPermission.protocol,
                 ipPermission.fromPort,
@@ -743,6 +764,7 @@ class NetworkInfoBroadcasts {
     String id
     int version
     String ownerAccountNumber
+    String vpcId
     List<String> rules
     List<IPPermissionNetworkView> ingressPermissions
     List<IPPermissionNetworkView> egressPermissions
@@ -763,6 +785,7 @@ class NetworkInfoBroadcasts {
           group.groupId,
           group.version,
           group.ownerAccountNumber,
+          group.vpcId,
           group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodeRules( networkRule ) }.flatten( ) as List<String>,
           group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>,
           group.egressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
