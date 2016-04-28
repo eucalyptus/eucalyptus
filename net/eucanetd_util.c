@@ -128,6 +128,7 @@
 #include <config.h>
 #include <sequence_executor.h>
 #include <atomic_file.h>
+#include <execinfo.h>
 
 #include <euca_file.h>
 
@@ -826,4 +827,80 @@ long int eucanetd_timer_usec(struct timeval *t)
         t->tv_usec = cur.tv_usec;
     }
     return ret;
+}
+
+/**
+ * Invokes calloc() and perform error checking.
+ * @param nmemb [in] see calloc() man pages.
+ * @param size [in] see calloc() man pages.
+ * @return pointer to the allocated memory.
+ */
+void *zalloc_check(size_t nmemb, size_t size) {
+    void *ret = calloc(nmemb, size);
+    if ((ret == NULL) && ((nmemb * size) != 0)) {
+        LOGFATAL("out of memory - alloc nmemb %zd, size %zd\n", nmemb, size);
+        LOGFATAL("Shutting down eucanetd.\n");
+        get_stack_trace();
+        exit(1);
+    }
+    return (ret);
+}
+
+/**
+ * Invokes realloc() and perform error checking.
+ * @param nmemb [in] see calloc() man pages.
+ * @param size [in] see calloc() man pages.
+ * @return pointer to the allocated memory.
+ */
+void *realloc_check(void *ptr, size_t nmemb, size_t size) {
+    void *ret = realloc(ptr, nmemb * size);
+    if ((ret == NULL) && ((nmemb * size) != 0)) {
+        LOGFATAL("out of memory - realloc nmemb %zd, size %zd.\n", nmemb, size);
+        LOGFATAL("Shutting down eucanetd.\n");
+        get_stack_trace();
+        exit(1);
+    }
+    return (ret);
+}
+
+/**
+ * Appends pointer ptr to the end of the given pointer array arr. The array should
+ * have been malloc'd. The allocation is adjusted as needed.
+ * @param arr [i/o] arr pointer to an array of pointers
+ * @param max_arr [i/o] max_arr the number of array entries.
+ * @param ptr (in] pointer to be appended to the array.
+ * @return 0 on success. 1 otherwise.
+ */
+void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
+    arr = EUCA_REALLOC(arr, *max_arr + 1, sizeof (void *));
+    if (arr == NULL) {
+        LOGFATAL("out of memory: failed to (re)allocate array of pointers\n");
+        LOGFATAL("Shutting down eucanetd.\n");
+        get_stack_trace();
+        exit (1);
+    }
+    void **parr = arr;
+    parr[*max_arr] = ptr;
+    (*max_arr)++;
+    return (arr);    
+}
+
+/**
+ * Attempts to log the backtrace.
+ * @param out [out] an array of strings that represents the backtrace.
+ */
+void get_stack_trace (void) {
+    void *traces[20] = {0};
+    size_t traces_len = 0;
+    char **traces_str = NULL;
+
+    traces_len = backtrace(traces, 20);
+    traces_str = backtrace_symbols(traces, traces_len);
+    if (traces_str) {
+        LOGINFO("stack trace:\n");
+        for (int i = 1; (i < traces_len) && traces_str; i++) {
+            LOGINFO("\t%s\n", traces_str[i]);
+        }
+    }
+    EUCA_FREE(traces_str);
 }

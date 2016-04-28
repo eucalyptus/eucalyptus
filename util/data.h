@@ -106,6 +106,8 @@
 #define INSTANCE_ID_LEN                            11   //! Length of the instance ID string (i-xxxxxxxx\0)
 #define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
+#define NETWORK_ACL_ID_LEN                         13   //! Length of the instance ID string (acl-xxxxxxxx\0)
+#define DHCP_OS_ID_LEN                             14   //! Length of the instance ID string (dopt-xxxxxxxx\0)
 #define ENI_ID_LEN                                 13   //! Length of the instance ID string (eni-xxxxxxxx\0)
 #define ENI_ATTACHMENT_ID_LEN                      21   //! Length of the eni attachment ID string (eni-attach-xxxxxxxx\0)
 //! @}

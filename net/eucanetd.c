@@ -647,7 +647,7 @@ int main(int argc, char **argv)
         }
 
         if (epoch_timer >= 300) {
-            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
+            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d\n\tsuccess_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
                     epoch_updates + epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
             epoch_checks = epoch_updates = epoch_failed_updates = epoch_timer = 0;
         }
@@ -693,7 +693,7 @@ int main(int argc, char **argv)
         }
     }
 
-    gni_hostnames_free(host_info);
+    //gni_hostnames_free(host_info);
     GNI_FREE(gni_a);
     GNI_FREE(gni_b);
     LNI_FREE(pLni);
@@ -913,11 +913,7 @@ static int eucanetd_daemonize(void)
 //!
 static int eucanetd_initialize(void) {
     if (!config) {
-        config = EUCA_ZALLOC(1, sizeof(eucanetdConfig));
-        if (!config) {
-            LOGFATAL("out of memory\n");
-            exit(1);
-        }
+        config = EUCA_ZALLOC_C(1, sizeof(eucanetdConfig));
     }
 
     config->polling_frequency = 5;
@@ -940,6 +936,7 @@ static int eucanetd_initialize(void) {
 */
 
 
+/*
     if (!host_info) {
         host_info = gni_init_hostname_info();
         if (!host_info) {
@@ -947,6 +944,7 @@ static int eucanetd_initialize(void) {
             exit(1);
         }
     }
+*/
     return (0);
 }
 
@@ -1170,6 +1168,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
     rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
+    //rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1178,7 +1177,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         return (1);
     }
     rc = gni_print(pGni);
-    rc = gni_hostnames_print(host_info);
+    //rc = gni_hostnames_print(host_info);
 
     // setup and read local NC eucalyptus.conf file
     snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
@@ -1332,11 +1331,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ipt = EUCA_ZALLOC(1, sizeof(ipt_handler));
-    if (!config->ipt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ipt = EUCA_ZALLOC_C(1, sizeof(ipt_handler));
 
     rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
     if (rc) {
@@ -1344,11 +1339,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ips = EUCA_ZALLOC(1, sizeof(ips_handler));
-    if (!config->ips) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ips = EUCA_ZALLOC_C(1, sizeof(ips_handler));
 
     rc = ips_handler_init(config->ips, config->cmdprefix);
     if (rc) {
@@ -1357,10 +1348,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
 #ifdef USE_IP_ROUTE_HANDLER
-    if ((config->ipr = EUCA_ZALLOC(1, sizeof(ipr_handler))) == NULL) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ipr = EUCA_ZALLOC_C(1, sizeof(ipr_handler));
 
     if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
         LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
@@ -1368,11 +1356,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 #endif /* USE_IP_ROUTE_HANDLER */
 
-    config->ebt = EUCA_ZALLOC(1, sizeof(ebt_handler));
-    if (!config->ebt) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
+    config->ebt = EUCA_ZALLOC_C(1, sizeof(ebt_handler));
 
     rc = ebt_handler_init(config->ebt, config->cmdprefix);
     if (rc) {
@@ -1381,7 +1365,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
     //
-    // If an error has occured we need to clean up temporary files
+    // If an error has occurred we need to clean up temporary files
     // that were created for the iptables, ebtables, ipset
     // and possibly ipr (if compiled)
     //
@@ -1567,97 +1551,97 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
     gni_cluster *mycluster = NULL;
 
     LOGDEBUG("reading latest network view into eucanetd\n");
-    
+
     if (!update_globalnet) {
         LOGWARN("Invalid argument: update_globalnet is null.\n");
         return (1);
     }
     rc = gni_populate(pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
-      LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
-      ret = 1;
+        LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
+        ret = 1;
     } else {
-      gni_print(pGni);
-      //gni_hostnames_print(host_info);
+        gni_print(pGni);
+        //gni_hostnames_print(host_info);
 
-      // regardless, if the last successfully applied version matches the current GNI version, skip the update
-      if ((strlen(pGni->version) && strlen(config->lastAppliedVersion))) {
-          if (!strcmp(pGni->version, config->lastAppliedVersion) ) {
-              LOGINFO("global network version (%s) already applied, skipping update\n", pGni->version);
-              *update_globalnet = FALSE;
-          } else {
-              LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", pGni->version, config->lastAppliedVersion);
-          }
-      }
+        // regardless, if the last successfully applied version matches the current GNI version, skip the update
+        if ((strlen(pGni->version) && strlen(config->lastAppliedVersion))) {
+            if (!strcmp(pGni->version, config->lastAppliedVersion)) {
+                LOGINFO("global network version (%s) already applied, skipping update\n", pGni->version);
+                *update_globalnet = FALSE;
+            } else {
+                LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", pGni->version, config->lastAppliedVersion);
+            }
+        }
 
-      if (IS_NETMODE_VPCMIDO(pGni)) {
-	// skip for VPCMIDO
-	ret = 0;
-      } else {
-	rc = gni_find_self_cluster(pGni, &mycluster);
-	if (rc) {
-	  LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
-	  ret = 1;
-	} else {
-	  if (!config->nc_router) {
-	    // user has not specified NC router, use the default cluster private subnet gateway
-	    config->vmGatewayIP = mycluster->private_subnet.gateway;
-	    strptra = hex2dot(config->vmGatewayIP);
-	    LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
-	    EUCA_FREE(strptra);
-	  } else {
-	    // user has specified use of NC as router
-	    if (!config->nc_router_ip) {
-	      // user has not specified a router IP, use 'fake_router' mode                                              
-	      config->vmGatewayIP = mycluster->private_subnet.gateway;
-	      strptra = hex2dot(config->vmGatewayIP);
-	      LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
-	      EUCA_FREE(strptra);
-	    } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
-	      // user has specified an explicit IP to use as NC router IP
-	      config->vmGatewayIP = dot2hex(config->ncRouterIP);
-	      LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
-	    } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
-	      // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
-	      rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
-	      if (rc) {
-		LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
-		ret = 1;
-	      } else {
-		LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
-		for (i = 0; i < brdev_len && !found_ip; i++) {
-		  strptra = hex2dot(brdev_ips[i]);
-		  strptrb = hex2dot(brdev_nms[i]);
-		  if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
-		    strptrc = hex2dot(mycluster->private_subnet.subnet);
-		    strptrd = hex2dot(mycluster->private_subnet.netmask);
-		    LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
-		    config->vmGatewayIP = brdev_ips[i];
-		    LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
-		    found_ip = TRUE;
-		    EUCA_FREE(strptrc);
-		    EUCA_FREE(strptrd);
-		  }
-		  EUCA_FREE(strptra);
-		  EUCA_FREE(strptrb);
-		}
-		if (!found_ip) {
-		  strptra = hex2dot(mycluster->private_subnet.subnet);
-		  strptrb = hex2dot(mycluster->private_subnet.netmask);
-		  LOGERROR
-		    ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
-		     config->bridgeDev, strptra, strptrb);
-		  EUCA_FREE(strptra);
-		  EUCA_FREE(strptrb);
-		  ret = 1;
-		}
-	      }
-	      EUCA_FREE(brdev_ips);
-	      EUCA_FREE(brdev_nms);
-	    }
-	  }
-	}
-      }
+        if (IS_NETMODE_VPCMIDO(pGni)) {
+            // skip for VPCMIDO
+            ret = 0;
+        } else {
+            rc = gni_find_self_cluster(pGni, &mycluster);
+            if (rc) {
+                LOGERROR("cannot retrieve cluster to which this NC belongs: check global network configuration\n");
+                ret = 1;
+            } else {
+                if (!config->nc_router) {
+                    // user has not specified NC router, use the default cluster private subnet gateway
+                    config->vmGatewayIP = mycluster->private_subnet.gateway;
+                    strptra = hex2dot(config->vmGatewayIP);
+                    LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
+                    EUCA_FREE(strptra);
+                } else {
+                    // user has specified use of NC as router
+                    if (!config->nc_router_ip) {
+                        // user has not specified a router IP, use 'fake_router' mode                                              
+                        config->vmGatewayIP = mycluster->private_subnet.gateway;
+                        strptra = hex2dot(config->vmGatewayIP);
+                        LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                        EUCA_FREE(strptra);
+                    } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified an explicit IP to use as NC router IP
+                        config->vmGatewayIP = dot2hex(config->ncRouterIP);
+                        LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
+                    } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
+                        // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
+                        rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
+                        if (rc) {
+                            LOGERROR("cannot retrieve IP information from specified bridge device '%s': check your configuration\n", config->bridgeDev);
+                            ret = 1;
+                        } else {
+                            LOGTRACE("specified bridgeDev '%s': found %d assigned IPs\n", config->bridgeDev, brdev_len);
+                            for (i = 0; i < brdev_len && !found_ip; i++) {
+                                strptra = hex2dot(brdev_ips[i]);
+                                strptrb = hex2dot(brdev_nms[i]);
+                                if ((brdev_nms[i] == mycluster->private_subnet.netmask) && ((brdev_ips[i] & mycluster->private_subnet.netmask) == mycluster->private_subnet.subnet)) {
+                                    strptrc = hex2dot(mycluster->private_subnet.subnet);
+                                    strptrd = hex2dot(mycluster->private_subnet.netmask);
+                                    LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
+                                    config->vmGatewayIP = brdev_ips[i];
+                                    LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
+                                    found_ip = TRUE;
+                                    EUCA_FREE(strptrc);
+                                    EUCA_FREE(strptrd);
+                                }
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                            }
+                            if (!found_ip) {
+                                strptra = hex2dot(mycluster->private_subnet.subnet);
+                                strptrb = hex2dot(mycluster->private_subnet.netmask);
+                                LOGERROR
+                                        ("cannot find an IP assigned to specified bridge device '%s' that falls within this cluster's specified subnet '%s/%s': check your configuration\n",
+                                        config->bridgeDev, strptra, strptrb);
+                                EUCA_FREE(strptra);
+                                EUCA_FREE(strptrb);
+                                ret = 1;
+                            }
+                        }
+                        EUCA_FREE(brdev_ips);
+                        EUCA_FREE(brdev_nms);
+                    }
+                }
+            }
+        }
     }
     return (ret);
 }
@@ -1743,58 +1727,5 @@ int eucanetd_dummy_udpsock_close(void) {
         return (rc);
     }
     return (1);
-}
-
-/**
- * Invokes calloc() and perform error checking.
- * @param nmemb [in] see calloc() man pages.
- * @param size [in] see calloc() man pages.
- * @return pointer to the allocated memory.
- */
-void *zalloc_check(size_t nmemb, size_t size) {
-    void *ret = calloc(nmemb, size);
-    if (ret == NULL) {
-        LOGFATAL("out of memory - check calling function with log level DEBUG\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit(1);
-    }
-    return (ret);
-}
-
-/**
- * Invokes realloc() and perform error checking.
- * @param nmemb [in] see calloc() man pages.
- * @param size [in] see calloc() man pages.
- * @return pointer to the allocated memory.
- */
-void *realloc_check(void *ptr, size_t nmemb, size_t size) {
-    void *ret = realloc(ptr, nmemb * size);
-    if (ret == NULL) {
-        LOGFATAL("out of memory - check calling function with log level DEBUG\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit(1);
-    }
-    return (ret);
-}
-
-/**
- * Appends pointer ptr to the end of the given pointer array arr. The array should
- * have been malloc'd. The allocation is adjusted as needed.
- * @param arr [i/o] arr pointer to an array of pointers
- * @param max_arr [i/o] max_arr the number of array entries.
- * @param ptr (in] pointer to be appended to the array.
- * @return 0 on success. 1 otherwise.
- */
-void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
-    arr = EUCA_REALLOC(arr, *max_arr + 1, sizeof (void *));
-    if (arr == NULL) {
-        LOGFATAL("out of memory: failed to (re)allocate array of pointers\n");
-        LOGFATAL("Shutting down eucanetd.\n");
-        exit (1);
-    }
-    void **parr = arr;
-    parr[*max_arr] = ptr;
-    (*max_arr)++;
-    return (arr);    
 }
 

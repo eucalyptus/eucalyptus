@@ -626,7 +626,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 {
     int rc = 0;
 
-    LOGINFO("Implementing network artifacts for '%s' network driver.\n", DRIVER_NAME());
+    LOGTRACE("Implementing network artifacts for '%s' network driver.\n", DRIVER_NAME());
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
@@ -686,7 +686,7 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 //!
 static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
 {
-    LOGINFO("Implementing security-group artifacts for '%s' network driver.\n", DRIVER_NAME());
+    LOGTRACE("Implementing security-group artifacts for '%s' network driver.\n", DRIVER_NAME());
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
@@ -737,7 +737,7 @@ static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t *
 {
     int rc = 0;
 
-    LOGINFO("Implementing addressing artifacts for '%s' network driver.\n", DRIVER_NAME());
+    LOGTRACE("Implementing addressing artifacts for '%s' network driver.\n", DRIVER_NAME());
 
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {

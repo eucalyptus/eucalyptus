@@ -192,10 +192,6 @@ extern const char *asPeerRoleName[];
 int eucanetd_dummy_udpsock(void);
 int eucanetd_dummy_udpsock_close(void);
 
-void *zalloc_check(size_t nmemb, size_t size);
-void *realloc_check(void *ptr, size_t nmemb, size_t size);
-void *append_ptrarr(void *arr, int *max_arr, void *ptr);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -229,11 +225,6 @@ void *append_ptrarr(void *arr, int *max_arr, void *ptr);
 #ifndef EUCA_APPEND_PTRARR
 #define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
 #endif /* ! EUCA_APPEND_PTRARR */
-
-#ifndef EUCA_ZALLOC_C
-#define EUCA_ZALLOC_C(_nmemb, _size)             zalloc_check((_nmemb), (_size))
-#define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
-#endif /* ! EUCA_ZALLOC_C */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
