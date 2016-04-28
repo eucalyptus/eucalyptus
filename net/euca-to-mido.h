@@ -295,6 +295,7 @@ typedef struct mido_core_t {
     midoname *midos[CORE_END];
     midonet_api_router *eucart;
     midonet_api_bridge *eucabr;
+    midonet_api_chain *eucabr_infilter;
     midonet_api_ipaddrgroup *metadata_iag;
     midonet_api_host *eucanetdhost;
 

@@ -5348,6 +5348,13 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
         midocore->midos[CORE_METADATA_IPADDRGROUP] = mdipag->obj;
     }
 
+    midonet_api_chain *eucabr_infilter = NULL;
+    eucabr_infilter = mido_get_chain("eucabr_infilter");
+    if (eucabr_infilter) {
+        LOGTRACE("Found eucabr chain %s\n", eucabr_infilter->obj->name);
+        midocore->eucabr_infilter = eucabr_infilter;
+    }
+    
     // search all ports for RT/BR ports
     for (i = 0; i < max_brports; i++) {
         if (brports[i] == NULL) {
@@ -6235,6 +6242,12 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
     // delete the bridge
     rc = mido_delete_bridge(midocore->midos[CORE_EUCABR]);
     midocore->midos[CORE_EUCABR] = NULL;
+    
+    // delete the bridge infilter
+    if (midocore->eucabr_infilter && midocore->eucabr_infilter->obj) {
+        rc = mido_delete_chain(midocore->eucabr_infilter->obj);
+        midocore->eucabr_infilter = NULL;
+    } 
 
     // delete the router
     rc = mido_delete_router(midocore->midos[CORE_EUCART]);
@@ -6371,6 +6384,29 @@ int create_mido_core(mido_config * mido, mido_core * midocore) {
         ret = 1;
     }
 
+    midonet_api_chain *eucabr_infilter = NULL;
+    eucabr_infilter = mido_create_chain(VPCMIDO_TENANT, "eucabr_infilter", NULL);
+    if (rc) {
+        LOGERROR("cannot create eucabr infilter.\n");
+        return (1);
+    } else {
+        midocore->eucabr_infilter = eucabr_infilter;
+    }
+    rc = mido_update_bridge(midocore->midos[CORE_EUCABR], "inboundFilterId",
+            eucabr_infilter->obj->uuid, "name", midocore->midos[CORE_EUCABR]->name, NULL);
+    if ((rc != 0) && (rc != -1)) {
+        LOGERROR("cannot attach eucabr infilter\n");
+        return (1);
+    }
+    rc = mido_create_rule(eucabr_infilter, eucabr_infilter->obj, NULL, NULL, "type", "drop",
+            "invDlType", "false", "dlType", "2048", "nwDstAddress", nw, "nwDstLength", sn,
+            "invNwDst", "false", NULL);
+    if (rc != 0) {
+        LOGWARN("Failed to eucabr drop rule\n");
+        return (1);
+    }
+
+    
     rc = create_mido_meta_core(mido);
     if (rc) {
         LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
