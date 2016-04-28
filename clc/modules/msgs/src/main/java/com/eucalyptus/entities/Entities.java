@@ -63,6 +63,7 @@
 package com.eucalyptus.entities;
 
 import java.lang.ref.WeakReference;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -117,7 +118,10 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
+import org.hibernate.engine.jdbc.spi.LogicalConnectionImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.engine.transaction.spi.TransactionCoordinator;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.jpa.internal.EntityManagerFactoryImpl;
@@ -187,7 +191,7 @@ public class Entities {
     final CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
     if ( tx == null ) {
       return false;
-    } else if ( tx.isActive( ) ) {
+    } else if ( tx.isUsable( ) ) {
       return true;
     } else {
       cleanStrandedTx( tx );
@@ -1281,7 +1285,39 @@ public class Entities {
     TxState getTxState( ) {
       return this.txState;
     }
-    
+
+    boolean isUsable( ) {
+      final boolean active = isActive( );
+      final boolean fresh = ( System.currentTimeMillis( ) - record.getStartTime( ) ) < TimeUnit.MINUTES.toMillis( 1 );
+      return
+          active &&
+          ( fresh || isConnected( ) );
+    }
+
+    boolean isConnected( ) {
+      boolean connected = false;
+      final TxState state = this.txState;
+      if ( state != null && state.getSession( ) instanceof SessionImplementor ) {
+        final SessionImplementor sessionImplementor = (SessionImplementor) state.getSession( );
+        final TransactionCoordinator txCoordinator = sessionImplementor.getTransactionCoordinator( );
+        if ( txCoordinator != null ) {
+          final JdbcCoordinator jdbcCoordinator = txCoordinator.getJdbcCoordinator( );
+          if ( jdbcCoordinator != null ) {
+            final LogicalConnectionImplementor logicalConnectionImplementor = jdbcCoordinator.getLogicalConnection( );
+            try {
+              connected =
+                  logicalConnectionImplementor.isOpen( ) &&
+                  logicalConnectionImplementor.isPhysicallyConnected( ) &&
+                  !logicalConnectionImplementor.getConnection( ).isClosed( );
+            } catch ( SQLException e ) {
+              // not connected
+            }
+          }
+        }
+      }
+      return connected;
+    }
+
     public EntityTransaction join( ) {
       return new EntityTransaction( ) {
         @Override public void setRollbackOnly( ) { }

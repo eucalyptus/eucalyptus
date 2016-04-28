@@ -625,7 +625,7 @@ public class Threads {
   }
   
   public static String currentStackString( ) {
-    return currentStackRange( 0, Integer.MAX_VALUE );
+    return currentStackRange( 0, 1_000_000 );
   }
   
   private static final ConcurrentMap<String, Queue<?>> workers = Maps.newConcurrentMap( );
