@@ -2198,7 +2198,7 @@ int euca_execlp_redirect(int *pStatus,
     }
     if (stderr_path) {
         stderr_fd = open(stderr_path, O_WRONLY | O_CREAT | (stderr_append ? O_APPEND : O_TRUNC), 0777);
-        if (stdin_fd < 0) {
+        if (stderr_fd < 0) {
             LOGERROR("open(O_WRONLY) of %s failed: %s\n", stderr_path, strerror(errno));
             exit(1);
         }
