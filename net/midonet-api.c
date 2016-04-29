@@ -6181,9 +6181,7 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
     for (int i = 0; i < cache->max_hosts; i++) {
         iphm->entries = EUCA_REALLOC_C(iphm->entries, iphm->max_entries + cache->hosts[i]->max_addresses,
                 sizeof (midonet_api_iphostmap_entry));
-        if (iphm->entries) {
-            bzero(&(iphm->entries[iphm->max_entries]), cache->hosts[i]->max_addresses * sizeof (midonet_api_iphostmap_entry));
-        }
+        bzero(&(iphm->entries[iphm->max_entries]), cache->hosts[i]->max_addresses * sizeof (midonet_api_iphostmap_entry));
         for (int j = 0; j < cache->hosts[i]->max_addresses; j++) {
             iphm->entries[iphm->max_entries].ip = cache->hosts[i]->addresses[j];
             iphm->entries[iphm->max_entries].host = cache->hosts[i];
