@@ -128,7 +128,7 @@
 \*----------------------------------------------------------------------------*/
 
 #define SUPERUSER                                "eucalyptus"
-#define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC
+#define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC // DONT USE 
 #define POLL_INTERVAL_MINIMUM_SEC                6
 #define STATS_INTERVAL_SEC                       60
 
@@ -169,6 +169,7 @@
 int config_init = 0;
 int local_init = 0;
 int thread_init = 0;
+int cache_init = 0;
 int sensor_initd = 0;
 int init = 0;
 int stats_initd = 0;
@@ -178,6 +179,7 @@ int stats_initd = 0;
 //! @name shared (between CC processes) globals
 ccConfig *config = NULL;
 ccInstanceCache *instanceCache = NULL; // canonical source for latest information about instances
+ccInstanceCacheMetadata *instanceCacheMetadata = NULL; // metadata for the cache
 euca_network *gpEucaNet = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
 ccResourceCache *resourceCache = NULL; // canonical source for latest information about resources
@@ -1970,8 +1972,8 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
                 corepool -= (*ccvms)[j].cores;
                 while (mempool >= 0 && diskpool >= 0 && corepool >= 0) {
                     (*outTypesMax)[j]++;
-                    if ( (*outTypesMax)[j] > MAXINSTANCES_PER_CC) {
-                        (*outTypesMax)[j] = MAXINSTANCES_PER_CC;
+                    if ( (*outTypesMax)[j] > config->ccMaxCores) {
+                        (*outTypesMax)[j] = config->ccMaxCores;
                     }
                     mempool -= (*ccvms)[j].mem;
                     diskpool -= (*ccvms)[j].disk;
@@ -1985,14 +1987,14 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
         char logStr[2048], typeStr[128];
         int numInstsActive=0;
 
-        sem_mywait(INSTCACHE);
-        numInstsActive = instanceCache->numInstsActive;
-        sem_mypost(INSTCACHE);
+        sem_mywait(INSTCACHEMD);
+        numInstsActive = instanceCacheMetadata->numInstsActive;
+        sem_mypost(INSTCACHEMD);
         
         snprintf(logStr, 2047, "resources summary ({avail/max}):");
         for (i=0; i<vmLen; i++) {
-            if ( (*outTypesAvail)[i] > (MAXINSTANCES_PER_CC - numInstsActive) ) {
-                (*outTypesAvail)[i] = MAXINSTANCES_PER_CC - numInstsActive;
+            if ( (*outTypesAvail)[i] > (config->ccMaxCores - numInstsActive) ) {
+                (*outTypesAvail)[i] = config->ccMaxCores - numInstsActive;
             }
             snprintf(typeStr, 127, " %s{%d/%d}", (*ccvms)[i].name, (*outTypesAvail)[i], (*outTypesMax)[i]);
             euca_strncat(logStr, typeStr, 2047);
@@ -2849,22 +2851,23 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
     *outInstsLen = 0;
 
     sem_mywait(INSTCACHE);
+    sem_mywait(INSTCACHEMD);
     count = 0;
-    if (instanceCache->numInsts) {
-        *outInsts = EUCA_ZALLOC(instanceCache->numInsts, sizeof(ccInstance));
+    if (instanceCacheMetadata->numInsts) {
+        *outInsts = EUCA_ZALLOC(instanceCacheMetadata->numInsts, sizeof(ccInstance));
         if (!*outInsts) {
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
 
-        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID) {
-                if (count >= instanceCache->numInsts) {
+        for (i = 0; i < config->ccMaxCores; i++) {
+            if (instanceCache[i].cacheState == INSTVALID) {
+                if (count >= instanceCacheMetadata->numInsts) {
                     LOGWARN("found more instances than reported by numInsts, will only report a subset of instances\n");
                     count = 0;
                 }
-                memcpy(&((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
-                instanceCache->described[i] = 1;
+                memcpy(&((*outInsts)[count]), &(instanceCache[i].instance), sizeof(ccInstance));
+                instanceCache[i].described = 1;
 
                 // We only report a subset of possible migration statuses upstream to the CLC.
                 if ((*outInsts)[count].migration_state == MIGRATION_READY) {
@@ -2876,8 +2879,9 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
             }
         }
 
-        *outInstsLen = instanceCache->numInsts;
+        *outInstsLen = instanceCacheMetadata->numInsts;
     }
+    sem_mypost(INSTCACHEMD);
     sem_mypost(INSTCACHE);
 
     for (i = 0; i < (*outInstsLen); i++) {
@@ -3494,8 +3498,8 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
         LOGERROR("cannot open temporary instance file '%s' for writing\n", instfile);
         return (-1);
     }
-    for (i = 0; i < instanceCache->numInsts; i++) {
-        inst = &(instanceCache->instances[i]);
+    for (i = 0; i < instanceCacheMetadata->numInsts; i++) {
+        inst = &(instanceCache[i].instance);
         if (inst) {
             snprintf(lbuf, sizeof(lbuf), "id=%s,state=%s,nchost=%s,mem=%d,disk=%d,cores=%d,secgroupidx=%d,publicip=%s,privateip=%s,ownerId=%s,accountId=%s,launchTime=%ld",
                      inst->instanceId, inst->state, inst->serviceTag, inst->ccvm.mem, inst->ccvm.disk, inst->ccvm.cores, inst->ccnet.vlan, inst->ccnet.publicIp,
@@ -4597,25 +4601,26 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
     }
 
     sem_mywait(INSTCACHE);
-    if (instanceCache->numInsts) {
-        for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID && (instanceId || instanceCache->instances[i].ncHostIdx == src_index)
-                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
+    sem_mywait(INSTCACHEMD);
+    if (instanceCacheMetadata->numInsts) {
+        for (i = 0; i < config->ccMaxCores; i++) {
+            if (instanceCache[i].cacheState == INSTVALID && (instanceId || instanceCache[i].instance.ncHostIdx == src_index)
+                && (!strcmp(instanceCache[i].instance.state, "Extant"))) {
                 if (instanceId) {
                     // Only looking for a specific instance?
-                    if (strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+                    if (strcmp(instanceCache[i].instance.instanceId, instanceId)) {
                         // Yes, but this is not the one, so keep looking.
                         continue;
                     } else {
                         // Found our instance.
-                        src_index = instanceCache->instances[i].ncHostIdx;
+                        src_index = instanceCache[i].instance.ncHostIdx;
                         LOGDEBUG("[%s] found instance running on node %s\n", instanceId, resourceCacheLocal.resources[src_index].hostname);
                     }
                 }
                 // TO-DO: Wrap alloc()'s
                 cc_instances = EUCA_REALLOC(cc_instances, found_instances + 1, sizeof(ccInstance *));
                 cc_instances[found_instances] = EUCA_ZALLOC(1, sizeof(ccInstance));
-                memcpy(cc_instances[found_instances], &(instanceCache->instances[i]), sizeof(ccInstance));
+                memcpy(cc_instances[found_instances], &(instanceCache[i].instance), sizeof(ccInstance));
                 LOGTRACE("[%s] copied cc_instances[%d] (reservation=%s, uuid=%s) from instance cache\n",
                          cc_instances[found_instances]->instanceId, found_instances, cc_instances[found_instances]->reservationId, cc_instances[found_instances]->uuid);
                 found_instances++;
@@ -4627,6 +4632,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
             }
         }
     }
+    sem_mypost(INSTCACHEMD);
     sem_mypost(INSTCACHE);
 
     if (!found_instances) {
@@ -5009,7 +5015,7 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
     *lock = sem_open(lockname, O_CREAT, 0644, 1);
     sem_wait(*lock);
     ret = 0;
-
+    fprintf(stderr, "Setting up shared buffer for: %s size: %zu\n",bufname,bytes);
     if (mode == SHARED_MEM) {
         // set up shared memory segment for config
         shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
@@ -5145,6 +5151,16 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
         LOGERROR("cannot initialize from configuration file\n");
     }
 
+    //
+    // MUST BE AFTER init_config as the configuration config->ccMaxCores is needed
+    // to properly allocate the shared memory segment.
+    //
+    rc = init_dynamicCaches();
+    if (rc) {
+        ret = 1;
+        LOGERROR("cannot initialize instance cache shared memory\n");
+    }
+    
     rc = init_pthreads();
     if (rc) {
         LOGERROR("cannot initialize background threads\n");
@@ -5520,18 +5536,20 @@ void *monitor_thread(void *in)
                 if ((now - last_log_update) > LOG_INTERVAL_SUMMARY_SEC) {
                     int num_pending = 0, num_extant = 0, num_teardown = 0;
                     sem_mywait(INSTCACHE);
-                    if (instanceCache->numInsts) {
-                        for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
-                            if (!strcmp(instanceCache->instances[i].state, "Pending")) {
+                    sem_mywait(INSTCACHEMD);
+                    if (instanceCacheMetadata->numInsts) {
+                        for (int i = 0; i < config->ccMaxCores; i++) {
+                            if (!strcmp(instanceCache[i].instance.state, "Pending")) {
                                 num_pending++;
-                            } else if (!strcmp(instanceCache->instances[i].state, "Extant")) {
+                            } else if (!strcmp(instanceCache[i].instance.state, "Extant")) {
                                 num_extant++;
-                            } else if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
+                            } else if (!strcmp(instanceCache[i].instance.state, "Teardown")) {
                                 num_teardown++;
                             }
                         }
-                        //                        instanceCache->numInstsActive = num_pending+num_extant;
+                        //                        instanceCacheMetadata->numInstsActive = num_pending+num_extant;
                     }
+                    sem_mypost(INSTCACHEMD);
                     sem_mypost(INSTCACHE);
 
                     last_log_update = now;
@@ -5680,15 +5698,19 @@ int init_pthreads(void)
                 sigaction(SIGTERM, &newsigact, NULL);
                 LOGDEBUG("sensor polling process running\n");
                 LOGDEBUG("calling sensor_init() to not return.\n");
-                if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, update_config) != EUCA_OK)    // this call will not return
+                //if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, update_config) != EUCA_OK)    // this call will not return
+                if (sensor_init(s, ccSensorResourceCache, config->ccMaxCores, TRUE, update_config) != EUCA_OK)    // this call will not return
                     LOGERROR("failed to invoke the sensor polling process\n");
                 exit(0);
             } else {
                 config->threads[SENSOR] = pid;
             }
         }
-        LOGDEBUG("calling sensor_init(..., NULL) to return.\n");
-        if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {  // this call will return
+        LOGDEBUG("calling sensor_init(..., NULL) to return, PID=%d.\n",getpid());
+        LOGDEBUG("Max Cores: %d\n",config->ccMaxCores);
+        //if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {  // this call will return
+        LOGDEBUG("ccSensorResourceCache == NULL? %d\n", ccSensorResourceCache == NULL);
+        if (sensor_init(s, ccSensorResourceCache, config->ccMaxCores, FALSE, NULL) != EUCA_OK) {  // this call will return
             LOGERROR("failed to initialize sensor subsystem in this process\n");
         } else {
             LOGDEBUG("sensor subsystem initialized in this process\n");
@@ -5859,11 +5881,12 @@ int init_thread(void)
             }
         }
 
-        if (instanceCache == NULL) {
-            rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstanceCache), &(locks[INSTCACHE]),
-                                     "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
+
+        if (instanceCacheMetadata == NULL) {
+            rc = setup_shared_buffer((void **)&instanceCacheMetadata, "/eucalyptusCCInstanceCacheMetadata", sizeof(ccInstanceCacheMetadata), &(locks[INSTCACHEMD]),
+                                     "/eucalyptusCCInstanceCacheMetadataLock", SHARED_FILE);
             if (rc != 0) {
-                fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
+                fprintf(stderr, "Cannot set up shared memory region for ccInstanceCacheMetadata, exiting...\n");
                 sem_mypost(INIT);
                 exit(1);
             }
@@ -5888,17 +5911,7 @@ int init_thread(void)
                 exit(1);
             }
         }
-
-        if (ccSensorResourceCache == NULL) {
-            rc = setup_shared_buffer((void **)&ccSensorResourceCache, "/eucalyptusCCSensorResourceCache",
-                                     sizeof(sensorResourceCache) + sizeof(sensorResource) * (MAX_SENSOR_RESOURCES - 1), &(locks[SENSORCACHE]),
-                                     "/eucalyptusCCSensorResourceCacheLock", SHARED_FILE);
-            if (rc != 0) {
-                fprintf(stderr, "Cannot set up shared memory region for ccSensorResourceCache, exiting...\n");
-                sem_mypost(INIT);
-                exit(1);
-            }
-        }
+        
 
         if (gpEucaNet == NULL) {
             rc = setup_shared_buffer((void **)&gpEucaNet, "/eucalyptusCCNETConfig", sizeof(euca_network), &(locks[NETCONFIG]), "/eucalyptusCCNETConfigLock", SHARED_FILE);
@@ -5931,6 +5944,57 @@ int init_thread(void)
 
         sem_mypost(INIT);
         thread_init = 1;
+    }
+    return (0);
+}
+
+//
+// These are shared memory that are dynamic in that the size requirement is calculated from the
+// configuration
+//
+// The two main shared memory segments are for:
+// instanceCache
+// ccSensorResourceCache
+//
+// If one attemps to allocate these in init_thread() you will get segmentation faults because
+// the 'config' hasn't been loaded yet.
+//
+int init_dynamicCaches(void) {
+    int rc = -1;
+    
+    if (!cache_init) {
+        sem_mywait(INIT);
+        LOGDEBUG("dynamicCaches maxCores: %d\n", config->ccMaxCores);
+        LOGDEBUG("instanceCache NULL: %d\n", instanceCache==NULL);
+        LOGDEBUG("ccSensorResourceCache NULL: %d\n", instanceCache==NULL);
+
+        if (instanceCache == NULL) {
+            rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstanceCache) * config->ccMaxCores, &(locks[INSTCACHE]),
+                                     "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
+            if (rc != 0) {
+                fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
+                sem_mypost(INIT);
+                exit(1);
+            }
+        }
+
+        //
+        // config->ccMaxCores -1 is needed because we are appending the memory to the sensorResourceCache
+        // struct to give it more elements in the 'resources' array...
+        //
+        if (ccSensorResourceCache == NULL) {
+            rc = setup_shared_buffer((void **)&ccSensorResourceCache, "/eucalyptusCCSensorResourceCache",
+                                     sizeof(sensorResourceCache) + (sizeof(sensorResource) * (config->ccMaxCores - 1)) , &(locks[SENSORCACHE]),
+                                     "/eucalyptusCCSensorResourceCacheLock", SHARED_FILE);
+            if (rc != 0) {
+                fprintf(stderr, "Cannot set up shared memory region for ccSensorResourceCache, exiting...\n");
+                sem_mypost(INIT);
+                exit(1);
+            }
+        }
+        
+        sem_mypost(INIT);
+        cache_init = 1;
     }
     return (0);
 }
@@ -6097,6 +6161,18 @@ int update_config(void)
                 config->ncPollingFrequency = 6;
             }
 
+            tmpstr = configFileValue("CC_MAX_CORES");
+            if (tmpstr) {
+                if (atoi(tmpstr) > 0) {
+                    config->ccMaxCores = atoi(tmpstr);
+                } else {
+                    config->ccMaxCores = MAXINSTANCES_PER_CC;
+                }
+                EUCA_FREE(tmpstr);
+            } else {
+                config->ccMaxCores = MAXINSTANCES_PER_CC;
+            }
+
             // enabled sensors list -- removed since it is part of sensor cycle
             //update_sensors_list();
         }
@@ -6128,6 +6204,7 @@ int init_config(void)
     int schedPolicy = 0;
     int idleThresh = 0;
     int wakeThresh = 0;
+    int ccMaxCores = MAXINSTANCES_PER_CC;
     char *psHost = NULL;
     char *tmpstr = NULL;
     char *proxyIp = NULL;
@@ -6500,6 +6577,16 @@ int init_config(void)
     }
     EUCA_FREE(tmpstr);
 
+    // Config ccMaxCores if defined, otherwise use default of MAXINSTANCES_PER_CC
+    tmpstr = configFileValue("CC_MAX_CORES");
+    if (tmpstr) {
+        if (atoi(tmpstr) > 0) {
+            ccMaxCores = atoi(tmpstr);
+        }
+    }
+    EUCA_FREE(tmpstr);
+
+    
     // CC Image Caching
     proxyIp = NULL;
     use_proxy = 0;
@@ -6525,6 +6612,8 @@ int init_config(void)
     }
     EUCA_FREE(tmpstr);
 
+
+    
     tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
     if (tmpstr) {
         snprintf(proxyPath, EUCA_MAX_PATH, "%s", tmpstr);
@@ -6560,6 +6649,7 @@ int init_config(void)
     config->ncSensorsPollingInterval = ncPollingFrequency;  // initially poll sensors with the same frequency as other NC ops
     config->clcPollingFrequency = clcPollingFrequency;
     config->ncFanout = ncFanout;
+    config->ccMaxCores = ccMaxCores;
     locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
     config->initialized = 1;
     ccChangeState(LOADED);
@@ -6594,6 +6684,7 @@ int init_config(void)
     LOGINFO("                     schedulerPolicy=%s\n", SP(SCHEDPOLICIES[config->schedPolicy]));
     LOGINFO("                     idleThreshold=%d\n", config->idleThresh);
     LOGINFO("                     wakeThreshold=%d\n", config->wakeThresh);
+    LOGINFO("                     maxCores=%d\n", config->ccMaxCores);
     sem_mypost(CONFIG);
 
     res = NULL;
@@ -6843,7 +6934,9 @@ void shawn(void)
     }
 
     if (instanceCache)
-        msync(instanceCache, sizeof(ccInstanceCache), MS_ASYNC);
+        msync(instanceCache, sizeof(ccInstanceCache) * config->ccMaxCores, MS_ASYNC);
+    if (instanceCacheMetadata)
+        msync(instanceCacheMetadata, sizeof(ccInstanceCacheMetadata), MS_ASYNC);
     if (resourceCache)
         msync(resourceCache, sizeof(ccResourceCache), MS_ASYNC);
     if (config)
@@ -6946,8 +7039,8 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
     inuse = FALSE;
     if (!force) {
         // check to make sure the mac isn't in use elsewhere
-        for (i = 0; ((i < MAXINSTANCES_PER_CC) && !inuse); i++) {
-            if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
+        for (i = 0; ((i < config->ccMaxCores) && !inuse); i++) {
+            if (!strcmp(instanceCache[i].instance.ccnet.privateMac, mac) && strcmp(instanceCache[i].instance.state, "Teardown")) {
                 inuse = TRUE;
             }
         }
@@ -7204,9 +7297,9 @@ int map_instanceCache(int (*match) (ccInstance *, void *), void *matchParam, int
 
     sem_mywait(INSTCACHE);
 
-    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-        if (!match(&(instanceCache->instances[i]), matchParam)) {
-            if (operate(&(instanceCache->instances[i]), operateParam)) {
+    for (i = 0; i < config->ccMaxCores; i++) {
+        if (!match(&(instanceCache[i].instance), matchParam)) {
+            if (operate(&(instanceCache[i].instance), operateParam)) {
                 LOGWARN("instance cache mapping failed to operate at index %d\n", i);
                 ret++;
             }
@@ -7227,10 +7320,10 @@ void print_instanceCache(void)
     int i;
 
     sem_mywait(INSTCACHE);
-    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-        if (instanceCache->cacheState[i] == INSTVALID) {
-            LOGDEBUG("\tcache: %d/%d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->numInstsActive, instanceCache->instances[i].instanceId,
-                     instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
+    for (i = 0; i < config->ccMaxCores; i++) {
+        if (instanceCache[i].cacheState == INSTVALID) {
+            LOGDEBUG("\tcache: %d/%d/%d %s %s %s %s\n", i, instanceCacheMetadata->numInsts, instanceCacheMetadata->numInstsActive, instanceCache[i].instance.instanceId,
+                     instanceCache[i].instance.ccnet.publicIp, instanceCache[i].instance.ccnet.privateIp, instanceCache[i].instance.state);
         }
     }
     sem_mypost(INSTCACHE);
@@ -7302,9 +7395,9 @@ void print_ccInstance(char *tag, ccInstance * in)
 //!
 void set_clean_instanceCache(void)
 {
-    sem_mywait(INSTCACHE);
-    instanceCache->dirty = 0;
-    sem_mypost(INSTCACHE);
+    sem_mywait(INSTCACHEMD);
+    instanceCacheMetadata->dirty = 0;
+    sem_mypost(INSTCACHEMD);
 }
 
 //!
@@ -7314,9 +7407,9 @@ void set_clean_instanceCache(void)
 //!
 void set_dirty_instanceCache(void)
 {
-    sem_mywait(INSTCACHE);
-    instanceCache->dirty = 1;
-    sem_mypost(INSTCACHE);
+    sem_mywait(INSTCACHEMD);
+    instanceCacheMetadata->dirty = 1;
+    sem_mypost(INSTCACHEMD);
 }
 
 //!
@@ -7331,13 +7424,13 @@ void set_dirty_instanceCache(void)
 int is_clean_instanceCache(void)
 {
     int ret = 1;
-    sem_mywait(INSTCACHE);
-    if (instanceCache->dirty) {
+    sem_mywait(INSTCACHEMD);
+    if (instanceCacheMetadata->dirty) {
         ret = 0;
     } else {
         ret = 1;
     }
-    sem_mypost(INSTCACHE);
+    sem_mypost(INSTCACHEMD);
     return (ret);
 }
 
@@ -7351,48 +7444,50 @@ void invalidate_instanceCache(void)
 {
     int i, do_invalidate=0;
 
-    LOGDEBUG("current instance counts (total in cache/total active in cache/maximum cache size): %d/%d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive, MAXINSTANCES_PER_CC);
+    LOGDEBUG("current instance counts (total in cache/total active in cache/maximum cache size): %d/%d/%d\n", instanceCacheMetadata->numInsts, instanceCacheMetadata->numInstsActive, config->ccMaxCores);
 
     sem_mywait(INSTCACHE);
+    sem_mywait(INSTCACHEMD);
 
-    instanceCache->numInsts = instanceCache->numInstsActive = 0;
+    instanceCacheMetadata->numInsts = instanceCacheMetadata->numInstsActive = 0;
 
-    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
+    for (i = 0; i < config->ccMaxCores; i++) {
         // if instance is in teardown, free up network information
-        //        if (!strcmp(instanceCache->instances[i].state, "Teardown")) {
-            //            free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
+        //        if (!strcmp(instanceCache[i].instance.state, "Teardown")) {
+            //            free_instanceNetwork(instanceCache[i].instance.ccnet.privateMac, instanceCache[i].instance.ccnet.vlan, 0, 0);
             //            instanceCache->numInstsActive--;
         //        }
-        if ((instanceCache->cacheState[i] == INSTVALID)) {            
-            if ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout) {
-                LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
+        if ((instanceCache[i].cacheState == INSTVALID)) {            
+            if ((time(NULL) - instanceCache[i].lastseen) > config->instanceTimeout) {
+                LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache[i].instance.instanceId, (time(NULL) - instanceCache[i].lastseen));
                 do_invalidate = 1;
-            } else if (!strlen(instanceCache->instances[i].instanceId)) {
+            } else if (!strlen(instanceCache[i].instance.instanceId)) {
                 LOGDEBUG("invalidating instance with invalid instanceId\n");
                 do_invalidate = 1;
             } else {
                 do_invalidate = 0;
             }
             if (do_invalidate) {
-                //                if (!strcmp(instanceCache->instances[i].state, "Pending") || !strcmp(instanceCache->instances[i].state, "Extant")) {
+                //                if (!strcmp(instanceCache[i].instance.state, "Pending") || !strcmp(instanceCache[i].instance.state, "Extant")) {
                     //                    instanceCache->numInstsActive--;
                 //                }
-                bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
-                instanceCache->described[i] = 0;
-                instanceCache->lastseen[i] = 0;
-                instanceCache->cacheState[i] = INSTINVALID;
+                bzero(&(instanceCache[i].instance), sizeof(ccInstance));
+                instanceCache[i].described = 0;
+                instanceCache[i].lastseen = 0;
+                instanceCache[i].cacheState = INSTINVALID;
                 //                instanceCache->numInsts--;
             }
         }
 
-        if ((instanceCache->cacheState[i] == INSTVALID)) {
-            if ( !strcmp(instanceCache->instances[i].state, "Extant") || !strcmp(instanceCache->instances[i].state, "Pending") ) {
-                instanceCache->numInstsActive++;
+        if ((instanceCache[i].cacheState == INSTVALID)) {
+            if ( !strcmp(instanceCache[i].instance.state, "Extant") || !strcmp(instanceCache[i].instance.state, "Pending") ) {
+                instanceCacheMetadata->numInstsActive++;
             }
-            instanceCache->numInsts++;
+            instanceCacheMetadata->numInsts++;
         }
     }
-    LOGDEBUG("instance counts: %d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive);
+    LOGDEBUG("instance counts: %d/%d\n", instanceCacheMetadata->numInsts, instanceCacheMetadata->numInstsActive);
+    sem_mypost(INSTCACHEMD);
     sem_mypost(INSTCACHE);
 }
 
@@ -7417,19 +7512,20 @@ int refresh_instanceCache(char *instanceId, ccInstance * in)
     }
 
     sem_mywait(INSTCACHE);
+    sem_mywait(INSTCACHEMD);
     done = 0;
-    for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
-        if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+    for (i = 0; i < config->ccMaxCores && !done; i++) {
+        if (!strcmp(instanceCache[i].instance.instanceId, instanceId)) {
             // in cache
             // give precedence to instances that are in Extant/Pending over expired instances, when info comes from two different nodes
-            if (strcmp(in->serviceTag, instanceCache->instances[i].serviceTag) && strcmp(in->state, instanceCache->instances[i].state)
+            if (strcmp(in->serviceTag, instanceCache[i].instance.serviceTag) && strcmp(in->state, instanceCache[i].instance.state)
                 && !strcmp(in->state, "Teardown")) {
                 // skip
                 LOGDEBUG("skipping cache refresh with instance in Teardown (instance with non-Teardown from different node already cached)\n");
             } else {
                 // update cached instance info
-                memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
-                instanceCache->lastseen[i] = time(NULL);
+                memcpy(&(instanceCache[i].instance), in, sizeof(ccInstance));
+                instanceCache[i].lastseen = time(NULL);
             }
             //            sem_mypost(INSTCACHE);
             //            return (0);
@@ -7443,17 +7539,18 @@ int refresh_instanceCache(char *instanceId, ccInstance * in)
     }
 
 
-    instanceCache->numInsts = instanceCache->numInstsActive = 0;
-    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-        if ((instanceCache->cacheState[i] == INSTVALID)) {
-            if ( !strcmp(instanceCache->instances[i].state, "Extant") || !strcmp(instanceCache->instances[i].state, "Pending") ) {
-                instanceCache->numInstsActive++;
+    instanceCacheMetadata->numInsts = instanceCacheMetadata->numInstsActive = 0;
+    for (i = 0; i < config->ccMaxCores; i++) {
+        if ((instanceCache[i].cacheState == INSTVALID)) {
+            if ( !strcmp(instanceCache[i].instance.state, "Extant") || !strcmp(instanceCache[i].instance.state, "Pending") ) {
+                instanceCacheMetadata->numInstsActive++;
             }
-            instanceCache->numInsts++;
+            instanceCacheMetadata->numInsts++;
         }
     }
-    LOGDEBUG("instance counts: %d/%d\n", instanceCache->numInsts, instanceCache->numInstsActive);
+    LOGDEBUG("instance counts: %d/%d\n", instanceCacheMetadata->numInsts, instanceCacheMetadata->numInstsActive);
 
+    sem_mypost(INSTCACHEMD);
     sem_mypost(INSTCACHE);
 
     return (0);
@@ -7484,19 +7581,19 @@ int add_instanceCache(char *instanceId, ccInstance * in)
     //    sem_mywait(INSTCACHE);
     firstNull = idxDescribedTeardown = idxNotDescribedTeardown = idxDescribedExtant = -1;
     done = 0;
-    for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
-        if ((instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
+    for (i = 0; i < config->ccMaxCores && !done; i++) {
+        if ((instanceCache[i].cacheState == INSTVALID) && (!strcmp(instanceCache[i].instance.instanceId, instanceId))) {
             // already in cache
             LOGDEBUG("'%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
-            instanceCache->lastseen[i] = time(NULL);
+            instanceCache[i].lastseen = time(NULL);
             //            sem_mypost(INSTCACHE);
             return (0);
-        } else if (instanceCache->cacheState[i] == INSTINVALID) {
+        } else if (instanceCache[i].cacheState == INSTINVALID) {
             firstNull = i;
             done++;
-        } else if (!strcmp(instanceCache->instances[i].state, "Teardown") && instanceCache->described[i] == 1) {
+        } else if (!strcmp(instanceCache[i].instance.state, "Teardown") && instanceCache[i].described == 1) {
             idxDescribedTeardown = i;
-        } else if (!strcmp(instanceCache->instances[i].state, "Teardown") && instanceCache->described[i] == 0) {
+        } else if (!strcmp(instanceCache[i].instance.state, "Teardown") && instanceCache[i].described == 0) {
             idxNotDescribedTeardown = i;
         }
     }
@@ -7506,30 +7603,30 @@ int add_instanceCache(char *instanceId, ccInstance * in)
         cacheIdx = firstNull;
     } else if (idxDescribedTeardown >= 0) {
         cacheIdx = idxDescribedTeardown;
-        LOGTRACE("ADD CACHE: caching %s at described Teardown dest %s\n", instanceId, instanceCache->instances[cacheIdx].instanceId);
+        LOGTRACE("ADD CACHE: caching %s at described Teardown dest %s\n", instanceId, instanceCache[cacheIdx].instance.instanceId);
     } else if (idxNotDescribedTeardown >= 0) {
         cacheIdx = idxNotDescribedTeardown;
-        LOGTRACE("ADD CACHE: caching %s at not described Teardown dest %s\n", instanceId, instanceCache->instances[cacheIdx].instanceId);
+        LOGTRACE("ADD CACHE: caching %s at not described Teardown dest %s\n", instanceId, instanceCache[cacheIdx].instance.instanceId);
     } else {
         LOGWARN("ADD CACHE: caching %s cannot find free or replacement slot\n", instanceId);
         cacheIdx = -1;
     }
     
-    if ( (cacheIdx >= 0) && (cacheIdx < MAXINSTANCES_PER_CC) ) {
+    if ( (cacheIdx >= 0) && (cacheIdx < config->ccMaxCores) ) {
         LOGDEBUG("adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
 
         // only add if the cache value is not replacing an existing instance
         //        if (instanceCache->cacheState[cacheIdx] == INSTINVALID) {
-        //            instanceCache->numInsts++;
+        //            instanceCacheMetadata->numInsts++;
         //        }
 
-        allocate_ccInstance(&(instanceCache->instances[cacheIdx]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
+        allocate_ccInstance(&(instanceCache[cacheIdx].instance), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL,
                             in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet),
                             &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->guestStateName, in->bundleTaskStateName,
                             in->groupNames, in->groupIds, in->volumes, in->volumesSize, in->bundleTaskProgress);
-        instanceCache->described[cacheIdx] = 0;
-        instanceCache->lastseen[cacheIdx] = time(NULL);
-        instanceCache->cacheState[cacheIdx] = INSTVALID;
+        instanceCache[cacheIdx].described = 0;
+        instanceCache[cacheIdx].lastseen = time(NULL);
+        instanceCache[cacheIdx].cacheState = INSTVALID;
     } else {
         LOGERROR("not enough cache space for storing instance [%s]: skipping update\n", instanceId);
         ret = 1;
@@ -7554,13 +7651,13 @@ int del_instanceCacheId(char *instanceId)
     int i;
 
     sem_mywait(INSTCACHE);
-    for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-        if ((instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
+    for (i = 0; i < config->ccMaxCores; i++) {
+        if ((instanceCache[i].cacheState == INSTVALID) && (!strcmp(instanceCache[i].instance.instanceId, instanceId))) {
             // del from cache
-            bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
-            instanceCache->described[i] = 0;
-            instanceCache->lastseen[i] = 0;
-            instanceCache->cacheState[i] = INSTINVALID;
+            bzero(&(instanceCache[i].instance), sizeof(ccInstance));
+            instanceCache[i].described = 0;
+            instanceCache[i].lastseen = 0;
+            instanceCache[i].cacheState = INSTINVALID;
             //            instanceCache->numInsts--;
             //            instanceCache->numInstsActive = instanceCache->numInsts;
             sem_mypost(INSTCACHE);
@@ -7594,30 +7691,30 @@ int find_instanceCacheId(char *instanceId, ccInstance ** out)
     sem_mywait(INSTCACHE);
     *out = NULL;
     done = 0;
-    for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
-        if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
+    for (i = 0; i < config->ccMaxCores && !done; i++) {
+        if (!strcmp(instanceCache[i].instance.instanceId, instanceId)) {
             // found it
             *out = EUCA_ZALLOC(1, sizeof(ccInstance));
             if (!*out) {
                 LOGFATAL("out of memory!\n");
                 unlock_exit(1);
             }
-            allocate_ccInstance(*out, instanceCache->instances[i].instanceId, instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId,
-                                instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL,
-                                instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].ownerId, instanceCache->instances[i].accountId,
-                                instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts,
-                                instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet),
-                                &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName,
-                                instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex,
-                                instanceCache->instances[i].platform, instanceCache->instances[i].guestStateName, instanceCache->instances[i].bundleTaskStateName,
-                                instanceCache->instances[i].groupNames, instanceCache->instances[i].groupIds, instanceCache->instances[i].volumes,
-                                instanceCache->instances[i].volumesSize, instanceCache->instances[i].bundleTaskProgress);
-            LOGTRACE("found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId,
-                     instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
+            allocate_ccInstance(*out, instanceCache[i].instance.instanceId, instanceCache[i].instance.amiId, instanceCache[i].instance.kernelId,
+                                instanceCache[i].instance.ramdiskId, instanceCache[i].instance.amiURL, instanceCache[i].instance.kernelURL,
+                                instanceCache[i].instance.ramdiskURL, instanceCache[i].instance.ownerId, instanceCache[i].instance.accountId,
+                                instanceCache[i].instance.state, instanceCache[i].instance.ccState, instanceCache[i].instance.ts,
+                                instanceCache[i].instance.reservationId, &(instanceCache[i].instance.ccnet), &(instanceCache[i].instance.ncnet),
+                                &(instanceCache[i].instance.ccvm), instanceCache[i].instance.ncHostIdx, instanceCache[i].instance.keyName,
+                                instanceCache[i].instance.serviceTag, instanceCache[i].instance.userData, instanceCache[i].instance.launchIndex,
+                                instanceCache[i].instance.platform, instanceCache[i].instance.guestStateName, instanceCache[i].instance.bundleTaskStateName,
+                                instanceCache[i].instance.groupNames, instanceCache[i].instance.groupIds, instanceCache[i].instance.volumes,
+                                instanceCache[i].instance.volumesSize, instanceCache[i].instance.bundleTaskProgress);
+            LOGTRACE("found instance in cache '%s/%s/%s'\n", instanceCache[i].instance.instanceId,
+                     instanceCache[i].instance.ccnet.publicIp, instanceCache[i].instance.ccnet.privateIp);
             // migration-related
             // TO-DO: move to allocate_ccInstance() ?
-            (*out)->migration_state = instanceCache->instances[i].migration_state;
-            LOGTRACE("instance %s migration state=%s\n", instanceCache->instances[i].instanceId, migration_state_names[(*out)->migration_state]);
+            (*out)->migration_state = instanceCache[i].instance.migration_state;
+            LOGTRACE("instance %s migration state=%s\n", instanceCache[i].instance.instanceId, migration_state_names[(*out)->migration_state]);
             done++;
         }
     }
@@ -7651,27 +7748,27 @@ int find_instanceCacheIP(char *ip, ccInstance ** out)
     sem_mywait(INSTCACHE);
     *out = NULL;
     done = 0;
-    for (i = 0; i < MAXINSTANCES_PER_CC && !done; i++) {
-        if ((instanceCache->instances[i].ccnet.publicIp[0] != '\0' || instanceCache->instances[i].ccnet.privateIp[0] != '\0')) {
-            if (!strcmp(instanceCache->instances[i].ccnet.publicIp, ip) || !strcmp(instanceCache->instances[i].ccnet.privateIp, ip)) {
+    for (i = 0; i < config->ccMaxCores && !done; i++) {
+        if ((instanceCache[i].instance.ccnet.publicIp[0] != '\0' || instanceCache[i].instance.ccnet.privateIp[0] != '\0')) {
+            if (!strcmp(instanceCache[i].instance.ccnet.publicIp, ip) || !strcmp(instanceCache[i].instance.ccnet.privateIp, ip)) {
                 // found it
                 *out = EUCA_ZALLOC(1, sizeof(ccInstance));
                 if (!*out) {
                     LOGFATAL("out of memory!\n");
                     unlock_exit(1);
                 }
-                allocate_ccInstance(*out, instanceCache->instances[i].instanceId, instanceCache->instances[i].amiId,
-                                    instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL,
-                                    instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL,
-                                    instanceCache->instances[i].ownerId, instanceCache->instances[i].accountId, instanceCache->instances[i].state,
-                                    instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId,
-                                    &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm),
-                                    instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName,
-                                    instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData,
-                                    instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform,
-                                    instanceCache->instances[i].guestStateName, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames,
-                                    instanceCache->instances[i].groupIds, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize,
-                                    instanceCache->instances[i].bundleTaskProgress);
+                allocate_ccInstance(*out, instanceCache[i].instance.instanceId, instanceCache[i].instance.amiId,
+                                    instanceCache[i].instance.kernelId, instanceCache[i].instance.ramdiskId, instanceCache[i].instance.amiURL,
+                                    instanceCache[i].instance.kernelURL, instanceCache[i].instance.ramdiskURL,
+                                    instanceCache[i].instance.ownerId, instanceCache[i].instance.accountId, instanceCache[i].instance.state,
+                                    instanceCache[i].instance.ccState, instanceCache[i].instance.ts, instanceCache[i].instance.reservationId,
+                                    &(instanceCache[i].instance.ccnet), &(instanceCache[i].instance.ncnet), &(instanceCache[i].instance.ccvm),
+                                    instanceCache[i].instance.ncHostIdx, instanceCache[i].instance.keyName,
+                                    instanceCache[i].instance.serviceTag, instanceCache[i].instance.userData,
+                                    instanceCache[i].instance.launchIndex, instanceCache[i].instance.platform,
+                                    instanceCache[i].instance.guestStateName, instanceCache[i].instance.bundleTaskStateName, instanceCache[i].instance.groupNames,
+                                    instanceCache[i].instance.groupIds, instanceCache[i].instance.volumes, instanceCache[i].instance.volumesSize,
+                                    instanceCache[i].instance.bundleTaskProgress);
                 done++;
             }
         }
@@ -7791,10 +7888,10 @@ static int reindex_instanceCache(int removed_index, ccResource * removed_resourc
     // reset the indexes of all concerned instances, atomically
     sem_mywait(INSTCACHE);
     {
-        for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            ccInstance *inst = instanceCache->instances + i;
+        for (int i = 0; i < config->ccMaxCores; i++) {
+            ccInstance *inst = &instanceCache[i].instance;
 
-            if ((instanceCache->cacheState[i] == INSTVALID) &&  // a valid instance slot
+            if ((instanceCache[i].cacheState == INSTVALID) &&  // a valid instance slot
                 (inst->ncHostIdx == removed_index)) {   // is pointing to the host being removed
                 LOGWARN("BUG: instance struct (%s) points to node to be removed (%s)\n", inst->instanceId, removed_resource->hostname);
                 ret = EUCA_ERROR;
@@ -7802,9 +7899,9 @@ static int reindex_instanceCache(int removed_index, ccResource * removed_resourc
             }
         }
         if (ret == EUCA_OK) {
-            for (int i = 0; i < MAXINSTANCES_PER_CC; i++) {
-                ccInstance *inst = instanceCache->instances + i;
-                if ((instanceCache->cacheState[i] == INSTVALID) &&  // a valid instance slot
+            for (int i = 0; i < config->ccMaxCores; i++) {
+                ccInstance *inst = &instanceCache[i].instance;
+                if ((instanceCache[i].cacheState == INSTVALID) &&  // a valid instance slot
                     (inst->ncHostIdx > removed_index)) {    // host index bigger than one being removed
                     inst->ncHostIdx--;
                 }

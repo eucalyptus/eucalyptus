@@ -125,6 +125,7 @@ enum {
     CONFIG,
     NETCONFIG,
     INSTCACHE,
+    INSTCACHEMD,
     RESCACHE,
     RESCACHESTAGE,
     REFRESHLOCK,
@@ -310,15 +311,22 @@ typedef struct ccResourceCache_t {
     int resourceCacheUpdate;
 } ccResourceCache;
 
+//
+// Array of these objects constitues a 'cache'
+// 
 typedef struct ccInstanceCache_t {
-    ccInstance instances[MAXINSTANCES_PER_CC];
-    time_t lastseen[MAXINSTANCES_PER_CC];
-    int cacheState[MAXINSTANCES_PER_CC];
-    int described[MAXINSTANCES_PER_CC];
-    int numInsts, numInstsActive;
+    ccInstance instance; // [MAXINSTANCES_PER_CC];
+    time_t lastseen; //[MAXINSTANCES_PER_CC];
+    int cacheState; //[MAXINSTANCES_PER_CC];
+    int described; //[MAXINSTANCES_PER_CC];
+} ccInstanceCache;
+
+typedef struct ccInstanceCacheMetadata_t {
+    int numInsts; 
+    int numInstsActive;
     int instanceCacheUpdate;
     int dirty;
-} ccInstanceCache;
+} ccInstanceCacheMetadata;
 
 typedef struct ccConfig_t {
     char eucahome[EUCA_MAX_PATH];
@@ -362,6 +370,7 @@ typedef struct ccConfig_t {
     serviceInfoType notreadyServices[16];
     char arbitrators[256];
     int arbitratorFails;
+    int ccMaxCores;
 } ccConfig;
 
 /*----------------------------------------------------------------------------*\
@@ -441,6 +450,7 @@ void *monitor_thread(void *in);
 int init_pthreads(void);
 int init_log(void);
 int init_thread(void);
+int init_dynamicCaches(void);
 int update_config(void);
 int init_config(void);
 int syncNetworkState(void);

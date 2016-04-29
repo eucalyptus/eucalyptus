@@ -537,15 +537,16 @@ static void *sensor_thread(void *arg)
 //!
 static void init_state(int resources_size)
 {
-    LOGDEBUG("initializing sensor shared memory (%lu KB)...\n", (sizeof(sensorResourceCache) + sizeof(sensorResource) * (resources_size - 1)) / 1024);
+    LOGDEBUG("initializing sensor shared memory (%lu KB)...\n", (sizeof(sensorResourceCache) + sizeof(sensorResource) * resources_size) / 1024);
     sensor_state->max_resources = resources_size;
     sensor_state->collection_interval_time_ms = 0;
     sensor_state->history_size = 0;
     sensor_state->last_polled = 0;
     sensor_state->interval_polled = 0;
+    LOGDEBUG("RESOURCE SIZE: %d\n",resources_size);
+    
     for (int i = 0; i < resources_size; i++) {
-        sensorResource *sr = sensor_state->resources + i;
-        bzero(sr, sizeof(sensorResource));
+        bzero(&(sensor_state->resources[i]), sizeof(sensorResource));
     }
     sensor_state->initialized = TRUE;  // inter-process init done
     LOGINFO("initialized sensor shared memory\n");
@@ -623,7 +624,8 @@ static int sensor_expire_cache_entries(void)
 int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void))
 {
     int use_resources_size = MAX_SENSOR_RESOURCES;
-
+    int memory_size = 0;
+    
     if (sem || resources) {            // we will use an externally allocated semaphore and memory region
         if (sem == NULL || resources == NULL || resources_size < 1) {   // all must be set
             return (EUCA_ERROR);
@@ -640,10 +642,12 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
             state_sem = sem;
         }
 
+        LOGDEBUG("before init_state\n");
         // if this process is the first to get to global state, initialize it
         sem_p(state_sem);
         if (!sensor_state->initialized) {
-            init_state(resources_size);
+            LOGDEBUG("init_state resources_size: %d\n",resources_size);
+            init_state(resources_size - 1);
         }
         LOGDEBUG("setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
         sensor_update_euca_config = update_euca_config_function;
@@ -668,15 +672,21 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
             return (EUCA_MEMORY_ERROR);
         }
 
-        sensor_state = EUCA_ZALLOC(sizeof(sensorResourceCache) + sizeof(sensorResource), (use_resources_size - 1));
+        // We have to subtract 1 because the 'struct' has a resource array of size 1
+        // Yes this is incredibly stupid.
+        memory_size = sizeof(sensorResourceCache) + (sizeof(sensorResource) * (use_resources_size - 1));
+        sensor_state = malloc(memory_size); // Don't use EUCA_ALLOC as we are dealing with a struct + array
+
         if (sensor_state == NULL) {
             LOGFATAL("failed to allocate memory for sensor data\n");
             SEM_FREE(state_sem);
             return (EUCA_MEMORY_ERROR);
         }
 
-        init_state(use_resources_size);
-
+        // Not sure if this is really needed as init_state() call bzeros the resources array...
+        // might be faster to just bzero the initial struct size...something to think about.
+        bzero(sensor_state, memory_size);
+        init_state(use_resources_size - 1);
         {                              // start the sensor thread
             pthread_t tcb;
             if (pthread_create(&tcb, NULL, sensor_thread, NULL)) {

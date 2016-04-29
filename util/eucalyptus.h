@@ -253,7 +253,7 @@
 //! @name system limit defaults */
 
 #define MAXNODES                                     1024
-#define MAXINSTANCES_PER_CC                         10240
+#define MAXINSTANCES_PER_CC                          2048
 #define MAXINSTANCES_PER_NC                           256
 #define MAXLOGFILESIZE                          104857600
 #define EUCA_MAX_GROUPS                                64

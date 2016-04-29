@@ -129,6 +129,8 @@ configEntry configKeysRestartCC[] = {
     ,
     {"CC_IMAGE_PROXY_PATH", NULL}
     ,
+    {"CC_MAX_CORES", NULL}
+    ,
     {NULL, NULL}
     ,
 };
