@@ -761,7 +761,6 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 			sb.append(String.format("\n%s=%s", key, value));
 		}
 		sb.append("\" > /etc/load-balancer-servo/servo.conf");
-		sb.append("\ntouch /var/lib/load-balancer-servo/ntp.lock");
 		sb.append("\nchown -R servo:servo /etc/load-balancer-servo");
 		sb.append("\nservice load-balancer-servo start");
 		return sb.toString();
