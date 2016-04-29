@@ -92,7 +92,6 @@
 
 #include <server-marshal.h>
 #include <handlers.h>
-#include <vnetwork.h>
 #include <misc.h>
 #include <euca_string.h>
 #include <ipc.h>

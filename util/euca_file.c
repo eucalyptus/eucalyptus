@@ -102,7 +102,6 @@
 #include "eucalyptus.h"
 
 #include <diskutil.h>
-#include <vnetwork.h>
 
 #include "misc.h"
 #include "euca_string.h"

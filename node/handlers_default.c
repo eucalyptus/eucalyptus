@@ -103,7 +103,6 @@
 #include <ipc.h>
 #include <misc.h>
 #include <backing.h>
-#include <vnetwork.h>
 #include <euca_auth.h>
 #include <vbr.h>
 #include <sensor.h>

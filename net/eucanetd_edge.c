@@ -114,7 +114,6 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
-#include <vnetwork.h>
 #include <euca_string.h>
 #include <log.h>
 #include <hash.h>

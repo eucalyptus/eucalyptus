@@ -103,7 +103,6 @@
 #include "misc.h"
 #include "hash.h"
 #include "euca_auth.h"                 // base64_enc
-#include "vnetwork.h"                  // OK / ERROR
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
