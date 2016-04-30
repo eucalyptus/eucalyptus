@@ -180,6 +180,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
 int check_for_string_in_list(char *string, char **list, int count);
 char **build_argv(const char *first, va_list va);
 int euca_execvp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, char **argv);
+int euca_execvp_fds(pid_t * ppid, int stdin_fd_in, int *stdin_fd_out, int stdout_fd_in, int *stdout_fd_out, int stderr_fd_in, int *stderr_fd_out, char **argv);
 int euca_waitpid(pid_t pid, int *pStatus);
 int euca_execlp_fd(pid_t * ppid, int *stdin_fd, int *stdout_fd, int *stderr_fd, const char *file, ...);
 int euca_execlp(int *pStatus, const char *file, ...);

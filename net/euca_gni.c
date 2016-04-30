@@ -2612,6 +2612,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
+                EUCA_FREE(strptra);
             } else {
                 LOGWARN("invalid global subnet at idx %d\n", j);
             }
@@ -2659,8 +2660,8 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
                         EUCA_FREE(results[i]);
                     }
-                    EUCA_FREE(results);
                 }
+                EUCA_FREE(results);
 
                 xmlNodeSet snnodeset = {0};
                 xmlNodePtr snstartnode = NULL;
@@ -3995,7 +3996,7 @@ int gni_populate_dhcpos(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCont
             gni_dhcp_os *gdh = &(gni->dhcpos[j]);
             if (dhnode && dhnode->properties && dhnode->properties->children &&
                     dhnode->properties->children->content) {
-                snprintf(gdh->name, 16, "%s", (char *) dhnode->properties->children->content);
+                snprintf(gdh->name, DHCP_OS_ID_LEN, "%s", (char *) dhnode->properties->children->content);
             }
 
             snprintf(expression, 2048, "./ownerId");
@@ -6099,6 +6100,7 @@ void gni_instance_interface_print(gni_instance *inst, int loglevel) {
 
     if (!inst) {
         EUCALOG(loglevel, "Invalid argument: NULL.\n");
+        return;
     }
     EUCALOG(loglevel, "------ name = %s -----\n", inst->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", inst->accountId);
@@ -6135,6 +6137,7 @@ void gni_sg_print(gni_secgroup *sg, int loglevel) {
 
     if (!sg) {
         EUCALOG(loglevel, "Invalid argument: NULL.\n");
+        return;
     }
     EUCALOG(loglevel, "------ name = %s -----\n", sg->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", sg->accountId);
@@ -6172,6 +6175,7 @@ void gni_vpc_print(gni_vpc *vpc, int loglevel) {
 
     if (!vpc) {
         EUCALOG(loglevel, "Invalid argument: NULL.\n");
+        return;
     }
     EUCALOG(loglevel, "------ name = %s -----\n", vpc->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", vpc->accountId);
@@ -6268,6 +6272,7 @@ void gni_vpc_print(gni_vpc *vpc, int loglevel) {
 void gni_internetgateway_print(gni_internet_gateway *ig, int loglevel) {
     if (!ig) {
         EUCALOG(loglevel, "Invalid argument: NULL.\n");
+        return;
     }
     EUCALOG(loglevel, "------ name = %s -----\n", ig->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", ig->accountId);
@@ -6281,6 +6286,7 @@ void gni_internetgateway_print(gni_internet_gateway *ig, int loglevel) {
 void gni_dhcpos_print(gni_dhcp_os *dhcpos, int loglevel) {
     if (!dhcpos) {
         EUCALOG(loglevel, "Invalid argument: NULL.\n");
+        return;
     }
     EUCALOG(loglevel, "------ name = %s -----\n", dhcpos->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", dhcpos->accountId);
