@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -441,7 +441,9 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
       try {
         RemoteCallback messageCallback = factory.newInstance( );
         BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( input.getConfiguration( ) );
-        Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
+        if ( Logs.extreme( ).isDebugEnabled( ) ) {
+          Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
+        }
       } catch ( CancellationException ex ) {
         //do nothing
       } catch ( Exception ex ) {

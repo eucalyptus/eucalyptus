@@ -754,7 +754,9 @@ public class ClusterAllocator implements Runnable {
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .rootDirective( this.allocInfo.getRootDirective() )
                                    .create( );
-    LOG.debug("Run instance request: " + run);
+    if ( LOG.isDebugEnabled( ) ) {
+      LOG.debug( "Run instance request: " + run );
+    }
     return new VmRunCallback( run, childToken );
   }
   

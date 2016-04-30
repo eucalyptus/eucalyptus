@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,9 @@ public abstract class MessageCallback<Q extends BaseMessage, R extends BaseMessa
   protected void setRequest( Q request ) {
     Q oldReq = null;
     if ( ( oldReq = this.request.getAndSet( request ) ) != null ) {
-      Logs.extreme( ).error( "Request has been set twice.  Old message was: " + oldReq, new IllegalStateException( "Request has been set twice." ) );
+      if ( Logs.isExtrrreeeme( ) ) {
+        Logs.extreme( ).error( "Request has been set twice.  Old message was: " + oldReq, new IllegalStateException( "Request has been set twice." ) );
+      }
     }
   }
   

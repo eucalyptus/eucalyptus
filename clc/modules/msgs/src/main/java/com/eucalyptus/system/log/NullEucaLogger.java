@@ -97,7 +97,7 @@ public class NullEucaLogger extends EucaLogger {
 
 	@Override
 	public Level getEffectiveLevel( ) {
-		return super.getEffectiveLevel( );
+		return Level.OFF;
 	}
 
 	@Override
@@ -133,17 +133,17 @@ public class NullEucaLogger extends EucaLogger {
 
 	@Override
 	public boolean isDebugEnabled( ) {
-		return super.isDebugEnabled( );
+		return false;
 	}
 
 	@Override
 	public boolean isEnabledFor( final Priority level ) {
-		return super.isEnabledFor( level );
+		return false;
 	}
 
 	@Override
 	public boolean isInfoEnabled( ) {
-		return super.isInfoEnabled( );
+		return false;
 	}
 
 	@Override

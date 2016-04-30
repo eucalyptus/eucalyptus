@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,7 +174,9 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         }
       }
 
-      Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
+      if ( Logs.extreme( ).isDebugEnabled( ) ) {
+        Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
+      }
       HttpResponse response = null;
       if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );

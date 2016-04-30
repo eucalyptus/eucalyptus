@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -316,7 +316,9 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       throw new BindingException(errMsg.toString());
     }
 
-    Logs.extreme().trace(groovyMsg.toString());
+    if ( Logs.extreme( ).isTraceEnabled( ) ) {
+      Logs.extreme().trace(groovyMsg.toString());
+    }
     try {
       Binding binding = BindingManager.getDefaultBinding();
       msg = binding.toOM(groovyMsg);

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,7 +130,9 @@ public class AsyncResponseFuture<R> extends GenericCheckedListenableFuture<R> {
     if( r ) {
       EventRecord.caller( this.getClass( ), EventType.FUTURE, "set(" + reply.getClass( ).getCanonicalName( ) + ")" ).trace( );
     } else {
-      Logs.exhaust( ).debug( "Duplicate response: " + reply );
+      if ( Logs.exhaust( ).isDebugEnabled( ) ) {
+        Logs.exhaust( ).debug( "Duplicate response: " + reply );
+      }
     }
     return r;
   }
