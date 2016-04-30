@@ -758,6 +758,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 {
     int ret = EUCA_OK;
     int credentials_prepared = 0;
+    char *libvirt_xml_modified = NULL;
 
     if (instancesLen <= 0) {
         LOGERROR("called with invalid instancesLen (%d)\n", instancesLen);
@@ -1001,6 +1002,10 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 }
                 // update the volume struct with connection string obtained from SC
                 euca_strncpy(volume->connectionString, vol_data->connect_string, sizeof(volume->connectionString));
+                // save volume info into vol-XXX-libvirt.xml for future detach
+                if (create_vol_xml(instance->instanceId, volume->volumeId, libvirt_xml, &libvirt_xml_modified) != EUCA_OK) {
+                    goto unroll;
+                }
 
                 continue;
 unroll:
