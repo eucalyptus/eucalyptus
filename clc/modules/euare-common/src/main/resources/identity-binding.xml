@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2015 Eucalyptus Systems, Inc.
+  Copyright 2009-2016 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -171,6 +171,7 @@
     <value name="RoleId" field="roleId" usage="optional"/>
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="AccountAlias" field="accountAlias" usage="optional"/>
+    <value name="Token" field="token" usage="optional"/>
     <value name="PasswordHash" field="passwordHash" usage="optional"/>
     <value name="PasswordExpiry" field="passwordExpiry" usage="optional"/>
     <collection name="AccessKeys" field="accessKeys" usage="optional">>

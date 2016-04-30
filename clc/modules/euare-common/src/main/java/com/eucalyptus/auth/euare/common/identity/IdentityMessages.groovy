@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,6 +56,7 @@ class Principal extends EucalyptusData {
   String roleId
   String canonicalId
   String accountAlias
+  String token
   String passwordHash
   Long passwordExpiry
   ArrayList<AccessKey> accessKeys
