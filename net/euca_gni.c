@@ -2515,8 +2515,8 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             LOGTRACE("after function: %d: %s\n", i, results[i]);
             EUCA_FREE(results[i]);
         }
-        EUCA_FREE(results);
     }
+    EUCA_FREE(results);
 
     // Do we have any managed subnets?
     snprintf(expression, 2048, "./property[@name='managedSubnet']/managedSubnet");
