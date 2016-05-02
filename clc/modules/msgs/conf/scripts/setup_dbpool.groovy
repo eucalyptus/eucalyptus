@@ -117,7 +117,7 @@ def setupDbPool = { String db_name ->
   // Register proxool
   LOG.trace( proxool_config )
   ProxoolFacade.registerConnectionPool(url, proxool_config);
-  ProxoolFacade.addStateListener( 
+  if ( 'database_events' != db_name ) ProxoolFacade.addStateListener(
       db_name, 
       { Integer state -> Databases.setVolatile( 
           state == StateListenerIF.STATE_DOWN ||
