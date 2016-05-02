@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,6 +160,7 @@ public class IdentityService {
         if ( !ptag.equals( request.getPtag( ) ) ) {
           principal.setAccountAlias( user.getAccountAlias() );
           principal.setEnabled( user.isEnabled( ) );
+          principal.setToken( user.getToken( ) );
           principal.setPasswordHash( user.getPassword( ) );
           principal.setPasswordExpiry( user.getPasswordExpires( ) );
 

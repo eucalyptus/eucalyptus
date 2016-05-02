@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -416,6 +416,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     sequences.add( userPrincipal.getAuthenticatedId( ) );
     sequences.add( userPrincipal.getCanonicalId( ) );
     sequences.add( userPrincipal.getName( ) );
+    sequences.add( String.valueOf( userPrincipal.getToken( ) ) );
     sequences.add( String.valueOf( userPrincipal.getPassword( ) ) );
     sequences.add( String.valueOf( userPrincipal.getPasswordExpires( ) ) );
     sequences.add( userPrincipal.getPath( ) );

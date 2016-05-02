@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,8 +123,10 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       @Override
       public void fire( R r ) {
         try {
-          Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n"
-                                 + r );
+          if ( Logs.isExtrrreeeme( ) ) {
+            Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".fire():\n"
+                + r );
+          }
           cb.fire( r );
           AsyncRequest.this.result.set( r );
           try {
@@ -156,7 +158,9 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
       
       @Override
       public void initialize( Q request ) throws Exception {
-        Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
+        if ( Logs.isExtrrreeeme( ) ) {
+          Logs.extreme( ).debug( cb.getClass( ).getCanonicalName( ) + ".initialize():\n" + request );
+        }
         try {
           cb.initialize( request );
         } catch ( Exception ex ) {
