@@ -189,7 +189,6 @@ static char service_key_path[EUCA_MAX_PATH] = "/var/lib/eucalyptus/keys/node-pk.
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static int try_stage_dir(const char *dir);
 static char *pruntf(boolean log_error, char *format, ...)
 _attribute_wur_ _attribute_format_(2, 3);
 static char *execlp_output(boolean log_error, ...);
@@ -205,34 +204,6 @@ static char *execlp_output(boolean log_error, ...);
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-//!
-//! Looks for file 'stage1' in dir.
-//!
-//! @param[in] dir the path where we are looking for the stage1 file
-//!
-//! @return EUCA_OK if the file is found or the following error code:
-//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
-//!         \li EUCA_NOT_FOUND_ERROR: if the 'stage1' file isn't found in the directory
-//!
-//! @pre The dir parameter must not be NULL
-//!
-//! @post If the 'stage1' file is found, the stage_file_dir variable is set.
-//!
-//! @note
-//!
-static int try_stage_dir(const char *dir)
-{
-    char stage_file_path[EUCA_MAX_PATH] = { 0 };
-    if (dir) {
-        snprintf(stage_file_path, sizeof(stage_file_path), "%s/stage1", dir);
-        if (check_file(stage_file_path))
-            return (EUCA_NOT_FOUND_ERROR);
-        euca_strncpy(stage_files_dir, dir, sizeof(stage_files_dir));
-        return (EUCA_OK);
-    }
-    return (EUCA_INVALID_ERROR);
-}
 
 int imaging_init(const char *new_euca_home_path, const char *new_cloud_cert_path, const char *new_service_key_path)
 {
