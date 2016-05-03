@@ -156,10 +156,14 @@ long int timer_get_interval_usec(struct timeval *ts, struct timeval *te);
 long int eucanetd_timer(struct timeval *t);
 long int eucanetd_timer_usec(struct timeval *t);
 
+int euca_exec(const char *command);
+int euca_exec_no_wait(const char *file, ...);
+
 void *zalloc_check(size_t nmemb, size_t size);
 void *realloc_check(void *ptr, size_t nmemb, size_t size);
 void *append_ptrarr(void *arr, int *max_arr, void *ptr);
 void get_stack_trace ();
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

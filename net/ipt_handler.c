@@ -184,7 +184,6 @@
 int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *psPreloadPath)
 {
     int fd = 0;
-    char sCommand[EUCA_MAX_PATH] = "";
     char sTempFileName[EUCA_MAX_PATH] = "";  // Used to temporarily hold name while we zero out the struct
 
     // Make sure our pointers are valid
@@ -245,9 +244,8 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
         snprintf(pIpt->preloadPath, EUCA_MAX_PATH, "%s", psPreloadPath);
     }
     // test required shell-outs
-    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-save >/dev/null 2>&1", pIpt->cmdprefix);
-    if (system(sCommand)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", sCommand);
+    if (euca_execlp(NULL, pIpt->cmdprefix, "iptables-save", NULL) != EUCA_OK) {
+        LOGERROR("could not execute iptables-save. check command/permissions\n");
         return (1);
     }
 
@@ -276,17 +274,11 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
 //!
 int ipt_system_save(ipt_handler * pIpt)
 {
-    int rc = 0;
-    char sCommand[EUCA_MAX_PATH] = "";
-
-    // Setup and execute the comand
-    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-save -c > %s", pIpt->cmdprefix, pIpt->ipt_file);
-    rc = system(sCommand);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("iptables-save failed '%s'\n", sCommand);
+    if (euca_execlp_redirect(NULL, NULL, pIpt->ipt_file, FALSE, NULL, FALSE, pIpt->cmdprefix, "iptables-save", "-c", NULL) != EUCA_OK) {
+        LOGERROR("iptables-save failed\n");
+        return EUCA_ERROR;
     }
-    return (rc);
+    return EUCA_OK;
 }
 
 //!
@@ -311,16 +303,11 @@ int ipt_system_save(ipt_handler * pIpt)
 //!
 int ipt_system_restore(ipt_handler * pIpt)
 {
-    int rc = 0;
-    char sCommand[EUCA_MAX_PATH] = "";
-
-    // Setup and execute the command
-    snprintf(sCommand, EUCA_MAX_PATH, "%s iptables-restore -c < %s", pIpt->cmdprefix, pIpt->ipt_file);
-    rc = system(sCommand);
-    rc = rc >> 8;
-    if (rc) {
+    int rc = EUCA_OK;
+    if (euca_execlp_redirect(NULL, pIpt->ipt_file, NULL, FALSE, NULL, FALSE, pIpt->cmdprefix, "iptables-restore", "-c", NULL) != EUCA_OK) {
         copy_file(pIpt->ipt_file, "/tmp/euca_ipt_file_failed");
-        LOGERROR("iptables-restore failed '%s': copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n", sCommand);
+        LOGERROR("iptables-restore failed. copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n");
+        rc = EUCA_ERROR;
     }
     unlink(pIpt->ipt_file);
     return (rc);

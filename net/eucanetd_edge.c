@@ -120,7 +120,6 @@
 #include <math.h>
 #include <http.h>
 #include <config.h>
-#include <sequence_executor.h>
 #include <atomic_file.h>
 
 #include "ipt_handler.h"
@@ -437,7 +436,6 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     int i = 0;
     int j = 0;
     char cmd[EUCA_MAX_PATH] = "";
-    sequence_executor cmds = { {0} };
     char *strptra = NULL;
 
     if (getdevinfo(config->pubInterface, &ips, &nms, &max_nets)) {
@@ -452,20 +450,21 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
             for (j = 0; j < max_nets; j++) {
                 if (ips[j] == pGni->public_ips[i]) {
                     // this global public IP is assigned to the public interface
-                    se_init(&cmds, config->cmdprefix, 2, 1);
 
                     strptra = hex2dot(pGni->public_ips[i]);
-                    snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
+                    snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                     EUCA_FREE(strptra);
 
-                    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-                    se_print(&cmds);
-                    rc = se_execute(&cmds);
-                    if (rc) {
-                        LOGERROR("could not execute command sequence (check above log errors for details): flushing public ips\n");
+                    euca_execlp(&rc, config->cmdprefix, "ip", "addr", "del", cmd,  "dev", config->pubInterface, NULL);
+                    rc = rc >> 8;
+                    if(!(rc == 0 || rc == 2)){
+                        LOGWARN("Failed to run ip addr del %s/32 dev %s", strptra, config->pubInterface);
                         ret = 1;
                     }
-                    se_free(&cmds);
+
+                    if (ret) {
+                        LOGERROR("could not execute: flushing public ips\n");
+                    }
                 }
             }
         }
@@ -1122,7 +1121,6 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
     char rule[MAX_RULE_LEN] = "";
     char *strptra = NULL;
     char *strptrb = NULL;
-    sequence_executor cmds = { {0} };
     gni_cluster *mycluster = NULL;
     gni_node *myself = NULL;
     gni_instance *instances = NULL;
@@ -1179,7 +1177,6 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
     }
 
     rc = ipt_handler_repopulate(config->ipt);
-    rc = se_init(&cmds, config->cmdprefix, 2, 1);
 
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
@@ -1219,21 +1216,14 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
             // run some commands
-            rc = se_init(&cmds, config->cmdprefix, 2, 1);
-
-            snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
-            rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-
-            snprintf(cmd, EUCA_MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
-            rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-            se_print(&cmds);
-            rc = se_execute(&cmds);
-            if (rc) {
-                LOGERROR("could not execute command sequence (check above log errors for details): adding ips, sending arpings\n");
+            snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
+            euca_execlp(&rc, config->cmdprefix, "ip", "addr", "add", cmd, "dev", config->pubInterface, NULL);
+            rc = rc >> 8;
+            if (!(rc == 0 || rc == 2)) {
+                LOGERROR("could not execute: adding ips\n");
                 ret = 1;
             }
-            se_free(&cmds);
+            euca_exec_no_wait(NULL, config->cmdprefix, "arping", "-c", "5", "-w", "1", "-U", "-I", config->pubInterface, strptra, NULL);
 
             snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
@@ -1321,20 +1311,13 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
             }
 
             if (!found) {
-                se_init(&cmds, config->cmdprefix, 2, 1);
-
                 strptra = hex2dot(pGni->public_ips[i]);
-                snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
+                snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                 EUCA_FREE(strptra);
-
-                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-                se_print(&cmds);
-                rc = se_execute(&cmds);
-                if (rc) {
-                    LOGERROR("could not execute command sequence (check above log errors for details): revoking no longer in use ips\n");
+                if (euca_execlp(NULL, config->cmdprefix, "ip", "addr", "del", cmd, "dev", config->pubInterface, NULL) != EUCA_OK) {
+                    LOGERROR("could not execute: revoking no longer in use ips\n");
                     ret = 1;
                 }
-                se_free(&cmds);
             }
         }
         EUCA_FREE(ips);
@@ -1666,13 +1649,13 @@ static int install_public_routes(globalNetworkInfo * pGni)
     char *psPrivateSubnet = NULL;
     char *psPrivateGateway = NULL;
     char sCommand[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
     char sPublicRouteFile[EUCA_MAX_PATH] = "";
     boolean found = TRUE;
     gni_subnet *pSubnet = NULL;
     gni_subnet *pMySubnet = NULL;
     gni_cluster *pCluster = NULL;
     gni_cluster *pMyCluster = NULL;
-    sequence_executor routeExecutor = { {0} };
 
     // Make sure the given pointer is valid
     if (!pGni) {
@@ -1701,11 +1684,8 @@ static int install_public_routes(globalNetworkInfo * pGni)
     close(fd);
 
     // Now save our route table for analysis
-    snprintf(sCommand, EUCA_MAX_PATH, "%s ip route list table euca_public > %s", config->cmdprefix, sPublicRouteFile);
-    rc = system(sCommand);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ip public route save failed '%s'\n", sCommand);
+    if (euca_execlp_redirect(NULL, NULL, sPublicRouteFile, FALSE, NULL, FALSE, config->cmdprefix, "ip", "route", "list", "table", "euca_public", NULL) != EUCA_OK) {
+        LOGERROR("ip public route save failed\n");
         unlink(sPublicRouteFile);
         return (1);
     }
@@ -1775,21 +1755,33 @@ static int install_public_routes(globalNetworkInfo * pGni)
 
     // If we did not find any of the subnet's gateway, flush and rebuild
     if (!found) {
-        // Initialize our sequence
-        se_init(&routeExecutor, config->cmdprefix, 2, 1);
 
         // First, flush our routing table
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route flush table euca_public", config->cmdprefix);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "flush", "table", "euca_public", NULL);
+        rc = rc >> 8;
+        if(!(rc == 0 || rc == 2)){
+            LOGWARN("Failed to run ip route flush table euca_public");
+        }
 
         // Add our default gateway
         snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_public", config->cmdprefix, psPublicGateway, config->pubInterface);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", "default", "via", psPublicGateway, "dev", config->pubInterface, "table", "euca_public", NULL);
+        rc = rc >> 8;
+        if(!(rc == 0 || rc == 2)){
+            LOGWARN("Failed to run %s", sCommand);
+            ret = 1;
+        }
 
         // Take care of our own subnet
         slashnet = NETMASK_TO_SLASHNET(pMySubnet->netmask);
         snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_public", config->cmdprefix, psPrivateSubnet, slashnet, config->privInterface);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+        snprintf(cmd, "%s/%u", psPrivateSubnet, slashnet);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "dev", config->privInterface, "table", "euca_public", NULL);
+        rc = rc >> 8;
+        if(!(rc == 0 || rc == 2)){
+            LOGWARN("Failed to run %s", sCommand);
+            ret = 1;
+        }
 
         // Then add our known subnets
         for (i = 0, pSubnet = pGni->subnets; i < pGni->max_subnets; i++, pSubnet++) {
@@ -1800,7 +1792,13 @@ static int install_public_routes(globalNetworkInfo * pGni)
 
                 // Now add the rule
                 snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
-                se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+                snprintf(cmd, "%s/%u", psTmpStr, slashnet,);
+                euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "via", psPrivateGateway, "dev", config->privInterface, "table", "euca_public", NULL);
+                rc = rc >> 8;
+                if(!(rc == 0 || rc == 2)){
+                    LOGWARN("Failed to run %s", sCommand);
+                    ret = 1;
+                }
                 EUCA_FREE(psTmpStr);
             } else {
                 LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
@@ -1822,7 +1820,13 @@ static int install_public_routes(globalNetworkInfo * pGni)
 
                 // Now add the rule
                 snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
-                se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+                snprintf(cmd, "%s/%u", psTmpStr, slashnet,);
+                euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "via", psPrivateGateway, "dev", config->privInterface, "table", "euca_public", NULL);
+                rc = rc >> 8;
+                if(!(rc == 0 || rc == 2)){
+                    LOGWARN("Failed to run %s", sCommand);
+                    ret = 1;
+                }
                 EUCA_FREE(psTmpStr);
             } else {
                 LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
@@ -1830,14 +1834,9 @@ static int install_public_routes(globalNetworkInfo * pGni)
             }
         }
 
-        // Now try pushing what we have
-        se_print(&routeExecutor);
-        if ((rc = se_execute(&routeExecutor)) != 0) {
-            LOGERROR("could not execute command sequence (check above log errors for details): ip public route.\n");
-            ret = 1;
+        if (ret) {
+            LOGERROR("could not execute: ip public route.\n");
         }
-        se_free(&routeExecutor);
-
     }
 
     EUCA_FREE(psPublicGateway);
@@ -1876,11 +1875,11 @@ static int install_private_routes(globalNetworkInfo * pGni)
     char *psGateway = NULL;
     char *psFileContent = NULL;
     char sCommand[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
     char sPrivateRouteFile[EUCA_MAX_PATH] = "";
     boolean found = TRUE;
     gni_subnet *pSubnet = NULL;
     gni_cluster *pCluster = NULL;
-    sequence_executor routeExecutor = { {0} };
 
     // Make sure the given pointer is valid
     if (!pGni) {
@@ -1909,11 +1908,8 @@ static int install_private_routes(globalNetworkInfo * pGni)
     close(fd);
 
     // Now save our route table for analysis
-    snprintf(sCommand, EUCA_MAX_PATH, "%s ip route list table euca_private > %s", config->cmdprefix, sPrivateRouteFile);
-    rc = system(sCommand);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ip private route save failed '%s'\n", sCommand);
+    if (euca_execlp_redirect(NULL, NULL, sPrivateRouteFile, FALSE, NULL, FALSE, config->cmdprefix, "ip", "route", "list", "table", "euca_private", NULL) != EUCA_OK) {
+        LOGERROR("ip private route save failed\n");
         unlink(sPrivateRouteFile);
         return (1);
     }
@@ -1956,28 +1952,38 @@ static int install_private_routes(globalNetworkInfo * pGni)
         // Retrieve our slashnet
         slashnet = NETMASK_TO_SLASHNET(pSubnet->netmask);
 
-        // Initialize our sequence
-        se_init(&routeExecutor, config->cmdprefix, 2, 1);
-
         // flush our routing table first
         snprintf(sCommand, EUCA_MAX_PATH, "%s ip route flush table euca_private", config->cmdprefix);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "flush", "table", "euca_private", NULL);
+        rc = rc >> 8;
+        if(!(rc==0 || rc == 2)){
+            LOGWARN("Failed to run %s", sCommand);
+            ret = 1;
+        }
+
 
         // Add our default gateway
         snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_private", config->cmdprefix, psGateway, config->privInterface);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", "default", "via", psGateway, "dev", config->privInterface, "table", "euca_private", NULL);
+        rc = rc >> 8;
+        if(!(rc == 0 || rc == 2)){
+            LOGWARN("Failed to run %s", sCommand);
+            ret = 1;
+        }
 
         // finally add our subnet to the mix so we can ping from one VM to another on the same bridge
         snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_private", config->cmdprefix, psSubnet, slashnet, config->privInterface);
-        se_add(&routeExecutor, sCommand, NULL, ignore_exit2);
-
-        // Now try pushing what we have
-        se_print(&routeExecutor);
-        if ((rc = se_execute(&routeExecutor)) != 0) {
-            LOGERROR("could not execute command sequence (check above log errors for details): ip private route.\n");
+        snprintf(cmd, EUCA_MAX_PATH, "%s/%u", psSubnet, slashnet);
+        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "dev", config->privInterface, "table", "euca_private", NULL);
+        rc = rc >> 8;
+        if(!(rc == 0 || rc == 2)){
+            LOGWARN("Failed to run %s", sCommand);
             ret = 1;
         }
-        se_free(&routeExecutor);
+
+        if (ret) {
+            LOGERROR("could not execute: ip private route.\n");
+        }
     }
 
     EUCA_FREE(psSubnet);
@@ -2005,6 +2011,7 @@ static int update_host_arp(void)
 #ifdef USE_EUCA_ARP
     int i = 0;
     int rc = 0;
+    int ret = 0;
     u8 aHexOut[ENET_BUF_SIZE] = { 0 };
     int bridgeMacLen = 0;
     int maxInstances = 0;
@@ -2015,17 +2022,11 @@ static int update_host_arp(void)
     char sCommand[EUCA_MAX_PATH] = "";
     gni_node *pNode = NULL;
     gni_instance *pInstances = NULL;
-    sequence_executor arpExecutor = { {0} };
 
     LOGDEBUG("updating ARP rules for peers\n");
 
     rc = ebt_handler_repopulate(config->ebt);
     if ((rc = gni_find_self_node(pGni, &pNode)) == 0) {
-        if ((rc = se_init(&arpExecutor, config->cmdprefix, 2, 1)) != 0) {
-            LOGERROR("Failed to initialize our sequence executor!\n");
-            return (1);
-        }
-
         if ((rc = gni_node_get_instances(pGni, pNode, NULL, 0, NULL, 0, &pInstances, &maxInstances)) == 0) {
             if ((psBridgeMac = INTFC2MAC(config->bridgeDev)) != NULL) {
                 if ((bridgeMacLen = strlen(psBridgeMac)) > 0) {
@@ -2041,8 +2042,11 @@ static int update_host_arp(void)
                                 if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
                                     LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", pInstances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
                                     snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
-                                    if ((rc = se_add(&arpExecutor, sCommand, NULL, ignore_exit2)) != 0) {
-                                        LOGWARN("Fail to schedule gratuitous ARP for host '%s' using mac '%s'. rc=%d\n", psPrivateIp, psBridgeMac, rc);
+                                    euca_execlp(&rc, config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
+                                    rc = rc >> 8;
+                                    if(!(rc == 0 || rc == 2)){
+                                        LOGWARN("Failed to run %s", sCommand);
+                                        ret = 1;
                                     }
                                 }
                                 EUCA_FREE(psPrivateIp);
@@ -2059,12 +2063,9 @@ static int update_host_arp(void)
         // Free our instances
         EUCA_FREE(pInstances);
 
-        // Now try to push what we have
-        se_print(&arpExecutor);
-        if ((rc = se_execute(&arpExecutor)) != 0) {
+        if (ret) {
             LOGERROR("could not execute command sequence (check above log errors for details): gratuitous ARP.\n");
         }
-        se_free(&arpExecutor);
 
         return (0);
     }

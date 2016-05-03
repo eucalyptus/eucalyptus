@@ -203,7 +203,6 @@ static int ipr_handler_add_rule_static(ipr_handler * pIprh, const char *psRule, 
 int ipr_handler_init(ipr_handler * pIprh, const char *psCmdPrefix)
 {
     int fd = 0;
-    char sCommand[EUCA_MAX_PATH] = "";
 
     // Make sure we got the pointer correctly
     if (!pIprh) {
@@ -235,9 +234,8 @@ int ipr_handler_init(ipr_handler * pIprh, const char *psCmdPrefix)
         snprintf(pIprh->sCmdPrefix, EUCA_MAX_PATH, "%s", psCmdPrefix);
     }
     // test required shell-outs
-    snprintf(sCommand, EUCA_MAX_PATH, "%s ip rule list >/dev/null 2>&1", pIprh->sCmdPrefix);
-    if (system(sCommand)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", sCommand);
+    if (euca_execlp(NULL, pIprh->sCmdPrefix, "ip", "rule", "list", NULL) != EUCA_OK) {
+        LOGERROR("could not execute ip rule list. check command/permissions\n");
 
         // Lets clean up the temporary file and empty the file name
         unlink(pIprh->sIpRuleFile);
@@ -290,11 +288,8 @@ int ipr_handler_repopulate(ipr_handler * pIprh)
         return (1);
     }
     // Save our IP rules
-    snprintf(sCommand, EUCA_MAX_PATH, "%s ip rule list > %s", pIprh->sCmdPrefix, pIprh->sIpRuleFile);
-    rc = system(sCommand);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ip rule listing failed '%s'\n", sCommand);
+    if (euca_execlp_redirect(NULL, NULL, pIprh->sIpRuleFile, FALSE, NULL, FALSE, pIprh->sCmdPrefix, "ip", "rule", "list", NULL) != EUCA_OK) {
+        LOGERROR("ip rule listing failed\n");
         return (1);
     }
     // Now open our file to be processed

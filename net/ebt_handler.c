@@ -180,7 +180,6 @@
 int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
 {
     int fd;
-    char cmd[EUCA_MAX_PATH] = "";
     char sTempFilterFile[EUCA_MAX_PATH] = "";
     char sTempNatFile[EUCA_MAX_PATH] = "";
     char sTempAscFile[EUCA_MAX_PATH] = "";
@@ -257,9 +256,8 @@ int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
     }
 
     // test required shell-outs
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
-    if (system(cmd)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "-L", NULL) != EUCA_OK) {
+        LOGERROR("could not execute ebtables -L. check command/permissions\n");
         unlink(ebth->ebt_filter_file);
         unlink(ebth->ebt_nat_file);
         unlink(ebth->ebt_asc_file);
@@ -287,44 +285,24 @@ int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
 //!
 int ebt_system_save(ebt_handler * ebth)
 {
-    int rc = 0;
     int ret = 0;
-    char cmd[EUCA_MAX_PATH] = "";
 
-    ret = 0;
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-save", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-save", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-save -t filter failed\n");
         ret = 1;
     }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-save", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_nat_file, "-t", "nat", "--atomic-save", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-save -t nat failed\n");
         ret = 1;
     }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter -L > %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->ebt_asc_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-list failed '%s'\n", cmd);
+    if (euca_execlp_redirect(NULL, NULL, ebth->ebt_asc_file, FALSE, NULL, FALSE, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "-L", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-list -t filter failed\n");
         ret = 1;
     }
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat -L >> %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->ebt_asc_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-list failed '%s'\n", cmd);
+    if (euca_execlp_redirect(NULL, NULL, ebth->ebt_asc_file, TRUE, NULL, FALSE, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_nat_file, "-t", "nat", "-L", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-list -t filter failed\n");
         ret = 1;
     }
-
     return (ret);
 }
 
@@ -345,30 +323,24 @@ int ebt_system_save(ebt_handler * ebth)
 //!
 int ebt_system_restore(ebt_handler * ebth)
 {
-    int rc;
-    char cmd[EUCA_MAX_PATH];
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-commit", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
+    int ret = EUCA_OK;
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-commit", NULL) != EUCA_OK) {
         copy_file(ebth->ebt_filter_file, "/tmp/euca_ebt_filter_file_failed");
-        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n", cmd);
+        LOGERROR("ebtables-restore failed. copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n");
+        ret = 1;
     }
     unlink(ebth->ebt_filter_file);
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_nat_file, "-t", "nat", "--atomic-commit", NULL) != EUCA_OK) {
         copy_file(ebth->ebt_nat_file, "/tmp/euca_ebt_nat_file_failed");
-        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n", cmd);
+        LOGERROR("ebtables-restore failed. copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n");
+        ret = 1;
     }
     unlink(ebth->ebt_nat_file);
 
     unlink(ebth->ebt_asc_file);
 
-    return (rc);
+    return (ret);
 }
 
 //!
@@ -391,7 +363,6 @@ int ebt_handler_deploy(ebt_handler * ebth)
     int i = 0;
     int j = 0;
     int k = 0;
-    int rc = 0;
     char cmd[EUCA_MAX_PATH] = "";
 
     if (!ebth || !ebth->init) {
@@ -400,19 +371,13 @@ int ebt_handler_deploy(ebt_handler * ebth)
 
     ebt_handler_update_refcounts(ebth);
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-init", ebth->cmdprefix, ebth->ebt_filter_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-init", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-save failed\n");
         return (1);
     }
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-init", ebth->cmdprefix, ebth->ebt_nat_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ebtables-save failed '%s'\n", cmd);
+    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_nat_file, "-t", "nat", "--atomic-init", NULL) != EUCA_OK) {
+        LOGERROR("ebtables-save failed\n");
         return (1);
     }
 
@@ -424,15 +389,16 @@ int ebt_handler_deploy(ebt_handler * ebth)
                     if (!strcmp(ebth->tables[i].name, "filter")) {
                         snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name);
+                        if (euca_exec(cmd) != EUCA_OK) {
+                            LOGERROR("command failed: command=%s\n", cmd);
+                        }
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
                         snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name);
+                        if (euca_exec(cmd) != EUCA_OK) {
+                            LOGERROR("command failed: command=%s\n", cmd);
+                        }
                     }
-                    rc = system(cmd);
-                    rc = rc >> 8;
-                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
-                    if (rc)
-                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
                 }
             }
         }
@@ -442,15 +408,16 @@ int ebt_handler_deploy(ebt_handler * ebth)
                     if (!strcmp(ebth->tables[i].name, "filter")) {
                         snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        if (euca_exec(cmd) != EUCA_OK) {
+                            LOGERROR("command failed: command=%s\n", cmd);
+                        }
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
                         snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        if (euca_exec(cmd) != EUCA_OK) {
+                            LOGERROR("command failed: command=%s\n", cmd);
+                        }
                     }
-                    rc = system(cmd);
-                    rc = rc >> 8;
-                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
-                    if (rc)
-                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
                 }
             }
         }

@@ -829,6 +829,74 @@ long int eucanetd_timer_usec(struct timeval *t)
     return ret;
 }
 
+static char **strsplit_on_space(const char* str) {
+    const char* delim = " ";
+    size_t tokens_alloc = 1;
+    size_t tokens_used = 0;
+    char **tokens = calloc(tokens_alloc, sizeof(char*));
+    char *token, *strtok_ctx;
+    char *s = strdup(str);
+    for (token = strtok_r(s, delim, &strtok_ctx); token != NULL; token = strtok_r(NULL, delim, &strtok_ctx)) {
+        if (tokens_used == tokens_alloc) {
+            tokens_alloc *= 2;
+            tokens = realloc(tokens, tokens_alloc * sizeof(char*));
+        }
+        tokens[tokens_used++] = strdup(token);
+    }
+    free(s);
+    if (tokens_used == 0) {
+        free(tokens);
+        tokens = NULL;
+    } else {
+        tokens = realloc(tokens, (tokens_used + 1) * sizeof(char*));
+        tokens[tokens_used] = (char *)NULL;
+    }
+
+    return tokens;
+}
+
+int euca_exec_no_wait(const char *file, ...)
+{
+    int result = 0;
+    char **argv = NULL;
+
+    {
+        va_list va;
+        va_start(va, file);
+        argv = build_argv(file, va);
+        va_end(va);
+        if (argv == NULL)
+            return EUCA_INVALID_ERROR;
+    }
+
+    pid_t pid;
+    result = euca_execvp_fd(&pid, NULL, NULL, NULL, argv);
+    free_char_list(argv);
+
+    return result;
+}
+
+/**
+ * Invokes euca_execvp_fd with passed command
+ * @param command that should be executed with parameters. Parameters must be separated by one space.
+ * @return exit code from executed script
+ */
+int euca_exec(const char *command)
+{
+    int result = 0;
+    pid_t pid;
+    int pStatus = -1;
+    char **args = strsplit_on_space(command);
+    result = euca_execvp_fd(&pid, NULL, NULL, NULL, args);
+    if (result == EUCA_OK) {
+        result = euca_waitpid(pid, &pStatus);
+    } else {
+        LOGERROR("Failed to run %s\n", command);
+    }
+    free_char_list(args);
+    return result;
+}
+
 /**
  * Invokes calloc() and perform error checking.
  * @param nmemb [in] see calloc() man pages.

@@ -180,7 +180,6 @@
 int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
 {
     int fd;
-    char cmd[EUCA_MAX_PATH];
     char sTempFileName[EUCA_MAX_PATH] = "";
 
     if (!ipsh) {
@@ -220,9 +219,8 @@ int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
     }
     
     // test required shell-outs
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
-    if (system(cmd)) {
-        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
+    if (euca_execlp(NULL, ipsh->cmdprefix, "ipset", "-L", NULL) != EUCA_OK) {
+        LOGERROR("could not execute ipset -L. check command/permissions\n");
         return (1);
     }
 
@@ -247,14 +245,10 @@ int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
 //!
 int ips_system_save(ips_handler * ipsh)
 {
-    int rc = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc) {
-        LOGERROR("ipset save failed '%s'\n", cmd);
+    int rc = EUCA_OK;
+    if (euca_execlp_redirect(NULL, NULL, ipsh->ips_file, FALSE, NULL, FALSE, ipsh->cmdprefix, "ipset", "save", NULL) != EUCA_OK) {
+        LOGERROR("ipset save failed\n");
+        rc = EUCA_ERROR;
     }
     return (rc);
 }
@@ -276,16 +270,11 @@ int ips_system_save(ips_handler * ipsh)
 //!
 int ips_system_restore(ips_handler * ipsh)
 {
-    int rc;
-    char cmd[EUCA_MAX_PATH];
-
-    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -! restore < %s", ipsh->cmdprefix, ipsh->ips_file);
-    rc = system(cmd);
-    rc = rc >> 8;
-    LOGDEBUG("RESTORE CMD: %s\n", cmd);
-    if (rc) {
+    int rc = EUCA_OK;
+    if (euca_execlp_redirect(NULL, ipsh->ips_file, NULL, FALSE, NULL, FALSE, ipsh->cmdprefix, "ipset", "-!", "restore", NULL) != EUCA_OK) {
         copy_file(ipsh->ips_file, "/tmp/euca_ips_file_failed");
-        LOGERROR("ipset restore failed '%s': copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n", cmd);
+        LOGERROR("ipset restore failed. copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n");
+        rc = EUCA_ERROR;
     }
     unlink(ipsh->ips_file);
     return (rc);
