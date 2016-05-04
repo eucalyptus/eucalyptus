@@ -37,13 +37,13 @@
 
     <resolution>
       <message>
-          1) Install the imaging worker image package:
+      1) Install the service image package:
 
-          yum install eucalyptus-imaging-worker-image
+          yum install eucalyptus-service-image
 
-          2) Install and register the imaging worker image:
+      2) Install and register the load balancer image:
 
-          euca-install-imaging-worker --install-default
+          esi-install-image --install-default
 
       </message>
     </resolution>

@@ -37,13 +37,13 @@
 
     <resolution>
       <message>
-      1) Install the load balancer image package:
+      1) Install the service image package:
 
-          yum install eucalyptus-load-balancer-image
+          yum install eucalyptus-service-image
 
       2) Install and register the load balancer image:
 
-          euca-install-load-balancer --install-default
+          esi-install-image --install-default
 
       </message>
     </resolution>
