@@ -155,7 +155,11 @@
 #define TCP_PROTOCOL_NUMBER 6
 #define UDP_PROTOCOL_NUMBER 17
 #define ICMP_PROTOCOL_NUMBER 1
+static boolean xml_initialized = FALSE;    //!< To determine if the XML library has been initialized
 
+#ifndef XML_INIT()                    // if compiling as a stand-alone binary (for unit testing)
+#define XML_INIT() if (!xml_initialized) { xmlInitParser(); xml_initialized = TRUE; }
+#endif
 //! Static prototypes
 static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len);
 
@@ -2096,7 +2100,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
     gni_clear(gni);
     LOGTRACE("gni cleared in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    xmlInitParser();
+    XML_INIT();
     LIBXML_TEST_VERSION
     docptr = xmlParseFile(xmlpath);
     if (docptr == NULL) {
@@ -2149,7 +2153,6 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
 
     xmlXPathFreeContext(ctxptr);
     xmlFreeDoc(docptr);
-    xmlCleanupParser();
 
     if (mode == GNI_POPULATE_ALL) {
         // Find VPC and subnet interfaces
