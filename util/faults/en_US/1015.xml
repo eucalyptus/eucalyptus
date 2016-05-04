@@ -41,9 +41,13 @@
 
           yum install eucalyptus-service-image
 
-      2) Install and register the load balancer image:
+      2) Install and register the imaging worker image:
 
           esi-install-image --install-default
+
+      3) Create imaging worker CF stack:
+
+          esi-manage-stack -a create imaging
 
       </message>
     </resolution>
