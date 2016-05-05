@@ -337,7 +337,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<Loadbalanci
 		}
 
 		//
-		if( !Topology.isEnabledLocally( LoadBalancingBackend.class ) )
+		if( !Topology.isEnabled( LoadBalancingBackend.class ) )
 			return;
 
 		if ((emi!=null && emi.length()>0) ||
