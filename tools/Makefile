@@ -129,6 +129,8 @@ install: build
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy
 	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
+	@$(INSTALL) -m 755 nodeadmin-archive-instance $(DESTDIR)$(sbindir)/nodeadmin-archive-instance
+	@$(INSTALL) -m 755 nodeadmin-restore-instance $(DESTDIR)$(sbindir)/nodeadmin-restore-instance
 	@make -C status install
 	@make -C imaging install
 ifeq ($(USE_SYSVINIT), yes)
@@ -168,5 +170,7 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/*.json
+	@$(RM) -f $(DESTDIR)$(sbindir)/nodeadmin-archive-instance
+	@$(RM) -f $(DESTDIR)$(sbindir)/nodeadmin-restore-instance
 	@make -C status uninstall
 	@make -C imaging uninstall
