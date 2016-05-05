@@ -1,0 +1,250 @@
+#!/usr/bin/python -tt
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import sys
+import argparse
+import logging
+import os
+import time
+import os.path
+import signal
+
+from subprocess import check_call, Popen, PIPE
+from ConfigParser import ConfigParser
+from StringIO import StringIO
+from xml.dom.minidom import parseString
+from socket import getaddrinfo, gethostname, IPPROTO_TCP
+from fnmatch import fnmatch
+
+import libvirt
+
+_ETC_EUCALYPTUS = '/etc/eucalyptus'
+_RUN_EUCALYPTUS = '/var/run/eucalyptus'
+_LIB_EUCALYPTUS = '/var/lib/eucalyptus'
+_EUCALYPTUS_CONF = 'eucalyptus.conf'
+_GLOBAL_NETWORK_INFO_XML = 'global_network_info.xml'
+_INSTANCE_XML = 'instance.xml'
+_INSTANCE_LIBVIRT_XML = 'instance-libvirt.xml'
+_WORK = 'work'
+_INSTANCE_PATH = 'INSTANCE_PATH'
+_GLOBAL_SECTION = 'GLOBAL'
+_QEMU_CONN = 'qemu:///system'
+_DEFAULT_TIMEOUT = 60
+_INSTANCE_RAM = '-ram.save'
+_BLOCK_SAVE = '-block.save'
+
+
+class NodeAdminRestoreError(Exception):
+    def __init__(self, *args):
+        super(NodeAdminRestoreError, self).__init__(*args)
+        logging.error(*args)
+
+
+def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    # set the timeout handler
+    old_handler = signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_duration)
+    try:
+        result = func(*args, **kwargs)
+    except TimeoutError as exc:
+        logging.debug("timeout period expired %s", exc)
+        result = default
+    finally:
+        signal.alarm(0)
+
+        if old_handler and old_handler not in [signal.SIG_DFL, signal.SIG_IGN]:
+            signal.signal(signal.SIGALRM, old_handler)
+
+    return result
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Import an instance to libvirt after "
+                                     "extracting artifacts from archive",
+                                     epilog="As an alternative to the commandline, "
+                                     "params can be placed in a file, one per line, and "
+                                     "specified on the commandline like '%(prog)s @params.conf'.",
+                                     fromfile_prefix_chars='@')
+    parser.add_argument("archive_file",
+                        help="file path to the archive storing the instance")
+    parser.add_argument("--verbose",
+                        help="increase output verbosity",
+                        action="store_true")
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        loglevel = logging.DEBUG
+    else:
+        loglevel = logging.INFO
+
+    return (args, loglevel)
+
+
+def _parse_eucalyptus_conf():
+    parser = ConfigParser()
+    config = StringIO()
+
+    config.write('[%s]\n' % _GLOBAL_SECTION)
+    config.write(open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)).read())
+    config.seek(0, os.SEEK_SET)
+
+    parser.readfp(config)
+
+    return parser
+
+
+def _find_instance(archive_path, instances_path):
+    tar_cmd = ["/bin/tar", "-xzOf", archive_path, "--wildcards", "*/instance.xml"]
+
+    proc = Popen(tar_cmd, stdout=PIPE)
+    instance_xml = proc.stdout.read()
+    logging.debug(instance_xml)
+    parser = parseString(instance_xml)
+
+    instance_path = parser.getElementsByTagName('instancePath')[0].childNodes[0].data
+    instance_name = os.path.split(instance_path)[1]
+
+    return (instance_name, instance_path)
+
+
+def _find_storage_controller():
+    euserv_cmd = ["/usr/bin/euserv-describe-services", "--filter", "service-type=storage", "--expert"]
+
+    proc = Popen(euserv_cmd, stdout=PIPE)
+    storage_controller = proc.stdout.read().split()[4]
+    logging.debug(storage_controller)
+
+    return storage_controller
+
+
+def _find_iqn():
+    cat_cmd = ["/bin/cat", "/etc/iscsi/initiatorname.iscsi"]
+
+    proc = Popen(cat_cmd, stdout=PIPE)
+    iqn = proc.stdout.read().strip('\n').split('=')[1]
+    logging.debug(iqn)
+
+    return iqn
+
+
+def _find_ip():
+    for socket_info in getaddrinfo(gethostname(), 80, 0, 0, IPPROTO_TCP):
+        if len(socket_info[4][0].split('.')) == 4:
+            logging.debug(socket_info[4][0])
+            return socket_info[4][0]
+
+
+def _get_libvirt_connection():
+    conn = libvirt.open(_QEMU_CONN)
+    if not conn:
+        raise NodeAdminRestoreError("Failed to connect to libvirt (%s)", _QEMU_CONN)
+
+    return conn
+
+
+def _lookup_domain(conn, instance_name):
+    domain = conn.lookupByName(instance_name)
+    if not domain:
+        conn.close()
+        raise NodeAdminRestoreError("Failed to find %s in libvirt list of domains",
+                                    instance_name)
+
+    return domain
+
+
+def _restore_instance(instance, instance_path, *args, **kwargs):
+    conn = _get_libvirt_connection()
+
+    rc = conn.restore(os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+
+    if rc:
+        raise NodeAdminRestoreError("Failed to restore instance %s at %s (%d)", instance, instance_path, rc)
+
+
+def _extract_files(instances_path, archive_path):
+    if not os.path.exists(instances_path):
+        os.makedirs(instances_path)
+
+    tar_cmd = ["/bin/tar", "-xf", archive_path, "-C", "/", "--incremental"]
+
+    check_call(tar_cmd)
+
+
+def _get_instancepath():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
+
+
+def import_instance(instance_path, archive_path):
+    _extract_files(instance_path, archive_path)
+
+    instance_name = os.path.basename(instance_path)
+
+    if not os.path.exists(os.path.join(instance_path, _INSTANCE_LIBVIRT_XML)):
+        raise NodeAdminRestoreError("Failed to extract libvirt instance xml file %s",
+                                    os.path.join(instance_path, _INSTANCE_LIBVIRT_XML))
+
+    if not os.path.exists(os.path.join(instance_path, "%s%s" % (instance_name, _INSTANCE_RAM))):
+        raise NodeAdminRestoreError("Failed to extract ram save file %s",
+                                    os.path.join(instance_path, "%s%s" % (instance_name, _INSTANCE_RAM)))
+
+    _restore_instance(instance_name, instance_path)
+    logging.info("instance %s restored", instance_name)
+
+    return 0
+
+
+def main(args, log_level):
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
+    logging.debug("Your Arguments: %s", args)
+
+    logging.info("import on %s", args.archive_file)
+
+    if not os.path.exists(args.archive_file):
+        raise NodeAdminRestoreError("%s not found", args.archive_file)
+
+    instance_tuple = _find_instance(args.archive_file, _get_instancepath())
+
+    if instance_tuple:
+        rc = import_instance(instance_tuple[1], args.archive_file)
+
+        if rc:
+            raise NodeAdminRestoreError("import instance returned %d", rc)
+
+    return 0
+
+
+if __name__ == '__main__':
+        args, log_level = _parse_args()
+        sys.exit(main(args, log_level))

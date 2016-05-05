@@ -1,0 +1,352 @@
+#!/usr/bin/python -tt
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import sys
+import argparse
+import logging
+import os
+import time
+import os.path
+import signal
+
+from subprocess import check_call
+from ConfigParser import ConfigParser
+from StringIO import StringIO
+from xml.dom.minidom import parseString, parse
+from glob import glob
+
+import libvirt
+
+_ETC_EUCALYPTUS = '/etc/eucalyptus'
+_RUN_EUCALYPTUS = '/var/run/eucalyptus'
+_LIB_EUCALYPTUS = '/var/lib/eucalyptus'
+_INSTANCE_CACHE = '/var/lib/eucalyptus/instances/cache'
+_EUCALYPTUS_CONF = 'eucalyptus.conf'
+_GLOBAL_NETWORK_INFO_XML = 'global_network_info.xml'
+_WORK = 'work'
+_INSTANCE_PATH = 'INSTANCE_PATH'
+_GLOBAL_SECTION = 'GLOBAL'
+_QEMU_CONN = 'qemu:///system'
+_DEFAULT_TIMEOUT = 60
+_EXPORT_TAR = '-archive.tgz'
+_INSTANCE_RAM = '-ram.save'
+_BLOCK_SAVE = '-block.save'
+_LIBVIRT_XML = 'instance-libvirt.xml'
+
+
+class NodeAdminArchiveError(Exception):
+    def __init__(self, *args):
+        super(NodeAdminArchiveError, self).__init__(*args)
+        logging.error(*args)
+
+
+def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    # set the timeout handler
+    old_handler = signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_duration)
+    try:
+        result = func(*args, **kwargs)
+    except TimeoutError as exc:
+        logging.debug("timeout period expired %s", exc)
+        result = default
+    finally:
+        signal.alarm(0)
+
+        if old_handler and old_handler not in [signal.SIG_DFL, signal.SIG_IGN]:
+            signal.signal(signal.SIGALRM, old_handler)
+
+    return result
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="Export an instance from libvirt and "
+                                     "place artifacts in an archive",
+                                     epilog="As an alternative to the commandline, "
+                                     "params can be placed in a file, one per line, and "
+                                     "specified on the commandline like '%(prog)s @params.conf'.",
+                                     fromfile_prefix_chars='@')
+
+    group_i = parser.add_mutually_exclusive_group(required=True)
+    group_i.add_argument("--all",
+                         help="all instances are targeted for export and placed in the directory specified",
+                         metavar="output-directory")
+    group_i.add_argument("--instance",
+                         help="name of the instance target for export and the target archive",
+                         nargs=2,
+                         metavar=("instance-name", "output-file"))
+
+    parser.add_argument("--shutdown",
+                        help="shutdown the instance first instead of suspend",
+                        action="store_true")
+    parser.add_argument("--verbose",
+                        help="increase output verbosity",
+                        action="store_true")
+    parser.add_argument("--no-compression",
+                        help="skip compression during archive operation",
+                        action="store_true")
+
+    args = parser.parse_args()
+    loglevel = logging.INFO
+
+    if args.verbose:
+        loglevel = logging.DEBUG
+
+    return (args, loglevel)
+
+
+def _parse_eucalyptus_conf():
+    parser = ConfigParser()
+    config = StringIO()
+
+    logging.debug("attempting to load %s", os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF))
+    config.write('[%s]\n' % _GLOBAL_SECTION)
+    config.write(open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)).read())
+    config.seek(0, os.SEEK_SET)
+
+    parser.readfp(config)
+
+    return parser
+
+
+def _list_instances():
+    logging.debug("attempting to open %s", _QEMU_CONN)
+    conn = libvirt.open(_QEMU_CONN)
+    if not conn:
+        logging.debug("failed to connect to %s", _QEMU_CONN)
+        return None
+
+    return [domain.name() for domain in conn.listAllDomains(0)]
+
+
+def _get_libvirt_connection():
+    conn = libvirt.open(_QEMU_CONN)
+    if not conn:
+        raise NodeAdminArchiveError("Failed to connect to libvirt (%s)", _QEMU_CONN)
+
+    return conn
+
+
+def _lookup_domain(conn, instance_name):
+    domain = conn.lookupByName(instance_name)
+    if not domain:
+        conn.close()
+        raise NodeAdminArchiveError("Failed to find %s in libvirt list of domains",
+                                    instance_name)
+
+    return domain
+
+
+def _modify_libvirt_xml(instance_path):
+    with open(os.path.join(instance_path, _LIBVIRT_XML)) as xml_file:
+        parser = parse(xml_file)
+
+    for elem in parser.getElementsByTagName("disk"):
+        elem.setAttribute("type", "file")
+        for serial in elem.getElementsByTagName('serial'):
+            elem.removeChild(serial)
+
+        for driver in elem.getElementsByTagName("driver"):
+            driver.removeAttribute("cache")
+            driver.setAttribute("name", "qemu")
+            driver.setAttribute("type", "raw")
+
+        for source in elem.getElementsByTagName("source"):
+            source.setAttribute("file", source.getAttribute("dev")[0])
+            source.removeAttribute("dev")
+
+    with open(os.path.join(instance_path, _LIBVIRT_XML), 'wb') as xml_file:
+        parser.writexml(xml_file)
+
+
+def _find_instance(instance):
+    logging.debug("attempting to locate %s in libvirt at %s", instance, _QEMU_CONN)
+    conn = _get_libvirt_connection()
+    domain = _lookup_domain(conn, instance)
+
+    parser = parseString(domain.XMLDesc(0))
+    if not parser:
+        conn.close()
+        raise NodeAdminArchiveError("Failed to parse xml for domain (%s)\n%s\n",
+                                    instance, domain.XMLDesc(0))
+
+    instances_path = os.path.join(_get_instances_path(), _WORK)
+    logging.debug("found instances path at %s", instances_path)
+
+    for elem in parser.getElementsByTagName('source'):
+        dev_path = elem.getAttribute('dev')
+        logging.debug("attempting to locate instance %s path on disk with libvirt device location %s",
+                      instance, dev_path)
+
+        if len(dev_path.split(instance)) == 2:
+            conn.close()
+            return (instance, os.path.join(dev_path.split(instance)[0], instance))
+
+    conn.close()
+    raise NodeAdminArchiveError("Failed to find instance %s", instance)
+
+
+def _save_instance(instance, instance_path, *args, **kwargs):
+    logging.debug("attempting to save instance %s at %s to %s",
+                  instance, _QEMU_CONN,
+                  os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+    conn = _get_libvirt_connection()
+    domain = _lookup_domain(conn, instance)
+
+    if domain.state(0)[0] is not 3:
+        rc = domain.save(os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+        logging.debug("save for domain %s returned %d", instance, rc)
+
+        if rc:
+            raise NodeAdminArchiveError("Failed attempting to save instance %s %d", instance, rc)
+
+    return 0
+
+
+def _shutdown_instance(instance, *args, **kwargs):
+    logging.debug("attempting to shutdown instance %s at %s", instance, _QEMU_CONN)
+    conn = _get_libvirt_connection()
+    domain = _lookup_domain(conn, instance)
+
+    if domain.state(0)[0] is not 5:
+        rc = domain.shutdown()
+        logging.debug("shutdown for domain %s returned %d", instance, rc)
+
+    while domain.state(0)[0] is not 5:
+        time.sleep(1)
+
+    return 0
+
+
+def _create_tar(files, archive_path, skip_compression):
+    tar_cmd = ["/bin/tar"]
+
+    if skip_compression:
+        tar_cmd.extend(["-cf", archive_path])
+    else:
+        tar_cmd.extend(["-czf", archive_path])
+
+    tar_cmd.extend(files)
+
+    rc = check_call(tar_cmd)
+    if rc:
+        NodeAdminArchiveError("Failed to create tar with cmd (%s)", tar_cmd)
+
+
+def _gather_files(instance_name, instance_path):
+    logging.debug("attempting to gather list of files for archiving at %s for instance %s",
+                  instance_path, instance_name)
+
+    if not os.path.exists(os.path.join(instance_path, _GLOBAL_NETWORK_INFO_XML)):
+        os.link(os.path.join(_RUN_EUCALYPTUS, _GLOBAL_NETWORK_INFO_XML),
+                os.path.join(instance_path, _GLOBAL_NETWORK_INFO_XML))
+
+    for block_file in glob("%s/*.blocks" % instance_path):
+        dir_name = os.path.splitext(os.path.basename(block_file))[0]
+        with open(os.path.join(instance_path, "%s.dm" % dir_name)) as dm_file:
+            device = dm_file.read().split()[-1]
+
+        block_save = "%s%s" % (os.path.join(instance_path, dir_name), _BLOCK_SAVE)
+        logging.debug("copying block device /dev/mapper/%s to file %s", device, block_save)
+        dd_cmd = ['/bin/dd', "if=/dev/mapper/%s" % device,
+                  "of=%s" % block_save, "bs=4M"]
+        rc = check_call(dd_cmd)
+        if rc:
+            raise NodeAdminArchiveError("Failed to copy block device /dev/mapper/%s to file %s (%d)",
+                                        device, block_save, rc)
+
+    for link_file in glob("%s/link-to-vd*" % instance_path):
+        link_target = "-".join(os.path.basename(os.readlink(link_file)).split('-')[-3:])
+        os.unlink(link_file)
+        os.symlink(os.path.join(instance_path, "%s%s" % (link_target, _BLOCK_SAVE)), link_file)
+
+    target_files = [os.path.join(instance_path, file) for file in os.listdir(instance_path)
+                    if os.path.splitext(file)[1] not in
+                    [".dm", ".deps", ".sig", ".lock", ".loopback", ".blocks"]]
+
+    return target_files
+
+
+def _get_instances_path():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
+
+
+def export_instance(instance, output_file, shutdown, skip_compression):
+    logging.debug("attempting export of instance %s", instance)
+    instance_tuple = _find_instance(instance)
+    logging.debug("found instance tuple %s %s", instance_tuple[0], instance_tuple[1])
+
+    if shutdown:
+        rc = _time_out(func=_shutdown_instance,
+                       args=[instance_tuple[0]],
+                       timeout_duration=_DEFAULT_TIMEOUT)
+        if rc:
+            raise NodeAdminArchiveError("Failed attempting to shutdown instance %s %d",
+                                        instance, rc)
+    else:
+        rc = _time_out(func=_save_instance,
+                       args=[instance_tuple[0], instance_tuple[1]],
+                       timeout_duration=_DEFAULT_TIMEOUT)
+        if rc:
+            raise NodeAdminArchiveError("Failed attempting to suspend instance %s %d",
+                                        instance, rc)
+
+    tar_files = _gather_files(instance_tuple[0], instance_tuple[1])
+    _modify_libvirt_xml(instance_tuple[1])
+    _create_tar(tar_files, output_file, skip_compression)
+
+
+def _main(args, log_level):
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
+    logging.debug("Your Arguments: %s", args)
+
+    if args.all:
+        logging.debug("export on all instances")
+        for instance in _list_instances():
+            logging.debug("export on %s", instance)
+            output_file = os.path.join(args.all, instance + _EXPORT_TAR)
+            export_instance(instance, output_file, args.shutdown, args.no_compression)
+
+            logging.info("Export of instance %s located at %s", instance, output_file)
+    else:
+        logging.debug("export on %s", args.instance[0])
+        export_instance(args.instance[0], args.instance[1], args.shutdown, args.no_compression)
+
+        logging.info("Export for instance %s located at %s", args.instance[0], args.instance[1])
+
+    return 0
+
+
+if __name__ == '__main__':
+    args, log_level = _parse_args()
+    sys.exit(_main(args, log_level))
