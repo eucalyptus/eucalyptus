@@ -127,19 +127,14 @@ public class ServiceContextManager {
     
     @Override
     public boolean start( ) throws Exception {
-      new Thread( ) {
-        
-        @Override
-        public void run( ) {
-          try {
-            singleton.update( );
-            singleton.getClient( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex, ex );
-          }
+      new Thread(() -> {
+        try {
+          singleton.update( );
+          ServiceContextManager.getClient( );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
         }
-        
-      }.start( );
+      }).start( );
       return true;
     }
   }
@@ -149,31 +144,24 @@ public class ServiceContextManager {
   private static ServiceContextManager                 singleton         = new ServiceContextManager( );
   
   private static final MuleContextFactory              contextFactory    = new DefaultMuleContextFactory( );
-  private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<String, String>( );
-  private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<String, String>( );
+  private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<>();
+  private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<>();
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
   private final AtomicBoolean                          running           = new AtomicBoolean( true );
-  private final ReentrantReadWriteLock                 canHas            = new ReentrantReadWriteLock( );
   private final Lock                                   canHasWrite;
   private final Lock                                   canHasRead;
-  private final BlockingQueue<ServiceConfiguration>    queue             = new LinkedBlockingQueue<ServiceConfiguration>( );
-  private MuleContext                                  context;
+  private final BlockingQueue<ServiceConfiguration>    queue             = new LinkedBlockingQueue<>();
+  private volatile MuleContext                         context;
   private MuleClient                                   client;
   
   private ServiceContextManager( ) {
-    this.canHasRead = this.canHas.readLock( );
-    this.canHasWrite = this.canHas.writeLock( );
-    OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
-      
-      @Override
-      public void run( ) {
-        ServiceContextManager.shutdown( );
-      }
-      
-    } );
+    ReentrantReadWriteLock canHas = new ReentrantReadWriteLock();
+    this.canHasRead = canHas.readLock( );
+    this.canHasWrite = canHas.writeLock( );
+    OrderedShutdown.registerPreShutdownHook(ServiceContextManager::shutdown);
   }
   
-  public static final void restartSync( ) {
+  public static void restartSync( ) {
     if ( singleton.canHasWrite.tryLock( ) ) {
       try {
         singleton.update( );
@@ -187,76 +175,67 @@ public class ServiceContextManager {
   }
   
   private void update( ) {
-    if ( this.context != null ) {
-      return;
-    } else {
-      this.canHasWrite.lock( );
-      try {
-        this.context = this.createContext( );
-        checkParam( this.context, notNullValue() );
+    if (context == null) {
+      canHasWrite.lock();
+      if (context == null) {
         try {
-          this.context.start( );
-          // Extend MuleClient to override method with fix as per pull request: 
-          // - https://github.com/mulesoft/mule/pull/124
-          this.client = new MuleClient( this.context ) { 
-            @Override
-            protected InboundEndpoint getDefaultClientEndpoint( final Service service, final Object payload, final boolean sync ) throws MuleException {
-              if (!(service.getMessageSource() instanceof ServiceCompositeMessageSource))
-              {
-                throw new IllegalStateException(
-                    "Only 'CompositeMessageSource' is supported with MuleClient.sendDirect() and MuleClient.dispatchDirect()");
-              }
+          context = createContext();
+          checkParam(context, notNullValue());
+          try {
+            this.context.start();
+            // Extend MuleClient to override method with fix as per pull request:
+            // - https://github.com/mulesoft/mule/pull/124
+            this.client = new MuleClient(this.context) {
+              @Override
+              protected InboundEndpoint getDefaultClientEndpoint(final Service service, final Object payload, final boolean sync) throws MuleException {
+                if (!(service.getMessageSource() instanceof ServiceCompositeMessageSource)) {
+                  throw new IllegalStateException(
+                      "Only 'CompositeMessageSource' is supported with MuleClient.sendDirect() and MuleClient.dispatchDirect()");
+                }
 
-              // as we are bypassing the message transport layer we need to check that
-              InboundEndpoint endpoint = ((ServiceCompositeMessageSource) service.getMessageSource()).getEndpoints().get(0);
-              if (endpoint != null)
-              {
-                List<Transformer> transformers = endpoint.getTransformers(); 
-                if (transformers != null && !transformers.isEmpty()) 
-                {
-                  // the original code here really did just check the first exception
-                  // as far as i can tell
-                  if ( TransformerUtils.isSourceTypeSupportedByFirst( transformers,
-                      payload.getClass() ))
-                  {
+                // as we are bypassing the message transport layer we need to check that
+                InboundEndpoint endpoint = ((ServiceCompositeMessageSource) service.getMessageSource()).getEndpoints().get(0);
+                if (endpoint != null) {
+                  List<Transformer> transformers = endpoint.getTransformers();
+                  if (transformers != null && !transformers.isEmpty()) {
+                    // the original code here really did just check the first exception
+                    // as far as i can tell
+                    if (TransformerUtils.isSourceTypeSupportedByFirst(transformers,
+                        payload.getClass())) {
+                      return endpoint;
+                    } else {
+                      EndpointBuilder builder = new EndpointURIEndpointBuilder(endpoint);
+                      builder.setTransformers(new LinkedList<>());
+                      builder.setExchangePattern(MessageExchangePattern.REQUEST_RESPONSE);
+                      return getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
+                    }
+                  } else {
                     return endpoint;
                   }
-                  else
-                  {
-                    EndpointBuilder builder = new EndpointURIEndpointBuilder(endpoint);
-                    builder.setTransformers(new LinkedList());
-                    builder.setExchangePattern( MessageExchangePattern.REQUEST_RESPONSE);
-                    return getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
-                  }
+                } else {
+                  EndpointBuilder builder = new EndpointURIEndpointBuilder("vm://mule.client", getMuleContext());
+                  builder.setName("muleClientProvider");
+                  endpoint = getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
                 }
-                else
-                {
-                  return endpoint;
-                }
+                return endpoint;
               }
-              else
-              {
-                EndpointBuilder builder = new EndpointURIEndpointBuilder("vm://mule.client", getMuleContext());
-                builder.setName("muleClientProvider");
-                endpoint = getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
+            };
+            this.endpointToService.clear();
+            this.serviceToEndpoint.clear();
+            for (final Service service : this.context.getRegistry().lookupObjects(Service.class)) {
+              final ServiceCompositeMessageSource source = (ServiceCompositeMessageSource) service.getMessageSource();
+              for (final InboundEndpoint in : source.getEndpoints()) {
+                this.endpointToService.put(in.getEndpointURI().toString(), service.getName());
+                this.serviceToEndpoint.put(service.getName(), in.getEndpointURI().toString());
               }
-              return endpoint;            }
-          };
-          this.endpointToService.clear( );
-          this.serviceToEndpoint.clear( );
-          for ( final Service service : this.context.getRegistry( ).lookupObjects( Service.class ) ) {
-            final ServiceCompositeMessageSource source = (ServiceCompositeMessageSource)service.getMessageSource( );
-            for ( final InboundEndpoint in : source.getEndpoints( ) ) {
-              this.endpointToService.put( in.getEndpointURI( ).toString( ), service.getName( ) );
-              this.serviceToEndpoint.put( service.getName( ), in.getEndpointURI( ).toString( ) );
             }
+          } catch (final Exception e) {
+            LOG.error(e, e);
+            throw Exceptions.toUndeclared(new ServiceInitializationException("Failed to start service this.context.", e));
           }
-        } catch ( final Exception e ) {
-          LOG.error( e, e );
-          throw Exceptions.toUndeclared( new ServiceInitializationException( "Failed to start service this.context.", e ) );
+        } finally {
+          this.canHasWrite.unlock();
         }
-      } finally {
-        this.canHasWrite.unlock( );
       }
     }
   }
@@ -328,8 +307,7 @@ public class ServiceContextManager {
     Logs.extreme( ).trace( "===================================" );
     Logs.extreme( ).trace( outString );
     Logs.extreme( ).trace( "===================================" );
-    final ConfigResource configRsc = new ConfigResource( componentId.getServiceModelFileName( ), bis );
-    return configRsc;
+    return new ConfigResource( componentId.getServiceModelFileName( ), bis );
   }
   
   private static String FAIL_MSG = "ESB client not ready because the service bus has not been started.";

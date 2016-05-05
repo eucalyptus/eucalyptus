@@ -88,21 +88,19 @@ public class BindingManager {
   private static Map<BindingKey, Binding> bindingMap            = Maps.newConcurrentMap( );
   private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
   private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
-  private static Binding              DEFAULT                   = null;
+  private static volatile Binding     DEFAULT;
   private static Map<BindingKey,Future<Boolean>> bindingSeedMap = Maps.newConcurrentMap( );
   
   public static Binding getDefaultBinding( ) {
-    if ( DEFAULT != null ) {
-      return DEFAULT;
-    } else {
-      synchronized ( BindingManager.class ) {
-        if ( DEFAULT != null ) {
-          return DEFAULT;
-        } else {
-          return ( DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.defaultBindingName( ) ) ) );
+    if (DEFAULT == null) {
+      synchronized (BindingManager.class) {
+        if (DEFAULT == null) {
+          DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.defaultBindingName( ) ) );
         }
       }
     }
+
+    return DEFAULT;
   }
   
   public static String sanitizeNamespace( String namespace ) {

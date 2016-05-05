@@ -228,7 +228,7 @@ public class Threads {
   public static class ThreadPool implements ThreadFactory, ExecutorService {
     private final ThreadGroup                    group;
     private final String                         name;
-    private ExecutorService                      pool;
+    private volatile ExecutorService             pool;
     private Integer                              numThreads = -1;
     private final StackTraceElement[]            creationPoint;
     private final LinkedBlockingQueue<Future<?>> taskQueue  = new LinkedBlockingQueue<Future<?>>( );
@@ -286,16 +286,15 @@ public class Threads {
     }
     
     public ExecutorService getExecutorService( ) {
-      if ( this.pool != null ) {
-        return this.pool;
-      } else {
-        synchronized ( this ) {
-          if ( ( this.pool == null ) ) {
-            this.pool = makePool( );
+      if (pool == null) {
+        synchronized (this) {
+          if (pool == null) {
+            pool = makePool();
           }
         }
-        return this;
       }
+
+      return this;
     }
     
     private ExecutorService makePool( ) {
