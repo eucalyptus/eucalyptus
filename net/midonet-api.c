@@ -86,6 +86,8 @@
 #include <curl/curl.h>
 #include <json/json.h>
 
+#include <pthread.h>
+
 #include <eucalyptus.h>
 #include <misc.h>
 #include <euca_string.h>
@@ -162,6 +164,40 @@ static int http_gets_prev = 0;
 static int http_posts_prev = 0;
 static int http_puts_prev = 0;
 static int http_deletes_prev = 0;
+
+static int mido_libcurl_initialized = 0;
+static mido_libcurl_handles libcurl_handles;
+static pthread_mutex_t libcurl_handles_mutex;
+static pthread_mutex_t mido_buffer_mutex;
+static pthread_mutex_t mido_cache_ports_mutex;
+
+static size_t header_find_location(char *content, size_t size, size_t nmemb, void *params);
+static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_params);
+static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_params);
+
+/**
+ * Prepares an array of mido_cache_thread_params structures: divides ntasks to
+ * nthreads blocks, and sets the start and end indices appropriately.
+ * @param ntasks [in] number of tasks.
+ * @param nthreads [in] number of threads.
+ * @return pointer to an array of mido_cache_thread_param structures. Caller is
+ * responsible to release the allocated memory.
+ */
+mido_cache_worker_thread_params *prep_thread_params(int ntasks, int nthreads) {
+    mido_cache_worker_thread_params *tparams = EUCA_ZALLOC_C(nthreads, sizeof (mido_cache_worker_thread_params));
+    if (ntasks > 100) {
+        int step = (ntasks + nthreads - 1) / nthreads;
+        tparams[0].start = 0;
+        tparams[0].end = step;
+        for (int i = 1; i < (nthreads - 1); i++) {
+            tparams[i].start = tparams[i - 1].end;
+            tparams[i].end = (i + 1) * step;
+        }
+        tparams[nthreads - 1].start = tparams[nthreads - 2].end;
+        tparams[nthreads - 1].end = ntasks;
+    }
+    return (tparams);
+}
 
 /**
  * Converts a list of comma separated IP address strings into an array of strings,
@@ -453,24 +489,11 @@ void mido_free_midoname_list(midoname * name, int max_name)
     }
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-void mido_free_midoname(midoname * name)
-{
-
+/**
+ * Releases memory allocated for the given midoname data structure.
+ * @param name [in] pointer to the midoname data structure of interest.
+ */
+void mido_free_midoname(midoname * name) {
     if (!name) {
         return;
     }
@@ -482,6 +505,13 @@ void mido_free_midoname(midoname * name)
     EUCA_FREE(name->content_type);
     EUCA_FREE(name->vers);
     EUCA_FREE(name->uri);
+    EUCA_FREE(name->ipag_ip);
+    EUCA_FREE(name->port_peerid);
+    EUCA_FREE(name->port_ifname);
+    EUCA_FREE(name->route_srcnet);
+    EUCA_FREE(name->route_srclen);
+    EUCA_FREE(name->route_dstnet);
+    EUCA_FREE(name->route_dstlen);
     bzero(name, sizeof(midoname));
 }
 
@@ -3882,23 +3912,12 @@ int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_ty
     return (0);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_update_midoname(midoname * name)
-{
+/**
+ * Parses the JSON object in name->json
+ * @param name [in] pointer to a midoname data structure
+ * @return 0 on success. Positive integer otherwise.
+ */
+int mido_update_midoname(midoname *name) {
     int ret = 0;
     struct json_object *jobj = NULL, *el = NULL;
     char special_uuid[EUCA_MAX_PATH];
@@ -3911,36 +3930,28 @@ int mido_update_midoname(midoname * name)
         printf("ERROR: json_tokener_parse(...): returned NULL\n");
         ret = 1;
     } else {
-        //        el = json_object_object_get(jobj, "id");
         json_object_object_get_ex(jobj, "id", &el);
         if (el) {
             EUCA_FREE(name->uuid);
             name->uuid = strdup(json_object_get_string(el));
-            //            json_object_put(el);
         }
 
-        //        el = json_object_object_get(jobj, "tenantId");
         json_object_object_get_ex(jobj, "tenantId", &el);
         if (el) {
             EUCA_FREE(name->tenant);
             name->tenant = strdup(json_object_get_string(el));
-            //            json_object_put(el);
         }
 
-        //el = json_object_object_get(jobj, "name");
         json_object_object_get_ex(jobj, "name", &el);
         if (el) {
             EUCA_FREE(name->name);
             name->name = strdup(json_object_get_string(el));
-            //            json_object_put(el);
         }
 
-        //        el = json_object_object_get(jobj, "uri");
         json_object_object_get_ex(jobj, "uri", &el);
         if (el) {
             EUCA_FREE(name->uri);
             name->uri = strdup(json_object_get_string(el));
-            //            json_object_put(el);
         }
 
         // special cases
@@ -3949,18 +3960,14 @@ int mido_update_midoname(midoname * name)
             EUCA_FREE(name->uuid);
             EUCA_FREE(name->name);
 
-            //el = json_object_object_get(jobj, "subnetPrefix");
             json_object_object_get_ex(jobj, "subnetPrefix", &el);
             if (el) {
                 subnet = strdup(json_object_get_string(el));
-                //                json_object_put(el);
             }
 
-            //el = json_object_object_get(jobj, "subnetLength");
             json_object_object_get_ex(jobj, "subnetLength", &el);
             if (el) {
                 slashnet = strdup(json_object_get_string(el));
-                //                json_object_put(el);
             }
 
             if (subnet && slashnet) {
@@ -3974,28 +3981,59 @@ int mido_update_midoname(midoname * name)
             char *ip = NULL;
             EUCA_FREE(name->uuid);
             EUCA_FREE(name->name);
-            //            el = json_object_object_get(jobj, "addr");
+            EUCA_FREE(name->ipag_ip);
             json_object_object_get_ex(jobj, "addr", &el);
             if (el) {
                 ip = strdup(json_object_get_string(el));
-                //                json_object_put(el);
             }
             
             if (ip) {
+                name->ipag_ip = strdup(ip);
                 snprintf(special_uuid, EUCA_MAX_PATH, "versions/6/ip_addrs/%s", ip);
                 name->uuid = strdup(special_uuid);
             }
             EUCA_FREE(ip);
 
-        } else {
-            if (!name->uuid || !strlen(name->uuid)) {
-                //                el = json_object_object_get(jobj, "uri");
-                json_object_object_get_ex(jobj, "uri", &el);
-                if (el) {
-                    EUCA_FREE(name->uuid);
-                    name->uuid = strdup(json_object_get_string(el));
-                    //                    json_object_put(el);
-                }
+        } else if (!strcmp(name->resource_type, "ports")) {
+            EUCA_FREE(name->port_peerid);
+            json_object_object_get_ex(jobj, "peerId", &el);
+            if (el) {
+                name->port_peerid = strdup(json_object_get_string(el));
+            }
+            EUCA_FREE(name->port_ifname);
+            json_object_object_get_ex(jobj, "interfaceName", &el);
+            if (el) {
+                name->port_ifname = strdup(json_object_get_string(el));
+            }
+
+        } else if (!strcmp(name->resource_type, "routes")) {
+            EUCA_FREE(name->route_srcnet);
+            json_object_object_get_ex(jobj, "srcNetworkAddr", &el);
+            if (el) {
+                name->route_srcnet = strdup(json_object_get_string(el));
+            }
+            EUCA_FREE(name->route_srclen);
+            json_object_object_get_ex(jobj, "srcNetworkLength", &el);
+            if (el) {
+                name->route_srclen = strdup(json_object_get_string(el));
+            }
+            EUCA_FREE(name->route_dstnet);
+            json_object_object_get_ex(jobj, "dstNetworkAddr", &el);
+            if (el) {
+                name->route_dstnet = strdup(json_object_get_string(el));
+            }
+            EUCA_FREE(name->route_dstlen);
+            json_object_object_get_ex(jobj, "dstNetworkLength", &el);
+            if (el) {
+                name->route_dstlen = strdup(json_object_get_string(el));
+            }
+
+        }
+        if (!name->uuid || !strlen(name->uuid)) {
+            json_object_object_get_ex(jobj, "uri", &el);
+            if (el) {
+                EUCA_FREE(name->uuid);
+                name->uuid = strdup(json_object_get_string(el));
             }
         }
 
@@ -4147,25 +4185,181 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
     return (bytes_to_copy);
 }
 
-//!
-//!
-//!
-//! @param[in]  url
-//! @param[in]  apistr
-//! @param[out] out_payload
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int midonet_http_get(char *url, char *apistr, char **out_payload)
-{
+/**
+ * Initializes resources to be used in midonet-api calls
+ */
+void midonet_api_init(void) {
+    mido_libcurl_init(&libcurl_handles);
+}
+
+/**
+ * Cleanup resources used in midonet-api calls
+ */
+void midonet_api_cleanup(void) {
+    mido_libcurl_cleanup(&libcurl_handles);
+}
+
+/**
+ * Cleanup possibly open libcurl easy_handles used by midonet-api
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @return 0 on success. Positive integer otherwise.
+ */
+int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles) {
+    if (handles == NULL) {
+        return (0);
+    }
+    for (int i = 0; i < handles->max_handles; i++) {
+        curl_easy_cleanup(handles->handles[i]);
+    }
+    EUCA_FREE(handles->handles);
+    for (int i = 0; i < handles->max_gethandles; i++) {
+        curl_easy_cleanup(handles->gethandles[i]);
+    }
+    EUCA_FREE(handles->gethandles);
+    bzero(handles, sizeof (mido_libcurl_handles));
+    return (0);
+}
+
+/**
+ * Initializes libcurl to be used for midonet-api.
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @return 0 on success. Positive integer on failure.
+ */
+int mido_libcurl_init(mido_libcurl_handles *handles) {
+    if (mido_libcurl_initialized == 1) {
+        return (0);
+    }
+    if (handles == NULL) {
+        LOGWARN("Cannot initialize libcurl with NULL mido_libcurl_handles\n");
+        return (1);
+    }
+    mido_libcurl_cleanup_handles(handles);
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    pthread_mutex_init(&libcurl_handles_mutex, NULL);
+    pthread_mutex_init(&mido_buffer_mutex, NULL);
+    pthread_mutex_init(&mido_cache_ports_mutex, NULL);
+    mido_libcurl_initialized = 1;
+    return (0);
+}
+
+/**
+ * Cleanup libcurl resources used by midonet-api
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @return 0 on success. Positive integer otherwise.
+ */
+int mido_libcurl_cleanup(mido_libcurl_handles *handles) {
+    mido_libcurl_cleanup_handles(handles);
+    curl_global_cleanup();
+    pthread_mutex_destroy(&libcurl_handles_mutex);
+    pthread_mutex_destroy(&mido_buffer_mutex);
+    pthread_mutex_destroy(&mido_cache_ports_mutex);
+    mido_libcurl_initialized = 0;
+    return (0);
+}
+
+/**
+ * Retrieve a libcurl easy_handle
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @return pointer to an easy_handle of interest
+ */
+CURL *mido_libcurl_get_handle(mido_libcurl_handles *handles) {
+    if (handles == NULL) {
+        LOGWARN("Invalid argument: cannot retrieve easy_handle from NULL\n");
+        return (NULL);
+    }
+    CURL *res = NULL;
+    pthread_mutex_lock(&libcurl_handles_mutex);
+    if (handles->max_handles > 0) {
+        res = handles->handles[handles->max_handles - 1];
+        handles->max_handles--;
+        curl_easy_reset(res);
+    } else {
+        res = curl_easy_init();
+        if (!res) {
+            LOGERROR("Unable to get libcurl easy_handle\n");
+        }
+    }
+    pthread_mutex_unlock(&libcurl_handles_mutex);
+    return (res);
+}
+
+/**
+ * Retrieve a libcurl easy_handle tailored for GET operations.
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @return pointer to an easy_handle of interest
+ */
+CURL *mido_libcurl_get_gethandle(mido_libcurl_handles *handles) {
+    if (handles == NULL) {
+        LOGWARN("Invalid argument: cannot retrieve get easy_handle from NULL\n");
+        return (NULL);
+    }
+    CURL *res = NULL;
+    pthread_mutex_lock(&libcurl_handles_mutex);
+    if (handles->max_gethandles > 0) {
+        res = handles->gethandles[handles->max_gethandles - 1];
+        handles->max_gethandles--;
+    } else {
+        res = curl_easy_init();
+        if (!res) {
+            LOGERROR("Unable to get libcurl easy_handle\n");
+        } else {
+            curl_easy_setopt(res, CURLOPT_HTTPGET, 1L);
+            curl_easy_setopt(res, CURLOPT_WRITEFUNCTION, mem_writer);
+            //curl_easy_setopt(res, CURLOPT_TCP_KEEPALIVE, 1L);
+            //curl_easy_setopt(res, CURLOPT_TCP_KEEPINTVL, 30L);
+            //curl_easy_setopt(res, CURLOPT_TCP_KEEPIDLE, 600L);
+        }
+    }
+    pthread_mutex_unlock(&libcurl_handles_mutex);
+    return (res);
+}
+
+/**
+ * Releases the libcurl easy_handle in the argument for other threads to use.
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @param handle [in] libcurl easy_handle to release. The handle is not closed, just
+ * returned to a pool.
+ * @return 0 on success. 1 on any error.
+ */
+int mido_libcurl_release_handle(mido_libcurl_handles *handles, CURL *handle) {
+    if (!handles || !handle) {
+        LOGWARN("Invalid argument: cannot release NULL handle\n");
+        return (1);
+    }
+    pthread_mutex_lock(&libcurl_handles_mutex);
+    handles->handles = EUCA_APPEND_PTRARR(handles->handles, &(handles->max_handles), handle);
+    pthread_mutex_unlock(&libcurl_handles_mutex);
+    return (0);
+}
+
+/**
+ * Releases the libcurl easy_handle in the argument for other threads to use.
+ * @param handles [in] pointer to mido_libcurl_handles structure
+ * @param handle [in] libcurl easy_handle to release. The handle is not closed, just
+ * returned to a pool.
+ * @return 0 on success. 1 on any error.
+ */
+int mido_libcurl_release_gethandle(mido_libcurl_handles *handles, CURL *handle) {
+    if (!handles || !handle) {
+        LOGWARN("Invalid argument: cannot release NULL GET handle\n");
+        return (1);
+    }
+    pthread_mutex_lock(&libcurl_handles_mutex);
+    handles->gethandles = EUCA_APPEND_PTRARR(handles->gethandles, &(handles->max_gethandles), handle);
+    pthread_mutex_unlock(&libcurl_handles_mutex);
+    return (0);
+}
+
+/**
+ * Performs http GET operation using libcurl
+ * @param url [in] the http url of interest.
+ * @param apistr [in] optional API string, to be used in "accept: ____" http header
+ * @param out_payload [out] pointer to a string where the result is stored. Caller
+ * is responsible to release the memory allocated.
+ * @return 0 on success. Positive integer on any failure.
+ */
+int midonet_http_get(char *url, char *apistr, char **out_payload) {
+
     CURL *curl = NULL;
     CURLcode curlret;
     struct mem_params_t mem_writer_params = { 0, 0 };
@@ -4173,21 +4367,31 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     long httpcode = 0L;
     struct curl_slist *headers = NULL;
     char hbuf[EUCA_MAX_PATH];
-    long long timer=0;
 
-    timer = time_usec();
+    struct timeval tv;
+    eucanetd_timer_usec(&tv);
     *out_payload = NULL;
 
-    curl = curl_easy_init();
+    curl = mido_libcurl_get_gethandle(&libcurl_handles);
+    if (!curl) {
+        LOGWARN("failed to get a libcurl handle - unable to perform http GET\n");
+        return (1);
+    }
+
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mem_writer);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&mem_writer_params);
+
+    //curl = curl_easy_init();
+    //curl_easy_setopt(curl, CURLOPT_URL, url);
+    //curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    //curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, mem_writer);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &mem_writer_params);
 
     if (apistr && strlen(apistr)) {
         snprintf(hbuf, EUCA_MAX_PATH, "accept: %s", apistr);
         headers = curl_slist_append(headers, hbuf);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    } else {
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
     }
 
     curlret = curl_easy_perform(curl);
@@ -4201,8 +4405,9 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
         ret = 1;
     }
     curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
+    mido_libcurl_release_gethandle(&libcurl_handles, curl);
+    //curl_easy_cleanup(curl);
+    //curl_global_cleanup();
 
     // convert to payload out
 
@@ -4218,7 +4423,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload)
     if (mem_writer_params.mem)
         free(mem_writer_params.mem);
 
-    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    LOGTRACE("total time for http operation: %ld us\n", eucanetd_timer_usec(&tv));
     http_gets++;
     return (ret);
 }
@@ -4258,7 +4463,8 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     mem_reader_params.mem = payload;
     mem_reader_params.size = strlen(payload) + 1;
 
-    curl = curl_easy_init();
+    curl = mido_libcurl_get_handle(&libcurl_handles);
+    //curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
     curl_easy_setopt(curl, CURLOPT_PUT, 1L);
@@ -4276,7 +4482,7 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     headers = curl_slist_append(headers, hbuf);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    LOGDEBUG("PUT PAYLOAD: %s\n", SP(payload));
+    LOGTRACE("PUT PAYLOAD: %s\n", SP(payload));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -4293,8 +4499,9 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     }
 
     curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
+    mido_libcurl_release_handle(&libcurl_handles, curl);
+    //curl_easy_cleanup(curl);
+    //curl_global_cleanup();
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     http_puts++;
@@ -4371,7 +4578,8 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
 
     *out_payload = NULL;
 
-    curl = curl_easy_init();
+    curl = mido_libcurl_get_handle(&libcurl_handles);
+    //curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     //    curl_easy_setopt(curl, CURLOPT_HEADER, 1L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
@@ -4393,7 +4601,7 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     //    headers = curl_slist_append(headers, "Content-Type: application/vnd.org.midonet");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    LOGDEBUG("POST PAYLOAD: %s\n", SP(payload));
+    LOGTRACE("POST PAYLOAD: %s\n", SP(payload));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -4408,8 +4616,9 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
         ret = 1;
     }
     curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
+    mido_libcurl_release_handle(&libcurl_handles, curl);
+    //curl_easy_cleanup(curl);
+    //curl_global_cleanup();
 
     if (!ret) {
         if (loc) {
@@ -4450,11 +4659,12 @@ int midonet_http_delete(char *url)
 
     mido_check_state();
         
-    curl = curl_easy_init();
+    curl = mido_libcurl_get_handle(&libcurl_handles);
+    //curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
-    LOGDEBUG("DELETE PAYLOAD: %s\n", SP(url));
+    LOGTRACE("DELETE PAYLOAD: %s\n", SP(url));
     curlret = curl_easy_perform(curl);
     if (curlret != CURLE_OK) {
         LOGERROR("ERROR: curl_easy_perform(): %s\n", curl_easy_strerror(curlret));
@@ -4469,8 +4679,9 @@ int midonet_http_delete(char *url)
         ret = 1;
     }
 
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
+    mido_libcurl_release_handle(&libcurl_handles, curl);
+    //curl_easy_cleanup(curl);
+    //curl_global_cleanup();
 
     LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
     http_deletes++;
@@ -5674,6 +5885,7 @@ int midoname_list_free(midoname_list *list) {
 midoname *midoname_list_get_midoname(midoname_list *list) {
     midoname *res = NULL;
     midoname *mnarr = NULL;
+    pthread_mutex_lock(&mido_buffer_mutex);
     LOGTRACE("Retrieving an unused midoname element %d/%d\n", list->size, list->capacity);
     if (list->size == list->capacity) {
         list->mnames = EUCA_REALLOC_C(list->mnames, list->capacity + MIDONAME_LIST_CAPACITY_STEP, sizeof (midoname *));
@@ -5685,6 +5897,7 @@ midoname *midoname_list_get_midoname(midoname_list *list) {
     }
     res = list->mnames[list->size];
     (list->size)++;
+    pthread_mutex_unlock(&mido_buffer_mutex);
     return res;
 }
 
@@ -5812,6 +6025,9 @@ int midonet_api_cache_flush(void) {
 int midonet_api_cache_check(void) {
     if ((midocache_midos != NULL) && (midocache_midos->released > MIDONAME_LIST_RELEASES_B4INVALIDATE)) {
         midocache_invalid = 1;
+    } else {
+        // System seems idle - release libcurl handles
+        midonet_api_cleanup();
     }
     return (0);
 }
@@ -5854,12 +6070,13 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
     int j = 0;
     int k = 0;
     midonet_api_cache *cache = NULL;
-    midoname ***names = NULL;
-    int *max_names = NULL;
+    //midoname ***names = NULL;
+    //int *max_names = NULL;
     midoname **l1names = NULL;
     int max_l1names = 0;
     midoname **l2names = NULL;
     int max_l2names = 0;
+    struct timeval tv = {0};
 
     // Disable global midonet_api cache
     if (midocache != NULL) {
@@ -5884,7 +6101,9 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         return (1);
     }
 
+    eucanetd_timer_usec(&tv);
     // get all ports
+/*
     names = &(cache->ports);
     max_names = &(cache->max_ports);
     rc = mido_get_ports(NULL, names, max_names);
@@ -5894,6 +6113,8 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             LOGEXTREME("Cached port %s\n", ports[i]->name);
         }
     }
+    LOGDEBUG("\t%d ports in %.2f\n", cache->max_ports, eucanetd_timer_usec(&tv) / 1000.0);
+*/
 
     // get all routers
     l1names = NULL;
@@ -5907,11 +6128,25 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             cache->routers[i] = router;
             router->obj = l1names[i];
             LOGEXTREME("Cached router %s\n", router->obj->name);
+/*
             rc = mido_get_device_ports(cache->ports, cache->max_ports, router->obj,
                     &(router->ports), &(router->max_ports));
             for (j = 0; j < router->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
             }
+*/
+            rc = mido_get_ports(router->obj, &(router->ports), &(router->max_ports));
+            if (!rc) {
+                cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + router->max_ports, sizeof (midoname *));
+                for (j = 0; j < router->max_ports; j++) {
+                    cache->ports[cache->max_ports + j] = router->ports[j];
+                }
+                cache->max_ports += router->max_ports;
+            }
+            for (j = 0; j < router->max_ports && !rc; j++) {
+                LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
+            }
+
             rc = mido_get_routes(router->obj, &(router->routes), &(router->max_routes));
             for (j = 0; j < router->max_routes && !rc; j++) {
                 LOGEXTREME("\tCached route %s\n", router->routes[j]->jsonbuf);
@@ -5924,6 +6159,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
+    LOGDEBUG("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all bridges
     l1names = NULL;
@@ -5937,11 +6173,25 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             cache->bridges[i] = bridge;
             bridge->obj = l1names[i];
             LOGEXTREME("Cached bridge %s\n", bridge->obj->name);
+/*
             rc = mido_get_device_ports(cache->ports, cache->max_ports, bridge->obj,
                     &(bridge->ports), &(bridge->max_ports));
             for (j = 0; j < bridge->max_ports && !rc; j++) {
                 LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
             }
+*/
+            rc = mido_get_ports(bridge->obj, &(bridge->ports), &(bridge->max_ports));
+            if (!rc) {
+                cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + bridge->max_ports, sizeof (midoname *));
+                for (j = 0; j < bridge->max_ports; j++) {
+                    cache->ports[cache->max_ports + j] = bridge->ports[j];
+                }
+                cache->max_ports += bridge->max_ports;
+            }
+            for (j = 0; j < bridge->max_ports && !rc; j++) {
+                LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
+            }
+            
             l2names = NULL;
             max_l2names = 0;
             rc = mido_get_dhcps(bridge->obj, &l2names, &max_l2names);
@@ -5970,6 +6220,9 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
+    LOGDEBUG("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    LOGDEBUG("\t%d ports\n", cache->max_ports);
 
     // get all chains
     l1names = NULL;
@@ -5996,6 +6249,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
+    LOGDEBUG("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all hosts
     if (refreshmode == MIDO_CACHE_REFRESH_ALL) {
@@ -6004,6 +6258,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             LOGWARN("failed to populate mido ip-host map\n");
         }
     }
+    LOGDEBUG("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     // get all IP address groups
     l1names = NULL;
@@ -6039,8 +6294,591 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
+    LOGDEBUG("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     // get all port-groups
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_portgroups(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->portgroups = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_portgroup *));
+        midonet_api_portgroup *portgroup = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            portgroup = EUCA_ZALLOC_C(1, sizeof (midonet_api_portgroup));
+            cache->portgroups[i] = portgroup;
+            portgroup->obj = l1names[i];
+            LOGEXTREME("Cached port-group %s\n", portgroup->obj->name);
+            rc = mido_get_portgroup_ports(portgroup->obj, &(portgroup->ports), &(portgroup->max_ports));
+            for (j = 0; j < portgroup->max_ports && !rc; j++) {
+                LOGEXTREME("\tCached port %s\n", portgroup->ports[j]->jsonbuf);
+            }
+        }
+        cache->max_portgroups = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido port-groups\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\tpgs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    // get all tunnel-zones
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->tunnelzones = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_tunnelzone *));
+        midonet_api_tunnelzone *tunnelzone = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            tunnelzone = EUCA_ZALLOC_C(1, sizeof (midonet_api_tunnelzone));
+            cache->tunnelzones[i] = tunnelzone;
+            tunnelzone->obj = l1names[i];
+            LOGEXTREME("Cached tunnel-zone %s\n", tunnelzone->obj->name);
+            rc = mido_get_tunnelzone_hosts(tunnelzone->obj, &(tunnelzone->hosts), &(tunnelzone->max_hosts));
+            for (j = 0; j < tunnelzone->max_hosts && !rc; j++) {
+                LOGEXTREME("\tCached host %s\n", tunnelzone->hosts[j]->jsonbuf);
+            }
+        }
+        cache->max_tunnelzones = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido tunnel-zones\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\ttzs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    // Enable midocache
+    midocache = cache;
+
+    return (ret);
+}
+
+/**
+ * Reloads router routes from MidoNet.
+ * @param cache [in] midonet_api_cache of interest
+ * @param start [in] start index of interest.
+ * @param end [in] end index of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int midonet_api_cache_refresh_routerroutes(midonet_api_cache *cache, int start, int end) {
+    int rc = 0;
+    if (cache == NULL) {
+        return (1);
+    }
+    if ((start < 0) || (end > cache->max_routers)) {
+        return (1);
+    }
+    for (int i = start; i < end; i++) {
+        midonet_api_router *router = cache->routers[i];
+        if (router == NULL) {
+            continue;
+        }
+
+/*
+                if (router->ports_cached == 0) {
+                    rc = mido_get_device_ports(cache->ports, cache->max_ports, router->obj,
+                            &(router->ports), &(router->max_ports));
+                    if (!rc) {
+                        router->ports_cached = 1;
+                        for (int j = 0; j < router->max_ports && !rc; j++) {
+                            LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
+                        }
+                    } else {
+                        LOGWARN("\tFailed to retrieve %s ports\n", router->obj->name);
+                    }
+                }
+         */
+
+        rc = mido_get_ports(router->obj, &(router->ports), &(router->max_ports));
+        if (!rc) {
+            pthread_mutex_lock(&mido_cache_ports_mutex);
+            cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + router->max_ports, sizeof (midoname *));
+            for (int j = 0; j < router->max_ports; j++) {
+                cache->ports[cache->max_ports + j] = router->ports[j];
+            }
+            cache->max_ports += router->max_ports;
+            pthread_mutex_unlock(&mido_cache_ports_mutex);
+            for (int j = 0; j < router->max_ports && !rc; j++) {
+                LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s ports\n", router->obj->name);
+        }
+
+        rc = mido_get_routes(router->obj, &(router->routes), &(router->max_routes));
+        if (!rc) {
+            for (int j = 0; j < router->max_routes && !rc; j++) {
+                LOGEXTREME("\tCached route %s\n", router->routes[j]->jsonbuf);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s routes\n", router->obj->name);
+        }
+    }
+    return (0);
+}
+
+/**
+ * Reloads bridge dhcps from MidoNet.
+ * @param cache [in] midonet_api_cache of interest
+ * @param start [in] start index of interest.
+ * @param end [in] end index of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, int end) {
+    int rc = 0;
+    if (cache == NULL) {
+        return (1);
+    }
+    if ((start < 0) || (end > cache->max_bridges)) {
+        return (1);
+    }
+    for (int i = start; i < end; i++) {
+        midonet_api_bridge *bridge = cache->bridges[i];
+        if (bridge == NULL) {
+            continue;
+        }
+
+/*
+        if (bridge->ports_cached == 0) {
+            rc = mido_get_device_ports(cache->ports, cache->max_ports, bridge->obj,
+                    &(bridge->ports), &(bridge->max_ports));
+            if (!rc) {
+                bridge->ports_cached = 1;
+                for (int j = 0; j < bridge->max_ports && !rc; j++) {
+                    LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
+                }
+            } else {
+                LOGWARN("\tFailed to retrieve %s ports\n", bridge->obj->name);
+            }
+        }
+*/
+
+        rc = mido_get_ports(bridge->obj, &(bridge->ports), &(bridge->max_ports));
+        if (!rc) {
+            pthread_mutex_lock(&mido_cache_ports_mutex);
+            cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + bridge->max_ports, sizeof (midoname *));
+            for (int j = 0; j < bridge->max_ports; j++) {
+                cache->ports[cache->max_ports + j] = bridge->ports[j];
+            }
+            cache->max_ports += bridge->max_ports;
+            pthread_mutex_unlock(&mido_cache_ports_mutex);
+            for (int j = 0; j < bridge->max_ports && !rc; j++) {
+                LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s ports\n", bridge->obj->name);
+        }
+
+        midoname **l2names = NULL;
+        int max_l2names = 0;
+        rc = mido_get_dhcps(bridge->obj, &l2names, &max_l2names);
+        if (!rc && l2names) {
+            bridge->dhcps = EUCA_ZALLOC_C(max_l2names, sizeof (midonet_api_dhcp *));
+            midonet_api_dhcp *dhcp = NULL;
+            for (int j = 0; j < max_l2names; j++) {
+                dhcp = EUCA_ZALLOC_C(1, sizeof (midonet_api_dhcp));
+                bridge->dhcps[j] = dhcp;
+                dhcp->obj = l2names[j];
+                LOGEXTREME("\tCached bridge %s dhcp %s\n", bridge->obj->name, dhcp->obj->jsonbuf);
+                rc = mido_get_dhcphosts(bridge->obj, dhcp->obj,
+                        &(dhcp->dhcphosts), &(dhcp->max_dhcphosts));
+                if (!rc) {
+                    for (int k = 0; k < dhcp->max_dhcphosts && !rc; k++) {
+                        LOGEXTREME("\t\tCached dhcphost %s\n", dhcp->dhcphosts[k]->jsonbuf);
+                    }
+                } else {
+                    LOGWARN("\t\tFailed to retrieve %s dhcphosts\n", dhcp->obj->name);
+                }
+            }
+            bridge->max_dhcps = max_l2names;
+            EUCA_FREE(l2names);
+        } else {
+            if (rc) {
+                LOGWARN("\tFailed to retrieve %s dhcps\n", bridge->obj->name);
+            }
+        }
+    }
+    return (0);
+}
+
+/**
+ * Reloads chain rules from MidoNet.
+ * @param cache [in] midonet_api_cache of interest
+ * @param start [in] start index of interest.
+ * @param end [in] end index of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int midonet_api_cache_refresh_chainrules(midonet_api_cache *cache, int start, int end) {
+    if (cache == NULL) {
+        return (1);
+    }
+    if ((start < 0) || (end > cache->max_chains)) {
+        return (1);
+    }
+    for (int i = start; i < end; i++) {
+        midonet_api_chain *chain = cache->chains[i];
+        if (chain == NULL) {
+            continue;
+        }
+        int rc = mido_get_rules(chain->obj, &(chain->rules), &(chain->max_rules));
+        if (!rc) {
+            chain->rules_count = chain->max_rules;
+            for (int j = 0; j < chain->max_rules && !rc; j++) {
+                LOGEXTREME("\tCached rule %s\n", chain->rules[j]->jsonbuf);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s rules\n", chain->obj->name);
+        }
+    }
+    return (0);
+}
+
+/**
+ * Reloads ip-address-group ips from MidoNet.
+ * @param cache [in] midonet_api_cache of interest
+ * @param start [in] start index of interest.
+ * @param end [in] end index of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int midonet_api_cache_refresh_ipagips(midonet_api_cache *cache, int start, int end) {
+    if (cache == NULL) {
+        return (1);
+    }
+    if ((start < 0) || (end > cache->max_ipaddrgroups)) {
+        return (1);
+    }
+
+    for (int i = start; i < end; i++) {
+        midonet_api_ipaddrgroup *ipaddrgroup = cache->ipaddrgroups[i];
+        if (ipaddrgroup == NULL) {
+            continue;
+        }
+        int rc = mido_get_ipaddrgroup_ips(ipaddrgroup->obj, &(ipaddrgroup->ips), &(ipaddrgroup->max_ips));
+        if (!rc) {
+            ipaddrgroup->ips_count = ipaddrgroup->max_ips;
+            ipaddrgroup->hexips = EUCA_REALLOC_C(ipaddrgroup->hexips, ipaddrgroup->max_ips, sizeof (u32));
+            for (int j = 0; j < ipaddrgroup->max_ips && !rc; j++) {
+                char *ipaddr = NULL;
+                LOGEXTREME("\tCached IP %s\n", ipaddrgroup->ips[j]->jsonbuf);
+                mido_getel_midoname(ipaddrgroup->ips[j], "addr", &ipaddr);
+                if (!ipaddr || !strlen(ipaddr)) {
+                    LOGWARN("failed to retrieve IP address for %s\n", ipaddrgroup->obj->name);
+                } else {
+                    ipaddrgroup->hexips[j] = dot2hex(ipaddr);
+                }
+                EUCA_FREE(ipaddr);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s ips\n", ipaddrgroup->obj->name);
+        }
+    }
+    return (0);
+}
+
+/**
+ * Thread to reload chain rules from MidoNet. MIDOCACHE chains are assumed to be pre-populated.
+ * Affected chains starts at index tparam->start and ends at index tparam->end.
+ * @param tparam [in] parameters to be used.
+ * @return NULL
+ */
+void *midonet_api_cache_refresh_objects_worker_thread(void *worker_param) {
+    struct timeval tv;
+    eucanetd_timer_usec(&tv);
+    if (worker_param == NULL) {
+        pthread_exit(NULL);
+    }
+    mido_cache_worker_thread_params *tp = (mido_cache_worker_thread_params *) worker_param;
+    midonet_api_cache *cache = tp->cache;
+    if (!cache) {
+        tp->rc = 1;
+    } else {
+        if (!tp->get_from_mido) {
+            tp->rc = 1;
+        } else {
+            tp->rc = tp->get_from_mido(tp->cache, tp->start, tp->end);
+        }
+    }
+    LOGDEBUG("\t\t%s worker thread - %.2f ms\n", tp->name, eucanetd_timer_usec(&tv) / 1000.0);
+    pthread_exit((void *) &(tp->rc));
+}
+
+/**
+ * Main thread responsible to load objects from MidoNet.
+ * @param main_params [in] mido_cache_main_thread_params structure, which specifies what to do.
+ * @return NULL
+ */
+void *midonet_api_cache_refresh_objects_main_thread(void *main_param) {
+    struct timeval tv;
+    eucanetd_timer_usec(&tv);
+    if (main_param == NULL) {
+        pthread_exit(NULL);
+    }
+    int rc = 0;
+    mido_cache_main_thread_params *param = (mido_cache_main_thread_params *) main_param;
+    int n = param->n;
+    if (!param->cache || !param->get_from_mido) {
+        LOGWARN("invalid argument: cannot start NULL threads\n");
+        param->rc = 1;
+        pthread_exit((void *) &(param->rc));
+    }
+
+    if (n > MIDONET_API_USE_THREADS_THRESHOLD) {
+        mido_cache_worker_thread_params *tparams = prep_thread_params(n, MIDONET_API_RELOAD_THREADS);
+        for (int i = 0; i < MIDONET_API_RELOAD_THREADS; i++) {
+            tparams[i].cache = param->cache;
+            tparams[i].get_from_mido = param->get_from_mido;
+            snprintf(tparams[i].name, MIDO_CACHE_THREAD_NAME_LEN, "%s", param->name);
+        }
+        pthread_t cthreads[MIDONET_API_RELOAD_THREADS - 1];
+        pthread_attr_t ptattr;
+        pthread_attr_init(&ptattr);
+        pthread_attr_setdetachstate(&ptattr, PTHREAD_CREATE_JOINABLE);
+        for (int i = 0; i < (MIDONET_API_RELOAD_THREADS - 1); i++) {
+            rc = pthread_create(&cthreads[i], &ptattr, midonet_api_cache_refresh_objects_worker_thread, (void *) &(tparams[i]));
+        }
+        rc = param->get_from_mido(tparams[MIDONET_API_RELOAD_THREADS - 1].cache,
+                tparams[MIDONET_API_RELOAD_THREADS - 1].start, tparams[MIDONET_API_RELOAD_THREADS - 1].end);
+        for (int i = 0; i < (MIDONET_API_RELOAD_THREADS - 1); i++) {
+            rc = pthread_join(cthreads[i], NULL);
+        }
+
+        EUCA_FREE(tparams);
+        pthread_attr_destroy(&ptattr);
+    } else {
+        rc = param->get_from_mido(param->cache, 0, n);
+    }
+
+    LOGDEBUG("\t\t%s main thread - %.2f ms\n", param->name, eucanetd_timer_usec(&tv) / 1000.0);
+    param->rc = 0;
+    pthread_exit((void *) &(param->rc));
+}
+
+/**
+ * Clears the current midocache hosts entries and reloads hosts from MidoNet.
+ * @param cache [in] midonet_api_cache of interest (where hosts will be [re]populated)
+ * @return 0 on success. 1 on any error.
+ */
+int midonet_api_cache_refresh_hosts(midonet_api_cache *cache) {
+    int rc = 0;
+    midoname **l1names = NULL;
+    int max_l1names = 0;
+    midonet_api_cache *midocache_bak;
+    
+    if (cache == NULL) {
+        return (1);
+    }
+    // Flush cache->hosts
+    for (int i = 0; i < cache->max_hosts; i++) {
+        midonet_api_host_free(cache->hosts[i]);
+    }
+    EUCA_FREE(cache->hosts);
+
+    // get all hosts
+    // disable midocache (load all hosts from MidoNet
+    midocache_bak = midocache;
+    midocache = NULL;
+
+    rc = mido_get_hosts(&l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->hosts = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_host *));
+        midonet_api_host *host = NULL;
+        for (int i = 0; i < max_l1names; i++) {
+            host = EUCA_ZALLOC_C(1, sizeof (midonet_api_host));
+            cache->hosts[i] = host;
+            host->obj = l1names[i];
+            LOGEXTREME("Cached host %s\n", host->obj->name);
+            rc = mido_get_host_ports(cache->ports, cache->max_ports, host->obj,
+                    &(host->ports), &(host->max_ports));
+            if (!rc) {
+                for (int j = 0; j < host->max_ports && !rc; j++) {
+                    LOGEXTREME("\tCached port %s\n", host->ports[j]->jsonbuf);
+                }
+            }
+            rc = mido_get_addresses(host->obj, &(host->addresses), &(host->max_addresses));
+            if (!rc) {
+                for (int j = 0; j < host->max_addresses && !rc; j++) {
+                    LOGEXTREME("\tCached address %u\n", host->addresses[j]);
+                }
+            }
+        }
+        cache->max_hosts = max_l1names;
+    }
+    EUCA_FREE(l1names);
+    // recover midocache state
+    midocache = midocache_bak;
+    return (0);
+}
+
+/**
+ * Clear the current midocache and populates the midonet_api_cache data structure.
+ * @param refreshmode [in] specify whether to populate hosts (MIDO_CACHE_REFRESH_ALL)
+ * or not (MIDO_CACHE_REFRESH_NOHOSTS).
+ * @return 0 on success. 1 on any failure.
+ */
+int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmode) {
+    int rc = 0;
+    int ret = 0;
+    int i = 0;
+    int j = 0;
+    midonet_api_cache *cache = NULL;
+    midoname **l1names = NULL;
+    int max_l1names = 0;
+    struct timeval tv = {0};
+    mido_cache_main_thread_params param[MIDO_CACHE_THREAD_END];
+    pthread_t pt[MIDO_CACHE_THREAD_END];
+    pthread_attr_t ptattr;
+
+    pthread_attr_init(&ptattr);
+    pthread_attr_setdetachstate(&ptattr, PTHREAD_CREATE_JOINABLE);
+
+    // Disable global midonet_api cache
+    if (midocache != NULL) {
+        midonet_api_cache_flush();
+        EUCA_FREE(midocache);
+        midocache = NULL;
+    }
+    cache = midonet_api_cache_init();
+
+    int mnapiok = 0;
+    for (int x = 0; x < 30 && !mnapiok; x++) {
+        rc = mido_check_state();
+        if (rc) {
+            sleep(1);
+        } else {
+            mnapiok = 1;
+        }
+    }
+    if (!mnapiok) {
+        LOGERROR("Unable to access midonet-api.\n");
+        EUCA_FREE(cache);
+        return (1);
+    }
+
+    eucanetd_timer_usec(&tv);
+
+    // get all routers
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_routers(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->routers = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_router *));
+        midonet_api_router *router = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            router = EUCA_ZALLOC_C(1, sizeof (midonet_api_router));
+            cache->routers[i] = router;
+            router->obj = l1names[i];
+            LOGEXTREME("Cached router %s\n", router->obj->name);
+        }
+        cache->max_routers = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido routers\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    snprintf(param[MIDO_CACHE_THREAD_ROUTER].name, MIDO_CACHE_THREAD_NAME_LEN, "router");
+    param[MIDO_CACHE_THREAD_ROUTER].n = cache->max_routers;
+    param[MIDO_CACHE_THREAD_ROUTER].get_from_mido = midonet_api_cache_refresh_routerroutes;
+    param[MIDO_CACHE_THREAD_ROUTER].cache = cache;
+    rc = pthread_create(&pt[MIDO_CACHE_THREAD_ROUTER], &ptattr, midonet_api_cache_refresh_objects_main_thread,
+            (void *) &param[MIDO_CACHE_THREAD_ROUTER]);
+    //pthread_join(pt[MIDO_CACHE_THREAD_ROUTER], NULL);
+
+    // get all bridges
+    eucanetd_timer_usec(&tv);
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_bridges(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->bridges = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_bridge *));
+        midonet_api_bridge *bridge = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            bridge = EUCA_ZALLOC_C(1, sizeof (midonet_api_bridge));
+            cache->bridges[i] = bridge;
+            bridge->obj = l1names[i];
+            LOGEXTREME("Cached bridge %s\n", bridge->obj->name);
+        }
+        cache->max_bridges = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido bridges\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    snprintf(param[MIDO_CACHE_THREAD_BRIDGE].name, MIDO_CACHE_THREAD_NAME_LEN, "bridge");
+    param[MIDO_CACHE_THREAD_BRIDGE].n = cache->max_bridges;
+    param[MIDO_CACHE_THREAD_BRIDGE].get_from_mido = midonet_api_cache_refresh_bridgedhcps;
+    param[MIDO_CACHE_THREAD_BRIDGE].cache = cache;
+    rc = pthread_create(&pt[MIDO_CACHE_THREAD_BRIDGE], &ptattr, midonet_api_cache_refresh_objects_main_thread,
+            (void *) &param[MIDO_CACHE_THREAD_BRIDGE]);
+    //pthread_join(pt[MIDO_CACHE_THREAD_BRIDGE], NULL);
+
+    // get all chains
+    eucanetd_timer_usec(&tv);
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_chains(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->chains = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_chain *));
+        midonet_api_chain *chain = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            chain = EUCA_ZALLOC_C(1, sizeof (midonet_api_chain));
+            cache->chains[i] = chain;
+            chain->obj = l1names[i];
+            LOGEXTREME("Cached chain %s\n", chain->obj->name);
+        }
+        cache->max_chains = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido chains\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    
+    snprintf(param[MIDO_CACHE_THREAD_CHAIN].name, MIDO_CACHE_THREAD_NAME_LEN, "chain");
+    param[MIDO_CACHE_THREAD_CHAIN].n = cache->max_chains;
+    param[MIDO_CACHE_THREAD_CHAIN].get_from_mido = midonet_api_cache_refresh_chainrules;
+    param[MIDO_CACHE_THREAD_CHAIN].cache = cache;
+    rc = pthread_create(&pt[MIDO_CACHE_THREAD_CHAIN], &ptattr, midonet_api_cache_refresh_objects_main_thread,
+            (void *) &param[MIDO_CACHE_THREAD_CHAIN]);
+    //pthread_join(pt[MIDO_CACHE_THREAD_CHAIN], NULL);
+
+    // get all IP address groups
+    l1names = NULL;
+    max_l1names = 0;
+    rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->ipaddrgroups = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_ipaddrgroup *));
+        midonet_api_ipaddrgroup *ipaddrgroup = NULL;
+        for (i = 0; i < max_l1names; i++) {
+            ipaddrgroup = EUCA_ZALLOC_C(1, sizeof (midonet_api_ipaddrgroup));
+            cache->ipaddrgroups[i] = ipaddrgroup;
+            ipaddrgroup->obj = l1names[i];
+            LOGEXTREME("Cached ip-address-group %s\n", ipaddrgroup->obj->name);
+        }
+        cache->max_ipaddrgroups = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido ip-address-groups\n");
+        }
+    }
+    EUCA_FREE(l1names);
+    LOGDEBUG("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    
+    snprintf(param[MIDO_CACHE_THREAD_IPAG].name, MIDO_CACHE_THREAD_NAME_LEN, "ipag");
+    param[MIDO_CACHE_THREAD_IPAG].n = cache->max_ipaddrgroups;
+    param[MIDO_CACHE_THREAD_IPAG].get_from_mido = midonet_api_cache_refresh_ipagips;
+    param[MIDO_CACHE_THREAD_IPAG].cache = cache;
+    rc = pthread_create(&pt[MIDO_CACHE_THREAD_IPAG], &ptattr, midonet_api_cache_refresh_objects_main_thread, (void *) &param[MIDO_CACHE_THREAD_IPAG]);
+
+    // get all port-groups
+    eucanetd_timer_usec(&tv);
     l1names = NULL;
     max_l1names = 0;
     rc = mido_get_portgroups(VPCMIDO_TENANT, &l1names, &max_l1names);
@@ -6089,63 +6927,29 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
+    LOGDEBUG("\tetc in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    pthread_join(pt[MIDO_CACHE_THREAD_ROUTER], NULL);
+    pthread_join(pt[MIDO_CACHE_THREAD_BRIDGE], NULL);
+    // get all hosts
+    eucanetd_timer_usec(&tv);
+    if (refreshmode == MIDO_CACHE_REFRESH_ALL) {
+        rc = midonet_api_cache_iphostmap_populate(cache);
+        if (rc) {
+            LOGWARN("failed to populate mido ip-host map\n");
+        }
+    }
+    LOGDEBUG("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    
+    pthread_join(pt[MIDO_CACHE_THREAD_CHAIN], NULL);
+    pthread_join(pt[MIDO_CACHE_THREAD_IPAG], NULL);
+
+    pthread_attr_destroy(&ptattr);
 
     // Enable midocache
     midocache = cache;
-
+    //mido_info_midocache();
     return (ret);
-}
-
-/**
- * Clears the current midocache hosts entries and reloads hosts from MidoNet.
- * @param cache [in] midonet_api_cache of interest (where hosts will be [re]populated)
- * @return 0 on success. 1 on any error.
- */
-int midonet_api_cache_refresh_hosts(midonet_api_cache *cache) {
-    int rc = 0;
-    midoname **l1names = NULL;
-    int max_l1names = 0;
-    midonet_api_cache *midocache_bak;
-    
-    if (cache == NULL) {
-        return (1);
-    }
-    // Flush cache->hosts
-    for (int i = 0; i < cache->max_hosts; i++) {
-        midonet_api_host_free(cache->hosts[i]);
-    }
-    EUCA_FREE(cache->hosts);
-
-    // get all hosts
-    // disable midocache (load all hosts from MidoNet
-    midocache_bak = midocache;
-    midocache = NULL;
-
-    rc = mido_get_hosts(&l1names, &max_l1names);
-    if (!rc && max_l1names) {
-        cache->hosts = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_host *));
-        midonet_api_host *host = NULL;
-        for (int i = 0; i < max_l1names; i++) {
-            host = EUCA_ZALLOC_C(1, sizeof (midonet_api_host));
-            cache->hosts[i] = host;
-            host->obj = l1names[i];
-            LOGEXTREME("Cached host %s\n", host->obj->name);
-            rc = mido_get_host_ports(cache->ports, cache->max_ports, host->obj,
-                    &(host->ports), &(host->max_ports));
-            for (int j = 0; j < host->max_ports && !rc; j++) {
-                LOGEXTREME("\tCached port %s\n", host->ports[j]->jsonbuf);
-            }
-            rc = mido_get_addresses(host->obj, &(host->addresses), &(host->max_addresses));
-            for (int j = 0; j < host->max_addresses && !rc; j++) {
-                LOGEXTREME("\tCached address %u\n", host->addresses[j]);
-            }
-        }
-        cache->max_hosts = max_l1names;
-    }
-    EUCA_FREE(l1names);
-    // recover midocache state
-    midocache = midocache_bak;
-    return (0);
 }
 
 /**

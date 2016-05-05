@@ -222,10 +222,6 @@ int eucanetd_dummy_udpsock_close(void);
 //! Macro to convert a peer enumeration to a string representation
 #define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
 
-#ifndef EUCA_APPEND_PTRARR
-#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
-#endif /* ! EUCA_APPEND_PTRARR */
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |

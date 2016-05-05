@@ -157,7 +157,7 @@
 #define ICMP_PROTOCOL_NUMBER 1
 static boolean xml_initialized = FALSE;    //!< To determine if the XML library has been initialized
 
-#ifndef XML_INIT()                    // if compiling as a stand-alone binary (for unit testing)
+#ifndef XML_INIT                    // if compiling as a stand-alone binary (for unit testing)
 #define XML_INIT() if (!xml_initialized) { xmlInitParser(); xml_initialized = TRUE; }
 #endif
 //! Static prototypes

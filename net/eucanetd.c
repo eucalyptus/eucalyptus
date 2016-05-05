@@ -1322,8 +1322,8 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         snprintf(config->dhcpUser, 32, "%s", cvals[EUCANETD_CVAL_DHCPUSER]);
 
     LOGDEBUG("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s "
-             "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),
-             SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
+            "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),
+            SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
 
     rc = eucanetd_initialize_logs();
     if (rc) {
@@ -1331,69 +1331,71 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ipt = EUCA_ZALLOC_C(1, sizeof(ipt_handler));
+    if (!IS_NETMODE_VPCMIDO(pGni)) {
+        config->ipt = EUCA_ZALLOC_C(1, sizeof (ipt_handler));
 
-    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    if (rc) {
-        LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
+        if (rc) {
+            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
-    config->ips = EUCA_ZALLOC_C(1, sizeof(ips_handler));
+        config->ips = EUCA_ZALLOC_C(1, sizeof (ips_handler));
 
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ips_handler_init(config->ips, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
 #ifdef USE_IP_ROUTE_HANDLER
-    config->ipr = EUCA_ZALLOC_C(1, sizeof(ipr_handler));
+        config->ipr = EUCA_ZALLOC_C(1, sizeof (ipr_handler));
 
-    if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
-        LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
+            LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
+            ret = 1;
+        }
 #endif /* USE_IP_ROUTE_HANDLER */
 
-    config->ebt = EUCA_ZALLOC_C(1, sizeof(ebt_handler));
+        config->ebt = EUCA_ZALLOC_C(1, sizeof (ebt_handler));
 
-    rc = ebt_handler_init(config->ebt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ebt_handler_init(config->ebt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
-    //
-    // If an error has occurred we need to clean up temporary files
-    // that were created for the iptables, ebtables, ipset
-    // and possibly ipr (if compiled)
-    //
-    if (ret) {
         //
-        // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
-        // We need to free the memory as read_config() will get called again until registered with the cloud.
+        // If an error has occurred we need to clean up temporary files
+        // that were created for the iptables, ebtables, ipset
+        // and possibly ipr (if compiled)
         //
-        if (config->ips) {
-            unlink_handler_file(config->ips->ips_file);
-            EUCA_FREE(config->ips);
-        }
-        if (config->ipt) {
-            unlink_handler_file(config->ipt->ipt_file);
-            EUCA_FREE(config->ipt);
-        }
-        if (config->ebt) {
-            unlink_handler_file(config->ebt->ebt_filter_file);
-            unlink_handler_file(config->ebt->ebt_nat_file);
-            unlink_handler_file(config->ebt->ebt_asc_file);
-            EUCA_FREE(config->ebt);
-        }
+        if (ret) {
+            //
+            // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
+            // We need to free the memory as read_config() will get called again until registered with the cloud.
+            //
+            if (config->ips) {
+                unlink_handler_file(config->ips->ips_file);
+                EUCA_FREE(config->ips);
+            }
+            if (config->ipt) {
+                unlink_handler_file(config->ipt->ipt_file);
+                EUCA_FREE(config->ipt);
+            }
+            if (config->ebt) {
+                unlink_handler_file(config->ebt->ebt_filter_file);
+                unlink_handler_file(config->ebt->ebt_nat_file);
+                unlink_handler_file(config->ebt->ebt_asc_file);
+                EUCA_FREE(config->ebt);
+            }
 #ifdef USE_IP_ROUTE_HANDLER
-        if (config->ipr) {
-            unlink_handler_file(config->ipr->sIpRuleFile);
-            EUCA_FREE(config->ipr);
-        }
+            if (config->ipr) {
+                unlink_handler_file(config->ipr->sIpRuleFile);
+                EUCA_FREE(config->ipr);
+            }
 #endif /* USE_IP_ROUTE_HANDLER */
+        }
     }
 
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
