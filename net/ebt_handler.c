@@ -256,7 +256,7 @@ int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
     }
 
     // test required shell-outs
-    if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "-L", NULL) != EUCA_OK) {
+    if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, ebth->cmdprefix, "ebtables", "-L", NULL) != EUCA_OK) {
         LOGERROR("could not execute ebtables -L. check command/permissions\n");
         unlink(ebth->ebt_filter_file);
         unlink(ebth->ebt_nat_file);

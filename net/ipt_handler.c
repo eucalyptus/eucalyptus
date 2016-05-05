@@ -244,7 +244,7 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
         snprintf(pIpt->preloadPath, EUCA_MAX_PATH, "%s", psPreloadPath);
     }
     // test required shell-outs
-    if (euca_execlp(NULL, pIpt->cmdprefix, "iptables-save", NULL) != EUCA_OK) {
+    if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, pIpt->cmdprefix, "iptables-save", NULL) != EUCA_OK) {
         LOGERROR("could not execute iptables-save. check command/permissions\n");
         return (1);
     }

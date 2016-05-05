@@ -454,8 +454,7 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
                     strptra = hex2dot(pGni->public_ips[i]);
                     snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                     EUCA_FREE(strptra);
-
-                    euca_execlp(&rc, config->cmdprefix, "ip", "addr", "del", cmd,  "dev", config->pubInterface, NULL);
+                    euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix, "ip", "addr", "del", cmd,  "dev", config->pubInterface, NULL);
                     rc = rc >> 8;
                     if(!(rc == 0 || rc == 2)){
                         LOGWARN("Failed to run ip addr del %s/32 dev %s", strptra, config->pubInterface);
@@ -1217,7 +1216,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
             // run some commands
             snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
-            euca_execlp(&rc, config->cmdprefix, "ip", "addr", "add", cmd, "dev", config->pubInterface, NULL);
+            euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix, "ip", "addr", "add", cmd, "dev", config->pubInterface, NULL);
             rc = rc >> 8;
             if (!(rc == 0 || rc == 2)) {
                 LOGERROR("could not execute: adding ips\n");
@@ -1314,7 +1313,8 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
                 strptra = hex2dot(pGni->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                 EUCA_FREE(strptra);
-                if (euca_execlp(NULL, config->cmdprefix, "ip", "addr", "del", cmd, "dev", config->pubInterface, NULL) != EUCA_OK) {
+                if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix,
+                                         "ip", "addr", "del", cmd, "dev", config->pubInterface, NULL) != EUCA_OK) {
                     LOGERROR("could not execute: revoking no longer in use ips\n");
                     ret = 1;
                 }

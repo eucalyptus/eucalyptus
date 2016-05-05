@@ -219,7 +219,7 @@ int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
     }
     
     // test required shell-outs
-    if (euca_execlp(NULL, ipsh->cmdprefix, "ipset", "-L", NULL) != EUCA_OK) {
+    if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, ipsh->cmdprefix, "ipset", "-L", NULL) != EUCA_OK) {
         LOGERROR("could not execute ipset -L. check command/permissions\n");
         return (1);
     }

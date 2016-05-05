@@ -234,6 +234,7 @@ int ipr_handler_init(ipr_handler * pIprh, const char *psCmdPrefix)
         snprintf(pIprh->sCmdPrefix, EUCA_MAX_PATH, "%s", psCmdPrefix);
     }
     // test required shell-outs
+    if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, pIprh->sCmdPrefix, "ip", "rule", "list", NULL) != EUCA_OK) {
     if (euca_execlp(NULL, pIprh->sCmdPrefix, "ip", "rule", "list", NULL) != EUCA_OK) {
         LOGERROR("could not execute ip rule list. check command/permissions\n");
 
