@@ -195,7 +195,7 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
     "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
-    "-XX:+UseConcMarkSweepGC",
+    "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+DisableExplicitGC",
     "-Djava.net.preferIPv4Stack=true",
     "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
     "-Djava.awt.headless=true",
