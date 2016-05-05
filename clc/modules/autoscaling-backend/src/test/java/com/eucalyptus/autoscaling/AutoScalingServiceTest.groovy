@@ -89,6 +89,7 @@ import com.eucalyptus.context.Context
 import com.eucalyptus.context.Contexts
 import com.eucalyptus.crypto.util.Timestamps
 import com.eucalyptus.util.Callback
+import com.eucalyptus.util.Classes
 import com.eucalyptus.util.Consumer
 import com.eucalyptus.auth.principal.OwnerFullName
 import com.eucalyptus.util.TypeMappers
@@ -118,23 +119,36 @@ class AutoScalingServiceTest {
   @BeforeClass
   static void before() {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupCoreViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupMinimumViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupMetricsViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupScalingViewTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceSummaryTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceCoreViewTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceGroupViewTransform.class )
-    discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationCoreViewTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationMinimumViewTransform.class )
-    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
-    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
-    discovery.processClass( ScalingPolicies.ScalingPolicyViewTransform.class )
-    discovery.processClass(Tags.TagToTagDescription )
+    def registerTypeMapper = { Class<?> transformClass ->
+      Classes.genericsToClasses( transformClass ).with {
+        Class<?> from = get( 0 )
+        Class<?> to = get( 1 )
+        try {
+          TypeMappers.lookup( from, to )
+        } catch ( IllegalArgumentException ) {  // not registered
+          discovery.processClass( transformClass )
+        }
+      }
+    }
+    [
+        AutoScalingGroups.AutoScalingGroupTransform,
+        AutoScalingGroups.AutoScalingGroupCoreViewTransform,
+        AutoScalingGroups.AutoScalingGroupMinimumViewTransform,
+        AutoScalingGroups.AutoScalingGroupMetricsViewTransform,
+        AutoScalingGroups.AutoScalingGroupScalingViewTransform,
+        AutoScalingInstances.AutoScalingInstanceSummaryTransform,
+        AutoScalingInstances.AutoScalingInstanceTransform,
+        AutoScalingInstances.AutoScalingInstanceCoreViewTransform,
+        AutoScalingInstances.AutoScalingInstanceGroupViewTransform,
+        LaunchConfigurations.BlockDeviceTransform,
+        LaunchConfigurations.LaunchConfigurationTransform,
+        LaunchConfigurations.LaunchConfigurationCoreViewTransform,
+        LaunchConfigurations.LaunchConfigurationMinimumViewTransform,
+        ScalingActivities.ScalingActivityTransform,
+        ScalingPolicies.ScalingPolicyTransform,
+        ScalingPolicies.ScalingPolicyViewTransform,
+        Tags.TagToTagDescription
+    ].each( registerTypeMapper )
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
     Permissions.setPolicyEngine( new PolicyEngineImpl( Suppliers.ofInstance( Boolean.FALSE ), Suppliers.<String>ofInstance( null ) ) )

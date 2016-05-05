@@ -68,6 +68,7 @@ import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalance
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType
 import com.eucalyptus.util.Callback
 import com.eucalyptus.auth.principal.OwnerFullName
+import com.eucalyptus.util.Classes
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.ws.WebServicesException
 import com.google.common.base.Function
@@ -96,16 +97,29 @@ class ActivityManagerTest {
   @BeforeClass
   static void before() {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupCoreViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupMinimumViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupMetricsViewTransform.class )
-    discovery.processClass( AutoScalingGroups.AutoScalingGroupScalingViewTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceCoreViewTransform.class )
-    discovery.processClass( AutoScalingInstances.AutoScalingInstanceGroupViewTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationCoreViewTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationMinimumViewTransform.class )
-    discovery.processClass( LaunchConfigurations.LaunchConfigurationToRunInstances.class )
-    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
+    def registerTypeMapper = { Class<?> transformClass ->
+      Classes.genericsToClasses( transformClass ).with {
+        Class<?> from = get( 0 )
+        Class<?> to = get( 1 )
+        try {
+          TypeMappers.lookup( from, to )
+        } catch ( IllegalArgumentException ) {  // not registered
+          discovery.processClass( transformClass )
+        }
+      }
+    }
+    [
+        AutoScalingGroups.AutoScalingGroupCoreViewTransform,
+        AutoScalingGroups.AutoScalingGroupMinimumViewTransform,
+        AutoScalingGroups.AutoScalingGroupMetricsViewTransform,
+        AutoScalingGroups.AutoScalingGroupScalingViewTransform,
+        AutoScalingInstances.AutoScalingInstanceCoreViewTransform,
+        AutoScalingInstances.AutoScalingInstanceGroupViewTransform,
+        LaunchConfigurations.LaunchConfigurationCoreViewTransform,
+        LaunchConfigurations.LaunchConfigurationMinimumViewTransform,
+        LaunchConfigurations.LaunchConfigurationToRunInstances,
+        ScalingActivities.ScalingActivityTransform
+    ].each( registerTypeMapper )
   }
 
   @Test
@@ -1180,6 +1194,8 @@ class ActivityManagerTest {
                     },
                 )
             )
+          } else if ( request instanceof DescribeTagsType ) {
+            request.reply
           } else {
             throw new RuntimeException("Unknown request type: " + request.getClass())
           }
@@ -1203,8 +1219,7 @@ class ActivityManagerTest {
                   )
               )
           } else if ( request instanceof CreateTagsType ||
-              request instanceof TerminateInstancesType ||
-              request instanceof DescribeTagsType ) {
+              request instanceof TerminateInstancesType  ) {
                 request.reply
           } else {
             throw new RuntimeException("Unknown request type: " + request.getClass())
