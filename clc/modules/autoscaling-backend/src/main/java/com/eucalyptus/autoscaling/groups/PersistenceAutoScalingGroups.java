@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Junction;
@@ -39,6 +40,7 @@ import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -81,43 +83,12 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   }
 
   @Override
-  public <T> List<T> listRequiringMonitoring( final long interval,
+  public <T> List<T> listRequiringMonitoring( final Set<MonitoringSelector> selectors,
                                               final Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException {
-    // We want to select some groups depending on the interval / time 
-    int group = (int)((System.currentTimeMillis() / interval) % 6 );
+    final Collection<String> suffixes = selectors.stream( )
+        .flatMap( FUtils.chain( MonitoringSelector::suffixes, Collection::stream ) )
+        .collect( Collectors.toSet( ) );
 
-    final Collection<String> suffixes = Lists.newArrayList();
-    switch ( group ) {
-      case 0:
-        suffixes.add( "0" );
-        suffixes.add( "1" );
-        suffixes.add( "2" );
-        break;
-      case 1:
-        suffixes.add( "3" );
-        suffixes.add( "4" );
-        suffixes.add( "5" );
-        break;
-      case 2:
-        suffixes.add( "6" );
-        suffixes.add( "7" );
-        suffixes.add( "8" );
-        break;
-      case 3:
-        suffixes.add( "9" );
-        suffixes.add( "a" );
-        suffixes.add( "b" );
-        break;
-      case 4:
-        suffixes.add( "c" );
-        suffixes.add( "d" );
-        break;
-      default:
-        suffixes.add( "e" );
-        suffixes.add( "f" );
-        break;
-    }
-    
     final Junction likeAnyOf = Restrictions.disjunction();
     for ( final String suffix : suffixes ) {
       likeAnyOf.add( Restrictions.ilike( "id", "%" + suffix ) );  

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -218,7 +219,9 @@ public class ActivityManager {
       .add( state( LifecycleState.Terminating, ConfigurationState.Registered, removeFromLoadBalancerOrTerminate() ) )
       .add( state( LifecycleState.InService, ConfigurationState.Instantiated, addToLoadBalancer() )  )
       .build();
+  private final AtomicLong selectorCounter = new AtomicLong( );
   private final List<ScalingTask> scalingTasks = ImmutableList.<ScalingTask>builder()
+      .add( new ScalingTask(   10, ActivityTask.Next              ) { @Override void doWork( ) throws Exception { nextSelectors( ); } } )
       .add( new ScalingTask(   30, ActivityTask.Timeout           ) { @Override void doWork( ) throws Exception { timeoutScalingActivities( ); } } )
       .add( new ScalingTask( 3600, ActivityTask.Expiry            ) { @Override void doWork( ) throws Exception { deleteExpiredActivities( ); } } )
       .add( new ScalingTask(   10, ActivityTask.ZoneHealth        ) { @Override void doWork( ) throws Exception { updateUnavailableZones( ); } } )
@@ -261,7 +264,7 @@ public class ActivityManager {
     }
   }
 
-  public enum ActivityTask { Timeout, Expiry, ZoneHealth, Recovery, Scaling, InstanceCleanup, MetricsSubmission }
+  public enum ActivityTask { Next, Timeout, Expiry, ZoneHealth, Recovery, Scaling, InstanceCleanup, MetricsSubmission }
 
   public ActivityManager() {
     this(
@@ -372,6 +375,13 @@ public class ActivityManager {
   }
 
   /**
+   *
+   */
+  private void nextSelectors( ) {
+    selectorCounter.incrementAndGet( );
+  }
+
+  /**
    * Periodically executed scaling work.
    *
    * If scaling activities are not updated for some time we will fail them.
@@ -414,7 +424,7 @@ public class ActivityManager {
   private void runningInstanceChecks() {
     final Map<String,AutoScalingGroupCoreView> autoScalingAccounts = Maps.newHashMap( );
     try {
-      for ( final AutoScalingGroupCoreView group : autoScalingGroups.listRequiringMonitoring( 10000L, TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupCoreView.class ) ) ) {
+      for ( final AutoScalingGroupCoreView group : autoScalingGroups.listRequiringMonitoring( selectors( ), TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupCoreView.class ) ) ) {
         autoScalingAccounts.put( group.getOwnerAccountNumber(), group );
         final List<String> groupInstancesPending = autoScalingInstances.listByGroup( group, LifecycleState.Pending, instanceId() );
         final List<String> groupInstancesInService = autoScalingInstances.listByGroup( group, LifecycleState.InService, instanceId() );
@@ -448,12 +458,18 @@ public class ActivityManager {
     }
   }
 
+  private Set<AutoScalingGroups.MonitoringSelector> selectors( ) {
+    return Collections.singleton( AutoScalingGroups.MonitoringSelector.values( )[
+        (int)(selectorCounter.get( ) % AutoScalingGroups.MonitoringSelector.values( ).length)
+    ] );
+  }
+
   /**
    * Periodically executed scaling work.
    */
   private void submitMetrics() {
     try {
-      for ( final AutoScalingGroupMetricsView group : autoScalingGroups.listRequiringMonitoring( 10000L, TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupMetricsView.class ) ) ) {
+      for ( final AutoScalingGroupMetricsView group : autoScalingGroups.listRequiringMonitoring( selectors( ), TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupMetricsView.class ) ) ) {
         if ( !group.getEnabledMetrics().isEmpty() ) {
           final List<AutoScalingInstanceCoreView> groupInstances = Sets.intersection( group.getEnabledMetrics(), instanceMetrics ).isEmpty() ?
               Collections.<AutoScalingInstanceCoreView>emptyList() :
