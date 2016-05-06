@@ -85,7 +85,6 @@ def initialize_cloud(opts):
                    'policy does not appear to be loaded.  '
                    'Initialization will proceed without selinux '
                    'support.').format(os.path.basename(sys.argv[0]))
-            sys.exit(1)
     try:
         subprocess.check_call([exepath, '--initialize'] + opts)
     except subprocess.CalledProcessError:
