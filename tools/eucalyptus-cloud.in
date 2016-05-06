@@ -156,6 +156,12 @@ check_java_version() {
     JAVA=""
     JH=$( echo $CLOUD_OPTS | \
          sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
+
+    # Try default RHEL/CentOS RPM location for Java 1.8
+    if [ -z "$JH" ] && [ -e /usr/lib/jvm/java-1.8.0 ]; then
+        JH=/usr/lib/jvm/java-1.8.0
+    fi
+
     if [ -n "$JH" ]; then
         if [ -x $JH/jre/bin/java ]; then
             JAVA=$JH/jre/bin/java
