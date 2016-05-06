@@ -1001,8 +1001,8 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     }
     (*outRes) = res;
 
-    LOGDEBUG("Core status:   in-use %d physical %lld over-committed %s\n", sum_cores, nc->phy_max_cores, (((sum_cores - cores_free) > nc->phy_max_cores) ? "yes" : "no"));
-    LOGDEBUG("Memory status: in-use %lld physical %lld over-committed %s\n", sum_mem, nc->phy_max_mem, (((sum_mem - mem_free) > nc->phy_max_mem) ? "yes" : "no"));
+    LOGDEBUG("Core status:   in-use %d physical %lld over-committed %s\n", sum_cores, nc->phy_max_cores, (((sum_cores + cores_free) > nc->phy_max_cores) ? "yes" : "no"));
+    LOGDEBUG("Memory status: in-use %lld physical %lld over-committed %s\n", sum_mem, nc->phy_max_mem, (((sum_mem + mem_free) > nc->phy_max_mem) ? "yes" : "no"));
     LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n", res->nodeStatus, res->numberOfCoresAvailable, res->numberOfCoresMax, res->memorySizeAvailable,
              res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
     return (EUCA_OK);
