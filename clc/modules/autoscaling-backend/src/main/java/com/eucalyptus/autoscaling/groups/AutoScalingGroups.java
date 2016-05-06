@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,6 +53,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 
@@ -60,6 +61,26 @@ import com.google.common.collect.Ordering;
  *
  */
 public abstract class AutoScalingGroups {
+
+  public enum MonitoringSelector {
+    Set1( "0", "1", "2" ),
+    Set2( "3", "4", "5" ),
+    Set3( "6", "7", "8" ),
+    Set4( "9", "a", "b" ),
+    Set5( "c", "d" ),
+    Set6( "e", "f" ),
+    ;
+
+    private final ImmutableSet<String> suffixes;
+
+    MonitoringSelector( String... idSuffixes ) {
+      this.suffixes = ImmutableSet.copyOf( idSuffixes );
+    }
+
+    Set<String> suffixes( ) {
+      return suffixes;
+    }
+  }
 
   public abstract <T> List<T> list( OwnerFullName ownerFullName,
                                     Predicate<? super AutoScalingGroup> filter,
@@ -69,7 +90,7 @@ public abstract class AutoScalingGroups {
 
   public abstract <T> List<T> listRequiringInstanceReplacement( Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
 
-  public abstract <T> List<T> listRequiringMonitoring( long interval,
+  public abstract <T> List<T> listRequiringMonitoring( Set<MonitoringSelector> selectors,
                                                        Function<? super AutoScalingGroup,T> transform ) throws AutoScalingMetadataException;
   
   public abstract <T> T lookup( OwnerFullName ownerFullName,
