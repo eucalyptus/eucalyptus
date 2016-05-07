@@ -3847,44 +3847,6 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 
                     while (rc && ((time(NULL) - startRun) < ncRunTimeout)) {
 
-                        boolean is_windows = (strstr(platform, "windows") != NULL) ? TRUE : FALSE;
-                        boolean has_creds = (credential != NULL && strlen(credential) > 0) ? TRUE : FALSE;
-                        boolean is_res_node = (strstr(res->ncURL, "EucalyptusNC") != NULL) ? TRUE : FALSE;
-
-                        // if this resource is not a node (but a co-located Broker)
-                        // and the guest is either Windows or Linux needing credentials,
-                        // then we'll have to create a floppy to pass to the instance
-                        if (!is_res_node && (is_windows || has_creds)) {
-
-                            //! @TODO: remove the 'windows' subdir or change something more generic
-                            char cdir[EUCA_MAX_PATH];
-                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
-                            if (check_directory(cdir)) {
-                                if (mkdir(cdir, 0700)) {
-                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
-                                }
-                            }
-                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
-                            if (check_directory(cdir)) {
-                                if (mkdir(cdir, 0700)) {
-                                    LOGWARN("mkdir failed: could not make directory '%s', check permissions\n", cdir);
-                                }
-                            }
-                            if (check_directory(cdir)) {
-                                LOGERROR("could not create console/floppy cache directory '%s'\n", cdir);
-                            } else {
-                                if (is_windows) {
-                                    // drop encrypted windows password and floppy on filesystem
-                                    rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
-                                } else if (has_creds) {
-                                    // decode the credential and place it into floppy on filesystem
-                                    rc = make_credential_floppy(config->eucahome, cdir, credential);
-                                }
-                                if (rc) {
-                                    LOGERROR("could not create console/floppy cache/file\n");
-                                }
-                            }
-                        }
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
                                           amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, credential,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, rootDirective, netIds, netIdsLen, secNetCfgs, secNetCfgsLen, &outInst);
@@ -4049,33 +4011,8 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     for (i = start, done = 0; ((i < stop) && !done); i++) {
         EUCA_FREE(*consoleOutput);
 
-        // if not talking to Eucalyptus NC (but, e.g., a Broker)
-        if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
-            *consoleOutput = NULL;
-            snprintf(pwfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/console.append.log", config->eucahome, instanceId);
-
-            rawconsole = NULL;
-            if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
-                rawconsole = file2str(pwfile);
-            } else {                   // the console log file will not exist for a Linux guest
-                rawconsole = strdup("not implemented");
-            }
-
-            if (rawconsole) {
-                *consoleOutput = base64_enc(((u8 *) rawconsole), strlen(rawconsole));
-                EUCA_FREE(rawconsole);
-            }
-            // set the return code accordingly
-            if (*consoleOutput == NULL) {
-                rc = 1;
-            } else {
-                rc = 0;
-            }
-            done++;                    // quit on the first host, since they are not queried remotely
-        } else {                       // otherwise, we *are* talking to a Eucalyptus NC, so make the remote call
-            timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), i);
-            rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncGetConsoleOutput", instanceId, consoleOutput);
-        }
+        timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), i);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncGetConsoleOutput", instanceId, consoleOutput);
 
         if (rc) {
             ret = EUCA_ERROR;
@@ -4227,25 +4164,6 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
         done = 0;
         for (j = start; j < stop && !done; j++) {
             if (resourceCacheLocal.resources[j].state == RESUP) {
-
-                if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
-                    char cdir[EUCA_MAX_PATH];
-                    char cfile[EUCA_MAX_PATH];
-                    snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
-                    if (!check_directory(cdir)) {
-                        snprintf(cfile, EUCA_MAX_PATH, "%s/floppy", cdir);
-                        if (!check_file(cfile))
-                            unlink(cfile);
-                        snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
-                        if (!check_file(cfile))
-                            unlink(cfile);
-
-                        if (rmdir(cdir)) {
-                            LOGWARN("rmdir failed: unable to remove directory '%s', check permissions\n", cdir);
-                        }
-                    }
-                }
-
                 rc = ncClientCall(pMeta, 0, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance",
                                   instId, force, &shutdownState, &previousState);
                 if (rc) {
