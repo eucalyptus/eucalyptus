@@ -158,8 +158,9 @@ check_java_version() {
          sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
 
     # Try default RHEL/CentOS RPM location for Java 1.8
-    if [ -z "$JH" ] && [ -e /usr/lib/jvm/java-1.8.0 ]; then
-        JH=/usr/lib/jvm/java-1.8.0
+    # (This is set via autoconf from JAVA_HOME at build time.)
+    if [ -z "$JH" ] && [ -e @JAVA_HOME@ ]; then
+        JH=@JAVA_HOME@
     fi
 
     if [ -n "$JH" ]; then
