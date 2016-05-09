@@ -319,13 +319,18 @@ public class EucalyptusActivityTasks {
 	  checkResult( task, new ComputeSystemActivity(useELBSystemAccount), "failed to delete the group "+groupName );
 	}
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames, boolean useElbSystemAccount ){
-    return describeSystemSecurityGroupsImpl(groupNames, useElbSystemAccount);
+    return describeSystemSecurityGroupsImpl(groupNames, null, useElbSystemAccount);
   }
 	public List<SecurityGroupItemType> describeSystemSecurityGroups( List<String> groupNames ){
-		return describeSystemSecurityGroupsImpl(groupNames, true);
+		return describeSystemSecurityGroupsImpl(groupNames, null, true);
 	}
-	private List<SecurityGroupItemType> describeSystemSecurityGroupsImpl( List<String> groupNames, boolean useELBSystemAccount ){
-	  final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null,groupNames,null);
+
+	public List<SecurityGroupItemType> describeSystemSecurityGroupsByVpc(final String vpcId) {
+		return describeSystemSecurityGroupsImpl(null, vpcId, true);
+	}
+
+	private List<SecurityGroupItemType> describeSystemSecurityGroupsImpl( final List<String> groupNames, final String vpcId, boolean useELBSystemAccount ){
+	  final EucalyptusDescribeSecurityGroupTask task = new EucalyptusDescribeSecurityGroupTask(null, groupNames, vpcId);
 	  return resultOf( task, new ComputeSystemActivity(useELBSystemAccount), "failed to describe security groups" );
 	}
 
@@ -982,6 +987,26 @@ public class EucalyptusActivityTasks {
 				new EucaModifyNetworkInterfaceAttribute(networkInterfaceId, securityGroupIds),
 				new ComputeSystemActivity(),
 				String.format("failed to modify network interface %s", networkInterfaceId)
+		);
+	}
+
+	public void revokeSystemSecurityGroupEgressRules(final String groupId) {
+		checkResult(
+				new EucalyptusRevokeEgressRuleTask(groupId, "-1", -1, -1, "0.0.0.0/0"),
+				new ComputeSystemActivity(),
+				"Failed to revoke egress rule"
+		);
+	}
+
+	public void authorizeSystemSecurityGroupEgressRule(final String groupId,
+														final String protocol,
+														int fromPort,
+														int toPort,
+														final String sourceCidrRange) {
+		checkResult(
+				new EucalyptusAuthorizeEgressRuleTask(groupId, protocol, fromPort, toPort, sourceCidrRange),
+				new ComputeSystemActivity(),
+				"Failed to authorize egress rule"
 		);
 	}
 
@@ -2286,7 +2311,66 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
+	private class EucalyptusAuthorizeEgressRuleTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String groupId = null;
+		private String protocol = null;
+		private int fromPort = -1;
+		private int toPort = -1;
+		private String cidrSourceRange = null;
+		EucalyptusAuthorizeEgressRuleTask(final String groupId, final String protocol,
+									   final int fromPort, final int toPort,
+									   final String cidrSourceRange) {
+			this.groupId = groupId;
+			this.protocol = protocol;
+			this.fromPort = fromPort;
+			this.toPort = toPort;
+			this.cidrSourceRange = cidrSourceRange;
+		}
+
+		AuthorizeSecurityGroupEgressType getRequest() {
+			final AuthorizeSecurityGroupEgressType req = new AuthorizeSecurityGroupEgressType();
+			req.setGroupId(this.groupId);
+			final IpPermissionType perm = new IpPermissionType();
+			perm.setIpProtocol(this.protocol);
+			perm.setFromPort(this.fromPort);
+			perm.setToPort(this.toPort);
+			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( this.cidrSourceRange ) ) );
+			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			return req;
+		}
+	}
+
+	private class EucalyptusRevokeEgressRuleTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String groupId = null;
+		private String protocol = null;
+		private int fromPort = -1;
+		private int toPort = -1;
+		private String cidrSourceRange = null;
+		EucalyptusRevokeEgressRuleTask(final String groupId, final String protocol,
+									   final int fromPort, final int toPort,
+									   final String cidrSourceRange) {
+			this.groupId = groupId;
+			this.protocol = protocol;
+			this.fromPort = fromPort;
+			this.toPort = toPort;
+			this.cidrSourceRange = cidrSourceRange;
+		}
+
+		RevokeSecurityGroupEgressType getRequest() {
+			final RevokeSecurityGroupEgressType req = new RevokeSecurityGroupEgressType();
+			req.setGroupId(this.groupId);
+			final IpPermissionType perm = new IpPermissionType();
+			perm.setIpProtocol(this.protocol);
+			perm.setFromPort(this.fromPort);
+			perm.setToPort(this.toPort);
+			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( this.cidrSourceRange ) ) );
+			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			return req;
+		}
+	}
+
+
 	private class EucalyptusDeleteGroupTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String groupName = null;
 		EucalyptusDeleteGroupTask(String groupName){

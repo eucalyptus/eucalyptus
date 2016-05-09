@@ -39,6 +39,7 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -690,6 +691,15 @@ public class LoadBalancingSystemVpcs {
                         throw Exceptions.toUndeclared("No NAT gateway is found for AZ: " + az);
                     addRouteToGateway(routeTableId, null, azToNatGateway.get(az));
                 }
+
+                // 9. restrict egress ports for default group
+                final List<SecurityGroupItemType> groups =
+                        client.describeSystemSecurityGroupsByVpc(vpcId);
+                final Optional<SecurityGroupItemType> defaultGroup =
+                        groups.stream().filter( g -> "default".equals(g.getGroupName()))
+                        .findFirst();
+                if (defaultGroup.isPresent())
+                    updateDefaultSecurityGroup(defaultGroup.get());
             }
             KnownAvailabilityZones.addAll(availabilityZones);
         } catch (final Exception ex) {
@@ -862,6 +872,34 @@ public class LoadBalancingSystemVpcs {
             return gateways.get(0).getInternetGatewayId();
         }
     }
+
+    private static void updateDefaultSecurityGroup(final SecurityGroupItemType group) {
+        final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
+
+        final String groupId = group.getGroupId();
+        final List<IpPermissionType> egressRules = group.getIpPermissionsEgress();
+        if (egressRules.stream().filter(ip -> "-1".equals(ip.getIpProtocol()))
+                .findAny().isPresent()) {
+            // revoke all
+            client.revokeSystemSecurityGroupEgressRules(groupId);
+        }
+
+        final int servicePort = StackConfiguration.PORT;
+        if (! egressRules.stream().filter(ip -> "tcp".equals(ip.getIpProtocol()) && servicePort == ip.getFromPort()).findAny().isPresent())
+            client.authorizeSystemSecurityGroupEgressRule(groupId, "tcp",  servicePort, servicePort, "0.0.0.0/0");
+
+        final int dnsPort = 53;
+        if (! egressRules.stream().filter(ip -> "udp".equals(ip.getIpProtocol()) && dnsPort == ip.getFromPort()).findAny().isPresent())
+            client.authorizeSystemSecurityGroupEgressRule(groupId, "udp", dnsPort, dnsPort, "0.0.0.0/0");
+
+        final int ntpPort = 123;
+        if (! egressRules.stream().filter(ip -> "udp".equals(ip.getIpProtocol()) && ntpPort == ip.getFromPort()).findAny().isPresent())
+            client.authorizeSystemSecurityGroupEgressRule(groupId, "udp", ntpPort, ntpPort, "0.0.0.0/0");
+
+        if (! egressRules.stream().filter(ip -> "icmp".equals(ip.getIpProtocol())).findAny().isPresent())
+            client.authorizeSystemSecurityGroupEgressRule(groupId, "icmp", -1, -1, "0.0.0.0/0");
+    }
+
     private static Set<String> KnownAvailabilityZones = Sets.newHashSet();
     /// When there is a new AZ enabled later, system VPC setup should run again
     public static class AvailabilityZoneChecker implements EventListener<ClockTick> {
