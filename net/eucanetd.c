@@ -277,6 +277,7 @@ static volatile boolean gIsRunning = FALSE;
 //! USR1 and USR2 signals
 static volatile boolean gUsr1Caught = FALSE;
 static volatile boolean gUsr2Caught = FALSE;
+static volatile boolean gHupCaught = FALSE;
 
 //! Dummy UDP socket
 int eucanetd_dummysock = 0;
@@ -334,7 +335,7 @@ int main(int argc, char **argv)
     int firstrun = 1;
     int counter = 0;
     int epoch_updates = 0;
-    int lni_populated = 0;
+    int lni_rc = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
     int check_peer_attempts = 300;
@@ -411,13 +412,13 @@ int main(int argc, char **argv)
     gni_a = gni_init();
     gni_b = gni_init();
     pGni = gni_a;
-    // spin here until we get the latest config from active CC
+    // spin here until we get the latest config
     LOGINFO("eucanetd: starting pre-flight checks\n");
     rc = 1;
     while (rc) {
         rc = eucanetd_read_config(pGni);
         if (rc) {
-            LOGDEBUG("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
+            LOGDEBUG("Failed to perform basic eucanetd configuration, will retry in 1 sec\n");
             sleep(1);
         } else {
             // At this point we have read a valid global network information
@@ -453,8 +454,8 @@ int main(int argc, char **argv)
     // Set to setup our local network view structure
     if ((!pLni) && (!IS_NETMODE_VPCMIDO(pGni))) {
         if ((pLni = lni_init(config->cmdprefix, config->sIptPreload)) == NULL) {
-            LOGFATAL("out of memory: unable to allocate LNI\n");
-            exit(1);
+            LOGFATAL("Failed to initialize LNI\n");
+            gIsRunning = FALSE;
         }
     }
 
@@ -468,10 +469,17 @@ int main(int argc, char **argv)
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsuccessful\n");
         }
-        // first time we run, force an update and flush has necessary
+        // first time we run, force an update
         if (firstrun) {
             update_globalnet = TRUE;
             firstrun = 0;
+        }
+        // Force an update if SIGHUP is caught
+        if (gHupCaught) {
+            update_globalnet = TRUE;
+            // Invalidate last applied version
+            config->lastAppliedVersion[0] = '\0';
+            gHupCaught = FALSE;
         }
         // if the last update operations failed, regardless of new info, force an update
         if (update_globalnet_failed == TRUE) {
@@ -484,7 +492,7 @@ int main(int argc, char **argv)
             rc = eucanetd_read_latest_network(pGni, &update_globalnet);
         }
         if (rc) {
-            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
+            LOGWARN("Failed to populate GNI. skipping update\n");
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = FALSE;
         }
@@ -510,7 +518,7 @@ int main(int argc, char **argv)
             // Initialize our network driver
             rc = eucanetd_initialize_network_drivers(config);
             if (rc) {
-                LOGFATAL("could not initialize network driver: check above log errors for details\n");
+                LOGFATAL("Failed to initialize network driver: eucanetd going down\n");
                 exit(1);
             }
         }
@@ -529,7 +537,7 @@ int main(int argc, char **argv)
                 update_globalnet_failed = TRUE;
             }
         }
-        // Do we need to flush all eucalyptus networking artifacts
+        // Do we need to flush all eucalyptus networking artifacts?
         if (config->flushmode) {
             eucanetd_timer(&tv);
             // Make sure we were given a flush API prior to calling it
@@ -550,9 +558,9 @@ int main(int argc, char **argv)
 
             // Are we able to load the LNI information - no need for lni in VPCMIDO
             if (!IS_NETMODE_VPCMIDO(pGni)) {
-                lni_populated = lni_populate(pLni);
+                lni_rc = lni_populate(pLni);
             }
-            if (lni_populated == 0) {
+            if (lni_rc == 0) {
                 //
                 // If we don't have a scrub API, just call all APIs. Any driver design must have this
                 // API defined but for development purpose it make sense to sometimes bypass it.
@@ -735,6 +743,7 @@ static void eucanetd_sighup_handler(int signal)
 {
     LOGINFO("eucanetd caught a SIGHUP signal.\n");
     config->flushmode = FLUSH_NONE;
+    gHupCaught = TRUE;
 }
 
 /**
@@ -773,28 +782,28 @@ static void eucanetd_install_signal_handlers(void) {
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigterm_handler;
     if (sigaction(SIGTERM, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGTERM handler");
+        LOGFATAL("Failed to install SIGTERM handler");
         exit(1);
     }
     // Install the SIGHUP signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sighup_handler;
     if (sigaction(SIGHUP, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGTERM handler");
+        LOGFATAL("Failed to install SIGTERM handler");
         exit(1);
     }
     // Install the SIGUSR1 signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigusr1_handler;
     if (sigaction(SIGUSR1, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGUSR1 handler");
+        LOGFATAL("Failed to install SIGUSR1 handler");
         exit(1);
     }
     // Install the SIGUSR1 signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigusr2_handler;
     if (sigaction(SIGUSR2, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGUSR2 handler");
+        LOGFATAL("Failed to install SIGUSR2 handler");
         exit(1);
     }
 }
@@ -1125,12 +1134,12 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
     if (check_directory(eucadir)) {
         LOGFATAL("cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
-        exit(1);
+        return (1);
     }
 
     snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
 
-    // search for the global state file from eucalyptue
+    // search for the global state file from eucalyptus
     snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
     if (check_file(sourceuri)) {
         snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml", home);
@@ -1168,7 +1177,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
     rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
-    //rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1484,7 +1492,7 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet)
 
     rc = eucanetd_fetch_latest_local_config();
     if (rc) {
-        LOGWARN("cannot read in changes to local configuration file: check local eucalyptus.conf\n");
+        LOGWARN("Failed to effect local eucalyptus.conf\n");
     }
     // get latest networking data from eucalyptus, set update flags if content has changed
     rc = eucanetd_fetch_latest_euca_network(update_globalnet);
@@ -1517,7 +1525,7 @@ static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
 
     rc = atomic_file_get(&(config->global_network_info_file), update_globalnet);
     if (rc) {
-        LOGWARN("could not fetch latest global network info from NC\n");
+        LOGWARN("Failed to fetch latest global network\n");
         ret = 1;
     }
 

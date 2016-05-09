@@ -298,6 +298,7 @@ typedef struct mido_core_t {
     midonet_api_chain *eucabr_infilter;
     midonet_api_ipaddrgroup *metadata_iag;
     midonet_api_host *eucanetdhost;
+    int population_failed;
 
     midoname *gwhosts[32];
     midoname *gwports[32];

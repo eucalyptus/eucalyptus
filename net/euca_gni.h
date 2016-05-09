@@ -126,6 +126,17 @@ enum gni_xpath_node_t {
     GNI_XPATH_INVALID
 };
 
+enum gni_vpcmido_config_diff_t {
+    GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP       = 0x00000001,
+    GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN  = 0x00000002,
+    GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS = 0x00000004,
+    GNI_VPCMIDO_CONFIG_DIFF_EUCANETDHOST       = 0x00000008,
+    GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR  = 0x00000010,
+    GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP    = 0x00000020,
+    GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS       = 0x00000040,
+    GNI_VPCMIDO_CONFIG_DIFF_OTHER              = 0x80000000,
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -516,6 +527,7 @@ int gni_hostnames_free(gni_hostname_info *host_info);
 int gni_hostnames_get_hostname(gni_hostname_info *host_info, const char *ip_address, char **hostname);
 int cmpipaddr(const void *p1, const void *p2);
 
+int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b);
 int cmp_gni_vpc(gni_vpc *a, gni_vpc *b);
 int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b);
 int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b);

@@ -293,21 +293,6 @@ static int network_driver_init(eucanetdConfig * pConfig)
         return (0);
     }
 
-/*
-    if ((pMidoConfig = EUCA_ZALLOC(1, sizeof (mido_config))) == NULL) {
-        LOGERROR("Failed to initialize '%s' networking mode. Out of memory!\n", DRIVER_NAME());
-        return (1);
-    }
-
-    rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
-            pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
-    if (rc) {
-        LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set in eucalyptus.conf\n");
-        EUCA_FREE(pMidoConfig);
-        return (1);
-    }
-*/
-
     pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
     rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
             pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
@@ -316,19 +301,7 @@ static int network_driver_init(eucanetdConfig * pConfig)
         EUCA_FREE(pMidoConfig);
         return (1);
     }
-    //pMidoConfig = pMidoConfig_c;
     
-    // Release unnecessary handlers
-    if (pConfig->ipt) {
-        ipt_handler_close(pConfig->ipt);
-    }
-    if (pConfig->ips) {
-        ips_handler_close(pConfig->ips);
-    }
-    if (pConfig->ebt) {
-        ebt_handler_close(pConfig->ebt);
-    }
-
     // We are now initialized
     gInitialized = TRUE;
 
@@ -366,6 +339,7 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
             ret = 1;
         }
     }
+    midonet_api_cleanup();
     gInitialized = FALSE;
     return (ret);
 }
@@ -452,9 +426,7 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         return (1);
     }
 
-    if (midonet_api_system_changed == 1) {
-        rc = do_midonet_maint(pMidoConfig);
-    }
+    rc = do_midonet_maint(pMidoConfig);
     return (rc);
 }
 
@@ -541,7 +513,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
     midonet_api_cache_midos_init();
 
     if (!gTunnelZoneOk) {
-        LOGINFO("Checking MidoNet tunnel-zone.\n");
+        LOGDEBUG("Checking MidoNet tunnel-zone.\n");
         rc = 1;
     }
     while (!gTunnelZoneOk) {
@@ -561,25 +533,39 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
 
     bzero(versionFile, EUCA_MAX_PATH);
 
-    // Is the driver initialized?
-    if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to scrub the system for network artifacts. Driver '%s' not initialized.\n", DRIVER_NAME());
-        return (ret);
-    }
     // Need a valid global network view
     if (!pGni) {
         LOGERROR("Failed to scrub the system for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
         return (ret);
     }
 
-    LOGTRACE("euca VPCMIDO cache state: %s\n", midonet_api_system_changed == 0 ? "CLEAN" : "DIRTY");
+    if (!IS_INITIALIZED() || cmp_gni_vpcmido_config(pGni, pGniApplied)) {
+        LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
+        if (pMidoConfig) {
+            free_mido_config(pMidoConfig);
+        }
+        rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode,
+                config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
+                config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+        if (rc) {
+            LOGERROR("failed to (re)initialize config options for VPCMIDO mode are set\n");
+            return (EUCANETD_RUN_ERROR_API);
+        }
+        pGniApplied = NULL;
+    }
+    LOGTRACE("euca VPCMIDO system state: %s\n", midonet_api_system_changed == 0 ? "CLEAN" : "DIRTY");
     rc = do_midonet_update(pGni, pGniApplied, pMidoConfig);
 
     if (rc != 0) {
         LOGERROR("failed to update midonet: check log for details\n");
-        // Invalidate mido cache - force repopulate
+        // Invalidate mido cache
         midonet_api_system_changed = 1;
-        ret = EUCANETD_RUN_ERROR_API;
+        if (rc < 0) {
+            // Accept errors in instances/interface implementation.
+            ret = EUCANETD_RUN_NO_API;
+        } else {
+            ret = EUCANETD_RUN_ERROR_API;
+        }
     } else {
         LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
     }

@@ -6414,6 +6414,55 @@ int cmpipaddr(const void *p1, const void *p2) {
         return 1;
 }
 
+/**
+ * Compares two globalNetworkInfo structures in the argument and search for
+ * VPCMIDO configuration changes.
+ * @param a [in] globalNetworkInfo structure of interest.
+ * @param b [in] globalNetworkInfo structure of interest.
+ * @return 0 if configuration parameters in a and b match. Non-zero otherwise. 
+ */
+int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
+    int ret = 0;
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (GNI_VPCMIDO_CONFIG_DIFF_OTHER);
+    }
+    if (a->enabledCLCIp != b->enabledCLCIp) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP;
+    }
+    if (strcmp(a->instanceDNSDomain, b->instanceDNSDomain)) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN;
+    }
+    if (a->max_instanceDNSServers != b->max_instanceDNSServers) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+    } else {
+        for (int i = 0; i < a->max_instanceDNSServers; i++) {
+            if (a->instanceDNSServers[i] != b->instanceDNSServers[i]) {
+                ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+            }
+        }
+    }
+    if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
+        if (strcmp(a->EucanetdHost, b->EucanetdHost)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_EUCANETDHOST;
+        }
+        if (strcmp(a->PublicNetworkCidr, b->PublicNetworkCidr)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR;
+        }
+        if (strcmp(a->PublicGatewayIP, b->PublicGatewayIP)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP;
+        }
+        if (strcmp(a->GatewayHosts, b->GatewayHosts)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS;
+        }
+    } else {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
+    }
+    return (ret);
+}
+
 //!
 //! Compares two gni_vpc structures in the argument.
 //!

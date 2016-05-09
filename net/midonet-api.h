@@ -168,6 +168,37 @@ enum mido_cache_pthreads_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef struct midoname_ipagip_extras_t {
+    char *ip;
+} midoname_ipagip_extras;
+
+typedef struct midoname_rule_extras_t {
+    char *type;
+    char *nattarget;
+    char *jumpchainid;
+} midoname_rule_extras;
+
+typedef struct midoname_port_extras_t {
+    char *hostid;
+    char *peerid;
+    char *ifname;
+    char *netaddr;
+    char *netlen;
+    char *portaddr;
+    char *portmac;
+} midoname_port_extras;
+
+typedef struct midoname_route_extras_t {
+    char *srcnet;
+    char *srclen;
+    char *dstnet;
+    char *dstlen;
+    char *type;
+    char *nexthopport;
+    char *nexthopgateway;
+    char *weight;
+} midoname_route_extras;
+
 typedef struct midoname_t {
     char *tenant;
     char *name;
@@ -177,13 +208,10 @@ typedef struct midoname_t {
     char *content_type;
     char *vers;
     char *uri;
-    char *ipag_ip;
-    char *port_peerid;
-    char *port_ifname;
-    char *route_srcnet;
-    char *route_srclen;
-    char *route_dstnet;
-    char *route_dstlen;
+    midoname_ipagip_extras *ipagip;
+    midoname_rule_extras *rule;
+    midoname_port_extras *port;
+    midoname_route_extras *route;
     int init;
 } midoname;
 
@@ -226,8 +254,8 @@ typedef struct midonet_api_chain_t {
 
 typedef struct midonet_api_host_t {
     midoname *obj;
-    midoname **ports;
-    int max_ports;
+    //midoname **ports;
+    //int max_ports;
     u32 *addresses;
     int max_addresses;
 } midonet_api_host;
@@ -370,6 +398,7 @@ int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
 int mido_check_state(void);
+int mido_initialize_apiuribase(void);
 
 int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
 int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnames_max);
@@ -548,6 +577,7 @@ int midonet_api_cache_del_bridge_port(midonet_api_bridge *bridge, midoname *port
 int midonet_api_cache_del_router_port(midonet_api_router *router, midoname *port);
 midoname *midonet_api_cache_lookup_port(midoname *port, int *idx);
 
+int midonet_api_cache_get_bridges(midonet_api_bridge ***bridges, int *max_bridges);
 midonet_api_bridge *midonet_api_cache_add_bridge(midoname *bridge);
 int midonet_api_cache_del_bridge(midoname *bridge);
 midonet_api_bridge *midonet_api_cache_lookup_bridge(midoname *bridge, int *idx);
@@ -565,6 +595,8 @@ midoname *midonet_api_cache_lookup_dhcp_host(midonet_api_dhcp *dhcp, midoname *d
 midoname *midonet_api_cache_lookup_dhcp_host_byparam(midonet_api_dhcp *dhcp,
         char *name, char *mac, char *ip, char *dns_domain, int *idx);
 
+int midonet_api_cache_get_routers(midonet_api_router ***routers, int *max_routers);
+int midonet_api_cache_get_natg_routers(midonet_api_router ***routers, int *max_routers);
 midonet_api_router *midonet_api_cache_add_router(midoname *router);
 int midonet_api_cache_del_router(midoname *router);
 midonet_api_router *midonet_api_cache_lookup_router(midoname *router, int *idx);
