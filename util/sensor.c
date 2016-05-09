@@ -623,6 +623,7 @@ static int sensor_expire_cache_entries(void)
 int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void))
 {
     int use_resources_size = MAX_SENSOR_RESOURCES;
+    int sensor_mem_size = 0;
 
     if (sem || resources) {            // we will use an externally allocated semaphore and memory region
         if (sem == NULL || resources == NULL || resources_size < 1) {   // all must be set
@@ -668,12 +669,16 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
             return (EUCA_MEMORY_ERROR);
         }
 
-        sensor_state = EUCA_ZALLOC(sizeof(sensorResourceCache) + sizeof(sensorResource), (use_resources_size - 1));
+        // use_resources_size - 1 ... because we already have 1 element of the array in the first struct 
+        sensor_mem_size = sizeof(sensorResourceCache) + (sizeof(sensorResource) * (use_resources_size - 1));
+
+        sensor_state = malloc(sensor_mem_size); 
         if (sensor_state == NULL) {
             LOGFATAL("failed to allocate memory for sensor data\n");
             SEM_FREE(state_sem);
             return (EUCA_MEMORY_ERROR);
         }
+        memset(sensor_state, 0, sensor_mem_size); 
 
         init_state(use_resources_size);
 
