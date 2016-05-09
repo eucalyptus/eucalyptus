@@ -149,13 +149,20 @@ initlog=$EUCALYPTUS/var/log/eucalyptus/startup.log
 
 check_java_version() {
     local req_major=1
-    local req_minor=7
+    local req_minor=8
     local error_msg="ERROR: JVM ${req_major}.${req_minor} or newer is required"
 
     # First check CLOUD_OPTS for --java-home
     JAVA=""
     JH=$( echo $CLOUD_OPTS | \
          sed -r -e '/--java-home/!d; s/^.*(--java-home(=|\s+)(\S+)).*$/\3/g' );
+
+    # Try default RHEL/CentOS RPM location for Java 1.8
+    # (This is set via autoconf from JAVA_HOME at build time.)
+    if [ -z "$JH" ] && [ -e @JAVA_HOME@ ]; then
+        JH=@JAVA_HOME@
+    fi
+
     if [ -n "$JH" ]; then
         if [ -x $JH/jre/bin/java ]; then
             JAVA=$JH/jre/bin/java
@@ -175,8 +182,7 @@ check_java_version() {
         JAVA=$( which java )
     fi
     # Compare Java version against requirements
-    JV=$( $JAVA -version 2>&1 | \
-          sed -r -e '/^java version/!d; s/^java version "(.*)"/\1/' )
+    JV=$($JAVA -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
     local version=$(echo $JV | cut -d'_' -f1)
     local major=$(echo $version | cut -d'.' -f1)
     local minor=$(echo $version | cut -d'.' -f2)
