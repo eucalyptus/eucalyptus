@@ -28,16 +28,14 @@ import sys
 import argparse
 import logging
 import os
-import time
 import os.path
 import signal
 
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from xml.dom.minidom import parseString
+from xml.dom.minidom import parseString, parse
 from socket import getaddrinfo, gethostname, IPPROTO_TCP
-from fnmatch import fnmatch
 
 import libvirt
 
@@ -50,14 +48,17 @@ _INSTANCE_XML = 'instance.xml'
 _INSTANCE_LIBVIRT_XML = 'instance-libvirt.xml'
 _WORK = 'work'
 _INSTANCE_PATH = 'INSTANCE_PATH'
+_EUCALYPTUS = 'EUCALYPTUS'
 _GLOBAL_SECTION = 'GLOBAL'
 _QEMU_CONN = 'qemu:///system'
 _DEFAULT_TIMEOUT = 60
 _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
+_CONNECT_ISCSI_PL = '/usr/share/eucalyptus/connect_iscsitarget.pl'
 
 
 class NodeAdminRestoreError(Exception):
+
     def __init__(self, *args):
         super(NodeAdminRestoreError, self).__init__(*args)
         logging.error(*args)
@@ -89,11 +90,8 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Import an instance to libvirt after "
-                                     "extracting artifacts from archive",
-                                     epilog="As an alternative to the commandline, "
-                                     "params can be placed in a file, one per line, and "
-                                     "specified on the commandline like '%(prog)s @params.conf'.",
-                                     fromfile_prefix_chars='@')
+                                     "extracting artifacts from archive")
+
     parser.add_argument("archive_file",
                         help="file path to the archive storing the instance")
     parser.add_argument("--verbose",
@@ -123,22 +121,23 @@ def _parse_eucalyptus_conf():
     return parser
 
 
-def _find_instance(archive_path, instances_path):
-    tar_cmd = ["/bin/tar", "-xzOf", archive_path, "--wildcards", "*/instance.xml"]
+def _find_instance(archive_path):
+    tar_cmd = ["/bin/tar", "-xzOf", archive_path,
+               "--wildcards", "*/instance.xml"]
 
     proc = Popen(tar_cmd, stdout=PIPE)
     instance_xml = proc.stdout.read()
     logging.debug(instance_xml)
     parser = parseString(instance_xml)
 
-    instance_path = parser.getElementsByTagName('instancePath')[0].childNodes[0].data
-    instance_name = os.path.split(instance_path)[1]
-
-    return (instance_name, instance_path)
+    for instance_path in parser.getElementsByTagName('instancePath'):
+        instance_name = os.path.split(instance_path.childNodes[0].data)[1]
+        return (instance_name, instance_path)
 
 
 def _find_storage_controller():
-    euserv_cmd = ["/usr/bin/euserv-describe-services", "--filter", "service-type=storage", "--expert"]
+    euserv_cmd = ["/usr/bin/euserv-describe-services",
+                  "--filter", "service-type=storage", "--expert"]
 
     proc = Popen(euserv_cmd, stdout=PIPE)
     storage_controller = proc.stdout.read().split()[4]
@@ -167,7 +166,8 @@ def _find_ip():
 def _get_libvirt_connection():
     conn = libvirt.open(_QEMU_CONN)
     if not conn:
-        raise NodeAdminRestoreError("Failed to connect to libvirt (%s)", _QEMU_CONN)
+        raise NodeAdminRestoreError(
+            "Failed to connect to libvirt (%s)", _QEMU_CONN)
 
     return conn
 
@@ -185,29 +185,90 @@ def _lookup_domain(conn, instance_name):
 def _restore_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
 
-    rc = conn.restore(os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+    rc = conn.restore(
+        os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
 
     if rc:
-        raise NodeAdminRestoreError("Failed to restore instance %s at %s (%d)", instance, instance_path, rc)
+        raise NodeAdminRestoreError(
+            "Failed to restore instance %s at %s (%d)", instance, instance_path, rc)
 
 
-def _extract_files(instances_path, archive_path):
-    if not os.path.exists(instances_path):
-        os.makedirs(instances_path)
-
+def _extract_files(archive_path):
     tar_cmd = ["/bin/tar", "-xf", archive_path, "-C", "/", "--incremental"]
 
-    check_call(tar_cmd)
+    rc = check_call(tar_cmd)
+    if rc:
+        raise NodeAdminRestoreError(
+            "Failed extracting files from %s (%d)", archive_path, rc)
 
 
-def _get_instancepath():
+def _get_eucalyptus_home_path():
     euca_conf = _parse_eucalyptus_conf()
 
-    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
+    return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
+
+
+def _attach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
+    commas = ',' * 3
+    dev_array = [_get_eucalyptus_home_path(), volume_id,
+                 volume_dev_name, volume_serial, volume_bus]
+
+    dev_string = "%s,%s,%s" % (','.join(dev_array), commas, connection_string)
+
+    iscsi_pl_cmd = [_CONNECT_ISCSI_PL, dev_string]
+
+    rc = check_call(iscsi_pl_cmd)
+    if rc:
+        raise NodeAdminRestoreError(
+            "Failed to attach iscsi target with connection string %s (%d)", connection_string, rc)
+    pass
+
+
+def _attach_volumes(instance_path):
+    instance_xml = os.path.join(instance_path, _INSTANCE_XML)
+
+    with open(instance_xml) as xml_file:
+        parser = parse(xml_file)
+
+    connection_string = ""
+    volume_id = ""
+    volume_dev_name = ""
+    volume_serial = ""
+    volume_bus = ""
+
+    for volume in parser.getElementsByTagName('volume'):
+        for connectionString in volume.getElementsByTagName('connectionString'):
+            connection_string = connectionString.childNodes[0].data
+            break
+
+        for vol_id in volume.getElementsByTagName('id'):
+            volume_id = vol_id.childNodes[0].data
+            break
+
+        for libvirt_node in volume.getElementsByTagName('libvirt'):
+            for disk_node in libvirt_node.getElementsByTagName('disk'):
+                for target in disk_node.getElementsByTagName('target'):
+                    volume_bus = target.getAttribute('bus')
+                    volume_dev_name = target.getAttribute('dev')
+                    break
+
+                for serial in disk_node.getElementsByTagName('serial'):
+                    volume_serial = serial.childNodes[0].data
+                    break
+                break
+            break
+        break
+
+    if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
+        raise NodeAdminRestoreError(
+            "Failed collecting infomration for ebs volume")
+
+    _attach_iscsi_target(volume_id, volume_dev_name,
+                         volume_serial, volume_bus, connection_string)
 
 
 def import_instance(instance_path, archive_path):
-    _extract_files(instance_path, archive_path)
+    _extract_files(archive_path)
 
     instance_name = os.path.basename(instance_path)
 
@@ -218,6 +279,8 @@ def import_instance(instance_path, archive_path):
     if not os.path.exists(os.path.join(instance_path, "%s%s" % (instance_name, _INSTANCE_RAM))):
         raise NodeAdminRestoreError("Failed to extract ram save file %s",
                                     os.path.join(instance_path, "%s%s" % (instance_name, _INSTANCE_RAM)))
+
+    _attach_volumes(instance_path)
 
     _restore_instance(instance_name, instance_path)
     logging.info("instance %s restored", instance_name)
@@ -234,7 +297,7 @@ def main(args, log_level):
     if not os.path.exists(args.archive_file):
         raise NodeAdminRestoreError("%s not found", args.archive_file)
 
-    instance_tuple = _find_instance(args.archive_file, _get_instancepath())
+    instance_tuple = _find_instance(args.archive_file)
 
     if instance_tuple:
         rc = import_instance(instance_tuple[1], args.archive_file)
@@ -246,5 +309,5 @@ def main(args, log_level):
 
 
 if __name__ == '__main__':
-        args, log_level = _parse_args()
-        sys.exit(main(args, log_level))
+    args, log_level = _parse_args()
+    sys.exit(main(args, log_level))

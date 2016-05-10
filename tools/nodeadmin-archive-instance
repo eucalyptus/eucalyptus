@@ -58,6 +58,7 @@ _LIBVIRT_XML = 'instance-libvirt.xml'
 
 
 class NodeAdminArchiveError(Exception):
+
     def __init__(self, *args):
         super(NodeAdminArchiveError, self).__init__(*args)
         logging.error(*args)
@@ -89,11 +90,7 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Export an instance from libvirt and "
-                                     "place artifacts in an archive",
-                                     epilog="As an alternative to the commandline, "
-                                     "params can be placed in a file, one per line, and "
-                                     "specified on the commandline like '%(prog)s @params.conf'.",
-                                     fromfile_prefix_chars='@')
+                                     "place artifacts in an archive")
 
     group_i = parser.add_mutually_exclusive_group(required=True)
     group_i.add_argument("--all",
@@ -127,7 +124,8 @@ def _parse_eucalyptus_conf():
     parser = ConfigParser()
     config = StringIO()
 
-    logging.debug("attempting to load %s", os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF))
+    logging.debug("attempting to load %s", os.path.join(
+        _ETC_EUCALYPTUS, _EUCALYPTUS_CONF))
     config.write('[%s]\n' % _GLOBAL_SECTION)
     config.write(open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)).read())
     config.seek(0, os.SEEK_SET)
@@ -150,7 +148,8 @@ def _list_instances():
 def _get_libvirt_connection():
     conn = libvirt.open(_QEMU_CONN)
     if not conn:
-        raise NodeAdminArchiveError("Failed to connect to libvirt (%s)", _QEMU_CONN)
+        raise NodeAdminArchiveError(
+            "Failed to connect to libvirt (%s)", _QEMU_CONN)
 
     return conn
 
@@ -169,10 +168,11 @@ def _modify_libvirt_xml(instance_path):
     with open(os.path.join(instance_path, _LIBVIRT_XML)) as xml_file:
         parser = parse(xml_file)
 
+    with open(os.path.join(instance_path, "%s.orig" % _LIBVIRT_XML)) as orig_xml_file:
+        parser.writexml(orig_xml_file)
+
     for elem in parser.getElementsByTagName("disk"):
         elem.setAttribute("type", "file")
-        for serial in elem.getElementsByTagName('serial'):
-            elem.removeChild(serial)
 
         for driver in elem.getElementsByTagName("driver"):
             driver.removeAttribute("cache")
@@ -180,7 +180,7 @@ def _modify_libvirt_xml(instance_path):
             driver.setAttribute("type", "raw")
 
         for source in elem.getElementsByTagName("source"):
-            source.setAttribute("file", source.getAttribute("dev")[0])
+            source.setAttribute("file", source.getAttribute("dev"))
             source.removeAttribute("dev")
 
     with open(os.path.join(instance_path, _LIBVIRT_XML), 'wb') as xml_file:
@@ -188,7 +188,8 @@ def _modify_libvirt_xml(instance_path):
 
 
 def _find_instance(instance):
-    logging.debug("attempting to locate %s in libvirt at %s", instance, _QEMU_CONN)
+    logging.debug(
+        "attempting to locate %s in libvirt at %s", instance, _QEMU_CONN)
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
 
@@ -222,17 +223,20 @@ def _save_instance(instance, instance_path, *args, **kwargs):
     domain = _lookup_domain(conn, instance)
 
     if domain.state(0)[0] is not 3:
-        rc = domain.save(os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+        rc = domain.save(
+            os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
         logging.debug("save for domain %s returned %d", instance, rc)
 
         if rc:
-            raise NodeAdminArchiveError("Failed attempting to save instance %s %d", instance, rc)
+            raise NodeAdminArchiveError(
+                "Failed attempting to save instance %s %d", instance, rc)
 
     return 0
 
 
 def _shutdown_instance(instance, *args, **kwargs):
-    logging.debug("attempting to shutdown instance %s at %s", instance, _QEMU_CONN)
+    logging.debug(
+        "attempting to shutdown instance %s at %s", instance, _QEMU_CONN)
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
 
@@ -274,8 +278,10 @@ def _gather_files(instance_name, instance_path):
         with open(os.path.join(instance_path, "%s.dm" % dir_name)) as dm_file:
             device = dm_file.read().split()[-1]
 
-        block_save = "%s%s" % (os.path.join(instance_path, dir_name), _BLOCK_SAVE)
-        logging.debug("copying block device /dev/mapper/%s to file %s", device, block_save)
+        block_save = "%s%s" % (
+            os.path.join(instance_path, dir_name), _BLOCK_SAVE)
+        logging.debug(
+            "copying block device /dev/mapper/%s to file %s", device, block_save)
         dd_cmd = ['/bin/dd', "if=/dev/mapper/%s" % device,
                   "of=%s" % block_save, "bs=4M"]
         rc = check_call(dd_cmd)
@@ -284,9 +290,11 @@ def _gather_files(instance_name, instance_path):
                                         device, block_save, rc)
 
     for link_file in glob("%s/link-to-vd*" % instance_path):
-        link_target = "-".join(os.path.basename(os.readlink(link_file)).split('-')[-3:])
+        link_target = "-".join(os.path.basename(os.readlink(link_file)
+                                                ).split('-')[-3:])
         os.unlink(link_file)
-        os.symlink(os.path.join(instance_path, "%s%s" % (link_target, _BLOCK_SAVE)), link_file)
+        os.symlink(os.path.join(instance_path, "%s%s" %
+                                (link_target, _BLOCK_SAVE)), link_file)
 
     target_files = [os.path.join(instance_path, file) for file in os.listdir(instance_path)
                     if os.path.splitext(file)[1] not in
@@ -304,7 +312,8 @@ def _get_instances_path():
 def export_instance(instance, output_file, shutdown, skip_compression):
     logging.debug("attempting export of instance %s", instance)
     instance_tuple = _find_instance(instance)
-    logging.debug("found instance tuple %s %s", instance_tuple[0], instance_tuple[1])
+    logging.debug(
+        "found instance tuple %s %s", instance_tuple[0], instance_tuple[1])
 
     if shutdown:
         rc = _time_out(func=_shutdown_instance,
@@ -335,14 +344,18 @@ def _main(args, log_level):
         for instance in _list_instances():
             logging.debug("export on %s", instance)
             output_file = os.path.join(args.all, instance + _EXPORT_TAR)
-            export_instance(instance, output_file, args.shutdown, args.no_compression)
+            export_instance(
+                instance, output_file, args.shutdown, args.no_compression)
 
-            logging.info("Export of instance %s located at %s", instance, output_file)
+            logging.info(
+                "Export of instance %s located at %s", instance, output_file)
     else:
         logging.debug("export on %s", args.instance[0])
-        export_instance(args.instance[0], args.instance[1], args.shutdown, args.no_compression)
+        export_instance(
+            args.instance[0], args.instance[1], args.shutdown, args.no_compression)
 
-        logging.info("Export for instance %s located at %s", args.instance[0], args.instance[1])
+        logging.info(
+            "Export for instance %s located at %s", args.instance[0], args.instance[1])
 
     return 0
 
