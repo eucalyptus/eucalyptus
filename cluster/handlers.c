@@ -6791,6 +6791,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
     return (0);
 }
 
+
 //!
 //!
 //!
@@ -6813,7 +6814,6 @@ void shawn(void)
         msync(config, sizeof(ccConfig), MS_ASYNC);
     if (gpEucaNet)
         msync(gpEucaNet, sizeof(euca_network), MS_ASYNC);
-
 }
 
 //!
@@ -7195,6 +7195,9 @@ void print_instanceCache(void)
 {
     int i;
 
+    if (log_level_get() > EUCA_LOG_DEBUG) {
+        return;
+    }
     sem_mywait(INSTCACHE);
     for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
         if (instanceCache->cacheState[i] == INSTVALID) {
@@ -7219,6 +7222,10 @@ void print_ccInstance(char *tag, ccInstance * in)
 {
     char *volbuf, *groupbuf, *secNetBuf;
     int i;
+
+    if (log_level_get() > EUCA_LOG_DEBUG) {
+        return;
+    }
 
     volbuf = EUCA_ZALLOC((EUCA_MAX_VOLUMES * 2), sizeof(ncVolume));
     if (!volbuf) {
