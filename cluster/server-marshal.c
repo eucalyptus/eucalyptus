@@ -816,7 +816,10 @@ adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNet
         rc = doBroadcastNetworkInfo(&ccMeta, networkInfo);
         unset_corrid(corr_id);
         if (rc) {
-            LOGERROR("doBroadcastNetworkInfo() failed: %d (%s)\n", rc, networkInfo);
+            // doBroadcastNetworkInfo returns failure in disable state, skipping logging the error since networkInfo can be long
+            if (!ccIsEnabled()){
+                LOGERROR("doBroadcastNetworkInfo() failed: %d (%s)\n", rc, networkInfo);
+            }
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
