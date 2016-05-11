@@ -52,7 +52,7 @@ _EUCALYPTUS = 'EUCALYPTUS'
 _GLOBAL_SECTION = 'GLOBAL'
 _QEMU_CONN = 'qemu:///system'
 _DEFAULT_TIMEOUT = 60
-_EXPORT_TAR = '-archive.tgz'
+_PACK_TAR = '-pack.tgz'
 _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
 _LIBVIRT_XML = 'instance-libvirt.xml'
@@ -60,10 +60,10 @@ _INSTANCE_XML = 'instance.xml'
 _DISCONNECT_ISCSI_PL = '/usr/share/eucalyptus/disconnect_iscsitarget.pl'
 
 
-class NodeAdminArchiveError(Exception):
+class NodeAdminPackError(Exception):
 
     def __init__(self, *args):
-        super(NodeAdminArchiveError, self).__init__(*args)
+        super(NodeAdminPackError, self).__init__(*args)
         logging.error(*args)
 
 
@@ -92,15 +92,15 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="Export an instance from libvirt and "
-                                     "place artifacts in an archive")
+    parser = argparse.ArgumentParser(description="Pack an instance from libvirt and "
+                                     "place artifacts in an packed file")
 
     group_i = parser.add_mutually_exclusive_group(required=True)
     group_i.add_argument("--all",
-                         help="all instances are targeted for export and placed in the directory specified",
+                         help="all instances are targeted for packing and placed in the directory specified",
                          metavar="output-directory")
     group_i.add_argument("--instance",
-                         help="name of the instance target for export and the target archive",
+                         help="name of the instance target for packing and the target packed file",
                          nargs=2,
                          metavar=("instance-name", "output-file"))
 
@@ -111,7 +111,7 @@ def _parse_args():
                         help="increase output verbosity",
                         action="store_true")
     parser.add_argument("--no-compression",
-                        help="skip compression during archive operation",
+                        help="skip compression during packing operation",
                         action="store_true")
 
     args = parser.parse_args()
@@ -151,7 +151,7 @@ def _list_instances():
 def _get_libvirt_connection():
     conn = libvirt.open(_QEMU_CONN)
     if not conn:
-        raise NodeAdminArchiveError(
+        raise NodeAdminPackError(
             "Failed to connect to libvirt (%s)", _QEMU_CONN)
 
     return conn
@@ -161,8 +161,8 @@ def _lookup_domain(conn, instance_name):
     domain = conn.lookupByName(instance_name)
     if not domain:
         conn.close()
-        raise NodeAdminArchiveError("Failed to find %s in libvirt list of domains",
-                                    instance_name)
+        raise NodeAdminPackError("Failed to find %s in libvirt list of domains",
+                                 instance_name)
 
     return domain
 
@@ -199,8 +199,8 @@ def _find_instance(instance):
     parser = parseString(domain.XMLDesc(0))
     if not parser:
         conn.close()
-        raise NodeAdminArchiveError("Failed to parse xml for domain (%s)\n%s\n",
-                                    instance, domain.XMLDesc(0))
+        raise NodeAdminPackError("Failed to parse xml for domain (%s)\n%s\n",
+                                 instance, domain.XMLDesc(0))
 
     instances_path = os.path.join(_get_instances_path(), _WORK)
     logging.debug("found instances path at %s", instances_path)
@@ -215,7 +215,7 @@ def _find_instance(instance):
             return (instance, os.path.join(dev_path.split(instance)[0], instance))
 
     conn.close()
-    raise NodeAdminArchiveError("Failed to find instance %s", instance)
+    raise NodeAdminPackError("Failed to find instance %s", instance)
 
 
 def _save_instance(instance, instance_path, *args, **kwargs):
@@ -231,7 +231,7 @@ def _save_instance(instance, instance_path, *args, **kwargs):
         logging.debug("save for domain %s returned %d", instance, rc)
 
         if rc:
-            raise NodeAdminArchiveError(
+            raise NodeAdminPackError(
                 "Failed attempting to save instance %s %d", instance, rc)
 
     return 0
@@ -253,19 +253,19 @@ def _shutdown_instance(instance, *args, **kwargs):
     return 0
 
 
-def _create_tar(files, archive_path, skip_compression):
+def _create_tar(files, pack_path, skip_compression):
     tar_cmd = ["/bin/tar"]
 
     if skip_compression:
-        tar_cmd.extend(["-cf", archive_path])
+        tar_cmd.extend(["-cf", pack_path])
     else:
-        tar_cmd.extend(["-czf", archive_path])
+        tar_cmd.extend(["-czf", pack_path])
 
     tar_cmd.extend(files)
 
     rc = check_call(tar_cmd)
     if rc:
-        NodeAdminArchiveError("Failed to create tar with cmd (%s)", tar_cmd)
+        NodeAdminPackError("Failed to create packed file with cmd (%s)", tar_cmd)
 
 
 def _get_eucalyptus_home_path():
@@ -285,7 +285,7 @@ def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, 
 
     rc = check_call(iscsi_pl_cmd)
     if rc:
-        raise NodeAdminArchiveError(
+        raise NodeAdminPackError(
             "Failed to detach iscsi target with connection string %s (%d)", connection_string, rc)
     pass
 
@@ -323,10 +323,9 @@ def _find_volumes_and_detach(instance_path):
                     break
                 break
             break
-        break
 
     if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
-        raise NodeAdminArchiveError(
+        raise NodeAdminPackError(
             "Failed collecting information for ebs volumes at instance path %s", instance_path)
 
     _detach_iscsi_target(volume_id, volume_dev_name,
@@ -354,8 +353,8 @@ def _gather_files(instance_name, instance_path):
                   "of=%s" % block_save, "bs=4M"]
         rc = check_call(dd_cmd)
         if rc:
-            raise NodeAdminArchiveError("Failed to copy block device /dev/mapper/%s to file %s (%d)",
-                                        device, block_save, rc)
+            raise NodeAdminPackError("Failed to copy block device /dev/mapper/%s to file %s (%d)",
+                                     device, block_save, rc)
 
     for link_file in glob("%s/link-to-vd*" % instance_path):
         link_target = "-".join(os.path.basename(os.readlink(link_file)
@@ -377,8 +376,8 @@ def _get_instances_path():
     return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
 
 
-def export_instance(instance, output_file, shutdown, skip_compression):
-    logging.debug("attempting export of instance %s", instance)
+def pack_instance(instance, output_file, shutdown, skip_compression):
+    logging.debug("attempting to pack instance %s", instance)
     instance_tuple = _find_instance(instance)
     logging.debug(
         "found instance tuple %s %s", instance_tuple[0], instance_tuple[1])
@@ -388,15 +387,15 @@ def export_instance(instance, output_file, shutdown, skip_compression):
                        args=[instance_tuple[0]],
                        timeout_duration=_DEFAULT_TIMEOUT)
         if rc:
-            raise NodeAdminArchiveError("Failed attempting to shutdown instance %s %d",
-                                        instance, rc)
+            raise NodeAdminPackError("Failed attempting to shutdown instance %s %d",
+                                     instance, rc)
     else:
         rc = _time_out(func=_save_instance,
                        args=[instance_tuple[0], instance_tuple[1]],
                        timeout_duration=_DEFAULT_TIMEOUT)
         if rc:
-            raise NodeAdminArchiveError("Failed attempting to suspend instance %s %d",
-                                        instance, rc)
+            raise NodeAdminPackError("Failed attempting to suspend instance %s %d",
+                                     instance, rc)
 
     tar_files = _gather_files(instance_tuple[0], instance_tuple[1])
     _modify_libvirt_xml(instance_tuple[1])
@@ -410,22 +409,22 @@ def _main(args, log_level):
     logging.debug("Your Arguments: %s", args)
 
     if args.all:
-        logging.debug("export on all instances")
+        logging.debug("packing all instances")
         for instance in _list_instances():
-            logging.debug("export on %s", instance)
-            output_file = os.path.join(args.all, instance + _EXPORT_TAR)
-            export_instance(
+            logging.debug("packing instance %s", instance)
+            output_file = os.path.join(args.all, instance + _PACK_TAR)
+            pack_instance(
                 instance, output_file, args.shutdown, args.no_compression)
 
             logging.info(
-                "Export of instance %s located at %s", instance, output_file)
+                "Packed instance %s located at %s", instance, output_file)
     else:
-        logging.debug("export on %s", args.instance[0])
-        export_instance(
+        logging.debug("packing instance %s", args.instance[0])
+        pack_instance(
             args.instance[0], args.instance[1], args.shutdown, args.no_compression)
 
         logging.info(
-            "Export for instance %s located at %s", args.instance[0], args.instance[1])
+            "Packed instance %s located at %s", args.instance[0], args.instance[1])
 
     return 0
 
