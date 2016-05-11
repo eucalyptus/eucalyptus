@@ -782,13 +782,23 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
     virtualMachine *vm = &(instance->params);
     artifact *sentinel = NULL;
     char work_prefix[1024] = { 0 };    // {userId}/{instanceId}
+    char base_path[EUCA_MAX_PATH];
+    char user_dir_path[EUCA_MAX_PATH];
 
     // set various instance-directory-relative paths in the instance struct
     set_instance_paths(instance);
 
-    // ensure instance directory exists
-    if (ensure_directories_exist(instance->instancePath, 0, NULL, "root", BACKING_DIRECTORY_PERM) == -1)
+    set_path(base_path, sizeof(base_path), NULL, NULL);
+    snprintf(user_dir_path, sizeof(user_dir_path), "%s/%s", base_path, instance->userId);
+    // create backing directory
+    if ((check_path(user_dir_path) == 1) && (mkdir(user_dir_path, INSTANCE_DIRECTORY_PERM) == -1)) {
+        LOGERROR("[%s] could not create backing directory %s\n", instance->instanceId, user_dir_path);
         goto out;
+    }
+    if (mkdir(instance->instancePath, INSTANCE_DIRECTORY_PERM) == -1) {
+        LOGERROR("[%s] could not create backing directory %s\n", instance->instanceId, instance->instancePath);
+        goto out;
+    }
 
     if (strstr(instance->platform, "windows")) {
         // generate the floppy file for windows instances

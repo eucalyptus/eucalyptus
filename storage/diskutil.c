@@ -176,7 +176,6 @@ static char *helpers[LASTHELPER] = {
 
 static char *helpers_path[LASTHELPER] = { NULL };
 
-static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = FALSE;
 static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
 static char euca_home_path[EUCA_MAX_PATH] = "";

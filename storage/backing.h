@@ -87,7 +87,8 @@
 \*----------------------------------------------------------------------------*/
 
 #define BACKING_FILE_PERM                        0660   //!< Backing file default permission
-#define BACKING_DIRECTORY_PERM                   0771   //!< Backing directory default permission
+#define BACKING_DIRECTORY_PERM                   0771   //!< Eucalyptus backing directory default permission
+#define INSTANCE_DIRECTORY_PERM                  0711   //!< Instace backing directory default permission
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
