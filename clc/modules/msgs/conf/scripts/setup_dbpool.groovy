@@ -81,7 +81,7 @@ String db_user = Databases.userName
 String db_pass = Databases.password
 
 default_pool_props = [
-      'proxool.simultaneous-build-throttle': '32',
+      'proxool.simultaneous-build-throttle': '1000000',
       'proxool.minimum-connection-count': '8',
       'proxool.maximum-connection-count': '512',
       'proxool.prototype-count': '8',
