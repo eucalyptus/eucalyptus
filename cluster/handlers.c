@@ -6149,32 +6149,8 @@ int init_config(void)
 
     // DHCP configuration section
     {
-        char *daemon = NULL,
-            *dhcpuser = NULL,
-            *numaddrs = NULL,
-            *pubmode = NULL,
-            *pubmacmap = NULL,
-            *pubips = NULL,
-            *pubInterface = NULL,
-            *privInterface = NULL, *pubSubnet = NULL, *pubSubnetMask = NULL, *pubBroadcastAddress = NULL, *pubRouter = NULL, *pubDomainname =
-            NULL, *pubDNS = NULL, *localIp = NULL, *macPrefix = NULL;
-        int usednew = 0;
-        int initFail = 0;
-
-        // DHCP Daemon Configuration Params
-        daemon = configFileValue("VNET_DHCPDAEMON");
-        if (!daemon) {
-            LOGWARN("no VNET_DHCPDAEMON defined in config, using default\n");
-        }
-
-        dhcpuser = configFileValue("VNET_DHCPUSER");
-        if (!dhcpuser) {
-            dhcpuser = strdup("root");
-            if (!dhcpuser) {
-                LOGFATAL("Out of memory\n");
-                unlock_exit(1);
-            }
-        }
+        char *pubmode = NULL,
+             *macPrefix = NULL;
 
         pubmode = configFileValue("VNET_MODE");
         if (!pubmode) {
@@ -6203,101 +6179,6 @@ int init_config(void)
             }
         }
 
-        pubInterface = configFileValue("VNET_PUBINTERFACE");
-        if (!pubInterface) {
-            LOGWARN("VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
-            pubInterface = strdup("eth0");
-            if (!pubInterface) {
-                LOGFATAL("out of memory!\n");
-                unlock_exit(1);
-            }
-        } else {
-            usednew = 1;
-        }
-
-        privInterface = NULL;
-        privInterface = configFileValue("VNET_PRIVINTERFACE");
-        if (!privInterface) {
-            LOGWARN("VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
-            privInterface = strdup("eth0");
-            if (!privInterface) {
-                LOGFATAL("out of memory!\n");
-                unlock_exit(1);
-            }
-            usednew = 0;
-        }
-
-        if (!usednew) {
-            tmpstr = NULL;
-            tmpstr = configFileValue("VNET_INTERFACE");
-            if (tmpstr) {
-                LOGWARN("VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead. Will set both to value of "
-                        "VNET_INTERFACE (%s) for now.\n", tmpstr);
-                EUCA_FREE(pubInterface);
-                pubInterface = strdup(tmpstr);
-                if (!pubInterface) {
-                    LOGFATAL("out of memory!\n");
-                    unlock_exit(1);
-                }
-
-                EUCA_FREE(privInterface);
-                privInterface = strdup(tmpstr);
-                if (!privInterface) {
-                    LOGFATAL("out of memory!\n");
-                    unlock_exit(1);
-                }
-            }
-            EUCA_FREE(tmpstr);
-        }
-        if (pubmode && !(!strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN) || !strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_VPCMIDO))) {
-            char errorm[256];
-            memset(errorm, 0, 256);
-            sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
-            LOGFATAL("%s\n", errorm);
-            log_eucafault("1012", "component", euca_this_component_name, "cause", errorm, NULL);
-            initFail = 1;
-        }
-        if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
-        } else if (pubmode && !strcmp(pubmode, NETMODE_VPCMIDO)) {
-        } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
-            numaddrs = configFileValue("VNET_ADDRSPERNET");
-            pubSubnet = configFileValue("VNET_SUBNET");
-            pubSubnetMask = configFileValue("VNET_NETMASK");
-            pubDNS = configFileValue("VNET_DNS");
-            pubDomainname = configFileValue("VNET_DOMAINNAME");
-            pubips = configFileValue("VNET_PUBLICIPS");
-            localIp = configFileValue("VNET_LOCALIP");
-            if (!localIp) {
-                LOGWARN("VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function " "properly.)\n");
-            }
-
-            if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
-                LOGFATAL("in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, " "VNET_ADDRSPERNET, and VNET_DNS'\n");
-                initFail = 1;
-            }
-        }
-
-        if (initFail) {
-            LOGFATAL("bad network parameters, must fix before system will work\n");
-            EUCA_FREE(pubSubnet);
-            EUCA_FREE(pubSubnetMask);
-            EUCA_FREE(pubBroadcastAddress);
-            EUCA_FREE(pubRouter);
-            EUCA_FREE(pubDomainname);
-            EUCA_FREE(pubDNS);
-            EUCA_FREE(pubmacmap);
-            EUCA_FREE(numaddrs);
-            EUCA_FREE(pubips);
-            EUCA_FREE(localIp);
-            EUCA_FREE(pubInterface);
-            EUCA_FREE(privInterface);
-            EUCA_FREE(dhcpuser);
-            EUCA_FREE(daemon);
-            EUCA_FREE(pubmode);
-            EUCA_FREE(macPrefix);
-            sem_mypost(INIT);
-            return (1);
-        }
 
         sem_mywait(NETCONFIG);
         {
@@ -6306,20 +6187,6 @@ int init_config(void)
         }
         sem_mypost(NETCONFIG);
 
-        EUCA_FREE(pubSubnet);
-        EUCA_FREE(pubSubnetMask);
-        EUCA_FREE(pubBroadcastAddress);
-        EUCA_FREE(pubRouter);
-        EUCA_FREE(pubDomainname);
-        EUCA_FREE(pubDNS);
-        EUCA_FREE(pubmacmap);
-        EUCA_FREE(numaddrs);
-        EUCA_FREE(pubips);
-        EUCA_FREE(localIp);
-        EUCA_FREE(pubInterface);
-        EUCA_FREE(privInterface);
-        EUCA_FREE(dhcpuser);
-        EUCA_FREE(daemon);
         EUCA_FREE(pubmode);
         EUCA_FREE(macPrefix);
     }
