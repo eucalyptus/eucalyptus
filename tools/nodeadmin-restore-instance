@@ -261,7 +261,7 @@ def _attach_volumes(instance_path):
 
     if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
         raise NodeAdminRestoreError(
-            "Failed collecting infomration for ebs volume")
+            "Failed collecting information for ebs volumes at instance path %s", instance_path)
 
     _attach_iscsi_target(volume_id, volume_dev_name,
                          volume_serial, volume_bus, connection_string)

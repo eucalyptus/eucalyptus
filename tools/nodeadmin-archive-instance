@@ -48,6 +48,7 @@ _EUCALYPTUS_CONF = 'eucalyptus.conf'
 _GLOBAL_NETWORK_INFO_XML = 'global_network_info.xml'
 _WORK = 'work'
 _INSTANCE_PATH = 'INSTANCE_PATH'
+_EUCALYPTUS = 'EUCALYPTUS'
 _GLOBAL_SECTION = 'GLOBAL'
 _QEMU_CONN = 'qemu:///system'
 _DEFAULT_TIMEOUT = 60
@@ -55,6 +56,8 @@ _EXPORT_TAR = '-archive.tgz'
 _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
 _LIBVIRT_XML = 'instance-libvirt.xml'
+_INSTANCE_XML = 'instance.xml'
+_DISCONNECT_ISCSI_PL = '/usr/share/eucalyptus/disconnect_iscsitarget.pl'
 
 
 class NodeAdminArchiveError(Exception):
@@ -265,6 +268,71 @@ def _create_tar(files, archive_path, skip_compression):
         NodeAdminArchiveError("Failed to create tar with cmd (%s)", tar_cmd)
 
 
+def _get_eucalyptus_home_path():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
+
+
+def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
+    commas = ',' * 3
+    dev_array = [_get_eucalyptus_home_path(), volume_id,
+                 volume_dev_name, volume_serial, volume_bus]
+
+    dev_string = "%s,%s,%s" % (','.join(dev_array), commas, connection_string)
+
+    iscsi_pl_cmd = [_DISCONNECT_ISCSI_PL, dev_string]
+
+    rc = check_call(iscsi_pl_cmd)
+    if rc:
+        raise NodeAdminArchiveError(
+            "Failed to detach iscsi target with connection string %s (%d)", connection_string, rc)
+    pass
+
+
+def _find_volumes_and_detach(instance_path):
+    instance_xml = os.path.join(instance_path, _INSTANCE_XML)
+
+    with open(instance_xml) as xml_file:
+        parser = parse(xml_file)
+
+    connection_string = ""
+    volume_id = ""
+    volume_dev_name = ""
+    volume_serial = ""
+    volume_bus = ""
+
+    for volume in parser.getElementsByTagName('volume'):
+        for connectionString in volume.getElementsByTagName('connectionString'):
+            connection_string = connectionString.childNodes[0].data
+            break
+
+        for vol_id in volume.getElementsByTagName('id'):
+            volume_id = vol_id.childNodes[0].data
+            break
+
+        for libvirt_node in volume.getElementsByTagName('libvirt'):
+            for disk_node in libvirt_node.getElementsByTagName('disk'):
+                for target in disk_node.getElementsByTagName('target'):
+                    volume_bus = target.getAttribute('bus')
+                    volume_dev_name = target.getAttribute('dev')
+                    break
+
+                for serial in disk_node.getElementsByTagName('serial'):
+                    volume_serial = serial.childNodes[0].data
+                    break
+                break
+            break
+        break
+
+    if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
+        raise NodeAdminArchiveError(
+            "Failed collecting information for ebs volumes at instance path %s", instance_path)
+
+    _detach_iscsi_target(volume_id, volume_dev_name,
+                         volume_serial, volume_bus, connection_string)
+
+
 def _gather_files(instance_name, instance_path):
     logging.debug("attempting to gather list of files for archiving at %s for instance %s",
                   instance_path, instance_name)
@@ -333,6 +401,8 @@ def export_instance(instance, output_file, shutdown, skip_compression):
     tar_files = _gather_files(instance_tuple[0], instance_tuple[1])
     _modify_libvirt_xml(instance_tuple[1])
     _create_tar(tar_files, output_file, skip_compression)
+
+    _find_volumes_and_detach(instance_tuple[1])
 
 
 def _main(args, log_level):
