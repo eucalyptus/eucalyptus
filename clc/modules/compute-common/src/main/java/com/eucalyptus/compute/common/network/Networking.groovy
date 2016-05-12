@@ -58,6 +58,6 @@ class Networking {
   }
 
   boolean update( final UpdateInstanceResourcesType updateInstanceResourcesType ) {
-    service.update( updateInstanceResourcesType ).updated ?: false
+    service.update( updateInstanceResourcesType )?.updated ?: false
   }
 }
