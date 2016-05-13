@@ -594,7 +594,7 @@ public class CreateImageTask {
 				final List<Snapshot> snapshots = task.getSnapshots();
 				final List<String> status = Lists.newArrayList();
 				for(final Snapshot s : snapshots){
-					LOG.debug(String.format("snapshot creating - %s", s.getProgress()));
+					LOG.debug(String.format("[%s] snapshot [%s] creating - %s", this.getImageId(), s.getSnapshotId(), s.getProgress()));
 					status.add(s.getStatus());
 				}
 				return status;
