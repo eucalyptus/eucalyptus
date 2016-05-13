@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
@@ -85,19 +86,23 @@ import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class ServiceBootstrapper extends Bootstrapper.Simple {
   private static Logger    LOG                           = Logger.getLogger( ServiceBootstrapper.class );
-  private static final int NUM_SERVICE_BOOTSTRAP_WORKERS = 40;                                           //TODO:GRZE:@Configurable
+
+  private static final int NUM_SERVICE_BOOTSTRAP_WORKERS =
+      MoreObjects.firstNonNull( Ints.tryParse( System.getProperty( "com.eucalyptus.bootstrap.serviceWorkers", "" ) ), 40 );
                                                                                                           
   static class ServiceBootstrapWorker {
     private static final ConcurrentMap<ServiceBootstrapWorker.Worker, Runnable> workers  = Maps.newConcurrentMap( );
@@ -106,50 +111,53 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
                                                                                            public String toString( ) {
                                                                                              return "IDLE";
                                                                                            }
-                                                                                           
                                                                                            @Override
                                                                                            public void run( ) {}
                                                                                          };
     private static final AtomicBoolean                                          running  = new AtomicBoolean( true );
-    private static final BlockingQueue<Runnable>                                msgQueue = new LinkedBlockingQueue<Runnable>( );
-    private static final ExecutorService                                        executor = Executors.newCachedThreadPool( );
+    private static final BlockingQueue<Runnable>                                msgQueue = new LinkedBlockingQueue<>( );
+    private static final ExecutorService                                        executor = Executors.newCachedThreadPool(
+                                                                                           new ThreadFactoryBuilder( )
+                                                                                           .setNameFormat(
+                                                                                           "service-bootstrap-%d"
+                                                                                           ).build( ) );
     private static final ServiceBootstrapWorker                                 worker   = new ServiceBootstrapWorker( );
-    
+
     private ServiceBootstrapWorker( ) {
-      for ( int i = 0; i < 40; i++ ) {
-        executor.submit( new Worker( ) );
+      for ( int i = 0; i < NUM_SERVICE_BOOTSTRAP_WORKERS; i++ ) {
+        executor.submit( new Worker( i ) );
       }
     }
     
     public static void markFinished( ) {
-      worker.running.set( false );
+      running.set( false );
       executor.shutdownNow( );
     }
     
     public static void submit( final Runnable run ) {
       LOG.info( run );
-      if ( !worker.running.get( ) ) {
+      if ( !running.get( ) ) {
         throw new IllegalStateException( "Worker has been stopped: " + ServiceBootstrapWorker.class );
       } else {
-        worker.msgQueue.add( run );
+        msgQueue.add( run );
       }
     }
     
     class Worker implements Runnable, Comparable<Worker> {
       private final String name;
       
-      Worker( ) {
+      Worker( final int number ) {
         super( );
-        this.name = Thread.currentThread( ).getName( );
+        this.name = "service-bootstrap-worker-" + number;
         workers.put( this, IDLE );
       }
       
       @Override
       public void run( ) {
-        while ( !worker.msgQueue.isEmpty( ) || worker.running.get( ) ) {
+        while ( !msgQueue.isEmpty( ) || running.get( ) ) {
           Runnable event;
           try {
-            if ( ( event = worker.msgQueue.poll( Long.MAX_VALUE, TimeUnit.MILLISECONDS ) ) != null ) {
+            if ( ( event = msgQueue.poll( Long.MAX_VALUE, TimeUnit.MILLISECONDS ) ) != null ) {
               try {
                 workers.replace( this, event );
                 event.run( );
@@ -157,8 +165,10 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
                 workers.replace( this, IDLE );
               }
             }
+          } catch ( final InterruptedException e ) {
+            Thread.currentThread( ).interrupt( );
+            break;
           } catch ( final Throwable e ) {
-            Exceptions.maybeInterrupted( e );
             Exceptions.trace( e );
           }
         }
@@ -232,9 +242,10 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     
     static void waitAll( ) {
       try {
-        while ( !worker.msgQueue.isEmpty( ) ) {
-          for ( final Worker w : workers.keySet( ) ) {
-            LOG.info( "Waiting for" + w );
+        while ( !msgQueue.isEmpty( ) ) {
+          for ( final Map.Entry<Worker,Runnable> entry : workers.entrySet( ) ) {
+            if ( entry.getValue( ) == IDLE ) continue;
+            LOG.info( "Waiting for " + entry.getKey( ) );
           }
           TimeUnit.MILLISECONDS.sleep( 200 );
         }
@@ -259,47 +270,30 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     }
   }
   
-  enum ShouldStart implements Predicate<ServiceConfiguration> {
-    INSTANCE;
-    
-    @Override
-    public boolean apply( final ServiceConfiguration config ) {
-      boolean ret = ShouldLoad.INSTANCE.apply( config ) || ( Eucalyptus.class.equals( config.getComponentId( ).getClass( ) ) && config.isHostLocal( ) );
-      LOG.debug( "ServiceBootstrapper.shouldStart(" + config.toString( )
-                 + "):"
-                 + ret );
-      return ret;
-    }
-  }
-  
   @Override
   public boolean load( ) {
     WebServices.restart( );
-    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( final ServiceConfiguration config ) {
-        ServiceBootstrapWorker.submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              Components.lookup( config.getComponentId( ) ).setup( config );
-              if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {
-                Topology.transition( State.LOADED ).apply( config );
-              }
-            } catch ( final Exception ex ) {
-              Faults.failure( config, ex );
+    ServiceBootstrapper.execute( config -> {
+      ServiceBootstrapWorker.submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          try {
+            Components.lookup( config.getComponentId( ) ).setup( config );
+            if ( config.lookupState( ).ordinal( ) < State.LOADED.ordinal( ) ) {
+              Topology.transition( State.LOADED ).apply( config );
             }
+          } catch ( final Exception ex ) {
+            Faults.failure( config, ex );
           }
-          
-          @Override
-          public String toString( ) {
-            return "ServiceBootstrap.load(): " + config.getFullName( );
-          }
-          
-        } );
-        return true;
-      }
+        }
+
+        @Override
+        public String toString( ) {
+          return "ServiceBootstrap.load(): " + config.getFullName( );
+        }
+
+      } );
+      return true;
     } );
     ServiceBootstrapWorker.waitAll( );
     return true;
@@ -307,30 +301,30 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
   
   @Override
   public boolean start( ) throws Exception {
-    ServiceBootstrapper.execute( new Predicate<ServiceConfiguration>( ) {
-      
-      @Override
-      public boolean apply( final ServiceConfiguration config ) {
-        ServiceBootstrapWorker.submit( new Runnable( ) {
-          @Override
-          public void run( ) {
-            try {
-              Topology.transition( State.DISABLED ).apply( config );
-            } catch ( final Exception ex ) {
-              Exceptions.maybeInterrupted( ex );
-            }
+    ServiceBootstrapper.execute( config -> {
+      ServiceBootstrapWorker.submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          try {
+            Topology.transition( State.DISABLED ).apply( config );
+          } catch ( final Exception ex ) {
+            Exceptions.maybeInterrupted( ex );
           }
-          
-          @Override
-          public String toString( ) {
-            return "ServiceBootstrap.start(): " + config.getFullName( );
-          }
-          
-        } );
-        return true;
-      }
+        }
+
+        @Override
+        public String toString( ) {
+          return "ServiceBootstrap.start(): " + config.getFullName( );
+        }
+
+      } );
+      return true;
     } );
-    ServiceBootstrapWorker.markFinished( );
+    try {
+      ServiceBootstrapWorker.waitAll( );
+    } finally {
+      ServiceBootstrapWorker.markFinished( );
+    }
     return true;
   }
   
@@ -354,12 +348,6 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
             Exceptions.trace( ex );
           }
         }
-      } else if ( compId.isAlwaysLocal( ) || ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) ) ) {
-//        try {
-//          predicate.apply( ServiceConfigurations.createEphemeral( compId, Internets.localHostInetAddress( ) ) );
-//        } catch ( final Exception ex ) {
-//          Exceptions.trace( ex );
-//        }
       }
     }
   }
