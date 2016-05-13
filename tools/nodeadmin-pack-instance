@@ -43,11 +43,9 @@ import libvirt
 _ETC_EUCALYPTUS = '/etc/eucalyptus'
 _RUN_EUCALYPTUS = '/var/run/eucalyptus'
 _LIB_EUCALYPTUS = '/var/lib/eucalyptus'
-_INSTANCE_CACHE = '/var/lib/eucalyptus/instances/cache'
 _EUCALYPTUS_CONF = 'eucalyptus.conf'
 _GLOBAL_NETWORK_INFO_XML = 'global_network_info.xml'
 _WORK = 'work'
-_INSTANCE_PATH = 'INSTANCE_PATH'
 _EUCALYPTUS = 'EUCALYPTUS'
 _GLOBAL_SECTION = 'GLOBAL'
 _QEMU_CONN = 'qemu:///system'
@@ -97,13 +95,14 @@ def _parse_args():
 
     group_i = parser.add_mutually_exclusive_group(required=True)
     group_i.add_argument("--all",
-                         help="all instances are targeted for packing and placed in the directory specified",
-                         metavar="output-directory")
-    group_i.add_argument("--instance",
-                         help="name of the instance target for packing and the target packed file",
-                         nargs=2,
-                         metavar=("instance-name", "output-file"))
+                         help="all instances are targeted for packing",
+                         action="store_true")
+    group_i.add_argument("-i", "--instance",
+                         help="name of the instance target for packing and the target packed file")
 
+    parser.add_argument("-o", "--output-directory",
+                        help="location to store resulting packed file(s)",
+                        default=".")
     parser.add_argument("--shutdown",
                         help="shutdown the instance first instead of suspend",
                         action="store_true")
@@ -130,7 +129,8 @@ def _parse_eucalyptus_conf():
     logging.debug("attempting to load %s", os.path.join(
         _ETC_EUCALYPTUS, _EUCALYPTUS_CONF))
     config.write('[%s]\n' % _GLOBAL_SECTION)
-    config.write(open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)).read())
+    with open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)) as config_file:
+        config.write(config_file.read())
     config.seek(0, os.SEEK_SET)
 
     parser.readfp(config)
@@ -171,7 +171,7 @@ def _modify_libvirt_xml(instance_path):
     with open(os.path.join(instance_path, _LIBVIRT_XML)) as xml_file:
         parser = parse(xml_file)
 
-    with open(os.path.join(instance_path, "%s.orig" % _LIBVIRT_XML)) as orig_xml_file:
+    with open(os.path.join(instance_path, "%s.orig" % _LIBVIRT_XML), 'wb') as orig_xml_file:
         parser.writexml(orig_xml_file)
 
     for elem in parser.getElementsByTagName("disk"):
@@ -201,9 +201,6 @@ def _find_instance(instance):
         conn.close()
         raise NodeAdminPackError("Failed to parse xml for domain (%s)\n%s\n",
                                  instance, domain.XMLDesc(0))
-
-    instances_path = os.path.join(_get_instances_path(), _WORK)
-    logging.debug("found instances path at %s", instances_path)
 
     for elem in parser.getElementsByTagName('source'):
         dev_path = elem.getAttribute('dev')
@@ -265,7 +262,8 @@ def _create_tar(files, pack_path, skip_compression):
 
     rc = check_call(tar_cmd)
     if rc:
-        NodeAdminPackError("Failed to create packed file with cmd (%s)", tar_cmd)
+        NodeAdminPackError(
+            "Failed to create packed file with cmd (%s)", tar_cmd)
 
 
 def _get_eucalyptus_home_path():
@@ -275,11 +273,9 @@ def _get_eucalyptus_home_path():
 
 
 def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
-    commas = ',' * 3
-    dev_array = [_get_eucalyptus_home_path(), volume_id,
-                 volume_dev_name, volume_serial, volume_bus]
-
-    dev_string = "%s,%s,%s" % (','.join(dev_array), commas, connection_string)
+    commas = ',' * 8
+    dev_string = "%s%s%s" % (_get_eucalyptus_home_path(),
+                             commas, connection_string.encode('utf8'))
 
     iscsi_pl_cmd = [_DISCONNECT_ISCSI_PL, dev_string]
 
@@ -324,12 +320,12 @@ def _find_volumes_and_detach(instance_path):
                 break
             break
 
-    if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
-        raise NodeAdminPackError(
-            "Failed collecting information for ebs volumes at instance path %s", instance_path)
+        if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
+            raise NodeAdminPackError(
+                "Failed collecting information for ebs volumes at instance path %s", instance_path)
 
-    _detach_iscsi_target(volume_id, volume_dev_name,
-                         volume_serial, volume_bus, connection_string)
+        _detach_iscsi_target(volume_id, volume_dev_name,
+                             volume_serial, volume_bus, connection_string)
 
 
 def _gather_files(instance_name, instance_path):
@@ -356,24 +352,21 @@ def _gather_files(instance_name, instance_path):
             raise NodeAdminPackError("Failed to copy block device /dev/mapper/%s to file %s (%d)",
                                      device, block_save, rc)
 
-    for link_file in glob("%s/link-to-vd*" % instance_path):
-        link_target = "-".join(os.path.basename(os.readlink(link_file)
-                                                ).split('-')[-3:])
-        os.unlink(link_file)
-        os.symlink(os.path.join(instance_path, "%s%s" %
-                                (link_target, _BLOCK_SAVE)), link_file)
+    link_files = glob("%s/link-to-vd*" % instance_path)
+
+    new_links = [("-".join(os.path.basename(os.readlink(link_file)).split('-')[-3:]), link_file)
+                 for link_file in link_files]
+
+    for new_link in new_links:
+        os.unlink(new_link[1])
+        os.symlink(os.path.join(os.path.dirname(new_link[1]), "%s%s" %
+                                (new_link[0], _BLOCK_SAVE)), new_link[1])
 
     target_files = [os.path.join(instance_path, file) for file in os.listdir(instance_path)
                     if os.path.splitext(file)[1] not in
                     [".dm", ".deps", ".sig", ".lock", ".loopback", ".blocks"]]
 
     return target_files
-
-
-def _get_instances_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
 
 
 def pack_instance(instance, output_file, shutdown, skip_compression):
@@ -412,16 +405,18 @@ def _main(args, log_level):
         logging.debug("packing all instances")
         for instance in _list_instances():
             logging.debug("packing instance %s", instance)
-            output_file = os.path.join(args.all, instance + _PACK_TAR)
+            output_file = os.path.join(
+                args.output_directory, instance + _PACK_TAR)
             pack_instance(
                 instance, output_file, args.shutdown, args.no_compression)
 
             logging.info(
                 "Packed instance %s located at %s", instance, output_file)
     else:
-        logging.debug("packing instance %s", args.instance[0])
+        logging.debug("packing instance %s", args.instance)
+        output_file = os.path.join(args.output_directory, instance + _PACK_TAR)
         pack_instance(
-            args.instance[0], args.instance[1], args.shutdown, args.no_compression)
+            args.instance, output_file, args.shutdown, args.no_compression)
 
         logging.info(
             "Packed instance %s located at %s", args.instance[0], args.instance[1])

@@ -35,7 +35,6 @@ from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 from xml.dom.minidom import parseString, parse
-from socket import getaddrinfo, gethostname, IPPROTO_TCP
 
 import libvirt
 
@@ -55,6 +54,9 @@ _DEFAULT_TIMEOUT = 60
 _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
 _CONNECT_ISCSI_PL = '/usr/share/eucalyptus/connect_iscsitarget.pl'
+_DEFAULT_CEPH_USER = "eucalyptus"
+_DEFAULT_CEPH_KEYRING = "/etc/ceph/ceph.client.eucalyptus.keyring"
+_DEFAULT_CEPH_CONF = "/etc/ceph/ceph.conf"
 
 
 class NodeAdminUnpackError(Exception):
@@ -89,8 +91,8 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="Unpack an instance to libvirt after "
-                                     "extracting artifacts from packed file")
+    parser = argparse.ArgumentParser(description="Restore an instance to libvirt after "
+                                     "unpacking artifacts from packed file")
 
     parser.add_argument("packed_file",
                         help="file path to the packed file storing the instance")
@@ -113,7 +115,8 @@ def _parse_eucalyptus_conf():
     config = StringIO()
 
     config.write('[%s]\n' % _GLOBAL_SECTION)
-    config.write(open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)).read())
+    with open(os.path.join(_ETC_EUCALYPTUS, _EUCALYPTUS_CONF)) as config_file:
+        config.write(config_file.read())
     config.seek(0, os.SEEK_SET)
 
     parser.readfp(config)
@@ -132,35 +135,7 @@ def _find_instance(packed_path):
 
     for instance_path in parser.getElementsByTagName('instancePath'):
         instance_name = os.path.split(instance_path.childNodes[0].data)[1]
-        return (instance_name, instance_path)
-
-
-def _find_storage_controller():
-    euserv_cmd = ["/usr/bin/euserv-describe-services",
-                  "--filter", "service-type=storage", "--expert"]
-
-    proc = Popen(euserv_cmd, stdout=PIPE)
-    storage_controller = proc.stdout.read().split()[4]
-    logging.debug(storage_controller)
-
-    return storage_controller
-
-
-def _find_iqn():
-    cat_cmd = ["/bin/cat", "/etc/iscsi/initiatorname.iscsi"]
-
-    proc = Popen(cat_cmd, stdout=PIPE)
-    iqn = proc.stdout.read().strip('\n').split('=')[1]
-    logging.debug(iqn)
-
-    return iqn
-
-
-def _find_ip():
-    for socket_info in getaddrinfo(gethostname(), 80, 0, 0, IPPROTO_TCP):
-        if len(socket_info[4][0].split('.')) == 4:
-            logging.debug(socket_info[4][0])
-            return socket_info[4][0]
+        return (instance_name, instance_path.childNodes[0].data)
 
 
 def _get_libvirt_connection():
@@ -185,7 +160,7 @@ def _lookup_domain(conn, instance_name):
 def _unpack_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
 
-    rc = conn.unpack(
+    rc = conn.restore(
         os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
 
     if rc:
@@ -209,11 +184,12 @@ def _get_eucalyptus_home_path():
 
 
 def _attach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
-    commas = ',' * 3
     dev_array = [_get_eucalyptus_home_path(), volume_id,
-                 volume_dev_name, volume_serial, volume_bus]
+                 volume_dev_name, volume_serial, volume_bus,
+                 _DEFAULT_CEPH_USER, _DEFAULT_CEPH_KEYRING, _DEFAULT_CEPH_CONF]
 
-    dev_string = "%s,%s,%s" % (','.join(dev_array), commas, connection_string)
+    dev_string = "%s,%s" % (
+        ','.join(dev_array), connection_string.encode('utf8'))
 
     iscsi_pl_cmd = [_CONNECT_ISCSI_PL, dev_string]
 
@@ -258,12 +234,12 @@ def _attach_volumes(instance_path):
                 break
             break
 
-    if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
-        raise NodeAdminUnpackError(
-            "Failed collecting information for ebs volumes at instance path %s", instance_path)
+        if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
+            raise NodeAdminUnpackError(
+                "Failed collecting information for ebs volumes at instance path %s", instance_path)
 
-    _attach_iscsi_target(volume_id, volume_dev_name,
-                         volume_serial, volume_bus, connection_string)
+        _attach_iscsi_target(volume_id, volume_dev_name,
+                             volume_serial, volume_bus, connection_string)
 
 
 def unpack_instance(instance_path, packed_path):
