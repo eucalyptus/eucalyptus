@@ -1277,7 +1277,7 @@ public class Entities {
         } catch ( final RuntimeException ex ) {
           throw PersistenceExceptions.throwFiltered( ex );
         }
-      } else {
+      } else if ( Logs.isExtrrreeeme( ) ) {
         Logs.extreme( ).error( "Duplicate call to commit( ): " + Threads.currentStackString( ) );
       }
     }
@@ -1484,7 +1484,7 @@ public class Entities {
     TxRecord( final String persistenceContext, final String uuid ) {
       this.persistenceContext = persistenceContext;
       this.uuid = uuid;
-      this.stack = Threads.currentStackString( );
+      this.stack = Threads.currentStackRange( 0, 32 );
       this.startTime = System.currentTimeMillis( );
     }
     
