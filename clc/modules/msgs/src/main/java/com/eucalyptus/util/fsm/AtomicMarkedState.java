@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -457,7 +457,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
       this.transition = transition;
       this.txName = AtomicMarkedState.this.getName( ) + " #" + this.txId + " " + this.rule.getName( );
       if ( Logs.isExtrrreeeme( ) ) {
-        this.startStackTrace = Threads.currentStackString( );
+        this.startStackTrace = Threads.currentStackRange( 0, 32 );
       } else {
         this.startStackTrace = Threads.currentStackFrame( 0 ).toString( );
       }
@@ -466,7 +466,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         @Override
         public String get( ) {
           if ( Logs.isExtrrreeeme( ) ) {
-            return Threads.currentStackString( );
+            return Threads.currentStackRange( 0, 32 );
           } else {
             return Threads.currentStackFrame( 3 ).toString( );
           }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -158,7 +158,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   private final String                              startingStack;
 
   protected AbstractListenableFuture() {
-    this.startingStack = Threads.currentStackString();
+    this.startingStack = Threads.currentStackRange( 0, 32 );
   }
 
   protected <T> void add( final ExecPair<T> pair ) {
@@ -291,7 +291,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
           } catch ( TimeoutException e ) {
             continue;
           } finally {
-            if (timeoutLogger.apply(this.callable)) {
+            if (timeoutLogger.apply(this.callable) && Logs.exhaust( ).isDebugEnabled( )) {
               Logs.exhaust().debug( "Intial Stack: \n" + AbstractListenableFuture.this.startingStack );
               Logs.exhaust().debug( "Current Stack: \n" + Threads.currentStackString() );
             }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -622,7 +622,10 @@ public class Threads {
     end = Ints.min( Ints.max( 2, end  + 2), len - 1 );
     return Joiner.on( "\t\n" ).join( Arrays.copyOfRange( stack, start, end ) );
   }
-  
+
+  /**
+   * WARNING: this can be large (> 100KiB)
+   */
   public static String currentStackString( ) {
     return currentStackRange( 0, 1_000_000 );
   }
@@ -647,7 +650,7 @@ public class Threads {
       this.ownerType = owner.getClass( );
       this.name = owner.getFullName( ).toString( );
       this.numWorkers = numWorkers;
-      this.creationStack = Threads.currentStackString( );
+      this.creationStack = Threads.currentStackRange( 0, 32 );
     }
     
     private boolean start( ) {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -111,7 +111,7 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   }
   
   public void setState( final STATE state ) {
-    this.stateChangeStack = Logs.isDebug( ) ? Threads.currentStackString( ) : "n/a";
+    this.stateChangeStack = Logs.isExtrrreeeme( ) ? Threads.currentStackRange( 0, 32 ) : "n/a";
     if ( state != null && this.state != null && !state.equals( this.state ) ) {
       this.lastState = this.state;
     } else if ( state != null && this.state == null ) {
