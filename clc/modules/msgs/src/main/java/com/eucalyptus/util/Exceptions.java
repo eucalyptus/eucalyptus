@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,6 +91,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.cache.CacheBuilder;
@@ -360,7 +361,7 @@ public class Exceptions {
   }
   
   public static <T extends Throwable> T trace( T t ) {
-    return trace( t.getMessage( ), t );
+    return trace( MoreObjects.firstNonNull( t.getMessage( ), t.toString( ) ), t );
   }
   
   public static <T extends Throwable> T trace( String message, T t ) {
