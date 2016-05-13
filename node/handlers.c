@@ -4098,6 +4098,24 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
                 LOGDEBUG("[%s] cannot read valid global network view file '%s' (yet), waiting\n", instance->instanceId, xmlfile);
             }
             EUCA_FREE(fileBuf);
+        } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED) || !strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED_NOVLAN)) {
+            int fd;
+            pid_t pid;
+            char buf[CHAR_BUFFER_SIZE] = "";
+            char bridge[SMALL_CHAR_BUFFER_SIZE] = "";
+            boolean found = TRUE;
+            snprintf(bridge, SMALL_CHAR_BUFFER_SIZE, "%s", instance->params.guestNicDeviceName);
+            if (euca_execlp_fd(&pid, NULL, &fd, NULL, "/usr/sbin/brctl", "show", bridge, NULL) == EUCA_OK) {
+                if (read(fd, &buf, CHAR_BUFFER_SIZE-1) > 0 && strstr(buf, "No such device")) {
+                    found = FALSE;
+                }
+                waitpid(pid, NULL, 0);
+                close(fd);
+            } else {
+                LOGWARN("Can't run brctl show");
+            }
+            if (found)
+                return (0);
         } else {
             return(0);
         }
