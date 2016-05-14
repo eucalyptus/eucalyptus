@@ -114,7 +114,7 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
       final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
       try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
         final LoadBalancer loadBalancer =
-            LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+            LoadBalancers.getLoadbalancerCaseInsensitive( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
         final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
             new Predicate<LoadBalancerServoInstanceCoreView>(){
           @Override

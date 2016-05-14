@@ -109,21 +109,30 @@ public class LoadBalancers {
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
 		return LoadBalancers.getLoadbalancer( ctx.getAccount().getAccountNumber(), lbName );
 	}
-	
-	public static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName){
-		 LoadBalancer lb = null;
-		 try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
-			 lb = Entities.uniqueResult( LoadBalancer.namedByAccountId(accountNumber, lbName)); 
-			 db.commit();
-			 return lb;
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 if(lb!=null)
-				 return lb;
-			 else
-				 throw Exceptions.toUndeclared(ex);
-		 }
+
+	public static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName) {
+		LoadBalancer lb = null;
+		try (final TransactionResource db = Entities.transactionFor(LoadBalancer.class)) {
+			lb = Entities.uniqueResult(LoadBalancer.namedByAccountId(accountNumber, lbName));
+			db.commit();
+			return lb;
+		} catch (NoSuchElementException ex) {
+			throw ex;
+		} catch (Exception ex) {
+			if (lb != null)
+				return lb;
+			else
+				throw Exceptions.toUndeclared(ex);
+		}
+	}
+
+	public static LoadBalancer getLoadbalancerCaseInsensitive(final String accountNumber, final String lbName) {
+		for (final LoadBalancer lb : listLoadbalancers(accountNumber) ) {
+			if (lb.getDisplayName().toLowerCase().equals(lbName.toLowerCase())) {
+				return lb;
+			}
+		}
+		throw new NoSuchElementException();
 	}
 
 	public static String getLoadBalancerDnsName( final LoadBalancerCoreView loadBalancer ) {
