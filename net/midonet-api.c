@@ -262,6 +262,36 @@ int iplist_arr_free(char **iparr, int max_iparr) {
     return (0);
 }
 
+/**
+ * Splits eucanetd VPCMIDO router names (in the form of name_rtid) into name and
+ * rtid parts.
+ * @param routername [in] name of eucanetd VPCMIDO router of interest
+ * @param name [out] string that represents the name of name_rtid. Memory allocated
+ * for name should be released by the caller.
+ * @param id [out] integer that represents the rtid of name_rtid
+ * @return 0 on success. 1 on failure.
+ */
+int routername_split(char *routername, char **name, int *id) {
+    if (!routername || !name || !id) {
+        return (1);
+    }
+    char *instr = strdup(routername);
+    char *rtid = NULL;
+    for (int i = strlen(instr) - 2; i >= 0; i--) {
+        if (instr[i] == '_') {
+            instr[i] = '\0';
+            rtid = &(instr[i + 1]);
+            break;
+        }
+    }
+    if (instr && rtid && strlen(instr) && strlen(rtid)) {
+        *name = strdup(instr);
+        *id = atoi(rtid);
+    }
+    EUCA_FREE(instr);
+    return (0);
+}
+
 //!
 //!
 //!
@@ -281,7 +311,7 @@ void mido_print_midoname(midoname * name) {
     if (name == NULL) {
         LOGWARN("Invalid argument: NULL midoname\n");
     } else {
-        LOGDEBUG("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n",
+        LOGTRACE("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n",
                 name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
                 SP(name->content_type), SP(name->vers));
     }
@@ -2250,7 +2280,7 @@ int mido_create_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipag, midoname *ipaddrgr
         }
         mido_free_midoname(&myname);
     }
-    LOGTRACE("12095: %s %d IPs\n", ig->obj->name, ig->max_ips);
+    LOGTRACE("\t %s %d IPs\n", ig->obj->name, ig->max_ips);
     return (ret);
 }
 
@@ -3371,7 +3401,7 @@ int mido_link_host_port(midoname *host, char *interface, midoname *device, midon
     // check to see if the port is already mapped
     rc = mido_getel_midoname(port, "hostInterfacePort", &hinterface);
     if (!rc) {
-        LOGDEBUG("Port %s already mapped to interface %s\n", port->name, hinterface);
+        LOGTRACE("Port %s already mapped to interface %s\n", port->name, hinterface);
         found = 1;
     }
     EUCA_FREE(hinterface);
@@ -3476,11 +3506,11 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
     // check to see if resource needs updating
     va_copy(alb, *al);
     rc = mido_cmp_midoname_to_input_json_v(name, &alb);
-    LOGDEBUG("update_resource cmp return: %d\n", rc);
+    LOGTRACE("update_resource cmp return: %d\n", rc);
     va_end(alb);
 
     if (!rc) {
-        LOGDEBUG("resource to update matches in place resource - skipping update\n");
+        LOGTRACE("resource to update matches in place resource - skipping update\n");
         return(-1);
     }
 
@@ -3589,9 +3619,9 @@ int mido_print_resource(char *resource_type, midoname * name)
         LOGERROR("ERROR: json_tokener_parse(...): returned NULL\n");
         ret = 1;
     } else {
-        LOGDEBUG("TYPE: %s NAME: %s UUID: %s\n", resource_type, SP(name->name), name->uuid);
+        LOGTRACE("TYPE: %s NAME: %s UUID: %s\n", resource_type, SP(name->name), name->uuid);
         json_object_object_foreach(jobj, key, val) {
-            LOGDEBUG("\t%s: %s\n", key, SP(json_object_get_string(val)));
+            LOGTRACE("\t%s: %s\n", key, SP(json_object_get_string(val)));
         }
         json_object_put(jobj);
     }
@@ -3819,11 +3849,11 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
                 if (outmn->jsonbuf) {
                     rc = mido_cmp_midoname_to_input_json_v(outmn, al);
                     if (rc) {
-                        LOGINFO("12095: create_resource_v() applying changes to %s/%s\n", outmn->name, outmn->jsonbuf);
+                        LOGINFO("\t create_resource_v() applying changes to %s/%s\n", outmn->name, outmn->jsonbuf);
                         mido_update_resource(newname->resource_type, newname->content_type, newname->vers, outmn, al);
                         ret = -2;
                     } else {
-                        LOGINFO("12095: create_resource_v() object already in mido %s\n", outmn->name);
+                        LOGINFO("\t create_resource_v() object already in mido %s\n", outmn->name);
                         ret = -1;
                     }
                 } else {
@@ -3839,7 +3869,7 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
         }
         *outname = outmn;
     } else {
-        LOGEXTREME("12095: New mido object will not be returned.\n");
+        LOGEXTREME("\t New mido object will not be returned.\n");
     }
 
     //  construct the payload
@@ -5324,6 +5354,47 @@ int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type) {
     return (ret);
 }
 
+/**
+ * Compares midoname data structures a and b. The comparison are based on jsonbuf
+ * of a and b. jsonbuf elements position, id, uri are ignored in the comparison (since
+ * they should be always disfferent).
+ * @param a midoname structure of interest.
+ * @param b midoname structute of interest.
+ * @return 0 if all elements in a->jsonbuf has a matching element in b->jsonbuf. 1 otherwise.
+ * The elements position, id, and uri are ignored in the comparison. 0 is also returned if
+ * both a and b are NULL.
+ */
+int mido_cmp_midoname_jsonbuf(midoname *a, midoname *b) {
+    int ret = 0;
+    if (a == b) {
+        return 0;
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return 1;
+    }
+
+    json_object *srcjobj = json_tokener_parse(a->jsonbuf);
+    json_object *dstjobj = json_tokener_parse(b->jsonbuf);
+
+    json_object_object_del(srcjobj, "position");
+    json_object_object_del(srcjobj, "id");
+    json_object_object_del(srcjobj, "uri");
+
+    if (json_object_cmp(srcjobj, dstjobj)) {
+        ret = 1;
+    } else {
+        ret = 0;
+    }
+
+    if (srcjobj) {
+        json_object_put(srcjobj);
+    }
+    if (dstjobj) {
+        json_object_put(dstjobj);
+    }
+    return (ret);
+}
+
 //!
 //!
 //!
@@ -5413,6 +5484,26 @@ int mido_get_routers(char *tenant, midoname ***outnames, int *outnames_max) {
  * @return pointer to the data structure that represents the router, when found. NULL otherwise.
  */
 midonet_api_router *mido_get_router(char *name) {
+    if (midocache != NULL) {
+        if (midocache->sorted_routers == 0) {
+            qsort(midocache->routers, midocache->max_routers,
+                    sizeof (midonet_api_router *), compare_midonet_api_router);
+            midocache->sorted_routers = 1;
+        }
+        midoname tmp;
+        tmp.name = strdup(name);
+        midonet_api_router router;
+        router.obj = &tmp;
+        midonet_api_router *prouter = &router;
+        midonet_api_router **res = (midonet_api_router **) bsearch(&prouter,
+                midocache->routers, midocache->max_routers,
+                sizeof (midonet_api_router *), compare_midonet_api_router);
+        EUCA_FREE(tmp.name);
+        if (res) {
+            return (*res);
+        }
+    }
+/*
     midoname tmp;
     midonet_api_router *res = NULL;
     if (midocache != NULL) {
@@ -5421,6 +5512,7 @@ midonet_api_router *mido_get_router(char *name) {
         EUCA_FREE(tmp.name);
         return (res);
     }
+*/
     return (NULL);
 }
 
@@ -5460,6 +5552,27 @@ int mido_get_bridges(char *tenant, midoname ***outnames, int *outnames_max) {
  * @return pointer to the data structure that represents the bridge, when found. NULL otherwise.
  */
 midonet_api_bridge *mido_get_bridge(char *name) {
+    if (midocache != NULL) {
+        if (midocache->sorted_bridges == 0) {
+            qsort(midocache->bridges, midocache->max_bridges,
+                    sizeof (midonet_api_bridge *), compare_midonet_api_bridge);
+            midocache->sorted_bridges = 1;
+        }
+        midoname tmp;
+        tmp.name = strdup(name);
+        midonet_api_bridge bridge;
+        bridge.obj = &tmp;
+        midonet_api_bridge *pbridge = &bridge;
+        midonet_api_bridge **res = (midonet_api_bridge **) bsearch(&pbridge,
+                midocache->bridges, midocache->max_bridges,
+                sizeof (midonet_api_bridge *), compare_midonet_api_bridge);
+        EUCA_FREE(tmp.name);
+        if (res) {
+            return (*res);
+        }
+    }
+
+/*
     midoname tmp;
     midonet_api_bridge *res = NULL;
     if (midocache != NULL) {
@@ -5468,6 +5581,7 @@ midonet_api_bridge *mido_get_bridge(char *name) {
         EUCA_FREE(tmp.name);
         return (res);
     }
+*/
     return (NULL);
 }
 
@@ -5642,7 +5756,7 @@ int mido_refresh_resource(midoname *resc, char *apistr) {
                     resc->resource_type, ((resc->vers == NULL) || (strlen(resc->vers) <= 0)) ? "v1" : resc->vers);
         }
     }
-    LOGTRACE("12095: refreshing %s %s\n", url, hbuf);
+    LOGTRACE("\t refreshing %s %s\n", url, hbuf);
 
     rc = midonet_http_get(url, hbuf, &payload);
     if (!rc) {
@@ -6263,6 +6377,15 @@ int midonet_api_cache_flush(void) {
 }
 
 /**
+ * Returns a pointer to the current MIDOCACHE.
+ * 
+ * @return a pointer to the current MIDOCACHE.
+ */
+midonet_api_cache *midonet_api_cache_get(void) {
+    return (midocache);
+}
+
+/**
  * Raises the midocache invalid flag if the number of midocache_midos releases reaches
  * a threshold.
  * 
@@ -6300,7 +6423,7 @@ int midonet_api_cache_populate(void) {
  * @return 0 on success. 1 on any failure.
  */
 int midonet_api_cache_refresh(void) {
-    return (midonet_api_cache_refresh_v(MIDO_CACHE_REFRESH_ALL));
+    return (midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL));
 }
 
 /**
@@ -6359,7 +6482,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             LOGEXTREME("Cached port %s\n", ports[i]->name);
         }
     }
-    LOGDEBUG("\t%d ports in %.2f\n", cache->max_ports, eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\t%d ports in %.2f\n", cache->max_ports, eucanetd_timer_usec(&tv) / 1000.0);
 */
 
     // get all routers
@@ -6405,7 +6528,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all bridges
     l1names = NULL;
@@ -6466,9 +6589,9 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
-    LOGDEBUG("\t%d ports\n", cache->max_ports);
+    LOGTRACE("\t%d ports\n", cache->max_ports);
 
     // get all chains
     l1names = NULL;
@@ -6495,7 +6618,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all hosts
     if (refreshmode == MIDO_CACHE_REFRESH_ALL) {
@@ -6504,7 +6627,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             LOGWARN("failed to populate mido ip-host map\n");
         }
     }
-    LOGDEBUG("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     // get all IP address groups
     l1names = NULL;
@@ -6537,7 +6660,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     // get all port-groups
     l1names = NULL;
@@ -6563,7 +6686,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tpgs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tpgs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all tunnel-zones
     l1names = NULL;
@@ -6589,7 +6712,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\ttzs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\ttzs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // Enable midocache
     midocache = cache;
@@ -6839,7 +6962,7 @@ void *midonet_api_cache_refresh_objects_worker_thread(void *worker_param) {
             tp->rc = tp->get_from_mido(tp->cache, tp->start, tp->end);
         }
     }
-    LOGDEBUG("\t\t%s worker thread - %.2f ms\n", tp->name, eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\t\t%s worker thread - %.2f ms\n", tp->name, eucanetd_timer_usec(&tv) / 1000.0);
     pthread_exit((void *) &(tp->rc));
 }
 
@@ -6889,7 +7012,7 @@ void *midonet_api_cache_refresh_objects_main_thread(void *main_param) {
         rc = param->get_from_mido(param->cache, 0, n);
     }
 
-    LOGDEBUG("\t\t%s main thread - %.2f ms\n", param->name, eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\t\t%s main thread - %.2f ms\n", param->name, eucanetd_timer_usec(&tv) / 1000.0);
     param->rc = 0;
     pthread_exit((void *) &(param->rc));
 }
@@ -7019,7 +7142,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\trouters in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     snprintf(param[MIDO_CACHE_THREAD_ROUTER].name, MIDO_CACHE_THREAD_NAME_LEN, "router");
     param[MIDO_CACHE_THREAD_ROUTER].n = cache->max_routers;
@@ -7050,7 +7173,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tbridges in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     snprintf(param[MIDO_CACHE_THREAD_BRIDGE].name, MIDO_CACHE_THREAD_NAME_LEN, "bridge");
     param[MIDO_CACHE_THREAD_BRIDGE].n = cache->max_bridges;
@@ -7081,7 +7204,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tchains in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     snprintf(param[MIDO_CACHE_THREAD_CHAIN].name, MIDO_CACHE_THREAD_NAME_LEN, "chain");
     param[MIDO_CACHE_THREAD_CHAIN].n = cache->max_chains;
@@ -7111,7 +7234,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tipag in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     snprintf(param[MIDO_CACHE_THREAD_IPAG].name, MIDO_CACHE_THREAD_NAME_LEN, "ipag");
     param[MIDO_CACHE_THREAD_IPAG].n = cache->max_ipaddrgroups;
@@ -7169,7 +7292,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
         }
     }
     EUCA_FREE(l1names);
-    LOGDEBUG("\tetc in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tetc in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     pthread_join(pt[MIDO_CACHE_THREAD_ROUTER], NULL);
     pthread_join(pt[MIDO_CACHE_THREAD_BRIDGE], NULL);
@@ -7181,7 +7304,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
             LOGWARN("failed to populate mido ip-host map\n");
         }
     }
-    LOGDEBUG("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGTRACE("\tiphostmap in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
     
     pthread_join(pt[MIDO_CACHE_THREAD_CHAIN], NULL);
     pthread_join(pt[MIDO_CACHE_THREAD_IPAG], NULL);
@@ -7468,6 +7591,7 @@ midonet_api_bridge *midonet_api_cache_add_bridge(midoname *bridge) {
     newbr = EUCA_ZALLOC_C(1, sizeof (midonet_api_bridge));
     newbr->obj = bridge;
     midocache->bridges = EUCA_APPEND_PTRARR(midocache->bridges, &(midocache->max_bridges), newbr);
+    midocache->sorted_bridges = 0;
     return (newbr);
 }
 
@@ -7495,6 +7619,7 @@ int midonet_api_cache_del_bridge(midoname *bridge) {
         }
         midonet_api_bridge_free(todel);
         midocache->bridges[idx] = NULL;
+        midocache->sorted_bridges = 0;
         (midocache_midos->released)++;
         return (0);
     }
@@ -7811,6 +7936,7 @@ midonet_api_router *midonet_api_cache_add_router(midoname *router) {
     newrt = EUCA_ZALLOC_C(1, sizeof (midonet_api_router));
     newrt->obj = router;
     midocache->routers = EUCA_APPEND_PTRARR(midocache->routers, &(midocache->max_routers), newrt);
+    midocache->sorted_routers = 0;
     return (newrt);
 }
 
@@ -7838,6 +7964,7 @@ int midonet_api_cache_del_router(midoname *router) {
         }
         midonet_api_router_free(todel);
         midocache->routers[idx] = NULL;
+        midocache->sorted_routers = 0;
         (midocache_midos->released)++;
         return (0);
     }
@@ -8408,11 +8535,12 @@ int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone) {
 
 /**
  * Delete all bridges, routers, ip-address-groups, and chains with names consistent
+ * with eucanetd VPCMIDO naming scheme.
  * @return always 0.
  */
 int midonet_api_delete_all(void) {
     // Refresh midocache
-    int rc = midonet_api_cache_refresh_v(MIDO_CACHE_REFRESH_NOHOSTS);
+    int rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_NOHOSTS);
     if (rc) {
         LOGERROR("cannot populate midocache prior to cleanup: check midonet health\n");
         return (1);
@@ -8478,6 +8606,334 @@ int midonet_api_delete_all(void) {
 }
 
 /**
+ * Iterate through all bridges, routers, ip-address-groups, and chains and detect/
+ * delete duplicate objects.
+ * @param checkonly [in] if true, only performs check. If false, duplicate objects
+ * are deleted.
+ * @return always 0.
+ */
+int midonet_api_delete_dups(boolean checkonly) {
+    boolean deleted = FALSE;
+    boolean gDeleted = FALSE;
+    boolean gDupDetected = FALSE;
+    midoname *a = NULL;
+    midoname *b = NULL;
+    int aidx = 0;
+    int bidx = 0;
+    // Refresh midocache
+    LOGINFO("Loading objects from MidoNet.\n");
+    int rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_NOHOSTS);
+    if (rc) {
+        LOGERROR("cannot populate midocache: check midonet health\n");
+        return (1);
+    }
+
+    // Check ip-address-groups
+    mido_get_ipaddrgroup("metadata_ip");
+    LOGINFO("\tchecking ip-address-groups\n");
+    deleted = FALSE;
+    a = NULL;
+    aidx = 0;
+    b = NULL;
+    bidx = 0;
+    for (int i = 1; i < midocache->max_ipaddrgroups; i++) {
+        if (strstr(midocache->ipaddrgroups[i]->obj->name, "sg_") ||
+                strstr(midocache->ipaddrgroups[i]->obj->name, "elip_") ||
+                strstr(midocache->ipaddrgroups[i]->obj->name, "metadata_")) {
+            if (!deleted) {
+                a = midocache->ipaddrgroups[i - 1]->obj;
+                aidx = i - 1;
+            }
+            b = midocache->ipaddrgroups[i]->obj;
+            bidx = i;
+            if (!strcmp(a->name, b->name)) {
+                LOGINFO("\t\t%s duplicate at idx %d\n", a->name, i);
+                gDupDetected = TRUE;
+                if (!checkonly) {
+                    if (midocache->ipaddrgroups[aidx]->ips_count > midocache->ipaddrgroups[bidx]->ips_count) {
+                        mido_delete_resource(NULL, midocache->ipaddrgroups[bidx]->obj);
+                        deleted = TRUE;
+                    } else {
+                        mido_delete_resource(NULL, midocache->ipaddrgroups[aidx]->obj);
+                        deleted = FALSE;
+                    }
+                    gDeleted = TRUE;
+                }
+            } else {
+                deleted = FALSE;
+            }
+        }
+    }
+    
+    // Check all chains
+    mido_get_chain("eucabr_infilter");
+    LOGINFO("\tchecking chains\n");
+    deleted = FALSE;
+    a = NULL;
+    aidx = 0;
+    b = NULL;
+    bidx = 0;
+    for (int i = 1; i < midocache->max_chains; i++) {
+        if (strstr(midocache->chains[i]->obj->name, "sg_") ||
+                strstr(midocache->chains[i]->obj->name, "ic_") ||
+                strstr(midocache->chains[i]->obj->name, "vc_") ||
+                strstr(midocache->chains[i]->obj->name, "natc_") ||
+                strstr(midocache->chains[i]->obj->name, "eucabr_")) {
+            if (!deleted) {
+                a = midocache->chains[i - 1]->obj;
+                aidx = i - 1;
+            }
+            b = midocache->chains[i]->obj;
+            bidx = i;
+            if (!strcmp(a->name, b->name)) {
+                LOGINFO("\t\t%s duplicate at idx %d\n", a->name, i);
+                gDupDetected = TRUE;
+                if (!checkonly) {
+                    if (midocache->chains[aidx]->rules_count > midocache->chains[bidx]->rules_count) {
+                        mido_delete_resource(NULL, midocache->chains[bidx]->obj);
+                        deleted = TRUE;
+                    } else {
+                        mido_delete_resource(NULL, midocache->chains[aidx]->obj);
+                        deleted = FALSE;
+                    }
+                    gDeleted = TRUE;
+                }
+            } else {
+                deleted = FALSE;
+            }
+        }
+    }
+
+    // Delete all bridges
+    mido_get_bridge("eucabr");
+    LOGINFO("\tchecking bridges\n");
+    deleted = FALSE;
+    a = NULL;
+    aidx = 0;
+    b = NULL;
+    bidx = 0;
+    for (int i = 1; i < midocache->max_bridges; i++) {
+        if (strstr(midocache->bridges[i]->obj->name, "vb_vpc") ||
+                strstr(midocache->bridges[i]->obj->name, "eucabr")) {
+            if (!deleted) {
+                a = midocache->bridges[i - 1]->obj;
+                aidx = i - 1;
+            }
+            b = midocache->bridges[i]->obj;
+            bidx = i;
+            if (!strcmp(a->name, b->name)) {
+                LOGINFO("\t\t%s duplicate at idx %d\n", a->name, i);
+                gDupDetected = TRUE;
+                if (!checkonly) {
+                    if (midocache->bridges[aidx]->max_ports >  midocache->bridges[bidx]->max_ports) {
+                        mido_delete_resource(NULL, midocache->bridges[bidx]->obj);
+                        deleted = TRUE;
+                    } else {
+                        mido_delete_resource(NULL, midocache->bridges[aidx]->obj);
+                        deleted = FALSE;
+                    }
+                    gDeleted = TRUE;
+                }
+            } else {
+                deleted = FALSE;
+            }
+        }
+    }
+
+    // Delete all routers
+    LOGINFO("\tchecking routers\n");
+    mido_get_router("eucart");
+    deleted = FALSE;
+    a = NULL;
+    aidx = 0;
+    b = NULL;
+    bidx = 0;
+    char *aname = NULL;
+    char *bname = NULL;
+    aidx = 0;
+    int aid = 0;
+    bidx = 0;
+    int bid = 0;
+    for (int i = 1; i < midocache->max_routers; i++) {
+        if (strstr(midocache->routers[i]->obj->name, "vr_vpc") ||
+                strstr(midocache->routers[i]->obj->name, "natr_nat") ||
+                strstr(midocache->routers[i]->obj->name, "eucart")) {
+            if (!deleted) {
+                a = midocache->routers[i - 1]->obj;
+                aidx = i - 1;
+                EUCA_FREE(aname);
+                routername_split(a->name, &aname, &aid);
+            }
+            b = midocache->routers[i]->obj;
+            bidx = i;
+            EUCA_FREE(bname);
+            routername_split(b->name, &bname, &bid);
+            if (aname && bname && !strcmp(aname, bname)) {
+                LOGINFO("\t\t%s duplicate at idx %d\n", a->name, i);
+                gDupDetected = TRUE;
+                if (!checkonly) {
+                    if (aid == bid) {
+                        if (midocache->routers[aidx]->max_routes > midocache->routers[bidx]->max_routes) {
+                            mido_delete_resource(NULL, midocache->routers[bidx]->obj);
+                            deleted = TRUE;
+                        } else {
+                            mido_delete_resource(NULL, midocache->routers[aidx]->obj);
+                            deleted = FALSE;
+                        }
+                    } else if (aid < bid) {
+                        mido_delete_resource(NULL, midocache->routers[bidx]->obj);
+                        deleted = TRUE;
+                    } else {
+                        mido_delete_resource(NULL, midocache->routers[aidx]->obj);;
+                        deleted = FALSE;
+                    }
+                    gDeleted = TRUE;
+                }
+            } else {
+                if (!strcmp(a->name, b->name) && strstr(a->name, "eucart")) {
+                    LOGINFO("\t\t%s duplicate at idx %d\n", a->name, i);
+                    gDupDetected = TRUE;
+                    if (!checkonly) {
+                        if (midocache->routers[aidx]->max_routes > midocache->routers[bidx]->max_routes) {
+                            mido_delete_resource(NULL, midocache->routers[bidx]->obj);
+                            deleted = TRUE;
+                        } else {
+                            mido_delete_resource(NULL, midocache->routers[aidx]->obj);
+                            deleted = FALSE;
+                        }
+                    }
+                } else {
+                    deleted = FALSE;
+                }
+            }
+        }
+    }
+    EUCA_FREE(aname);
+    EUCA_FREE(bname);
+
+    if (gDeleted) {
+        // Refresh midocache
+        LOGINFO("(Re)Loading objects from MidoNet.\n");
+        int rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_NOHOSTS);
+        if (rc) {
+            LOGERROR("cannot populate midocache: check midonet health\n");
+            return (1);
+        }
+        gDeleted = FALSE;
+    }
+    
+    midonet_api_chain *eucabrin = mido_get_chain("eucabr_infilter");
+    if (eucabrin) {
+        LOGINFO("\tchecking eucabr infilter\n");
+        if (midonet_api_delete_dups_rules(eucabrin, checkonly)) {
+            gDupDetected = TRUE;
+        }
+    }
+
+    midonet_api_router *eucart = mido_get_router(VPCMIDO_CORERT);
+    if (eucart) {
+        LOGINFO("\tchecking eucart routes\n");
+        if (midonet_api_delete_dups_routes(eucart, checkonly)) {
+            gDupDetected = TRUE;
+        }
+    }
+
+    if (!gDupDetected) {
+        LOGINFO("=== System checked for duplicates. Looks CLEAN ===\n");
+    } else {
+        LOGWARN("=== DUPLICATE(S) DETECTED ===\n");
+    }
+    return (0);
+}
+
+/**
+ * Iterate through the list of ports and detect/delete unconnected ports.
+ * @param ports [in] pointer to an array of pointers to midoname structures representing ports..
+ * @param max_ports [in] number of entries in the array
+ * @param checkonly [in] if true, only performs check. If false, unconnected ports are
+ * are deleted.
+ * @return number of detected (unconnected) ports.
+ */
+int midonet_api_delete_unconnected_ports(midoname **ports, int max_ports, boolean checkonly) {
+    int ret = 0;
+    for (int i = 0; i < max_ports; i++) {
+        char *peerId = NULL;
+        char *interfaceName = NULL;
+        if (ports[i]->port) {
+            peerId = ports[i]->port->peerid;
+            interfaceName = ports[i]->port->ifname;
+        }
+        
+        if (!peerId && !interfaceName) {
+            LOGINFO("\t\tunconnected port %s\n", ports[i]->name);
+            ret++;
+            if (!checkonly) {
+                mido_delete_resource(NULL, midocache->ports[i]);
+            }
+        }
+    }    
+    return (ret);
+}
+
+/**
+ * Iterate through rules of the given chain and detect/delete duplicate rules.
+ * @param chain [in] chain of interest.
+ * @param checkonly [in] if true, only performs check. If false, duplicate objects
+ * are deleted.
+ * @return number of detected duplicates.
+ */
+int midonet_api_delete_dups_rules(midonet_api_chain *chain, boolean checkonly) {
+    int ret = 0;
+    if (!chain) {
+        return (ret);
+    }
+    for (int i = 0; i < chain->max_rules; i++) {
+        if (!chain->rules[i]) continue;
+        for (int j = i + 1; j < chain->max_rules; j++) {
+            if (!chain->rules[j]) continue;
+            if (!mido_cmp_midoname_jsonbuf(chain->rules[i], chain->rules[j])) {
+                LOGINFO("\t\tduplicate rule detected at idx %d\n", i);
+                ret++;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, chain->rules[i]);
+                }
+                break;
+            }
+        }
+    }
+    return (ret);
+}
+
+/**
+ * Iterate through route of the given router and detect/delete duplicate routes.
+ * @param router [in] router of interest.
+ * @param checkonly [in] if true, only performs check. If false, duplicate objects
+ * are deleted.
+ * @return number of detected duplicates.
+ */
+int midonet_api_delete_dups_routes(midonet_api_router *router, boolean checkonly) {
+    int ret = 0;
+    if (!router) {
+        return (ret);
+    }
+    for (int i = 0; i < router->max_routes; i++) {
+        if (!router->routes[i]) continue;
+        for (int j = i + 1; j < router->max_routes; j++) {
+            if (!router->routes[j]) continue;
+            if (!mido_cmp_midoname_jsonbuf(router->routes[i], router->routes[j])) {
+                LOGINFO("\t\tduplicate route detected at idx %d\n", i);
+                ret++;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, router->routes[i]);
+                }
+                break;
+            }
+        }
+    }
+    return (ret);
+}
+
+/**
  * Comparator function for midonet_api_iphostmap_entry structures.
  * @param p1 [in] pointer to midonet_api_iphostmap_entry 1.
  * @param p2 [in] pointer to midonet_api_iphostmap_entry 2.
@@ -8525,6 +8981,90 @@ int compare_midoname_name(const void *p1, const void *p2) {
     }
     if (e2 && e2->name && strlen(e2->name)) {
         name2 = e2->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
+}
+
+/**
+ * Comparator function for midonet_api_bridge structures. Comparison is base on name property.
+ * @param p1 [in] pointer to midonet_api_bridge pointer 1.
+ * @param p2 [in] pointer to midonet_api_bridge pointer 2.
+ * @return 0 iff p1->.->obj->name == p2->.->obj->name. -1 iff p1->.->obj->name < p2->.->obj->name.
+ * 1 iff p1->.->obj->name > p2->.->obj->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_midonet_api_bridge(const void *p1, const void *p2) {
+    midonet_api_bridge **pp1 = NULL;
+    midonet_api_bridge **pp2 = NULL;
+    midonet_api_bridge *e1 = NULL;
+    midonet_api_bridge *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL midonet_api_bridge\n");
+        return (0);
+    }
+    pp1 = (midonet_api_bridge **) p1;
+    pp2 = (midonet_api_bridge **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->obj && e1->obj->name && strlen(e1->obj->name)) {
+        name1 = e1->obj->name;
+    }
+    if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
+        name2 = e2->obj->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
+}
+
+/**
+ * Comparator function for midonet_api_router structures. Comparison is base on name property.
+ * @param p1 [in] pointer to midonet_api_router pointer 1.
+ * @param p2 [in] pointer to midonet_api_router pointer 2.
+ * @return 0 iff p1->.->obj->name == p2->.->obj->name. -1 iff p1->.->obj->name < p2->.->obj->name.
+ * 1 iff p1->.->obj->name > p2->.->obj->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_midonet_api_router(const void *p1, const void *p2) {
+    midonet_api_router **pp1 = NULL;
+    midonet_api_router **pp2 = NULL;
+    midonet_api_router *e1 = NULL;
+    midonet_api_router *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL midonet_api_router\n");
+        return (0);
+    }
+    pp1 = (midonet_api_router **) p1;
+    pp2 = (midonet_api_router **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->obj && e1->obj->name && strlen(e1->obj->name)) {
+        name1 = e1->obj->name;
+    }
+    if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
+        name2 = e2->obj->name;
     }
     if (name1 == name2) {
         return (0);

@@ -205,7 +205,7 @@ int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup,
     char *chainhash = NULL;
 
     if (!gni || !secgroup || !outchainname) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot get chainname from NULL\n");
         return (1);
     }
 
@@ -311,7 +311,7 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
     int i = 0;
 
     if (!gni || !vpc || !out_interfaces || !max_out_interfaces) {
-        LOGWARN("Invalid argument: NULL pointer - failed to get vpc interfaces.\n");
+        LOGWARN("Invalid argument: failed to get vpc interfaces.\n");
         return (1);
     }
     LOGTRACE("Searching VPC interfaces.\n");
@@ -366,7 +366,7 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
         if (max_vpcinterfaces == 0) {
             return (0);
         }
-        LOGWARN("Invalid argument: NULL pointer - failed to get subnet interfaces.\n");
+        LOGWARN("Invalid argument: failed to get subnet interfaces.\n");
         return (1);
     }
 
@@ -411,7 +411,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
     char *strptra = NULL;
 
     if (!gni || !outclusterptr) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find cluster from NULL\n");
         return (1);
     }
 
@@ -466,7 +466,7 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
     int i = 0;
 
     if (!gni || !psGroupId || !pSecGroup) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find secgroup from NULL\n");
         return (1);
     }
     // Initialize to NULL
@@ -482,21 +482,28 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
     return (1);
 }
 
+/**
+ * Searches for the given instance name and returns the associated gni_instance structure.
+ * @param gni [in] pointer to the global network information structure.
+ * @param psInstanceId [in] the ID string of the instance of interest.
+ * @param pInstance [out] pointer to the gni_instance structure of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
 int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
     int i = 0;
 
     if (!gni || !psInstanceId || !pInstance) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find instance from NULL\n");
         return (1);
     }
     // Initialize to NULL
     (*pInstance) = NULL;
 
-    LOGDEBUG("attempting search for instance id %s in gni\n", psInstanceId);
+    LOGTRACE("attempting search for instance id %s in gni\n", psInstanceId);
 
     // Go through our instance list and look for that instance
     for (i = 0; i < gni->max_instances; i++) {
-        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->instances[i].name);
+        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->instances[i].name);
         if (!strcmp(psInstanceId, gni->instances[i].name)) {
             (*pInstance) = &(gni->instances[i]);
             return (0);
@@ -507,7 +514,8 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
 }
 
 //!
-//! Searches through the list of network interfaces in the gni returns all non-primary interfaces for a given instance
+//! Searches through the list of network interfaces in the gni  and returns all
+//! non-primary interfaces for a given instance
 //!
 //! @param[in] gni a pointer to the global network information structure
 //! @param[in] psInstanceId a pointer to instance ID identifier (i-XXXXXXX)
@@ -524,16 +532,16 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
 //!
 int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int *size) {
     if (!size || !gni || !psInstanceId || !sizeof (pAInstances)) {
-        LOGERROR("invalid input\n");
+        LOGERROR("invalid argument: cannot find secondary interfaces for NULL\n");
         return EUCA_ERROR;
     }
 
     *size = 0;
 
-    LOGDEBUG("attempting search for interfaces for instance id %s in gni\n", psInstanceId);
+    LOGTRACE("attempting search for interfaces for instance id %s in gni\n", psInstanceId);
 
     for (int i = 0; i < gni->max_interfaces; i++) {
-        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].instance_name.name);
+        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].instance_name.name);
         if (!strcmp(gni->interfaces[i].instance_name.name, psInstanceId) &&
                 strcmp(gni->interfaces[i].name, psInstanceId)) {
             pAInstances[*size] = &(gni->interfaces[i]);
@@ -737,7 +745,7 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -849,7 +857,7 @@ int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, in
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     // Do we have any groups?
@@ -950,7 +958,7 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1077,7 +1085,7 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
     }
 
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1227,7 +1235,7 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         EUCA_FREE(pInstances);
         return (0);
     }
@@ -1361,7 +1369,7 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1494,7 +1502,7 @@ int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psS
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         EUCA_FREE(pInstances);
         return (0);
     }
@@ -1627,7 +1635,7 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1740,11 +1748,11 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     if (secgroup->max_instances == 0) {
-        LOGDEBUG("nothing to do, no instance associated with %s\n", secgroup->name);
+        LOGEXTREME("nothing to do, no instance associated with %s\n", secgroup->name);
         return (0);
     }
     if (do_outnames) {
@@ -1834,11 +1842,11 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         do_outstructs = 1;
     }
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     if (secgroup->max_interfaces == 0) {
-        LOGDEBUG("nothing to do, no instances/interfaces associated with %s\n", secgroup->name);
+        LOGEXTREME("nothing to do, no instances/interfaces associated with %s\n", secgroup->name);
         return (0);
     }
 
@@ -2119,7 +2127,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
     eucanetd_timer_usec(&tv);
     rc = gni_populate_xpathnodes(docptr, gni_nodes);
 
-    LOGDEBUG("begin parsing XML into data structures\n");
+    LOGTRACE("begin parsing XML into data structures\n");
 
     // GNI version
     rc = gni_populate_gnidata(gni, gni_nodes[GNI_XPATH_CONFIGURATION], ctxptr, docptr);
@@ -2174,7 +2182,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
             }
         }
     }
-    LOGDEBUG("end parsing XML into data structures\n");
+    LOGTRACE("end parsing XML into data structures\n");
 
     eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
@@ -2248,7 +2256,7 @@ int gni_populate_xpathnodes(xmlDocPtr doc, xmlNode **gni_nodes) {
     while (node) {
         int nodetype = gni_xmlstr2type(node->name);
         if (nodetype == GNI_XPATH_INVALID) {
-            LOGDEBUG("Unknown GNI xml node %s\n", node->name);
+            LOGTRACE("Unknown GNI xml node %s\n", node->name);
             node = node->next;
             continue;
         }
@@ -5290,7 +5298,7 @@ int gni_validate(globalNetworkInfo * gni) {
     }
     // GNI should be initialized... but check just in case
     if (!gni->init) {
-        LOGWARN("BUG: gni is not initialized yet\n");
+        LOGWARN("invalid input: gni is not initialized yet\n");
         return (1);
     }
     // Make sure we have a valid mode
@@ -5298,7 +5306,7 @@ int gni_validate(globalNetworkInfo * gni) {
         return (1);
     }
 
-    LOGDEBUG("Validating XML for '%s' networking mode.\n", gni->sMode);
+    LOGTRACE("Validating XML for '%s' networking mode.\n", gni->sMode);
 
     // We need to know about which CLC is the enabled one. 0.0.0.0 means we don't know
     if (gni->enabledCLCIp == 0) {
@@ -5489,9 +5497,9 @@ int gni_netmode_validate(const char *psMode)
     }
 
     if (strlen(psMode) > 0) {
-        LOGWARN("invalid network mode '%s'\n", psMode);
+        LOGDEBUG("invalid network mode '%s'\n", psMode);
     } else {
-        LOGDEBUG("network mode is empty.\n");
+        LOGTRACE("network mode is empty.\n");
     }
     return (1);
 }
@@ -5731,7 +5739,7 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!instance->publicIp) {
-        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
+        LOGTRACE("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
     }
 
     if (!instance->privateIp) {
@@ -5795,7 +5803,7 @@ int gni_interface_validate(gni_instance *interface)
     }
 
     if (!interface->publicIp) {
-        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", interface->name);
+        LOGTRACE("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", interface->name);
     }
 
     if (!interface->privateIp) {
@@ -5804,7 +5812,7 @@ int gni_interface_validate(gni_instance *interface)
     }
 
     if (!interface->max_secgroup_names || !interface->secgroup_names) {
-        LOGDEBUG("instance %s: no secgroups\n", interface->name);
+        LOGTRACE("instance %s: no secgroups\n", interface->name);
     } else {
         for (i = 0; i < interface->max_secgroup_names; i++) {
             if (!strlen(interface->secgroup_names[i].name)) {
@@ -5975,7 +5983,7 @@ int gni_nat_gateway_validate(gni_nat_gateway *natg) {
     }
 
     if (!natg->publicIp) {
-        LOGDEBUG("natg %s: no publicIp set (ignore if natg was run with private only addressing)\n", natg->name);
+        LOGTRACE("natg %s: no publicIp set\n", natg->name);
     }
 
     if (!natg->privateIp) {

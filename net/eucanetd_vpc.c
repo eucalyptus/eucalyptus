@@ -294,8 +294,10 @@ static int network_driver_init(eucanetdConfig * pConfig)
     }
 
     pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
-    rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
-            pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
+    pMidoConfig->config = pConfig;
+    //rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
+    //        pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
+    rc = initialize_mido(pMidoConfig, pConfig, "169.254.0.0", "17");
     if (rc) {
         LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
         EUCA_FREE(pMidoConfig);
@@ -375,18 +377,84 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
         return (1);
     }
 
-    if (pMidoConfig) {
-        rc = do_midonet_teardown(pMidoConfig);
-        if (rc != 0) {
-            ret = 1;
-        } else {
-            EUCA_FREE(pMidoConfig);
-            pMidoConfig = NULL;
-            gInitialized = FALSE;
+    if (pMidoConfig->config->flushmode) {
+        switch(pMidoConfig->config->flushmode) {
+            case FLUSH_DYNAMIC:
+                LOGINFO("Flushing objects in MidoNet (keep the core intact)\n");
+                rc = do_midonet_teardown(pMidoConfig);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_ALL:
+                LOGINFO("Flush all objects in MidoNet\n");
+                rc = do_midonet_teardown(pMidoConfig);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_CHECKDUPS:
+                LOGINFO("Check for duplicate objects in MidoNet\n");
+                rc = do_midonet_delete_dups(pMidoConfig, TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_DUPS:
+                LOGINFO("Flush duplicate objects in MidoNet\n");
+                rc = do_midonet_delete_dups(pMidoConfig, FALSE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_CHECKUNCONNECTED:
+                LOGINFO("Check for unconnected objects in MidoNet\n");
+                rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_UNCONNECTED:
+                LOGINFO("Flush unconnected objects in MidoNet\n");
+                rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", FALSE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_CHECKVPC:
+                LOGINFO("Check %s health in MidoNet\n", pMidoConfig->config->flushmodearg);
+                rc = do_midonet_delete_vpc_object(pMidoConfig, pMidoConfig->config->flushmodearg, TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_VPC:
+                rc = do_midonet_delete_vpc_object(pMidoConfig, pMidoConfig->config->flushmodearg, FALSE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_LISTVPC:
+                rc = do_midonet_delete_vpc_object(pMidoConfig, "list", TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
+            case FLUSH_MIDO_TEST:
+                do_midonet_delete_vpc_object(pMidoConfig, "test", TRUE);
+                break;
+            case FLUSH_NONE:
+            default:
+                LOGERROR("check for eucanetd bug: should never reach this point.\n");
+                break;                
         }
+        free_mido_config(pMidoConfig);
+        EUCA_FREE(pMidoConfig);
+        pMidoConfig = NULL;
+        gInitialized = FALSE;
     }
 
-    return (0);
+    return (ret);
 }
 
 //!
@@ -412,7 +480,7 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
     int rc = 0;
     struct timeval tv;
     
-    LOGDEBUG("Running maintenance for '%s' network driver.\n", DRIVER_NAME());
+    LOGTRACE("Running maintenance for '%s' network driver.\n", DRIVER_NAME());
     eucanetd_timer(&tv);
 
     // Is the driver initialized?
@@ -470,6 +538,13 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
             break;
         case SIGUSR2:
             LOGINFO("Going to invalidate midocache\n");
+            rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
+            if (rc) {
+                LOGERROR("failed to retrieve objects from MidoNet.\n");
+                midocache_invalid = 1;
+                break;
+            }
+
             rc = do_midonet_populate(pMidoConfig);
             if (rc) {
                 LOGERROR("failed to populate euca VPC models\n");
@@ -539,14 +614,17 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
         return (ret);
     }
 
-    if (!IS_INITIALIZED() || cmp_gni_vpcmido_config(pGni, pGniApplied)) {
+    if (!IS_INITIALIZED() || (pGni && pGniApplied && cmp_gni_vpcmido_config(pGni, pGniApplied))) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
+            eucanetdConfig *configbak = pMidoConfig->config;
             free_mido_config(pMidoConfig);
+            pMidoConfig->config = configbak;
         }
-        rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode,
-                config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
-                config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+        //rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode,
+        //        config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
+        //        config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
+        rc = initialize_mido(pMidoConfig, pMidoConfig->config, "169.254.0.0", "17");
         if (rc) {
             LOGERROR("failed to (re)initialize config options for VPCMIDO mode are set\n");
             return (EUCANETD_RUN_ERROR_API);
@@ -558,8 +636,6 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
 
     if (rc != 0) {
         LOGERROR("failed to update midonet: check log for details\n");
-        // Invalidate mido cache
-        midonet_api_system_changed = 1;
         if (rc < 0) {
             // Accept errors in instances/interface implementation.
             ret = EUCANETD_RUN_NO_API;

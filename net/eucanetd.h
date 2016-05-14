@@ -135,6 +135,9 @@ enum eucanetd_debug_level_t {
     EUCANETD_DEBUG_TRACE = 1,
     EUCANETD_DEBUG_DEBUG = 2,
     EUCANETD_DEBUG_INFO = 3,
+    EUCANETD_DEBUG_WARN = 4,
+    EUCANETD_DEBUG_ERROR = 5,
+    EUCANETD_DEBUG_FATAL = 6,
 };
 
 /*----------------------------------------------------------------------------*\

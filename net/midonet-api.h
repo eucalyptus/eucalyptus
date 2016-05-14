@@ -212,6 +212,7 @@ typedef struct midoname_t {
     midoname_rule_extras *rule;
     midoname_port_extras *port;
     midoname_route_extras *route;
+    int tag;
     int init;
 } midoname;
 
@@ -296,8 +297,10 @@ typedef struct midonet_api_cache_t {
     int max_ports;
     midonet_api_router **routers;
     int max_routers;
+    int sorted_routers;
     midonet_api_bridge **bridges;
     int max_bridges;
+    int sorted_bridges;
     midonet_api_chain **chains;
     int max_chains;
     int sorted_chains;
@@ -377,6 +380,8 @@ mido_cache_worker_thread_params *prep_thread_params(int ntasks, int nthreads);
 
 int iplist_split(char *iplist, char ***outiparr, int *max_outiparr);
 int iplist_arr_free(char **iparr, int max_iparr);
+
+int routername_split(char *routername, char **name, int *id);
 
 void mido_info_midocache();
 
@@ -522,6 +527,7 @@ int mido_cmp_midoname_to_input(midoname * name, ...);
 int mido_cmp_midoname_to_input_json(midoname * name, ...);
 int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al);
 int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type);
+int mido_cmp_midoname_jsonbuf(midoname *a, midoname *b);
 char *mido_get_json(char *tenant, ...);
 char *mido_jsonize(char *tenant, va_list * al);
 
@@ -548,6 +554,7 @@ int midoname_list_get_midonames(midoname_list *list, midoname ***outnames, int m
 midonet_api_cache *midonet_api_cache_init(void);
 midoname_list *midonet_api_cache_midos_init(void);
 
+midonet_api_cache *midonet_api_cache_get(void);
 int midonet_api_cache_check(void);
 int midonet_api_cache_flush(void);
 int midonet_api_cache_populate(void);
@@ -632,9 +639,16 @@ int midonet_api_portgroup_free(midonet_api_portgroup *portgroup);
 int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone);
 
 int midonet_api_delete_all(void);
+int midonet_api_delete_dups(boolean checkonly);
+
+int midonet_api_delete_unconnected_ports(midoname **ports, int max_ports, boolean checkonly);
+int midonet_api_delete_dups_rules(midonet_api_chain *chain, boolean checkonly);
+int midonet_api_delete_dups_routes(midonet_api_router *router, boolean checkonly);
 
 int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2);
 int compare_midoname_name(const void *p1, const void *p2);
+int compare_midonet_api_bridge(const void *p1, const void *p2);
+int compare_midonet_api_router(const void *p1, const void *p2);
 int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2);
 int compare_midonet_api_chain(const void *p1, const void *p2);
 

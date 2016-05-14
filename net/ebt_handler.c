@@ -532,7 +532,7 @@ int ebt_handler_add_table(ebt_handler * ebth, char *tablename)
         return (1);
     }
 
-    LOGDEBUG("adding table %s\n", tablename);
+    LOGTRACE("adding table %s\n", tablename);
     table = ebt_handler_find_table(ebth, tablename);
     if (!table) {
         ebth->tables = realloc(ebth->tables, sizeof(ebt_table) * (ebth->max_tables + 1));
@@ -574,7 +574,7 @@ int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, ch
     if (!ebth || !tablename || !chainname || !counters || !ebth->init) {
         return (1);
     }
-    LOGDEBUG("adding chain %s to table %s\n", chainname, tablename);
+    LOGTRACE("adding chain %s to table %s\n", chainname, tablename);
     table = ebt_handler_find_table(ebth, tablename);
     if (!table) {
         return (1);
@@ -629,7 +629,7 @@ int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, cha
     ebt_chain *chain = NULL;
     ebt_rule *rule = NULL;
 
-    LOGDEBUG("adding rules (%s) to chain %s to table %s\n", newrule, chainname, tablename);
+    LOGTRACE("adding rules (%s) to chain %s to table %s\n", newrule, chainname, tablename);
     if (!ebth || !tablename || !chainname || !newrule || !ebth->init) {
         return (1);
     }
@@ -695,7 +695,7 @@ int ebt_handler_update_refcounts(ebt_handler * ebth)
                     if (strlen(jumpchain)) {
                         refchain = ebt_table_find_chain(ebth, table->name, jumpchain);
                         if (refchain) {
-                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count,
+                            LOGTRACE("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count,
                                      rule->ebtrule);
                             refchain->ref_count++;
                         }
@@ -1090,7 +1090,7 @@ int ebt_handler_close(ebt_handler * ebth)
     int i = 0;
     int j = 0;
     if (!ebth || !ebth->init) {
-        LOGDEBUG("Invalid argument. NULL or uninitialized ebt_handler.\n");
+        LOGTRACE("Invalid argument. NULL or uninitialized ebt_handler.\n");
         return (1);
     }
 
