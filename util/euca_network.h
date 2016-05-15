@@ -99,12 +99,13 @@
 //! @{
 //! @name Defines the various supported network mode names
 
-#define NETMODE_EDGE                             "EDGE" //!< EDGE networking mode
-#define NETMODE_MANAGED                          "MANAGED"  //!< MANAGED networking mode
-#define NETMODE_MANAGED_NOVLAN                   "MANAGED-NOVLAN"   //!< MANAGED-NOVLAN networking mode
-#define NETMODE_VPCMIDO                          "VPCMIDO"  //!< MIDONET VPC networking mode
-#define NETMODE_SYSTEM                           "SYSTEM"   //!< SYSTEM networking mode
-#define NETMODE_STATIC                           "STATIC"   //!< STATIC networking mode
+#define NETMODE_EDGE                             "EDGE"           //!< EDGE networking mode
+#define NETMODE_MANAGED                          "MANAGED"        //!< MANAGED networking mode
+#define NETMODE_MANAGED_NOVLAN                   "MANAGED-NOVLAN" //!< MANAGED-NOVLAN networking mode
+#define NETMODE_VPCMIDO                          "VPCMIDO"        //!< MIDONET VPC networking mode
+#define NETMODE_SYSTEM                           "SYSTEM"         //!< SYSTEM networking mode
+#define NETMODE_STATIC                           "STATIC"         //!< STATIC networking mode
+#define NETMODE_INVALID                          "INVALID"        //!< INVALID networking mode
 
 //! @}
 

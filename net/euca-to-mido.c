@@ -6996,6 +6996,7 @@ int do_midonet_list(mido_config *mido) {
         LOGERROR("failed to allocate buffer\n");
         return (1);
     }
+    buf[buflen - 1] = '\0';
     char *pbuf = buf;
     int ulen = 0;
     int rc = 0;
@@ -7051,7 +7052,24 @@ int do_midonet_list(mido_config *mido) {
             }
         }
     }
-    LOGINFO("%s\n", buf);
+    for (int i = 0; i < mido->max_vpcsecgroups; i++) {
+        mido_vpc_secgroup *sg = &(mido->vpcsecgroups[i]);
+        if (i % 4 == 0) {
+            rc = snprintf(pbuf, buflen, "\n");
+            if (rc > 0) {
+                ulen += rc;
+                buflen -= rc;
+                pbuf = &(buf[ulen]);
+            }
+        }
+        rc = snprintf(pbuf, buflen, "%s ", sg->name);
+        if (rc > 0) {
+            ulen += rc;
+            buflen -= rc;
+            pbuf = &(buf[ulen]);
+        }
+    }
+    printf("%s\n", buf);
     
     EUCA_FREE(buf);
     return (0);
