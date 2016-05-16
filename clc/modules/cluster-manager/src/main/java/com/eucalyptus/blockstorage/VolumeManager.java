@@ -172,8 +172,10 @@ public class VolumeManager {
         if (volSize != null && snap != null && snap.getVolumeSize() != null && volSize < snap.getVolumeSize()) {
           throw new EucalyptusCloudException( "Volume size cannot be less than snapshot size" );
         }
-      } catch ( ExecutionException ex ) {
-        throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
+      } catch ( NoSuchElementException ex ) {
+          throw new ClientComputeException( "InvalidSnapshot.NotFound", "The snapshot " + snapId + " does not exist.");
+      } catch ( TransactionException ex ) {
+          throw Exceptions.toUndeclared( "Creating volume failed:  Contact the administrator to report the problem.", ex );
       }
     }
     final Integer sizeFromRequest = request.getSize() != null  
