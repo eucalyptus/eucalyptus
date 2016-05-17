@@ -38,12 +38,18 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.storage.config.CacheableConfiguration;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+
+import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
@@ -188,5 +194,27 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Override
   public S3ProviderConfiguration getLatest() {
     return getS3ProviderConfiguration();
+  }
+
+  @EntityUpgrade( entities = S3ProviderConfiguration.class, since = Version.v4_3_0, value = ObjectStorage.class )
+  public enum S3ProviderConfigurationUpgrade430 implements Predicate<Class> {
+    INSTANCE;
+
+    private static final Logger LOG = Logger.getLogger(S3ProviderConfigurationUpgrade430.class);
+
+    @Override
+    public boolean apply( final Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( S3ProviderConfiguration.class ) ) {
+        final S3ProviderConfiguration configuration = S3ProviderConfiguration.getS3ProviderConfiguration( );
+        if ( configuration.getS3EndpointHeadResponse( ) == null ) {
+          LOG.info( "Initializing S3EndpointHeadResponse to default value " + DEFAULT_S3_HEAD_RESPONSE );
+          configuration.updateDefaults( );
+          tx.commit( );
+        }
+        return true;
+      } catch (final Exception ex) {
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
   }
 }

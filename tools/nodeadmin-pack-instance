@@ -28,11 +28,10 @@ import sys
 import argparse
 import logging
 import os
-import time
 import os.path
 import signal
 
-from subprocess import check_call
+from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 from xml.dom.minidom import parseString, parse
@@ -175,6 +174,9 @@ def _modify_libvirt_xml(instance_path):
         parser.writexml(orig_xml_file)
 
     for elem in parser.getElementsByTagName("disk"):
+        if not elem.getAttribute("type") == "block":
+            continue
+
         elem.setAttribute("type", "file")
 
         for driver in elem.getElementsByTagName("driver"):
@@ -394,9 +396,24 @@ def pack_instance(instance, output_file, shutdown, skip_compression):
     _find_volumes_and_detach(instance_tuple[1])
 
 
+def _is_nc_service_running():
+    service_cmd = ["/sbin/service", "eucalyptus-nc", "status"]
+
+    proc = Popen(service_cmd, stdout=PIPE)
+    nc_status = proc.stdout.read()
+    logging.debug("nc_status is %s", nc_status)
+
+    return len(nc_status) > 0
+
+
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
+
+    if _is_nc_service_running():
+        logging.error(
+            "Node controller service is running. Please stop this service before continuing.")
+        return 1
 
     if args.all:
         logging.debug("packing all instances")
