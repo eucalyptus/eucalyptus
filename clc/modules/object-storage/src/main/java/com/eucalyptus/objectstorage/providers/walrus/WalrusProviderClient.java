@@ -209,7 +209,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   @Override
   public void check() throws EucalyptusCloudException {
-    if (Topology.lookup(WalrusBackend.class) == null) {
+    if (!Topology.isEnabled(WalrusBackend.class)) {
       throw new EucalyptusCloudException("No ENABLED WalrusBackend found. Cannot initialize fully.");
     }
     super.check();

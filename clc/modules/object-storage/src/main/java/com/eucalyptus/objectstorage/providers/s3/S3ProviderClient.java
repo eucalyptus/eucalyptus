@@ -404,8 +404,11 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     checkConnectivityUsingHead(ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3EndpointHeadResponse());
   }
 
-  protected void checkConnectivityUsingHead(int expectedResponse) throws EucalyptusCloudException {
+  private void checkConnectivityUsingHead(Integer expectedResponse) throws EucalyptusCloudException {
     LOG.debug("Checking connectivity to S3 endpoint");
+    if (expectedResponse == null) {
+      throw new EucalyptusCloudException("S3 provider HEAD op code is not set");
+    }
     try {
       int headResponse = excuteHeadRequest(this.getUpstreamEndpoint());
       if (headResponse != expectedResponse) {
