@@ -961,7 +961,15 @@ public class EucalyptusActivityTasks {
 
 	public List<NetworkInterfaceType> describeSystemNetworkInterfaces(final String subnetId) {
 		return resultOf(
-				new EucaDescribeNetworkInterfacesTask(subnetId),
+				new EucaDescribeNetworkInterfacesTask(null, subnetId),
+				new ComputeSystemActivity(),
+				"failed to describe network interfaces"
+		);
+	}
+
+	public List<NetworkInterfaceType> describeSystemNetworkInterfaces(final List<String> networkInterfaceIds) {
+		return resultOf(
+				new EucaDescribeNetworkInterfacesTask(networkInterfaceIds, null),
 				new ComputeSystemActivity(),
 				"failed to describe network interfaces"
 		);
@@ -985,6 +993,16 @@ public class EucalyptusActivityTasks {
 	public void modifyNetworkInterfaceSecurityGroups(final String networkInterfaceId, final List<String> securityGroupIds) {
 		checkResult(
 				new EucaModifyNetworkInterfaceAttribute(networkInterfaceId, securityGroupIds),
+				new ComputeSystemActivity(),
+				String.format("failed to modify network interface %s", networkInterfaceId)
+		);
+	}
+
+	public void modifyNetworkInterfaceDeleteOnTerminate(final String networkInterfaceId,
+														final String attachmentId,
+														final boolean deleteOnTerminate) {
+		checkResult(
+				new EucaModifyNetworkInterfaceAttribute(networkInterfaceId, attachmentId, deleteOnTerminate),
 				new ComputeSystemActivity(),
 				String.format("failed to modify network interface %s", networkInterfaceId)
 		);
@@ -1403,8 +1421,11 @@ public class EucalyptusActivityTasks {
 	}
 
 	private class EucaDescribeNetworkInterfacesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<NetworkInterfaceType>> {
+		private List<String> interfaceIds = null;
 		private String subnetId = null;
-		private EucaDescribeNetworkInterfacesTask(final String subnetId) {
+
+		private EucaDescribeNetworkInterfacesTask(final List<String> interfaceIds, final String subnetId) {
+			this.interfaceIds = interfaceIds;
 			this.subnetId = subnetId;
 		}
 
@@ -1412,6 +1433,11 @@ public class EucalyptusActivityTasks {
 		ComputeMessage getRequest() {
 			final DescribeNetworkInterfacesType req =
 					new DescribeNetworkInterfacesType();
+			if(this.interfaceIds!=null) {
+				for (final String interfaceId: this.interfaceIds) {
+					req.getFilterSet().add(filter("network-interface-id", interfaceId));
+				}
+			}
 			if(this.subnetId!=null) {
 				req.getFilterSet().add(filter("subnet-id", this.subnetId));
 			}
@@ -1429,9 +1455,17 @@ public class EucalyptusActivityTasks {
 		private String networkInterfaceId = null;
 		private List<String> securityGroupIds = null;
 
+		private String attachmentId = null;
+		private Optional<Boolean> deleteOnTerminate =  Optional.absent();
 		private EucaModifyNetworkInterfaceAttribute(final String networkInterfaceId, final List<String> securityGroupIds) {
 			this.networkInterfaceId = networkInterfaceId;
 			this.securityGroupIds = securityGroupIds;
+		}
+
+		private EucaModifyNetworkInterfaceAttribute(final String networkInterfaceId, final String attachmentId, final boolean deleteOnTerminate) {
+			this.networkInterfaceId = networkInterfaceId;
+			this.attachmentId = attachmentId;
+			this.deleteOnTerminate = Optional.of(deleteOnTerminate);
 		}
 		@Override
 		ComputeMessage getRequest() {
@@ -1449,6 +1483,12 @@ public class EucalyptusActivityTasks {
 								})
 								.collect(Collectors.toList())));
 				req.setGroupSet(groupIds);
+			}
+			if(this.attachmentId!=null && this.deleteOnTerminate.isPresent()) {
+				final ModifyNetworkInterfaceAttachmentType attachment = new ModifyNetworkInterfaceAttachmentType();
+				attachment.setAttachmentId(this.attachmentId);
+				attachment.setDeleteOnTermination(this.deleteOnTerminate.get());
+				req.setAttachment(attachment);
 			}
 			return req;
 		}

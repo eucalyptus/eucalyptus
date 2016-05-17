@@ -606,6 +606,18 @@ public class LoadBalancingSystemVpcs {
                         LOG.warn("Failed to disassociate elastic IP from internal ELB's interface", ex);
                     }
                 }
+
+                // 5. turn on deleteOnTerminate flag on the attached ENI
+                try{
+                    attachedENI = client.describeSystemNetworkInterfaces(
+                            Lists.newArrayList(attachedENI.getNetworkInterfaceId())
+                    ).get(0);
+                    client.modifyNetworkInterfaceDeleteOnTerminate(attachedENI.getNetworkInterfaceId(),
+                            attachedENI.getAttachment().getAttachmentId(),
+                            true);
+                }catch(final Exception ex) {
+                    LOG.warn("Failed to set deleteOnTerminate flag for attached user VPC ENI", ex);
+                }
             }
         }
     }
