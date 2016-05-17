@@ -263,9 +263,24 @@ def unpack_instance(instance_path, packed_path):
     return 0
 
 
+def _is_nc_service_running():
+    service_cmd = ["/sbin/service", "eucalyptus-nc", "status"]
+
+    proc = Popen(service_cmd, stdout=PIPE)
+    nc_status = proc.stdout.read()
+    logging.debug("nc_status is %s", nc_status)
+
+    return len(nc_status) > 0
+
+
 def main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
+
+    if _is_nc_service_running():
+        logging.error(
+            "Node controller service is running. Please stop this service before continuing.")
+        return 1
 
     logging.info("unpack on %s", args.packed_file)
 
