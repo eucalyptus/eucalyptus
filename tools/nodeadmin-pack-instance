@@ -227,10 +227,6 @@ def _save_instance(instance, instance_path, *args, **kwargs):
             os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
         logging.debug("save for domain %s returned %d", instance, rc)
 
-        if rc:
-            raise NodeAdminPackError(
-                "Failed attempting to save instance %s %d", instance, rc)
-
     return 0
 
 
@@ -244,8 +240,9 @@ def _shutdown_instance(instance, *args, **kwargs):
         rc = domain.shutdown()
         logging.debug("shutdown for domain %s returned %d", instance, rc)
 
-    while domain.state(0)[0] is not 5:
-        time.sleep(1)
+        if rc:
+            raise NodeAdminPackError(
+                "Failed attempting to shutdown instance %s %d", instance, rc)
 
     return 0
 
