@@ -281,7 +281,7 @@ public class ImagingServiceLaunchers {
         throw ex;
       } catch (final Exception e) {
         throw new ConfigurablePropertyException(
-            "Could disable/enable imaging service workers due to: "
+            "Could not disable/enable imaging service workers due to: "
                 + e.getMessage(), e);
       }
     }
