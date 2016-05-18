@@ -36,6 +36,7 @@ from ConfigParser import ConfigParser
 from StringIO import StringIO
 from xml.dom.minidom import parseString, parse
 from glob import glob
+from re import compile, match, I, S
 
 import libvirt
 
@@ -224,7 +225,7 @@ def _save_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
 
-    if domain.state(0)[0] is not 3:
+    if domain.isActive():
         rc = domain.save(
             os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
         logging.debug("save for domain %s returned %d", instance, rc)
@@ -238,7 +239,7 @@ def _shutdown_instance(instance, *args, **kwargs):
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
 
-    if domain.state(0)[0] is not 5:
+    if domain.isActive():
         rc = domain.shutdown()
         logging.debug("shutdown for domain %s returned %d", instance, rc)
 
@@ -403,7 +404,9 @@ def _is_nc_service_running():
     nc_status = proc.stdout.read()
     logging.debug("nc_status is %s", nc_status)
 
-    return len(nc_status) > 0
+    results = match(compile(".*running.*", I | S), nc_status)
+
+    return results is not None
 
 
 def _main(args, log_level):

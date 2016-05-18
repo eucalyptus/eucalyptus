@@ -35,6 +35,7 @@ from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 from xml.dom.minidom import parseString, parse
+from re import compile, match, I, S
 
 import libvirt
 
@@ -159,9 +160,17 @@ def _lookup_domain(conn, instance_name):
 
 def _unpack_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
+    rc = None
 
-    rc = conn.restore(
-        os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+    if os.path.exists(
+       os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM))):
+        rc = conn.restore(
+            os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
+    else:
+        logging.debug("saved ram file not found, attempting instance creation.")
+        with open(os.path.join(instance_path, _INSTANCE_LIBVIRT_XML)) as libvirt_xml:
+            instance_xml = libvirt_xml.read()
+            conn.createXML(instance_xml, 0)
 
     if rc:
         raise NodeAdminUnpackError(
@@ -270,7 +279,9 @@ def _is_nc_service_running():
     nc_status = proc.stdout.read()
     logging.debug("nc_status is %s", nc_status)
 
-    return len(nc_status) > 0
+    results = match(compile(".*running.*", I | S), nc_status)
+
+    return results is not None
 
 
 def main(args, log_level):
