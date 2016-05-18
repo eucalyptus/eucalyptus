@@ -1228,14 +1228,17 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         } else {
           LOG.info("done waiting for signals, calling the rest failures");
           addStackEventForRollingUpdate(newAction, "Failed to receive " + rollingUpdateStateEntity.getNumNeededSignalsThisBatch() + ".  Each resource signal timeout is counted as a FAILURE." );
-          rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + rollingUpdateStateEntity.getNumNeededSignalsThisBatch() - rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+          int numNewFailureSignals = rollingUpdateStateEntity.getNumNeededSignalsThisBatch() - rollingUpdateStateEntity.getNumReceivedSignalsThisBatch();
+          rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + numNewFailureSignals);
+          rollingUpdateStateEntity.setNumReceivedSignalsThisBatch(rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() + numNewFailureSignals);
           LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
+          LOG.info("rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
         }
       }
       LOG.info("should have enough signals now");
       LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
-      LOG.info("rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100=="+rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100);
-      if (rollingUpdateStateEntity.getNumFailureSignals() > rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100) {
+      LOG.info("rollingUpdateStateEntity.getNumExpectedTotalSignals() * (1 - updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100)=="+rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100);
+      if (rollingUpdateStateEntity.getNumFailureSignals() > (1 - rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100)) {
         LOG.info("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
           " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
         throw new ResourceFailureException("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
