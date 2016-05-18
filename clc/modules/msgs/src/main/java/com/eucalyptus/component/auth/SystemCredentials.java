@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +86,6 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.HttpService;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.KeyStore;
 import com.eucalyptus.crypto.util.AbstractKeyStore;
@@ -401,8 +400,7 @@ public class SystemCredentials {
     
     @Override
     public boolean check( ) throws GeneralSecurityException {
-      return ( this.getCertificate( ComponentIds.lookup( HttpService.class ).name( ) ) != null )
-             && ( this.getCertificate( ComponentIds.lookup( Eucalyptus.class ).name( ) ) != null );
+      return this.getCertificate( ComponentIds.lookup( Eucalyptus.class ).name( ) ) != null;
     }
 
     @Override
