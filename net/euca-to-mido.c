@@ -180,7 +180,7 @@ int midocache_invalid = 0;
  */
 int do_metaproxy_teardown(mido_config * mido) {
     LOGDEBUG("tearing down metaproxy subsystem\n");
-    return (do_metaproxy_maintain(mido, NULL, 1));
+    return (do_metaproxy_maintain(mido, 1));
 }
 
 /**
@@ -189,7 +189,7 @@ int do_metaproxy_teardown(mido_config * mido) {
  * @return 0 on success. Positive integer otherwise.
  */
 int do_metaproxy_setup(mido_config *mido) {
-    return (do_metaproxy_maintain(mido, NULL, 0));
+    return (do_metaproxy_maintain(mido, 0));
 }
 
 /**
@@ -204,7 +204,7 @@ int do_metaproxy_setup(mido_config *mido) {
  * to properly cleanup network namespaces, core nginx needs to be terminated when
  * deleting VPCs.
  */
-int do_metaproxy_maintain(mido_config *mido, char *vpcid, int mode) {
+int do_metaproxy_maintain(mido_config *mido, int mode) {
     int ret = 0, rc = 0, i = 0, dorun = 0;
     pid_t npid = 0;
     char rr[EUCA_MAX_PATH], cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
@@ -213,32 +213,6 @@ int do_metaproxy_maintain(mido_config *mido, char *vpcid, int mode) {
     if (!mido || mode < 0 || mode > 1) {
         LOGERROR("invalid argument: unable to maintain metaproxy for NULL mido\n");
         return (1);
-    }
-
-    char **vpcnames = NULL;
-    int max_vpcnames = 0;
-    vpcnames = EUCA_ZALLOC_C(mido->max_vpcs + 1, sizeof (char *));
-    if (!vpcid) {
-        for (i = 0; i < mido->max_vpcs; i++) {
-            if (strlen(mido->vpcs[i].name)) {
-                vpcnames[i] = mido->vpcs[i].name;
-                max_vpcnames++;
-            }
-        }
-    } else {
-        boolean found = FALSE;
-        for (i = 0; i < mido->max_vpcs && !found; i++) {
-            if (!strcmp(mido->vpcs[i].name, vpcid)) {
-                vpcnames[max_vpcnames] = mido->vpcs[i].name;
-                max_vpcnames++;
-                found = TRUE;
-            }
-        }
-        if (!found) {
-            LOGERROR("unable to maintain metaproxy for %s\n", vpcid);
-            EUCA_FREE(vpcnames);
-            return (1);
-        }
     }
 
     snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
@@ -289,52 +263,53 @@ int do_metaproxy_maintain(mido_config *mido, char *vpcid, int mode) {
         LOGTRACE("not maintaining proxy, no action to take for pid (%d)\n", npid);
     }
 
-    for (i = 0; i < max_vpcnames; i++) {
-        dorun = 0;
-        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, vpcnames[i]);
-        if (!check_file(pidfile)) {
-            pidstr = file2str(pidfile);
-            if (pidstr) {
-                npid = atoi(pidstr);
+    for (i = 0; i < mido->max_vpcs; i++) {
+        if (strlen(mido->vpcs[i].name)) {
+            dorun = 0;
+            snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
+            if (!check_file(pidfile)) {
+                pidstr = file2str(pidfile);
+                if (pidstr) {
+                    npid = atoi(pidstr);
+                } else {
+                    npid = 0;
+                }
+                EUCA_FREE(pidstr);
             } else {
                 npid = 0;
             }
-            EUCA_FREE(pidstr);
-        } else {
-            npid = 0;
-        }
 
-        if (mode == 0) {
-            if (npid > 1) {
-                if (check_process(npid, "nginx")) {
-                    unlink(pidfile);
+            if (mode == 0) {
+                if (npid > 1) {
+                    if (check_process(npid, "nginx")) {
+                        unlink(pidfile);
+                        dorun = 1;
+                    }
+                } else {
                     dorun = 1;
                 }
-            } else {
-                dorun = 1;
-            }
-        } else if (mode == 1) {
-            if (npid > 1 && !check_process(npid, "nginx")) {
-                dorun = 1;
-            }
-        }
-
-        if (dorun) {
-            if (mode == 0) {
-                LOGTRACE("VPC (%s) proxy not running, starting new proxy\n", vpcnames[i]);
-                snprintf(cmd, EUCA_MAX_PATH,
-                        "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
-                        vpcnames[i], mido->eucahome, mido->eucahome, vpcnames[i], vpcnames[i], mido->eucahome);
             } else if (mode == 1) {
-                LOGTRACE("VPC (%s) proxy running, terminating VPC proxy\n", vpcnames[i]);
-                snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+                if (npid > 1 && !check_process(npid, "nginx")) {
+                    dorun = 1;
+                }
             }
-            rc = se_add(&cmds, cmd, NULL, ignore_exit);
-        } else {
-            LOGTRACE("not maintaining VPC (%s) proxy, no action to take on pid (%d)\n", vpcnames[i], npid);
+
+            if (dorun) {
+                if (mode == 0) {
+                    LOGTRACE("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
+                    snprintf(cmd, EUCA_MAX_PATH,
+                            "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
+                            mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
+                } else if (mode == 1) {
+                    LOGTRACE("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
+                    snprintf(cmd, EUCA_MAX_PATH, "kill %d", npid);
+                }
+                rc = se_add(&cmds, cmd, NULL, ignore_exit);
+            } else {
+                LOGTRACE("not maintaining VPC (%s) proxy, no action to take on pid (%d)\n", mido->vpcs[i].name, npid);
+            }
         }
     }
-    EUCA_FREE(vpcnames);
 
     // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
     int do_dummyudp = 0;

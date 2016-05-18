@@ -487,7 +487,7 @@ int do_midonet_tag_midonames(mido_config *mido);
 
 int do_metaproxy_setup(mido_config *mido);
 int do_metaproxy_teardown(mido_config *mido);
-int do_metaproxy_maintain(mido_config *mido, char *vpcid, int mode);
+int do_metaproxy_maintain(mido_config *mido, int mode);
 
 int create_mido_meta_core(mido_config * mido);
 int create_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc);
