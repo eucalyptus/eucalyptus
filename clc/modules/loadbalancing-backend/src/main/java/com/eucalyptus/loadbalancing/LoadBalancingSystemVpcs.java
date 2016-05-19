@@ -555,7 +555,7 @@ public class LoadBalancingSystemVpcs {
                             client.describeSystemNetworkInterfaces(userSubnetId).stream()
                                     .filter(n -> "available".equals(n.getStatus()))
                                     .findAny()
-                                    .orElse(client.createNetworkInterface(userSubnetId,
+                                    .orElseGet(() -> client.createNetworkInterface(userSubnetId,
                                             Lists.newArrayList(userSecurityGroupIds)));
                 }catch(final Exception ex) {
                     throw Exceptions.toUndeclared("Failed to create network interface to subnet " + userSubnetId, ex);
