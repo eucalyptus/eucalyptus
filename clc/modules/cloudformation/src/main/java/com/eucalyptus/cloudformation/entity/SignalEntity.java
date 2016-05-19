@@ -125,6 +125,7 @@ public class SignalEntity extends AbstractPersistent {
   @Override
   public String toString() {
     return "SignalEntity{" +
+      "stackId='" + stackId + '\'' +
       "uniqueId='" + uniqueId + '\'' +
       ", status=" + status +
       ", processed=" + processed +

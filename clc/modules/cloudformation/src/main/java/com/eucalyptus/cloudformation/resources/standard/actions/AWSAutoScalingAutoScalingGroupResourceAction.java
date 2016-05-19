@@ -1157,22 +1157,23 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     }
 
     private static RollingUpdateStateEntity commonWaitForSignalsLogic(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity, State nextState) throws Exception {
-      LOG.info("in common wait for signals logic");
-      LOG.info("updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()=="+updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals());
+      String stackName = newAction.getStackEntity().getStackName();
+      LOG.info(stackName + ":" + "in common wait for signals logic");
+      LOG.info(stackName + ":" + "updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()=="+updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals());
       if (!updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()) {
-        LOG.info("not waiting on resource signals, just waiting");
-        LOG.info("rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
-        LOG.info("Current date = " + new Date());
+        LOG.info(stackName + ":" + "not waiting on resource signals, just waiting");
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
+        LOG.info(stackName + ":" + "Current date = " + new Date());
         if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
-          LOG.info("Still pausing");
+          LOG.info(stackName + ":" + "Still pausing");
           throw new NotAResourceFailureException("still pausing");
         } else {
-          LOG.info("Not pausing anyore, going to " + nextState);
+          LOG.info(stackName + ":" + "Not pausing anyore, going to " + nextState);
           rollingUpdateStateEntity.setState(nextState);
           return rollingUpdateStateEntity;
         }
       }
-      LOG.info("waiting on resource signals");
+      LOG.info(stackName + ":" + "waiting on resource signals");
       // Otherwise we wait for signals?
       AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
       Set<String> allRunningInstanceIds = Sets.newHashSet();
@@ -1183,71 +1184,71 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           }
         }
       }
-      LOG.info("all running instance ids = " + allRunningInstanceIds);
+      LOG.info(stackName + ":" + "all running instance ids = " + allRunningInstanceIds);
       Collection<SignalEntity> signals = SignalEntityManager.getSignals(newAction.getStackEntity().getStackId(), newAction.info.getAccountId(), newAction.info.getLogicalResourceId(),
         newAction.getStackEntity().getStackVersion());
       for (SignalEntity signal : signals) {
-        LOG.info("signal=" + signal);
+        LOG.info(stackName + ":" + "signal=" + signal);
         if (signal.getProcessed()) {
-          LOG.info("signal is already processed");
+          LOG.info(stackName + ":" + "signal is already processed");
           continue;
         }
         // Ignore signals with ids not from the list of instance ids.
         if (!allRunningInstanceIds.contains(signal.getUniqueId())) {
-          LOG.info("signal is from running instance list");
+          LOG.info(stackName + ":" + "signal is not from running instance list");
           continue;
         }
         StackEventEntityManager.addSignalStackEvent(signal);
         signal.setProcessed(true);
         SignalEntityManager.updateSignal(signal);
-        LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
-        LOG.info("rollingUpdateStateEntity.getNumSuccessSignals()=="+rollingUpdateStateEntity.getNumSuccessSignals());
-        LOG.info("rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumSuccessSignals()=="+rollingUpdateStateEntity.getNumSuccessSignals());
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
         if (signal.getStatus() == SignalEntity.Status.FAILURE) {
-          LOG.info("incrementing rollingUpdateStateEntity.getNumFailureSignals()");
+          LOG.info(stackName + ":" + "incrementing rollingUpdateStateEntity.getNumFailureSignals()");
           rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + 1);
-          LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
+          LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
         } else {
-          LOG.info("incrementing rollingUpdateStateEntity.getNumSuccessSignals()");
+          LOG.info(stackName + ":" + "incrementing rollingUpdateStateEntity.getNumSuccessSignals()");
           rollingUpdateStateEntity.setNumSuccessSignals(rollingUpdateStateEntity.getNumSuccessSignals() + 1);
-          LOG.info("rollingUpdateStateEntity.getNumSuccessSignals()=="+rollingUpdateStateEntity.getNumSuccessSignals());
+          LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumSuccessSignals()=="+rollingUpdateStateEntity.getNumSuccessSignals());
         }
-        LOG.info("incrementing rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()");
+        LOG.info(stackName + ":" + "incrementing rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()");
         rollingUpdateStateEntity.setNumReceivedSignalsThisBatch(rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() + 1);
-        LOG.info("rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
       }
-      LOG.info("rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
-      LOG.info("rollingUpdateStateEntity.getNumNeededSignalsThisBatch()=="+rollingUpdateStateEntity.getNumNeededSignalsThisBatch());
+      LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+      LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumNeededSignalsThisBatch()=="+rollingUpdateStateEntity.getNumNeededSignalsThisBatch());
       if (rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() < rollingUpdateStateEntity.getNumNeededSignalsThisBatch()) {
-        LOG.info("Not received enough signals yet");
-        LOG.info("rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
-        LOG.info("Current date = " + new Date());
+        LOG.info(stackName + ":" + "Not received enough signals yet");
+        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
+        LOG.info(stackName + ":" + "Current date = " + new Date());
         if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
-          LOG.info("still waiting for resource signals");
+          LOG.info(stackName + ":" + "still waiting for resource signals");
           throw new NotAResourceFailureException("Still waiting for resource signals");
         } else {
-          LOG.info("done waiting for signals, calling the rest failures");
+          LOG.info(stackName + ":" + "done waiting for signals, calling the rest failures");
           addStackEventForRollingUpdate(newAction, "Failed to receive " + rollingUpdateStateEntity.getNumNeededSignalsThisBatch() + ".  Each resource signal timeout is counted as a FAILURE." );
           int numNewFailureSignals = rollingUpdateStateEntity.getNumNeededSignalsThisBatch() - rollingUpdateStateEntity.getNumReceivedSignalsThisBatch();
           rollingUpdateStateEntity.setNumFailureSignals(rollingUpdateStateEntity.getNumFailureSignals() + numNewFailureSignals);
           rollingUpdateStateEntity.setNumReceivedSignalsThisBatch(rollingUpdateStateEntity.getNumReceivedSignalsThisBatch() + numNewFailureSignals);
-          LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
-          LOG.info("rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
+          LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
+          LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumReceivedSignalsThisBatch()=="+rollingUpdateStateEntity.getNumReceivedSignalsThisBatch());
         }
       }
-      LOG.info("should have enough signals now");
-      LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
+      LOG.info(stackName + ":" + "should have enough signals now");
+      LOG.info(stackName + ":" + "rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
       double minNumSuccessSignals = updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100.0 * rollingUpdateStateEntity.getNumExpectedTotalSignals();
       double maxNumFailureSignals = rollingUpdateStateEntity.getNumExpectedTotalSignals() - minNumSuccessSignals;
-      LOG.info("maxNumFailureSignals=="+maxNumFailureSignals);
+      LOG.info(stackName + ":" + "maxNumFailureSignals=="+maxNumFailureSignals);
       if (rollingUpdateStateEntity.getNumFailureSignals() > maxNumFailureSignals) {
-        LOG.info("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
+        LOG.info(stackName + ":" + "Received " + rollingUpdateStateEntity.getNumFailureSignals() +
           " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
         throw new ResourceFailureException("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
           " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
       }
       // otherwise continue
-      LOG.info("continuing to state " + nextState);
+      LOG.info(stackName + ":" + "continuing to state " + nextState);
       rollingUpdateStateEntity.setState(nextState);
       return rollingUpdateStateEntity;
     }
