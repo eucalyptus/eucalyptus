@@ -346,6 +346,7 @@ int main(int argc, char **argv)
     
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
+    boolean update_version_file = FALSE;
 
     /*
        {
@@ -652,6 +653,7 @@ int main(int argc, char **argv)
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             eucanetd_timer_usec(&tv);
+            update_version_file = FALSE;
             LOGINFO("new networking state: updating system\n");
 
             // Are we able to load the LNI information - no need for lni in VPCMIDO
@@ -673,7 +675,7 @@ int main(int argc, char **argv)
                 }
                 
                 // Make sure the scrub did not fail
-                if (scrubResult != EUCANETD_RUN_ERROR_API) {
+                if ((scrubResult & EUCANETD_RUN_ERROR_API) == 0) {
                     // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
                     if (pDriverHandler->implement_network && (scrubResult & EUCANETD_RUN_NETWORK_API)) {
                         rc = pDriverHandler->implement_network(pGni, pLni);
@@ -725,7 +727,13 @@ int main(int argc, char **argv)
         if (update_globalnet) {
             if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
+                if (scrubResult == EUCANETD_VPCMIDO_IFERROR) {
+                    update_version_file = TRUE;
+                }
             } else {
+                update_version_file = TRUE;
+            }
+            if (update_version_file) {
                 char versionFile[EUCA_MAX_PATH];
                 // update was requested and was successful
                 epoch_updates++;

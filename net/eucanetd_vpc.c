@@ -638,7 +638,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
         LOGERROR("failed to update midonet: check log for details\n");
         if (rc < 0) {
             // Accept errors in instances/interface implementation.
-            ret = EUCANETD_RUN_NO_API;
+            ret = EUCANETD_VPCMIDO_IFERROR;
         } else {
             ret = EUCANETD_RUN_ERROR_API;
         }
