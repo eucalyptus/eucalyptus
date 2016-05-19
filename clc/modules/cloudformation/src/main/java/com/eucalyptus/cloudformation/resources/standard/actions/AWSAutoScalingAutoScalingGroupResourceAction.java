@@ -1237,8 +1237,10 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       }
       LOG.info("should have enough signals now");
       LOG.info("rollingUpdateStateEntity.getNumFailureSignals()=="+rollingUpdateStateEntity.getNumFailureSignals());
-      LOG.info("rollingUpdateStateEntity.getNumExpectedTotalSignals() * (1 - updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100)=="+rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100);
-      if (rollingUpdateStateEntity.getNumFailureSignals() > (1 - rollingUpdateStateEntity.getNumExpectedTotalSignals() * updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100)) {
+      double minNumSuccessSignals = updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100.0 * rollingUpdateStateEntity.getNumExpectedTotalSignals();
+      double maxNumFailureSignals = rollingUpdateStateEntity.getNumExpectedTotalSignals() - minNumSuccessSignals;
+      LOG.info("maxNumFailureSignals=="+maxNumFailureSignals);
+      if (rollingUpdateStateEntity.getNumFailureSignals() > maxNumFailureSignals) {
         LOG.info("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
           " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
         throw new ResourceFailureException("Received " + rollingUpdateStateEntity.getNumFailureSignals() +
