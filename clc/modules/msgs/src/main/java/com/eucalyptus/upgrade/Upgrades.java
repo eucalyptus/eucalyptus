@@ -41,10 +41,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import javax.annotation.Nullable;
+import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
@@ -71,7 +72,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;
@@ -93,15 +94,11 @@ public class Upgrades {
   public @interface PreUpgrade {
     /**
      * The {@link ComponentId} for which this upgrade should be executed.
-     * 
-     * @return
      */
     Class<? extends ComponentId> value( );
     
     /**
      * The {@link Upgrades.Version} since which this upgrade should be executed.
-     * 
-     * @return
      */
     Version since( );
   }
@@ -111,15 +108,11 @@ public class Upgrades {
   public @interface PostUpgrade {
     /**
      * The {@link ComponentId} for which this upgrade should be executed.
-     * 
-     * @return
      */
     Class<? extends ComponentId> value( );
     
     /**
      * The {@link Upgrades.Version} since which this upgrade should be executed.
-     * 
-     * @return
      */
     Version since( );
   }
@@ -130,27 +123,21 @@ public class Upgrades {
     
     /**
      * The list of entity classes which are addressed by this upgrade implementation.
-     * 
-     * @return
      */
     Class[] entities( );
     
     /**
      * The {@link ComponentId} for which this upgrade should be executed.
-     * 
-     * @return
      */
     Class<? extends ComponentId> value( );
     
     /**
      * The {@link Upgrades.Version} since which this upgrade should be executed.
-     * 
-     * @return
      */
     Version since( );
   }
   
-  enum Arguments {
+  private enum Arguments {
     CURRENT_VERSION( "euca.version" ),
     OLD_VERSION( "euca.upgrade.old.version" ){
 
@@ -163,7 +150,7 @@ public class Upgrades {
     NEW_VERSION( "euca.version" );
     String propName;
     
-    private Arguments( String propName ) {
+    Arguments( String propName ) {
       this.propName = propName;
     }
     
@@ -230,17 +217,17 @@ public class Upgrades {
      * 
      * @return Iterable<Version> which are in the upgrade path.
      */
-    public static Iterable<Version> upgradePath( ) {
-      return Iterables.filter( Arrays.asList( Version.values( ) ), new Predicate<Version>( ) {
-        
-        @Override
-        public boolean apply( @Nullable Version input ) {
-          return getOldVersion( ).ordinal( ) < input.ordinal( ) && getNewVersion( ).ordinal( ) >= input.ordinal( );
-        }
-      } );
+    @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
+    public static Iterable<Version> upgradePath( final Optional<Version> alternateFromVersion ) {
+      final Version from = alternateFromVersion.orElse( getOldVersion( ) );
+      final Version to = getNewVersion( );
+      return Arrays.asList( Version.values( ) ).stream( )
+          .filter( input -> from.ordinal( ) < input.ordinal( ) && to.ordinal( ) >= input.ordinal( ) )
+          .collect( Collectors.toList( ) );
     }
   }
   
+  @SuppressWarnings( "unused" )
   public static class UpgradeDiscovery extends ServiceJarDiscovery {
     
     @Override
@@ -277,11 +264,11 @@ public class Upgrades {
   
   private static final Map<Version, Map<Class<? extends ComponentId>, ComponentUpgradeInfo>> versionedComponentUpgrades = Maps.newHashMap( );
   private static class ComponentUpgradeInfo {
-    private Multimap<Class, Predicate>                                                         entityUpgrades             = ArrayListMultimap.create( );
+    private Multimap<Class, Predicate<Class>>                                                  entityUpgrades             = ArrayListMultimap.create( );
     private List<Callable<Boolean>>                                                            preUpgrades                = Lists.newArrayList( );
     private List<Callable<Boolean>>                                                            postUpgrades               = Lists.newArrayList( );
     private Class<? extends ComponentId>                                                       component;
-    
+
     private ComponentUpgradeInfo( Class<? extends ComponentId> component ) {
       this.component = component;
     }
@@ -290,7 +277,7 @@ public class Upgrades {
       return this.preUpgrades;
     }
     
-    Multimap<Class, Predicate> getEntityUpgrades( ) {
+    Multimap<Class, Predicate<Class>> getEntityUpgrades( ) {
       return this.entityUpgrades;
     }
     
@@ -310,6 +297,7 @@ public class Upgrades {
       return compMap.get( component );
     }
     
+    @SuppressWarnings( "unchecked" )
     static void put( Class<? extends ComponentId> component, Class upgradeClass ) {
       Ats ats = Ats.from( upgradeClass );
       if ( ats.has( EntityUpgrade.class ) ) {
@@ -325,10 +313,18 @@ public class Upgrades {
         LOG.info( "Registered @PostUpgrade: " + component.getSimpleName( ) + " => " + upgradeClass );
       }
     }
-    
+
+    public String toString( ) {
+      return MoreObjects.toStringHelper( ComponentUpgradeInfo.class )
+          .add( "component", component )
+          .add( "entityUpgradesSize", entityUpgrades.size( ) )
+          .add( "preUpgradesSize", preUpgrades.size( ) )
+          .add( "postUpgradesSize", postUpgrades.size( ) )
+          .toString( );
+    }
   }
   
-  public enum UpgradeEventLog {
+  private enum UpgradeEventLog {
     INSTANCE;
     private final String tableName = "database_upgrade_log";
     
@@ -339,7 +335,7 @@ public class Upgrades {
                                      "    upgrade_to_version character varying(255),\n" +
                                      "    upgrade_state character varying(255)\n" +
                                      ");\n" +
-                                     "ALTER TABLE public." + this.tableName + " OWNER TO eucalyptus;";
+                                     "ALTER TABLE public." + this.tableName + " OWNER TO %1$s;";
     
     public void logEvent( Version fromVersion, Version toVersion, UpgradeState state ) {
       Sql sql = null;
@@ -406,7 +402,7 @@ public class Upgrades {
         Sql sql = null;
         try {
           sql = Databases.Events.getConnection( );
-          sql.execute( UpgradeEventLog.INSTANCE.schema );
+          sql.execute( String.format( UpgradeEventLog.INSTANCE.schema, Databases.getBootstrapper( ).getUserName( ) ) );
           return true;
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
@@ -529,7 +525,7 @@ public class Upgrades {
    * <li>COMPLETED
    * </ol>
    */
-  enum UpgradeState implements Callable<Boolean> {
+  private enum UpgradeState implements Callable<Boolean> {
     START {
       @Override
       public boolean callAndLog( ) throws Exception {
@@ -568,6 +564,13 @@ public class Upgrades {
           Version.getCurrentVersion( );
           Version.getOldVersion( );
           Version.getNewVersion( );
+
+          Version schemaVersion = UpgradeEventLog.getLastUpgradedVersion( );
+          if ( schemaVersion != Version.v3_1_2 && schemaVersion != Version.getOldVersion( ) ) {
+            LOG.warn( "Detected skipped schema upgrade, previous software version " + Version.getOldVersion( ) +
+                ", previous schema version " + schemaVersion );
+            schemaVersionOption = Optional.of( schemaVersion );
+          }
         } catch ( IllegalArgumentException ex ) {
           LOG.fatal( ex );
           throw ex;
@@ -593,15 +596,12 @@ public class Upgrades {
         for ( final String ctx : PersistenceContexts.list( ) ) {
           final DatabaseNamingStrategy strategy = PersistenceContexts.getNamingStrategy( ctx );
           final Collection<DatabaseNamingStrategy> otherStrategies = EnumSet.complementOf( EnumSet.of( strategy ) );
-          final Collection<DatabaseNamingStrategy> presentStrategies = Collections2.filter( otherStrategies, new Predicate<DatabaseNamingStrategy>() {
-            @Override
-            public boolean apply( @Nullable final DatabaseNamingStrategy strategy ) {
-              final String databaseName = strategy.getDatabaseName( ctx );
-              final String schemaName = strategy.getSchemaName( ctx );
-              return
-                  ( schemaName == null && databaseNames.contains( databaseName ) ) ||
-                      ( schemaName != null && schemaNames.contains( schemaName ) );
-            }
+          final Collection<DatabaseNamingStrategy> presentStrategies = Collections2.filter( otherStrategies, strategy1 -> {
+            final String databaseName = strategy1.getDatabaseName( ctx );
+            final String schemaName = strategy1.getSchemaName( ctx );
+            return
+                ( schemaName == null && databaseNames.contains( databaseName ) ) ||
+                    ( schemaName != null && schemaNames.contains( schemaName ) );
           } );
 
           if ( !presentStrategies.isEmpty( ) && !(BootstrapArgs.isUpgradeSystem( ) || isForceUpgrade( )) ) {
@@ -615,9 +615,9 @@ public class Upgrades {
           } else if ( presentStrategies.size( ) == 1 ) {
             exitCode = 123; // restart after renaming
             final String targetDatabaseName = strategy.getDatabaseName( ctx );
-            final String targetSchemaName = Objects.firstNonNull( strategy.getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );
+            final String targetSchemaName = MoreObjects.firstNonNull( strategy.getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );
             final String sourceDatabaseName = Iterables.getOnlyElement( presentStrategies ).getDatabaseName( ctx );
-            final String sourceSchemaName = Objects.firstNonNull( Iterables.getOnlyElement( presentStrategies ).getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );;
+            final String sourceSchemaName = MoreObjects.firstNonNull( Iterables.getOnlyElement( presentStrategies ).getSchemaName( ctx ), Databases.getDefaultSchemaName( ) );
             boolean copied = false;
             try {
               Databases.getBootstrapper().copyDatabaseSchema( sourceDatabaseName, sourceSchemaName, targetDatabaseName, targetSchemaName );
@@ -664,11 +664,7 @@ public class Upgrades {
       
       @Override
       public Boolean call( ) throws Exception {
-        if ( BootstrapArgs.isCloudController( ) && ( BootstrapArgs.isUpgradeSystem( ) || !UpgradeEventLog.exists( ) ) ) {
-          return true;
-        } else {
-          return false;
-        }
+        return BootstrapArgs.isCloudController( ) && ( BootstrapArgs.isUpgradeSystem( ) || !UpgradeEventLog.exists( ) );
       }
       
     },
@@ -689,14 +685,12 @@ public class Upgrades {
      * <ul>
      * <li>no rows present ==> do upgrade
      * <li>most recent <tt>upgrade version</tt> is less than <tt>current version</tt> ==> do upgrade
-     * <li>most recent <tt>upgrade version</tt> is <tt>preparing</tt> or <tt>in-progress</tt> ==> {@link Upgrades#rollbackUpgrade()} to
+     * <li>most recent <tt>upgrade version</tt> is <tt>preparing</tt> or <tt>in-progress</tt> ==> rollback to
      * <tt>previous version</tt> and do upgrade
      * <li>most recent <tt>upgrade version</tt> is <tt>rolling-back</tt> ==> copy <tt>old version</tt> db to <tt>orig</tt> db and do upgrade
      * <li>most recent <tt>upgrade version</tt> matches <tt>current version</tt> ==> no upgrade
      * </ul>
      * </ol>
-     * 
-     * @return true if upgrade should be executed
      */
     CHECK_UPGRADE_LOG {
       
@@ -800,6 +794,7 @@ public class Upgrades {
     },
     CHECK_VERSIONS {
       
+      @SuppressWarnings( "SimplifiableIfStatement" )
       @Override
       public Boolean call( ) throws Exception {
         if ( Version.getCurrentVersion( ).equals( UpgradeEventLog.getLastUpgradedVersion( ) ) ) {
@@ -907,7 +902,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.upgradePath( ) ) {
+          for ( Version v : Version.upgradePath( schemaVersionOption ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPreUpgrades( ) ) {
               try {
@@ -930,9 +925,9 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.upgradePath( ) ) {
+          for ( Version v : Version.upgradePath( schemaVersionOption ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
-            for ( Entry<Class, Predicate> p : upgradeInfo.getEntityUpgrades( ).entries( ) ) {
+            for ( Entry<Class, Predicate<Class>> p : upgradeInfo.getEntityUpgrades( ).entries( ) ) {
               try {
                 LOG.info( "Executing @EntityUpgrade: " + p.getValue( ).getClass( ) );
                 p.getValue( ).apply( p.getKey( ) );
@@ -955,7 +950,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.upgradePath( ) ) {
+          for ( Version v : Version.upgradePath( schemaVersionOption ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPostUpgrades( ) ) {
               try {
@@ -1045,7 +1040,6 @@ public class Upgrades {
     }
     
     /**
-     * @return
      * @throws Exception
      */
     public boolean callAndLog( ) throws Exception {
@@ -1074,7 +1068,7 @@ public class Upgrades {
           Sets.newTreeSet( Iterables.filter(
               Databases.getBootstrapper( ).listSchemas( DatabaseNamingStrategy.SHARED_DATABASE_NAME ),
               DatabaseFilters.EUCALYPTUS ) ) :
-          Collections.<String>emptySet( );
+          Collections.emptySet( );
     }
 
     public static void putContextProperties( Map<? super String, ? super String> properties,
@@ -1088,27 +1082,32 @@ public class Upgrades {
 
     public static Map<String, String> getDatabaseProperties( ) {
       DatabaseBootstrapper db = Databases.getBootstrapper( );
-      final Map<String, String> props = ImmutableMap.<String, String> builder( )
-                                                    .put( "hibernate.show_sql", "false" )
-                                                    .put( "hibernate.format_sql", "false" )
-                                                    .put( "hibernate.connection.autocommit", "false" )
-                                                    .put( "hibernate.hbm2ddl.auto", "update" )
-                                                    .put( "hibernate.generate_statistics", "false" )
-                                                    .put( "hibernate.connection.driver_class", db.getDriverName( ) )
-                                                    .put( "hibernate.connection.username", db.getUserName( ) )
-                                                    .put( "hibernate.connection.password", db.getPassword( ) )
-                                                    .put( "hibernate.bytecode.use_reflection_optimizer", "true" )
-                                                    .put( "hibernate.cglib.use_reflection_optimizer", "true" )
-                                                    .put( "hibernate.dialect", db.getHibernateDialect( ) )
-                                                    .put( "hibernate.cache.use_second_level_cache", "false" )
-                                                    .put( "hibernate.cache.use_query_cache", "false" )
-                                                    .put( "hibernate.discriminator.ignore_explicit_for_joined", "true" ) // HHH-6911
-                                                    .build( );
-      return props;
+      return ImmutableMap.<String, String> builder( )
+          .put( "hibernate.show_sql", "false" )
+          .put( "hibernate.format_sql", "false" )
+          .put( "hibernate.connection.autocommit", "false" )
+          .put( "hibernate.hbm2ddl.auto", "update" )
+          .put( "hibernate.generate_statistics", "false" )
+          .put( "hibernate.connection.driver_class", db.getDriverName( ) )
+          .put( "hibernate.connection.username", db.getUserName( ) )
+          .put( "hibernate.connection.password", db.getPassword( ) )
+          .put( "hibernate.bytecode.use_reflection_optimizer", "true" )
+          .put( "hibernate.cglib.use_reflection_optimizer", "true" )
+          .put( "hibernate.dialect", db.getHibernateDialect( ) )
+          .put( "hibernate.cache.use_second_level_cache", "false" )
+          .put( "hibernate.cache.use_query_cache", "false" )
+          .put( "hibernate.discriminator.ignore_explicit_for_joined", "true" ) // HHH-6911
+          .build( );
     }
 
     private static UpgradeState currentState = UpgradeState.START;
-    
+
+    /**
+     * Version we are upgrading from (if known)
+     */
+    @SuppressWarnings( "OptionalUsedAsFieldOrParameterType" )
+    private static Optional<Version> schemaVersionOption = Optional.empty( );
+
     public static boolean isFinished( ) {
       return currentState == COMPLETED;
     }
@@ -1116,6 +1115,19 @@ public class Upgrades {
     public static UpgradeState nextState( ) {
       currentState = currentState.next( );
       return currentState;
+    }
+  }
+
+  public static void init( ) {
+    if ( UpgradeEventLog.create( ) ) {
+      LOG.info( "Created database event log" );
+
+      UpgradeEventLog.INSTANCE.logEvent(
+          Version.getCurrentVersion( ),
+          Version.getCurrentVersion( ),
+          UpgradeState.COMPLETED );
+
+      LOG.info( "Logged initial completion event" );
     }
   }
 
