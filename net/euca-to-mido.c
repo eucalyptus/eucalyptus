@@ -4077,7 +4077,7 @@ int create_mido_vpc_secgroup_rule(midonet_api_chain *chain, midoname **outname,
                     "tpDst:END", rule->jsonel[MIDO_CRULE_TPD_END], "tpSrc", rule->jsonel[MIDO_CRULE_TPS],
                     "tpSrc:start", rule->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", rule->jsonel[MIDO_CRULE_TPS_E],
                     "tpSrc:END", rule->jsonel[MIDO_CRULE_TPS_END], "nwProto", rule->jsonel[MIDO_CRULE_PROTO],
-                    "ipAddrGroupDst", rule->jsonel[MIDO_CRULE_GRPUUID], "nwSrcAddress", rule->jsonel[MIDO_CRULE_NW],
+                    "ipAddrGroupSrc", rule->jsonel[MIDO_CRULE_GRPUUID], "nwSrcAddress", rule->jsonel[MIDO_CRULE_NW],
                     "nwSrcLength", rule->jsonel[MIDO_CRULE_NWLEN], NULL);
             break;
         case MIDO_RULE_INVALID:
