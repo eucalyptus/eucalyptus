@@ -591,7 +591,7 @@ public class LoadBalancingSystemVpcs {
                                     && addr.getNetworkInterfaceId() == null)
                             .map(addr -> addr.getAllocationId())
                             .findAny()
-                            .orElse(client.allocateSystemVpcAddress().getAllocationId());
+                            .orElseGet(() -> client.allocateSystemVpcAddress().getAllocationId());
                     if (allocationId == null)
                         throw Exceptions.toUndeclared("Failed to allocate EIP address to associate with ELB instances");
 
