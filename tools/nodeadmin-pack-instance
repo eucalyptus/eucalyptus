@@ -34,7 +34,7 @@ import signal
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from xml.dom.minidom import parseString, parse
+from xml.dom.minidom import parse
 from glob import glob
 from re import compile, match, I, S
 
@@ -47,6 +47,7 @@ _EUCALYPTUS_CONF = 'eucalyptus.conf'
 _GLOBAL_NETWORK_INFO_XML = 'global_network_info.xml'
 _WORK = 'work'
 _EUCALYPTUS = 'EUCALYPTUS'
+_INSTANCE_PATH = 'INSTANCE_PATH'
 _GLOBAL_SECTION = 'GLOBAL'
 _QEMU_CONN = 'qemu:///system'
 _DEFAULT_TIMEOUT = 60
@@ -174,8 +175,18 @@ def _modify_libvirt_xml(instance_path):
     with open(os.path.join(instance_path, "%s.orig" % _LIBVIRT_XML), 'wb') as orig_xml_file:
         parser.writexml(orig_xml_file)
 
+    instance_name = None
+
+    for name in parser.getElementsByTagName("name"):
+        instance_name = name.firstChild.nodeValue
+
     for elem in parser.getElementsByTagName("disk"):
         if not elem.getAttribute("type") == "block":
+            continue
+
+        if not len(
+                elem.getElementsByTagName("source")[0].
+                getAttribute("dev").split(instance_name)) == 2:
             continue
 
         elem.setAttribute("type", "file")
@@ -199,20 +210,13 @@ def _find_instance(instance):
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
 
-    parser = parseString(domain.XMLDesc(0))
-    if not parser:
+    instances_path = _get_instances_path()
+
+    if domain:
         conn.close()
-        raise NodeAdminPackError("Failed to parse xml for domain (%s)\n%s\n",
-                                 instance, domain.XMLDesc(0))
-
-    for elem in parser.getElementsByTagName('source'):
-        dev_path = elem.getAttribute('dev')
-        logging.debug("attempting to locate instance %s path on disk with libvirt device location %s",
-                      instance, dev_path)
-
-        if len(dev_path.split(instance)) == 2:
-            conn.close()
-            return (instance, os.path.join(dev_path.split(instance)[0], instance))
+        instance_path = glob("%s/*/%s" % (os.path.join(instances_path, _WORK), instance))
+        if len(instance_path):
+            return (instance, instance_path[0])
 
     conn.close()
     raise NodeAdminPackError("Failed to find instance %s", instance)
@@ -270,6 +274,12 @@ def _get_eucalyptus_home_path():
     euca_conf = _parse_eucalyptus_conf()
 
     return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
+
+
+def _get_instances_path():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
 
 
 def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
@@ -371,7 +381,15 @@ def _gather_files(instance_name, instance_path):
 
 def pack_instance(instance, output_file, shutdown, skip_compression):
     logging.debug("attempting to pack instance %s", instance)
-    instance_tuple = _find_instance(instance)
+    instance_tuple = None
+
+    try:
+        instance_tuple = _find_instance(instance)
+    except NodeAdminPackError:
+        logging.debug(
+            "instance (%s) not found to have local storage", instance)
+        return 1
+
     logging.debug(
         "found instance tuple %s %s", instance_tuple[0], instance_tuple[1])
 
@@ -396,6 +414,8 @@ def pack_instance(instance, output_file, shutdown, skip_compression):
 
     _find_volumes_and_detach(instance_tuple[1])
 
+    return 0
+
 
 def _is_nc_service_running():
     service_cmd = ["/sbin/service", "eucalyptus-nc", "status"]
@@ -412,6 +432,7 @@ def _is_nc_service_running():
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
+    rc = 0
 
     if _is_nc_service_running():
         logging.error(
@@ -424,21 +445,28 @@ def _main(args, log_level):
             logging.debug("packing instance %s", instance)
             output_file = os.path.join(
                 args.output_directory, instance + _PACK_TAR)
-            pack_instance(
+            rc = pack_instance(
                 instance, output_file, args.shutdown, args.no_compression)
-
-            logging.info(
-                "Packed instance %s located at %s", instance, output_file)
+            if rc:
+                logging.warn(
+                    "Failed packing instance %s (%d)", instance, rc)
+            else:
+                logging.info(
+                    "Packed instance %s located at %s", instance, output_file)
     else:
         logging.debug("packing instance %s", args.instance)
         output_file = os.path.join(args.output_directory, instance + _PACK_TAR)
-        pack_instance(
+        rc = pack_instance(
             args.instance, output_file, args.shutdown, args.no_compression)
 
-        logging.info(
-            "Packed instance %s located at %s", args.instance[0], args.instance[1])
+        if rc:
+            logging.warn(
+                "Failed packing instance %s (%d)", args.instance, rc)
+        else:
+            logging.info(
+                "Packed instance %s located at %s", args.instance[0], args.instance[1])
 
-    return 0
+    return rc
 
 
 if __name__ == '__main__':
