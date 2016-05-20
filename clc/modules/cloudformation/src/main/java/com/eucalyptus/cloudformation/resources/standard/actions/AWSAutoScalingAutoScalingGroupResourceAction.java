@@ -56,6 +56,8 @@ import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.Values;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntity.ObsoleteInstance.TerminationState;
+import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntity.ObsoleteInstance;
 import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntity;
 import com.eucalyptus.cloudformation.entity.RollingUpdateStateEntityManager;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
@@ -911,21 +913,19 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           rollingUpdateStateEntity.setDesiredCapacity(autoScalingGroupType.getDesiredCapacity());
 
           // figure out which instances are 'bad'
+          Collection<ObsoleteInstance> obsoleteInstances = Lists.newArrayList();
           if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
             Set<String> instanceIds = Sets.newHashSet();
             for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
               instanceIds.add(instance.getInstanceId());
             }
             Map<String, String> subnetMap = getSubnetMap(instanceIds, newAction.info.getEffectiveUserId());
-            Set<String> obsoleteInstanceIds = Sets.newHashSet();
             for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
               if (doesInstanceNeedReplacement(instance, subnetMap, autoScalingGroupType)) {
-                obsoleteInstanceIds.add(instance.getInstanceId());
+                obsoleteInstances.add(new ObsoleteInstance(instance.getInstanceId(), TerminationState.RUNNING));
               }
             }
-            rollingUpdateStateEntity.setNumOriginalObsoleteInstances(obsoleteInstanceIds.size());
-            rollingUpdateStateEntity.setObsoleteInstanceIds(Joiner.on(',').join(obsoleteInstanceIds));
-
+            rollingUpdateStateEntity.setObsoleteInstancesJson(RollingUpdateStateEntity.ObsoleteInstance.obsoleteInstancesToJson(obsoleteInstances));
             Set<String> previousRunningInstanceIds = Sets.newHashSet();
             for (Instance instance: autoScalingGroupType.getInstances().getMember()) {
               if (instance.getLifecycleState().equals("InService")) {
@@ -935,12 +935,11 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
             rollingUpdateStateEntity.setPreviousRunningInstanceIds(Joiner.on(',').join(previousRunningInstanceIds));
 
           } else {
-            rollingUpdateStateEntity.setNumOriginalObsoleteInstances(0);
-            rollingUpdateStateEntity.setObsoleteInstanceIds("");
+            rollingUpdateStateEntity.setObsoleteInstancesJson(RollingUpdateStateEntity.ObsoleteInstance.obsoleteInstancesToJson(obsoleteInstances));
             rollingUpdateStateEntity.setPreviousRunningInstanceIds("");
           }
 
-          if (rollingUpdateStateEntity.getNumOriginalObsoleteInstances() == 0) {
+          if (obsoleteInstances.size() == 0) {
             rollingUpdateStateEntity.setState(State.RESUME_PROCESSES);
             return rollingUpdateStateEntity;
           }
@@ -952,9 +951,9 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           //    of the group temporarily.  In that case the value it can't be bigger than is desiredCapacity - minRunningInstances + number of non obsolete instances
 
           int batchSize = Math.min(
-            Math.min(rollingUpdateStateEntity.getNumOriginalObsoleteInstances(), updatePolicy.getAutoScalingRollingUpdate().getMaxBatchSize()),
+            Math.min(obsoleteInstances.size(), updatePolicy.getAutoScalingRollingUpdate().getMaxBatchSize()),
             rollingUpdateStateEntity.getDesiredCapacity() - updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService()
-              + (rollingUpdateStateEntity.getDesiredCapacity() - rollingUpdateStateEntity.getNumOriginalObsoleteInstances()));
+              + (rollingUpdateStateEntity.getDesiredCapacity() - obsoleteInstances.size()));
 
           // Once we set the batch size, we need to make sure the group size is correct.  Either 'desiredCapacity' or (if we need to increase the size, batchSize + minRunningInstances)
 
@@ -963,7 +962,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           rollingUpdateStateEntity.setTempDesiredCapacity(tempDesiredCapacity);
 
           StringBuilder message = new StringBuilder("Rollling update initiated.  " +
-            "Terminating " + rollingUpdateStateEntity.getNumOriginalObsoleteInstances() + " instance(s) in batches of " + batchSize);
+            "Terminating " + obsoleteInstances.size() + " instance(s) in batches of " + batchSize);
           if (updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService() > 0) {
             message.append(", while keeping at least " + updatePolicy.getAutoScalingRollingUpdate().getMinInstancesInService() + " in service.");
           } else {
@@ -1005,22 +1004,28 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       TRY_TERMINATE {
         @Override
         public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
-          Set<String> obsoleteInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getObsoleteInstanceIds()));
+          Collection<ObsoleteInstance> obsoleteInstances = ObsoleteInstance.jsonToObsoleteInstances(rollingUpdateStateEntity.getObsoleteInstancesJson());
+          Collection<String> obsoleteButStillRunningInstanceIds = Lists.newArrayList();
+          for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
+            if (obsoleteInstance.getLastKnownState() == TerminationState.RUNNING) {
+              obsoleteButStillRunningInstanceIds.add(obsoleteInstance.getInstanceId());
+            }
+          }
           AutoScalingGroupType autoScalingGroupType = getExistingUniqueAutoscalingGroupType(configuration, newAction);
-          if (obsoleteInstanceIds.isEmpty()) {
+          if (obsoleteButStillRunningInstanceIds.isEmpty()) {
             rollingUpdateStateEntity.setState(State.RESUME_PROCESSES);
             return rollingUpdateStateEntity;
           } else {
-            boolean isLastRound = (obsoleteInstanceIds.size() <= rollingUpdateStateEntity.getBatchSize());
-            Set<String> terminatingInstanceIds = Sets.newHashSet();
-            int numToTerminate = 0;
-            for (String obsoleteInstanceId: obsoleteInstanceIds) {
-              terminatingInstanceIds.add(obsoleteInstanceId);
-              if (++numToTerminate == rollingUpdateStateEntity.getBatchSize()) break;
+            boolean isLastRound = (obsoleteButStillRunningInstanceIds.size() <= rollingUpdateStateEntity.getBatchSize());
+            List<String> terminatingInstanceIds = Lists.newArrayList();
+            for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
+              if (obsoleteInstance.getLastKnownState() == TerminationState.RUNNING) {
+                obsoleteInstance.setLastKnownState(TerminationState.TERMINATING);
+                terminatingInstanceIds.add(obsoleteInstance.getInstanceId());
+                if (terminatingInstanceIds.size() == rollingUpdateStateEntity.getBatchSize()) break;
+              }
             }
-            obsoleteInstanceIds.removeAll(terminatingInstanceIds);
-            rollingUpdateStateEntity.setTerminatingInstanceIds(Joiner.on(',').join(terminatingInstanceIds));
-            rollingUpdateStateEntity.setObsoleteInstanceIds(Joiner.on(',').join(obsoleteInstanceIds));
+            rollingUpdateStateEntity.setObsoleteInstancesJson(ObsoleteInstance.obsoleteInstancesToJson(obsoleteInstances));
 
             Set<String> allRunningInstanceIds = Sets.newHashSet();
             if (autoScalingGroupType.getInstances() != null && autoScalingGroupType.getInstances().getMember() != null) {
@@ -1074,14 +1079,30 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       WAIT_FOR_TERMINATE {
         @Override
         public RollingUpdateStateEntity apply(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity) throws Exception {
-          Set<String> terminatingInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getTerminatingInstanceIds()));
-          Set<String> obsoleteInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getObsoleteInstanceIds()));
+          Collection<ObsoleteInstance> obsoleteInstances = ObsoleteInstance.jsonToObsoleteInstances(rollingUpdateStateEntity.getObsoleteInstancesJson());
+          Set<String> terminatingInstanceIds = Sets.newHashSet();
+          for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
+            if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
+              terminatingInstanceIds.add(obsoleteInstance.getInstanceId());
+            }
+          }
           if (!isAllTerminated(terminatingInstanceIds, newAction.info.getEffectiveUserId())) {
             throw new NotAResourceFailureException("Still waiting on terminating instances");
           } else {
-            int progress = rollingUpdateStateEntity.getNumOriginalObsoleteInstances() == 0 ? 100 : 100 * (rollingUpdateStateEntity.getNumOriginalObsoleteInstances() - obsoleteInstanceIds.size()) / rollingUpdateStateEntity.getNumOriginalObsoleteInstances();
+            // set all terminating instances to terminated
+            int numTerminatedInstances = 0;
+            for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
+              // move to terminated if was terminating
+              if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
+                obsoleteInstance.setLastKnownState(TerminationState.TERMINATED);
+                numTerminatedInstances++;
+              } else if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
+                numTerminatedInstances++;
+              }
+            }
+            int progress = obsoleteInstances.size() == 0 ? 100 : 100 * numTerminatedInstances / obsoleteInstances.size();
             addStackEventForRollingUpdate(newAction, "Successfully terminated instance(s) " + terminatingInstanceIds + " (Progress " + progress + "%).");
-            rollingUpdateStateEntity.setTerminatingInstanceIds("");
+            rollingUpdateStateEntity.setObsoleteInstancesJson(ObsoleteInstance.obsoleteInstancesToJson(obsoleteInstances));
             rollingUpdateStateEntity.setState(State.WAIT_TO_SETTLE);
             return rollingUpdateStateEntity;
           }

@@ -19,8 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.standard.actions.AWSAutoScalingAutoScalingGroupResourceAction;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
@@ -34,6 +40,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -68,15 +75,10 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
   @Enumerated(EnumType.STRING)
   AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State state = AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State.NOT_STARTED;
 
-  @Column(name = "obsolete_instance_ids" )
+  @Column(name = "obsolete_instances_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
-  String obsoleteInstanceIds = "";
-
-  @Column(name = "terminating_instance_ids" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
-  String terminatingInstanceIds = "";
+  String obsoleteInstancesJson = "";
 
   @Column(name = "previous_running_instance_ids" )
   @Lob
@@ -87,9 +89,6 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String alreadySuspendedProcessNames = "";
-
-  @Column(name = "num_original_obsolete_instances")
-  Integer numOriginalObsoleteInstances = 0;
 
   @Column(name = "num_success_signals")
   Integer numSuccessSignals = 0;
@@ -161,16 +160,20 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
     this.desiredCapacity = desiredCapacity;
   }
 
+  public String getObsoleteInstancesJson() {
+    return obsoleteInstancesJson;
+  }
+
+  public void setObsoleteInstancesJson(String obsoleteInstancesJson) {
+    this.obsoleteInstancesJson = obsoleteInstancesJson;
+  }
+
   public AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State getState() {
     return state;
   }
 
   public void setState(AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State state) {
     this.state = state;
-  }
-
-  public String getObsoleteInstanceIds() {
-    return obsoleteInstanceIds;
   }
 
   public String getPreviousRunningInstanceIds() {
@@ -181,25 +184,12 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
     this.previousRunningInstanceIds = previousRunningInstanceIds;
   }
 
-  public void setObsoleteInstanceIds(String obsoleteInstanceIds) {
-    this.obsoleteInstanceIds = obsoleteInstanceIds;
-  }
-
   public String getAlreadySuspendedProcessNames() {
     return alreadySuspendedProcessNames;
   }
 
   public void setAlreadySuspendedProcessNames(String alreadySuspendedProcessNames) {
     this.alreadySuspendedProcessNames = alreadySuspendedProcessNames;
-  }
-
-  public Integer getNumOriginalObsoleteInstances() {
-    return numOriginalObsoleteInstances;
-
-  }
-
-  public void setNumOriginalObsoleteInstances(Integer numOriginalObsoleteInstances) {
-    this.numOriginalObsoleteInstances = numOriginalObsoleteInstances;
   }
 
   public Integer getNumSuccessSignals() {
@@ -274,13 +264,53 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
     this.tempDesiredCapacity = tempDesiredCapacity;
   }
 
-  public String getTerminatingInstanceIds() {
-    return terminatingInstanceIds;
+  public static class ObsoleteInstance {
+    private String instanceId;
+
+    public ObsoleteInstance(String instanceId, TerminationState lastKnownState) {
+      this.instanceId = instanceId;
+      this.lastKnownState = lastKnownState;
+    }
+
+    public enum TerminationState {RUNNING, TERMINATING, TERMINATED};
+    private TerminationState lastKnownState;
+
+    public String getInstanceId() {
+      return instanceId;
+    }
+
+    public void setInstanceId(String instanceId) {
+      this.instanceId = instanceId;
+    }
+
+    public TerminationState getLastKnownState() {
+      return lastKnownState;
+    }
+
+    public void setLastKnownState(TerminationState lastKnownState) {
+      this.lastKnownState = lastKnownState;
+    }
+
+    public static String obsoleteInstancesToJson(Collection<ObsoleteInstance> obsoleteInstances) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      ObjectNode objectNode = objectMapper.createObjectNode();
+      for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
+        objectNode.put(obsoleteInstance.getInstanceId(), obsoleteInstance.getLastKnownState().toString());
+      }
+      return JsonHelper.getStringFromJsonNode(objectNode);
+    }
+
+    public static Collection<ObsoleteInstance> jsonToObsoleteInstances(String obsoleteInstancesJson) throws ValidationErrorException {
+      Collection<ObsoleteInstance> obsoleteInstances = Lists.newArrayList();
+      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(obsoleteInstancesJson);
+      if (!jsonNode.isObject()) {
+        throw new ValidationErrorException("Unable to create collection of obsolete instances from " + obsoleteInstancesJson);
+      }
+      for (String fieldName : Lists.newArrayList(jsonNode.fieldNames())) {
+        ObsoleteInstance obsoleteInstance = new ObsoleteInstance(fieldName, TerminationState.valueOf(jsonNode.get(fieldName).asText()));
+        obsoleteInstances.add(obsoleteInstance);
+      }
+      return obsoleteInstances;
+    }
   }
-
-  public void setTerminatingInstanceIds(String terminatingInstanceIds) {
-    this.terminatingInstanceIds = terminatingInstanceIds;
-  }
-
-
 }

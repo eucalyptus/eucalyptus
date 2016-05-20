@@ -40,9 +40,8 @@ public class RollingUpdateStateEntityManager {
     destEntity.setDesiredCapacity(sourceEntity.getDesiredCapacity());
     destEntity.setState(sourceEntity.getState());
     destEntity.setPreviousRunningInstanceIds(sourceEntity.getPreviousRunningInstanceIds());
-    destEntity.setObsoleteInstanceIds(sourceEntity.getObsoleteInstanceIds());
+    destEntity.setObsoleteInstancesJson(sourceEntity.getObsoleteInstancesJson());
     destEntity.setAlreadySuspendedProcessNames(sourceEntity.getAlreadySuspendedProcessNames());
-    destEntity.setNumOriginalObsoleteInstances(sourceEntity.getNumOriginalObsoleteInstances());
     destEntity.setNumSuccessSignals(sourceEntity.getNumSuccessSignals());
     destEntity.setNumFailureSignals(sourceEntity.getNumFailureSignals());
     destEntity.setNumNeededSignalsThisBatch(sourceEntity.getNumNeededSignalsThisBatch());
@@ -51,7 +50,6 @@ public class RollingUpdateStateEntityManager {
     destEntity.setSignalCutoffTimestamp(sourceEntity.getSignalCutoffTimestamp());
     destEntity.setBatchSize(sourceEntity.getBatchSize());
     destEntity.setTempDesiredCapacity(sourceEntity.getTempDesiredCapacity());
-    destEntity.setTerminatingInstanceIds(sourceEntity.getTerminatingInstanceIds());
     destEntity.setNeedsRollbackUpdate(sourceEntity.getNeedsRollbackUpdate());
   }
 
