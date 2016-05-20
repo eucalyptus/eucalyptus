@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -366,7 +366,7 @@ public class VolumeManager {
     }
     
     // check if instance is stopped
-    if (VmState.STOPPED.equals(vm.getState())) {
+    if ( VmState.STOPPED.apply( vm ) ) {
       // Volume attachment to an EBS backed instance in stopped state. Don't get attachment token from SC since its a part of instance start up
       // process. Just add the persistent attachment record to the VM
 
@@ -375,7 +375,7 @@ public class VolumeManager {
       // swathi - assuming delete on terminate flag to always be false. Its better to err on the safe side and not delete volumes
       // add root attachment
       VmInstances.addPersistentVolume( vm, deviceName, volume, rootDevice.equals( deviceName ), false );
-    } else { // swathi: should there be a check for other instance states before attaching volume?
+    } else if ( VmState.RUNNING.apply( vm ) ) {
       // A normal volume attachment. Get attachment token from SC and fire attachment request to NC/CC
       
       ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition() );
@@ -402,6 +402,8 @@ public class VolumeManager {
       // Fire attach volume request to NC/CC
       final VolumeAttachCallback cb = new VolumeAttachCallback(attachVolume);
       AsyncRequests.newRequest(cb).dispatch(ccConfig);
+    } else {
+      throw new ClientComputeException( "IncorrectState", "Instance '"+instanceId+"' is not 'running'" );
     }
     
     EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_ATTACH )
