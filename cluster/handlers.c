@@ -2138,11 +2138,11 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
                 for (i = 0; i < gni->max_instances; i++) {
                     char *strptra = NULL, *strptrb = NULL;
                     ccInstance *myInstance = NULL;
-                    strptra = hex2dot(gni->instances[i].publicIp);
-                    strptrb = hex2dot(gni->instances[i].privateIp);
+                    strptra = hex2dot(gni->instances[i]->publicIp);
+                    strptrb = hex2dot(gni->instances[i]->privateIp);
 
-                    if (gni->instances[i].publicIp && gni->instances[i].privateIp) {
-                        LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                    if (gni->instances[i]->publicIp && gni->instances[i]->privateIp) {
+                        LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i]->name, SP(strptra), SP(strptrb));
                         // here, we should decide if we need to send the mapping, or not
                         rc = find_instanceCacheIP(strptrb, &myInstance);
                         if (myInstance && !strcmp(myInstance->ccnet.privateIp, strptrb)) {
@@ -2160,9 +2160,9 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
                             EUCA_FREE(myInstance);
                         }
 
-                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i].name, strptra, strptrb, rc);
+                        LOGDEBUG("instance '%s' has assigned address: (%s -> %s) rc: %d\n", gni->instances[i]->name, strptra, strptrb, rc);
                     } else {
-                        LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                        LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i]->name, SP(strptra), SP(strptrb));
                     }
                     EUCA_FREE(strptra);
                     EUCA_FREE(strptrb);

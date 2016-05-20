@@ -197,8 +197,10 @@ struct gni_instance_t {
     gni_name instance_name;            //!< Instance name associated
     gni_name *secgroup_names;          //!< List of associated security group names
     int max_secgroup_names;            //!< Number of security group names in the list
-    gni_name *interface_names;         //!< List of associated interface names (only for instances)
-    int max_interface_names;           //!< Number of interface names in the list
+    //gni_name *interface_names;         //!< List of associated interface names (only for instances)
+    //int max_interface_names;           //!< Number of interface names in the list
+    gni_instance **interfaces;
+    int max_interfaces;
     gni_secgroup **gnisgs;
     void *mido_present;                //!< mido datastructure that implements this gni_instance
     void *mido_vpc;
@@ -389,10 +391,13 @@ typedef struct globalNetworkInfo_t {
     int max_managedSubnets;                 //!< Number of global managed subnets in the list
     gni_cluster *clusters;                  //!< List of clusters information
     int max_clusters;                       //!< Number of clusters in the list
-    gni_instance *instances;                //!< List of instances information
+    gni_instance **instances;               //!< List of instances information
     int max_instances;                      //!< Number of instances in the list
-    gni_instance *interfaces;               //!< List of interfaces information
-    int max_interfaces;                     //!< Number of interfaces in the list
+    boolean sorted_instances;
+    //gni_instance *interfaces;               //!< List of interfaces information
+    //int max_interfaces;                     //!< Number of interfaces in the list
+    gni_instance **ifs;                     //!< List of interfaces information
+    int max_ifs;                            //!< Number of interfaces in the list
     gni_secgroup *secgroups;                //!< List of security group information
     int max_secgroups;                      //!< Number of security groups in the list
     gni_vpc *vpcs;                          //!< List of VPC information
@@ -537,6 +542,8 @@ int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sd
 
 int ruleconvert(char *rulebuf, char *outrule);
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);
+
+int compare_gni_instance_name(const void *p1, const void *p2);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

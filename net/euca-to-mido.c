@@ -2022,9 +2022,9 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
     struct timeval tv;
 
     // Process instances/interfaces
-    for (i = 0; i < gni->max_interfaces; i++) {
+    for (i = 0; i < gni->max_ifs; i++) {
         eucanetd_timer_usec(&tv);
-        gniif = &(gni->interfaces[i]);
+        gniif = gni->ifs[i];
         if (strlen(gniif->name) == 0) {
             LOGWARN("Empty interface detected in GNI.\n");
             ret++;
