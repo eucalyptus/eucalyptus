@@ -69,7 +69,6 @@ import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 
-@GenerateKeys
 @PolicyVendor("s3")
 @Partition(WalrusBackend.class)
 @FaultLogPrefix
