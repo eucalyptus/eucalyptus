@@ -455,7 +455,7 @@ def _main(args, log_level):
                     "Packed instance %s located at %s", instance, output_file)
     else:
         logging.debug("packing instance %s", args.instance)
-        output_file = os.path.join(args.output_directory, instance + _PACK_TAR)
+        output_file = os.path.join(args.output_directory, args.instance + _PACK_TAR)
         rc = pack_instance(
             args.instance, output_file, args.shutdown, args.no_compression)
 
