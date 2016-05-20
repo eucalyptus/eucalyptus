@@ -6147,19 +6147,21 @@ int init_config(void)
     configInitValues(configKeysRestartCC, configKeysNoRestartCC);
     readConfigFile(configFiles, 2);
 
-    // DHCP configuration section
+    // network configuration section
     {
         char *pubmode = NULL,
              *macPrefix = NULL;
 
         pubmode = configFileValue("VNET_MODE");
         if (!pubmode) {
-            LOGWARN("VNET_MODE is not defined, defaulting to '%s'\n", NETMODE_MANAGED_NOVLAN);
-            pubmode = strdup(NETMODE_MANAGED_NOVLAN);
-            if (!pubmode) {
-                LOGFATAL("Out of memory\n");
-                unlock_exit(1);
-            }
+            LOGERROR("VNET_MODE is not defined!\n");
+            return (1);
+        }
+
+        if (!(!strcmp(pubmode, NETMODE_MANAGED_NOVLAN) || !strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_VPCMIDO))) {
+            LOGERROR("Invalid network mode!\n");
+            EUCA_FREE(pubmode);
+            return (1);
         }
 
         macPrefix = configFileValue("VNET_MACPREFIX");
