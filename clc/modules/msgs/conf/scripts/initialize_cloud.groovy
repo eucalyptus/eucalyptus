@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,6 +60,8 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+
+import com.eucalyptus.upgrade.Upgrades
 import org.apache.log4j.Logger
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.BootstrapArgs
@@ -130,6 +132,7 @@ try {
       PersistenceContexts.registerPersistenceContext( config );
     }
     if( BootstrapArgs.isInitializeSystem( ) ) {
+      Upgrades.init( )
       ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class );
       final ServiceConfiguration newComponent = sb.newInstance( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
       ServiceConfigurations.store( newComponent );

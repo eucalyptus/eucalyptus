@@ -285,6 +285,7 @@ public class Databases {
   
   public static void initialize( ) {
     singleton.init( );
+    Databases.Events.create( );
   }
   
   @RunDuring( Bootstrap.Stage.DatabaseInit )
