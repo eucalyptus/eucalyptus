@@ -1095,7 +1095,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
               if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
                 obsoleteInstance.setLastKnownState(TerminationState.TERMINATED);
               }
-              if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
+              if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATED) {
                 numTerminatedInstances++;
               }
             }
