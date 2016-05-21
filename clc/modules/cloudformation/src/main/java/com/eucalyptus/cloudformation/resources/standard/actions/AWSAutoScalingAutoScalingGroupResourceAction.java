@@ -492,9 +492,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     }
   }
 
-
-
-
   private static final Logger LOG = Logger.getLogger(AWSAutoScalingAutoScalingGroupResourceAction.class);
   private enum UpdateNoInterruptionSteps implements UpdateStep {
     CHECK_ROLLING_UPDATE_AND_SUSPEND {
@@ -1097,8 +1094,8 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
               // move to terminated if was terminating
               if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
                 obsoleteInstance.setLastKnownState(TerminationState.TERMINATED);
-                numTerminatedInstances++;
-              } else if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
+              }
+              if (obsoleteInstance.getLastKnownState() == TerminationState.TERMINATING) {
                 numTerminatedInstances++;
               }
             }
