@@ -85,25 +85,18 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String previousRunningInstanceIds = "";
 
+  @Column(name = "current_batch_instance_ids" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String currentBatchInstanceIds = "";
+
   @Column(name = "already_suspended_process_names" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String alreadySuspendedProcessNames = "";
 
-  @Column(name = "num_success_signals")
-  Integer numSuccessSignals = 0;
-
-  @Column(name = "num_failure_signals")
-  Integer numFailureSignals = 0;
-
   @Column(name = "num_expected_total_signals")
   Integer numExpectedTotalSignals = 0;
-
-  @Column(name = "num_needed_signals_this_batch")
-  Integer numNeededSignalsThisBatch = 0;
-
-  @Column(name = "num_received_signals_this_batch")
-  Integer numReceivedSignalsThisBatch = 0;
 
   @Column(name = "needs_rollback_update")
   Boolean needsRollbackUpdate = false;
@@ -184,44 +177,20 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
     this.previousRunningInstanceIds = previousRunningInstanceIds;
   }
 
+  public String getCurrentBatchInstanceIds() {
+    return currentBatchInstanceIds;
+  }
+
+  public void setCurrentBatchInstanceIds(String currentBatchInstanceIds) {
+    this.currentBatchInstanceIds = currentBatchInstanceIds;
+  }
+
   public String getAlreadySuspendedProcessNames() {
     return alreadySuspendedProcessNames;
   }
 
   public void setAlreadySuspendedProcessNames(String alreadySuspendedProcessNames) {
     this.alreadySuspendedProcessNames = alreadySuspendedProcessNames;
-  }
-
-  public Integer getNumSuccessSignals() {
-    return numSuccessSignals;
-  }
-
-  public void setNumSuccessSignals(Integer numSuccessSignals) {
-    this.numSuccessSignals = numSuccessSignals;
-  }
-
-  public Integer getNumFailureSignals() {
-    return numFailureSignals;
-  }
-
-  public void setNumFailureSignals(Integer numFailureSignals) {
-    this.numFailureSignals = numFailureSignals;
-  }
-
-  public Integer getNumNeededSignalsThisBatch() {
-    return numNeededSignalsThisBatch;
-  }
-
-  public void setNumNeededSignalsThisBatch(Integer numNeededSignalsThisBatch) {
-    this.numNeededSignalsThisBatch = numNeededSignalsThisBatch;
-  }
-
-  public Integer getNumReceivedSignalsThisBatch() {
-    return numReceivedSignalsThisBatch;
-  }
-
-  public void setNumReceivedSignalsThisBatch(Integer numReceivedSignalsThisBatch) {
-    this.numReceivedSignalsThisBatch = numReceivedSignalsThisBatch;
   }
 
   public Integer getNumExpectedTotalSignals() {
