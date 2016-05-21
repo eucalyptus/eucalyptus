@@ -379,14 +379,14 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
 
     if (pMidoConfig->config->flushmode) {
         switch(pMidoConfig->config->flushmode) {
-            case FLUSH_DYNAMIC:
+            case FLUSH_MIDO_DYNAMIC:
                 LOGINFO("Flushing objects in MidoNet (keep the core intact)\n");
                 rc = do_midonet_teardown(pMidoConfig);
                 if (rc) {
                     ret = 1;
                 }
                 break;
-            case FLUSH_ALL:
+            case FLUSH_MIDO_ALL:
                 LOGINFO("Flush all objects in MidoNet\n");
                 rc = do_midonet_teardown(pMidoConfig);
                 if (rc) {

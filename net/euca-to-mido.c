@@ -1011,7 +1011,7 @@ int do_midonet_teardown(mido_config * mido) {
     }
     EUCA_FREE(bgprecovery);
 
-    if (mido->config->flushmode == FLUSH_ALL) {
+    if (mido->config->flushmode == FLUSH_MIDO_ALL) {
         LOGINFO("deleting mido core\n");
         delete_mido_core(mido, mido->midocore);
     } else {

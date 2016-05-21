@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhHlfFmMuUv:V:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlfFmMuUCZv:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
@@ -385,6 +385,14 @@ int main(int argc, char **argv)
             break;
         case 'f':
             config->flushmode = FLUSH_DYNAMIC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'C':
+            config->flushmode = FLUSH_MIDO_DYNAMIC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'Z':
+            config->flushmode = FLUSH_MIDO_ALL;
             config->debug = EUCANETD_DEBUG_INFO;
             break;
         case 'm':
@@ -424,13 +432,17 @@ int main(int argc, char **argv)
         case 'H':
             printf("EXPERIMENTAL OPTIONS (USE AT YOUR OWN RISK)\n"
                     "\t%-12s| list VPCMIDO objects\n"
+                    "\t%-12s| flush all but core objects that implement VPC models\n"
+                    "\t%-12s| flush all objects (including core) that implement VPC models\n"
                     "\t%-12s| detect duplicate objects in MidoNet\n"
                     "\t%-12s| detect and flush duplicate objects in MidoNet\n"
                     "\t%-12s| detect unconnected objects in MidoNet\n"
                     "\t%-12s| detect and flush unconnected objects in MidoNet\n"
-                    "\t%-12s| check a VPCMIDO object (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
-                    "\t%-12s| flush a VPCMIDO object (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
-                    , "-l", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
+                    "\t%-12s| check a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t%-12s| flush a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t\tlowercase options are read-only, and work with eucanetd service running\n"
+                    "\t\tuppercase options can only be executed with eucanetd service stopped\n"
+                    , "-l", "-C", "-Z", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
             exit (1);
             break;
         case 'h':
@@ -438,7 +450,9 @@ int main(int argc, char **argv)
             printf("USAGE: %s OPTIONS\n"
                     "\t%-12s| debug - run eucanetd in foreground, all output to terminal\n"
                     "\t%-12s| flush - clear all eucanetd artifacts and exit\n"
-                    "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n", argv[0], "-d", "-F", "-f");
+                    "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n"
+                    "\t\toptions '-f' and '-F' do not work in VPCMIDO mode\n",
+                    argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         }
@@ -633,18 +647,22 @@ int main(int argc, char **argv)
         }
         // Do we need to flush all eucalyptus networking artifacts?
         if (config->flushmode) {
-            if (!IS_NETMODE_VPCMIDO(pGni) && (config->flushmode > FLUSH_DYNAMIC)) {
-                // invalid flush mode for non-VPCMIDO modes
-                LOGWARN("Invalid flush mode selected\n");
+            if (IS_NETMODE_VPCMIDO(pGni) && ((config->flushmode == FLUSH_DYNAMIC) || (config->flushmode == FLUSH_ALL))) {
+                LOGERROR("options '-f' and '-F' cannot be used in VPCMIDO mode\n");
             } else {
-                eucanetd_timer(&tv);
-                // Make sure we were given a flush API prior to calling it
-                if (pDriverHandler->system_flush) {
-                    if (pDriverHandler->system_flush(pGni)) {
-                        LOGERROR("flushing of euca networking artifacts failed\n");
+                if (!IS_NETMODE_VPCMIDO(pGni) && (config->flushmode > FLUSH_DYNAMIC)) {
+                    // invalid flush mode for non-VPCMIDO modes
+                    LOGERROR("Invalid flush mode selected\n");
+                } else {
+                    eucanetd_timer(&tv);
+                    // Make sure we were given a flush API prior to calling it
+                    if (pDriverHandler->system_flush) {
+                        if (pDriverHandler->system_flush(pGni)) {
+                            LOGERROR("flushing of euca networking artifacts failed\n");
+                        }
                     }
+                    LOGINFO("eucanetd flush executed in %ld ms.\n", eucanetd_timer(&tv));
                 }
-                LOGINFO("eucanetd flush executed in %ld ms.\n", eucanetd_timer(&tv));
             }
             update_globalnet = FALSE;
             gIsRunning = FALSE;
