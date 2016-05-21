@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -81,7 +82,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			this.view = new LoadBalancerServoInstanceRelationView(this);
 	}
 	
-	enum STATE {
+	public enum STATE {
 		Pending, InService, Error, OutOfService, Retired
 	}
 	enum DNS_STATE {
@@ -117,7 +118,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     
     @Column(name="metadata_dns_state", nullable=true)
     private String dnsState = null;
-    
+
+	@Column(name="metadata_certificate_expiration_date", nullable=true)
+	private Date certificateExpirationDate = null;
+
     private LoadBalancerServoInstance(){
     }
     
@@ -141,13 +145,20 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.security_group = group;
     }
     
-    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group, final LoadBalancerAutoScalingGroup as_group, String instanceId)
+    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone,
+														final LoadBalancerSecurityGroup group,
+														final LoadBalancerAutoScalingGroup as_group,
+														final int certExpirationDays,
+														String instanceId)
     {
     	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group);
     	instance.setInstanceId(instanceId);
     	instance.setAutoScalingGroup(as_group);
     	instance.dnsState = DNS_STATE.None.name();
-
+		final Calendar cal = Calendar.getInstance();
+		cal.setTime(new Date());
+		cal.add(Calendar.DATE, certExpirationDays);
+		instance.setCertificateExpiration(cal.getTime());
     	return instance;
     }
     
@@ -229,7 +240,19 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     public DNS_STATE getDnsState(){
     	return Enum.valueOf(DNS_STATE.class, this.dnsState);
     }
-    
+
+	public void setCertificateExpiration(final Date expirationDate)  { this.certificateExpirationDate = expirationDate; }
+	public Date getCertificateExpiration() { return this.certificateExpirationDate; }
+	public boolean isCertificateExpired() {
+		if (this.certificateExpirationDate == null)
+			return false;
+		if ((new Date()).after(this.certificateExpirationDate))
+			return true;
+		else
+			return false;
+	}
+
+
 	@Override
 	public String toString(){
 		String id = this.instanceId==null? "unassigned" : this.instanceId;
@@ -258,6 +281,9 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 				return this.entity.getPrivateIp();
 		}
 
+		public Date getCertificateExpirationDate() { return this.entity.getCertificateExpiration(); }
+		public boolean isCertificateExpired() { return this.entity.isCertificateExpired(); }
+
     public boolean canResolveDns(){
       return DNS_STATE.Registered.equals(this.entity.getDnsState()) && 
             STATE.InService.equals(this.entity.getState());
@@ -271,22 +297,21 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			return StringFunctions.PRIVATE_IP;
 		}
 		
-		private enum StringFunctions implements Function<LoadBalancerServoInstanceCoreView,String>{
+		private enum StringFunctions implements Function<LoadBalancerServoInstanceCoreView,String> {
 			ADDRESS {
 				@Nullable
 				@Override
-				public String apply( @Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView ) {
-					return loadBalancerServoInstanceCoreView.getAddress( );
+				public String apply(@Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView) {
+					return loadBalancerServoInstanceCoreView.getAddress();
 				}
 			},
 			PRIVATE_IP {
 				@Nullable
 				@Override
-				public String apply( @Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView ) {
-					return loadBalancerServoInstanceCoreView.getPrivateIp( );
+				public String apply(@Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView) {
+					return loadBalancerServoInstanceCoreView.getPrivateIp();
 				}
-			},
-			;
+			},;
 		}
 	}
 

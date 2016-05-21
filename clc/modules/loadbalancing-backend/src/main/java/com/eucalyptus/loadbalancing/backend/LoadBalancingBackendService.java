@@ -1285,6 +1285,8 @@ public class LoadBalancingBackendService {
       }
       throw (LoadBalancingException) ex;
     }
+
+    LoadBalancers.checkWorkerCertificateExpiration(lb);
     
     try{
       LoadBalancers.createLoadbalancerListener(lbName,  ctx, listeners);
@@ -1936,7 +1938,9 @@ public class LoadBalancingBackendService {
     }catch(Exception ex){
       throw new InternalFailure400Exception("Failed to find the loadbalancer");
     }
-    
+
+    LoadBalancers.checkWorkerCertificateExpiration(lb);
+
     try{
       LoadBalancers.setLoadBalancerListenerSSLCertificate(lb, lbPort, certArn);
     }catch(final LoadBalancingException ex){

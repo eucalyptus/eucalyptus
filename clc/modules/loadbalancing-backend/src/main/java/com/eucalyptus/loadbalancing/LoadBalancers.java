@@ -24,8 +24,10 @@ import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -33,6 +35,8 @@ import java.util.NoSuchElementException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.TextParseException;
@@ -638,6 +642,47 @@ public class LoadBalancers {
     }catch(final Exception ex){
       throw new CertificateNotFoundException();
     }
+	}
+
+	public static void checkWorkerCertificateExpiration(final LoadBalancer lb) throws LoadBalancingException{
+		try{
+			for (final LoadBalancerZoneCoreView lbZoneView : lb.getZones()) {
+				final LoadBalancerZone lbZone = LoadBalancerZoneEntityTransform.INSTANCE.apply(lbZoneView);
+				for(final LoadBalancerServoInstanceCoreView instance : lbZone.getServoInstances()) {
+					if(LoadBalancerServoInstance.STATE.InService.equals(instance.getState()))  {
+						boolean expired = false;
+						try { // Upgrade case: add expiration date to instance's launch time
+							if (instance.getCertificateExpirationDate() == null) {
+								final List<RunningInstancesItemType> instances =
+										EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(instance.getInstanceId()), true);
+								final Date launchDate = instances.get(0).getLaunchTime();
+								final Calendar cal = Calendar.getInstance();
+								cal.setTime(launchDate);
+								cal.add(Calendar.DATE, Integer.parseInt(LoadBalancerASGroupCreator.EXPIRATION_DAYS));
+
+								try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+									final LoadBalancerServoInstance entity = Entities.uniqueResult(LoadBalancerServoInstance.named(instance.getInstanceId()));
+									entity.setCertificateExpiration(cal.getTime());
+									expired = entity.isCertificateExpired();
+									Entities.persist(entity);
+									db.commit();
+								}
+							}
+						}catch(final Exception ex) {
+							LOG.warn("Failed to update ELB worker's certificate expiration date", ex);
+						}
+						if (expired || instance.isCertificateExpired()) {
+							throw new InternalFailureException(String.format("LoadBalancing worker(%s)'s certificate has expired. Contact Cloud Administrator.",
+									instance.getInstanceId()));
+						}
+					}
+				}
+			}
+		}catch(final LoadBalancingException ex) {
+			throw ex;
+		}catch(final Exception ex) {
+			throw new LoadBalancingException("Error while checking loadbalancing worker's certificate expiration", ex);
+		}
 	}
 
   @QuantityMetricFunction( LoadBalancerMetadata.class )

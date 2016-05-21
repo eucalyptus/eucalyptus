@@ -711,7 +711,8 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		  }
 
 		  final LoadBalancerServoInstance newInstance = 
-		      LoadBalancerServoInstance.newInstance(zone, sgroup, group, instanceId);
+		      LoadBalancerServoInstance.newInstance(zone, sgroup, group,
+					  Integer.parseInt(LoadBalancerASGroupCreator.EXPIRATION_DAYS), instanceId);
 		  if("Healthy".equals(instance.getHealthStatus()) && 
 		      "InService".equals(instance.getLifecycleState()))
 		    newInstance.setState(LoadBalancerServoInstance.STATE.InService);
