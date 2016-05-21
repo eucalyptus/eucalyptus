@@ -244,7 +244,6 @@ class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration>
   @Override
   void validate( final NetworkConfiguration configuration ) {
     require( configuration.&getPublicIps )
-    require( configuration.&getMode )
     validate( configuration.&getMode, new RegexValidator( errors, MODE_PATTERN, 'Invalid mode "{0}": "{1}"' ) )
     validate( configuration.&getInstanceDnsDomain, new DomainValidator(errors) )
     validateAll( configuration.&getInstanceDnsServers, new IPValidator(errors) )
