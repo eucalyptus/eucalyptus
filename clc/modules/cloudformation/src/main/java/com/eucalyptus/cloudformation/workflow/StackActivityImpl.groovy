@@ -1065,10 +1065,10 @@ public class StackActivityImpl implements StackActivity {
     // only put update in progress if we actually did an update and it was of no_interruption or some_interruption
     if (UpdateType.NO_INTERRUPTION.toString().equals(updatedStackResourceEntity.getUpdateType()) ||
       UpdateType.SOME_INTERRUPTION.toString().equals(updatedStackResourceEntity.getUpdateType())) {
-      updatedStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
-      updatedStackResourceEntity.setResourceStatusReason(null);
-      StackResourceEntityManager.updateStackResource(updatedStackResourceEntity);
-      StackEventEntityManager.addStackEvent(updatedStackResourceEntity);
+      rolledbackStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
+      rolledbackStackResourceEntity.setResourceStatusReason(null);
+      StackResourceEntityManager.updateStackResource(rolledbackStackResourceEntity);
+      StackEventEntityManager.addStackEvent(rolledbackStackResourceEntity);
     }
     // Unsupported update types or "needs replacement" ones don't need status updates
     // At this point just return the previous value
