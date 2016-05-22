@@ -1176,31 +1176,20 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     }
 
     private static RollingUpdateStateEntity commonWaitForSignalsLogic(AWSAutoScalingAutoScalingGroupResourceAction newAction, ServiceConfiguration configuration, UpdatePolicy updatePolicy, RollingUpdateStateEntity rollingUpdateStateEntity, State nextState) throws Exception {
-      String stackName = newAction.getStackEntity().getStackName();
-      LOG.info(stackName + ":" + "in common wait for signals logic");
-      LOG.info(stackName + ":" + "updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()=="+updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals());
       if (!updatePolicy.getAutoScalingRollingUpdate().isWaitOnResourceSignals()) {
-        LOG.info(stackName + ":" + "not waiting on resource signals, just waiting");
-        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
-        LOG.info(stackName + ":" + "Current date = " + new Date());
         if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
-          LOG.info(stackName + ":" + "Still pausing");
           throw new NotAResourceFailureException("still pausing");
         } else {
-          LOG.info(stackName + ":" + "Not pausing anyore, going to " + nextState);
           rollingUpdateStateEntity.setState(nextState);
           return rollingUpdateStateEntity;
         }
       }
-      LOG.info(stackName + ":" + "waiting on resource signals");
       // Otherwise we wait for signals?
       Set<String> currentBatchInstanceIds = Sets.newHashSet(Splitter.on(',').omitEmptyStrings().trimResults().split(rollingUpdateStateEntity.getCurrentBatchInstanceIds()));
       Set<String> unsignaledCurrentBatchInstanceIds = Sets.newHashSet(currentBatchInstanceIds);
-      LOG.info(stackName + ":" + "current batch instance ids = " + currentBatchInstanceIds);
       Collection<SignalEntity> signals = SignalEntityManager.getSignals(newAction.getStackEntity().getStackId(), newAction.info.getAccountId(), newAction.info.getLogicalResourceId(),
         newAction.getStackEntity().getStackVersion());
       for (SignalEntity signal : signals) {
-        LOG.info(stackName + ":" + "signal=" + signal);
         if (unsignaledCurrentBatchInstanceIds.contains(signal.getUniqueId())) {
           if (!signal.getProcessed()) {
             StackEventEntityManager.addSignalStackEvent(signal);
@@ -1209,19 +1198,14 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           }
           unsignaledCurrentBatchInstanceIds.remove(signal.getUniqueId());
         } else {
+          ;
           // Ignore signals with ids not from the list of instance ids.
-          LOG.info(stackName + ":" + "signal is not from running instance list");
         }
       }
       if (!unsignaledCurrentBatchInstanceIds.isEmpty()) {
-        LOG.info(stackName + ":" + "Not received enough signals yet");
-        LOG.info(stackName + ":" + "rollingUpdateStateEntity.getSignalCutoffTimestamp()=="+rollingUpdateStateEntity.getSignalCutoffTimestamp());
-        LOG.info(stackName + ":" + "Current date = " + new Date());
         if (new Date().before(rollingUpdateStateEntity.getSignalCutoffTimestamp())) {
-          LOG.info(stackName + ":" + "still waiting for resource signals");
           throw new NotAResourceFailureException("Still waiting for resource signals");
         } else {
-          LOG.info(stackName + ":" + "done waiting for signals, calling the rest failures");
           addStackEventForRollingUpdate(newAction, "Failed to receive " + currentBatchInstanceIds.size() + " signals.  Each resource signal timeout is counted as a FAILURE." );
           for (String instanceId: unsignaledCurrentBatchInstanceIds) {
             // add failure signals (but don't log an event, AWS does not log an event)
@@ -1237,7 +1221,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           }
         }
       }
-      LOG.info(stackName + ":" + "should have enough signals now");
       // check failure and success signals (from processed)
       int numSuccessSignals = 0;
       int numFailureSignals = 0;
@@ -1251,17 +1234,12 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           numFailureSignals++;
         }
       }
-      LOG.info("numSuccessSignals-=" + numSuccessSignals);
-      LOG.info("numFailureSignals=="+numFailureSignals);
       double minNumSuccessSignals = updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() / 100.0 * rollingUpdateStateEntity.getNumExpectedTotalSignals();
       double maxNumFailureSignals = rollingUpdateStateEntity.getNumExpectedTotalSignals() - minNumSuccessSignals;
-      LOG.info(stackName + ":" + "maxNumFailureSignals=="+maxNumFailureSignals);
       if (numFailureSignals > maxNumFailureSignals) {
-        LOG.info(stackName + ":" + "Received " + numFailureSignals + " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
         throw new ResourceFailureException("Received " + numFailureSignals + " FAILURE signal(s) out of " + rollingUpdateStateEntity.getNumExpectedTotalSignals() + ". Unable to satisfy " + updatePolicy.getAutoScalingRollingUpdate().getMinSuccessfulInstancesPercent() + "% MinSuccessfulInstancesPercent requirement");
       }
       // otherwise continue
-      LOG.info(stackName + ":" + "continuing to state " + nextState);
       rollingUpdateStateEntity.setState(nextState);
       return rollingUpdateStateEntity;
     }
