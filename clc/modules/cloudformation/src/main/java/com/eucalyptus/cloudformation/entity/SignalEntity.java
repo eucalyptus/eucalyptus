@@ -122,5 +122,4 @@ public class SignalEntity extends AbstractPersistent {
     this.status = status;
   }
 
-
 }
