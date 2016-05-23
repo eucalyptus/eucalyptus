@@ -193,4 +193,69 @@ class RegionConfigurationTest {
     RegionConfigurations.parse( String.format( config, '0.0.0.0/a' ) )
   }
 
+  @Test( expected = RegionConfigurationException )
+  void testEmptyMultiElementRegions( ) {
+    String config =  """
+    {
+          "Regions": [
+            {
+            },
+            {
+            }
+        ]
+    }
+    """
+
+    RegionConfigurations.parse( config )
+  }
+
+  @Test ( expected = RegionConfigurationException )
+  void testEmptyElementRegions( ) {
+    String config =  """
+    {
+          "Regions": [
+            {
+            }
+        ]
+    }
+    """
+
+    RegionConfigurations.parse(config)
+  }
+
+  @Test( expected = RegionConfigurationException )
+  void testMisspelledRegions( ) {
+    String config =  """
+    {
+        "Region": [
+        {
+            "Name": "foobar",
+            "CertificateFingerprintDigest": "SHA-256",
+            "CertificateFingerprint": "ED:8F:9A:92:45:4D:37:F3:54:E4:2E:E7:26:28:EE:04:A1:DF:AD:82:87:60:A6:C3:4A:15:CB:D7:E9:F2:99:13",
+            "IdentifierPartitions": [
+                1
+            ],
+            "Services": [
+                {
+                    "Type": "identity",
+                    "Endpoints": [
+                        "http://identity.a-41.autoqa.qa1.eucalyptus-systems.com:8773/"
+                    ]
+                },
+                {
+                    "Type": "compute",
+                    "Endpoints": [
+                        "http://compute.a-41.autoqa.qa1.eucalyptus-systems.com:8773/"
+                    ]
+                }
+            ]
+        }
+    ]
+    }
+    """
+
+    RegionConfigurations.parse( config )
+  }
+
+
 }

@@ -178,10 +178,11 @@ class RegionValidator extends TypedValidator<Region> {
     validateAll( region.&getServices, new ServiceValidator( errors ) )
     validateAll( region.&getRemoteCidrs, new CidrValidator( errors ) )
     validateAll( region.&getForwardedForCidrs, new CidrValidator( errors ) )
-    if ( region.identifierPartitions.empty ) {
+
+    if ( region?.identifierPartitions?.empty ) {
       errors.reject( "property.invalid.identifier", [pathTranslate(errors.nestedPath,'identifierPartitions')] as Object[], 'No values given for \"{0}\"' )
     }
-    if ( region.services.empty ) {
+    if ( region?.services?.empty ) {
       errors.reject( "property.invalid.services", [pathTranslate(errors.nestedPath,'services')] as Object[], 'No values given for \"{0}\"' )
     }
   }
@@ -243,7 +244,7 @@ class CertificateFingerprintDigestValidator extends TypedValidator<String> {
   void validate( final String digest ) {
     if ( digest ) {
       if ( ![ 'SHA-1', 'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512' ].contains( digest ) ) {
-        errors.reject( "property.invalid.certificateFingerprintDigest", [pathTranslate( errors.getNestedPath( ) )] as Object[], 'Invalid certificate fingerprint digest (e.g. SHA-256): \"{0}\"' )
+        errors.reject( "property.invalid.certificateFingerprintDigest", [digest, pathTranslate( errors.getNestedPath( ) ), "SHA-256, SHA-1"] as Object[], 'Invalid certificate fingerprint digest: \"{0}\" for field: \"{1}\". Typical digests: \"{2}\"' )
       }
     }
   }
