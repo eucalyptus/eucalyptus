@@ -145,6 +145,16 @@ enum {
     FLUSH_NONE,
     FLUSH_ALL,
     FLUSH_DYNAMIC,
+    FLUSH_MIDO_ALL,
+    FLUSH_MIDO_DYNAMIC,
+    FLUSH_MIDO_CHECKDUPS,
+    FLUSH_MIDO_DUPS,
+    FLUSH_MIDO_CHECKVPC,
+    FLUSH_MIDO_CHECKUNCONNECTED,
+    FLUSH_MIDO_UNCONNECTED,
+    FLUSH_MIDO_VPC,
+    FLUSH_MIDO_LISTVPC,
+    FLUSH_MIDO_TEST,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -201,6 +211,8 @@ typedef struct eucanetdConfig_t {
 
     int debug;
     int flushmode;
+    char *flushmodearg;
+    boolean multieucanetd_safe;
     int udpsock;
     boolean init;
 } eucanetdConfig;

@@ -277,6 +277,8 @@ static volatile boolean gIsRunning = FALSE;
 //! USR1 and USR2 signals
 static volatile boolean gUsr1Caught = FALSE;
 static volatile boolean gUsr2Caught = FALSE;
+static volatile boolean gHupCaught = FALSE;
+static volatile boolean gTermCaught = FALSE;
 
 //! Dummy UDP socket
 int eucanetd_dummysock = 0;
@@ -298,6 +300,7 @@ static int eucanetd_fetch_latest_local_config(void);
 static int eucanetd_initialize(void);
 static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig);
 static int eucanetd_read_config_bootstrap(void);
+static int eucanetd_setlog_bootstrap(void);
 static int eucanetd_read_config(globalNetworkInfo *pGni);
 static int eucanetd_initialize_logs(void);
 static int eucanetd_fetch_latest_network(boolean * update_globalnet);
@@ -334,16 +337,16 @@ int main(int argc, char **argv)
     int firstrun = 1;
     int counter = 0;
     int epoch_updates = 0;
-    int lni_populated = 0;
+    int lni_rc = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
-    int check_peer_attempts = 300;
     time_t epoch_timer = 0;
     struct timeval tv = { 0 };
     struct timeval ttv = { 0 };
     
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
+    boolean update_version_file = FALSE;
 
     /*
        {
@@ -366,10 +369,15 @@ int main(int argc, char **argv)
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhFf")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlfFmMuUCZv:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
+            break;
+        case 'l':
+            config->flushmode = FLUSH_MIDO_LISTVPC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->multieucanetd_safe = TRUE;
             break;
         case 'F':
             config->flushmode = FLUSH_ALL;
@@ -379,10 +387,72 @@ int main(int argc, char **argv)
             config->flushmode = FLUSH_DYNAMIC;
             config->debug = EUCANETD_DEBUG_INFO;
             break;
+        case 'C':
+            config->flushmode = FLUSH_MIDO_DYNAMIC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'Z':
+            config->flushmode = FLUSH_MIDO_ALL;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'm':
+            config->flushmode = FLUSH_MIDO_CHECKDUPS;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->multieucanetd_safe = TRUE;
+            break;
+        case 'M':
+            config->flushmode = FLUSH_MIDO_DUPS;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'u':
+            config->flushmode = FLUSH_MIDO_CHECKUNCONNECTED;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->multieucanetd_safe = TRUE;
+            break;
+        case 'U':
+            config->flushmode = FLUSH_MIDO_UNCONNECTED;
+            config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 'v':
+            config->flushmode = FLUSH_MIDO_CHECKVPC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->flushmodearg = optarg;
+            config->multieucanetd_safe = TRUE;
+            break;
+        case 'V':
+            config->flushmode = FLUSH_MIDO_VPC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->flushmodearg = optarg;
+            break;
+        case 'z':
+            config->flushmode = FLUSH_MIDO_TEST;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->flushmodearg = optarg;
+            break;
+        case 'H':
+            printf("EXPERIMENTAL OPTIONS (USE AT YOUR OWN RISK)\n"
+                    "\t%-12s| list VPCMIDO objects\n"
+                    "\t%-12s| flush all but core objects that implement VPC models\n"
+                    "\t%-12s| flush all objects (including core) that implement VPC models\n"
+                    "\t%-12s| detect duplicate objects in MidoNet\n"
+                    "\t%-12s| detect and flush duplicate objects in MidoNet\n"
+                    "\t%-12s| detect unconnected objects in MidoNet\n"
+                    "\t%-12s| detect and flush unconnected objects in MidoNet\n"
+                    "\t%-12s| check a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t%-12s| flush a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t\tlowercase options are read-only, and work with eucanetd service running\n"
+                    "\t\tuppercase options can only be executed with eucanetd service stopped\n"
+                    , "-l", "-C", "-Z", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
+            exit (1);
+            break;
         case 'h':
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all eucanetd artifacts and exit\n"
-                   "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n", argv[0], "-d", "-F", "-f");
+            printf("USAGE: %s OPTIONS\n"
+                    "\t%-12s| debug - run eucanetd in foreground, all output to terminal\n"
+                    "\t%-12s| flush - clear all eucanetd artifacts and exit\n"
+                    "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n"
+                    "\t\toptions '-f' and '-F' do not work in VPCMIDO mode\n",
+                    argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         }
@@ -395,12 +465,23 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    if (!config->multieucanetd_safe) {
+        rc = eucanetd_dummy_udpsock();
+        if (rc == -1) {
+            LOGERROR("Cannot start eucanetd: another eucanetd might be running\n");
+            LOGERROR("\tCheck SELinux policies for eucanetd.\n")
+            exit(1);
+        }
+    }
+
     // daemonize this process!
     rc = eucanetd_daemonize();
     if (rc) {
         fprintf(stderr, "failed to eucanetd_daemonize eucanetd, exiting\n");
         exit(1);
     }
+
+    eucanetd_setlog_bootstrap();
 
     LOGINFO("eucanetd started\n");
 
@@ -411,41 +492,90 @@ int main(int argc, char **argv)
     gni_a = gni_init();
     gni_b = gni_init();
     pGni = gni_a;
-    // spin here until we get the latest config from active CC
+    // spin here until we get the latest config
     LOGINFO("eucanetd: starting pre-flight checks\n");
     rc = 1;
-    while (rc) {
+    boolean config_mode_ok = FALSE;
+    boolean config_peer_ok = FALSE;
+    for (int i = 0; rc; i++) {
+        if (config->debug != EUCANETD_DEBUG_NONE) {
+            // Temporarily disable verbose debug messages (it will be set by eucanetd_read_config)
+            log_params_set(EUCA_LOG_WARN, 0, 100000);
+        }
         rc = eucanetd_read_config(pGni);
         if (rc) {
-            LOGDEBUG("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
-            sleep(1);
+            if (i % 100 == 0) {
+                LOGINFO("eucanetd: waiting for a valid GNI and/or basic configuration\n");
+            } else {
+                LOGTRACE("Failed to perform basic eucanetd configuration, will retry in 1 sec\n");
+            }
         } else {
             // At this point we have read a valid global network information
             // Sanity check before entering eucanetd main loop
-            if (pGni->nmCode != config->nmCode) {
-                LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s)\n", pGni->sMode, config->netMode);
+            if (config->nmCode == NM_INVALID) {
+                if (i % 30 == 0) {
+                    LOGWARN("Invalid network mode detected. Waiting for a valid mode in GNI\n");
+                }
                 rc = 1;
                 sleep(1);
                 continue;
-            }
-            if (!IS_NETMODE_VPCMIDO(pGni)) {
-                if (check_peer_attempts > 0) {
-                    eucanetdPeer = eucanetd_detect_peer(pGni);
-                    if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_VALID(eucanetdPeer))) {
-                        LOGTRACE("eucanetd in mode %s should have a CC or NC service peer - instead of PEER_NONE.\n", config->netMode);
-                        rc = 1;
-                        check_peer_attempts--;
-                        sleep(3);
-                    }
-                } else {
-                    LOGWARN("Unable to detect service peer during pre-flight checks.\n");
+            } else {
+                if (!config_mode_ok) {
+                    LOGINFO("\tconfiguring eucanetd in %s mode\n", config->netMode);
+                    config_mode_ok = TRUE;
                 }
             }
-            eucanetdPeer = PEER_INVALID;
+            if (!IS_NETMODE_VPCMIDO(pGni)) {
+                eucanetdPeer = eucanetd_detect_peer(pGni);
+                if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_VALID(eucanetdPeer))) {
+                    if (i % 100 == 0) {
+                        LOGWARN("eucanetd in mode %s requires a CC or NC service peer\n", config->netMode);
+                    }
+                    rc = 1;
+                } else {
+                    if (!config_peer_ok) {
+                        config_peer_ok = TRUE;
+                        LOGINFO("\teucanetd valid service peer (%s) detected\n", PEER2STR(eucanetdPeer));
+                    }
+                }
+            } else {
+                char *clcip = hex2dot(pGni->enabledCLCIp);
+                if (!gni_is_self_getifaddrs(clcip)) {
+                    eucanetdPeer = PEER_CLC;
+                    if (!config_peer_ok) {
+                        config_peer_ok = TRUE;
+                        LOGINFO("\teucanetd valid service peer (%s) detected\n", PEER2STR(eucanetdPeer));
+                    }
+                } else {
+                    if (i % 100 == 0) {
+                        LOGWARN("eucanetd in mode %s requires CLC service peer\n", config->netMode);
+                    }
+                    rc = 1;
+                }
+                EUCA_FREE(clcip);
+            }
         }
+
         if (rc && config->flushmode) {
             LOGFATAL("Unable to complete eucanetd pre-flight checks. Flush aborted.\n");
             exit(1);
+        }
+        if (gTermCaught) {
+            LOGINFO("shutting down eucanetd due to SIGTERM\n");
+            exit(0);
+        }
+
+        // Initialize our network driver
+        if (!rc) {
+            rc = eucanetd_initialize_network_drivers(config);
+            if (rc) {
+                LOGFATAL("Failed to initialize network driver: eucanetd going down\n");
+                exit(1);
+            }
+        }
+
+        if (rc) {
+            sleep(1);
         }
     }
     LOGINFO("eucanetd: pre-flight checks complete.\n");
@@ -453,8 +583,8 @@ int main(int argc, char **argv)
     // Set to setup our local network view structure
     if ((!pLni) && (!IS_NETMODE_VPCMIDO(pGni))) {
         if ((pLni = lni_init(config->cmdprefix, config->sIptPreload)) == NULL) {
-            LOGFATAL("out of memory: unable to allocate LNI\n");
-            exit(1);
+            LOGFATAL("Failed to initialize LNI\n");
+            gIsRunning = FALSE;
         }
     }
 
@@ -468,10 +598,17 @@ int main(int argc, char **argv)
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsuccessful\n");
         }
-        // first time we run, force an update and flush has necessary
+        // first time we run, force an update
         if (firstrun) {
             update_globalnet = TRUE;
             firstrun = 0;
+        }
+        // Force an update if SIGHUP is caught
+        if (gHupCaught) {
+            update_globalnet = TRUE;
+            // Invalidate last applied version
+            config->lastAppliedVersion[0] = '\0';
+            gHupCaught = FALSE;
         }
         // if the last update operations failed, regardless of new info, force an update
         if (update_globalnet_failed == TRUE) {
@@ -484,7 +621,7 @@ int main(int argc, char **argv)
             rc = eucanetd_read_latest_network(pGni, &update_globalnet);
         }
         if (rc) {
-            LOGWARN("eucanetd_read_latest_network failed, skipping update: check above errors for details\n");
+            LOGWARN("Failed to populate GNI. skipping update\n");
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = FALSE;
         }
@@ -492,27 +629,6 @@ int main(int argc, char **argv)
         if (update_globalnet && (pGni->nmCode != config->nmCode)) {
             LOGWARN("Inconsistent network mode in GNI(%s) and eucalyptus.conf(%s). Skipping update.\n", pGni->sMode, config->netMode);
             update_globalnet = FALSE;
-        }
-
-        if (eucanetdPeer == PEER_INVALID) {
-            if (!IS_NETMODE_VPCMIDO(pGni)) {
-                eucanetdPeer = eucanetd_detect_peer(pGni);
-                if (!PEER_IS_VALID(eucanetdPeer)) {
-                    LOGERROR("cannot find which service peer (CC/NC) is running alongside eucanetd.\n");
-                    update_globalnet = FALSE;
-                    update_globalnet_failed = TRUE;
-                    sleep(1);
-                    continue;
-                }
-            } else {
-                eucanetdPeer = PEER_NONE;
-            }
-            // Initialize our network driver
-            rc = eucanetd_initialize_network_drivers(config);
-            if (rc) {
-                LOGFATAL("could not initialize network driver: check above log errors for details\n");
-                exit(1);
-            }
         }
 
         // Do we need to run the network upgrade stuff?
@@ -529,16 +645,25 @@ int main(int argc, char **argv)
                 update_globalnet_failed = TRUE;
             }
         }
-        // Do we need to flush all eucalyptus networking artifacts
+        // Do we need to flush all eucalyptus networking artifacts?
         if (config->flushmode) {
-            eucanetd_timer(&tv);
-            // Make sure we were given a flush API prior to calling it
-            if (pDriverHandler->system_flush) {
-                if (pDriverHandler->system_flush(pGni)) {
-                    LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
+            if (IS_NETMODE_VPCMIDO(pGni) && ((config->flushmode == FLUSH_DYNAMIC) || (config->flushmode == FLUSH_ALL))) {
+                LOGERROR("options '-f' and '-F' cannot be used in VPCMIDO mode\n");
+            } else {
+                if (!IS_NETMODE_VPCMIDO(pGni) && (config->flushmode > FLUSH_DYNAMIC)) {
+                    // invalid flush mode for non-VPCMIDO modes
+                    LOGERROR("Invalid flush mode selected\n");
+                } else {
+                    eucanetd_timer(&tv);
+                    // Make sure we were given a flush API prior to calling it
+                    if (pDriverHandler->system_flush) {
+                        if (pDriverHandler->system_flush(pGni)) {
+                            LOGERROR("flushing of euca networking artifacts failed\n");
+                        }
+                    }
+                    LOGINFO("eucanetd flush executed in %ld ms.\n", eucanetd_timer(&tv));
                 }
             }
-            LOGINFO("eucanetd flush executed in %ld ms.\n", eucanetd_timer(&tv));
             update_globalnet = FALSE;
             gIsRunning = FALSE;
             config->flushmode = FLUSH_NONE;
@@ -546,13 +671,14 @@ int main(int argc, char **argv)
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             eucanetd_timer_usec(&tv);
+            update_version_file = FALSE;
             LOGINFO("new networking state: updating system\n");
 
             // Are we able to load the LNI information - no need for lni in VPCMIDO
             if (!IS_NETMODE_VPCMIDO(pGni)) {
-                lni_populated = lni_populate(pLni);
+                lni_rc = lni_populate(pLni);
             }
-            if (lni_populated == 0) {
+            if (lni_rc == 0) {
                 //
                 // If we don't have a scrub API, just call all APIs. Any driver design must have this
                 // API defined but for development purpose it make sense to sometimes bypass it.
@@ -567,7 +693,7 @@ int main(int argc, char **argv)
                 }
                 
                 // Make sure the scrub did not fail
-                if (scrubResult != EUCANETD_RUN_ERROR_API) {
+                if ((scrubResult & EUCANETD_RUN_ERROR_API) == 0) {
                     // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
                     if (pDriverHandler->implement_network && (scrubResult & EUCANETD_RUN_NETWORK_API)) {
                         rc = pDriverHandler->implement_network(pGni, pLni);
@@ -619,7 +745,13 @@ int main(int argc, char **argv)
         if (update_globalnet) {
             if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
+                if (scrubResult == EUCANETD_VPCMIDO_IFERROR) {
+                    update_version_file = TRUE;
+                }
             } else {
+                update_version_file = TRUE;
+            }
+            if (update_version_file) {
                 char versionFile[EUCA_MAX_PATH];
                 // update was requested and was successful
                 epoch_updates++;
@@ -667,7 +799,7 @@ int main(int argc, char **argv)
             sleep(config->polling_frequency);
         } else {
             if (update_globalnet == FALSE) {
-                LOGDEBUG("main loop complete (%ld ms): sleeping %d seconds before next poll\n", eucanetd_timer(&ttv), config->polling_frequency);
+                LOGTRACE("main loop complete (%ld ms): sleeping %d seconds before next poll\n", eucanetd_timer(&ttv), config->polling_frequency);
                 sleep(config->polling_frequency);
             } else {
                 pGniApplied = pGni;
@@ -718,6 +850,7 @@ static void eucanetd_sigterm_handler(int signal)
 {
     LOGINFO("eucanetd caught SIGTERM signal.\n");
     gIsRunning = FALSE;
+    gTermCaught = TRUE;
 }
 
 //!
@@ -735,6 +868,7 @@ static void eucanetd_sighup_handler(int signal)
 {
     LOGINFO("eucanetd caught a SIGHUP signal.\n");
     config->flushmode = FLUSH_NONE;
+    gHupCaught = TRUE;
 }
 
 /**
@@ -773,28 +907,28 @@ static void eucanetd_install_signal_handlers(void) {
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigterm_handler;
     if (sigaction(SIGTERM, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGTERM handler");
+        LOGFATAL("Failed to install SIGTERM handler");
         exit(1);
     }
     // Install the SIGHUP signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sighup_handler;
     if (sigaction(SIGHUP, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGTERM handler");
+        LOGFATAL("Failed to install SIGTERM handler");
         exit(1);
     }
     // Install the SIGUSR1 signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigusr1_handler;
     if (sigaction(SIGUSR1, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGUSR1 handler");
+        LOGFATAL("Failed to install SIGUSR1 handler");
         exit(1);
     }
     // Install the SIGUSR1 signal handler
     bzero(&act, sizeof(struct sigaction));
     act.sa_handler = &eucanetd_sigusr2_handler;
     if (sigaction(SIGUSR2, &act, NULL) < 0) {
-        LOGERROR("Failed to install SIGUSR2 handler");
+        LOGFATAL("Failed to install SIGUSR2 handler");
         exit(1);
     }
 }
@@ -861,18 +995,24 @@ static int eucanetd_daemonize(void)
             fprintf(stderr, "could not establish a new session id\n");
             exit(1);
         }
-    }
 
-    pid = getpid();
-    if (pid > 1) {
-        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
-        FH = fopen(pidfile, "w");
-        if (FH) {
-            fprintf(FH, "%d\n", pid);
-            fclose(FH);
-        } else {
-            fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
-            exit(1);
+        pid = getpid();
+        if (pid > 1) {
+            snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
+            FH = fopen(pidfile, "w");
+            if (FH) {
+                fprintf(FH, "%d\n", pid);
+                fclose(FH);
+            } else {
+                fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
+                exit(1);
+            }
+        }
+
+        if (config->debug == EUCANETD_DEBUG_NONE) {
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
+            close(STDERR_FILENO);
         }
     }
 
@@ -886,12 +1026,6 @@ static int eucanetd_daemonize(void)
         perror("setgid() setuid()");
         fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
         exit(1);
-    }
-
-    if (config->debug == EUCANETD_DEBUG_NONE) {
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
     }
 
     return (0);
@@ -919,12 +1053,6 @@ static int eucanetd_initialize(void) {
     config->polling_frequency = 5;
     config->init = 1;
     
-    int rc = eucanetd_dummy_udpsock();
-    if (rc == -1) {
-        LOGERROR("Cannot start eucanetd: check for another running instance\n");
-        exit (1);
-    }
-
 /*
     if (!globalnetworkinfo) {
         globalnetworkinfo = gni_init();
@@ -995,29 +1123,17 @@ static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig)
     return (1);
 }
 
-//!
-//! Read and sets the environment parameters.
-//!
-//! @return 0 on success or the process will exit with a value of 1 on failure.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static int eucanetd_read_config_bootstrap(void)
-{
+/**
+ * Read and sets the environment parameters.
+ * @return 0 on success or the process will exit with a value of 1 on failure.
+ */
+static int eucanetd_read_config_bootstrap(void) {
     int ret = 0;
     char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME);
     char home[EUCA_MAX_PATH] = "";
     char user[EUCA_MAX_PATH] = "";
     char eucadir[EUCA_MAX_PATH] = "";
-    char logfile[EUCA_MAX_PATH] = "";
-    struct passwd *pwent = NULL;
 
     ret = 0;
 
@@ -1043,12 +1159,27 @@ static int eucanetd_read_config_bootstrap(void)
     config->eucauser = strdup(user);
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
+    return (ret);
+}
+
+/**
+ * Performs basic configuration to the log subsystem
+ * @return always 0
+ */
+static int eucanetd_setlog_bootstrap(void) {
+    int ret = 0;
+    char logfile[EUCA_MAX_PATH] = "";
+    //struct passwd *pwent = NULL;
+
+    ret = 0;
+
     switch (config->debug) {
         case EUCANETD_DEBUG_NONE:
             snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
             log_file_set(logfile, NULL);
             log_params_set(EUCA_LOG_INFO, 0, 100000);
 
+/*
             pwent = getpwnam(config->eucauser);
             if (!pwent) {
                 fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
@@ -1060,6 +1191,7 @@ static int eucanetd_read_config_bootstrap(void)
                 fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
                 exit(1);
             }
+*/
             break;
         case EUCANETD_DEBUG_TRACE:
             log_params_set(EUCA_LOG_TRACE, 0, 100000);
@@ -1125,34 +1257,34 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
     if (check_directory(eucadir)) {
         LOGFATAL("cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
-        exit(1);
+        return (1);
     }
 
     snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
 
-    // search for the global state file from eucalyptue
+    // search for the global state file from eucalyptus
     snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
     if (check_file(sourceuri)) {
         snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml", home);
         if (check_file(sourceuri)) {
             snprintf(sourceuri, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
             if (check_file(sourceuri)) {
-                LOGDEBUG("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
+                LOGTRACE("cannot find global_network_info.xml state file in $EUCALYPTUS/var/lib/eucalyptus or $EUCALYPTUS/var/run/eucalyptus yet.\n");
                 return (1);
             } else {
                 snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
                 snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
-                LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+                LOGTRACE("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
             }
         } else {
             snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_RUN_DIR "/cc_global_network_info.xml", home);
             snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
-            LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+            LOGTRACE("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
         }
     } else {
         snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_RUN_DIR "/global_network_info.xml", home);
         snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_global_network_info.xml", home);
-        LOGDEBUG("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
+        LOGTRACE("found global_network_info.xml state file: setting source URI to '%s'\n", sourceuri);
     }
 
     // initialize and populate data from global_network_info.xml file
@@ -1168,7 +1300,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     }
 
     rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
-    //rc = gni_populate_v(GNI_POPULATE_CONFIG, pGni, host_info, config->global_network_info_file.dest);
     if (rc) {
         LOGDEBUG("could not initialize global network info data structures from XML input\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1298,7 +1429,13 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         config->vmGatewayIP = 0;
     }
 
-    snprintf(config->netMode, NETMODE_LEN, "%s", cvals[EUCANETD_CVAL_MODE]);
+    // Only accept network mode configuration from GNI
+    if (strlen(pGni->sMode)) {
+        snprintf(config->netMode, NETMODE_LEN, "%s", pGni->sMode);
+    } else {
+        snprintf(config->netMode, NETMODE_LEN, "%s", NETMODE_INVALID);
+    }
+    //snprintf(config->netMode, NETMODE_LEN, "%s", cvals[EUCANETD_CVAL_MODE]);
     config->nmCode = euca_netmode_atoi(config->netMode);
     snprintf(config->pubInterface, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_PUBINTERFACE]);
     snprintf(config->privInterface, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
@@ -1321,9 +1458,9 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)
         snprintf(config->dhcpUser, 32, "%s", cvals[EUCANETD_CVAL_DHCPUSER]);
 
-    LOGDEBUG("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s "
-             "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),
-             SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
+    LOGTRACE("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s "
+            "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),
+            SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
 
     rc = eucanetd_initialize_logs();
     if (rc) {
@@ -1331,69 +1468,71 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    config->ipt = EUCA_ZALLOC_C(1, sizeof(ipt_handler));
+    if (!IS_NETMODE_VPCMIDO(pGni)) {
+        config->ipt = EUCA_ZALLOC_C(1, sizeof (ipt_handler));
 
-    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    if (rc) {
-        LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
+        if (rc) {
+            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
-    config->ips = EUCA_ZALLOC_C(1, sizeof(ips_handler));
+        config->ips = EUCA_ZALLOC_C(1, sizeof (ips_handler));
 
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ips_handler_init(config->ips, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
 #ifdef USE_IP_ROUTE_HANDLER
-    config->ipr = EUCA_ZALLOC_C(1, sizeof(ipr_handler));
+        config->ipr = EUCA_ZALLOC_C(1, sizeof (ipr_handler));
 
-    if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
-        LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
+            LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
+            ret = 1;
+        }
 #endif /* USE_IP_ROUTE_HANDLER */
 
-    config->ebt = EUCA_ZALLOC_C(1, sizeof(ebt_handler));
+        config->ebt = EUCA_ZALLOC_C(1, sizeof (ebt_handler));
 
-    rc = ebt_handler_init(config->ebt, config->cmdprefix);
-    if (rc) {
-        LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-        ret = 1;
-    }
+        rc = ebt_handler_init(config->ebt, config->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+            ret = 1;
+        }
 
-    //
-    // If an error has occurred we need to clean up temporary files
-    // that were created for the iptables, ebtables, ipset
-    // and possibly ipr (if compiled)
-    //
-    if (ret) {
         //
-        // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
-        // We need to free the memory as read_config() will get called again until registered with the cloud.
+        // If an error has occurred we need to clean up temporary files
+        // that were created for the iptables, ebtables, ipset
+        // and possibly ipr (if compiled)
         //
-        if (config->ips) {
-            unlink_handler_file(config->ips->ips_file);
-            EUCA_FREE(config->ips);
-        }
-        if (config->ipt) {
-            unlink_handler_file(config->ipt->ipt_file);
-            EUCA_FREE(config->ipt);
-        }
-        if (config->ebt) {
-            unlink_handler_file(config->ebt->ebt_filter_file);
-            unlink_handler_file(config->ebt->ebt_nat_file);
-            unlink_handler_file(config->ebt->ebt_asc_file);
-            EUCA_FREE(config->ebt);
-        }
+        if (ret) {
+            //
+            // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
+            // We need to free the memory as read_config() will get called again until registered with the cloud.
+            //
+            if (config->ips) {
+                unlink_handler_file(config->ips->ips_file);
+                EUCA_FREE(config->ips);
+            }
+            if (config->ipt) {
+                unlink_handler_file(config->ipt->ipt_file);
+                EUCA_FREE(config->ipt);
+            }
+            if (config->ebt) {
+                unlink_handler_file(config->ebt->ebt_filter_file);
+                unlink_handler_file(config->ebt->ebt_nat_file);
+                unlink_handler_file(config->ebt->ebt_asc_file);
+                EUCA_FREE(config->ebt);
+            }
 #ifdef USE_IP_ROUTE_HANDLER
-        if (config->ipr) {
-            unlink_handler_file(config->ipr->sIpRuleFile);
-            EUCA_FREE(config->ipr);
-        }
+            if (config->ipr) {
+                unlink_handler_file(config->ipr->sIpRuleFile);
+                EUCA_FREE(config->ipr);
+            }
 #endif /* USE_IP_ROUTE_HANDLER */
+        }
     }
 
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1444,6 +1583,15 @@ static int eucanetd_initialize_logs(void)
         case EUCANETD_DEBUG_INFO:
             log_params_set(EUCA_LOG_INFO, 0, 100000);
             break;
+        case EUCANETD_DEBUG_WARN:
+            log_params_set(EUCA_LOG_WARN, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_ERROR:
+            log_params_set(EUCA_LOG_ERROR, 0, 100000);
+            break;
+        case EUCANETD_DEBUG_FATAL:
+            log_params_set(EUCA_LOG_FATAL, 0, 100000);
+            break;
         default:
             log_params_set(EUCA_LOG_TRACE, 0, 100000);
             break;
@@ -1471,7 +1619,7 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet)
 {
     int rc = 0, ret = 0;
 
-    LOGDEBUG("fetching latest network view\n");
+    LOGTRACE("fetching latest network view\n");
 
     if (!update_globalnet) {
         LOGERROR("BUG: input contains null pointers\n");
@@ -1482,7 +1630,7 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet)
 
     rc = eucanetd_fetch_latest_local_config();
     if (rc) {
-        LOGWARN("cannot read in changes to local configuration file: check local eucalyptus.conf\n");
+        LOGWARN("Failed to effect local eucalyptus.conf\n");
     }
     // get latest networking data from eucalyptus, set update flags if content has changed
     rc = eucanetd_fetch_latest_euca_network(update_globalnet);
@@ -1515,7 +1663,7 @@ static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
 
     rc = atomic_file_get(&(config->global_network_info_file), update_globalnet);
     if (rc) {
-        LOGWARN("could not fetch latest global network info from NC\n");
+        LOGWARN("Failed to fetch latest global network\n");
         ret = 1;
     }
 
@@ -1550,7 +1698,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
     boolean found_ip = FALSE;
     gni_cluster *mycluster = NULL;
 
-    LOGDEBUG("reading latest network view into eucanetd\n");
+    LOGTRACE("reading latest network view into eucanetd\n");
 
     if (!update_globalnet) {
         LOGWARN("Invalid argument: update_globalnet is null.\n");
@@ -1570,7 +1718,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
                 LOGINFO("global network version (%s) already applied, skipping update\n", pGni->version);
                 *update_globalnet = FALSE;
             } else {
-                LOGDEBUG("global network version (%s) does not match last successfully applied version (%s), continuing\n", pGni->version, config->lastAppliedVersion);
+                LOGTRACE("global network version (%s) does not match last successfully applied version (%s), continuing\n", pGni->version, config->lastAppliedVersion);
             }
         }
 
@@ -1587,7 +1735,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
                     // user has not specified NC router, use the default cluster private subnet gateway
                     config->vmGatewayIP = mycluster->private_subnet.gateway;
                     strptra = hex2dot(config->vmGatewayIP);
-                    LOGDEBUG("using default cluster private subnet GW as VM default GW: %s\n", strptra);
+                    LOGTRACE("using default cluster private subnet GW as VM default GW: %s\n", strptra);
                     EUCA_FREE(strptra);
                 } else {
                     // user has specified use of NC as router
@@ -1595,12 +1743,12 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
                         // user has not specified a router IP, use 'fake_router' mode                                              
                         config->vmGatewayIP = mycluster->private_subnet.gateway;
                         strptra = hex2dot(config->vmGatewayIP);
-                        LOGDEBUG("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
+                        LOGTRACE("using default cluster private subnet GW, with ARP spoofing, as VM default GW: %s\n", strptra);
                         EUCA_FREE(strptra);
                     } else if (config->nc_router_ip && strcmp(config->ncRouterIP, "AUTO")) {
                         // user has specified an explicit IP to use as NC router IP
                         config->vmGatewayIP = dot2hex(config->ncRouterIP);
-                        LOGDEBUG("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
+                        LOGTRACE("using user specified NC IP as VM default GW: %s\n", config->ncRouterIP);
                     } else if (config->nc_router_ip && !strcmp(config->ncRouterIP, "AUTO")) {
                         // user has specified 'AUTO', so detect the IP on the bridge Device that falls within this node's cluster's private subnet
                         rc = getdevinfo(config->bridgeDev, &brdev_ips, &brdev_nms, &brdev_len);
@@ -1617,7 +1765,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
                                     strptrd = hex2dot(mycluster->private_subnet.netmask);
                                     LOGTRACE("auto-detected IP '%s' on specified bridge interface '%s' that matches cluster's specified subnet '%s/%s'\n", strptra, config->bridgeDev, strptrc, strptrd);
                                     config->vmGatewayIP = brdev_ips[i];
-                                    LOGDEBUG("using auto-detected NC IP as VM default GW: %s\n", strptra);
+                                    LOGTRACE("using auto-detected NC IP as VM default GW: %s\n", strptra);
                                     found_ip = TRUE;
                                     EUCA_FREE(strptrc);
                                     EUCA_FREE(strptrd);
@@ -1707,7 +1855,7 @@ int eucanetd_dummy_udpsock(void) {
         close(s);
         return (-1);
     }
-    shutdown(s, 0);
+    shutdown(s, SHUT_RD);
     eucanetd_dummysock = s;
     return (0);
 }

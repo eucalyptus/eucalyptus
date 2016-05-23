@@ -937,7 +937,7 @@ void *realloc_check(void *ptr, size_t nmemb, size_t size) {
  * @param arr [i/o] arr pointer to an array of pointers
  * @param max_arr [i/o] max_arr the number of array entries.
  * @param ptr (in] pointer to be appended to the array.
- * @return 0 on success. 1 otherwise.
+ * @return pointer to the re-allocated array.
  */
 void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
     arr = EUCA_REALLOC(arr, *max_arr + 1, sizeof (void *));

@@ -66,6 +66,9 @@
 #ifndef _INCLUDE_MIDONET_API_H_
 #define _INCLUDE_MIDONET_API_H_
 
+#include <pthread.h>
+#include <curl/curl.h>
+
 #include "ipt_handler.h"
 #include "ips_handler.h"
 #include "ebt_handler.h"
@@ -96,7 +99,7 @@
 // Maximum number of active VPCs (mido routers)
 // Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
 // 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
-#define MAX_RTID 8192
+#define MAX_RTID 32767
 
 #define MIDO_HOST_INTERFACE_PHYSICAL           0x00000001
 #define MIDO_HOST_INTERFACE_VIRTUAL            0x00000002
@@ -111,6 +114,11 @@
 
 #define MIDONAME_LIST_CAPACITY_STEP            1000
 #define MIDONAME_LIST_RELEASES_B4INVALIDATE    1000
+
+#define MIDONET_API_RELOAD_THREADS             6
+#define MIDONET_API_USE_THREADS_THRESHOLD      100
+
+#define MIDO_CACHE_THREAD_NAME_LEN             8
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -146,11 +154,50 @@ enum mido_cache_refresh_mode_t {
     MIDO_CACHE_REFRESH_NONE
 };
 
+enum mido_cache_pthreads_t {
+    MIDO_CACHE_THREAD_ROUTER,
+    MIDO_CACHE_THREAD_BRIDGE,
+    MIDO_CACHE_THREAD_CHAIN,
+    MIDO_CACHE_THREAD_IPAG,
+    MIDO_CACHE_THREAD_END
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+typedef struct midoname_ipagip_extras_t {
+    char *ip;
+} midoname_ipagip_extras;
+
+typedef struct midoname_rule_extras_t {
+    char *type;
+    char *nattarget;
+    char *jumpchainid;
+} midoname_rule_extras;
+
+typedef struct midoname_port_extras_t {
+    char *hostid;
+    char *peerid;
+    char *ifname;
+    char *netaddr;
+    char *netlen;
+    char *portaddr;
+    char *portmac;
+} midoname_port_extras;
+
+typedef struct midoname_route_extras_t {
+    char *srcnet;
+    char *srclen;
+    char *dstnet;
+    char *dstlen;
+    char *type;
+    char *nexthopport;
+    char *nexthopgateway;
+    char *weight;
+} midoname_route_extras;
 
 typedef struct midoname_t {
     char *tenant;
@@ -161,6 +208,11 @@ typedef struct midoname_t {
     char *content_type;
     char *vers;
     char *uri;
+    midoname_ipagip_extras *ipagip;
+    midoname_rule_extras *rule;
+    midoname_port_extras *port;
+    midoname_route_extras *route;
+    int tag;
     int init;
 } midoname;
 
@@ -203,8 +255,8 @@ typedef struct midonet_api_chain_t {
 
 typedef struct midonet_api_host_t {
     midoname *obj;
-    midoname **ports;
-    int max_ports;
+    //midoname **ports;
+    //int max_ports;
     u32 *addresses;
     int max_addresses;
 } midonet_api_host;
@@ -245,8 +297,10 @@ typedef struct midonet_api_cache_t {
     int max_ports;
     midonet_api_router **routers;
     int max_routers;
+    int sorted_routers;
     midonet_api_bridge **bridges;
     int max_bridges;
+    int sorted_bridges;
     midonet_api_chain **chains;
     int max_chains;
     int sorted_chains;
@@ -278,6 +332,32 @@ typedef struct mido_parsed_chain_rule_t {
     char jsonel[MIDO_CRULE_END][64];
 } mido_parsed_chain_rule;
 
+typedef int (*loadobj) (midonet_api_cache *cache, int start, int end);
+
+typedef struct mido_cache_worker_thread_params_t {
+    int start;
+    int end;
+    int rc;
+    char name[8];
+    midonet_api_cache *cache;
+    loadobj get_from_mido;
+} mido_cache_worker_thread_params;
+
+typedef struct mido_cache_main_thread_params_t {
+    int rc;
+    int n;
+    char name[8];
+    midonet_api_cache *cache;
+    loadobj get_from_mido;
+} mido_cache_main_thread_params;
+
+typedef struct mido_libcurl_handles_t {
+    int max_handles;
+    int max_gethandles;
+    CURL **handles;
+    CURL **gethandles;
+} mido_libcurl_handles;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -296,8 +376,12 @@ extern int http_deletes;
 
 //int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min, char *src_port_max,  char *dstIAGuuid, char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max, midorule *outrule);
 
+mido_cache_worker_thread_params *prep_thread_params(int ntasks, int nthreads);
+
 int iplist_split(char *iplist, char ***outiparr, int *max_outiparr);
 int iplist_arr_free(char **iparr, int max_iparr);
+
+int routername_split(char *routername, char **name, int *id);
 
 void mido_info_midocache();
 
@@ -308,9 +392,9 @@ void mido_free_mido_parsed_route(mido_parsed_route *route);
 void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes);
 
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname);
-void mido_free_midoname(midoname * name);
+void mido_free_midoname(midoname *name);
 void mido_free_midoname_list(midoname * name, int max_name);
-int mido_update_midoname(midoname * name);
+int mido_update_midoname(midoname *name);
 void mido_copy_midoname(midoname * dst, midoname * src);
 int mido_getel_midoname(midoname * name, char *key, char **val);
 int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_values);
@@ -319,6 +403,7 @@ int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
 int mido_check_state(void);
+int mido_initialize_apiuribase(void);
 
 int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
 int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnames_max);
@@ -442,8 +527,19 @@ int mido_cmp_midoname_to_input(midoname * name, ...);
 int mido_cmp_midoname_to_input_json(midoname * name, ...);
 int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al);
 int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type);
+int mido_cmp_midoname_jsonbuf(midoname *a, midoname *b);
 char *mido_get_json(char *tenant, ...);
 char *mido_jsonize(char *tenant, va_list * al);
+
+void midonet_api_init(void);
+void midonet_api_cleanup(void);
+int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
+int mido_libcurl_init(mido_libcurl_handles *handles);
+int mido_libcurl_cleanup(mido_libcurl_handles *handles);
+CURL *mido_libcurl_get_handle(mido_libcurl_handles *handles);
+CURL *mido_libcurl_get_gethandle(mido_libcurl_handles *handles);
+int mido_libcurl_release_handle(mido_libcurl_handles *handles, CURL *handle);
+int mido_libcurl_release_gethandle(mido_libcurl_handles *handles, CURL *handle);
 
 int midonet_http_get(char *url, char *apistr, char **out_payload);
 int midonet_http_put(char *url, char *resource_type, char *vers, char *payload);
@@ -458,11 +554,21 @@ int midoname_list_get_midonames(midoname_list *list, midoname ***outnames, int m
 midonet_api_cache *midonet_api_cache_init(void);
 midoname_list *midonet_api_cache_midos_init(void);
 
+midonet_api_cache *midonet_api_cache_get(void);
 int midonet_api_cache_check(void);
 int midonet_api_cache_flush(void);
 int midonet_api_cache_populate(void);
 int midonet_api_cache_refresh(void);
 int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode);
+int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmode);
+
+int midonet_api_cache_refresh_routerroutes(midonet_api_cache *cache, int start, int end);
+int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, int end);
+int midonet_api_cache_refresh_chainrules(midonet_api_cache *cache, int start, int end);
+int midonet_api_cache_refresh_ipagips(midonet_api_cache *cache, int start, int end);
+
+void *midonet_api_cache_refresh_objects_worker_thread(void *worker_param);
+void *midonet_api_cache_refresh_objects_main_thread(void *main_params);
 
 int midonet_api_cache_refresh_hosts(midonet_api_cache *cache);
 int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache);
@@ -478,6 +584,7 @@ int midonet_api_cache_del_bridge_port(midonet_api_bridge *bridge, midoname *port
 int midonet_api_cache_del_router_port(midonet_api_router *router, midoname *port);
 midoname *midonet_api_cache_lookup_port(midoname *port, int *idx);
 
+int midonet_api_cache_get_bridges(midonet_api_bridge ***bridges, int *max_bridges);
 midonet_api_bridge *midonet_api_cache_add_bridge(midoname *bridge);
 int midonet_api_cache_del_bridge(midoname *bridge);
 midonet_api_bridge *midonet_api_cache_lookup_bridge(midoname *bridge, int *idx);
@@ -495,6 +602,8 @@ midoname *midonet_api_cache_lookup_dhcp_host(midonet_api_dhcp *dhcp, midoname *d
 midoname *midonet_api_cache_lookup_dhcp_host_byparam(midonet_api_dhcp *dhcp,
         char *name, char *mac, char *ip, char *dns_domain, int *idx);
 
+int midonet_api_cache_get_routers(midonet_api_router ***routers, int *max_routers);
+int midonet_api_cache_get_natg_routers(midonet_api_router ***routers, int *max_routers);
 midonet_api_router *midonet_api_cache_add_router(midoname *router);
 int midonet_api_cache_del_router(midoname *router);
 midonet_api_router *midonet_api_cache_lookup_router(midoname *router, int *idx);
@@ -530,9 +639,16 @@ int midonet_api_portgroup_free(midonet_api_portgroup *portgroup);
 int midonet_api_tunnelzone_free(midonet_api_tunnelzone *tunnelzone);
 
 int midonet_api_delete_all(void);
+int midonet_api_delete_dups(boolean checkonly);
+
+int midonet_api_delete_unconnected_ports(midoname **ports, int max_ports, boolean checkonly);
+int midonet_api_delete_dups_rules(midonet_api_chain *chain, boolean checkonly);
+int midonet_api_delete_dups_routes(midonet_api_router *router, boolean checkonly);
 
 int compare_midonet_api_iphostmap_entry(const void *p1, const void *p2);
 int compare_midoname_name(const void *p1, const void *p2);
+int compare_midonet_api_bridge(const void *p1, const void *p2);
+int compare_midonet_api_router(const void *p1, const void *p2);
 int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2);
 int compare_midonet_api_chain(const void *p1, const void *p2);
 

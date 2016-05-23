@@ -87,14 +87,15 @@
 \*----------------------------------------------------------------------------*/
 
 //! @{
-//! @name The bitmask indicating which of the API needs to be executed after a successful system scrup
+//! @name The bitmask indicating which of the API needs to be executed after a successful system scrub
 
 #define EUCANETD_RUN_NO_API                      0x00000000 //!< Bassically says don't do anything
 #define EUCANETD_RUN_NETWORK_API                 0x00000001 //!< If set, this will trigger the core to run the implement_network() driver API
 #define EUCANETD_RUN_SECURITY_GROUP_API          0x00000002 //!< If set, this will trigger the core to run the implement_sg() driver API
 #define EUCANETD_RUN_ADDRESSING_API              0x00000004 //!< If set, this will trigger the core to run the implement_addressing() driver API
 #define EUCANETD_RUN_ALL_API                     (EUCANETD_RUN_NETWORK_API | EUCANETD_RUN_SECURITY_GROUP_API | EUCANETD_RUN_ADDRESSING_API)
-#define EUCANETD_RUN_ERROR_API                   0xFFFFFFFF //!< This is to indicate an error case
+#define EUCANETD_RUN_ERROR_API                   0x80000000 //!< This is to indicate an error case
+#define EUCANETD_VPCMIDO_IFERROR                 0xC0000000 //!< Error implementing interface(s) in VPCMIDO
 
 //! @}
 
@@ -135,6 +136,9 @@ enum eucanetd_debug_level_t {
     EUCANETD_DEBUG_TRACE = 1,
     EUCANETD_DEBUG_DEBUG = 2,
     EUCANETD_DEBUG_INFO = 3,
+    EUCANETD_DEBUG_WARN = 4,
+    EUCANETD_DEBUG_ERROR = 5,
+    EUCANETD_DEBUG_FATAL = 6,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -221,10 +225,6 @@ int eucanetd_dummy_udpsock_close(void);
 
 //! Macro to convert a peer enumeration to a string representation
 #define PEER2STR(_peer)                  ((((unsigned)(_peer)) > PEER_MAX) ? asPeerRoleName[PEER_MAX] : asPeerRoleName[(_peer)])
-
-#ifndef EUCA_APPEND_PTRARR
-#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
-#endif /* ! EUCA_APPEND_PTRARR */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -157,7 +157,7 @@
 #define ICMP_PROTOCOL_NUMBER 1
 static boolean xml_initialized = FALSE;    //!< To determine if the XML library has been initialized
 
-#ifndef XML_INIT()                    // if compiling as a stand-alone binary (for unit testing)
+#ifndef XML_INIT                    // if compiling as a stand-alone binary (for unit testing)
 #define XML_INIT() if (!xml_initialized) { xmlInitParser(); xml_initialized = TRUE; }
 #endif
 //! Static prototypes
@@ -205,7 +205,7 @@ int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup,
     char *chainhash = NULL;
 
     if (!gni || !secgroup || !outchainname) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot get chainname from NULL\n");
         return (1);
     }
 
@@ -311,17 +311,17 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
     int i = 0;
 
     if (!gni || !vpc || !out_interfaces || !max_out_interfaces) {
-        LOGWARN("Invalid argument: NULL pointer - failed to get vpc interfaces.\n");
+        LOGWARN("Invalid argument: failed to get vpc interfaces.\n");
         return (1);
     }
     LOGTRACE("Searching VPC interfaces.\n");
-    for (i = 0; i < gni->max_interfaces; i++) {
-        if (strcmp(gni->interfaces[i].vpc, vpc->name)) {
-            LOGTRACE("%s in %s: N\n", gni->interfaces[i].name, vpc->name);
+    for (i = 0; i < gni->max_ifs; i++) {
+        if (strcmp(gni->ifs[i]->vpc, vpc->name)) {
+            LOGTRACE("%s in %s: N\n", gni->ifs[i]->name, vpc->name);
         } else {
-            LOGTRACE("%s in %s: Y\n", gni->interfaces[i].name, vpc->name);
+            LOGTRACE("%s in %s: Y\n", gni->ifs[i]->name, vpc->name);
             result = EUCA_REALLOC_C(result, max_result + 1, sizeof (gni_instance *));
-            result[max_result] = &(gni->interfaces[i]);
+            result[max_result] = gni->ifs[i];
             max_result++;
         }
     }
@@ -366,7 +366,7 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
         if (max_vpcinterfaces == 0) {
             return (0);
         }
-        LOGWARN("Invalid argument: NULL pointer - failed to get subnet interfaces.\n");
+        LOGWARN("Invalid argument: failed to get subnet interfaces.\n");
         return (1);
     }
 
@@ -411,7 +411,7 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
     char *strptra = NULL;
 
     if (!gni || !outclusterptr) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find cluster from NULL\n");
         return (1);
     }
 
@@ -466,7 +466,7 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
     int i = 0;
 
     if (!gni || !psGroupId || !pSecGroup) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find secgroup from NULL\n");
         return (1);
     }
     // Initialize to NULL
@@ -482,32 +482,59 @@ int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgro
     return (1);
 }
 
+/**
+ * Searches for the given instance name and returns the associated gni_instance structure.
+ * @param gni [in] pointer to the global network information structure.
+ * @param psInstanceId [in] the ID string of the instance of interest.
+ * @param pInstance [out] pointer to the gni_instance structure of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
 int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
-    int i = 0;
-
     if (!gni || !psInstanceId || !pInstance) {
-        LOGERROR("invalid input\n");
+        LOGWARN("invalid argument: cannot find instance from NULL\n");
         return (1);
     }
     // Initialize to NULL
     (*pInstance) = NULL;
 
-    LOGDEBUG("attempting search for instance id %s in gni\n", psInstanceId);
+    LOGTRACE("attempting search for instance id %s in gni\n", psInstanceId);
+
+    // binary search - instances should be already sorted in GNI (uncomment below if not sorted)
+/*
+    if (gni->sorted_instances == FALSE) {
+        qsort(gni->instances, gni->max_instances,
+                sizeof (gni_instance *), compare_gni_instance_name);
+        gni->sorted_instances = TRUE;
+    }
+*/
+    gni_instance inst;
+    snprintf(inst.name, INTERFACE_ID_LEN, "%s", psInstanceId);
+    gni_instance *pinst = &inst;
+    gni_instance **res = (gni_instance **) bsearch(&pinst,
+            gni->instances, gni->max_instances,
+            sizeof (gni_instance *), compare_gni_instance_name);
+    if (res) {
+        *pInstance = *res;
+        return (0);
+    }
 
     // Go through our instance list and look for that instance
-    for (i = 0; i < gni->max_instances; i++) {
-        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->instances[i].name);
-        if (!strcmp(psInstanceId, gni->instances[i].name)) {
-            (*pInstance) = &(gni->instances[i]);
+/*
+    for (int i = 0; i < gni->max_instances; i++) {
+        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->instances[i]->name);
+        if (!strcmp(psInstanceId, gni->instances[i]->name)) {
+            (*pInstance) = gni->instances[i];
             return (0);
         }
     }
+*/
 
     return (1);
 }
 
 //!
-//! Searches through the list of network interfaces in the gni returns all non-primary interfaces for a given instance
+//! Searches through the list of network interfaces in the gni  and returns all
+//! non-primary interfaces for a given instance
 //!
 //! @param[in] gni a pointer to the global network information structure
 //! @param[in] psInstanceId a pointer to instance ID identifier (i-XXXXXXX)
@@ -524,22 +551,35 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
 //!
 int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int *size) {
     if (!size || !gni || !psInstanceId || !sizeof (pAInstances)) {
-        LOGERROR("invalid input\n");
+        LOGERROR("invalid argument: cannot find secondary interfaces for NULL\n");
         return EUCA_ERROR;
     }
 
     *size = 0;
 
-    LOGDEBUG("attempting search for interfaces for instance id %s in gni\n", psInstanceId);
+    LOGTRACE("attempting search for interfaces for instance id %s in gni\n", psInstanceId);
 
-    for (int i = 0; i < gni->max_interfaces; i++) {
-        LOGDEBUG("attempting match between %s and %s\n", psInstanceId, gni->interfaces[i].instance_name.name);
-        if (!strcmp(gni->interfaces[i].instance_name.name, psInstanceId) &&
-                strcmp(gni->interfaces[i].name, psInstanceId)) {
-            pAInstances[*size] = &(gni->interfaces[i]);
+    gni_instance *inst = NULL;
+    int rc = 0;
+    rc = gni_find_instance(gni, psInstanceId, &inst);
+    if (!rc) {
+        for (int i = 0; i < inst->max_interfaces; i++) {
+            if (inst->interfaces[i]->deviceidx != 0) {
+                pAInstances[*size] = inst->interfaces[i];
+                (*size)++;
+            }
+        }
+    }
+/*
+    for (int i = 0; i < gni->max_ifs; i++) {
+        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->ifs[i]->instance_name.name);
+        if (!strcmp(gni->ifs[i]->instance_name.name, psInstanceId) &&
+                strcmp(gni->ifs[i]->name, psInstanceId)) {
+            pAInstances[*size] = gni->ifs[i];
             (*size)++;
         }
     }
+*/
 
     return EUCA_OK;
 }
@@ -737,7 +777,7 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -849,7 +889,7 @@ int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, in
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     // Do we have any groups?
@@ -950,7 +990,7 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1077,7 +1117,7 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
     }
 
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1123,8 +1163,8 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
 
                 if (doOutStructs) {
                     for (x = 0; x < pGni->max_instances; x++) {
-                        if (!strcmp(pGni->instances[x].name, pCluster->nodes[i].instance_names[k].name)) {
-                            memcpy(&(pRetInstances[retCount]), &(pGni->instances[x]), sizeof (gni_instance));
+                        if (!strcmp(pGni->instances[x]->name, pCluster->nodes[i].instance_names[k].name)) {
+                            memcpy(&(pRetInstances[retCount]), pGni->instances[x], sizeof (gni_instance));
                             break;
                         }
                     }
@@ -1141,10 +1181,10 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
 
                         if (doOutStructs) {
                             for (y = 0; y < pGni->max_instances; y++) {
-                                if (!strcmp(pGni->instances[y].name, pCluster->nodes[i].instance_names[k].name)) {
+                                if (!strcmp(pGni->instances[y]->name, pCluster->nodes[i].instance_names[k].name)) {
                                     *pOutInstances = EUCA_REALLOC_C(*pOutInstances, (retCount + 1), sizeof (gni_instance));
                                     pRetInstances = *pOutInstances;
-                                    memcpy(&(pRetInstances[retCount]), &(pGni->instances[y]), sizeof (gni_instance));
+                                    memcpy(&(pRetInstances[retCount]), pGni->instances[y], sizeof (gni_instance));
                                     break;
                                 }
                             }
@@ -1227,7 +1267,7 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         EUCA_FREE(pInstances);
         return (0);
     }
@@ -1361,7 +1401,7 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1394,8 +1434,8 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
                 ret_instance_names[i] = strdup(node->instance_names[i].name);
             if (do_outstructs) {
                 for (k = 0; k < gni->max_instances; k++) {
-                    if (!strcmp(gni->instances[k].name, node->instance_names[i].name)) {
-                        memcpy(&(ret_instances[i]), &(gni->instances[k]), sizeof (gni_instance));
+                    if (!strcmp(gni->instances[k]->name, node->instance_names[i].name)) {
+                        memcpy(&(ret_instances[i]), gni->instances[k], sizeof (gni_instance));
                         break;
                     }
                 }
@@ -1411,10 +1451,10 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
                     }
                     if (do_outstructs) {
                         for (k = 0; k < gni->max_instances; k++) {
-                            if (!strcmp(gni->instances[k].name, node->instance_names[i].name)) {
+                            if (!strcmp(gni->instances[k]->name, node->instance_names[i].name)) {
                                 *out_instances = EUCA_REALLOC_C(*out_instances, (retcount + 1), sizeof (gni_instance));
                                 ret_instances = *out_instances;
-                                memcpy(&(ret_instances[retcount]), &(gni->instances[k]), sizeof (gni_instance));
+                                memcpy(&(ret_instances[retcount]), gni->instances[k], sizeof (gni_instance));
                                 break;
                             }
                         }
@@ -1494,7 +1534,7 @@ int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psS
     }
     // Are we doing anything?
     if (!doOutNames && !doOutStructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         EUCA_FREE(pInstances);
         return (0);
     }
@@ -1627,7 +1667,7 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
 
@@ -1740,11 +1780,11 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
     }
 
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     if (secgroup->max_instances == 0) {
-        LOGDEBUG("nothing to do, no instance associated with %s\n", secgroup->name);
+        LOGEXTREME("nothing to do, no instance associated with %s\n", secgroup->name);
         return (0);
     }
     if (do_outnames) {
@@ -1834,11 +1874,11 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         do_outstructs = 1;
     }
     if (!do_outnames && !do_outstructs) {
-        LOGDEBUG("nothing to do, both output variables are NULL\n");
+        LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
     }
     if (secgroup->max_interfaces == 0) {
-        LOGDEBUG("nothing to do, no instances/interfaces associated with %s\n", secgroup->name);
+        LOGEXTREME("nothing to do, no instances/interfaces associated with %s\n", secgroup->name);
         return (0);
     }
 
@@ -2119,14 +2159,14 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
     eucanetd_timer_usec(&tv);
     rc = gni_populate_xpathnodes(docptr, gni_nodes);
 
-    LOGDEBUG("begin parsing XML into data structures\n");
+    LOGTRACE("begin parsing XML into data structures\n");
 
     // GNI version
     rc = gni_populate_gnidata(gni, gni_nodes[GNI_XPATH_CONFIGURATION], ctxptr, docptr);
     LOGTRACE("gni version populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    // Instances
     if (mode == GNI_POPULATE_ALL) {
+        // Instances
         rc = gni_populate_instances(gni, gni_nodes[GNI_XPATH_INSTANCES], ctxptr, docptr);
         LOGTRACE("gni instances populated in %ld us.\n", eucanetd_timer_usec(&tv));
 
@@ -2174,7 +2214,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
             }
         }
     }
-    LOGDEBUG("end parsing XML into data structures\n");
+    LOGTRACE("end parsing XML into data structures\n");
 
     eucanetd_timer_usec(&tv);
     rc = gni_validate(gni);
@@ -2248,7 +2288,7 @@ int gni_populate_xpathnodes(xmlDocPtr doc, xmlNode **gni_nodes) {
     while (node) {
         int nodetype = gni_xmlstr2type(node->name);
         if (nodetype == GNI_XPATH_INVALID) {
-            LOGDEBUG("Unknown GNI xml node %s\n", node->name);
+            LOGTRACE("Unknown GNI xml node %s\n", node->name);
             node = node->next;
             continue;
         }
@@ -2724,13 +2764,20 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
                             if (IS_NETMODE_VPCMIDO(gni)) {
                                 for (l = 0; l < gni->max_instances; l++) {
-                                    if (!strcmp(gni->instances[l].name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                                        snprintf(gni->instances[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+                                    if (!strcmp(gni->instances[l]->name, gni->clusters[j].nodes[k].instance_names[i].name)) {
+                                        snprintf(gni->instances[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
                                     }
                                 }
+/*
                                 for (l = 0; l < gni->max_interfaces; l++) {
                                     if (!strcmp(gni->interfaces[l].instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
                                         snprintf(gni->interfaces[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+                                    }
+                                }
+*/
+                                for (l = 0; l < gni->max_ifs; l++) {
+                                    if (!strcmp(gni->ifs[l]->instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
+                                        snprintf(gni->ifs[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
                                     }
                                 }
                             }
@@ -2780,15 +2827,16 @@ int gni_populate_instances(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathC
     snprintf(expression, 2048, "./instance");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->instances = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_instance));
+        gni->instances = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_instance *));
         gni->max_instances = nodeset.nodeNr;
     }
     LOGTRACE("Found %d instances\n", gni->max_instances);
     for (i = 0; i < gni->max_instances; i++) {
         if (nodeset.nodeTab[i]) {
-            gni_populate_instance_interface(&(gni->instances[i]), nodeset.nodeTab[i], ctxptr, doc);
-            //gni_instance_interface_print(&(gni->instances[i]), EUCA_LOG_INFO);
-            gni_populate_interfaces(gni, &(gni->instances[i]), nodeset.nodeTab[i], ctxptr, doc);
+            gni->instances[i] = EUCA_ZALLOC_C(1, sizeof (gni_instance));
+            gni_populate_instance_interface(gni->instances[i], nodeset.nodeTab[i], ctxptr, doc);
+            //gni_instance_interface_print(gni->instances[i], EUCA_LOG_INFO);
+            gni_populate_interfaces(gni, gni->instances[i], nodeset.nodeTab[i], ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
@@ -2830,17 +2878,26 @@ int gni_populate_interfaces(globalNetworkInfo *gni, gni_instance *instance, xmlN
     snprintf(expression, 2048, "./networkInterfaces/networkInterface");
     rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
-        gni->interfaces = EUCA_REALLOC_C(gni->interfaces, gni->max_interfaces + nodeset.nodeNr, sizeof (gni_instance));
-        bzero(&(gni->interfaces[gni->max_interfaces]), nodeset.nodeNr * sizeof (gni_instance));
+        instance->interfaces = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_instance *));
+        instance->max_interfaces = nodeset.nodeNr;
+        //gni->interfaces = EUCA_REALLOC_C(gni->interfaces, gni->max_interfaces + nodeset.nodeNr, sizeof (gni_instance));
+        //memset(&(gni->interfaces[gni->max_interfaces]), 0, nodeset.nodeNr * sizeof (gni_instance));
+        gni->ifs = EUCA_REALLOC_C(gni->ifs, gni->max_ifs + nodeset.nodeNr, sizeof (gni_instance *));
+        memset(&(gni->ifs[gni->max_ifs]), 0, nodeset.nodeNr * sizeof (gni_instance *));
         LOGTRACE("Found %d interfaces\n", nodeset.nodeNr);
         for (i = 0; i < nodeset.nodeNr; i++) {
             if (nodeset.nodeTab[i]) {
-                snprintf(gni->interfaces[gni->max_interfaces + i].instance_name.name, 1024, instance->name);
-                gni_populate_instance_interface(&(gni->interfaces[gni->max_interfaces + i]), nodeset.nodeTab[i], ctxptr, doc);
-                //gni_instance_interface_print(&(gni->interfaces[gni->max_interfaces + i]), EUCA_LOG_INFO);
+                //snprintf(gni->interfaces[gni->max_interfaces + i].instance_name.name, 1024, instance->name);
+                //gni_populate_instance_interface(&(gni->interfaces[gni->max_interfaces + i]), nodeset.nodeTab[i], ctxptr, doc);
+                gni->ifs[gni->max_ifs + i] = EUCA_ZALLOC_C(1, sizeof (gni_instance));
+                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 1024, instance->name);
+                gni_populate_instance_interface(gni->ifs[gni->max_ifs + i], nodeset.nodeTab[i], ctxptr, doc);
+                instance->interfaces[i] = gni->ifs[gni->max_ifs + i];
+                //gni_instance_interface_print(gni->ifs[gni->max_ifs + i]), EUCA_LOG_INFO);
             }
         }
-        gni->max_interfaces += nodeset.nodeNr;
+        //gni->max_interfaces += nodeset.nodeNr;
+        gni->max_ifs += nodeset.nodeNr;
     }
     EUCA_FREE(nodeset.nodeTab);
 
@@ -2963,12 +3020,11 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
 
     if (is_instance) {
         // Populate interfaces.
+/*
         snprintf(expression, 2048, "./networkInterfaces/networkInterface");
         rc = evaluate_xpath_element(ctxptr, doc, xmlnode, expression, &results, &max_results);
         instance->interface_names = EUCA_REALLOC_C(instance->interface_names, instance->max_interface_names + max_results, sizeof (gni_name));
-        if (instance->interface_names) {
-            bzero(&(instance->interface_names[instance->max_interface_names]), max_results * sizeof (gni_name));
-        }
+        bzero(&(instance->interface_names[instance->max_interface_names]), max_results * sizeof (gni_name));
         for (i = 0; i < max_results; i++) {
             LOGTRACE("\t\tafter function: %d: %s\n", i, results[i]);
             snprintf(instance->interface_names[instance->max_interface_names + i].name, 1024, "%s", results[i]);
@@ -2976,6 +3032,7 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
         }
         instance->max_interface_names += max_results;
         EUCA_FREE(results);
+*/
     }
     if (!is_instance) {
         snprintf(expression, 2048, "./sourceDestCheck");
@@ -3057,8 +3114,8 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             gni_instance *gi = NULL;
             gsg->max_instances = 0;
             for (k = 0; k < gni->max_instances; k++) {
-                for (l = 0; l < gni->instances[k].max_secgroup_names; l++) {
-                    gi = &(gni->instances[k]);
+                for (l = 0; l < gni->instances[k]->max_secgroup_names; l++) {
+                    gi = gni->instances[k];
                     if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
                         gsg->instances = EUCA_REALLOC_C(gsg->instances, gsg->max_instances + 1, sizeof (gni_instance *));
                         gsg->instances[gsg->max_instances] = gi;
@@ -3069,8 +3126,8 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             // populate secgroup's interface_names
             if (IS_NETMODE_VPCMIDO(gni)) {
                 gsg->max_interfaces = 0;
-                for (k = 0; k < gni->max_interfaces; k++) {
-                    gi = &(gni->interfaces[k]);
+                for (k = 0; k < gni->max_ifs; k++) {
+                    gi = gni->ifs[k];
                     for (l = 0; l < gi->max_secgroup_names; l++) {
                         if (!strcmp(gi->secgroup_names[l].name, gsg->name)) {
                             gsg->interfaces = EUCA_REALLOC_C(gsg->interfaces, gsg->max_interfaces + 1, sizeof (gni_instance *));
@@ -4339,15 +4396,17 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
         LOGTRACE("instances: \n");
     for (i = 0; i < gni->max_instances; i++) {
         if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tid: %s\n", gni->instances[i].name);
+            LOGTRACE("\tid: %s\n", gni->instances[i]->name);
         if (mode == GNI_ITERATE_FREE) {
-            gni_instance_clear(&(gni->instances[i]));
+            gni_instance_clear(gni->instances[i]);
+            EUCA_FREE(gni->instances[i]);
         }
     }
     if (mode == GNI_ITERATE_FREE) {
         EUCA_FREE(gni->instances);
     }
 
+/*
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("interfaces: \n");
     for (i = 0; i < gni->max_interfaces; i++) {
@@ -4359,6 +4418,21 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
     }
     if (mode == GNI_ITERATE_FREE) {
         EUCA_FREE(gni->interfaces);
+    }
+*/
+
+    if (mode == GNI_ITERATE_PRINT)
+        LOGTRACE("interfaces: \n");
+    for (i = 0; i < gni->max_ifs; i++) {
+        if (mode == GNI_ITERATE_PRINT)
+            LOGTRACE("\tid: %s\n", gni->ifs[i]->name);
+        if (mode == GNI_ITERATE_FREE) {
+            gni_instance_clear(gni->ifs[i]);
+            EUCA_FREE(gni->ifs[i]);
+        }
+    }
+    if (mode == GNI_ITERATE_FREE) {
+        EUCA_FREE(gni->ifs);
     }
 
     if (mode == GNI_ITERATE_PRINT)
@@ -4917,8 +4991,9 @@ int gni_instance_clear(gni_instance * instance)
     }
 
     EUCA_FREE(instance->secgroup_names);
-    EUCA_FREE(instance->interface_names);
+    //EUCA_FREE(instance->interface_names);
     EUCA_FREE(instance->gnisgs);
+    EUCA_FREE(instance->interfaces);
 
     bzero(instance, sizeof (gni_instance));
 
@@ -5290,7 +5365,7 @@ int gni_validate(globalNetworkInfo * gni) {
     }
     // GNI should be initialized... but check just in case
     if (!gni->init) {
-        LOGWARN("BUG: gni is not initialized yet\n");
+        LOGWARN("invalid input: gni is not initialized yet\n");
         return (1);
     }
     // Make sure we have a valid mode
@@ -5298,7 +5373,7 @@ int gni_validate(globalNetworkInfo * gni) {
         return (1);
     }
 
-    LOGDEBUG("Validating XML for '%s' networking mode.\n", gni->sMode);
+    LOGTRACE("Validating XML for '%s' networking mode.\n", gni->sMode);
 
     // We need to know about which CLC is the enabled one. 0.0.0.0 means we don't know
     if (gni->enabledCLCIp == 0) {
@@ -5385,7 +5460,7 @@ int gni_validate(globalNetworkInfo * gni) {
         LOGTRACE("no instances set\n");
     } else {
         for (i = 0; i < gni->max_instances; i++) {
-            if (gni_instance_validate(&(gni->instances[i]))) {
+            if (gni_instance_validate(gni->instances[i])) {
                 LOGWARN("invalid instances set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
@@ -5393,11 +5468,11 @@ int gni_validate(globalNetworkInfo * gni) {
     }
 
     // Validate interfaces
-    if (!gni->max_interfaces || !gni->interfaces) {
+    if (!gni->max_ifs || !gni->ifs) {
         LOGTRACE("no interfaces set\n");
     } else {
-        for (i = 0; i < gni->max_interfaces; i++) {
-            if (gni_interface_validate(&(gni->interfaces[i]))) {
+        for (i = 0; i < gni->max_ifs; i++) {
+            if (gni_interface_validate(gni->ifs[i])) {
                 LOGWARN("invalid instances set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
@@ -5489,9 +5564,9 @@ int gni_netmode_validate(const char *psMode)
     }
 
     if (strlen(psMode) > 0) {
-        LOGWARN("invalid network mode '%s'\n", psMode);
+        LOGDEBUG("invalid network mode '%s'\n", psMode);
     } else {
-        LOGDEBUG("network mode is empty.\n");
+        LOGTRACE("network mode is empty.\n");
     }
     return (1);
 }
@@ -5731,7 +5806,7 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!instance->publicIp) {
-        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
+        LOGTRACE("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
     }
 
     if (!instance->privateIp) {
@@ -5795,7 +5870,7 @@ int gni_interface_validate(gni_instance *interface)
     }
 
     if (!interface->publicIp) {
-        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", interface->name);
+        LOGTRACE("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", interface->name);
     }
 
     if (!interface->privateIp) {
@@ -5804,7 +5879,7 @@ int gni_interface_validate(gni_instance *interface)
     }
 
     if (!interface->max_secgroup_names || !interface->secgroup_names) {
-        LOGDEBUG("instance %s: no secgroups\n", interface->name);
+        LOGTRACE("instance %s: no secgroups\n", interface->name);
     } else {
         for (i = 0; i < interface->max_secgroup_names; i++) {
             if (!strlen(interface->secgroup_names[i].name)) {
@@ -5975,7 +6050,7 @@ int gni_nat_gateway_validate(gni_nat_gateway *natg) {
     }
 
     if (!natg->publicIp) {
-        LOGDEBUG("natg %s: no publicIp set (ignore if natg was run with private only addressing)\n", natg->name);
+        LOGTRACE("natg %s: no publicIp set\n", natg->name);
     }
 
     if (!natg->privateIp) {
@@ -6119,8 +6194,13 @@ void gni_instance_interface_print(gni_instance *inst, int loglevel) {
     EUCALOG(loglevel, "\tsrcdstcheck  = %s\n", inst->srcdstcheck ? "true" : "false");
     EUCALOG(loglevel, "\tdeviceidx    = %d\n", inst->deviceidx);
     EUCALOG(loglevel, "\tattachment   = %s\n", inst->attachmentId);
+/*
     for (i = 0; i < inst->max_interface_names; i++) {
         EUCALOG(loglevel, "\tinterface[%d] = %s\n", i, inst->interface_names[i].name);
+    }
+*/
+    for (i = 0; i < inst->max_interfaces; i++) {
+        EUCALOG(loglevel, "\tinterface[%d] = %s idx %d\n", i, inst->interfaces[i]->name, inst->interfaces[i]->deviceidx);
     }
     for (i = 0; i < inst->max_secgroup_names; i++) {
         EUCALOG(loglevel, "\tsg[%d]        = %s\n", i, inst->secgroup_names[i].name);
@@ -6412,6 +6492,55 @@ int cmpipaddr(const void *p1, const void *p2) {
         return -1;
     else
         return 1;
+}
+
+/**
+ * Compares two globalNetworkInfo structures in the argument and search for
+ * VPCMIDO configuration changes.
+ * @param a [in] globalNetworkInfo structure of interest.
+ * @param b [in] globalNetworkInfo structure of interest.
+ * @return 0 if configuration parameters in a and b match. Non-zero otherwise. 
+ */
+int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
+    int ret = 0;
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (GNI_VPCMIDO_CONFIG_DIFF_OTHER);
+    }
+    if (a->enabledCLCIp != b->enabledCLCIp) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP;
+    }
+    if (strcmp(a->instanceDNSDomain, b->instanceDNSDomain)) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN;
+    }
+    if (a->max_instanceDNSServers != b->max_instanceDNSServers) {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+    } else {
+        for (int i = 0; i < a->max_instanceDNSServers; i++) {
+            if (a->instanceDNSServers[i] != b->instanceDNSServers[i]) {
+                ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+            }
+        }
+    }
+    if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
+        if (strcmp(a->EucanetdHost, b->EucanetdHost)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_EUCANETDHOST;
+        }
+        if (strcmp(a->PublicNetworkCidr, b->PublicNetworkCidr)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR;
+        }
+        if (strcmp(a->PublicGatewayIP, b->PublicGatewayIP)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP;
+        }
+        if (strcmp(a->GatewayHosts, b->GatewayHosts)) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS;
+        }
+    } else {
+        ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
+    }
+    return (ret);
 }
 
 //!
@@ -6736,3 +6865,46 @@ int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sd
     }
     return (1);
 }
+
+/**
+ * Comparator function for gni_instance structures. Comparison is base on name property.
+ * @param p1 [in] pointer to gni_instance pointer 1.
+ * @param p2 [in] pointer to gni_instance pointer 2.
+ * @return 0 iff p1->.->name == p2->.->name. -1 iff p1->.->name < p2->.->name.
+ * 1 iff p1->.->name > p2->.->name.
+ * NULL is considered larger than a non-NULL string.
+ */
+int compare_gni_instance_name(const void *p1, const void *p2) {
+    gni_instance **pp1 = NULL;
+    gni_instance **pp2 = NULL;
+    gni_instance *e1 = NULL;
+    gni_instance *e2 = NULL;
+    char *name1 = NULL;
+    char *name2 = NULL;
+
+    if ((p1 == NULL) || (p2 == NULL)) {
+        LOGWARN("Invalid argument: cannot compare NULL gni_instance\n");
+        return (0);
+    }
+    pp1 = (gni_instance **) p1;
+    pp2 = (gni_instance **) p2;
+    e1 = *pp1;
+    e2 = *pp2;
+    if (e1 && e1->name && strlen(e1->name)) {
+        name1 = e1->name;
+    }
+    if (e2 && e2->name && strlen(e2->name)) {
+        name2 = e2->name;
+    }
+    if (name1 == name2) {
+        return (0);
+    }
+    if (name1 == NULL) {
+        return (1);
+    }
+    if (name2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(name1, name2));
+}
+

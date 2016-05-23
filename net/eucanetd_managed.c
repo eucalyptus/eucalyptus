@@ -1101,13 +1101,13 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni) {
                             for (k = 0; k < pGni->max_instances; k++) {
                                 for (l = 0, found = 0; (l < nbInstances) && !found; l++) {
                                     // Skip instances in this security group
-                                    if (pInstances[l].publicIp == pGni->instances[k].publicIp) {
+                                    if (pInstances[l].publicIp == pGni->instances[k]->publicIp) {
                                         found = 1;
                                     }
                                 }
-                                if (!found && ((pGni->instances[k].publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
-                                        ((pGni->instances[k].privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
-                                    pStra = hex2dot(pGni->instances[k].privateIp);
+                                if (!found && ((pGni->instances[k]->publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((pGni->instances[k]->privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    pStra = hex2dot(pGni->instances[k]->privateIp);
                                     LOGTRACE("Found instance private IP (%s) affected by EUCA-11476.\n", pStra);
                                     ingress_gni_to_iptables_rule(pStra, &(pSecGroup->ingress_rules[j]), sRule, 2);
                                     EUCA_FREE(pStra);
@@ -1634,13 +1634,13 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni) {
                             for (k = 0; k < pGni->max_instances; k++) {
                                 for (l = 0, found = 0; (l < nbInstances) && !found; l++) {
                                     // Skip instances in this security group
-                                    if (pInstances[l].publicIp == pGni->instances[k].publicIp) {
+                                    if (pInstances[l].publicIp == pGni->instances[k]->publicIp) {
                                         found = 1;
                                     }
                                 }
-                                if (!found && ((pGni->instances[k].publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
-                                        ((pGni->instances[k].privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
-                                    pStra = hex2dot(pGni->instances[k].privateIp);
+                                if (!found && ((pGni->instances[k]->publicIp & cidrnm) == (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((pGni->instances[k]->privateIp & cidrnm) != (pSecGroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    pStra = hex2dot(pGni->instances[k]->privateIp);
                                     LOGTRACE("Found instance private IP (%s) affected by EUCA-11476.\n", pStra);
                                     ingress_gni_to_iptables_rule(pStra, &(pSecGroup->ingress_rules[j]), sRule, 2);
                                     EUCA_FREE(pStra);

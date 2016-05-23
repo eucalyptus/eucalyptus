@@ -182,6 +182,10 @@ void get_stack_trace ();
 #define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
 #endif /* ! EUCA_ZALLOC_C */
 
+#ifndef EUCA_APPEND_PTRARR
+#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
+#endif /* ! EUCA_APPEND_PTRARR */
+
 #ifndef EUCA_GET_STACK_TRACE
 #define EUCA_GET_STACK_TRACE()                   get_stack_trace()
 #endif /* ! EUCA_GET_STACK_TRACE */
