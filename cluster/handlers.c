@@ -2106,33 +2106,34 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
         LOGEXTREME("%s\n", xmlbuf);
-        snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+        if(gpEucaNet && strncmp(gpEucaNet->sMode, NETMODE_VPCMIDO, NETMODE_LEN)){
+            snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
 
-        if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
-            LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
+            if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
+                LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
 
-            gni = gni_init();
-            host_info = gni_init_hostname_info();
-            if (gni && host_info) {
-                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
-                rc = gni_populate(gni,host_info,xmlfile);
-                LOGDEBUG("done with gni_populate()\n");
+                gni = gni_init();
+                host_info = gni_init_hostname_info();
+                if (gni && host_info) {
+                    // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
+                    rc = gni_populate(gni,host_info,xmlfile);
+                    LOGDEBUG("done with gni_populate()\n");
 
-                // do any CC actions based on contents of new network view
+                    // do any CC actions based on contents of new network view
 
-                // reset macprefix
-                if ((rc = gni_find_self_cluster(gni, &myself)) != 0) {
-                    LOGWARN("failed to find local host IP in list of enabled clusters, skipping macPrefix update\n");
-                } else {
-                    sem_mywait(NETCONFIG);
-                    {
-                        if (myself && strlen(myself->macPrefix) && strcmp(gpEucaNet->sMacPrefix, myself->macPrefix)) {
-                            LOGDEBUG("reset local cluster macPrefix from '%s' to '%s'\n", gpEucaNet->sMacPrefix, myself->macPrefix);
-                            snprintf(gpEucaNet->sMacPrefix, ENET_MACPREFIX_LEN, "%s", myself->macPrefix);
+                    // reset macprefix
+                    if ((rc = gni_find_self_cluster(gni, &myself)) != 0) {
+                        LOGWARN("failed to find local host IP in list of enabled clusters, skipping macPrefix update\n");
+                    } else {
+                        sem_mywait(NETCONFIG);
+                        {
+                            if (myself && strlen(myself->macPrefix) && strcmp(gpEucaNet->sMacPrefix, myself->macPrefix)) {
+                                LOGDEBUG("reset local cluster macPrefix from '%s' to '%s'\n", gpEucaNet->sMacPrefix, myself->macPrefix);
+                                snprintf(gpEucaNet->sMacPrefix, ENET_MACPREFIX_LEN, "%s", myself->macPrefix);
+                            }
                         }
+                        sem_mypost(NETCONFIG);
                     }
-                    sem_mypost(NETCONFIG);
-                }
 
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i = 0; i < gni->max_instances; i++) {
@@ -2168,13 +2169,14 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
                     EUCA_FREE(strptrb);
                 }
 
+                }
+
+                // Free up gni and host_info memory
+                rc = gni_free(gni);
+                rc = gni_hostnames_free(host_info);
+
+                unlink(xmlfile);
             }
-
-            // Free up gni and host_info memory
-            rc = gni_free(gni);
-            rc = gni_hostnames_free(host_info);
-
-            unlink(xmlfile);
         }
 
         snprintf(xmlfile, EUCA_MAX_PATH, EUCANETD_GNI_FILE, config->eucahome);
