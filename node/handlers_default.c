@@ -1494,8 +1494,8 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char bus[16];
     set_serial_and_bus(volumeId, canonicalDev, serial, sizeof(serial), bus, sizeof(bus));
     if (connect_ebs(canonicalDev, serial, bus, nc, instanceId, volumeId, attachmentToken, &libvirt_xml, &vol_data)) {
-        EUCA_FREE(vol_data);
-        return EUCA_ERROR;
+        ret = EUCA_ERROR;
+        goto release;
     }
     have_remote_device = TRUE;
 
