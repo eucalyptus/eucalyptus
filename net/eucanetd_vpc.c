@@ -533,8 +533,15 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
 
     switch (signal) {
         case SIGUSR1:
+            mido_info_midonetapi();
             mido_info_http_count_total();
             mido_info_midocache();
+            char *bgprecovery = NULL;
+            bgprecovery = discover_mido_bgps(pMidoConfig);
+            if (bgprecovery && strlen(bgprecovery)) {
+                LOGINFO("\nmido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+            }
+            EUCA_FREE(bgprecovery);
             break;
         case SIGUSR2:
             LOGINFO("Going to invalidate midocache\n");
@@ -620,13 +627,16 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
             eucanetdConfig *configbak = pMidoConfig->config;
             free_mido_config(pMidoConfig);
             pMidoConfig->config = configbak;
+        } else {
+            LOGERROR("failed to (re)initialize config options: VPCMIDO driver not initialized\n");
+            return (EUCANETD_RUN_ERROR_API);
         }
         //rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode,
         //        config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
         //        config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
         rc = initialize_mido(pMidoConfig, pMidoConfig->config, "169.254.0.0", "17");
         if (rc) {
-            LOGERROR("failed to (re)initialize config options for VPCMIDO mode are set\n");
+            LOGERROR("failed to (re)initialize config options\n");
             return (EUCANETD_RUN_ERROR_API);
         }
         pGniApplied = NULL;
