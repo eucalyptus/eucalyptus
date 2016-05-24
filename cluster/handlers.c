@@ -5331,15 +5331,8 @@ int ccCheckState(int checkArbitrator)
             LOGERROR("cannot find shellout '%s'\n", cmd);
             ret++;
         }
-
-        if (euca_execlp(NULL, "ip", "addr", "show", NULL) != EUCA_OK) {
-            LOGERROR("cannot run shellout 'ip addr show'\n");
-            ret++;
-        }
     }
-    // filesystem
 
-    // network
     // arbitrators
     if (checkArbitrator == 1 && strlen(config->arbitrators)) {
         char *tok, buf[256], *host;
