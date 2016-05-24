@@ -383,6 +383,7 @@ int iplist_arr_free(char **iparr, int max_iparr);
 
 int routername_split(char *routername, char **name, int *id);
 
+void mido_info_midonetapi();
 void mido_info_midocache();
 
 void mido_info_http_count();

@@ -6890,10 +6890,10 @@ int compare_gni_instance_name(const void *p1, const void *p2) {
     pp2 = (gni_instance **) p2;
     e1 = *pp1;
     e2 = *pp2;
-    if (e1 && e1->name && strlen(e1->name)) {
+    if (e1 && strlen(e1->name)) {
         name1 = e1->name;
     }
-    if (e2 && e2->name && strlen(e2->name)) {
+    if (e2 && strlen(e2->name)) {
         name2 = e2->name;
     }
     if (name1 == name2) {

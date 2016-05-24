@@ -1599,6 +1599,9 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
             ret += delete_mido_vpc(mido, vpc);
             // Re-enable nginx
             rc = do_metaproxy_setup(mido);
+            if (rc) {
+                LOGERROR("failed to start metadata proxies\n");
+            }
         } else {
             LOGTRACE("pass2: mido VPC %s in global: Y\n", vpc->name);
         }
@@ -1679,6 +1682,9 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                 }
                 // Re-enable nginx
                 rc = do_metaproxy_setup(mido);
+                if (rc) {
+                    LOGERROR("failed to setup metadata proxies\n");
+                }
                 continue;
             } else {
                 vpc->population_failed = 0;
@@ -4905,10 +4911,6 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
 
     if (!mido || !eucanetd_config ||
             !eucanetd_config->eucahome ||
-            !eucanetd_config->midoeucanetdhost ||
-            !eucanetd_config->midogwhosts ||
-            !eucanetd_config->midopubnw ||
-            !eucanetd_config->midopubgwip ||
             !int_rtnetwork ||
             !int_rtslashnet ||
             !strlen(eucanetd_config->midoeucanetdhost) ||
@@ -6449,7 +6451,7 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
 
     midonet_api_chain *eucabr_infilter = NULL;
     eucabr_infilter = mido_create_chain(VPCMIDO_TENANT, "eucabr_infilter", &(midocore->midos[CORE_EUCABR_INFILTER]));
-    if (rc) {
+    if (!eucabr_infilter) {
         LOGERROR("cannot create eucabr infilter.\n");
         ret++;
     } else {
@@ -6612,8 +6614,6 @@ int do_midonet_delete_vpc_object(mido_config *mido, char *id, boolean checkonly)
                 break;
             case TEST:
                 do_midonet_test(mido);
-                break;
-            default:
                 break;
         }
     }
@@ -7044,7 +7044,21 @@ int do_midonet_list(mido_config *mido) {
             pbuf = &(buf[ulen]);
         }
     }
+
+    char *bgprecovery = NULL;
+    bgprecovery = discover_mido_bgps(mido);
+    if (bgprecovery && strlen(bgprecovery)) {
+        rc = snprintf(pbuf, buflen, "\n\nmido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+        if (rc > 0) {
+            ulen += rc;
+            buflen -= rc;
+            pbuf = &(buf[ulen]);
+        }
+    }
+    EUCA_FREE(bgprecovery);
+
     printf("%s\n", buf);
+    printf("\n");
     
     EUCA_FREE(buf);
     return (0);

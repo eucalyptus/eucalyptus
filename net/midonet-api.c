@@ -166,6 +166,7 @@ static int http_puts_prev = 0;
 static int http_deletes_prev = 0;
 
 static char midonet_api_uribase[1024] = {0};
+static char midonet_api_version[16] = {0};
 
 static int mido_libcurl_initialized = 0;
 static mido_libcurl_handles libcurl_handles;
@@ -277,6 +278,9 @@ int routername_split(char *routername, char **name, int *id) {
     }
     char *instr = strdup(routername);
     char *rtid = NULL;
+    if (!instr) {
+        return (1);
+    }
     for (int i = strlen(instr) - 2; i >= 0; i--) {
         if (instr[i] == '_') {
             instr[i] = '\0';
@@ -284,7 +288,7 @@ int routername_split(char *routername, char **name, int *id) {
             break;
         }
     }
-    if (instr && rtid && strlen(instr) && strlen(rtid)) {
+    if (rtid && strlen(instr) && strlen(rtid)) {
         *name = strdup(instr);
         *id = atoi(rtid);
     }
@@ -314,6 +318,15 @@ void mido_print_midoname(midoname * name) {
         LOGTRACE("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n",
                 name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
                 SP(name->content_type), SP(name->vers));
+    }
+}
+
+/**
+ * Logs MidoNet-API information
+ */
+void mido_info_midonetapi() {
+    if (strlen(midonet_api_version) && strlen(midonet_api_uribase)) {
+        LOGINFO("\nmido API %s at %s\n", midonet_api_version, midonet_api_uribase);
     }
 }
 
@@ -4418,18 +4431,19 @@ void midonet_api_cleanup(void) {
  * @return 0 on success. Positive integer otherwise.
  */
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles) {
-    if (handles == NULL) {
-        return (0);
+    pthread_mutex_lock(&libcurl_handles_mutex);
+    if (handles) {
+        for (int i = 0; i < handles->max_handles; i++) {
+            curl_easy_cleanup(handles->handles[i]);
+        }
+        EUCA_FREE(handles->handles);
+        for (int i = 0; i < handles->max_gethandles; i++) {
+            curl_easy_cleanup(handles->gethandles[i]);
+        }
+        EUCA_FREE(handles->gethandles);
+        bzero(handles, sizeof (mido_libcurl_handles));
     }
-    for (int i = 0; i < handles->max_handles; i++) {
-        curl_easy_cleanup(handles->handles[i]);
-    }
-    EUCA_FREE(handles->handles);
-    for (int i = 0; i < handles->max_gethandles; i++) {
-        curl_easy_cleanup(handles->gethandles[i]);
-    }
-    EUCA_FREE(handles->gethandles);
-    bzero(handles, sizeof (mido_libcurl_handles));
+    pthread_mutex_unlock(&libcurl_handles_mutex);
     return (0);
 }
 
@@ -4446,12 +4460,12 @@ int mido_libcurl_init(mido_libcurl_handles *handles) {
         LOGWARN("Cannot initialize libcurl with NULL mido_libcurl_handles\n");
         return (1);
     }
-    mido_libcurl_cleanup_handles(handles);
     curl_global_init(CURL_GLOBAL_DEFAULT);
     pthread_mutex_init(&libcurl_handles_mutex, NULL);
     pthread_mutex_init(&mido_buffer_mutex, NULL);
     pthread_mutex_init(&mido_cache_ports_mutex, NULL);
     mido_libcurl_initialized = 1;
+    mido_libcurl_cleanup_handles(handles);
     return (0);
 }
 
@@ -4932,7 +4946,7 @@ int mido_find_route_from_list(midoname **routes, int max_routes, midoname *rport
         if ((routes[i] == NULL) || (routes[i]->init == 0)) {
             continue;
         }
-        if (strcmp(next_hop_ip, "UNSET")) {
+        if (!next_hop_ip || strcmp(next_hop_ip, "UNSET")) {
 /*
             rc = mido_cmp_midoname_to_input(routes[i], "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
                     "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
@@ -6141,10 +6155,10 @@ int mido_initialize_apiuribase(void) {
     char *outbuf = NULL;
     
     bzero(url, EUCA_MAX_PATH);
-    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/system_state");
+    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/");
 
     for (int i = 0; i < 30 && rc; i++) {
-        rc = midonet_http_get(url, "application/vnd.org.midonet.SystemState-v2+json", &outbuf);
+        rc = midonet_http_get(url, "application/vnd.org.midonet.Application-v5+json", &outbuf);
         if (rc) {
             sleep(1);
         }
@@ -6155,22 +6169,28 @@ int mido_initialize_apiuribase(void) {
         if (jobj) {
             json_object_object_get_ex(jobj, "uri", &el);
             if (el) {
-                char *ssurl = strdup(json_object_get_string(el));
-                char *ss = strstr(ssurl, "/system_state");
-                if (ss && strlen(ss)) {
-                    ss[0] = '\0';
-                }
-                snprintf(midonet_api_uribase, 1024, "%s", ssurl);
-                EUCA_FREE(ssurl);
+                snprintf(midonet_api_uribase, 1024, "%s", json_object_get_string(el));
+            }
+            el = NULL;
+            json_object_object_get_ex(jobj, "version", &el);
+            if (el) {
+                snprintf(midonet_api_version, 16, "%s", json_object_get_string(el));
             }
             json_object_put(jobj);
         }
     }
     if (!strlen(midonet_api_uribase)) {
         snprintf(midonet_api_uribase, 1024, "http://localhost:8080/midonet-api");
+    } else {
+        if ((strlen(midonet_api_uribase) - 1) > 0) {
+            midonet_api_uribase[strlen(midonet_api_uribase) - 1] = '\0';
+        } 
+    }
+    if (!strlen(midonet_api_version)) {
+        snprintf(midonet_api_version, 16, "unknown");
     }
     EUCA_FREE(outbuf);
-    LOGINFO("mido API at %s\n", midonet_api_uribase);
+    mido_info_midonetapi();
     return (rc);
 }
 
