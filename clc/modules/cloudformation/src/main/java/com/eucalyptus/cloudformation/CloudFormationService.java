@@ -1113,7 +1113,7 @@ public class CloudFormationService {
 
       }
       if (stackResourceEntity.getResourceStatus() != Status.CREATE_IN_PROGRESS && stackResourceEntity.getResourceStatus() != Status.UPDATE_IN_PROGRESS) {
-        throw new ValidationErrorException("Resource " + logicalResourceId + " is in " + stackEntity.getStackStatus().toString() + " state and can not be signaled.");
+        throw new ValidationErrorException("Resource " + logicalResourceId + " is in " + stackResourceEntity.getResourceStatus().toString() + " state and can not be signaled.");
       }
       SignalEntity signal = SignalEntityManager.getSignal(stackId, accountId, logicalResourceId, stackResourceEntity.getResourceVersion(), uniqueId);
       if (signal != null && !"FAILURE".equals(status)) {
