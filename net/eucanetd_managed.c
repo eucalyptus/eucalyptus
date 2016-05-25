@@ -3261,7 +3261,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
     int i = 0;
     int j = 0;
     int ret = 0;
-    int localId = -1;
+    //int localId = -1;
     int nbBridges = 0;
     char *psBridgeName = NULL;
     boolean done = FALSE;
@@ -3291,7 +3291,7 @@ static int managed_detach_tunnels(globalNetworkInfo * pGni, gni_cluster * pClust
         return (1);
     }
     // Retrieve the local tunnel ID from the GNI
-    localId = managed_get_new_tunnel_id(pGni, pCluster);
+    //localId = managed_get_new_tunnel_id(pGni, pCluster);
 
     // Are we detaching all tunnels or do we need to pick and choose?
     if (nbGroups == 0) {
