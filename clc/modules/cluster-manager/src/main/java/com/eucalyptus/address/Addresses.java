@@ -881,7 +881,7 @@ public class Addresses {
     @Override
     public boolean apply( final Address input ) {
       try {
-        input.release( null );
+        addresses.release( input, input.getAllocationId( ) );
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
