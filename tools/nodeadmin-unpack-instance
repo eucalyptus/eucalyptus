@@ -178,7 +178,7 @@ def _unpack_instance(instance, instance_path, *args, **kwargs):
 
 
 def _extract_files(packed_path):
-    tar_cmd = ["/bin/tar", "-xf", packed_path, "-C", "/", "--incremental"]
+    tar_cmd = ["/bin/tar", "-xpf", packed_path, "-C", "/", "--incremental"]
 
     rc = check_call(tar_cmd)
     if rc:

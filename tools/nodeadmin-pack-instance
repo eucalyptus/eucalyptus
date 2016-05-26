@@ -258,9 +258,9 @@ def _create_tar(files, pack_path, skip_compression):
     tar_cmd = ["/bin/tar"]
 
     if skip_compression:
-        tar_cmd.extend(["-cf", pack_path])
+        tar_cmd.extend(["-cpPf", pack_path])
     else:
-        tar_cmd.extend(["-czf", pack_path])
+        tar_cmd.extend(["-czpPf", pack_path])
 
     tar_cmd.extend(files)
 
@@ -464,7 +464,7 @@ def _main(args, log_level):
                 "Failed packing instance %s (%d)", args.instance, rc)
         else:
             logging.info(
-                "Packed instance %s located at %s", args.instance[0], args.instance[1])
+                "Packed instance %s located at %s", args.instance, output_file)
 
     return rc
 
