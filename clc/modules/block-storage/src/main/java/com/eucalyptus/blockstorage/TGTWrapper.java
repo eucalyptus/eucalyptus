@@ -98,24 +98,6 @@ public class TGTWrapper {
   final public static String TGT_SERVICE_NAME = "tgtd";
   final private static Logger LOG = Logger.getLogger(TGTWrapper.class);
   final private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
-  private static boolean systemctl;
-
-  static {
-    LOG.info("Checking is systemctl is present.");
-    try {
-      Runtime runtime = Runtime.getRuntime();
-      Process process = runtime.exec(new String[] {"systemctl", "--version"});
-      process.waitFor();
-      if (process.exitValue() == 0)
-        systemctl = true;
-      else
-        systemctl = false;
-    } catch (Exception e) {
-      LOG.info(e);
-      systemctl = false;
-    }
-    LOG.info("The systemctl is present: " + systemctl);
-  }
 
   private static final ReadWriteLock serviceLock = new ReentrantReadWriteLock();
   private static ExecutorService service; // do not access directly, use getExecutor / getExecutorWithInit
