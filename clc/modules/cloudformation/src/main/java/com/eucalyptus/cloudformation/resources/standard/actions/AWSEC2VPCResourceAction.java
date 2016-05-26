@@ -219,7 +219,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCResourceAction action = (AWSEC2VPCResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
         describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );
@@ -277,7 +277,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+        if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
           for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
             EC2Tag tag = new EC2Tag();
             tag.setKey(tagInfo.getKey());

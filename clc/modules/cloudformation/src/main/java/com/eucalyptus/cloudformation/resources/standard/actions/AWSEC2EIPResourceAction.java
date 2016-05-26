@@ -172,7 +172,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform( final ResourceAction resourceAction ) throws Exception {
         final AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         if ( action.properties.getInstanceId( ) != null ) {
           final ServiceConfiguration configuration = Topology.lookup( Compute.class );
           final List<AddressInfoType> addresses = describeAddresses( action, configuration ).getAddressesSet( );
@@ -207,7 +207,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         final DescribeAddressesResponseType describeAddressesResponseType = describeAddresses( action, configuration );
         if (describeAddressesResponseType.getAddressesSet() != null && !describeAddressesResponseType.getAddressesSet().isEmpty()) {
           ReleaseAddressType releaseAddressType = MessageHelper.createMessage(ReleaseAddressType.class, action.info.getEffectiveUserId());

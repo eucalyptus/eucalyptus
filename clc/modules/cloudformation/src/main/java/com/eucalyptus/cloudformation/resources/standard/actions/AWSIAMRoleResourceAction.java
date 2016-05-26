@@ -133,7 +133,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // if no role, bye...
         if (!IAMHelper.roleExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;

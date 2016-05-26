@@ -67,7 +67,7 @@ public class IAMHelper {
         listUsersType.setMarker(userMarker);
       }
       ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listUsersResponseType.getListUsersResult().getIsTruncated())) {
         userMarker = listUsersResponseType.getListUsersResult().getMarker();
       } else {
         seenAllUsers = true;
@@ -99,7 +99,7 @@ public class IAMHelper {
         listAccessKeysType.setMarker(accessKeyMarker);
       }
       ListAccessKeysResponseType listAccessKeysResponseType = AsyncRequests.<ListAccessKeysType,ListAccessKeysResponseType> sendSync(configuration, listAccessKeysType);
-      if (listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listAccessKeysResponseType.getListAccessKeysResult().getIsTruncated())) {
         accessKeyMarker = listAccessKeysResponseType.getListAccessKeysResult().getMarker();
       } else {
         seenAllAccessKeys = true;
@@ -134,7 +134,7 @@ public class IAMHelper {
         listGroupsType.setMarker(groupMarker);
       }
       ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
-      if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listGroupsResponseType.getListGroupsResult().getIsTruncated())) {
         groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
       } else {
         seenAllGroups = true;
@@ -175,7 +175,7 @@ public class IAMHelper {
         listInstanceProfilesType.setMarker(instanceProfileMarker);
       }
       ListInstanceProfilesResponseType listInstanceProfilesResponseType = AsyncRequests.<ListInstanceProfilesType,ListInstanceProfilesResponseType> sendSync(configuration, listInstanceProfilesType);
-      if (listInstanceProfilesResponseType.getListInstanceProfilesResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listInstanceProfilesResponseType.getListInstanceProfilesResult().getIsTruncated())) {
         instanceProfileMarker = listInstanceProfilesResponseType.getListInstanceProfilesResult().getMarker();
       } else {
         seenAllInstanceProfiles = true;
@@ -202,7 +202,7 @@ public class IAMHelper {
         listGroupsType.setMarker(groupMarker);
       }
       ListGroupsResponseType listGroupsResponseType = AsyncRequests.<ListGroupsType,ListGroupsResponseType> sendSync(configuration, listGroupsType);
-      if (listGroupsResponseType.getListGroupsResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listGroupsResponseType.getListGroupsResult().getIsTruncated())) {
         groupMarker = listGroupsResponseType.getListGroupsResult().getMarker();
       } else {
         seenAllGroups = true;
@@ -228,7 +228,7 @@ public class IAMHelper {
         listUsersType.setMarker(userMarker);
       }
       ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listUsersResponseType.getListUsersResult().getIsTruncated())) {
         userMarker = listUsersResponseType.getListUsersResult().getMarker();
       } else {
         seenAllUsers = true;
@@ -254,7 +254,7 @@ public class IAMHelper {
         listRolesType.setMarker(roleMarker);
       }
       ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
-      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listRolesResponseType.getListRolesResult().getIsTruncated())) {
         roleMarker = listRolesResponseType.getListRolesResult().getMarker();
       } else {
         seenAllRoles = true;
@@ -284,7 +284,7 @@ public class IAMHelper {
         listRolesType.setMarker(RoleMarker);
       }
       ListRolesResponseType listRolesResponseType = AsyncRequests.<ListRolesType,ListRolesResponseType> sendSync(configuration, listRolesType);
-      if (listRolesResponseType.getListRolesResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listRolesResponseType.getListRolesResult().getIsTruncated())) {
         RoleMarker = listRolesResponseType.getListRolesResult().getMarker();
       } else {
         seenAllRoles = true;
@@ -320,7 +320,7 @@ public class IAMHelper {
         listGroupsForUserType.setMarker(groupMarker);
       }
       ListGroupsForUserResponseType listGroupsForUserResponseType = AsyncRequests.<ListGroupsForUserType,ListGroupsForUserResponseType> sendSync(configuration, listGroupsForUserType);
-      if (listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated())) {
         groupMarker = listGroupsForUserResponseType.getListGroupsForUserResult().getMarker();
       } else {
         seenAllGroups = true;
@@ -344,7 +344,7 @@ public class IAMHelper {
         listUsersType.setMarker(userMarker);
       }
       ListUsersResponseType listUsersResponseType = AsyncRequests.<ListUsersType,ListUsersResponseType> sendSync(configuration, listUsersType);
-      if (listUsersResponseType.getListUsersResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(listUsersResponseType.getListUsersResult().getIsTruncated())) {
         userMarker = listUsersResponseType.getListUsersResult().getMarker();
       } else {
         seenAllUsers = true;
@@ -389,7 +389,7 @@ public class IAMHelper {
         getGroupType.setMarker(userMarker);
       }
       GetGroupResponseType getGroupResponseType = AsyncRequests.<GetGroupType,GetGroupResponseType> sendSync(configuration, getGroupType);
-      if (getGroupResponseType.getGetGroupResult().getIsTruncated() == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(getGroupResponseType.getGetGroupResult().getIsTruncated())) {
         userMarker = getGroupResponseType.getGetGroupResult().getMarker();
       } else {
         seenAllUsers = true;

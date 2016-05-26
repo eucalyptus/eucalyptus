@@ -187,7 +187,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserResourceAction action = (AWSIAMUserResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // if no user, bye...
         if (!IAMHelper.userExists(configuration, action.info.getPhysicalResourceId(), action.info.getEffectiveUserId())) return action;
@@ -204,7 +204,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
               listGroupsForUserType.setMarker(groupMarker);
             }
             ListGroupsForUserResponseType listGroupsForUserResponseType = AsyncRequests.<ListGroupsForUserType,ListGroupsForUserResponseType> sendSync(configuration, listGroupsForUserType);
-            if (listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated() == Boolean.TRUE) {
+            if (Boolean.TRUE.equals(listGroupsForUserResponseType.getListGroupsForUserResult().getIsTruncated())) {
               groupMarker = listGroupsForUserResponseType.getListGroupsForUserResult().getMarker();
             } else {
               seenAllGroups = true;

@@ -248,7 +248,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
     }
 
     private static boolean notCreatedOrNoInstanceOrNoVolume(AWSEC2VolumeAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
-      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
+      if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
       describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );

@@ -560,7 +560,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // See if instance was ever populated
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         // First see if instance exists or has been terminated
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
         describeInstancesType.getFilterSet().add(Filter.filter("instance-id", action.info.getPhysicalResourceId()));
@@ -582,7 +582,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // See if instance was ever populated
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
         describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
@@ -652,7 +652,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
             resetInstanceAttribute(configuration, newAction, "disableApiTermination");
           }
         }
-        if (!Objects.equals(runningInstancesItemType.getInstanceInitiatedShutdownBehavior(), newAction.properties.getInstanceInitiatedShutdownBehavior())) {
+        if (!Objects.equals(BoolToString(runningInstancesItemType.getInstanceInitiatedShutdownBehavior()), newAction.properties.getInstanceInitiatedShutdownBehavior())) {
           if (newAction.properties.getInstanceInitiatedShutdownBehavior() != null) {
             ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
             modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());
@@ -676,8 +676,8 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
             AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
           }
         }
-        if (!Objects.equals(runningInstancesItemType.getMonitoring(), newAction.properties.getMonitoring())) {
-          if (newAction.properties.getMonitoring() != Boolean.TRUE) {
+        if (!Objects.equals(runningInstancesItemType.getMonitoring(), BoolToString(newAction.properties.getMonitoring()))) {
+          if (!Boolean.TRUE.equals(newAction.properties.getMonitoring())) {
             UnmonitorInstancesType unmonitorInstancesType = MessageHelper.createMessage(UnmonitorInstancesType.class, newAction.info.getEffectiveUserId());
             unmonitorInstancesType.setInstancesSet(Lists.newArrayList(newAction.info.getPhysicalResourceId()));
             AsyncRequests.sendSync(configuration, unmonitorInstancesType);
@@ -704,6 +704,10 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
+
+      private String BoolToString(Boolean b) {
+        return b == null ? null : String.valueOf(b.booleanValue());
+      }
     },
     UPDATE_TAGS {
       @Override
@@ -715,7 +719,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+        if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
           for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
             EC2Tag tag = new EC2Tag();
             tag.setKey(tagInfo.getKey());
@@ -1000,7 +1004,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
         if (describeInstancesResponseType.getReservationSet().size() == 0) throw new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " not found.");
         if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
-          new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " terminated.");
+          throw new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " terminated.");
         }
         if ("stopped".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
           return newAction;

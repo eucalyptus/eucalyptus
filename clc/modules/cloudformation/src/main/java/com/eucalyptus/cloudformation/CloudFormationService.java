@@ -370,7 +370,7 @@ public class CloudFormationService {
             stackEntity.setStackPolicy(stackPolicyText);
             stackEntity.setStackStatus(Status.CREATE_IN_PROGRESS);
             stackEntity.setStackStatusReason("User initiated");
-            stackEntity.setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
+            stackEntity.setDisableRollback(Boolean.TRUE.equals(request.getDisableRollback())); // null -> false
             stackEntity.setCreationTimestamp(new Date());
             if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
               stackEntity.setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
@@ -398,7 +398,7 @@ public class CloudFormationService {
                 onFailure = request.getOnFailure();
               }
             } else {
-              onFailure = (request.getDisableRollback() == Boolean.TRUE) ? "DO_NOTHING" : "ROLLBACK";
+              onFailure = (Boolean.TRUE.equals(request.getDisableRollback())) ? "DO_NOTHING" : "ROLLBACK";
             }
 
             for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
@@ -1258,9 +1258,9 @@ public class CloudFormationService {
 
       List<String> changedTypeResources = Lists.newArrayList();
       for (String resourceName: previousTemplate.getResourceInfoMap().keySet()) {
-        if (previousTemplate.getResourceInfoMap().get(resourceName).getAllowedByCondition() == Boolean.TRUE &&
+        if (Boolean.TRUE.equals(previousTemplate.getResourceInfoMap().get(resourceName).getAllowedByCondition()) &&
           nextTemplate.getResourceInfoMap().containsKey(resourceName) &&
-          nextTemplate.getResourceInfoMap().get(resourceName).getAllowedByCondition() == Boolean.TRUE &&
+          Boolean.TRUE.equals(nextTemplate.getResourceInfoMap().get(resourceName).getAllowedByCondition()) &&
           !previousTemplate.getResourceInfoMap().get(resourceName).getType().equals(nextTemplate.getResourceInfoMap().get(resourceName).getType())) {
           changedTypeResources.add(resourceName);
         }
@@ -1318,7 +1318,7 @@ public class CloudFormationService {
       }
       // 6) If this is an "outer" stack (that contains a nested stack) always update
       for (ResourceInfo resourceInfo: nextTemplate.getResourceInfoMap().values()) {
-        if (resourceInfo.getAllowedByCondition() == Boolean.TRUE && resourceInfo.getType().equals("AWS::CloudFormation::Stack")) {
+        if (Boolean.TRUE.equals(resourceInfo.getAllowedByCondition()) && resourceInfo.getType().equals("AWS::CloudFormation::Stack")) {
           requiresUpdate = true;
           break;
         }
@@ -1430,7 +1430,7 @@ public class CloudFormationService {
 
   private boolean stackPolicyIsDifferent(String previousStackPolicy, String nextStackPolicy) throws ValidationErrorException {
     if (nextStackPolicy == null) return false;
-    if (previousStackPolicy == null && previousStackPolicy != null) return true;
+    if (previousStackPolicy == null && nextStackPolicy != null) return true;
     ObjectMapper objectMapper = new ObjectMapper();
     JsonNode previousStackPolicyNode = null;
     try {
@@ -1527,7 +1527,7 @@ public class CloudFormationService {
     }
     if (nextParameters != null) {
       for (Parameter nextParameter: nextParameters) {
-        if (nextParameter.getUsePreviousValue() == Boolean.TRUE) {
+        if (Boolean.TRUE.equals(nextParameter.getUsePreviousValue())) {
           if (Strings.isNullOrEmpty(nextParameter.getParameterValue())) {
             throw new ValidationErrorException("Invalid input for parameter key " + nextParameter.getParameterKey() + ". Cannot specify usePreviousValue as true and non empty value for a parameter.");
           }

@@ -117,7 +117,7 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserToGroupAdditionResourceAction action = (AWSIAMUserToGroupAdditionResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         IAMHelper.removeUsersFromGroup(configuration, action.properties.getUsers(), action.properties.getGroupName(), action.info.getEffectiveUserId());
         return action;
       }

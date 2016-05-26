@@ -123,7 +123,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2VPCDHCPOptionsAssociationResourceAction action = (AWSEC2VPCDHCPOptionsAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // Check dhcp options (if not "default")
         if (!"default".equals(action.properties.getDhcpOptionsId())) {

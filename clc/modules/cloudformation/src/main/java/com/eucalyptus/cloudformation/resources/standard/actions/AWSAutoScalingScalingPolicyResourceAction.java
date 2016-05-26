@@ -135,7 +135,7 @@ public class AWSAutoScalingScalingPolicyResourceAction extends StepBasedResource
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSAutoScalingScalingPolicyResourceAction action = (AWSAutoScalingScalingPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         // no group, bye...
         DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
         AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();

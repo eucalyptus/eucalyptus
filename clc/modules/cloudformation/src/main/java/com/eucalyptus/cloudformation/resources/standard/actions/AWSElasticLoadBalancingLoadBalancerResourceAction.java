@@ -433,7 +433,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         final ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         final boolean accessLogging = action.properties.getAccessLoggingPolicy( ) != null;
         final boolean crossZone = action.properties.getCrossZone() != null &&
-            action.properties.getCrossZone() == Boolean.TRUE;
+             Boolean.TRUE.equals(action.properties.getCrossZone());
         final boolean idleTimeout = action.properties.getConnectionSettings( ) != null &&
             action.properties.getConnectionSettings( ).getIdleTimeout( ) != null;
         if ( accessLogging || crossZone || idleTimeout ) {
@@ -585,7 +585,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DescribeLoadBalancersType describeLoadBalancersType = MessageHelper.createMessage(DescribeLoadBalancersType.class, action.info.getEffectiveUserId());
         LoadBalancerNames loadBalancerNames = new LoadBalancerNames();
         ArrayList<String> member = Lists.newArrayList(action.info.getPhysicalResourceId());
@@ -623,9 +623,9 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         DescribeLoadBalancersType describeLoadBalancersType = MessageHelper.createMessage(DescribeLoadBalancersType.class, newAction.info.getEffectiveUserId());
         describeLoadBalancersType.setLoadBalancerNames(getLoadBalancerNames(newAction));
         DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType, DescribeLoadBalancersResponseType>sendSync(configuration, describeLoadBalancersType);
-        if (describeLoadBalancersResponseType == null || describeLoadBalancersResponseType.getDescribeLoadBalancersResult() == null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() == null &&
-          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() == null &&
+        if (describeLoadBalancersResponseType == null || describeLoadBalancersResponseType.getDescribeLoadBalancersResult() == null ||
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() == null ||
+          describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() == null ||
           describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().size() != 1) {
           throw new ValidationErrorException("Can not find load balancer : " + newAction.info.getPhysicalResourceId());
         }
@@ -703,7 +703,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         }
         final TagDescription tagDescription = describeTagsResponseType.getDescribeTagsResult().getTagDescriptions().getMember().get(0);
         Set<CloudFormationResourceTag> existingTags = Sets.newLinkedHashSet();
-        if (tagDescription != null & tagDescription.getTags() != null && tagDescription.getTags().getMember() != null) {
+        if (tagDescription != null && tagDescription.getTags() != null && tagDescription.getTags().getMember() != null) {
           for (Tag tag : tagDescription.getTags().getMember()) {
             CloudFormationResourceTag cfTag = new CloudFormationResourceTag();
             cfTag.setKey(tag.getKey());
@@ -1237,9 +1237,9 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
     loadBalancerNames.getMember().add(newAction.info.getPhysicalResourceId());
     describeLoadBalancersType.setLoadBalancerNames(loadBalancerNames);
     DescribeLoadBalancersResponseType describeLoadBalancersResponseType = AsyncRequests.<DescribeLoadBalancersType,DescribeLoadBalancersResponseType> sendSync(configuration, describeLoadBalancersType);
-    if (describeLoadBalancersResponseType == null && describeLoadBalancersResponseType.getDescribeLoadBalancersResult() == null
-            && describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() == null &&
-            describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() == null &&
+    if (describeLoadBalancersResponseType == null || describeLoadBalancersResponseType.getDescribeLoadBalancersResult() == null
+            || describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions() == null ||
+            describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember() == null ||
             describeLoadBalancersResponseType.getDescribeLoadBalancersResult().getLoadBalancerDescriptions().getMember().isEmpty()) {
       throw new ValidationErrorException("Can't find load balancer" + newAction.info.getPhysicalResourceId());
     }

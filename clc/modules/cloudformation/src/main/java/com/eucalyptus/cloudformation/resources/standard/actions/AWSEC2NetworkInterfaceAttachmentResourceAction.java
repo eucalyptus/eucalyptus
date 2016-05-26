@@ -207,7 +207,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
         final AWSEC2NetworkInterfaceAttachmentResourceAction action =
             (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if ( action.info.getCreatedEnoughToDelete() != Boolean.TRUE ) return action;
+        if ( !Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete()) ) return action;
         if (notCreatedOrNoInstanceOrNoNetworkInterface(action, configuration)) return action;
         return deleteNetworkInterfaceAttachment(action, configuration);
       }
@@ -218,7 +218,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceAttachmentResourceAction action = (AWSEC2NetworkInterfaceAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if ( action.info.getCreatedEnoughToDelete() != Boolean.TRUE ) return action;
+        if ( !Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete()) ) return action;
         if (notCreatedOrNoInstanceOrNoNetworkInterface(action, configuration)) return action;
         return waitUntilDetached(action, configuration);
       }
@@ -378,7 +378,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
   }
 
   private static boolean notCreatedOrNoInstanceOrNoNetworkInterface(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
-    if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
+    if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
     try {
       final DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
       describeInstancesType.setInstancesSet(Lists.newArrayList(action.properties.getInstanceId()));
