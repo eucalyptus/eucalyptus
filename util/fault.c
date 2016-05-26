@@ -91,6 +91,7 @@
 #include <wchar.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -637,6 +638,7 @@ static boolean initialize_faultlog(const char *fileprefix)
     }
     LOGTRACE("Initializing faultlog using %s\n", faultlogpath);
     faultlog = fopen(faultlogpath, "a+");
+    fcntl(faultlog, F_SETFD, FD_CLOEXEC);
 
     if (faultlog == NULL) {
         LOGERROR("Cannot open fault log file %s: %s\n", faultlogpath, strerror(errno));
