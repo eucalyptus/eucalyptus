@@ -1090,7 +1090,7 @@ int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
 //! @note
 //!
 int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule) {
-    int i, found = 0, ruleidx = 0;
+    int i, found = 0;
     ipt_chain *chain;
 
     if (!ipth || !tablename || !chainname || !findrule || !ipth->init) {
@@ -1103,7 +1103,6 @@ int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, c
     }
 
     for (i = 0; i < chain->max_rules && !found; i++) {
-        ruleidx = i;
         if (!strcmp(chain->rules[i].iptrule, findrule)) {
             found++;
             chain->rules[i].flushed = 1;

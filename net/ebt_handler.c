@@ -807,7 +807,7 @@ ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findc
 //!
 ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule)
 {
-    int i, found = 0, ruleidx = 0;
+    int i, found = 0;
     ebt_chain *chain;
 
     if (!ebth || !tablename || !chainname || !findrule || !ebth->init) {
@@ -820,7 +820,6 @@ ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainna
     }
 
     for (i = 0; i < chain->max_rules; i++) {
-        ruleidx = i;
         if (!strcmp(chain->rules[i].ebtrule, findrule))
             found++;
     }

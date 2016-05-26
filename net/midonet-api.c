@@ -1601,8 +1601,6 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
     int foundidx = 0;
     midonet_api_dhcp *founddhcp = NULL;
 
-    midonet_api_dhcp **dhcps = NULL;
-    int max_dhcps = 0;
     midoname *out = NULL;
     
     if (devname == NULL) {
@@ -1619,9 +1617,6 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
     if (br == NULL) {
         LOGWARN("Unable to find %s in midocache.\n", devname->name);
         return (1);
-    } else {
-        dhcps = br->dhcps;
-        max_dhcps = br->max_dhcps;
     }
     if (out && out->init) {
         founddhcp = midonet_api_cache_lookup_dhcp(br, out, NULL);
@@ -1952,8 +1947,6 @@ int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name,
     int found = 0;
     int foundidx = 0;
 
-    midoname **dhcphosts = NULL;
-    int max_dhcphosts = 0;
     midoname *out = NULL;
     midoname *founddhh = NULL;
     
@@ -1971,9 +1964,6 @@ int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name,
     if (dh == NULL) {
         LOGWARN("Unable to find %s in midocache.\n", dhcp->name);
         return (1);
-    } else {
-        dhcphosts = dh->dhcphosts;
-        max_dhcphosts = dh->max_dhcphosts;
     }
     if (out && out->init) {
         founddhh = midonet_api_cache_lookup_dhcp_host(dh, out, NULL);
@@ -2035,7 +2025,7 @@ int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name,
         mido_free_midoname(&myname);
         EUCA_FREE(parents);
     }
-    return (rc);
+    return (ret);
 }
 
 /**
@@ -5224,7 +5214,9 @@ int json_object_cmp(json_object * one, json_object * two)
             //            twoval = json_object_object_get(two, onekey);
             json_object_object_get_ex(two, onekey, &twoval);
             twosubtype = json_object_get_type(twoval);
-            if (onesubtype == json_type_object) {
+            if (onesubtype != twosubtype) {
+                rc = 1;
+            } else if (onesubtype == json_type_object) {
                 // recurse
                 rc = json_object_cmp(oneval, twoval);
             } else if (onesubtype == json_type_array) {
@@ -7018,18 +7010,18 @@ void *midonet_api_cache_refresh_objects_main_thread(void *main_param) {
         pthread_attr_init(&ptattr);
         pthread_attr_setdetachstate(&ptattr, PTHREAD_CREATE_JOINABLE);
         for (int i = 0; i < (MIDONET_API_RELOAD_THREADS - 1); i++) {
-            rc = pthread_create(&cthreads[i], &ptattr, midonet_api_cache_refresh_objects_worker_thread, (void *) &(tparams[i]));
+            rc += pthread_create(&cthreads[i], &ptattr, midonet_api_cache_refresh_objects_worker_thread, (void *) &(tparams[i]));
         }
-        rc = param->get_from_mido(tparams[MIDONET_API_RELOAD_THREADS - 1].cache,
+        rc += param->get_from_mido(tparams[MIDONET_API_RELOAD_THREADS - 1].cache,
                 tparams[MIDONET_API_RELOAD_THREADS - 1].start, tparams[MIDONET_API_RELOAD_THREADS - 1].end);
         for (int i = 0; i < (MIDONET_API_RELOAD_THREADS - 1); i++) {
-            rc = pthread_join(cthreads[i], NULL);
+            rc += pthread_join(cthreads[i], NULL);
         }
 
         EUCA_FREE(tparams);
         pthread_attr_destroy(&ptattr);
     } else {
-        rc = param->get_from_mido(param->cache, 0, n);
+        rc += param->get_from_mido(param->cache, 0, n);
     }
 
     LOGTRACE("\t\t%s main thread - %.2f ms\n", param->name, eucanetd_timer_usec(&tv) / 1000.0);

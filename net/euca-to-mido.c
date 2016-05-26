@@ -205,7 +205,7 @@ int do_metaproxy_setup(mido_config *mido) {
  * deleting VPCs.
  */
 int do_metaproxy_maintain(mido_config *mido, int mode) {
-    int ret = 0, rc = 0, i = 0, dorun = 0;
+    int ret = 0, rc, i = 0, dorun = 0;
     pid_t npid = 0;
     char rr[EUCA_MAX_PATH], cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
     sequence_executor cmds;
@@ -4170,12 +4170,8 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     if (vpcsubnet->subnetbr) {
         found = 0;
         midonet_api_dhcp *dhcp = NULL;
-        midoname **dhcphosts = NULL;
-        int max_dhcphosts = 0;
         if (vpcsubnet->subnetbr->max_dhcps) {
             dhcp = vpcsubnet->subnetbr->dhcps[0];
-            dhcphosts = dhcp->dhcphosts;
-            max_dhcphosts = dhcp->max_dhcphosts;
             midoname *tmpmn = mido_get_dhcphost(dhcp, vpcinstance->name);
             if (tmpmn) {
                 LOGTRACE("Found dhcp host %s\n", tmpmn->name);
@@ -5460,7 +5456,7 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
 
     midoname **hosts = NULL;
     int max_hosts = 0;
-    rc = mido_get_hosts(&hosts, &max_hosts);
+    rc += mido_get_hosts(&hosts, &max_hosts);
     for (k = 0; k < mido->ext_rthostarrmax; k++) {
         for (i = 0; i < max_hosts; i++) {
             if (!strcmp(hosts[i]->name, mido->ext_rthostnamearr[k])) {
@@ -6033,18 +6029,18 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
 
     for (i = 0; i < vpc->max_subnets; i++) {
         if (strlen(vpc->subnets[i].name)) {
-            rc = delete_mido_vpc_subnet(mido, vpc, &(vpc->subnets[i]));
+            rc += delete_mido_vpc_subnet(mido, vpc, &(vpc->subnets[i]));
         }
     }
     
-    rc = mido_delete_bridge_port(mido->midocore->eucabr, vpc->midos[VPC_EUCABR_DOWNLINK]);
-    rc = mido_delete_router(vpc->midos[VPC_VPCRT]);
+    rc += mido_delete_bridge_port(mido->midocore->eucabr, vpc->midos[VPC_EUCABR_DOWNLINK]);
+    rc += mido_delete_router(vpc->midos[VPC_VPCRT]);
 
-    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_PREELIPCHAIN]);
-    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
-    rc = mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
+    rc += mido_delete_chain(vpc->midos[VPC_VPCRT_PREELIPCHAIN]);
+    rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
+    rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
 
-    rc = delete_mido_meta_vpc_namespace(mido, vpc);
+    rc += delete_mido_meta_vpc_namespace(mido, vpc);
 
     clear_router_id(mido, vpc->rtid);
     free_mido_vpc(vpc);
@@ -6285,7 +6281,7 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
     int rc = 0, i = 0;
 
     // delete the metadata_ip ipaddrgroup
-    rc = mido_delete_ipaddrgroup(midocore->midos[CORE_METADATA_IPADDRGROUP]);
+    rc += mido_delete_ipaddrgroup(midocore->midos[CORE_METADATA_IPADDRGROUP]);
     midocore->midos[CORE_METADATA_IPADDRGROUP] = NULL;
 
     // delete the host/port links
@@ -6293,28 +6289,28 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
         if ((midocore->gwhosts[i]->init == 0) || (midocore->gwports[i]->init == 0)) {
             continue;
         }
-        rc = mido_unlink_host_port(midocore->gwhosts[i], midocore->gwports[i]);
+        rc += mido_unlink_host_port(midocore->gwhosts[i], midocore->gwports[i]);
     }
 
     // delete the port-group
-    rc = mido_delete_portgroup(midocore->midos[CORE_GWPORTGROUP]);
+    rc += mido_delete_portgroup(midocore->midos[CORE_GWPORTGROUP]);
     midocore->midos[CORE_GWPORTGROUP] = NULL;
 
     // delete the bridge
-    rc = mido_delete_bridge(midocore->midos[CORE_EUCABR]);
+    rc += mido_delete_bridge(midocore->midos[CORE_EUCABR]);
     midocore->midos[CORE_EUCABR] = NULL;
     
     // delete the bridge infilter
     if (midocore->eucabr_infilter && midocore->eucabr_infilter->obj) {
-        rc = mido_delete_chain(midocore->eucabr_infilter->obj);
+        rc += mido_delete_chain(midocore->eucabr_infilter->obj);
         midocore->eucabr_infilter = NULL;
     } 
 
     // delete the router
-    rc = mido_delete_router(midocore->midos[CORE_EUCART]);
+    rc += mido_delete_router(midocore->midos[CORE_EUCART]);
     midocore->midos[CORE_EUCART] = NULL;
 
-    rc = delete_mido_meta_core(mido);
+    rc += delete_mido_meta_core(mido);
 
     return (0);
 }
@@ -6456,19 +6452,19 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         ret++;
     } else {
         midocore->eucabr_infilter = eucabr_infilter;
-    }
-    rc = mido_update_bridge(midocore->midos[CORE_EUCABR], "inboundFilterId",
-            eucabr_infilter->obj->uuid, "name", midocore->midos[CORE_EUCABR]->name, NULL);
-    if ((rc != 0) && (rc != -1)) {
-        LOGERROR("cannot attach eucabr infilter\n");
-        ret++;
-    }
-    rc = mido_create_rule(eucabr_infilter, eucabr_infilter->obj, NULL, NULL, "type", "drop",
-            "invDlType", "false", "dlType", "2048", "nwDstAddress", nw, "nwDstLength", sn,
-            "invNwDst", "false", NULL);
-    if (rc != 0) {
-        LOGWARN("Failed to eucabr drop rule\n");
-        ret++;
+        rc = mido_update_bridge(midocore->midos[CORE_EUCABR], "inboundFilterId",
+                eucabr_infilter->obj->uuid, "name", midocore->midos[CORE_EUCABR]->name, NULL);
+        if ((rc != 0) && (rc != -1)) {
+            LOGERROR("cannot attach eucabr infilter\n");
+            ret++;
+        }
+        rc = mido_create_rule(eucabr_infilter, eucabr_infilter->obj, NULL, NULL, "type", "drop",
+                "invDlType", "false", "dlType", "2048", "nwDstAddress", nw, "nwDstLength", sn,
+                "invNwDst", "false", NULL);
+        if (rc != 0) {
+            LOGWARN("Failed to eucabr drop rule\n");
+            ret++;
+        }
     }
 
     rc = create_mido_meta_core(mido);
@@ -7072,7 +7068,6 @@ int do_midonet_list(mido_config *mido) {
  */
 int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
     boolean gDetected = FALSE;
-    boolean gDeleted = FALSE;
     do_midonet_tag_midonames(mido);
     midonet_api_cache *cache = midonet_api_cache_get();
     if (!cache) {
@@ -7084,7 +7079,6 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
     if (midonet_api_delete_unconnected_ports(cache->ports, cache->max_ports, checkonly)) {
         gDetected = TRUE;
         if (!checkonly) {
-            gDeleted = TRUE;
         }
     }
     LOGINFO("\tchecking chains\n");
@@ -7094,7 +7088,6 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
             gDetected = TRUE;
             if (!checkonly) {
                 mido_delete_resource(NULL, cache->chains[i]->obj);
-                gDeleted = TRUE;
             }
         }
     }
@@ -7105,7 +7098,6 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
             gDetected = TRUE;
             if (!checkonly) {
                 mido_delete_resource(NULL, cache->ipaddrgroups[i]->obj);
-                gDeleted = TRUE;
             }
         }
     }
