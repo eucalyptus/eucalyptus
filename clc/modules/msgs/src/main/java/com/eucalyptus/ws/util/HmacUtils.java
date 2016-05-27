@@ -107,9 +107,13 @@ public class HmacUtils {
 
   private static final List<String> PARAMETERS_V4_QUERY = ImmutableList.of(
       SecurityParameter.X_Amz_Algorithm.parameter(),
-      SecurityParameter.X_Amz_Algorithm.parameter(),
+      SecurityParameter.X_Amz_Credential.parameter(),
       SecurityParameter.X_Amz_Signature.parameter(),
       SecurityParameter.X_Amz_SignedHeaders.parameter() );
+
+  private static final List<String> DATE_PARAMETERS_V4_QUERY = ImmutableList.of(
+      SecurityParameter.X_Amz_Date.parameter(),
+      SecurityParameter.X_Amz_Expires.parameter() );
 
   public enum SignatureVariant {
     SignatureV1Standard( SignatureVersion.SignatureV1 ) {
@@ -308,7 +312,7 @@ public class HmacUtils {
 
       @Override
       public Collection<String> getDateParametersToRemove() {
-        return Collections.singleton( SecurityParameter.X_Amz_Date.parameter() );
+        return DATE_PARAMETERS_V4_QUERY;
       }
 
       @Override
@@ -320,7 +324,7 @@ public class HmacUtils {
       @Override
       public String getAccessKeyId( @Nonnull final Function<String, List<String>> headerLookup,
                                     @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
-        return new SignatureCredential( lookupUniqueRequired( parameterLookup, "parameter", SecurityParameter.X_Amz_Signature.parameter() ) ).getAccessKeyId();
+        return new SignatureCredential( lookupUniqueRequired( parameterLookup, "parameter", SecurityParameter.X_Amz_Credential.parameter() ) ).getAccessKeyId();
       }
 
       @Override

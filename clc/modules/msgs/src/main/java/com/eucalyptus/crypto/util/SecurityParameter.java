@@ -79,6 +79,7 @@ public enum SecurityParameter {
   X_Amz_Date( true ),
   X_Amz_Algorithm( true ),
   X_Amz_Credential( true ),
+  X_Amz_Expires( true ),
   X_Amz_Signature( true ),
   X_Amz_SignedHeaders( true ),
   X_Amz_Security_Token( true ),
