@@ -204,10 +204,8 @@ while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
       NEW_EUCA_VERSION=$(get_euca_version NEW_EUCA)
     ;;
     o)
-      if [ -z "$OPTARG" ] ; then
-        OLD_EUCA=${OPTARG}
-        OLD_EUCA_VERSION=$(get_euca_version OLD_EUCA)
-      fi
+      OLD_EUCA=${OPTARG}
+      OLD_EUCA_VERSION=$(get_euca_version OLD_EUCA)
     ;;
     f) UP_FORCE="force";;
     d) UP_DB="upgrade_db";;
