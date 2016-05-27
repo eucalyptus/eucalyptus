@@ -32,7 +32,7 @@ import com.eucalyptus.ws.Role;
 public class ComputeException extends EucalyptusWebServiceException {
   private static final long serialVersionUID = 1L;
 
-  public ComputeException( final String code, final String message ) {
-    super( code, Role.Receiver, message );
+  public ComputeException( final String code, final String message, Object... args ) {
+    super( code, Role.Receiver, String.format(message, args) );
   }
 }

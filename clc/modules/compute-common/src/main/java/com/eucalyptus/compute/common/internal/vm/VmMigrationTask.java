@@ -83,8 +83,10 @@ public class VmMigrationTask {
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    if ( this.state != null ) builder.append( this.state );
-    if ( this.sourceHost != null && this.destinationHost != null ) builder.append( " " ).append( this.sourceHost ).append( "->" ).append( this.destinationHost );
+    if ( this.state != null )
+      builder.append( this.state );
+    if ( !Strings.isNullOrEmpty(this.sourceHost) && !Strings.isNullOrEmpty(this.destinationHost) )
+      builder.append( " " ).append( this.sourceHost ).append( "->" ).append( this.destinationHost );
     return builder.toString( );
   }
 

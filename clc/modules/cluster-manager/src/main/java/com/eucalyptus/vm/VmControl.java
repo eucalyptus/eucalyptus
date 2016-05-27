@@ -62,83 +62,17 @@
 
 package com.eucalyptus.vm;
 
-import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
-import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
-import static com.eucalyptus.util.Strings.substringAfter;
-import static com.eucalyptus.util.Strings.substringBefore;
-
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-
-import javax.persistence.EntityTransaction;
-
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.login.AuthenticationException;
-import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.compute.ClusterComputeServiceUnavailableException;
-import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
-import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
-import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException;
-import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
-import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
-import com.eucalyptus.compute.common.internal.util.SecurityGroupLimitMetadataException;
-import com.eucalyptus.compute.ClientUnauthorizedComputeException;
-import com.eucalyptus.compute.ComputeException;
-import com.eucalyptus.compute.common.backend.ReportInstanceStatusResponseType;
-import com.eucalyptus.compute.common.backend.ReportInstanceStatusType;
-import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
-import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
-import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
-import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.common.internal.vm.MigrationState;
-import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
-import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
-import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
-import com.eucalyptus.compute.vpc.NetworkInterfaceInUseMetadataException;
-import com.eucalyptus.compute.vpc.NoSuchNetworkInterfaceMetadataException;
-import com.eucalyptus.compute.vpc.NoSuchSubnetMetadataException;
-import com.eucalyptus.compute.vpc.NotEnoughPrivateAddressResourcesException;
-import com.eucalyptus.compute.vpc.PrivateAddressResourceAllocationException;
-import com.eucalyptus.compute.vpc.VpcRequiredMetadataException;
-import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.compute.common.internal.images.ImageInfo;
-import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
-import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
-import com.eucalyptus.images.Images;
-import com.eucalyptus.compute.common.internal.keys.NoSuchKeyMetadataException;
-import com.eucalyptus.compute.common.internal.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.compute.common.internal.vmtypes.VmType;
-import com.eucalyptus.vmtypes.VmTypes;
-import com.eucalyptus.ws.util.HmacUtils;
-import com.google.common.base.Joiner;
-
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.DecoderException;
-
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.run.AdmissionControl;
-import com.eucalyptus.cloud.run.Allocations;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.run.*;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.ClusterAllocator;
-import com.eucalyptus.cloud.run.ContractEnforcement;
-import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.RebootCallback;
@@ -146,44 +80,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.tracking.MessageContexts;
-import com.eucalyptus.compute.common.internal.tags.Filter;
-import com.eucalyptus.compute.common.internal.tags.Filters;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.Request;
-import com.eucalyptus.vm.Bundles.BundleCallback;
-import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
-import com.google.common.base.Function;
-import com.google.common.base.MoreObjects;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType;
-import com.eucalyptus.compute.common.MonitorInstanceState;
-import com.eucalyptus.compute.common.ReservationInfoType;
-import com.eucalyptus.compute.common.GroupItemType;
-import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
-import com.eucalyptus.compute.common.TerminateInstancesItemType;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
+import com.eucalyptus.compute.ClusterComputeServiceUnavailableException;
+import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.*;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupResponseType;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupType;
 import com.eucalyptus.compute.common.backend.DeletePlacementGroupResponseType;
@@ -198,6 +98,8 @@ import com.eucalyptus.compute.common.backend.MonitorInstancesResponseType;
 import com.eucalyptus.compute.common.backend.MonitorInstancesType;
 import com.eucalyptus.compute.common.backend.RebootInstancesResponseType;
 import com.eucalyptus.compute.common.backend.RebootInstancesType;
+import com.eucalyptus.compute.common.backend.ReportInstanceStatusResponseType;
+import com.eucalyptus.compute.common.backend.ReportInstanceStatusType;
 import com.eucalyptus.compute.common.backend.ResetInstanceAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetInstanceAttributeType;
 import com.eucalyptus.compute.common.backend.RunInstancesResponseType;
@@ -210,6 +112,52 @@ import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.compute.common.backend.UnmonitorInstancesResponseType;
 import com.eucalyptus.compute.common.backend.UnmonitorInstancesType;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
+import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
+import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
+import com.eucalyptus.compute.common.internal.keys.NoSuchKeyMetadataException;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
+import com.eucalyptus.compute.common.internal.tags.Filter;
+import com.eucalyptus.compute.common.internal.tags.Filters;
+import com.eucalyptus.compute.common.internal.util.*;
+import com.eucalyptus.compute.common.internal.vm.MigrationState;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
+import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
+import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.vpc.*;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.images.Images;
+import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.records.EventRecord;
+import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.tracking.MessageContexts;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.Request;
+import com.eucalyptus.vm.Bundles.BundleCallback;
+import com.eucalyptus.vmtypes.VmTypes;
+import com.eucalyptus.ws.util.HmacUtils;
+import com.google.common.base.*;
+import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
 import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType;
@@ -217,13 +165,24 @@ import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
+import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.DecoderException;
+
+import javax.persistence.EntityTransaction;
+import java.security.MessageDigest;
+import java.util.*;
+
+import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
+import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
+import static com.eucalyptus.util.Strings.substringAfter;
+import static com.eucalyptus.util.Strings.substringBefore;
 
 
 @SuppressWarnings( "UnusedDeclaration" )
 public class VmControl {
-  
+
   private static Logger LOG = Logger.getLogger( VmControl.class );
-  
+
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
     Allocation allocInfo = Allocations.run( request );
@@ -288,7 +247,7 @@ public class VmControl {
     for( final ResourceToken allocToken : allocInfo.getAllocationTokens()){
       MessageContexts.remember(allocToken.getInstanceId(), request.getClass(), request);
     }
-    
+
     ClusterAllocator.get( ).apply( allocInfo );
     return reply;
   }
@@ -303,6 +262,7 @@ public class VmControl {
     final List<VmInstance> vmList = new ArrayList<>(  );
     final Context context = Contexts.lookup( );
     final Collection<String> identifiers = normalizeIdentifiers( request.getInstancesSet( ) );
+
     for ( String requestedInstanceId : identifiers ) {
       try {
         VmInstance vm = RestrictedTypes.doPrivileged( requestedInstanceId, VmInstance.class );
@@ -319,64 +279,63 @@ public class VmControl {
         failedVmList.add( requestedInstanceId );
       }
     }
+
     if ( !failedVmList.isEmpty( ) ) {
-      if ( failedVmList.size( ) > 1 )
-        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance IDs '" + Joiner.on( ", " ).join( failedVmList ) +"' do not exist" );
-      else
-        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + Joiner.on( ", " ).join( failedVmList ) +"' does not exist" );
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID(s) '%s' does not exist", Joiner.on( ", " ).join( failedVmList ));
     }
+
+    for ( VmInstance vm : vmList ) {
+      if (MigrationState.isMigrating(vm)) {
+        throw new ClientComputeException( "OperationNotPermitted", "Cannot terminate an instance which is currently migrating: %s", vm.getInstanceId() );
+      }
+    }
+
     try {
       final List<TerminateInstancesItemType> results = reply.getInstancesSet( );
-      Function<VmInstance,TerminateInstancesItemType> terminateFunction = new Function<VmInstance,TerminateInstancesItemType>( ) {
-        @Override
-        public TerminateInstancesItemType apply( final VmInstance vm ) {
-          String oldState, newState = null;
-          int oldCode, newCode = 0;
-          TerminateInstancesItemType result = null;
-          try {
-            if ( MigrationState.isMigrating( vm ) ) {
-              throw Exceptions.toUndeclared( "Cannot terminate an instance which is currently migrating: "
-                                             + vm.getInstanceId( )
-                                             + " "
-                                             + vm.getRuntimeState().getMigrationTask( ) );
-            }
-            oldCode = vm.getState( ).getCode( );
-            oldState = vm.getState( ).getName( );
-            if ( VmState.STOPPED.apply( vm ) ) {
-              newCode = VmState.TERMINATED.getCode( );
-              newState = VmState.TERMINATED.getName( );
-              VmInstances.terminated( vm );
-            } else if ( VmStateSet.RUN.apply( vm ) ) {
-              newCode = VmState.SHUTTING_DOWN.getCode( );
-              newState = VmState.SHUTTING_DOWN.getName( );
-              VmInstances.shutDown( vm );
-            } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
-              newCode = VmState.SHUTTING_DOWN.getCode( );
-              newState = VmState.SHUTTING_DOWN.getName( );
-            } else if ( VmStateSet.DONE.apply( vm ) ) {
-              oldCode = newCode = VmState.TERMINATED.getCode( );
-              oldState = newState = VmState.TERMINATED.getName( );
-              VmInstances.buried( vm );
-            }
-            MessageContexts.remember(vm.getInstanceId(), request.getClass(), request);
-            result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
-          } catch ( final TerminatedInstanceException e ) {
+      Function<VmInstance,TerminateInstancesItemType> terminateFunction = (VmInstance vm) -> {
+        String oldState, newState = null;
+        int oldCode, newCode = 0;
+        TerminateInstancesItemType result = null;
+
+        try {
+          oldCode = vm.getState( ).getCode( );
+          oldState = vm.getState( ).getName( );
+          if ( VmState.STOPPED.apply( vm ) ) {
+            newCode = VmState.TERMINATED.getCode( );
+            newState = VmState.TERMINATED.getName( );
+            VmInstances.terminated( vm );
+          } else if ( VmStateSet.RUN.apply( vm ) ) {
+            newCode = VmState.SHUTTING_DOWN.getCode( );
+            newState = VmState.SHUTTING_DOWN.getName( );
+            VmInstances.shutDown( vm );
+          } else if ( VmState.SHUTTING_DOWN.apply( vm ) ) {
+            newCode = VmState.SHUTTING_DOWN.getCode( );
+            newState = VmState.SHUTTING_DOWN.getName( );
+          } else if ( VmStateSet.DONE.apply( vm ) ) {
             oldCode = newCode = VmState.TERMINATED.getCode( );
             oldState = newState = VmState.TERMINATED.getName( );
-            try {
-              VmInstances.buried( vm.getInstanceId( ) );
-            } catch ( TransactionException e1 ) {
-              throw Exceptions.toUndeclared( e1 );
-            }
-            result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
-          } catch ( final NoSuchElementException e ) {
-            LOG.debug( "Ignoring terminate request for non-existent instance: " + vm.getInstanceId( ) );
-          } catch ( final Exception e ) {
-            throw Exceptions.toUndeclared( e );
+            VmInstances.buried( vm );
           }
-          return result;
+
+          MessageContexts.remember(vm.getInstanceId(), request.getClass(), request);
+          result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
+        } catch ( final TerminatedInstanceException e ) {
+          oldCode = newCode = VmState.TERMINATED.getCode( );
+          oldState = newState = VmState.TERMINATED.getName( );
+          try {
+            VmInstances.buried( vm.getInstanceId( ) );
+          } catch ( TransactionException e1 ) {
+            throw Exceptions.toUndeclared( e1 );
+          }
+          result = new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState );
+        } catch ( final NoSuchElementException e ) {
+          LOG.debug( "Ignoring terminate request for non-existent instance: " + vm.getInstanceId( ) );
+        } catch ( final Exception e ) {
+          throw Exceptions.toUndeclared( e );
         }
+        return result;
       };
+
       Function<VmInstance, TerminateInstancesItemType> terminateTx = Entities.asTransaction( VmInstance.class, terminateFunction, VmInstances.TX_RETRIES );
       for ( VmInstance vm : vmList ) {
         try {
@@ -397,7 +356,7 @@ public class VmControl {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
-  
+
   public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
     final RebootInstancesResponseType reply = request.getReply( );
     try {
@@ -456,7 +415,7 @@ public class VmControl {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
-  
+
   public GetConsoleOutputResponseType getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     VmInstance v;
@@ -491,16 +450,16 @@ public class VmControl {
       }
     }
   }
-  
+
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
     final DescribeBundleTasksResponseType reply = request.getReply( );
 
     final boolean showAll = request.getBundleIds( ).remove( "verbose" ) || !request.getBundleIds( ).isEmpty( );
     final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-      
+
       // Get all from cache that match filters......
-      final Predicate<? super VmBundleTask> filteredAndBundling = 
+      final Predicate<? super VmBundleTask> filteredAndBundling =
           Predicates.and(filter.asPredicate(), VmBundleTask.Filters.BUNDLING);
       Collection<VmBundleTask> cachedValues = Bundles.getPreviousBundleTasks().values();
       final Map<String, VmBundleTask> cachedBundles = buildMap(Collections2.filter(cachedValues, filteredAndBundling));
@@ -509,8 +468,8 @@ public class VmControl {
           .byPrivileges()
           .buildPredicate();
       // Get all from the db that are owned
-      
-      final Predicate<? super VmInstance> filteredInstances = 
+
+      final Predicate<? super VmInstance> filteredInstances =
           Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() );
       final Filter noFilters = Filters.generate( new ArrayList<com.eucalyptus.compute.common.Filter>(), VmBundleTask.class );
       final Context ctx = Contexts.lookup();
@@ -520,7 +479,7 @@ public class VmControl {
       final Collection<VmInstance> dbBundles =
           VmInstances.list( ownerFullName, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
       for ( final VmInstance v : dbBundles) {
-        
+
         if ( filteredInstances.apply(v) && VmInstance.Filters.BUNDLING.apply(v)) {
           LOG.debug("Getting current bundle for " + v.getInstanceId());
           reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
@@ -545,7 +504,7 @@ public class VmControl {
     }
     return map;
   }
-  
+
   public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) throws EucalyptusCloudException {
     final UnmonitorInstancesResponseType reply = request.getReply();
     final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet( ) );
@@ -561,7 +520,7 @@ public class VmControl {
     reply.setInstancesSet( SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
     return reply;
   }
-  
+
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : normalizeIdentifiers( request.getInstancesSet() ) ) {
@@ -597,7 +556,7 @@ public class VmControl {
     }
     return reply;
   }
-  
+
   public StopInstancesResponseType stopInstances( final StopInstancesType request ) throws EucalyptusCloudException {
     final StopInstancesResponseType reply = request.getReply( );
     try {
@@ -670,14 +629,14 @@ public class VmControl {
               throw new EucalyptusCloudException("Failed to erase Windows password");
             }
           }
-        }   
+        }
       }
-      
+
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
       Iterables.all( identifiers, stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
-    } catch( final EucalyptusCloudException ex){ 
+    } catch( final EucalyptusCloudException ex){
     	throw ex;
     } catch ( final Throwable e ) {
       LOG.error( e );
@@ -690,7 +649,7 @@ public class VmControl {
           throws EucalyptusCloudException {
     final ResetInstanceAttributeResponseType reply = request.getReply( );
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
-    
+
     try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( "sourceDestCheck".equals( request.getAttribute( ) ) ) {
@@ -750,19 +709,19 @@ public class VmControl {
     }
     return reply;
   }
-  
-  public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) throws EucalyptusCloudException {    
+
+  public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) throws EucalyptusCloudException {
       final MonitorInstancesResponseType reply = request.getReply();
       final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet() );
       final List<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
-      
+
       for(final String inst : instanceSet) {
         final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
         monitorInstanceState.setInstanceId(inst);
         monitorInstanceState.setMonitoringState("enabled");
         monitorTrueList.add(monitorInstanceState);
       }
-      
+
       reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorTrueList ) );
       return reply;
   }
@@ -959,17 +918,17 @@ public class VmControl {
     }
     return reply;
   }
-  
+
   public DeletePlacementGroupResponseType deletePlacementGroup( final DeletePlacementGroupType request ) {
     final DeletePlacementGroupResponseType reply = request.getReply( );
     return reply;
   }
-  
+
   public CreatePlacementGroupResponseType createPlacementGroup( final CreatePlacementGroupType request ) {
     final CreatePlacementGroupResponseType reply = request.getReply( );
     return reply;
   }
-  
+
   public CancelBundleTaskResponseType cancelBundleTask( final CancelBundleTaskType request ) throws EucalyptusCloudException {
     final CancelBundleTaskResponseType reply = request.getReply( );
     reply.set_return( true );
@@ -979,16 +938,16 @@ public class VmControl {
       BundleState bundleState = v.getRuntimeState( ).getBundleTaskState( );
       if ( !( bundleState == BundleState.pending || bundleState == BundleState.storing ) )
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
-      
+
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         Bundles.updateBundleTaskState( v, BundleState.canceling, 0.0d );
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
-        
+
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         final Cluster cluster = Clusters.lookup( ccConfig );
-        
+
         request.setInstanceId( v.getInstanceId( ) );
         reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
         AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
@@ -1000,7 +959,7 @@ public class VmControl {
       throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
     }
   }
-  
+
   public BundleInstanceResponseType bundleInstance( final BundleInstanceType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
     final BundleInstanceResponseType reply = request.getReply( );
@@ -1102,7 +1061,7 @@ public class VmControl {
   			setUserKey(request.getUserKey());
   			setArchitecture(imageInfo != null ? imageInfo.getArchitecture().name() : "i386");
 			}
-		}.regardingUserRequest(request);      
+		}.regardingUserRequest(request);
       AsyncRequests.newRequest( Bundles.createCallback(reqInternal)).dispatch( cluster );
     } catch ( Exception ex ) {
       LOG.error( ex );
@@ -1111,7 +1070,7 @@ public class VmControl {
     }
     return reply;
   }
-  
+
   public GetPasswordDataResponseType getPasswordData( final GetPasswordDataType request ) throws Exception {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     final VmInstance v;

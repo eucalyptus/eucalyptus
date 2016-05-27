@@ -28,7 +28,7 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 public class ClientComputeException extends ComputeException {
   private static final long serialVersionUID = 1L;
 
-  public ClientComputeException( final String code, final String message ) {
-    super( code, message );
+  public ClientComputeException( final String code, final String message, Object... args ) {
+    super( code, message, args );
   }
 }
