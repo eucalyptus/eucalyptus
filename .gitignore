@@ -16,6 +16,7 @@
 admin-tools/MANIFEST
 admin-tools/build
 admin-tools/dist
+admin-tools/venv
 console/jstests/node_modules/*
 console/eucaconsole/version.py
 autom4te.cache
@@ -26,6 +27,7 @@ clc/.classpath.bak
 clc/bind.log
 clc/derby.log
 clc/test
+clc/out
 clc/.deprecated/*/build
 clc/deps
 clc/eucadmin/bin/euca_conf
