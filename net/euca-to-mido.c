@@ -298,7 +298,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
                 if (mode == 0) {
                     LOGTRACE("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
                     snprintf(cmd, EUCA_MAX_PATH,
-                            "ip netns exec %s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
+                            "nsenter --net=/var/run/netns/%s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
                             mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
                 } else if (mode == 1) {
                     LOGTRACE("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
@@ -529,11 +529,11 @@ int create_mido_meta_vpc_namespace(mido_config * mido, mido_vpc * vpc) {
     nw = dot2hex("169.254.0.0");
     ip = nw + vpc->rtid;
     ipstr = hex2dot(ip);
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip addr add %s/16 dev vn3_%s", vpc->name, ipstr, sid);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/16 dev vn3_%s", vpc->name, ipstr, sid);
     EUCA_FREE(ipstr);
     se_add(&cmds, cmd, NULL, ignore_exit2);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip link set vn3_%s up", vpc->name, sid);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set vn3_%s up", vpc->name, sid);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
     se_print(&cmds);
@@ -719,11 +719,11 @@ int create_mido_meta_subnet_veth(mido_config * mido, mido_vpc * vpc, char *name,
     gw = nw + 2;
     gateway = hex2dot(gw);
     //  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip addr add %s/%s dev vn1_%s", gateway, slashnet, sid);
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip addr add %s/%s dev vn1_%s", vpc->name, gateway, slashnet, sid);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev vn1_%s", vpc->name, gateway, slashnet, sid);
     EUCA_FREE(gateway);
     se_add(&cmds, cmd, NULL, ignore_exit2);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns exec %s ip link set vn1_%s up", vpc->name, sid);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set vn1_%s up", vpc->name, sid);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
     se_print(&cmds);
