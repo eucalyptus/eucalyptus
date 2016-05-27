@@ -1746,7 +1746,7 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     char lpath[EUCA_MAX_PATH];
     char *libvirt_xml = NULL;
 
-    LOGINFO("[%s][%s][%s] processing attach network interface request\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
+    LOGDEBUG("[%s][%s][%s] processing attach network interface request\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
 
     // Get the instance
     ncInstance *instance = find_instance(&global_instances, instanceId);
@@ -1760,23 +1760,16 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     // Get the instance path
     euca_strncpy(ipath, instance->instancePath, EUCA_MAX_PATH);
 
-//    if ((ret = get_instance_path(instanceId, ipath, sizeof(ipath)))) {
-//        LOGERROR("[%s][%s] failed to find instance for a network interface attach operation\n", instanceId, netCfg->interfaceId);
-//        return EUCA_ERROR;
-//    }
-
     // Save network interface to instance structure, that should generate the network interface xml
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHING))) {
-        LOGERROR("[%s][%s] Aborting network interface attach operation due to error creating network interface record\n", instanceId, netCfg->interfaceId)
-        // TODO is there any clean up to be done here?
-        return ret;
+        LOGERROR("[%s][%s][%d] Aborting network interface attach operation due to error creating network interface record\n", instanceId, netCfg->interfaceId, ret)
+        goto release;
     }
 
     // Generate network interface libvirt xml
     if((ret = gen_libvirt_nic_xml(ipath, netCfg->interfaceId))) {
-        LOGERROR("[%s][%s] Aborting attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
-        // TODO cleanup and update state
-        return ret;
+        LOGERROR("[%s][%s][%d] Aborting attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId, ret)
+        goto release;
     }
 
     // Read libvirt xml content into a string
@@ -1785,29 +1778,32 @@ static int doAttachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     libvirt_xml = file2str(lpath);
     if (libvirt_xml == NULL) {
         LOGERROR("[%s][%s] failed to read network interface libvirt XML from %s\n", instanceId, netCfg->interfaceId, lpath);
-        // TODO cleanup and update state
-        return ret;
+        ret = EUCA_ERROR;
+        goto release;
     }
 
     // Invoke libvirt attach device from an xml
     if ((ret = attach_network_interface_instance(instance, netCfg->interfaceId, libvirt_xml))) {
         LOGERROR("[%s][%s] libvirt attach device failed\n", instanceId, netCfg->interfaceId)
-        // TODO cleanup and update state
-        
-        if(libvirt_xml) EUCA_FREE(libvirt_xml);
-        return ret;
+        goto release;
     }
 
     // Update network interface record in the instance structure
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHED))) {
-        LOGERROR("[%s][%s] Aborting network interface attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId)
-        // TODO cleanup and update state
-        
-        if(libvirt_xml) EUCA_FREE(libvirt_xml);
-        return ret;
+        LOGERROR("[%s][%s][%d] Aborting network interface attach operation due to error updating network interface record\n", instanceId, netCfg->interfaceId, ret)
+        goto release;
     }
 
     LOGINFO("[%s][%s][%s] attached network interface successfully\n", instanceId, netCfg->interfaceId, netCfg->attachmentId);
+
+    if(libvirt_xml) EUCA_FREE(libvirt_xml);
+    return EUCA_OK;
+
+release:
+
+    if (update_network_interface(instanceId, netCfg, VOL_STATE_ATTACHING_FAILED)) {
+        LOGERROR("[%s][%s]Failed to update network interface in cache during unwind from failed attach operation\n", instanceId, netCfg->interfaceId);
+    }
 
     if(libvirt_xml) EUCA_FREE(libvirt_xml);
     return ret;
@@ -1886,8 +1882,7 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
 
     // Update network interface record in the instance structure
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_DETACHING))) {
-        LOGERROR("[%s][%s] Aborting network interface detach operation due to error updating network interface record\n", instanceId, attachmentId)
-        // TODO is there any clean up to be done here?
+        LOGERROR("[%s][%s][%d] Aborting network interface detach operation due to error updating network interface record\n", instanceId, attachmentId, ret)
         return ret;
     }
 
@@ -1897,37 +1892,39 @@ static int doDetachNetworkInterface(struct nc_state_t *nc, ncMetadata * pMeta, c
     libvirt_xml = file2str(lpath);
     if (libvirt_xml == NULL) {
         LOGERROR("[%s][%s] failed to read network interface libvirt XML from %s\n", instanceId, attachmentId, lpath);
-        // TODO cleanup and update state
         return ret;
     }
 
     // Invoke libvirt attach device from an xml
     if ((ret = detach_network_interface_instance(instanceId, attachmentId, libvirt_xml))) {
-        LOGERROR("[%s][%s] libvirt detach device failed\n", instanceId, attachmentId)
-        // TODO cleanup and update state
-        
-        if(libvirt_xml) EUCA_FREE(libvirt_xml);
-        return ret;
+        LOGERROR("[%s][%s][%d] libvirt detach device failed\n", instanceId, attachmentId, ret)
+        goto release;
     } else {
         // Remove libvirt.xml file
         if ((ret = (unlink(lpath) ? EUCA_ERROR : EUCA_OK))) {
-            LOGERROR("[%s][%s] failed to remove libvirt xml file %s\n", instanceId, attachmentId, lpath);
+            LOGERROR("[%s][%s][%d] failed to remove libvirt xml file %s\n", instanceId, attachmentId, ret, lpath);
         }
     }
 
     // Update network interface record in the instance structure
     if ((ret = update_network_interface(instanceId, netCfg, VOL_STATE_DETACHED))) {
-        LOGERROR("[%s][%s] Aborting network interface detach operation due to error updating network interface record\n", instanceId, netCfg->attachmentId)
-        // TODO is there any clean up to be done here?
-        
-        if(libvirt_xml) EUCA_FREE(libvirt_xml);
-        return ret;
+        LOGERROR("[%s][%s][%d] Aborting network interface detach operation due to error updating network interface record\n", instanceId, netCfg->attachmentId, ret)
+        goto release;
     }
 
     LOGINFO("[%s][%s] detached network interface successfully\n", instanceId, attachmentId);
 
     if(libvirt_xml) EUCA_FREE(libvirt_xml);
     return EUCA_OK;
+
+release:
+
+    if (update_network_interface(instanceId, netCfg, VOL_STATE_DETACHING_FAILED)) {
+        LOGERROR("[%s][%s] Failed to update network interface in cache during unwind from failed detach operation\n", instanceId, attachmentId);
+    }
+
+    if(libvirt_xml) EUCA_FREE(libvirt_xml);
+    return ret;
 }
 
 //!

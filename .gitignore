@@ -99,6 +99,7 @@ cluster/euca_killall
 cluster/libEucalyptusCC.so
 cluster/libEucalyptusCCFake.so
 cluster/shutdownCC
+cluster/eucalyptus-cluster
 net/eucanetd
 net/euca_arp
 net/libeucanet.a
@@ -113,6 +114,7 @@ node/test_nc
 node/test_misc
 node/test_xml
 node/test_xml2
+node/eucalyptus-node
 util/euca-generate-fault
 /.settings
 .groovy/
