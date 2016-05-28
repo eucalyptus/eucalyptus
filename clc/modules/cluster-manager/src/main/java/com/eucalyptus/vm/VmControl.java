@@ -281,7 +281,11 @@ public class VmControl {
     }
 
     if ( !failedVmList.isEmpty( ) ) {
-      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID(s) '%s' does not exist", Joiner.on( ", " ).join( failedVmList ));
+      String failedVms = Joiner.on( ", " ).join( failedVmList );
+      if ( failedVmList.size( ) > 1 )
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance IDs '%s' do not exist", failedVms );
+      else
+        throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '%s' does not exist", failedVms );
     }
 
     for ( VmInstance vm : vmList ) {
