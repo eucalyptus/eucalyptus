@@ -129,7 +129,7 @@ public class UpdateCleanupStackWorkflowImpl implements UpdateCleanupStackWorkflo
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
       Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)
       waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase ->
-        if (innerStackUpdateSpecialCase == Boolean.TRUE) {
+        if (Boolean.TRUE.equals(innerStackUpdateSpecialCase)) {
           Promise<String> initPromise = activities.initUpdateCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
           waitFor(initPromise) {
             waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion)) {

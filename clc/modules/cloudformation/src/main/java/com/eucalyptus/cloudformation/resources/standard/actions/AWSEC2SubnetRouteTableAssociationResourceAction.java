@@ -110,7 +110,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetRouteTableAssociationResourceAction action = (AWSEC2SubnetRouteTableAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         if (!action.associationIdExistsForDelete(configuration)) return action;
         if (!action.routeTableExistsForDelete(configuration)) return action;

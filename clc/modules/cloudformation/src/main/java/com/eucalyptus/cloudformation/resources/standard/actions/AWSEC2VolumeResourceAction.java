@@ -356,7 +356,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
     }
 
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
-      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
+      if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
       describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
@@ -409,7 +409,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+        if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
           for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
             EC2Tag tag = new EC2Tag();
             tag.setKey(tagInfo.getKey());

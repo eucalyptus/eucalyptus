@@ -170,7 +170,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SecurityGroupEgressResourceAction action = (AWSEC2SecurityGroupEgressResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // property validation
         action.validateProperties();

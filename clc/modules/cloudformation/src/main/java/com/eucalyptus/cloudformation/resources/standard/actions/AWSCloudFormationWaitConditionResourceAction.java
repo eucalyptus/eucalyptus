@@ -249,7 +249,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
                   continue;
                 }
                 String uniqueId = localObjectNode.get("UniqueId").asText();
-                if (data == null) {
+                if (uniqueId == null) {
                   LOG.trace("Null uniqueId, skipping");
                   continue;
                 }

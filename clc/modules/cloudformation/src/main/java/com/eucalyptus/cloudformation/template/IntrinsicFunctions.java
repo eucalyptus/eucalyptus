@@ -400,7 +400,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       // Make sure types ok
       if (arg0Node == null || arg1Node == null || arg2Node == null
         || !arg0Node.isValueNode() || !arg1Node.isValueNode() || !arg2Node.isValueNode()
-        || arg0Node == null || arg1Node.asText() == null || arg2Node.asText() == null) {
+        || arg0Node.asText() == null || arg1Node.asText() == null || arg2Node.asText() == null) {
         throw new ValidationErrorException("Template error: every Fn::FindInMap object requires three parameters, " +
           "the map name, map key and the attribute for return value");
       }

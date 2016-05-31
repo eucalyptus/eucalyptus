@@ -150,7 +150,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
     String primary = null;
     if (privateIpAddresses != null) {
       for (PrivateIpAddressSpecification spec: privateIpAddresses) {
-        if (spec != null && spec.getPrimary() == Boolean.TRUE) {
+        if (spec != null && Boolean.TRUE.equals(spec.getPrimary())) {
           if (primary != null) throw new ValidationErrorException("More than one primary private ip address was passed in");
           primary = spec.getPrivateIpAddress();
         }
@@ -308,7 +308,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         if (checkDeleted(action, configuration)) return action;
         DeleteNetworkInterfaceType deleteNetworkInterfaceType = MessageHelper.createMessage(DeleteNetworkInterfaceType.class, action.info.getEffectiveUserId());
         deleteNetworkInterfaceType.setNetworkInterfaceId(action.info.getPhysicalResourceId());
@@ -321,7 +321,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         if (checkDeleted(action, configuration)) return action;
         throw new RetryAfterConditionCheckFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet deleted");
       }
@@ -411,7 +411,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
             throw new ValidationErrorException("Network interface " + newAction.info.getPhysicalResourceId() + " either does not exist or is not unique");
           }
           for (NetworkInterfacePrivateIpAddressesSetItemType networkInterfacePrivateIpAddressesSetItemType : describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getPrivateIpAddressesSet().getItem()) {
-            if (networkInterfacePrivateIpAddressesSetItemType.getPrimary() != Boolean.TRUE) {
+            if (!Boolean.TRUE.equals(networkInterfacePrivateIpAddressesSetItemType.getPrimary())) {
               existingSecondaryAddresses.add(networkInterfacePrivateIpAddressesSetItemType.getPrivateIpAddress());
             }
           }
@@ -496,7 +496,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null & describeTagsResponseType.getTagSet() != null) {
+        if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
           for (TagInfo tagInfo : describeTagsResponseType.getTagSet()) {
             EC2Tag tag = new EC2Tag();
             tag.setKey(tagInfo.getKey());
@@ -604,7 +604,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
     Set<String> setOfAddressStrings = Sets.newLinkedHashSet();
     if (privateIpAddresses != null) {
       for (PrivateIpAddressSpecification privateIpAddressSpecification: privateIpAddresses) {
-        if (privateIpAddressSpecification != null && privateIpAddressSpecification.getPrimary() != Boolean.TRUE && privateIpAddressSpecification.getPrivateIpAddress() != null) {
+        if (privateIpAddressSpecification != null && !Boolean.TRUE.equals(privateIpAddressSpecification.getPrimary()) && privateIpAddressSpecification.getPrivateIpAddress() != null) {
           setOfAddressStrings.add(privateIpAddressSpecification.getPrivateIpAddress());
         }
       }

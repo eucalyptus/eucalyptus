@@ -126,7 +126,7 @@ public class UpdateRollbackCleanupStackWorkflowImpl implements UpdateRollbackCle
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
       Promise<Boolean> checkInnerStackUpdateSpecialCasePromise = activities.checkInnerStackUpdate(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)
       waitFor(checkInnerStackUpdateSpecialCasePromise) { Boolean innerStackUpdateSpecialCase ->
-        if (innerStackUpdateSpecialCase == Boolean.TRUE) {
+        if (Boolean.TRUE.equals(innerStackUpdateSpecialCase)) {
           Promise<String> initPromise = activities.initUpdateRollbackCleanupInnerStackUpdateResource(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
           waitFor(initPromise) {
             waitFor(((AWSCloudFormationStackResourceAction) resourceAction).getUpdateRollbackCleanupUpdatePromise(workflowOperations, resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion)) {

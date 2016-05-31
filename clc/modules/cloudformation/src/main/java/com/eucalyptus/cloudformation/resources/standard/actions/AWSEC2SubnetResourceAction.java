@@ -185,7 +185,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetResourceAction action = (AWSEC2SubnetResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // Check vpc (return if gone)
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
@@ -233,7 +233,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         final ModifySubnetAttributeType modifySubnet =
         MessageHelper.createMessage(ModifySubnetAttributeType.class, newAction.info.getEffectiveUserId());
         final AttributeBooleanValueType value = new AttributeBooleanValueType( );
-        value.setValue( newAction.properties.getMapPublicIpOnLaunch( ) == Boolean.TRUE);
+        value.setValue( Boolean.TRUE.equals(newAction.properties.getMapPublicIpOnLaunch( )));
         modifySubnet.setMapPublicIpOnLaunch( value );
         modifySubnet.setSubnetId( newAction.info.getPhysicalResourceId( ) );
         AsyncRequests.<ModifySubnetAttributeType,ModifySubnetAttributeResponseType>sendSync( configuration, modifySubnet );
@@ -250,7 +250,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null  & describeTagsResponseType.getTagSet() != null) {
+        if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
           for (TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
             EC2Tag tag = new EC2Tag();
             tag.setKey(tagInfo.getKey());

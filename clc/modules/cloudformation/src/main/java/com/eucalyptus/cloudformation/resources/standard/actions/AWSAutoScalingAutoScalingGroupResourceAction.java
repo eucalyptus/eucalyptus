@@ -473,7 +473,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
 
     private static boolean groupDoesNotExist(ServiceConfiguration configuration, AWSAutoScalingAutoScalingGroupResourceAction action) throws Exception {
       // See if resource was ever populated...
-      if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return true;
+      if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       // See if group still exists
       DescribeAutoScalingGroupsType describeAutoScalingGroupsType = MessageHelper.createMessage(DescribeAutoScalingGroupsType.class, action.info.getEffectiveUserId());
       AutoScalingGroupNames autoScalingGroupNames = new AutoScalingGroupNames();
@@ -548,7 +548,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           }
         }
 
-        if (rollingUpdateStateEntity.getNeedsRollbackUpdate() != Boolean.TRUE) return newAction;
+        if (!Boolean.TRUE.equals(rollingUpdateStateEntity.getNeedsRollbackUpdate())) return newAction;
 
         // otherwise start by suspending processes
         rollingUpdateStateEntity.setAlreadySuspendedProcessNames(Joiner.on(',').join(alreadySuspendedProcesses));
@@ -629,7 +629,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         describeTagsType.setFilters(filters);
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<AutoScalingTag> existingTags = Sets.newLinkedHashSet();
-        if (describeTagsResponseType != null  & describeTagsResponseType.getDescribeTagsResult() != null && 
+        if (describeTagsResponseType != null && describeTagsResponseType.getDescribeTagsResult() != null &&
           describeTagsResponseType.getDescribeTagsResult().getTags() != null && describeTagsResponseType.getDescribeTagsResult().getTags().getMember() != null) {
           for (TagDescription tagDescription: describeTagsResponseType.getDescribeTagsResult().getTags().getMember()) {
             AutoScalingTag tag = new AutoScalingTag();
@@ -750,7 +750,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         UpdatePolicy updatePolicy = UpdatePolicy.parse(newAction.info.getUpdatePolicyJson());
         if (updatePolicy.getAutoScalingRollingUpdate() == null) return newAction;
         RollingUpdateStateEntity rollingUpdateStateEntity = RollingUpdateStateEntityManager.getRollingUpdateStateEntity(newAction.info.getAccountId(), newAction.getStackEntity().getStackId(), newAction.info.getLogicalResourceId());
-        if (rollingUpdateStateEntity.getNeedsRollbackUpdate() != Boolean.TRUE) return newAction;
+        if (!Boolean.TRUE.equals(rollingUpdateStateEntity.getNeedsRollbackUpdate())) return newAction;
         while (rollingUpdateStateEntity.getState() != UpdateRollbackInfo.State.DONE) {
           LOG.info("Evaluating loop action on state " + rollingUpdateStateEntity.getState());
           rollingUpdateStateEntity = (rollingUpdateStateEntity.getState().apply(newAction, configuration, updatePolicy, rollingUpdateStateEntity));

@@ -113,7 +113,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2SubnetNetworkAclAssociationResourceAction action = (AWSEC2SubnetNetworkAclAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         // First see if association id is there...
         if (!action.associationIdExistsForDelete(configuration)) return action;

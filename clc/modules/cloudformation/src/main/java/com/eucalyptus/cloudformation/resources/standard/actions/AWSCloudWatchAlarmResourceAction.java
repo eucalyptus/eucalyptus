@@ -149,7 +149,7 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudWatchAlarmResourceAction action = (AWSCloudWatchAlarmResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudWatch.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DescribeAlarmsType describeAlarmsType = MessageHelper.createMessage(DescribeAlarmsType.class, action.info.getEffectiveUserId());
         AlarmNames alarmNames = new AlarmNames();
         alarmNames.setMember(Lists.newArrayList(action.info.getPhysicalResourceId()));

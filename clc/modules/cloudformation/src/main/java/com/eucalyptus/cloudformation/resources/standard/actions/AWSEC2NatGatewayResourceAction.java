@@ -139,7 +139,7 @@ public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2NatGatewayResourceAction action = (AWSEC2NatGatewayResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DeleteNatGatewayType deleteNatGatewayType = MessageHelper.createMessage(DeleteNatGatewayType.class, action.info.getEffectiveUserId());
         deleteNatGatewayType.setNatGatewayId(action.info.getPhysicalResourceId());
         AsyncRequests.sendSync(configuration, deleteNatGatewayType);

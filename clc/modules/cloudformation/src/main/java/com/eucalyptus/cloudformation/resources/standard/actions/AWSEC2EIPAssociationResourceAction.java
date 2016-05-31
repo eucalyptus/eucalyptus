@@ -229,7 +229,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSEC2EIPAssociationResourceAction action = (AWSEC2EIPAssociationResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
-        if (action.info.getCreatedEnoughToDelete() != Boolean.TRUE) return action;
+        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         if (action.properties.getAllocationId() != null) {
           DescribeAddressesType describeAddressesType = MessageHelper.createMessage(DescribeAddressesType.class, action.info.getEffectiveUserId());
           describeAddressesType.setAllocationIds(Lists.newArrayList(action.properties.getAllocationId()));
