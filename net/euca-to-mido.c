@@ -1849,7 +1849,6 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
 
     // Process security groups
     for (i = 0; i < gni->max_secgroups; i++) {
-        int ecnt = ret;
         gnisecgroup = &(gni->secgroups[i]);
         vpcsecgroup = (mido_vpc_secgroup *) gnisecgroup->mido_present;
         if (vpcsecgroup != NULL) {
@@ -1890,10 +1889,25 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
         vpcsecgroup->gnipresent = 1;
-        LOGTRACE("\t\t%s ingress %d egress %d intf %d\n", vpcsecgroup->name, vpcsecgroup->ingress_changed, vpcsecgroup->egress_changed, vpcsecgroup->interfaces_changed);
+        LOGTRACE("\t\t%s ingress %d egress %d intf %d\n", vpcsecgroup->name,
+                vpcsecgroup->ingress_changed, vpcsecgroup->egress_changed,
+                vpcsecgroup->interfaces_changed);
+    }
 
+    // Process security group rules
+    for (i = 0; i < mido->max_vpcsecgroups; i++) {
+        int ecnt = ret;
+        vpcsecgroup = &(mido->vpcsecgroups[i]);
+        gnisecgroup = vpcsecgroup->gniSecgroup;
         mido_parsed_chain_rule sgrule;
 
+        if (strlen(vpcsecgroup->name) == 0) {
+            continue;
+        }
+        if (gnisecgroup == NULL) {
+            LOGWARN("unknown security group %s\n", vpcsecgroup->name);
+            continue;
+        }
         // Process egress rules
         if (!vpcsecgroup->population_failed && !vpcsecgroup->egress_changed) {
             LOGTRACE("\t\tskipping pass3 for %s egress\n", gnisecgroup->name);
