@@ -90,6 +90,7 @@
 #include <errno.h>
 #define SYSLOG_NAMES                   // we want facilities as strings
 #include <syslog.h>
+#include <fcntl.h>
 
 #include "eucalyptus.h"
 #include "log.h"
@@ -342,6 +343,7 @@ retry:
     if (fp == NULL) {
         mode_t old_umask = umask(~LOG_FILE_PERM);
         fp = fopen(log_file, "a+");
+        fcntl(fp, F_SETFD, FD_CLOEXEC);
         umask(old_umask);
         if (fp == NULL) {
             return NULL;

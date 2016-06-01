@@ -57,6 +57,18 @@ _BLOCK_SAVE = '-block.save'
 _LIBVIRT_XML = 'instance-libvirt.xml'
 _INSTANCE_XML = 'instance.xml'
 _DISCONNECT_ISCSI_PL = '/usr/share/eucalyptus/disconnect_iscsitarget.pl'
+_NCHOOK_PATH = '/etc/eucalyptus/nc-hooks/stop-delete.sh'
+_STOP_DELETE = r'''
+#!/bin/bash
+event=$1
+
+if [ "$event" == "euca-nc-pre-clean" ] ; then
+    echo "Blocking deletes of storage backing instances"
+    exit 1;
+fi
+
+exit 0;
+'''
 
 
 class NodeAdminPackError(Exception):
@@ -214,7 +226,8 @@ def _find_instance(instance):
 
     if domain:
         conn.close()
-        instance_path = glob("%s/*/%s" % (os.path.join(instances_path, _WORK), instance))
+        instance_path = glob(
+            "%s/*/%s" % (os.path.join(instances_path, _WORK), instance))
         if len(instance_path):
             return (instance, instance_path[0])
 
@@ -429,6 +442,17 @@ def _is_nc_service_running():
     return results is not None
 
 
+def _place_stop_delete_file():
+    if os.path.exists(_NCHOOK_PATH):
+        return
+
+    with open(_NCHOOK_PATH, 'w') as hook_file:
+        hook_file.truncate()
+        hook_file.write(_STOP_DELETE)
+
+    os.chmod(_NCHOOK_PATH, os.stat.S_IXUSR | os.stat.S_IXGRP | os.stat.S_IXOTH)
+
+
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -438,6 +462,8 @@ def _main(args, log_level):
         logging.error(
             "Node controller service is running. Please stop this service before continuing.")
         return 1
+
+    _place_stop_delete_file()
 
     if args.all:
         logging.debug("packing all instances")
@@ -455,7 +481,8 @@ def _main(args, log_level):
                     "Packed instance %s located at %s", instance, output_file)
     else:
         logging.debug("packing instance %s", args.instance)
-        output_file = os.path.join(args.output_directory, args.instance + _PACK_TAR)
+        output_file = os.path.join(
+            args.output_directory, args.instance + _PACK_TAR)
         rc = pack_instance(
             args.instance, output_file, args.shutdown, args.no_compression)
 
