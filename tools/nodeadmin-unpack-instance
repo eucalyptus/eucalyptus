@@ -158,7 +158,7 @@ def _lookup_domain(conn, instance_name):
     return domain
 
 
-def _unpack_instance(instance, instance_path, *args, **kwargs):
+def _restore_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
     rc = None
 
@@ -167,14 +167,15 @@ def _unpack_instance(instance, instance_path, *args, **kwargs):
         rc = conn.restore(
             os.path.join(instance_path, "%s%s" % (instance, _INSTANCE_RAM)))
     else:
-        logging.debug("saved ram file not found, attempting instance creation.")
+        logging.debug(
+            "saved ram file not found, attempting instance creation.")
         with open(os.path.join(instance_path, _INSTANCE_LIBVIRT_XML)) as libvirt_xml:
             instance_xml = libvirt_xml.read()
             conn.createXML(instance_xml, 0)
 
     if rc:
         raise NodeAdminUnpackError(
-            "Failed to unpack instance %s at %s (%d)", instance, instance_path, rc)
+            "Failed to restore instance %s at %s (%d)", instance, instance_path, rc)
 
 
 def _extract_files(packed_path):
@@ -251,6 +252,18 @@ def _attach_volumes(instance_path):
                              volume_serial, volume_bus, connection_string)
 
 
+def _change_ownership(instance_path):
+    xml_stat = os.stat(os.path.join(instance_path, _INSTANCE_XML))
+
+    for file in os.listdir(instance_path):
+        os.lchown(
+            os.path.join(instance_path, file), xml_stat.st_uid, xml_stat.st_gid)
+
+    while(os.path.basename(instance_path).lower() != "eucalyptus"):
+        os.lchown(instance_path, xml_stat.st_uid, xml_stat.st_gid)
+        instance_path = os.path.dirname(instance_path)
+
+
 def unpack_instance(instance_path, packed_path):
     _extract_files(packed_path)
 
@@ -264,9 +277,11 @@ def unpack_instance(instance_path, packed_path):
         raise NodeAdminUnpackError("Failed to extract ram save file %s",
                                    os.path.join(instance_path, "%s%s" % (instance_name, _INSTANCE_RAM)))
 
+    _change_ownership(instance_path)
+
     _attach_volumes(instance_path)
 
-    _unpack_instance(instance_name, instance_path)
+    _restore_instance(instance_name, instance_path)
     logging.info("instance %s unpacked", instance_name)
 
     return 0
