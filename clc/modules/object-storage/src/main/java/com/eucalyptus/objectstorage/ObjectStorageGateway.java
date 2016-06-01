@@ -476,6 +476,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
         LOG.debug("Failed to fire reporting event for OSG object creation", ex);
       }
       return response;
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;

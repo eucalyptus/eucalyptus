@@ -129,6 +129,8 @@ configEntry configKeysRestartCC[] = {
     ,
     {"CC_IMAGE_PROXY_PATH", NULL}
     ,
+    {"MAX_INSTANCES_PER_CC", NULL}
+    ,
     {NULL, NULL}
     ,
 };
