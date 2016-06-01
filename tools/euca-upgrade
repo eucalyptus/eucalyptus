@@ -166,7 +166,7 @@ upgrade_db() {
   # Arbitrary string of properly formatted opts passed direct to jvm"
   UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom"
   # Upgrade version and directory info
-  UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA}"
+  UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA_PATH}"
   UPGRADE_ARGS="--upgrade  ${UPGRADE_OLD_ARGS}"
   UPGRADE_CMD="${EUCALYPTUS}/usr/sbin/eucalyptus-cloud -u ${EUCA_USER} -h ${EUCALYPTUS} ${UPGRADE_ARGS}"
   log "Upgrade command: ${UPGRADE_CMD}" 
@@ -184,6 +184,13 @@ upgrade_db() {
   fi
 }
 
+read_dot_upgrade() {
+  while IFS=: read -r a b; do
+    OLD_EUCA_VERSION=$a
+    OLD_EUCA_PATH=$b
+  done < $EUCALYPTUS/etc/eucalyptus/.upgrade
+}
+
 ## NOTE: Start reading here.
 ## Parse cmd line options.
 NEW_ARGS=$(echo "${@}" | sed 's/--\(.\)\w*/-\1/g')
@@ -196,7 +203,7 @@ while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
       NEW_EUCA=${OPTARG}
       NEW_EUCA_VERSION=$(get_euca_version NEW_EUCA)
     ;;
-    o) 
+    o)
       OLD_EUCA=${OPTARG}
       OLD_EUCA_VERSION=$(get_euca_version OLD_EUCA)
     ;;
@@ -208,6 +215,18 @@ while getopts ":hn:fo:ckdpsu:" flag ${NEW_ARGS} ; do
     u) EUCA_USER=${OPTARG};;
   esac
 done
+read_dot_upgrade
+if [ -z "$OLD_EUCA_PATH" ] || [ -z "$OLD_EUCA_VERSION" ]; then
+  log "ERROR: Cannot find old Eucalyptus version or path in $EUCALYPTUS/etc/eucalyptus/.upgrade. Aborting."
+  exit 1
+fi
+if [ -z "$NEW_EUCA_VERSION" ]; then
+  NEW_EUCA_VERSION=$(get_euca_version EUCALYPTUS)
+fi
+# Remove old unpacked webapp area
+rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+# Remove old class cache
+rm -rf $EUCALYPTUS/var/run/eucalyptus/classcache
 ## After this point guaranteed that NEW_EUCA and OLD_EUCA are set.
 export EUCALYPTUS="${NEW_EUCA}"
 UP_LOG=${NEW_EUCA}/var/log/eucalyptus/upgrade.log
