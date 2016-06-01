@@ -298,7 +298,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
                 if (mode == 0) {
                     LOGTRACE("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
                     snprintf(cmd, EUCA_MAX_PATH,
-                            "nsenter --net=/var/run/netns/%s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=31338; env EUCAHOME=%s;'",
+                            "nsenter --net=/var/run/netns/%s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=8009; env EUCAHOME=%s;'",
                             mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
                 } else if (mode == 1) {
                     LOGTRACE("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
@@ -2365,7 +2365,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                 "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
                 "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf,
                 "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
-                "31337", "natTargets:portTo", "31337", "natTargets:END", "END", NULL);
+                "8008", "natTargets:portTo", "8008", "natTargets:END", "END", NULL);
         if (rc) {
             LOGWARN("Failed to create MD dnat rule for %s\n", gniif->name);
             ret++;
@@ -2378,7 +2378,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                 NULL, &rulepos,
                 "position", pos_str, "type", "snat", "flowAction", "continue",
                 "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6",
-                "tpSrc", "jsonjson", "tpSrc:start", "31337", "tpSrc:end", "31337", "tpSrc:END", "END",
+                "tpSrc", "jsonjson", "tpSrc:start", "8008", "tpSrc:end", "8008", "tpSrc:END", "END",
                 "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254",
                 "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80",
                 "natTargets:portTo", "80", "natTargets:END", "END", NULL);
