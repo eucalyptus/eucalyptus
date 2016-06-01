@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,7 @@ import com.eucalyptus.crypto.Signatures
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
+import com.google.common.primitives.UnsignedLongs
 import groovy.transform.Immutable
 
 import java.nio.file.Files
@@ -300,24 +301,24 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
       
       long pageSize = Long.parseLong( pageSizeStr )
       long MIN_SHMALL = MIN_SHMMAX / pageSize
-      long semmni = Long.parseLong( semStrs[3] )
-      long semmns = Long.parseLong( semStrs[1] )
-      long shmall = Long.parseLong( shmallStr )
-      long shmmax = Long.parseLong( shmmaxStr )
+      long semmni = UnsignedLongs.parseUnsignedLong( semStrs[3] )
+      long semmns = UnsignedLongs.parseUnsignedLong( semStrs[1] )
+      long shmall = UnsignedLongs.parseUnsignedLong( shmallStr )
+      long shmmax = UnsignedLongs.parseUnsignedLong( shmmaxStr )
       
       LOG.info "Found kernel parameters semmni=$semmni, semmns=$semmns, shmall=$shmall, shmmax=$shmmax"
       
       // Parameter descriptions from "man proc"
-      if ( semmni < MIN_SEMMNI ) {
+      if ( semmni >= 0 && semmni < MIN_SEMMNI ) {
         LOG.error "Insufficient operating system resources! The available number of semaphore identifiers is too low (semmni < $MIN_SEMMNI)"
       }
-      if ( semmns < MIN_SEMMNS ) {
+      if ( semmns >= 0 && semmns < MIN_SEMMNS ) {
         LOG.error "Insufficient operating system resources! The available number of semaphores in all semaphore sets is too low (semmns < $MIN_SEMMNS)"
       }
-      if ( shmall < MIN_SHMALL ) {
+      if ( shmall >= 0 && shmall < MIN_SHMALL ) {
         LOG.error "Insufficient operating system resources! The total number of pages of System V shared memory is too low (shmall < $MIN_SHMALL)"
       }
-      if ( shmmax < MIN_SHMMAX ) {
+      if ( shmmax >= 0 && shmmax < MIN_SHMMAX ) {
         LOG.error "Insufficient operating system resources! The run-time limit on the maximum (System V IPC) shared memory segment size that can be created is too low (shmmax < $MIN_SHMMAX)"
       }
     }  catch ( Exception e ) {
