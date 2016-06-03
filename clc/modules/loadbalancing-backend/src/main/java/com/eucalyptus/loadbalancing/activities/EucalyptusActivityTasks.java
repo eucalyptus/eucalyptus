@@ -1008,6 +1008,15 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
+	public void revokePermissionFromOtherGroup(final String groupId, final String sourceAccountId,
+											   final String sourceGroupId, final String protocol) {
+		checkResult(
+				new EucalyptusRevokeIngressRuleFromOtherGroupTask(groupId, protocol, null, null, sourceAccountId, sourceGroupId),
+				new ComputeSystemActivity(),
+				"Failed to revoke security group permission"
+		);
+	}
+
 	public void revokeSystemSecurityGroupEgressRules(final String groupId) {
 		checkResult(
 				new EucalyptusRevokeEgressRuleTask(groupId, "-1", -1, -1, "0.0.0.0/0"),
@@ -2348,6 +2357,47 @@ public class EucalyptusActivityTasks {
 			perm.setCidrIpRanges( Lists.newArrayList( Arrays.asList( "0.0.0.0/0" ) ) );
 			perm.setIpProtocol(this.protocol);
 			req.setIpPermissions(Lists.newArrayList(Arrays.asList(perm)));
+			return req;
+		}
+	}
+
+	private class EucalyptusRevokeIngressRuleFromOtherGroupTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private String groupId = null;
+		private String protocol = null;
+		private Integer fromPortNum = null;
+		private Integer toPortNum = null;
+		private String sourceGroupId = null;
+		private String sourceAccountId = null;
+
+		EucalyptusRevokeIngressRuleFromOtherGroupTask(final String groupId, final String protocol,
+													  final Integer fromPortNum, final Integer toPortNum,
+													  final String sourceAccountId, final String sourceGroupId) {
+			this.groupId = groupId;
+			this.protocol = protocol;
+			this.fromPortNum = fromPortNum;
+			this.toPortNum = toPortNum;
+			this.sourceAccountId = sourceAccountId;
+			this.sourceGroupId = sourceGroupId;
+		}
+
+		RevokeSecurityGroupIngressType getRequest() {
+			final RevokeSecurityGroupIngressType req = new RevokeSecurityGroupIngressType();
+			req.setGroupId(this.groupId);
+			req.setIpPermissions(new ArrayList<IpPermissionType>());
+			final IpPermissionType perm = new IpPermissionType();
+			perm.setIpProtocol(this.protocol);
+			if(this.sourceAccountId!=null && this.sourceGroupId!=null) {
+				perm.setGroups(new ArrayList<UserIdGroupPairType>());
+				final UserIdGroupPairType userGroup = new UserIdGroupPairType();
+				userGroup.setSourceGroupId( this.sourceGroupId );
+				userGroup.setSourceUserId( this.sourceAccountId );
+				perm.getGroups().add( userGroup );
+			}
+			if(this.fromPortNum != null && this.toPortNum != null) {
+				perm.setFromPort(this.fromPortNum);
+				perm.setToPort(this.toPortNum);
+			}
+			req.getIpPermissions().add(perm);
 			return req;
 		}
 	}

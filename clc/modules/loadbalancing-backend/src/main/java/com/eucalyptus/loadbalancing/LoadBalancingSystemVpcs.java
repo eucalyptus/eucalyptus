@@ -889,6 +889,10 @@ public class LoadBalancingSystemVpcs {
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
 
         final String groupId = group.getGroupId();
+
+        // revoke ingress permission from the same group
+        client.revokePermissionFromOtherGroup(groupId, group.getAccountId(), groupId, "-1");
+
         final List<IpPermissionType> egressRules = group.getIpPermissionsEgress();
         if (egressRules.stream().filter(ip -> "-1".equals(ip.getIpProtocol()))
                 .findAny().isPresent()) {
