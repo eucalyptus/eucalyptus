@@ -256,7 +256,6 @@
 
 #define MAXNODES                                      256
 #define MAXINSTANCES_PER_CC                          3584
-#define MAXINSTANCES_PER_NC                           144
 #define MAXLOGFILESIZE                          104857600
 #define EUCA_MAX_GROUPS                                64
 #define EUCA_MAX_VOLUMES                               27
@@ -265,7 +264,6 @@
 #define EUCA_MAX_PARTITIONS                            32   //!< partitions per disk
 #define EUCA_MAX_DISKS                                 26   //!< disks per bus: sd[a-z]
 #define EUCA_MAX_NICS                                   8   //!< nics per instance
-#define MAXBUNDLES                               MAXINSTANCES_PER_NC
 
 //! @}
 

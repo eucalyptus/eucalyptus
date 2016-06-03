@@ -144,7 +144,6 @@
 #define LIBVIRT_TIMEOUT_SEC                          5
 #define NETWORK_GATE_TIMEOUT_SEC                     1200
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
-#define MAX_SENSOR_RESOURCES                         MAXINSTANCES_PER_NC
 #define SEC_PER_MB                                   ((1024 * 1024) / 512)
 
 #define MIN_BLOBSTORE_SIZE_MB                        10 //!< even with boot-from-EBS one will need work space for kernel and ramdisk
@@ -2468,10 +2467,6 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {
-        LOGERROR("failed to initialize sensor subsystem in this process\n");
-        return (EUCA_FATAL_ERROR);
-    }
     //// from now on we have unrecoverable failure, so no point in retrying to re-init ////
     initialized = -1;
 
@@ -2491,10 +2486,7 @@ static int init(void)
         LOGFATAL("failed to set logging semaphore\n");
         return (EUCA_FATAL_ERROR);
     }
-    if (sensor_set_hyp_sem(hyp_sem) != 0) {
-        LOGFATAL("failed to set hypervisor semaphore for the sensor subsystem\n");
-        return (EUCA_FATAL_ERROR);
-    }
+
     if ((loop_sem = diskutil_get_loop_sem()) == NULL) { // NC does not need GRUB for now
         LOGFATAL("failed to find all dependencies\n");
         return (EUCA_FATAL_ERROR);
@@ -2550,29 +2542,34 @@ static int init(void)
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
     if (nc_state.config_max_mem) {
-        if (nc_state.config_max_mem > nc_state.mem_max)
-            LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
+        if (nc_state.config_max_mem > nc_state.phy_max_mem)
+            LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.phy_max_mem);
         nc_state.mem_max = nc_state.config_max_mem;
     } else {
         nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
-        int cores = nc_state.cores_max;
         nc_state.cores_max = nc_state.config_max_cores;
-        if (nc_state.cores_max > MAXINSTANCES_PER_NC) {
-            nc_state.cores_max = MAXINSTANCES_PER_NC;
-            LOGWARN("ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
-        }
-
-        if (nc_state.cores_max > cores)
-            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+        if (nc_state.cores_max > nc_state.phy_max_cores)
+            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %d\n", nc_state.cores_max, nc_state.phy_max_cores);
     } else {
         nc_state.cores_max = nc_state.phy_max_cores;
     }
 
     LOGINFO("physical memory available for instances: %lldMB\n", nc_state.mem_max);
     LOGINFO("virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
+
+    // sensor subsystem
+    if (sensor_init(NULL, NULL, nc_state.cores_max, FALSE, NULL) != EUCA_OK) {
+        LOGERROR("failed to initialize sensor subsystem in this process\n");
+        return (EUCA_FATAL_ERROR);
+    }
+
+    if (sensor_set_hyp_sem(hyp_sem) != 0) {
+        LOGFATAL("failed to set hypervisor semaphore for the sensor subsystem\n");
+        return (EUCA_FATAL_ERROR);
+    }
 
     {
         // backing store configuration
