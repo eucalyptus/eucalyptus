@@ -399,7 +399,7 @@ public class DatabaseServerProperties {
 
     @Override
     public void fireEvent(ClockTick event) {
-      if (!(Bootstrap.isFinished() && Topology
+      if (!(Bootstrap.isOperational() && Topology
           .isEnabledLocally(Eucalyptus.class)))
         return;
       if (Topology.isEnabled(Reporting.class))

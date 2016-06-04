@@ -396,7 +396,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 		@Override
 		public void fireEvent(ClockTick event) {
-			if (!( Bootstrap.isFinished() &&
+			if (!( Bootstrap.isOperational( ) &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
@@ -466,7 +466,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 
 		@Override
 		public void fireEvent(ClockTick event) {
-			if (!( Bootstrap.isFinished() &&
+			if (!( Bootstrap.isOperational( ) &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;

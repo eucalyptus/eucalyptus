@@ -72,7 +72,7 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+    if ( Bootstrap.isOperational() && Hosts.isCoordinator() ) {
 
       final List<ResourceAvailabilityEvent> resourceAvailabilityEvents = Lists.newArrayList();
       final Map<ResourceAvailabilityEvent.ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap( ResourceAvailabilityEvent.ResourceType.class );
