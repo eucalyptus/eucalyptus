@@ -2231,8 +2231,13 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       public boolean apply( final VmInfo input ) {
         final VmState inputState = VmState.Mapper.get( input.getStateName() );
         if ( VmStateSet.RUN.contains( inputState ) ) {
-          LOG.info( "Terminating instance: " + input.getInstanceId( ) );
-          sendTerminate( input.getInstanceId( ), input.getPlacement( ) );
+          try {
+            final String partition = Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( );
+            LOG.info( "Requesting termination for instance " + input.getInstanceId( ) + " in zone " + partition );
+            sendTerminate( input.getInstanceId( ), partition );
+          } catch ( final NoSuchElementException e ) {
+            LOG.info( "Partition lookup failed, skipping terminate attempt for cluster: " + input.getPlacement( ) + ", instance " + input.getInstanceId() );
+          }
         }
         return true;
       }
