@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,9 +20,13 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.net.ConnectException;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 
 import com.ctc.wstx.exc.WstxEOFException;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Throwables;
@@ -145,8 +149,22 @@ public class NotifyClient {
     final Consumer<Boolean> consumer = Consumers.once( resultConsumer );
     final PollForNotificationType poll = new PollForNotificationType( );
     poll.setChannel( taskList.getChannelName( ) );
+
+    if ( Bootstrap.isShuttingDown( ) ) {
+      delayedPollFailure( 1000L, consumer );
+      return;
+    }
+
+    final ServiceConfiguration polledNotificationsConfiguration;
+    try {
+      polledNotificationsConfiguration = Topology.lookup( PolledNotifications.class );
+    } catch ( final NoSuchElementException e ){
+      delayedPollFailure( 5000L, consumer );
+      return;
+    }
+
     final ListenableFuture<PollForNotificationResponseType> dispatchFuture =
-        AsyncRequests.dispatch( Topology.lookup( PolledNotifications.class ), poll );
+        AsyncRequests.dispatch( polledNotificationsConfiguration, poll );
     dispatchFuture.addListener( new Runnable( ) {
       @Override
       public void run( ) {
@@ -156,7 +174,11 @@ public class NotifyClient {
         } catch ( final InterruptedException e ) {
           logger.info( "Interrupted while polling for task " + poll.getChannel( ), e );
         } catch ( final ExecutionException e ) {
-          handleExecutionExceptionForPolling(e, poll);
+          if ( Bootstrap.isShuttingDown( ) ) {
+            logger.info( "Error polling for task " + poll.getChannel( ) + ": " + Exceptions.getCauseMessage( e ) );
+          } else {
+            handleExecutionExceptionForPolling(e, poll);
+          }
         } catch ( final Exception e ) {
           logger.error( "Error polling for task " + poll.getChannel( ), e );
         } finally {
@@ -164,6 +186,17 @@ public class NotifyClient {
         }
       }
     } );
+  }
+
+  private static void delayedPollFailure( final long delay,
+                                          final Consumer<Boolean> consumer) {
+    try {
+      Thread.sleep( delay );
+    } catch (InterruptedException e1) {
+      Thread.currentThread( ).interrupt( );
+    } finally {
+      consumer.accept( false );
+    }
   }
 
   private static void handleExecutionExceptionForPolling(ExecutionException e, PollForNotificationType poll) {
