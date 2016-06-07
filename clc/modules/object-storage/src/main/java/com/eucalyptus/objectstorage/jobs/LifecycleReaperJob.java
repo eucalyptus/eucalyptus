@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.UnableToInterruptJobException;
 
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.objectstorage.BucketLifecycleManagers;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.BucketState;
@@ -100,6 +101,10 @@ public class LifecycleReaperJob implements InterruptableJob {
 
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
+    if ( Databases.isVolatile( ) ) {
+      LOG.warn( "Skipping job due to database not available" );
+      return;
+    }
     LOG.info("beginning Object Lifecycle processing");
     LOG.debug("retrieving Object Lifecycle rules from the database");
     List<LifecycleRule> rules = null;

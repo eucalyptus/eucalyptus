@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,19 +62,27 @@
 
 package com.eucalyptus.objectstorage.jobs;
 
+import org.apache.log4j.Logger;
 import org.quartz.InterruptableJob;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.UnableToInterruptJobException;
 
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
 
 public class MainBucketReaperJob implements InterruptableJob {
+
+  private static Logger LOG = Logger.getLogger(MainBucketReaperJob.class);
 
   static final BucketReaperTask reaper = new BucketReaperTask();
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+    if ( Databases.isVolatile( ) ) {
+      LOG.warn( "Skipping job due to database not available" );
+      return;
+    }
     reaper.resume();
     reaper.run();
   }
