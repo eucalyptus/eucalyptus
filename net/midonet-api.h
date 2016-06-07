@@ -524,9 +524,9 @@ int mido_delete_resource(midoname * parentname, midoname * name);
 int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ***outnames, int *outnames_max);
 int mido_refresh_resource(midoname *resc, char *apistr);
 
-int mido_cmp_midoname_to_input(midoname * name, ...);
-int mido_cmp_midoname_to_input_json(midoname * name, ...);
-int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al);
+int mido_cmp_midoname_to_input(midoname *name, ...);
+int mido_cmp_midoname_to_input_json(midoname *name, ...);
+int mido_cmp_midoname_to_input_json_v(midoname *name, va_list * al);
 int mido_cmp_jsons(char *jsonsrc, char *jsondst, char *type);
 int mido_cmp_midoname_jsonbuf(midoname *a, midoname *b);
 char *mido_get_json(char *tenant, ...);

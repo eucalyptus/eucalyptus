@@ -5184,8 +5184,14 @@ int mido_get_bgp_routes(midoname *bgp, midoname ***outnames, int *outnames_max) 
 //!
 //! @note
 //!
-int json_object_cmp(json_object * one, json_object * two)
-{
+/**
+ * Compares json_object one and two. Specifically, checks whether all elements in
+ * one are present (and match) in two. 
+ * @param one json_object of interest
+ * @param two json_object of interest
+ * @return 0 if all elements of one have a corresponding element in two. 1 otherwise.
+ */
+int json_object_cmp(json_object *one, json_object *two) {
     int onetype = 0, twotype = 0, onesubtype = 0, twosubtype = 0, rc = 0, ret = 0, i = 0;
     char *oneel = NULL, *twoel = NULL;
     json_object *twoval = NULL;
@@ -5214,7 +5220,9 @@ int json_object_cmp(json_object * one, json_object * two)
             //            twoval = json_object_object_get(two, onekey);
             json_object_object_get_ex(two, onekey, &twoval);
             twosubtype = json_object_get_type(twoval);
-            if (onesubtype != twosubtype) {
+            if ((onesubtype != twosubtype) && ((onesubtype == json_type_object) ||
+                    (twosubtype == json_type_object) || (onesubtype == json_type_array) ||
+                    (twosubtype == json_type_array))) {
                 rc = 1;
             } else if (onesubtype == json_type_object) {
                 // recurse
@@ -5249,24 +5257,14 @@ int json_object_cmp(json_object * one, json_object * two)
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument part
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_cmp_midoname_to_input_json(midoname * name, ...)
-{
+/**
+ * Checks if a NULL terminated list of variable arguments (consisting of key-value
+ * pairs) have corresponding entries in midoname data structure (jsonbuf).
+ * @param name midoname data structure of interest.
+ * @param ... NULL terminated variable argument section
+ * @return 0 if all key-value pairs are found in name. 1 otherwise.
+ */
+int mido_cmp_midoname_to_input_json(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
 
@@ -5292,8 +5290,16 @@ int mido_cmp_midoname_to_input_json(midoname * name, ...)
 //!
 //! @note
 //!
-int mido_cmp_midoname_to_input_json_v(midoname * name, va_list * al)
-{
+
+/**
+ * Checks if a NULL terminated list of variable arguments (consisting of key-value
+ * pairs) have corresponding entries in midoname data structure (jsonbuf).
+ * @param name midoname data structure of interest.
+ * @param al variable argument list that specifies a rule. This list is copied in
+ * this function.
+ * @return 0 if all key-value pairs are found in name. 1 otherwise.
+ */
+ int mido_cmp_midoname_to_input_json_v(midoname *name, va_list *al) {
     va_list ala = { {0} };
     char *jsonbuf = NULL;
     int ret = 0;
@@ -5401,24 +5407,14 @@ int mido_cmp_midoname_jsonbuf(midoname *a, midoname *b) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_cmp_midoname_to_input(midoname * name, ...)
-{
+/**
+ * Checks if a NULL terminated list of variable arguments (consisting of key-value
+ * pairs) have corresponding entries in midoname data structure (jsonbuf).
+ * @param name midoname data structure of interest.
+ * @param ... NULL terminated variable argument section
+ * @return 0 if all key-value pairs are found in name. 1 otherwise.
+ */
+int mido_cmp_midoname_to_input(midoname *name, ...) {
     va_list al = { {0} };
     int rc = 0;
     char *key = NULL, *dstval = NULL, *srcval = NULL;
@@ -8715,6 +8711,21 @@ int midonet_api_delete_dups(boolean checkonly) {
             }
         }
     }
+    // Check chain rules
+    LOGINFO("\tchecking chain rules\n");
+    for (int i = 0; i < midocache->max_chains; i++) {
+        if ((!midocache->chains[i]->obj) || (!midocache->chains[i]->obj->init)) continue;
+        if (strstr(midocache->chains[i]->obj->name, "sg_") ||
+                strstr(midocache->chains[i]->obj->name, "ic_") ||
+                strstr(midocache->chains[i]->obj->name, "vc_") ||
+                strstr(midocache->chains[i]->obj->name, "natc_") ||
+                strstr(midocache->chains[i]->obj->name, "eucabr_")) {
+            if (midonet_api_delete_dups_rules(midocache->chains[i], checkonly)) {
+                LOGINFO("\t\tfor chain %s\n", midocache->chains[i]->obj->name);
+                gDupDetected = TRUE;
+            }
+        }
+    }
 
     // Delete all bridges
     mido_get_bridge("eucabr");
@@ -8834,6 +8845,7 @@ int midonet_api_delete_dups(boolean checkonly) {
         gDeleted = FALSE;
     }
     
+/*
     midonet_api_chain *eucabrin = mido_get_chain("eucabr_infilter");
     if (eucabrin) {
         LOGINFO("\tchecking eucabr infilter\n");
@@ -8841,6 +8853,7 @@ int midonet_api_delete_dups(boolean checkonly) {
             gDupDetected = TRUE;
         }
     }
+*/
 
     midonet_api_router *eucart = mido_get_router(VPCMIDO_CORERT);
     if (eucart) {
@@ -8900,9 +8913,9 @@ int midonet_api_delete_dups_rules(midonet_api_chain *chain, boolean checkonly) {
         return (ret);
     }
     for (int i = 0; i < chain->max_rules; i++) {
-        if (!chain->rules[i]) continue;
+        if ((!chain->rules[i]) || (!chain->rules[i]->init)) continue;
         for (int j = i + 1; j < chain->max_rules; j++) {
-            if (!chain->rules[j]) continue;
+            if ((!chain->rules[j]) || (!chain->rules[j]->init)) continue;
             if (!mido_cmp_midoname_jsonbuf(chain->rules[i], chain->rules[j])) {
                 LOGINFO("\t\tduplicate rule detected at idx %d\n", i);
                 ret++;
@@ -8929,9 +8942,9 @@ int midonet_api_delete_dups_routes(midonet_api_router *router, boolean checkonly
         return (ret);
     }
     for (int i = 0; i < router->max_routes; i++) {
-        if (!router->routes[i]) continue;
+        if ((!router->routes[i]) || (!router->routes[i]->init)) continue;
         for (int j = i + 1; j < router->max_routes; j++) {
-            if (!router->routes[j]) continue;
+            if ((!router->routes[j]) || (!router->routes[j]->init)) continue;
             if (!mido_cmp_midoname_jsonbuf(router->routes[i], router->routes[j])) {
                 LOGINFO("\t\tduplicate route detected at idx %d\n", i);
                 ret++;

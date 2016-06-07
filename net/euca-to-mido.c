@@ -6975,7 +6975,7 @@ int do_midonet_list(mido_config *mido) {
     LOGINFO("%d VPCs, %d subnets, %d interfaces, %d NAT gws, %d SGs\n",
             max_vpcs, max_subnets, max_interfaces, max_natgs, max_sgs);
 
-    int buflen = 32 * (max_vpcs + max_subnets + max_interfaces + max_natgs + max_sgs);
+    int buflen = 32 * (max_vpcs + max_subnets + max_interfaces + max_natgs + max_sgs) + 1500;
     char *buf = malloc(buflen);
     if (!buf) {
         LOGERROR("failed to allocate buffer\n");
@@ -7058,7 +7058,7 @@ int do_midonet_list(mido_config *mido) {
     char *bgprecovery = NULL;
     bgprecovery = discover_mido_bgps(mido);
     if (bgprecovery && strlen(bgprecovery)) {
-        rc = snprintf(pbuf, buflen, "\n\nmido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+        rc = snprintf(pbuf, buflen, "\n\nmido BGP configuration (for manual recovery):\n%s", bgprecovery);
         if (rc > 0) {
             ulen += rc;
             buflen -= rc;
@@ -7068,7 +7068,6 @@ int do_midonet_list(mido_config *mido) {
     EUCA_FREE(bgprecovery);
 
     printf("%s\n", buf);
-    printf("\n");
     
     EUCA_FREE(buf);
     return (0);
