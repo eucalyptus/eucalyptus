@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
@@ -98,8 +99,11 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
 
   @Override
   public void fireDisable( final ServiceConfiguration config ) {
-    if ( config.isVmLocal( ) && noOtherEnabled( config ) ) {
+    if ( Bootstrap.isShuttingDown( ) || ( config.isVmLocal( ) && noOtherEnabled( config ) ) ) {
       pendingStopTimestamp.compareAndSet( 0, System.currentTimeMillis( ) );
+      if ( Bootstrap.isShuttingDown( ) ) {
+        stopWorkflowClient( pendingStopTimestamp.get( ) );
+      }
     }
   }
 
@@ -114,6 +118,19 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
         Predicates.not( Predicates.equalTo( config ) ) ) ) );
   }
 
+  private static void stopWorkflowClient( final long timestampMatch ) {
+    synchronized ( startStopSync ) {
+      if ( pendingStopTimestamp.compareAndSet( timestampMatch, 0 ) ) {
+        try {
+          logger.info( "Stopping cloudformation workflow client" );
+          WorkflowClientManager.stop( );
+        } catch ( Exception e ) {
+          logger.error( "Error stopping cloudformation workflow client", e );
+        }
+      }
+    }
+  }
+
   public static class CloudFormationWorkflowStopEventListener implements EventListener<ClockTick> {
     public static void register( ) {
       Listeners.register( ClockTick.class, new CloudFormationWorkflowStopEventListener( ) );
@@ -123,16 +140,7 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
     public void fireEvent( final ClockTick event ) {
       final long stopRequestedTime = pendingStopTimestamp.get( );
       if ( stopRequestedTime > 0 && stopRequestedTime + PENDING_STOP_TIMEOUT < System.currentTimeMillis( ) ) {
-        synchronized ( startStopSync ) {
-          if ( pendingStopTimestamp.compareAndSet( stopRequestedTime, 0 ) ) {
-            try {
-              logger.info( "Stopping cloudformation workflow client" );
-              WorkflowClientManager.stop( );
-            } catch ( Exception e ) {
-              logger.error( "Error stopping cloudformation workflow client", e );
-            }
-          }
-        }
+        stopWorkflowClient( stopRequestedTime );
       }
     }
   }
