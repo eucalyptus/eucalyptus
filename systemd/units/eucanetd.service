@@ -8,6 +8,10 @@ PIDFile=/run/eucalyptus/eucanetd.pid
 ExecStart=/usr/sbin/eucanetd
 LimitNOFILE=10000
 LimitNPROC=100000
+# Need to come up with a better way of preserving nginx and dhcpd
+# processes across service restarts
+# https://eucalyptus.atlassian.net/browse/EUCA-12390
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
