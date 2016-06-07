@@ -1184,8 +1184,8 @@ public class DASManager implements LogicalStorageManager {
             try {
               LOG.info("Unexporting volume " + foundLVMVolumeInfo.getVolumeId());
               try {
-                String path = lvmRootDirectory + PATH_SEPARATOR + volumeGroup + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
-                if (LVMWrapper.logicalVolumeExists(path)) {
+                String lvPath = foundLVMVolumeInfo.getAbsoluteLVPath();
+                if (lvPath != null && LVMWrapper.logicalVolumeExists(lvPath)) {
                   // guard this. tgt is not happy when you ask it to
                   // get rid of a non existent tid
                   exportManager.cleanup(foundLVMVolumeInfo);
