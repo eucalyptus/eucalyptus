@@ -367,7 +367,7 @@ int add_euca_to_path(const char *euca_home_supplied)
     }
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca-* admin commands)
+             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, old admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
