@@ -747,7 +747,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void fireEvent(ClockTick event) {
 			
-			if ( Bootstrap.isFinished() &&
+			if ( Bootstrap.isOperational( ) &&
 			          Topology.isEnabledLocally( LoadBalancingBackend.class ) &&
 			          Topology.isEnabled( AutoScaling.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) ) {

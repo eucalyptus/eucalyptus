@@ -63,7 +63,7 @@ public class ImagingWorkers {
 
     @Override
     public void fireEvent(ClockTick event) {
-      if (!( Bootstrap.isFinished() &&
+      if (!( Bootstrap.isOperational( ) &&
           Topology.isEnabledLocally( ImagingBackend.class ) &&
           Topology.isEnabled( Compute.class) ) )
         return;

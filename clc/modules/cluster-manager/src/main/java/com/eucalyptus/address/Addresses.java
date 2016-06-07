@@ -910,7 +910,7 @@ public class Addresses {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+      if ( Bootstrap.isOperational() && Hosts.isCoordinator() ) {
         final List<Address> addresses = AddressRegistry.getInstance( ).listValues( );
         final List<Address> disabledAddresses = AddressRegistry.getInstance( ).listDisabledValues( );
         final long total = addresses.size() + disabledAddresses.size();
