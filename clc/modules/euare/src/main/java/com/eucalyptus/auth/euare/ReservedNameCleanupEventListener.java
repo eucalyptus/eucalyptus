@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import java.util.Date;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity_;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.Entities;
@@ -44,7 +45,7 @@ public class ReservedNameCleanupEventListener implements EventListener<ClockTick
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Euare.class ) ) {
+    if ( Topology.isEnabledLocally( Euare.class ) && !Databases.isVolatile( ) ) {
       try ( final TransactionResource tx = Entities.transactionFor( ReservedNameEntity.class ) ) {
         Entities.delete(
             Entities.restriction( ReservedNameEntity.class ).before( ReservedNameEntity_.expiry, new Date( ) ).build( )
