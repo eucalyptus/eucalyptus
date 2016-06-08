@@ -29,9 +29,9 @@ distclean: clean
 install: deploy
 ifeq ($(USE_SYSTEMD), yes)
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
-	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/systemd/system
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/sysctl.d
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
+	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/systemd/system
 	install -m 0644 modules-load.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
 	install -m 0644 sysctl.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/sysctl.d
 	install -m 0644 tmpfiles.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
@@ -39,4 +39,31 @@ ifeq ($(USE_SYSTEMD), yes)
 	# For backwards compatibility with ``service eucalyptus-cc/nc start''
 	ln -fs eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	ln -fs eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
+endif
+
+uninstall:
+ifeq ($(USE_SYSTEMD), yes)
+# Extra "if" checks prevent e.g. "rm -f /..../system/*.service" removing files we didn't install.
+	@if [ -n "$$(/bin/ls modules-load.d/*.conf)" ]; then \
+		for conf_file in modules-load.d/*.conf; do \
+			rm -f $(DESTDIR)/$(prefix)/usr/lib/$$conf_file; \
+		done; \
+	fi
+	@if [ -n "$$(/bin/ls sysctl.d/*.conf)" ]; then \
+		for conf_file in sysctl.d/*.conf; do \
+			rm -f $(DESTDIR)/$(prefix)/usr/lib/$$conf_file; \
+		done; \
+	fi
+	@if [ -n "$$(/bin/ls tmpfiles.d/*.conf)" ]; then \
+		for conf_file in tmpfiles.d/*.conf; do \
+			rm -f $(DESTDIR)/$(prefix)/usr/lib/$$conf_file; \
+		done; \
+	fi
+	@if [ -n "$$(/bin/ls units/*.service)" ]; then \
+		for unit_file in units/*.service; do \
+			rm -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/$$(basename $$unit_file); \
+		done; \
+	fi
+	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
+	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
 endif
