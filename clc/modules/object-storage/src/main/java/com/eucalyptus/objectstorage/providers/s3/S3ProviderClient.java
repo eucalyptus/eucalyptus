@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -150,6 +149,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.util.AclUtils;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -852,7 +852,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
     String sourceBucket = request.getSourceBucket();
     String sourceKey = request.getSourceObject();
-    String sourceVersionId = request.getSourceVersionId();
+    String sourceVersionId = request.getSourceVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID) ? null : request.getSourceVersionId();
     String destinationBucket = request.getDestinationBucket();
     String destinationKey = request.getDestinationObject();
     String copyIfMatch = request.getCopySourceIfMatch();
