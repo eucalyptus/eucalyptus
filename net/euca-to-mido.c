@@ -2102,7 +2102,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         } else {
             gni_instance_node = mido_get_host_byip(gniif->node);
             if (!gni_instance_node) {
-                LOGERROR("\thost %s not found: check midonet and/or midolman health\n", gniif->node);
+                LOGERROR("\thost %s for %s not found: check midonet and/or midolman health\n", gniif->node, gniif->name);
                 continue;
             } else {
                 if (vpcif->midos[INST_VMHOST] && vpcif->midos[INST_VMHOST]->init) {
@@ -2570,7 +2570,8 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
  * @return 0 on success. 1 otherwise.
  */
 int do_midonet_maint(mido_config *mido) {
-    int ret = 0;
+    int rc = 0;
+    struct timeval tv;
 
     if (!mido) {
         return (1);
@@ -2578,8 +2579,28 @@ int do_midonet_maint(mido_config *mido) {
 
     // Check for number of midoname releases in midocache_midos
     midonet_api_cache_check();
+    
+    if (midocache_invalid) {
+        eucanetd_timer_usec(&tv);
+        rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
+        if (rc) {
+            LOGERROR("failed to retrieve objects from MidoNet.\n");
+            return (1);
+        }
+        LOGINFO("\tMidoNet objects cached in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
-    return (ret);
+        rc = do_midonet_populate(mido);
+        if (rc) {
+            LOGWARN("failed to populate euca VPC models.\n");
+            return (1);
+        }
+        LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        mido_info_http_count();
+        midonet_api_system_changed = 0;
+        midocache_invalid = 0;
+    }
+
+    return (0);
 }
 
 /**
