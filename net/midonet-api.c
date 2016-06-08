@@ -160,6 +160,11 @@ int http_posts = 0;
 int http_puts = 0;
 int http_deletes = 0;
 
+double http_gets_time = 0.0;
+double http_posts_time = 0.0;
+double http_puts_time = 0.0;
+double http_deletes_time = 0.0;
+
 static int http_gets_prev = 0;
 static int http_posts_prev = 0;
 static int http_puts_prev = 0;
@@ -471,8 +476,15 @@ void mido_info_http_count()
 //!
 void mido_info_http_count_total()
 {
-    LOGINFO("Total MidoNet API requests: %d gets, %d puts, %d posts, %d deletes\n", 
+    LOGINFO("Total mido requests: %d gets, %d puts, %d posts, %d deletes\n", 
             http_gets, http_puts, http_posts, http_deletes);
+    long int getdiv = http_gets ? http_gets : (http_gets + 1);
+    long int putdiv = http_puts ? http_puts : (http_puts + 1);
+    long int postdiv = http_posts ? http_posts : (http_posts + 1);
+    long int deldiv = http_deletes ? http_deletes : (http_deletes + 1);
+    LOGINFO("\t%.2f ms/get, %.2f ms/put, %.2f ms/post, %.2f ms/del\n", 
+            http_gets_time / getdiv / 1000.0, http_puts_time / putdiv / 1000.0,
+            http_posts_time / postdiv / 1000.0, http_deletes_time / deldiv / 1000.0);
 }
 
 //!
@@ -4494,6 +4506,8 @@ CURL *mido_libcurl_get_handle(mido_libcurl_handles *handles) {
         res = curl_easy_init();
         if (!res) {
             LOGERROR("Unable to get libcurl easy_handle\n");
+        } else {
+            curl_easy_setopt(res, CURLOPT_NOSIGNAL, 1L);
         }
     }
     pthread_mutex_unlock(&libcurl_handles_mutex);
@@ -4515,19 +4529,22 @@ CURL *mido_libcurl_get_gethandle(mido_libcurl_handles *handles) {
     if (handles->max_gethandles > 0) {
         res = handles->gethandles[handles->max_gethandles - 1];
         handles->max_gethandles--;
+        curl_easy_reset(res);
     } else {
         res = curl_easy_init();
         if (!res) {
             LOGERROR("Unable to get libcurl easy_handle\n");
-        } else {
-            curl_easy_setopt(res, CURLOPT_HTTPGET, 1L);
-            curl_easy_setopt(res, CURLOPT_WRITEFUNCTION, mem_writer);
-            //curl_easy_setopt(res, CURLOPT_TCP_KEEPALIVE, 1L);
-            //curl_easy_setopt(res, CURLOPT_TCP_KEEPINTVL, 30L);
-            //curl_easy_setopt(res, CURLOPT_TCP_KEEPIDLE, 600L);
         }
     }
     pthread_mutex_unlock(&libcurl_handles_mutex);
+    if (res) {
+        curl_easy_setopt(res, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(res, CURLOPT_WRITEFUNCTION, mem_writer);
+        curl_easy_setopt(res, CURLOPT_NOSIGNAL, 1L);
+        //curl_easy_setopt(res, CURLOPT_TCP_KEEPALIVE, 1L);
+        //curl_easy_setopt(res, CURLOPT_TCP_KEEPINTVL, 30L);
+        //curl_easy_setopt(res, CURLOPT_TCP_KEEPIDLE, 600L);
+    }
     return (res);
 }
 
@@ -4584,6 +4601,7 @@ int midonet_http_get(char *url, char *apistr, char **out_payload) {
     long httpcode = 0L;
     struct curl_slist *headers = NULL;
     char hbuf[EUCA_MAX_PATH];
+    long int httptime;
 
     struct timeval tv;
     eucanetd_timer_usec(&tv);
@@ -4640,30 +4658,22 @@ int midonet_http_get(char *url, char *apistr, char **out_payload) {
     if (mem_writer_params.mem)
         free(mem_writer_params.mem);
 
-    LOGTRACE("total time for http operation: %ld us\n", eucanetd_timer_usec(&tv));
+    httptime = eucanetd_timer_usec(&tv);
+    LOGTRACE("total time for http GET operation: %ld us\n", httptime);
     http_gets++;
+    http_gets_time += httptime;
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] url
-//! @param[in] resource_type
-//! @param[in] payload
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
-{
+/**
+ * Performs http PUT operation using libcurl
+ * @param url [in] the http url of interest.
+ * @param resource_type [in] mido resource type, used to build the media type.
+ * @param vers [in] mido resource type version, used to build the media type string.
+ * @param payload [in] a JSON string to be used as the payload of this operation.
+ * @return 0 on success. Positive integer on any failure.
+ */
+int midonet_http_put(char *url, char *resource_type, char *vers, char *payload) {
     CURL *curl = NULL;
     CURLcode curlret;
     struct mem_params_t mem_reader_params = { 0, 0 };
@@ -4671,9 +4681,10 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     struct curl_slist *headers = NULL;
     int ret = 0;
     long httpcode = 0L;
-    long long timer=0;
+    struct timeval tv;
+    long int httptime;
 
-    timer = time_usec();
+    eucanetd_timer_usec(&tv);
 
     mido_check_state();
 
@@ -4720,8 +4731,10 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload)
     //curl_easy_cleanup(curl);
     //curl_global_cleanup();
 
-    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    httptime = eucanetd_timer_usec(&tv);
+    LOGTRACE("total time for http PUT operation: %ld us\n", httptime);
     http_puts++;
+    http_puts_time += httptime;
     return (ret);
 }
 
@@ -4761,35 +4774,27 @@ static size_t header_find_location(char *content, size_t size, size_t nmemb, voi
     return (size * nmemb);
 }
 
-//!
-//!
-//!
-//! @param[in]  url
-//! @param[in]  resource_type
-//! @param[in]  payload
-//! @param[out] out_payload
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload)
-{
+/**
+ * Performs http POST operation using libcurl
+ * @param url [in] the http url of interest.
+ * @param resource_type [in] mido resource type, used to build the media type.
+ * @param vers [in] mido resource type version, used to build the media type string.
+ * @param payload [in] a JSON string to be used as the payload of this operation.
+ * @param out_payload [out] optional pointer to a string where the results of this
+ * POST operation will be stored.
+ * @return 0 on success. Positive integer on any failure.
+ */
+int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload) {
     CURL *curl = NULL;
     CURLcode curlret;
     int ret = 0;
     char *loc = NULL, hbuf[EUCA_MAX_PATH];
     struct curl_slist *headers = NULL;
-    long long timer=0;
     long httpcode = 0L;
+    struct timeval tv;
+    long int httptime;
 
-    timer = time_usec();
+    eucanetd_timer_usec(&tv);
 
     mido_check_state();
 
@@ -4844,35 +4849,27 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     }
     EUCA_FREE(loc);
 
-    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    httptime = eucanetd_timer_usec(&tv);
+    LOGTRACE("total time for http POST operation: %ld us\n", httptime);
     http_posts++;
+    http_posts_time += httptime;
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] url
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int midonet_http_delete(char *url)
-{
+/**
+ * Performs http DELETE operation using libcurl
+ * @param url [in] the http url of interest.
+ * @return 0 on success. Positive integer on any failure.
+ */
+int midonet_http_delete(char *url) {
     CURL *curl = NULL;
     CURLcode curlret;
     int ret = 0;
-    long long timer=0;
     long httpcode = 0L;
+    struct timeval tv;
+    long int httptime;
 
-    timer = time_usec();
+    eucanetd_timer_usec(&tv);
 
     mido_check_state();
         
@@ -4900,8 +4897,10 @@ int midonet_http_delete(char *url)
     //curl_easy_cleanup(curl);
     //curl_global_cleanup();
 
-    LOGTRACE("total time for http operation: %f seconds\n", (time_usec() - timer) / 100000.0);
+    httptime = eucanetd_timer_usec(&tv);
+    LOGTRACE("total time for http DELETE operation: %ld us\n", httptime);
     http_deletes++;
+    http_deletes_time += httptime;
     return (ret);
 }
 
@@ -6380,6 +6379,7 @@ int midonet_api_cache_flush(void) {
     midocache = NULL;
     midoname_list_free(midocache_midos);
     midocache_midos = NULL;
+    midonet_api_cache_midos_init();
     
     return (0);
 }
@@ -7101,6 +7101,9 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
     mido_cache_main_thread_params param[MIDO_CACHE_THREAD_END];
     pthread_t pt[MIDO_CACHE_THREAD_END];
     pthread_attr_t ptattr;
+
+    midonet_api_cleanup();
+    midonet_api_init();
 
     pthread_attr_init(&ptattr);
     pthread_attr_setdetachstate(&ptattr, PTHREAD_CREATE_JOINABLE);

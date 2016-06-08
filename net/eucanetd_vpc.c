@@ -361,15 +361,13 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
 //!
 //! @post
 //!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occurred. The system is left in a non-deterministic state and a subsequent
+//!     failure occurred, the system is left in a non-deterministic state and a subsequent
 //!     call to this API may resolve the remaining issues.
 //!
 static int network_driver_system_flush(globalNetworkInfo *pGni)
 {
     int rc = 0;
     int ret = 0;
-
-    LOGINFO("Flushing '%s' network driver artifacts.\n", DRIVER_NAME());
 
     // Is our driver initialized?
     if (!IS_INITIALIZED()) {
@@ -494,6 +492,9 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         return (1);
     }
 
+    // Make sure midoname buffer is available
+    midonet_api_cache_midos_init();
+
     rc = do_midonet_maint(pMidoConfig);
     return (rc);
 }
@@ -517,7 +518,6 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
 //! @note
 //!
 static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
-    int rc = 0;
     LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
 
     // Is the driver initialized?
@@ -545,18 +545,7 @@ static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
             break;
         case SIGUSR2:
             LOGINFO("Going to invalidate midocache\n");
-            rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
-            if (rc) {
-                LOGERROR("failed to retrieve objects from MidoNet.\n");
-                midocache_invalid = 1;
-                break;
-            }
-
-            rc = do_midonet_populate(pMidoConfig);
-            if (rc) {
-                LOGERROR("failed to populate euca VPC models\n");
-                midocache_invalid = 1;
-            }
+            midocache_invalid = 1;
             break;
         default:
             break;
