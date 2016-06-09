@@ -373,7 +373,9 @@ public class TopologyDnsResolver extends DnsResolver {
       }
       final Cidr listenerCidr = Cidr.fromAddress(listenerAddress, prefix);
       final Host host = Hosts.lookup(hostAddress);
-      if( host != null ) {
+      if ( host.isLocalHost( ) ) {
+        result = listenerAddress;
+      } else if ( host != null ) {
         result = Iterables.tryFind(host.getHostAddresses(), listenerCidr).or(result);
       }
     }
