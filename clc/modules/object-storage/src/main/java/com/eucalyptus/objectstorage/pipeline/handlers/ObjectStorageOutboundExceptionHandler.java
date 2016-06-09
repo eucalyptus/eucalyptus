@@ -64,9 +64,11 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
@@ -117,6 +119,8 @@ public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
         }
         httpResponse.setMessage(errMsg);
       }
+      httpResponse.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+      event.getFuture().addListener(ChannelFutureListener.CLOSE);
     }
   }
 }
