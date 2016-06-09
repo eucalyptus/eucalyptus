@@ -99,7 +99,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC    //!< used for resource name cache
+#define MAX_SENSOR_RESOURCES                     MAX_INSTANCES_PER_CC    //!< used for resource name cache
 #define SENSOR_SYSTEM_POLL_INTERVAL_MINIMUM_USEC 5000000    //!< never poll system more often than this
 
 /*----------------------------------------------------------------------------*\
