@@ -361,6 +361,11 @@ def _gather_files(instance_name, instance_path):
 
     for block_file in glob("%s/*.blocks" % instance_path):
         dir_name = os.path.splitext(os.path.basename(block_file))[0]
+
+        if not os.path.exists(os.path.join(instance_path, "%s.dm" % dir_name)):
+            logging.debug("Skipping %s as there is no associated .dm file", block_file)
+            continue
+
         with open(os.path.join(instance_path, "%s.dm" % dir_name)) as dm_file:
             device = dm_file.read().split()[-1]
 
@@ -387,7 +392,7 @@ def _gather_files(instance_name, instance_path):
 
     target_files = [os.path.join(instance_path, file) for file in os.listdir(instance_path)
                     if os.path.splitext(file)[1] not in
-                    [".dm", ".deps", ".sig", ".lock", ".loopback", ".blocks"]]
+                    [".dm", ".deps", ".sig", ".lock", ".loopback"]]
 
     return target_files
 
