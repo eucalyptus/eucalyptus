@@ -995,25 +995,6 @@ static int eucanetd_daemonize(void)
             fprintf(stderr, "could not establish a new session id\n");
             exit(1);
         }
-
-        pid = getpid();
-        if (pid > 1) {
-            snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
-            FH = fopen(pidfile, "w");
-            if (FH) {
-                fprintf(FH, "%d\n", pid);
-                fclose(FH);
-            } else {
-                fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
-                exit(1);
-            }
-        }
-
-        if (config->debug == EUCANETD_DEBUG_NONE) {
-            close(STDIN_FILENO);
-            close(STDOUT_FILENO);
-            close(STDERR_FILENO);
-        }
     }
 
     pwent = getpwnam(config->eucauser);
@@ -1026,6 +1007,32 @@ static int eucanetd_daemonize(void)
         perror("setgid() setuid()");
         fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
         exit(1);
+    }
+
+    char eucadir[EUCA_MAX_PATH] = "";
+    snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", config->eucahome);
+    if (check_directory(eucadir)) {
+        fprintf(stderr, "cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
+        exit(1);
+    }
+
+    pid = getpid();
+    if (pid > 1) {
+        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
+        FH = fopen(pidfile, "w");
+        if (FH) {
+            fprintf(FH, "%d\n", pid);
+            fclose(FH);
+        } else {
+            fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
+            exit(1);
+        }
+    }
+
+    if (config->debug == EUCANETD_DEBUG_NONE) {
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
     }
 
     return (0);
@@ -1133,7 +1140,6 @@ static int eucanetd_read_config_bootstrap(void) {
     char *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME);
     char home[EUCA_MAX_PATH] = "";
     char user[EUCA_MAX_PATH] = "";
-    char eucadir[EUCA_MAX_PATH] = "";
 
     ret = 0;
 
@@ -1147,12 +1153,6 @@ static int eucanetd_read_config_bootstrap(void) {
         snprintf(user, EUCA_MAX_PATH, "eucalyptus");
     } else {
         snprintf(user, EUCA_MAX_PATH, "%s", eucauserenv);
-    }
-
-    snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
-    if (check_directory(eucadir)) {
-        fprintf(stderr, "cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
-        exit(1);
     }
 
     config->eucahome = strdup(home);
@@ -1841,7 +1841,7 @@ int eucanetd_dummy_udpsock(void) {
     struct sockaddr_in dummysock;
     int s = -1;
 
-    s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_UDP);
     if (s == -1) {
         LOGERROR("Failed to create eucanetd udp socket.\n");
         return (-1);

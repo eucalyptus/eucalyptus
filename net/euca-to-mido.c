@@ -311,14 +311,6 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
         }
     }
 
-    // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
-    int do_dummyudp = 0;
-    if (cmds.max_commands > 0) {
-        do_dummyudp = 1;
-    }
-    if (do_dummyudp) {
-        eucanetd_dummy_udpsock_close();
-    }
     se_print(&cmds);
     rc = se_execute(&cmds);
     if (rc) {
@@ -326,10 +318,6 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
         ret = 1;
     }
     se_free(&cmds);
-    // Temporary solution to avoid nginx to inherit eucanetd_dummyudp socket
-    if (do_dummyudp) {
-        eucanetd_dummy_udpsock();
-    }
 
     return (ret);
 }

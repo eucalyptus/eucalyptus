@@ -275,8 +275,6 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config)
     if ((psConfig = file2str(sConfigFileName)) != NULL) {
         // Do we have any "node-" statement
         if (strstr(psConfig, "node-")) {
-            // avoid dhcpd to inherit eucanetd_dummyudp socket 
-            eucanetd_dummy_udpsock_close();
             // Run the DHCP command
             rc = euca_execlp(&status, config->cmdprefix, config->dhcpDaemon, "-cf", sConfigFileName, "-lf", sLeaseFileName, "-pf", sPidFileName, "-tf", sTraceFileName, NULL);
             if (rc != EUCA_OK) {
@@ -287,7 +285,6 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config)
             } else {
                 LOGDEBUG("DHCP server restarted successfully\n");
             }
-            eucanetd_dummy_udpsock();
         }
         EUCA_FREE(psConfig);
     }
