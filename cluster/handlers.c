@@ -6117,20 +6117,6 @@ int update_config(void)
             } else {
                 config->ncPollingFrequency = 6;
             }
-
-            tmpstr = configFileValue("MAX_INSTANCES_PER_CC");
-            if (tmpstr) {
-                if (atoi(tmpstr) > 15 && atoi(tmpstr) < MAXINSTANCES_PER_CC) {
-                    config->ccMaxInstances = atoi(tmpstr);
-                } else {
-                    config->ccMaxInstances = MAXINSTANCES_PER_CC;
-                }
-            } else {
-                config->ccMaxInstances = MAXINSTANCES_PER_CC;
-            }
-            EUCA_FREE(tmpstr);
-            // enabled sensors list -- removed since it is part of sensor cycle
-            //update_sensors_list();
         }
     }
 
@@ -6160,7 +6146,7 @@ int init_config(void)
     int schedPolicy = 0;
     int idleThresh = 0;
     int wakeThresh = 0;
-    int ccMaxInstances = MAXINSTANCES_PER_CC;
+    int ccMaxInstances = DEFAULT_MAX_INSTANCES_PER_CC;
     char *psHost = NULL;
     char *tmpstr = NULL;
     char *proxyIp = NULL;
@@ -6402,10 +6388,10 @@ int init_config(void)
     }
     EUCA_FREE(tmpstr);
 
-    // Config ccMaxInstances if defined, otherwise use default of MAXINSTANCES_PER_CC
+    // Config ccMaxInstances if defined, otherwise use default of DEFAULT_MAX_INSTANCES_PER_CC
     tmpstr = configFileValue("MAX_INSTANCES_PER_CC");
     if (tmpstr) {
-        if (atoi(tmpstr) > 15 && atoi(tmpstr) < MAXINSTANCES_PER_CC) {
+        if (atoi(tmpstr) > 15 && atoi(tmpstr) <= MAX_INSTANCES_PER_CC) {
             ccMaxInstances = atoi(tmpstr);
         }
     }
