@@ -669,14 +669,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
             + " access is denied based on acl and/or IAM policy");
         throw new AccessDeniedException(request.getBucket());
       }
-    } catch (Exception ex) {
-      if (ex instanceof S3Exception) {
-        LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", ex);
-        throw (S3Exception) ex;
-      } else {
-        LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", ex);
-        throw new InternalErrorException(request.getBucket(), ex);
-      }
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
+    } catch (S3Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
+      throw e;
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+      throw new InternalErrorException(request.getBucket(), e);
     }
   }
 
@@ -885,6 +886,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
       reply.setStatusMessage("No Content");
       return reply;
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;
@@ -912,6 +916,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
           reply.setIsDeleteMarker(Boolean.TRUE);
       }
       return reply;
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;
@@ -1347,6 +1354,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
       response.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
       response.setStatus(HttpResponseStatus.OK);
       return response;
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;
@@ -1793,6 +1803,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: InvalidArgumentException");
       throw new InvalidArgumentException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionId(),
           "Invalid version id specified").withArgumentName("versionId").withArgumentValue(request.getVersionId());
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;
@@ -1813,6 +1826,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
           reply.setIsDeleteMarker(Boolean.TRUE);
       }
       return reply;
+    } catch (AccessDeniedException e) {
+      LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
+      throw e;
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
       throw e;
