@@ -647,7 +647,7 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
         sem_p(state_sem);
         if (!sensor_state->initialized) {
             LOGDEBUG("init_state resources_size: %d\n",resources_size);
-            init_state(resources_size - 1);
+            init_state(resources_size);
         }
         LOGDEBUG("setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
         sensor_update_euca_config = update_euca_config_function;
@@ -686,7 +686,7 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
         // Not sure if this is really needed as init_state() call bzeros the resources array...
         // might be faster to just bzero the initial struct size...something to think about.
         bzero(sensor_state, sensor_mem_size);
-        init_state(use_resources_size - 1);
+        init_state(use_resources_size);
         {                              // start the sensor thread
             pthread_t tcb;
             if (pthread_create(&tcb, NULL, sensor_thread, NULL)) {
