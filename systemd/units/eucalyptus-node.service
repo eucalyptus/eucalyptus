@@ -6,13 +6,6 @@ Wants=chronyd.service eucalyptus-node-keygen.service libvirtd.service
 [Service]
 Type=simple
 ExecStart=/usr/sbin/eucalyptus-node
-ExecStop=/bin/kill -WINCH ${MAINPID}
-# We want systemd to give httpd some time to finish gracefully, but still
-# want it to kill httpd after TimeoutStopSec if something went wrong
-# during the graceful stop.  Normally, systemd sends SIGTERM right
-# after the ExecStop, which would kill httpd.  We are sending useless
-# SIGCONT here to give httpd time to finish.
-KillSignal=SIGCONT
 LimitNOFILE=10000
 PrivateTmp=true
 
