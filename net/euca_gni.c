@@ -2222,7 +2222,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
         LOGDEBUG("could not validate GNI after XML parse: check network config\n");
         return (1);
     }
-    LOGINFO("gni validated in %ld us.\n", eucanetd_timer_usec(&tv));
+    LOGDEBUG("gni validated in %ld us.\n", eucanetd_timer_usec(&tv));
 
     LOGINFO("gni populated in %.2f ms.\n", eucanetd_timer_usec(&ttv) / 1000.0);
 
