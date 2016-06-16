@@ -1019,6 +1019,13 @@ unroll:
                 goto failed_dest;
             }
 
+                        // build any secondary network interface xml files
+            for (int w=0; w < EUCA_MAX_NICS; w++) {
+                if (strlen(instance->secNetCfgs[w].interfaceId) == 0)
+                    continue;
+                gen_libvirt_nic_xml(instance->instancePath, instance->secNetCfgs[w].interfaceId);
+            }
+
             sem_p(inst_sem);
             instance->migration_state = MIGRATION_READY;
             instance->migrationTime = 0; //Reset the timer, to ensure monitoring thread handles this properly. This is required when setting BOOTING state
