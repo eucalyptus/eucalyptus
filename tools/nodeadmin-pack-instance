@@ -29,6 +29,7 @@ import argparse
 import logging
 import os
 import os.path
+import stat
 import signal
 
 from subprocess import check_call, Popen, PIPE
@@ -455,7 +456,7 @@ def _place_stop_delete_file():
         hook_file.truncate()
         hook_file.write(_STOP_DELETE)
 
-    os.chmod(_NCHOOK_PATH, os.stat.S_IXUSR | os.stat.S_IXGRP | os.stat.S_IXOTH)
+    os.chmod(_NCHOOK_PATH, stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def _main(args, log_level):
