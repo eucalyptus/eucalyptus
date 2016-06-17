@@ -105,6 +105,8 @@ public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
         if (errMsg instanceof ObjectStorageErrorMessageType) {
           ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
           httpResponse.setStatus(walrusErrorMsg.getStatus());
+          httpResponse.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+          event.getFuture().addListener(ChannelFutureListener.CLOSE);
         }
         httpResponse.setMessage(errMsg);
       } else if (msg instanceof ExceptionResponseType) {
@@ -113,14 +115,14 @@ public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
         if (errMsg instanceof ObjectStorageErrorMessageType) {
           ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
           httpResponse.setStatus(walrusErrorMsg.getStatus());
+          httpResponse.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+          event.getFuture().addListener(ChannelFutureListener.CLOSE);
         } else {
           // If unknown type, set 500
           httpResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
         }
         httpResponse.setMessage(errMsg);
       }
-      httpResponse.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-      event.getFuture().addListener(ChannelFutureListener.CLOSE);
     }
   }
 }
