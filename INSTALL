@@ -339,7 +339,7 @@ Run the "configure" script to prepare the system to build:
 # ./configure --with-axis2==/usr/share/java/axis2 \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
---with-db-home=/usr/pgsql-9.2 \
+--with-db-home=/ \
 --with-wsdl2c-sh=$EUCAGIT/eucalyptus/devel/euca-WSDL2C.sh \
 $EUCASTART
 
