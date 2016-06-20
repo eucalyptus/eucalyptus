@@ -775,7 +775,8 @@ public class LoadBalancingBackendService {
     final Set<String> securityGroupIds = Sets.newHashSet( );
     if ( request.getSecurityGroups( ) != null ) {
       securityGroupIds.addAll( request.getSecurityGroups( ).getMember( ) );
-    } else if ( vpcId != null && !defaultVpc ) { // for default VPC a group is created/discovered later
+    } else if ( vpcId != null && request.getSubnets() != null ) {
+      // for default VPC (where availability-zone is specified), a group is created/discovered later
       final List<SecurityGroupItemType> groups =  EucalyptusActivityTasks.getInstance( )
           .describeUserSecurityGroupsByName( accountFullName, vpcId, "default" );
       if ( groups.isEmpty( ) ) {
