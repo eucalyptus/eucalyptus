@@ -31,6 +31,7 @@ import os
 import os.path
 import stat
 import signal
+import shutil
 
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
@@ -357,8 +358,8 @@ def _gather_files(instance_name, instance_path):
                   instance_path, instance_name)
 
     if not os.path.exists(os.path.join(instance_path, _GLOBAL_NETWORK_INFO_XML)):
-        os.link(os.path.join(_RUN_EUCALYPTUS, _GLOBAL_NETWORK_INFO_XML),
-                os.path.join(instance_path, _GLOBAL_NETWORK_INFO_XML))
+        shutil.copyfile(os.path.join(_RUN_EUCALYPTUS, _GLOBAL_NETWORK_INFO_XML),
+                        os.path.join(instance_path, _GLOBAL_NETWORK_INFO_XML))
 
     for block_file in glob("%s/*.blocks" % instance_path):
         dir_name = os.path.splitext(os.path.basename(block_file))[0]
@@ -387,7 +388,7 @@ def _gather_files(instance_name, instance_path):
                  for link_file in link_files]
 
     for new_link in new_links:
-        os.unlink(new_link[1])
+        os.rename(new_link[1], "%s.orig" % new_link[1])
         os.symlink(os.path.join(os.path.dirname(new_link[1]), "%s%s" %
                                 (new_link[0], _BLOCK_SAVE)), new_link[1])
 
@@ -456,7 +457,8 @@ def _place_stop_delete_file():
         hook_file.truncate()
         hook_file.write(_STOP_DELETE)
 
-    os.chmod(_NCHOOK_PATH, stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    os.chmod(_NCHOOK_PATH, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR |
+             stat.S_IXGRP | stat.S_IRGRP | stat.S_IROTH | stat.S_IXOTH)
 
 
 def _main(args, log_level):
