@@ -3278,6 +3278,29 @@ int mido_get_rules(midoname *chainname, midoname ***outnames, int *outnames_max)
 }
 
 /**
+ * Reloads chain rules from mido.
+ * @param chain [in] chain of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_reload_rules(midonet_api_chain *chain) {
+    if ((!chain) || (!chain->obj) || (!chain->obj->tenant)) {
+        LOGERROR("Invalid argument: cannot retrieve NULL chains/rules\n");
+        return (1);
+    }
+    midoname ***outnames = &(chain->rules);
+    int *outnames_max = &(chain->max_rules);
+    chain->rules_count = 0;
+    int rc = mido_get_resources(chain->obj, 1, chain->obj->tenant, "rules",
+            "application/vnd.org.midonet.collection.Rule-v2+json", outnames, outnames_max);
+    if (rc) {
+        LOGWARN("Failed to reload %s rules\n", chain->obj->name);
+        return (1);
+    }
+    chain->rules_count = chain->max_rules;
+    return (0);
+}
+
+/**
  * Retrieves an array of pointers to midonet object representing chain rule that implement jumps.
  * @param chain [in] chain of interest.
  * @param outnames [out] an array of pointers to midonet objects representing chain rule, to be returned.
@@ -3300,6 +3323,7 @@ int mido_get_jump_rules(midonet_api_chain *chain, midoname ***outnames, int *out
             LOGWARN("MIDOCACHE: cannot search jump rules for NULL\n");
             return (1);
         } else {
+            mido_reload_rules(chain);
             if (chain->max_rules > 0) {
                 if (outnames) {
                     *outnames = EUCA_ZALLOC_C(chain->max_rules, sizeof (midoname *));

@@ -2473,7 +2473,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                             }
                         }
 
-                        // Get the ingress jump rules currently in mido
                         found = 0;
                         for (k = 0; k < max_jprules_ingress && !found; k++) {
                             if (!strcmp(vpcsecgroup->midos[VPCSG_INGRESS]->uuid, jprules_tgt_ingress[k])) {
@@ -2483,7 +2482,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                             }
                         }
                         if (!found) {
-                            // add the SG chain jump egress - right before the drop rule
+                            // add the SG chain jump ingress - right before the drop rule
                             rulepos = vpcif->postchain->rules_count;
                             snprintf(pos_str, 32, "%d", rulepos);
                             rc = mido_create_rule(vpcif->postchain, vpcif->midos[INST_POSTCHAIN],

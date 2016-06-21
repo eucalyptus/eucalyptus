@@ -499,6 +499,7 @@ int mido_update_rule(midoname * name, ...);
 int mido_print_rule(midoname * name);
 int mido_delete_rule(midonet_api_chain *chain, midoname *rule);
 int mido_get_rules(midoname *chainname, midoname ***outnames, int *outnames_max);
+int mido_reload_rules(midonet_api_chain *chain);
 int mido_get_jump_rules(midonet_api_chain *chain, midoname ***outnames, int *outnames_max,
         char ***jumptargets, int *jumptargets_max);
 int mido_clear_rules(midonet_api_chain *chain);
