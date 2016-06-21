@@ -3287,6 +3287,9 @@ int mido_reload_rules(midonet_api_chain *chain) {
         LOGERROR("Invalid argument: cannot retrieve NULL chains/rules\n");
         return (1);
     }
+    if (chain->rules) {
+        EUCA_FREE(chain->rules);
+    }
     midoname ***outnames = &(chain->rules);
     int *outnames_max = &(chain->max_rules);
     chain->rules_count = 0;
