@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.euare.ServerCertificateType;
@@ -137,7 +138,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				throw new EventHandlerException("could not find the loadbalancer", ex);
 			}
 
-			final Map<String,String> securityGroupIdsToNames = lb.getCoreView( ).getSecurityGroupIdsToNames( );
+         	final Map<String,String> securityGroupIdsToNames = lb.getCoreView( ).getSecurityGroupIdsToNames( );
 			String protocol = "tcp"; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
 			if ( lb.getVpcId( ) == null ) {
 				if ( groupName == null )
@@ -153,15 +154,32 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 				}
 			} else if ( securityGroupIdsToNames.size( ) == 1 ) {
 				if ( securityGroupIdsToNames.values( ).contains( generateDefaultVPCSecurityGroupName( lb.getVpcId( ) ) ) ) {
-					final String groupId = Iterables.getOnlyElement( securityGroupIdsToNames.keySet( ) );
-					for ( Listener listener : listeners ) {
-						int port = listener.getLoadBalancerPort();
-						try {
-						  EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup( groupId, protocol, port, lb.useSystemAccount());
-						} catch ( Exception ex ) {
-							throw new EventHandlerException( String.format( "failed to authorize %s, %s, %d", groupId, protocol, port ), ex );
-						}
-					}
+                    boolean isRuleEmpty = false;
+                    try {
+                        final SecurityGroupItemType defaultGroup =
+                                EucalyptusActivityTasks.getInstance()
+                                        .describeUserSecurityGroupsByName( evt.getContext().getAccount(),
+                                                lb.getVpcId( ), securityGroupIdsToNames.values().stream().findAny().get() )
+                                        .stream().findAny().get();
+                        if (defaultGroup.getIpPermissions() == null ||
+                                defaultGroup.getIpPermissions().isEmpty()) {
+                            isRuleEmpty = true;
+                        }
+                    }catch(final Exception ex) {
+                        isRuleEmpty = false;
+                    }
+
+                    if (isRuleEmpty) { // the rule is created only for the first time the group is created
+                        final String groupId = Iterables.getOnlyElement(securityGroupIdsToNames.keySet());
+                        for (Listener listener : listeners) {
+                            int port = listener.getLoadBalancerPort();
+                            try {
+                                EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup(groupId, protocol, port, lb.useSystemAccount());
+                            } catch (Exception ex) {
+                                throw new EventHandlerException(String.format("failed to authorize %s, %s, %d", groupId, protocol, port), ex);
+                            }
+                        }
+                    }
 				}
 			}
 		}
