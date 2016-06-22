@@ -368,7 +368,7 @@ int readConfigFile(char asConfigFiles[][EUCA_MAX_PATH], int numFiles)
         new = getConfString(asConfigFiles, numFiles, aConfigKeysRestart[i].key);
         if (configRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                LOGWARN("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change "
+                LOGWARN("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): restart is required before this change "
                         "will take effect!\n", aConfigKeysRestart[i].key, SP(old), SP(new));
             }
 
