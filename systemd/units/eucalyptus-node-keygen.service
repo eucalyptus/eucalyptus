@@ -5,5 +5,5 @@ PartOf=eucalyptus-node.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/share/eucalyptus/generate-migration-keys.sh %H INACTIVE server
+ExecStart=/usr/share/eucalyptus/generate-migration-keys.sh %H INACTIVE
 RemainAfterExit=yes

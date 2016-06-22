@@ -259,7 +259,7 @@ do_start() {
                         echo
                         echo "Cannot generate stub migration keys for libvirtd: missing generate-migration-keys.sh."
                 else
-                        $EUCALYPTUS/usr/share/eucalyptus/generate-migration-keys.sh `hostname` INACTIVE server
+                        $EUCALYPTUS/usr/share/eucalyptus/generate-migration-keys.sh `hostname` INACTIVE
                 fi
         fi
 

@@ -57,8 +57,6 @@ elif [ $# -eq 3 ] ; then
     shift
     if [ $1 = "restart" ] ; then
         RESTART=yes
-    elif [ $1 = "server" ] ; then
-        SERVER=yes
     else
         echo "Usage $0 [-v] NC-address migration-token [restart]" >&2
         exit 1
@@ -93,7 +91,7 @@ else
     echo "Generating keys under $WORKD ..." >&2
 fi
 
-if [ "$SERVER" == "yes" ] ; then
+
 # Generate the server key.
 certtool --generate-privkey > $WORKD/serverkey.pem
 
@@ -108,9 +106,7 @@ EOT
 
 # Generate the server cert.
 certtool --generate-certificate --load-privkey $WORKD/serverkey.pem --load-ca-certificate $KEYDIR/$NCCERT --load-ca-privkey $KEYDIR/$NCKEY --template $WORKD/server.info --outfile $WORKD/servercert.pem 2> $WORKD/servercert.txt
-fi
 
-if [ "$MIGTOK" != "INACTIVE" ] ; then
 # Generate the client key.
 certtool --generate-privkey > $WORKD/clientkey.pem
 
@@ -128,10 +124,14 @@ signing_key
 EOT
 
 certtool --generate-certificate --load-privkey $WORKD/clientkey.pem --load-ca-certificate $KEYDIR/$NCCERT --load-ca-privkey $KEYDIR/$NCKEY --template $WORKD/client.info --outfile $WORKD/clientcert.pem 2> $WORKD/clientcert.txt
-fi
 
 echo "Key generation complete."
 echo "Installing keys ..."
+
+mkdir -p /etc/pki/libvirt/private
+cp -f $KEYDIR/$NCCERT /etc/pki/CA/cacert.pem
+cp -f $WORKD/clientcert.pem $WORKD/servercert.pem /etc/pki/libvirt/
+cp -f $WORKD/clientkey.pem $WORKD/serverkey.pem /etc/pki/libvirt/private/
 
 # Do this in a subshell due to the sourcing of the eucalyptus.conf file.
 (
@@ -141,31 +141,10 @@ fi
 if [ -z "$EUCA_USER" ] ; then
     EUCA_USER=root
 fi
-
-EUCALYPTUS_HOMEPATH=`~$EUCA_USER`
-
-if [ "$SERVER" == "yes" ] ; then
-    echo "Installing server cert and key"
-    mkdir -p /etc/pki/libvirt/private
-    cp -f $WORKD/servercert.pem /etc/pki/libvirt/
-    cp -f $WORKD/serverkey.pem /etc/pki/libvirt/private/
-    chmod 700 /etc/pki/libvirt/private
-    chmod 600 /etc/pki/libvirt/private/serverkey.pem
-    chmod 644 /etc/pki/libvirt/servercert.pem
-    chown -R $EUCA_USER /etc/pki/libvirt/private/ || true
-fi
-
-if [ "$MIGTOK" != "INACTIVE" ] ; then
-    echo "Installing client cert and key"
-    mkdir -p $EUCALYPTUS_HOMEPATH/.pki/libvirt
-    cp -f $KEYDIR/$NCCERT $EUCALYPTUS_HOMEPATH/.pki/libvirt/cacert.pem
-    cp -f $WORKD/clientcert.pem $WORKD/clientkey.pem $EUCALYPTUS_HOMEPATH/.pki/libvirt/
-    chmod 600 $EUCALYPTUS_HOMEPATH/.pki/libvirt/clientkey.pem
-    chmod 644 $EUCALYPTUS_HOMEPATH/.pki/libvirt/clientcert.pem
-    chmod 644 $EUCALYPTUS_HOMEPATH/.pki/libvirt/cacert.pem
-    chown -R $EUCA_USER $EUCALYPTUS_HOMEPATH/.pki/libvirt || true
-fi
-
+chmod 700 /etc/pki/libvirt/private
+chmod 600 /etc/pki/libvirt/private/clientkey.pem  /etc/pki/libvirt/private/serverkey.pem
+chmod 644 /etc/pki/CA/cacert.pem /etc/pki/libvirt/clientcert.pem /etc/pki/libvirt/servercert.pem
+chown -R $EUCA_USER /etc/pki/libvirt/private/ || true
 )
 
 ensure_listen ()
