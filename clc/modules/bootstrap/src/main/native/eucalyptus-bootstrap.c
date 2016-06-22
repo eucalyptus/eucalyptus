@@ -221,6 +221,11 @@ static int set_caps(int caps)
     return 0;
 }
 
+static int set_process_options( void )
+{
+    return (prctl( PR_SET_PDEATHSIG, SIGKILL ));
+}
+
 static int set_keys_ownership(char *home, int uid, int gid)
 {
     char filename[2048];
@@ -420,10 +425,12 @@ static int child(euca_opts * args, java_home_t * data, uid_t uid, gid_t gid)
     __write_pid(GETARG(args, pidfile));
     setpgrp();
     __limits(GETARG(args,fdlimit));
+    __die(set_process_options() != 0, "Setting process options failed.");
     __die(java_init(args, data) != 1, "Failed to initialize Eucalyptus.");
     __die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance, bootstrap.init)) == 0, "Failed to init Eucalyptus.");
     __abort(4, set_keys_ownership(GETARG(args, home), uid, gid) != 0, "Setting ownership of keyfile failed.");
     __abort(4, linuxset_user_group(GETARG(args, user), uid, gid) != 0, "Setting the user failed.");
+    __abort(4, set_process_options() != 0, "Setting process options failed.");
     __die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance, bootstrap.load)) == 0, "Failed to load Eucalyptus.");
     __die_jni((r = (*env)->CallBooleanMethod(env, bootstrap.instance, bootstrap.start)) == 0, "Failed to start Eucalyptus.");
     handle._hup = signal_set(SIGHUP, handler);

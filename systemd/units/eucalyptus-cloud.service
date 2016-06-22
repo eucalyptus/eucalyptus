@@ -8,6 +8,7 @@ Type=simple
 EnvironmentFile=-/etc/eucalyptus/eucalyptus.conf
 ExecStart=/usr/sbin/eucalyptus-cloud $CLOUD_OPTS
 KillMode=process
+TimeoutStopSec=120
 LimitNOFILE=65535
 LimitNPROC=infinity
 PrivateTmp=true
