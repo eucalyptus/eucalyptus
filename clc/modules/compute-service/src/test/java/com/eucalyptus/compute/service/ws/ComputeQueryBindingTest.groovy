@@ -23,13 +23,21 @@ import com.eucalyptus.compute.common.AttributeBooleanValueType
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType
 import com.eucalyptus.compute.common.CreateVolumePermissionItemType
 import com.eucalyptus.compute.common.DescribeSnapshotAttributeType
+import com.eucalyptus.compute.common.DiskImage
+import com.eucalyptus.compute.common.DiskImageDetail
+import com.eucalyptus.compute.common.DiskImageVolume
+import com.eucalyptus.compute.common.ImportInstanceLaunchSpecification
+import com.eucalyptus.compute.common.ImportInstanceType
+import com.eucalyptus.compute.common.InstancePlacement
 import com.eucalyptus.compute.common.IpPermissionType
 import com.eucalyptus.compute.common.LaunchPermissionItemType
 import com.eucalyptus.compute.common.LaunchPermissionOperationType
 import com.eucalyptus.compute.common.ModifyImageAttributeType
 import com.eucalyptus.compute.common.ModifySnapshotAttributeType
 import com.eucalyptus.compute.common.ModifyVpcAttributeType
+import com.eucalyptus.compute.common.MonitoringInstance
 import com.eucalyptus.compute.common.ResetSnapshotAttributeType
+import com.eucalyptus.compute.common.UserData
 import com.eucalyptus.compute.common.UserIdGroupPairType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import com.google.common.base.Splitter
@@ -1193,5 +1201,109 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
       assertNotNull( 'Expected non-null dns hostnames attribute', enableDnsHostnames )
       assertEquals( 'EnableDnsHostnames value', true, enableDnsHostnames.value )
     }
+  }
+
+  @Test
+  void testImportInstanceMessageQueryBindings() {
+    URL resource = ComputeQueryBindingTest.class.getResource('/ec2-import-13-10-15.xml')
+
+    String version = "2013-10-15"
+    ComputeQueryBinding eb = new ComputeQueryBinding() {
+      @Override
+      protected com.eucalyptus.binding.Binding getBindingWithElementClass(final String operationName) {
+        createTestBindingFromXml(resource, operationName)
+      }
+
+      @Override
+      String getNamespace() {
+        return getNamespaceForVersion(version);
+      }
+
+      @Override
+      protected void validateBinding(final com.eucalyptus.binding.Binding currentBinding,
+                                     final String operationName,
+                                     final Map<String, String> params,
+                                     final BaseMessage eucaMsg) {
+        // Validation requires compiled bindings
+      }
+    }
+
+    // ImportInstance \w  LaunchSpecification.UserData
+    bindAndAssertParameters(eb, ImportInstanceType.class, "ImportInstance", new ImportInstanceType(
+        diskImageSet: [
+            new DiskImage(
+                image: new DiskImageDetail(
+                    bytes: 1231323l,
+                    format: 'raw',
+                    importManifestUrl: 'http://foo/bar'
+                ),
+                volume: new DiskImageVolume(
+                    size: 4
+                ),
+            )
+        ] as ArrayList<DiskImage>,
+        launchSpecification: new ImportInstanceLaunchSpecification(
+            architecture: 'x86_64',
+            groupName: ['import_instance_test_group'] as ArrayList<String>,
+            instanceType: 'c1.medium',
+            keyName: 'ImportInstanceTests_key_1466551088.49',
+            monitoring: new MonitoringInstance(enabled: false),
+            placement: new InstancePlacement(availabilityZone: 'one'),
+            userData: new UserData(data: 'I2Nsb3VkLWNvbmZpZwpkaXNhYmxlX3Jvb3Q6IGZhbHNl')
+        ),
+        platform: 'Linux'
+    ), [
+        'DiskImage.1.Image.Bytes'                       : '1231323',
+        'DiskImage.1.Image.Format'                      : 'raw',
+        'DiskImage.1.Image.ImportManifestUrl'           : 'http://foo/bar',
+        'DiskImage.1.Volume.Size'                       : '4',
+        'LaunchSpecification.Architecture'              : 'x86_64',
+        'LaunchSpecification.GroupName.1'               : 'import_instance_test_group',
+        'LaunchSpecification.InstanceType'              : 'c1.medium',
+        'LaunchSpecification.KeyName'                   : 'ImportInstanceTests_key_1466551088.49',
+        'LaunchSpecification.Monitoring.Enabled'        : 'False',
+        'LaunchSpecification.Placement.AvailabilityZone': 'one',
+        'LaunchSpecification.UserData'                  : 'I2Nsb3VkLWNvbmZpZwpkaXNhYmxlX3Jvb3Q6IGZhbHNl',
+        'Platform'                                      : 'Linux',
+    ])
+
+    // ImportInstance \w  LaunchSpecification.UserData.Data
+    bindAndAssertParameters(eb, ImportInstanceType.class, "ImportInstance", new ImportInstanceType(
+        diskImageSet: [
+            new DiskImage(
+                image: new DiskImageDetail(
+                    bytes: 1231323l,
+                    format: 'raw',
+                    importManifestUrl: 'http://foo/bar'
+                ),
+                volume: new DiskImageVolume(
+                    size: 4
+                ),
+            )
+        ] as ArrayList<DiskImage>,
+        launchSpecification: new ImportInstanceLaunchSpecification(
+            architecture: 'x86_64',
+            groupName: ['import_instance_test_group'] as ArrayList<String>,
+            instanceType: 'c1.medium',
+            keyName: 'ImportInstanceTests_key_1466551088.49',
+            monitoring: new MonitoringInstance(enabled: false),
+            placement: new InstancePlacement(availabilityZone: 'one'),
+            userData: new UserData(data: 'I2Nsb3VkLWNvbmZpZwpkaXNhYmxlX3Jvb3Q6IGZhbHNl')
+        ),
+        platform: 'Linux'
+    ), [
+        'DiskImage.1.Image.Bytes'                       : '1231323',
+        'DiskImage.1.Image.Format'                      : 'raw',
+        'DiskImage.1.Image.ImportManifestUrl'           : 'http://foo/bar',
+        'DiskImage.1.Volume.Size'                       : '4',
+        'LaunchSpecification.Architecture'              : 'x86_64',
+        'LaunchSpecification.GroupName.1'               : 'import_instance_test_group',
+        'LaunchSpecification.InstanceType'              : 'c1.medium',
+        'LaunchSpecification.KeyName'                   : 'ImportInstanceTests_key_1466551088.49',
+        'LaunchSpecification.Monitoring.Enabled'        : 'False',
+        'LaunchSpecification.Placement.AvailabilityZone': 'one',
+        'LaunchSpecification.UserData.Data'             : 'I2Nsb3VkLWNvbmZpZwpkaXNhYmxlX3Jvb3Q6IGZhbHNl',
+        'Platform'                                      : 'Linux',
+    ])
   }
 }
