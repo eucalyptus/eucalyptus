@@ -193,10 +193,30 @@ def _get_eucalyptus_home_path():
     return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
 
 
+def _get_ceph_user_name():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, "CEPH_USER_NAME").strip('"')
+
+
+def _get_ceph_keyring_path():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, "CEPH_KEYRING_PATH").strip('"')
+
+
+def _get_ceph_config_path():
+    euca_conf = _parse_eucalyptus_conf()
+
+    return euca_conf.get(_GLOBAL_SECTION, "CEPH_CONFIG_PATH").strip('"')
+
+
 def _attach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
     dev_array = [_get_eucalyptus_home_path(), volume_id,
                  volume_dev_name, volume_serial, volume_bus,
-                 _DEFAULT_CEPH_USER, _DEFAULT_CEPH_KEYRING, _DEFAULT_CEPH_CONF]
+                 _get_ceph_user_name() or _DEFAULT_CEPH_USER,
+                 _get_ceph_keyring_path() or _DEFAULT_CEPH_KEYRING,
+                 _get_ceph_config_path() or _DEFAULT_CEPH_CONF]
 
     dev_string = "%s,%s" % (
         ','.join(dev_array), connection_string.encode('utf8'))
