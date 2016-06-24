@@ -60,8 +60,7 @@ _LIBVIRT_XML = 'instance-libvirt.xml'
 _INSTANCE_XML = 'instance.xml'
 _DISCONNECT_ISCSI_PL = '/usr/share/eucalyptus/disconnect_iscsitarget.pl'
 _NCHOOK_PATH = '/etc/eucalyptus/nc-hooks/stop-delete.sh'
-_STOP_DELETE = r'''
-#!/bin/bash
+_STOP_DELETE = r'''#!/bin/bash
 event=$1
 
 if [ "$event" == "euca-nc-pre-clean" ] ; then
@@ -151,6 +150,15 @@ def _parse_eucalyptus_conf():
     parser.readfp(config)
 
     return parser
+
+
+def _get_conf_value(variable_name):
+    euca_conf = _parse_eucalyptus_conf()
+
+    try:
+        return euca_conf.get(_GLOBAL_SECTION, variable_name).strip('"')
+    except:
+        return None
 
 
 def _list_instances():
@@ -286,15 +294,11 @@ def _create_tar(files, pack_path, skip_compression):
 
 
 def _get_eucalyptus_home_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
+    return _get_conf_value(_EUCALYPTUS)
 
 
 def _get_instances_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, _INSTANCE_PATH).strip('"')
+    return _get_conf_value(_INSTANCE_PATH)
 
 
 def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
@@ -365,7 +369,8 @@ def _gather_files(instance_name, instance_path):
         dir_name = os.path.splitext(os.path.basename(block_file))[0]
 
         if not os.path.exists(os.path.join(instance_path, "%s.dm" % dir_name)):
-            logging.debug("Skipping %s as there is no associated .dm file", block_file)
+            logging.debug(
+                "Skipping %s as there is no associated .dm file", block_file)
             continue
 
         with open(os.path.join(instance_path, "%s.dm" % dir_name)) as dm_file:

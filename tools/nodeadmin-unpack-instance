@@ -125,6 +125,15 @@ def _parse_eucalyptus_conf():
     return parser
 
 
+def _get_conf_value(variable_name):
+    euca_conf = _parse_eucalyptus_conf()
+
+    try:
+        return euca_conf.get(_GLOBAL_SECTION, variable_name).strip('"')
+    except:
+        return None
+
+
 def _find_instance(packed_path):
     tar_cmd = ["/bin/tar", "-xzOf", packed_path,
                "--wildcards", "*/instance.xml"]
@@ -188,27 +197,19 @@ def _extract_files(packed_path):
 
 
 def _get_eucalyptus_home_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, _EUCALYPTUS).strip('"')
+    return _get_conf_value(_EUCALYPTUS)
 
 
 def _get_ceph_user_name():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, "CEPH_USER_NAME").strip('"')
+    return _get_conf_value("CEPH_USER_NAME")
 
 
 def _get_ceph_keyring_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, "CEPH_KEYRING_PATH").strip('"')
+    return _get_conf_value("CEPH_KEYRING_PATH")
 
 
 def _get_ceph_config_path():
-    euca_conf = _parse_eucalyptus_conf()
-
-    return euca_conf.get(_GLOBAL_SECTION, "CEPH_CONFIG_PATH").strip('"')
+    return _get_conf_value("CEPH_CONFIG_PATH")
 
 
 def _attach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
