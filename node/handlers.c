@@ -149,6 +149,7 @@
 #define MIN_BLOBSTORE_SIZE_MB                        10 //!< even with boot-from-EBS one will need work space for kernel and ramdisk
 #define FS_BUFFER_PERCENT                            0.03   //!< leave 3% extra when deciding on blobstore sizes automatically
 #define WORK_BS_PERCENT                              0.33   //!< give a third of available space to work, the rest to cache
+#define MAX_CONNECTION_ERRORS                        5
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -262,6 +263,7 @@ static struct handlers *available_handlers[] = {
 
 static json_object *stats_json = NULL; //!< The json object that holds all of the internal message counters
 static int stats_sensor_interval_sec;  //!< Keeps the current value for sensor interval. Set during init
+static int hypervisor_conn_errors = 0;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -930,7 +932,7 @@ virConnectPtr lock_hypervisor_conn()
             bail = TRUE;
         } else if (rc == 0) {
             LOGERROR("timed out waiting for hypervisor checker pid=%d\n", cpid);
-            try_again = TRUE;
+            bail = TRUE;
         } else if (WEXITSTATUS(status) != 0) {
             LOGERROR("child process failed to connect to hypervisor\n");
             bail = TRUE;
@@ -939,34 +941,11 @@ virConnectPtr lock_hypervisor_conn()
         killwait(cpid);
     }
 
-    if (try_again) {
-        if ((cpid = fork()) < 0) {         // fork error
-            LOGERROR("failed to fork to check hypervisor connection\n");
-            bail = TRUE;                   // we are in big trouble if we cannot fork
-        } else if (cpid == 0) {            // child process - checks on the connection
-            if ((tmp_conn = virConnectOpen(nc_state.uri)) == NULL)
-                exit(1);
-            virConnectClose(tmp_conn);
-            exit(0);
-        } else {                           // parent process - waits for the child, kills it if necessary
-            if ((rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC)) < 0) {
-                LOGERROR("failed to wait for forked process (attempt 2): %s\n", strerror(errno));
-                bail = TRUE;
-            } else if (rc == 0) {
-                LOGERROR("timed out waiting for hypervisor (attempt 2) checker pid=%d\n", cpid);
-                bail = TRUE;
-            } else if (WEXITSTATUS(status) != 0) {
-                LOGERROR("child process failed to connect to hypervisor (attempt 2)\n");
-                bail = TRUE;
-            }
-            // terminate the child, if any
-            killwait(cpid);
-        }
-    }
     if (bail) {
         sem_v(hyp_sem);
         return NULL;                   // better fail the operation than block the whole NC
     }
+
     LOGTRACE("process check for libvirt succeeded\n");
 
     // At this point, the check for libvirt done in a separate process was
@@ -1142,8 +1121,18 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
 
     {                                  // all this is done while holding the hypervisor lock, with a valid connection
         virConnectPtr conn = lock_hypervisor_conn();
-        if (conn == NULL)
+        if (conn == NULL) {
+            hypervisor_conn_errors++;
+            // This is last resort. restarting libvirtd
+            if (hypervisor_conn_errors >= MAX_CONNECTION_ERRORS) {
+                LOGWARN("Got %d connection errors to libvirt. Restarting libvirtd service...\n", hypervisor_conn_errors);
+                euca_execlp(NULL, nc_state.rootwrap_cmd_path, "/sbin/service", "libvirtd", "restart", NULL);
+                sleep(LIBVIRT_TIMEOUT_SEC);
+            }
             return;
+        } else {
+            hypervisor_conn_errors = 0;
+        }
 
         virDomainPtr dom = virDomainLookupByName(conn, instance->instanceId);
 
@@ -1829,6 +1818,7 @@ void *startup_thread(void *arg)
     virConnectPtr conn = lock_hypervisor_conn();
     if (conn == NULL) {
         LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+        hypervisor_conn_errors++;
         goto shutoff;
     }
     unlock_hypervisor_conn();          // unlock right away, since we are just checking on it
@@ -1896,6 +1886,7 @@ void *startup_thread(void *arg)
             virConnectPtr conn = lock_hypervisor_conn();
             if (conn == NULL) {        // get a new connection for each loop iteration
                 LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+                hypervisor_conn_errors++;
                 goto shutoff;
             }
 
@@ -2085,8 +2076,13 @@ void adopt_instances()
     virConnectPtr conn = NULL;
 
     conn = lock_hypervisor_conn();
-    if (conn == NULL)
-        return;
+    while (conn == NULL) {
+       LOGERROR("Can't get connection to libvirt. Restarting libvirtd service...\n");
+       euca_execlp(NULL, nc_state.rootwrap_cmd_path, "/sbin/service", "libvirtd", "restart", NULL);
+       sleep(LIBVIRT_TIMEOUT_SEC);
+       LOGINFO("Trying to re-connect");
+       conn = lock_hypervisor_conn();
+    }
 
     LOGINFO("looking for existing domains\n");
     virSetErrorFunc(NULL, libvirt_err_handler);
@@ -2522,8 +2518,14 @@ static int init(void)
         // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
-            LOGFATAL("unable to contact hypervisor\n");
-            return (EUCA_FATAL_ERROR);
+            // libvirt could be unresponsive for some time if there are log of instances after previous restart via authorize_migration_keys call
+            // let's wait a bit and ask for a connection again
+            sleep(LIBVIRT_TIMEOUT_SEC);
+            conn = lock_hypervisor_conn();
+            if (conn == NULL) {
+               LOGFATAL("unable to contact hypervisor\n");
+               return (EUCA_FATAL_ERROR);
+            }
         }
         char *caps_xml = virConnectGetCapabilities(conn);
         if (caps_xml == NULL) {
