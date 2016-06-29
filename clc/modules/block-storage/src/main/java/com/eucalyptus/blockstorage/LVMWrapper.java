@@ -111,11 +111,11 @@ public class LVMWrapper {
    * @throws EucalyptusCloudException
    */
   public static String createLogicalVolume(String volumeId, String vgName, String lvName, long sizeMB) throws EucalyptusCloudException {
-    // The --wipesignatures flag is needed to prevent occasional hangs when lvcreate looks for and finds 
-    // a signature and waits after prompting the caller (who will never respond) whether to wipe it or not.
-    // return SystemUtil.run(new String[]{EUCA_ROOT_WRAPPER, "lvcreate", "--wipesignatures", "n", "-n", lvName, "-L", String.valueOf(size) + "G", vgName});
+    // '--wipesignatures y' turns on signature detection and wiping during lvcreate. It overrides the configuration in /etc/lvm/lvm.conf
+    // '--yes' flag suppresses the interactive prompt and enforces the wipe operation
     return SystemUtil
-        .run(new String[] {EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "--wipesignatures", "n", "-n", lvName, "-L", String.valueOf(sizeMB) + "M", vgName});
+        .run(new String[] {EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-L", String.valueOf(sizeMB) + "M", "--wipesignatures",
+            "y", "--yes", vgName});
   }
 
   /**
@@ -148,8 +148,10 @@ public class LVMWrapper {
   }
 
   public static String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {
-    return SystemUtil
-        .run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "--wipesignatures", "n", "--addtag", volumeId, "-n", lvName, "-l", "100%FREE", vgName});
+    // '--wipesignatures y' turns on signature detection and wiping during lvcreate. It overrides the configuration in /etc/lvm/lvm.conf
+    // '--yes' flag suppresses the interactive prompt and enforces the wipe operation
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "lvcreate", "--addtag", volumeId, "-n", lvName, "-l", "100%FREE",
+        "--wipesignatures", "y", "--yes", vgName});
   }
 
   public static String createSnapshotLogicalVolume(String lvName, String snapLvName) throws EucalyptusCloudException {
