@@ -99,7 +99,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -201,7 +201,9 @@ public class IdentityService {
     } catch ( InvalidAccessKeyAuthException e ) {
       // not found, so empty response
     } catch ( AuthException e ) {
-      throw handleException( e );
+      if ( !isNotFoundError( e ) ) {
+        throw handleException( e );
+      }
     }
 
     response.setDescribePrincipalResult( result );
@@ -350,7 +352,7 @@ public class IdentityService {
       final X509Certificate vmCert = EuareServerCertificateUtil.generateVMCertificate(
           (RSAPublicKey) publicKey,
           principal,
-          Objects.firstNonNull( expirationDays, 180 )
+          MoreObjects.firstNonNull( expirationDays, 180 )
       );
       final String certPem = new String( PEMFiles.getBytes(  vmCert ) );
       result.setPem( certPem );
@@ -401,16 +403,31 @@ public class IdentityService {
     return response;
   }
 
+  private static boolean isNotFoundError( final AuthException e ) {
+    switch ( Strings.nullToEmpty( e.getMessage( ) ) ) {
+      case AuthException.NO_SUCH_ACCOUNT:
+      case AuthException.NO_SUCH_CERTIFICATE:
+      case AuthException.NO_SUCH_INSTANCE_PROFILE:
+      case AuthException.NO_SUCH_ROLE:
+      case AuthException.NO_SUCH_USER:
+        return true;
+    }
+    return false;
+  }
+
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
-  private IdentityServiceException handleException( final Exception e ) throws IdentityServiceException {
+  private static IdentityServiceException handleException( final Exception e ) throws IdentityServiceException {
     final IdentityServiceException cause = Exceptions.findCause( e, IdentityServiceException.class );
     if ( cause != null ) {
       throw cause;
     }
 
-    logger.error( e, e );
+    AuthException auth = Exceptions.findCause( e, AuthException.class );
+    if ( auth == null || !isNotFoundError( auth ) ) {
+      logger.error( e, e );
+    }
 
     final IdentityServiceException exception =
         new IdentityServiceReceiverException( "InternalError", String.valueOf( e.getMessage( ) ) );
