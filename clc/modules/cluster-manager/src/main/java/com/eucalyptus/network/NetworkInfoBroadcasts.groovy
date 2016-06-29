@@ -73,6 +73,7 @@ import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.Strings as EucaStrings;
@@ -298,6 +299,13 @@ class NetworkInfoBroadcasts {
           vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
       )
     } )
+    vpcs.findAll{ VpcNetworkView vpc -> !activeVpcs.contains(vpc.id) }.each { Object vpcViewObj -> // processing for any inactive vpcs
+      final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
+      routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.each { Object routeTableObj ->
+        RouteTableNetworkView routeTable = routeTableObj as RouteTableNetworkView
+        CollectionUtils.each( routeTable.routes, activeRoutePredicate )
+      }
+    }
 
     // populate instances
     Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
