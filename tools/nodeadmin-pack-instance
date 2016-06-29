@@ -58,8 +58,9 @@ _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
 _LIBVIRT_XML = 'instance-libvirt.xml'
 _INSTANCE_XML = 'instance.xml'
-_DISCONNECT_ISCSI_PL = '/usr/share/eucalyptus/disconnect_iscsitarget.pl'
 _NCHOOK_PATH = '/etc/eucalyptus/nc-hooks/stop-delete.sh'
+_NODEADMIN_VOLUME = '/usr/libexec/eucalyptus/nodeadmin-manage-volume-connections'
+
 _STOP_DELETE = r'''#!/bin/bash
 event=$1
 
@@ -190,6 +191,29 @@ def _lookup_domain(conn, instance_name):
     return domain
 
 
+def _find_storage_controller():
+    euserv_cmd = ["/usr/bin/euserv-describe-services",
+                  "--filter", "service-type=storage", "--expert"]
+
+    proc = Popen(euserv_cmd, stdout=PIPE)
+    storage_controller = proc.stdout.read().split()[4]
+    logging.debug(storage_controller)
+
+    return storage_controller
+
+
+def _disconnect_volumes(instance_id):
+    storage_controller = _find_storage_controller()
+    scclient_args = [
+        "DisconnectVolumes", "-s", storage_controller, "-i", instance_id]
+    scclient_cmd = [_NODEADMIN_VOLUME] + scclient_args
+
+    rc = check_call(scclient_cmd)
+    if rc:
+        raise NodeAdminPackError(
+            "Failed to unexport volume with args %s (%d)", ",".join(scclient_args))
+
+
 def _modify_libvirt_xml(instance_path):
     with open(os.path.join(instance_path, _LIBVIRT_XML)) as xml_file:
         parser = parse(xml_file)
@@ -301,62 +325,6 @@ def _get_instances_path():
     return _get_conf_value(_INSTANCE_PATH)
 
 
-def _detach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
-    commas = ',' * 8
-    dev_string = "%s%s%s" % (_get_eucalyptus_home_path(),
-                             commas, connection_string.encode('utf8'))
-
-    iscsi_pl_cmd = [_DISCONNECT_ISCSI_PL, dev_string]
-
-    rc = check_call(iscsi_pl_cmd)
-    if rc:
-        raise NodeAdminPackError(
-            "Failed to detach iscsi target with connection string %s (%d)", connection_string, rc)
-    pass
-
-
-def _find_volumes_and_detach(instance_path):
-    instance_xml = os.path.join(instance_path, _INSTANCE_XML)
-
-    with open(instance_xml) as xml_file:
-        parser = parse(xml_file)
-
-    connection_string = ""
-    volume_id = ""
-    volume_dev_name = ""
-    volume_serial = ""
-    volume_bus = ""
-
-    for volume in parser.getElementsByTagName('volume'):
-        for connectionString in volume.getElementsByTagName('connectionString'):
-            connection_string = connectionString.childNodes[0].data
-            break
-
-        for vol_id in volume.getElementsByTagName('id'):
-            volume_id = vol_id.childNodes[0].data
-            break
-
-        for libvirt_node in volume.getElementsByTagName('libvirt'):
-            for disk_node in libvirt_node.getElementsByTagName('disk'):
-                for target in disk_node.getElementsByTagName('target'):
-                    volume_bus = target.getAttribute('bus')
-                    volume_dev_name = target.getAttribute('dev')
-                    break
-
-                for serial in disk_node.getElementsByTagName('serial'):
-                    volume_serial = serial.childNodes[0].data
-                    break
-                break
-            break
-
-        if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
-            raise NodeAdminPackError(
-                "Failed collecting information for ebs volumes at instance path %s", instance_path)
-
-        _detach_iscsi_target(volume_id, volume_dev_name,
-                             volume_serial, volume_bus, connection_string)
-
-
 def _gather_files(instance_name, instance_path):
     logging.debug("attempting to gather list of files for archiving at %s for instance %s",
                   instance_path, instance_name)
@@ -437,7 +405,7 @@ def pack_instance(instance, output_file, shutdown, skip_compression):
     _modify_libvirt_xml(instance_tuple[1])
     _create_tar(tar_files, output_file, skip_compression)
 
-    _find_volumes_and_detach(instance_tuple[1])
+    _disconnect_volumes(instance_tuple[0])
 
     return 0
 

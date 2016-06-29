@@ -34,7 +34,7 @@ import signal
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from xml.dom.minidom import parseString, parse
+from xml.dom.minidom import parseString
 from re import compile, match, I, S
 
 import libvirt
@@ -54,10 +54,7 @@ _QEMU_CONN = 'qemu:///system'
 _DEFAULT_TIMEOUT = 60
 _INSTANCE_RAM = '-ram.save'
 _BLOCK_SAVE = '-block.save'
-_CONNECT_ISCSI_PL = '/usr/share/eucalyptus/connect_iscsitarget.pl'
-_DEFAULT_CEPH_USER = "eucalyptus"
-_DEFAULT_CEPH_KEYRING = "/etc/ceph/ceph.client.eucalyptus.keyring"
-_DEFAULT_CEPH_CONF = "/etc/ceph/ceph.conf"
+_NODEADMIN_VOLUME = '/usr/libexec/eucalyptus/nodeadmin-manage-volume-connections'
 
 
 class NodeAdminUnpackError(Exception):
@@ -167,6 +164,17 @@ def _lookup_domain(conn, instance_name):
     return domain
 
 
+def _find_storage_controller():
+    euserv_cmd = ["/usr/bin/euserv-describe-services",
+                  "--filter", "service-type=storage", "--expert"]
+
+    proc = Popen(euserv_cmd, stdout=PIPE)
+    storage_controller = proc.stdout.read().split()[4]
+    logging.debug(storage_controller)
+
+    return storage_controller
+
+
 def _restore_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
     rc = None
@@ -200,77 +208,17 @@ def _get_eucalyptus_home_path():
     return _get_conf_value(_EUCALYPTUS)
 
 
-def _get_ceph_user_name():
-    return _get_conf_value("CEPH_USER_NAME")
+def _connect_volumes(instance_id):
+    storage_controller = _find_storage_controller()
 
+    scclient_args = [
+        "ConnectVolumes", "-s", storage_controller, "-i", instance_id]
+    scclient_cmd = [_NODEADMIN_VOLUME] + scclient_args
 
-def _get_ceph_keyring_path():
-    return _get_conf_value("CEPH_KEYRING_PATH")
-
-
-def _get_ceph_config_path():
-    return _get_conf_value("CEPH_CONFIG_PATH")
-
-
-def _attach_iscsi_target(volume_id, volume_dev_name, volume_serial, volume_bus, connection_string):
-    dev_array = [_get_eucalyptus_home_path(), volume_id,
-                 volume_dev_name, volume_serial, volume_bus,
-                 _get_ceph_user_name() or _DEFAULT_CEPH_USER,
-                 _get_ceph_keyring_path() or _DEFAULT_CEPH_KEYRING,
-                 _get_ceph_config_path() or _DEFAULT_CEPH_CONF]
-
-    dev_string = "%s,%s" % (
-        ','.join(dev_array), connection_string.encode('utf8'))
-
-    iscsi_pl_cmd = [_CONNECT_ISCSI_PL, dev_string]
-
-    rc = check_call(iscsi_pl_cmd)
+    rc = check_call(scclient_cmd)
     if rc:
         raise NodeAdminUnpackError(
-            "Failed to attach iscsi target with connection string %s (%d)", connection_string, rc)
-    pass
-
-
-def _attach_volumes(instance_path):
-    instance_xml = os.path.join(instance_path, _INSTANCE_XML)
-
-    with open(instance_xml) as xml_file:
-        parser = parse(xml_file)
-
-    connection_string = ""
-    volume_id = ""
-    volume_dev_name = ""
-    volume_serial = ""
-    volume_bus = ""
-
-    for volume in parser.getElementsByTagName('volume'):
-        for connectionString in volume.getElementsByTagName('connectionString'):
-            connection_string = connectionString.childNodes[0].data
-            break
-
-        for vol_id in volume.getElementsByTagName('id'):
-            volume_id = vol_id.childNodes[0].data
-            break
-
-        for libvirt_node in volume.getElementsByTagName('libvirt'):
-            for disk_node in libvirt_node.getElementsByTagName('disk'):
-                for target in disk_node.getElementsByTagName('target'):
-                    volume_bus = target.getAttribute('bus')
-                    volume_dev_name = target.getAttribute('dev')
-                    break
-
-                for serial in disk_node.getElementsByTagName('serial'):
-                    volume_serial = serial.childNodes[0].data
-                    break
-                break
-            break
-
-        if not volume_id or not volume_serial or not volume_bus or not volume_dev_name:
-            raise NodeAdminUnpackError(
-                "Failed collecting information for ebs volumes at instance path %s", instance_path)
-
-        _attach_iscsi_target(volume_id, volume_dev_name,
-                             volume_serial, volume_bus, connection_string)
+            "Failed to export volume with args %s (%d)", ",".join(scclient_args))
 
 
 def _change_ownership(instance_path):
@@ -300,7 +248,7 @@ def unpack_instance(instance_path, packed_path):
 
     _change_ownership(instance_path)
 
-    _attach_volumes(instance_path)
+    _connect_volumes(instance_name)
 
     _restore_instance(instance_name, instance_path)
     logging.info("instance %s unpacked", instance_name)

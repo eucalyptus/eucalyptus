@@ -93,6 +93,7 @@ storage/test_blobstore
 storage/test_vbr
 storage/test_ebs
 storage/sc-client-policy.xml
+storage/nodeadmin-manage-volume-connections
 /TAGS
 cluster/CCclient_full
 cluster/cc-client-policy.xml

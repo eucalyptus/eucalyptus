@@ -80,8 +80,9 @@ TEST_DISKUTIL_OBJS  =                                            map.o          
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore test_ebs test_diskutil
-CFLAGS         += 
+CFLAGS         +=
 #EFENCE          = -lefence
+NODEADMIN_TOOL_NAME = nodeadmin-manage-volume-connections
 
 #all: vbr.o backing.o storage-windows.o objectstorage.o diskutil.o map.o Wclient euca-blobs generated/stubs $(SCCLIENT) $(TESTS)
 all: generated/stubs
@@ -103,12 +104,15 @@ generated/stubs: $(SCWSDL)
 
 build: all
 
-buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o objectstorage.o diskutil.o map.o OSGclient euca-blobs $(SCCLIENT) $(TESTS)
+buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o objectstorage.o diskutil.o map.o OSGclient euca-blobs $(SCCLIENT) $(TESTS) euca_volume
 
 client: $(SCCLIENT) OSGclient
 
-$(SCCLIENT): $(SCCLIENT).c generated/stubs $(WSSECLIBS) storage-controller.o $(STORAGE_CONTROLLER_OBJS)
-	$(CC) -o $(SCCLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SCCLIENT).c -DMODE=1 storage-controller.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS)
+$(SCCLIENT): $(SCCLIENT).c generated/stubs $(WSSECLIBS) storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS)
+	$(CC) -o $(SCCLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SCCLIENT).c -DMODE=1 storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS)
+
+euca_volume: euca_volume.c generated/stubs $(WSSECLIBS) storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS)
+	$(CC) -o $(NODEADMIN_TOOL_NAME) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) euca_volume.c -DMODE=1 storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS) `xslt-config --cflags` `xslt-config --libs`
 
 euca-blobs: Makefile blobstore.c blobstore.h $(EUCA_BLOBS_OBJS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs $(EUCA_BLOBS_OBJS) $(STORAGE_LIBS) $(EFENCE)
@@ -135,7 +139,7 @@ vbr_no_ebs.o: vbr.c vbr.h
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_NO_EBS -o vbr_no_ebs.o $<
 
 %.o: %.c %.h
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<	
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
 	make -C ../util
@@ -177,9 +181,11 @@ install:
 	@echo installing sc-client-policy.xml
 	@$(INSTALL) -d $(DESTDIR)$(policiesdir)
 	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(policiesdir)
+	@$(INSTALL) -m 755 $(NODEADMIN_TOOL_NAME) $(DESTDIR)$(libexecdir)/eucalyptus/$(NODEADMIN_TOOL_NAME)
 
 deploy:
 	cat ../tools/client-policy-template.xml | sed "s:EUCALYPTUS_HOME:$(EUCALYPTUS):g" | sed "s:AXIS2C_HOME:$(AXIS2C_HOME):g" | sed "s:CLIENT-CERT:node-cert.pem:g" | sed "s:SERVER-CERT:cloud-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > sc-client-policy.xml
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(policiesdir)/sc-client-policy.xml
+	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/$(NODEADMIN_TOOL_NAME)
