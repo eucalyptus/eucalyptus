@@ -160,6 +160,10 @@ public class AbsoluteMetricQueue {
   private static void callPutMetricData( final List<PutMetricDataType> putMetricDataList ) throws Exception {
     final List<ServiceConfiguration> serviceConfigurations =
         Lists.newArrayList( Topology.lookupMany( CloudWatch.class ) );
+    if ( serviceConfigurations.isEmpty( ) ) {
+      LOG.warn( "Cannot put compute system metric data, cloudwatch not enabled." );
+      return;
+    }
     final Map<ServiceConfiguration, Semaphore> semaphoreMap = Maps.newHashMap( );
     for ( final ServiceConfiguration serviceConfiguration: serviceConfigurations ) {
       semaphoreMap.put( serviceConfiguration, new Semaphore( 8 ) );
