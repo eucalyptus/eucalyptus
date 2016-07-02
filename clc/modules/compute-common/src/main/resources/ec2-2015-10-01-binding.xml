@@ -49,4 +49,5 @@
   <include path="classpath:euca-instance-types.xml" />
   <include path="classpath:euca-migration.xml" />
   <include path="classpath:ec2-flow-logs.xml" />
+  <include path="classpath:ec2-id-format.xml" />
 </binding>

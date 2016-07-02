@@ -1363,6 +1363,30 @@ public class ComputeService {
     return request.getReply( );
   }
 
+  public DescribeIdentityIdFormatResponseType describeIdentityIdFormat(
+      final DescribeIdentityIdFormatType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public ModifyIdentityIdFormatResponseType modifyIdentityIdFormat(
+      final ModifyIdentityIdFormatType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( ).markFailed( );
+  }
+
+  public DescribeIdFormatResponseType describeIdFormat(
+      final DescribeIdFormatType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public ModifyIdFormatResponseType modifyIdFormat(
+      final ModifyIdFormatType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( ).markFailed( );
+  }
+
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {
