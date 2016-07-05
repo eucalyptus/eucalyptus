@@ -1,6 +1,6 @@
-.Dd 2016-03-10
+.Dd 2016-07-01
 .Dt EUCTL 1
-.Os Eucalyptus 4.2
+.Os Eucalyptus 4.3
 .Sh NAME
 .Nm euctl
 .Nd get or set cloud state
@@ -48,7 +48,7 @@ To reset a varable to its default value, specify the
 .Fl r
 option:
 .Pp
-.Dl $ Nm No Fl r No dns.enabled
+.Dl $ Nm Fl r No dns.enabled
 .Pp
 The information available from euctl consists of integers,
 strings, and structures.  Structures can only be retrieved
@@ -82,7 +82,7 @@ values.
 Output variables' descriptions rather than their current
 values.
 .It Fl n
-Suppress output of the variable name. This is useful
+Suppress output of variable names. This is useful
 for setting shell variables.
 .It Fl q
 Suppress all output when setting a variable. This
@@ -153,7 +153,7 @@ and
 .Xr euca2ools.ini 5 ,
 but not
 .Fl S .
-.It Ev PROPERTIES_URL
+.It Ev EUCA_PROPERTIES_URL
 The URL of the service to contact.  This takes precedence
 over
 .Fl -region
