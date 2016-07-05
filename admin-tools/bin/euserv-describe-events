@@ -1,0 +1,6 @@
+#!/usr/bin/python -tt
+
+import eucalyptus_admin.commands.bootstrap.describeevents
+
+if __name__ == '__main__':
+    eucalyptus_admin.commands.bootstrap.describeevents.DescribeEvents.run()

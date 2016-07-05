@@ -23,6 +23,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import argparse
 import sys
 
 from requestbuilder import Arg, Filter, MutuallyExclusiveArgList
@@ -47,6 +48,10 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                 help='limit results to specific instances of services'),
             Arg('-a', '--all', dest='ListAll', action='store_true',
                 help='show all services regardless of type'),
+            Arg('--show-events', dest='ShowEvents', action='store_true',
+                help=argparse.SUPPRESS),
+            Arg('--show-stack-traces', dest='ShowEventStacks',
+                action='store_true', help=argparse.SUPPRESS),
             MutuallyExclusiveArgList(
                 Arg('--group-by-type', action='store_true', route_to=None,
                     help='collate services by service type (default)'),
@@ -76,7 +81,7 @@ class DescribeServices(BootstrapRequest, TableOutputMixin):
                # tool set that doesn't match what that term means today,
                # so we removed it at least for now.  See
                # https://eucalyptus.atlassian.net/browse/EUCA-11006
-    LIST_TAGS = ['serviceAccounts', 'serviceStatuses', 'uris']
+    LIST_TAGS = ['serviceAccounts', 'serviceStatuses', 'statusDetails', 'uris']
 
     def print_result(self, result):
         services = result.get('serviceStatuses') or []

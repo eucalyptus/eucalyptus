@@ -1,0 +1,167 @@
+.Dd 2016-07-01
+.Dt EUSERV-DESCRIBE-EVENTS 1
+.Os Eucalyptus 4.3
+.Sh NAME
+.Nm euserv-describe-events
+.Nd Show information about service-affecting events
+.Sh SYNOPSIS
+.Nm
+.Op Fl s
+.Op Fl f Ar FORMAT
+.Sh TECH PREVIEW
+.Nm
+is a technical preview.  Its name and behavior are subject
+to change without notice in future releases.
+.Sh DESCRIPTION
+The
+.Nm
+utility retrieves information about service-affecting
+events in the cloud.  Events come in the form of a list,
+where each event contains one or more of the following
+tags:
+.Bl -column subject-type foobar
+.It id Ta A unique ID for the event
+.It message Ta A free-form text description of the event
+.It severity Ta The message's severity (FATAL, URGENT,
+ERROR, WARNING, INFO, DEBUG, TRACE)
+.It stack-trace Ta The stack trace, if any, corresponding
+to the event.  The
+.Fl s
+option is required to make this appear.
+.It subject-arn Ta The Eucalyptus ARN of the service
+affected by the event
+.It subject-name Ta the name of the service affected by the
+event
+.It subject-type Ta The type of service affected by the event
+.It timestamp Ta The date and time of the event's creation
+.El
+.Ss Optional arguments
+.Bl -tag -width Ds
+.It Fl f Ar FORMAT , Fl -format Ar FORMAT
+Print events in a given format, where
+.Ar FORMAT
+can be one of
+.Cm yaml ,
+.Cm oneline ,
+and
+.Cm format: Ns Ar STRING .
+See the "OUTPUT FORMATS" section for details about each
+format.  When omitted, the format defaults to
+.Cm yaml .
+.It Fl s , Fl -show-stack-traces
+Include the stack-trace tag in events' data.  This is
+omitted by default due to its length.
+.It Fl h , Fl -help
+Show a help message and exit without doing anything.
+.It Fl U Ar URL , Fl -url Ar URL
+The URL of the service to contact.
+.It Fl I Ar KEY_ID , Fl -access-key-id Ar KEY_ID
+The access key ID to use to authenticate requests.
+.It Fl S Ar KEY . Fl -secret-key Ar KEY
+The secret key to use to authenticate requests.
+.It Fl -security-token Ar TOKEN
+The STS security token to use to authenticate requests.
+.It Fl -region Ar USER@REGION
+The user and/or region name to use when looking up
+configuration file data.
+.It Fl -debug
+Show debugging output when running.
+.It Fl -debugger
+Launch an interactive epdb or pdb debugger after
+encountering
+an error.
+.It Fl -version
+show the program's version and exit
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width Ds
+.It Ev AWS_ACCESS_KEY_ID
+The access key ID to use when authenticating web
+service requests.  This takes precedence over
+.Rl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl I .
+.It Ev AWS_SECRET_ACCESS_KEY
+The secret key to use when authenticating web
+service requests.  This takes precedence over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl S .
+.It Ev EUCA_BOOTSTRAP_URL
+The URL of the service to contact.  This takes precedence
+over
+.Fl -region
+and
+.Xr euca2ools.ini 5 ,
+but not
+.Fl U .
+.El
+.Sh OUTPUT FORMATS
+There are several built-in formats, and you can define
+additional formats using a
+.Cm format:
+string, as described below.  Here are the details of the
+built-in formats:
+.Bl -bullet -width Wd
+.It
+.Cm yaml
+.Pp
+.Bd -literal -offset indent
+events:
+- timestamp: {timestamp}
+  severity: {severity}
+  id: {id}
+  subject-type: {subject-type}
+  subject-name: {subject-name}
+  subject-host: {subject-host}
+  subject-arn: {subject-arn}
+  message: |-
+    {message}
+  stack-trace: |-
+    {stack-trace}
+.Ed
+.Pp
+This outputs block-style YAML designed to be readable by
+both humans and machines.  Tags that are empty or not
+defined do not appear in this output at all.
+.It
+.Cm oneline
+.Pp
+.Dl {timestamp} {severity} {subject-type} {subject-name} {message}
+.Pp
+This is designed to be as compact as possible.
+.It
+.Cm format: Ns Ar STRING
+.Pp
+The
+.Cm format: Ns Ar STRING
+format allows you to specify which information you want to
+show using placeholders enclosed in curly braces to
+indicate where to show the tags for each event.  For
+example:
+.Pp
+.Bd -ragged -offset indent
+.Nm
+.Fl f Ar """format:{timestamp} {subject-name} {message}"""
+.Ed
+.Pp
+.El
+.Sh SEE ALSO
+.Xr euserv-describe-services 1 ,
+.Xr euca2ools.ini 5 ,
+.Xr eucalyptus-admin 7
+.Sh HISTORY
+The
+.Nm
+command first appeared in Eucalyptus 4.3.
+.Sh NOTES
+.Nm
+requires access keys and knowledge of where to locate
+the web services it needs to contact.  It can obtain
+these from several locations.  See
+.Xr eucalyptus-admin 7
+for more information.
