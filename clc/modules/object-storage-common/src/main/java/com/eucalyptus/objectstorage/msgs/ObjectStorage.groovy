@@ -175,6 +175,25 @@ public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestTyp
   def ObjectStorageDataGetRequestType(String bucket, String key) {
     super(bucket, key);
   }
+
+  def ObjectStorageDataGetVersionRequestType getObjectStorageDataGetVersionRequestType() {
+    ObjectStorageDataGetVersionRequestType request = new ObjectStorageDataGetVersionRequestType()
+    request.setBucket(this.bucket);
+    request.setKey(this.key);
+
+    // common elements
+    request.setCorrelationId(this.correlationId);
+    request.setEffectiveUserId(this.getEffectiveUserId());
+
+    return request;
+  }
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETOBJECTVERSION])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
+public class ObjectStorageDataGetVersionRequestType extends ObjectStorageDataRequestType {
 }
 
 public class ObjectStorageDataGetResponseType extends ObjectStorageDataResponseType {
@@ -283,6 +302,25 @@ public class GetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ_ACP], bucket = [])
 public class GetObjectAccessControlPolicyType extends ObjectStorageRequestType {
   String versionId;
+
+  def GetObjectVersionAccessControlPolicyType getGetObjectVersionAccessControlPolicyType() {
+    GetObjectVersionAccessControlPolicyType request = new GetObjectVersionAccessControlPolicyType()
+    request.setBucket(this.bucket);
+    request.setKey(this.key);
+
+    // common elements
+    request.setCorrelationId(this.correlationId);
+    request.setEffectiveUserId(this.getEffectiveUserId());
+
+    return request;
+  }
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETOBJECTVERSIONACL])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ_ACP], bucket = [])
+public class GetObjectVersionAccessControlPolicyType extends ObjectStorageRequestType {
 }
 
 public class GetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
@@ -672,6 +710,25 @@ public class SetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
   AccessControlPolicy accessControlPolicy;
   String versionId;
+
+  def SetObjectVersionAccessControlPolicyType getSetObjectVersionAccessControlPolicyType() {
+    SetObjectVersionAccessControlPolicyType request = new SetObjectVersionAccessControlPolicyType()
+    request.setBucket(this.bucket);
+    request.setKey(this.key);
+
+    // common elements
+    request.setCorrelationId(this.correlationId);
+    request.setEffectiveUserId(this.getEffectiveUserId());
+
+    return request;
+  }
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECTVERSIONACL])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object = [ObjectStorageProperties.Permission.WRITE_ACP], bucket = [])
+public class SetObjectVersionAccessControlPolicyType extends ObjectStorageRequestType {
 }
 
 public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
