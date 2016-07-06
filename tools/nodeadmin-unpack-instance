@@ -90,13 +90,21 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Restore an instance to libvirt after "
-                                     "unpacking artifacts from packed file")
+                                     "unpacking artifacts from packed file",
+                                     epilog="The following environment variables must be established as well:\n"
+                                     "EUCALYPTUS=/\n"
+                                     "AXIS2C_HOME=/usr/lib64/axis2c\n"
+                                     "LD_LIBRARY_PATH=$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart\n",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument("packed_file",
                         help="file path to the packed file storing the instance")
     parser.add_argument("--verbose",
                         help="increase output verbosity",
                         action="store_true")
+    parser.add_argument("--sc-host-port",
+                        help="the host and port of the storage controller",
+                        required=True)
 
     args = parser.parse_args()
 
@@ -164,17 +172,6 @@ def _lookup_domain(conn, instance_name):
     return domain
 
 
-def _find_storage_controller():
-    euserv_cmd = ["/usr/bin/euserv-describe-services",
-                  "--filter", "service-type=storage", "--expert"]
-
-    proc = Popen(euserv_cmd, stdout=PIPE)
-    storage_controller = proc.stdout.read().split()[4]
-    logging.debug(storage_controller)
-
-    return storage_controller
-
-
 def _restore_instance(instance, instance_path, *args, **kwargs):
     conn = _get_libvirt_connection()
     rc = None
@@ -208,11 +205,9 @@ def _get_eucalyptus_home_path():
     return _get_conf_value(_EUCALYPTUS)
 
 
-def _connect_volumes(instance_id):
-    storage_controller = _find_storage_controller()
-
+def _connect_volumes(instance_id, sc_host_port):
     scclient_args = [
-        "ConnectVolumes", "-s", storage_controller, "-i", instance_id]
+        "ConnectVolumes", "-s", sc_host_port, "-i", instance_id]
     scclient_cmd = [_NODEADMIN_VOLUME] + scclient_args
 
     rc = check_call(scclient_cmd)
@@ -233,7 +228,7 @@ def _change_ownership(instance_path):
         instance_path = os.path.dirname(instance_path)
 
 
-def unpack_instance(instance_path, packed_path):
+def unpack_instance(instance_path, packed_path, sc_host_port):
     _extract_files(packed_path)
 
     instance_name = os.path.basename(instance_path)
@@ -248,7 +243,7 @@ def unpack_instance(instance_path, packed_path):
 
     _change_ownership(instance_path)
 
-    _connect_volumes(instance_name)
+    _connect_volumes(instance_name, sc_host_port)
 
     _restore_instance(instance_name, instance_path)
     logging.info("instance %s unpacked", instance_name)
@@ -268,6 +263,13 @@ def _is_nc_service_running():
     return results is not None
 
 
+def _check_for_axisc_environment():
+    env_eucalyptus = len(os.getenv("EUCALYPTUS") or "") > 0
+    env_axis2c_home = len(os.getenv("AXIS2C_HOME") or "") > 0
+    env_ld_library_path = len(os.getenv("LD_LIBRARY_PATH") or "") > 0
+    return (env_eucalyptus and env_axis2c_home and env_ld_library_path)
+
+
 def main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -275,6 +277,11 @@ def main(args, log_level):
     if _is_nc_service_running():
         logging.error(
             "Node controller service is running. Please stop this service before continuing.")
+        return 1
+
+    if not _check_for_axisc_environment():
+        logging.error(
+            "Missing environment variables $EUCALYPTUS, $AXIS2C_HOME and LD_LIBRARY_PATH")
         return 1
 
     logging.info("unpack on %s", args.packed_file)
@@ -285,7 +292,8 @@ def main(args, log_level):
     instance_tuple = _find_instance(args.packed_file)
 
     if instance_tuple:
-        rc = unpack_instance(instance_tuple[1], args.packed_file)
+        rc = unpack_instance(
+            instance_tuple[1], args.packed_file, args.sc_host_port)
 
         if rc:
             raise NodeAdminUnpackError("unpack instance returned %d", rc)
