@@ -38,9 +38,9 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.BucketLogData
 import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
-import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry
+import com.eucalyptus.storage.msgs.s3.CorsConfiguration
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply
 import com.eucalyptus.storage.msgs.s3.Initiator
@@ -518,7 +518,7 @@ public class CopyObjectType extends ObjectStorageRequestType {
 /* HEAD /bucket/object */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_HEADOBJECT])
+@RequiresPermission([PolicySpec.S3_GETOBJECT])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class HeadObjectType extends ObjectStorageDataGetRequestType {
