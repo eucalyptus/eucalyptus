@@ -106,7 +106,12 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="Pack an instance from libvirt and "
-                                     "place artifacts in an packed file")
+                                     "place artifacts in an packed file",
+                                     epilog="The following environment variables must be established as well:\n"
+                                     "EUCALYPTUS=/\n"
+                                     "AXIS2C_HOME=/usr/lib64/axis2c\n"
+                                     "LD_LIBRARY_PATH=$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart\n",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
     group_i = parser.add_mutually_exclusive_group(required=True)
     group_i.add_argument("--all",
@@ -127,6 +132,9 @@ def _parse_args():
     parser.add_argument("--no-compression",
                         help="skip compression during packing operation",
                         action="store_true")
+    parser.add_argument("--sc-host-port",
+                        help="the host and port of the storage controller",
+                        required=True)
 
     args = parser.parse_args()
     loglevel = logging.INFO
@@ -191,21 +199,9 @@ def _lookup_domain(conn, instance_name):
     return domain
 
 
-def _find_storage_controller():
-    euserv_cmd = ["/usr/bin/euserv-describe-services",
-                  "--filter", "service-type=storage", "--expert"]
-
-    proc = Popen(euserv_cmd, stdout=PIPE)
-    storage_controller = proc.stdout.read().split()[4]
-    logging.debug(storage_controller)
-
-    return storage_controller
-
-
-def _disconnect_volumes(instance_id):
-    storage_controller = _find_storage_controller()
+def _disconnect_volumes(instance_id, sc_host_port):
     scclient_args = [
-        "DisconnectVolumes", "-s", storage_controller, "-i", instance_id]
+        "DisconnectVolumes", "-s", sc_host_port, "-i", instance_id]
     scclient_cmd = [_NODEADMIN_VOLUME] + scclient_args
 
     rc = check_call(scclient_cmd)
@@ -372,7 +368,7 @@ def _gather_files(instance_name, instance_path):
     return target_files
 
 
-def pack_instance(instance, output_file, shutdown, skip_compression):
+def pack_instance(instance, output_file, shutdown, skip_compression, sc_host_port):
     logging.debug("attempting to pack instance %s", instance)
     instance_tuple = None
 
@@ -405,7 +401,7 @@ def pack_instance(instance, output_file, shutdown, skip_compression):
     _modify_libvirt_xml(instance_tuple[1])
     _create_tar(tar_files, output_file, skip_compression)
 
-    _disconnect_volumes(instance_tuple[0])
+    _disconnect_volumes(instance_tuple[0], sc_host_port)
 
     return 0
 
@@ -434,6 +430,13 @@ def _place_stop_delete_file():
              stat.S_IXGRP | stat.S_IRGRP | stat.S_IROTH | stat.S_IXOTH)
 
 
+def _check_for_axisc_environment():
+    env_eucalyptus = len(os.getenv("EUCALYPTUS") or "") > 0
+    env_axis2c_home = len(os.getenv("AXIS2C_HOME") or "") > 0
+    env_ld_library_path = len(os.getenv("LD_LIBRARY_PATH") or "") > 0
+    return (env_eucalyptus and env_axis2c_home and env_ld_library_path)
+
+
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -442,6 +445,11 @@ def _main(args, log_level):
     if _is_nc_service_running():
         logging.error(
             "Node controller service is running. Please stop this service before continuing.")
+        return 1
+
+    if not _check_for_axisc_environment():
+        logging.error(
+            "Missing environment variables $EUCALYPTUS, $AXIS2C_HOME and LD_LIBRARY_PATH")
         return 1
 
     _place_stop_delete_file()
@@ -453,7 +461,7 @@ def _main(args, log_level):
             output_file = os.path.join(
                 args.output_directory, instance + _PACK_TAR)
             rc = pack_instance(
-                instance, output_file, args.shutdown, args.no_compression)
+                instance, output_file, args.shutdown, args.no_compression, args.sc_host_port)
             if rc:
                 logging.warn(
                     "Failed packing instance %s (%d)", instance, rc)
@@ -465,7 +473,7 @@ def _main(args, log_level):
         output_file = os.path.join(
             args.output_directory, args.instance + _PACK_TAR)
         rc = pack_instance(
-            args.instance, output_file, args.shutdown, args.no_compression)
+            args.instance, output_file, args.shutdown, args.no_compression, args.sc_host_port)
 
         if rc:
             logging.warn(
