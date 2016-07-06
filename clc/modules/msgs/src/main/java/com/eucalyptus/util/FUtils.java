@@ -20,6 +20,7 @@
 package com.eucalyptus.util;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Enums;
@@ -114,6 +115,35 @@ public class FUtils {
       public T apply( @Nullable final T t ) {
         callback.fire( t );
         return t;
+      }
+    };
+  }
+
+  /**
+   * Memoize the last successful invocation with non-null parameter/result.
+   *
+   * @param function The function to memoize
+   * @param <F> The parameter type
+   * @param <T> The result type
+   * @return A function that memoizes the last result
+   */
+  public static <F,T> Function<F,T> memoizeLast( @Nonnull final Function<F,T> function ) {
+    return new Function<F, T>( ) {
+      private final AtomicReference<Pair<F,T>> cached = new AtomicReference<>( );
+
+      @Nullable
+      @Override
+      public T apply( @Nullable final F f ) {
+        final Pair<F,T> cachedResult = cached.get( );
+        if ( cachedResult != null && cachedResult.getLeft( ).equals( f ) ) {
+          return cachedResult.getRight( );
+        } else {
+          final T result = function.apply( f );
+          if ( f != null && result != null ) {
+            cached.compareAndSet( cachedResult, Pair.pair( f, result ) );
+          }
+          return result;
+        }
       }
     };
   }
