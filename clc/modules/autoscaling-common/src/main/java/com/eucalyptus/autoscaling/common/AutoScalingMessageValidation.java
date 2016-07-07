@@ -96,9 +96,9 @@ public class AutoScalingMessageValidation {
     EC2_MACHINE_IMAGE( "[ae]mi-[0-9a-fA-F]{8}" ),
     EC2_KERNEL_IMAGE( "[ae]ki-[0-9a-fA-F]{8}" ),
     EC2_RAMDISK_IMAGE( "[ae]ri-[0-9a-fA-F]{8}" ),
-    EC2_SNAPSHOT( "snap-[0-9a-fA-F]{8}" ),
-    EC2_INSTANCE( "i-[0-9a-fA-F]{8}" ),
-    EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),
+    EC2_SNAPSHOT( "snap-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_INSTANCE( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?|verbose" ),
     EC2_USERDATA( "(?s).{0,90000}" ), // Enough for 64KiB Base64 encoded with some formatting
     EC2_SPOT_PRICE( "[0-9]{1,4}\\.[0-9]{2,4}" ),
     EC2_PLACEMENT_TENANCY( "default|dedicated" ),

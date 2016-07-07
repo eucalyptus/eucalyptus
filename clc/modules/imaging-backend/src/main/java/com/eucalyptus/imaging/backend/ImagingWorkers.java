@@ -175,7 +175,7 @@ public class ImagingWorkers {
   }
   
   private static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
-  private static final Pattern INSTANCE_ID = Pattern.compile( "i-[0-9a-fA-F]{8}" );
+  private static final Pattern INSTANCE_ID = Pattern.compile( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" );
 
   public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception {
     if (instanceId == null || !INSTANCE_ID.matcher(instanceId).matches())

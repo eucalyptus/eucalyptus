@@ -80,10 +80,10 @@ public class LoadBalancingMessageValidation {
     LOAD_BALANCER_SCHEME( "internal|internet-facing" ),
     LOAD_BALANCER_TAG_KEY( "[\\p{L}\\p{Z}\\p{N}_.:/=+@-]{1,128}" ),
     LOAD_BALANCER_TAG_VALUE( "[\\p{L}\\p{Z}\\p{N}_.:/=+@-]{0,256}" ),
-    LOAD_BALANCER_INSTANCE_ID_OPTIONAL_STATUS( "i-[a-fA-F0-9]{8}(?::(?:InService|OutOfService|Error))?" ),
+    LOAD_BALANCER_INSTANCE_ID_OPTIONAL_STATUS( "i-[a-fA-F0-9]{8}(?:[0-9a-fA-F]{9})?(?::(?:InService|OutOfService|Error))?" ),
 
     // EC2
-    EC2_INSTANCE_ID( "i-[a-fA-F0-9]{8}" ),
+    EC2_INSTANCE_ID( "i-[a-fA-F0-9]{8}(?:[0-9a-fA-F]{9})?" ),
     EC2_SECURITY_GROUP_ID( "sg-[a-fA-F0-9]{8}" ),
     EC2_SUBNET_ID( "subnet-[a-fA-F0-9]{8}" ),
     ;
