@@ -2198,7 +2198,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
 
-        // block any outgoing IP traffic that isn't from the VM private IP
+        // block any incoming IP traffic that isn't to the VM private IP
         // Check if the rule is already in place
         rc = mido_find_rule_from_list(vpcif->prechain->rules, vpcif->prechain->max_rules, &ptmpmn,
                 "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
@@ -2224,7 +2224,35 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
 
-        // block any incoming IP traffic that isn't to the VM private IP
+        // Allow DHCP requests (this rule needs to be placed before dst check rule)
+        // Check if the rule is already in place
+        rc = mido_find_rule_from_list(vpcif->postchain->rules, vpcif->postchain->max_rules, &ptmpmn,
+                "type", "accept", "nwProto", "17", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                "tpDst:END", "END", NULL);
+        if ((rc == 0) && ptmpmn && (ptmpmn->init == 1)) {
+            if ((mido->disable_l2_isolation) || (!gniif->srcdstcheck)) {
+                LOGTRACE("\tdeleting DHCP rule for %s\n", gniif->name);
+                rc = mido_delete_rule(vpcif->postchain, ptmpmn);
+                if (rc) {
+                    LOGWARN("Failed to delete DHCP rule for %s\n", gniif->name);
+                    ret++;
+                }
+            }
+        } else {
+            if ((!mido->disable_l2_isolation) && (gniif->srcdstcheck)) {
+                LOGTRACE("\tcreating DHCP rule for %s\n", gniif->name);
+                rc = mido_create_rule(vpcif->postchain, vpcif->midos[INST_POSTCHAIN],
+                        NULL, &rulepos, "position", pos_str, "type", "accept", "nwProto", "17",
+                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                        "tpDst:END", "END", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create DHCP rule for %s\n", gniif->name);
+                    ret++;
+                }
+            }
+        }
+
+        // block any outgoing IP traffic that isn't from the VM private IP
         // Check if the rule is already in place
         rc = mido_find_rule_from_list(vpcif->postchain->rules, vpcif->postchain->max_rules, &ptmpmn,
                 "type", "drop", "dlType", "2048", "nwDstAddress", instIp, "nwDstLength", "32", "invNwDst", "true", NULL);
