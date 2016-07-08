@@ -411,7 +411,7 @@ int loop_through_volumes(const char *xml_path, eucaVolume volumes[EUCA_MAX_VOLUM
             MKVOLPATH("devName");
             XGET_STR_FREE(volxpath, v->device);
             MKVOLPATH("libvirt");
-            if ((strcmp(v->state, VOL_STATE_ATTACHING) == 0 || strcmp(v->state, VOL_STATE_ATTACHING_FAILED) == 0) && get_xpath_xml(xml_path, volxpath, v->libvirt_XML, sizeof(v->libvirt_XML)) != EUCA_OK) {
+            if (strcmp(v->state, VOL_STATE_ATTACHING) && strcmp(v->state, VOL_STATE_ATTACHING_FAILED) && get_xpath_xml(xml_path, volxpath, v->libvirt_XML, sizeof(v->libvirt_XML)) != EUCA_OK) {
                 fprintf(stderr, "failed to read '%s' from '%s'\n", volxpath, xml_path);
                 for (int z = 0; res_array[z] != NULL; z++)
                     EUCA_FREE(res_array[z]);

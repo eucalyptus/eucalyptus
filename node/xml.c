@@ -1119,7 +1119,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR_FREE(volxpath, v->devName);
             }
             MKVOLPATH("libvirt");
-            if ((strcmp(v->stateName, VOL_STATE_ATTACHING) == 0 || strcmp(v->stateName, VOL_STATE_ATTACHING_FAILED) == 0) && get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
+            if (strcmp(v->stateName, VOL_STATE_ATTACHING) && strcmp(v->stateName, VOL_STATE_ATTACHING_FAILED) && get_xpath_xml(xml_path, volxpath, v->volLibvirtXml, sizeof(v->volLibvirtXml)) != EUCA_OK) {
                 LOGERROR("failed to read '%s' from '%s'\n", volxpath, xml_path);
                 for (int z = 0; res_array[z] != NULL; z++)
                     EUCA_FREE(res_array[z]);
