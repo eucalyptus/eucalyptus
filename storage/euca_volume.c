@@ -411,7 +411,7 @@ int loop_through_volumes(const char *xml_path, eucaVolume volumes[EUCA_MAX_VOLUM
             MKVOLPATH("devName");
             XGET_STR_FREE(volxpath, v->device);
             MKVOLPATH("libvirt");
-            if (strcmp(v->state, "attaching") && get_xpath_xml(xml_path, volxpath, v->libvirt_XML, sizeof(v->libvirt_XML)) != EUCA_OK) {
+            if ((strcmp(v->state, VOL_STATE_ATTACHING) == 0 || strcmp(v->state, VOL_STATE_ATTACHING_FAILED) == 0) && get_xpath_xml(xml_path, volxpath, v->libvirt_XML, sizeof(v->libvirt_XML)) != EUCA_OK) {
                 fprintf(stderr, "failed to read '%s' from '%s'\n", volxpath, xml_path);
                 for (int z = 0; res_array[z] != NULL; z++)
                     EUCA_FREE(res_array[z]);
@@ -467,7 +467,14 @@ char *find_instance_path(const char* instance_paths, const char *instance_id){
 }
 
 
-char *find_ip_addr(const char* hostname){
+char *find_ip_addr(void){
+    char hostname[HOSTNAME_SIZE];
+    if (gethostname(hostname, sizeof(hostname)) != 0) {
+        fprintf(stderr, "failed to find hostname\n");
+        return NULL;
+    }
+    fprintf(stderr, "Searching for IP by hostname %s\n", hostname);
+
     struct addrinfo hints, *servinfo, *p;
     struct sockaddr_in *h;
     memset(&hints, 0, sizeof hints);
@@ -616,7 +623,7 @@ int main(int argc, char **argv)
 
     loop_through_volumes(instance_xml, volumes);
 
-    ip = find_ip_addr(NULL);
+    ip = find_ip_addr();
     iqn = find_local_iqn();
 
     printf("Found local iqn=%s and local ip=%s\n", iqn, ip);
