@@ -119,6 +119,7 @@ import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.ResourceTagMessage;
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
@@ -137,7 +138,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.InstanceStatusEventType;
 import com.eucalyptus.compute.common.backend.StopInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
-import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
 import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
@@ -723,10 +723,10 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
 
-  public static String getId( final Long rsvId, final int launchIndex ) {
+  public static String getId( final String identityArn ) {
     String vmId;
     do {
-      vmId = ResourceIdentifiers.generateString( "i" );
+      vmId = IdentityIdFormats.generate( identityArn, VmInstance.ID_PREFIX );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }

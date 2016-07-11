@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,6 +90,7 @@ import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeResponseType
 import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeType;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
@@ -162,7 +163,7 @@ public class SnapshotManager {
       @Override
       public Snapshot get( ) {
         try {
-          return initializeSnapshot( ctx.getUserFullName( ), volReady, sc, request.getDescription() );
+          return initializeSnapshot( Accounts.getAuthenticatedArn( ctx.getUser( ) ), ctx.getUserFullName( ), volReady, sc, request.getDescription() );
         } catch ( EucalyptusCloudException ex ) {
           throw new RuntimeException( ex );
         }
@@ -423,14 +424,15 @@ public class SnapshotManager {
     return Predicates.or( SnapshotInUseVerifier.INSTANCE ).apply( snapshotId );
   }
 
-  private static Snapshot initializeSnapshot( final UserFullName userFullName,
+  private static Snapshot initializeSnapshot( final String authenticatedArn,
+                                              final UserFullName userFullName,
                                               final Volume vol,
                                               final ServiceConfiguration sc,
                                               final String description ) throws EucalyptusCloudException {
     final EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
-        final String newId = ResourceIdentifiers.generateString( Snapshot.ID_PREFIX );
+        final String newId = IdentityIdFormats.generate( authenticatedArn, Snapshot.ID_PREFIX );
         try {
           Entities.uniqueResult( Snapshot.named( null, newId ) );
         } catch ( NoSuchElementException e ) {

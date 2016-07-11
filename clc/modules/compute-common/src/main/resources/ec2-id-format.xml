@@ -19,7 +19,7 @@
   <mapping class="com.eucalyptus.compute.common.IdFormatItemType" abstract="true">
     <value name="resource" field="resource" />
     <value name="useLongIds" field="useLongIds" />
-    <value name="deadline" field="deadline" />
+    <value name="deadline" field="deadline" usage="optional"/>
   </mapping>
 
   <mapping name="DescribeIdentityIdFormat" class="com.eucalyptus.compute.common.DescribeIdentityIdFormatType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -30,7 +30,7 @@
 
   <mapping name="DescribeIdentityIdFormatResponse" class="com.eucalyptus.compute.common.DescribeIdentityIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="statuses" field="statuses">
+    <collection name="statusSet" field="statuses">
       <structure name="item" type="com.eucalyptus.compute.common.IdFormatItemType"/>
     </collection>
   </mapping>
@@ -42,7 +42,7 @@
 
   <mapping name="DescribeIdFormatResponse" class="com.eucalyptus.compute.common.DescribeIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="statuses" field="statuses">
+    <collection name="statusSet" field="statuses">
       <structure name="item" type="com.eucalyptus.compute.common.IdFormatItemType"/>
     </collection>
   </mapping>

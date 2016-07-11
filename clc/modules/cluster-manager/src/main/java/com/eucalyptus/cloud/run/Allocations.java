@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
@@ -183,8 +184,7 @@ public class Allocations {
 
       this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
           (long) request.getMaxCount());
-      this.reservationId = VmInstances.getId(this.reservationIndex, 0)
-          .replaceAll("i-", "r-");
+      this.reservationId = IdentityIdFormats.generate( getAuthenticatedArn( ), "r" );
       this.request.setMonitoring(this.monitoring);
       // GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
       if (this.request.getUserData() != null) {
@@ -373,6 +373,10 @@ public class Allocations {
       return this.ownerFullName;
     }
 
+    public String getAuthenticatedArn( ) {
+      return Accounts.getAuthenticatedArn( context.getUser( ) );
+    }
+
     public List<ResourceToken> getAllocationTokens() {
       return this.allocationTokens;
     }
@@ -516,9 +520,9 @@ public class Allocations {
       return Sets.newHashSet( this.instanceIds.values( ) );
     }
 
-    public String getInstanceId(int index) {
+    public String getInstanceId( int index ) {
       if ( !this.instanceIds.containsKey( index ) ) {
-        this.instanceIds.put( index, VmInstances.getId( this.getReservationIndex( ), index ) );
+        this.instanceIds.put( index, VmInstances.getId( Accounts.getAuthenticatedArn( context.getUser( ) ) ) );
       }
       return this.instanceIds.get(index);
     }

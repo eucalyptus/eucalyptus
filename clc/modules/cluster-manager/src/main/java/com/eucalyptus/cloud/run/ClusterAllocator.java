@@ -464,6 +464,7 @@ public class ClusterAllocator implements Runnable {
                   throw new ExecutionException( e );
                 }
                 final UserFullName fullName = this.allocInfo.getOwnerFullName();
+                final String authenticatedArn = this.allocInfo.getAuthenticatedArn();
                 final String snapshotId = ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() );
                 final int volSize = volumeSize;
                 final BaseMessage request = this.allocInfo.getRequest();
@@ -473,7 +474,7 @@ public class ClusterAllocator implements Runnable {
                         @Override
                         public Volume apply( Long size ) {
                           try {
-                            return Volumes.createStorageVolume( sc, fullName, snapshotId, Ints.checkedCast( size ), request );
+                            return Volumes.createStorageVolume( sc, authenticatedArn, fullName, snapshotId, Ints.checkedCast( size ), request );
                           } catch ( ExecutionException ex ) {
                             throw Exceptions.toUndeclared( ex );
                           }

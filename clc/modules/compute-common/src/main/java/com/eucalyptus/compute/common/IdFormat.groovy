@@ -60,6 +60,13 @@ class IdFormatItemType extends EucalyptusData {
   String resource
   Boolean useLongIds
   Date deadline
+
+  IdFormatItemType( ) { }
+
+  IdFormatItemType( final String resource, final Boolean useLongIds ) {
+    this.resource = resource
+    this.useLongIds = useLongIds
+  }
 }
 
 class ModifyIdentityIdFormatType extends IdFormatMessage {

@@ -78,6 +78,7 @@ import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseOpenIdConnectProvider;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.HasRole;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principals;
@@ -356,6 +357,17 @@ public class Accounts {
     return lookupSystemAccountByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
   }
 
+  public static String getNameFromFullName( final String fullName ) {
+    String name = fullName;
+    if ( name != null ) {
+      int pathEndIndex = name.lastIndexOf( '/' );
+      if ( pathEndIndex > -1 && pathEndIndex < name.length( )) {
+        name = name.substring( pathEndIndex + 1, name.length( ) );
+      }
+    }
+    return name;
+  }
+
   public static String getAccountFullName( AccountIdentifiers account ) {
     return "/" + account.getAccountAlias();
   }
@@ -384,6 +396,14 @@ public class Accounts {
     }
   }
 
+  public static String getAuthenticatedFullName( final UserPrincipal user ) {
+    if ( isRoleIdentifier( user.getAuthenticatedId( ) ) ) {
+      return getRoleFullName( ((HasRole)user).getRole( ) );
+    } else {
+      return getUserFullName( user );
+    }
+  }
+
   @Nonnull
   public static String getAccountArn( @Nonnull final String accountId ) throws AuthException {
     if ( !accountId.matches( "[0-9]{12}" ) ) {
@@ -396,7 +416,7 @@ public class Accounts {
     return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
 
-  public static String getUserArn( final UserPrincipal user ) throws AuthException {
+  public static String getUserArn( final UserPrincipal user ) {
     return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
 
@@ -404,9 +424,21 @@ public class Accounts {
     return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
   }
 
+  public static String getRoleArn( final Role role ) {
+    return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
+  }
+
   public static String getAssumedRoleArn( final BaseRole role,
                                           final String roleSessionName ) throws AuthException {
     return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
+  }
+
+  public static String getAuthenticatedArn( final UserPrincipal user ) {
+    if ( isRoleIdentifier( user.getAuthenticatedId( ) ) ) {
+      return getRoleArn( ((HasRole)user).getRole( ) );
+    } else {
+      return getUserArn( user );
+    }
   }
 
   public static String getInstanceProfileArn( final BaseInstanceProfile instanceProfile ) throws AuthException {
@@ -424,7 +456,7 @@ public class Accounts {
   protected static String buildArn( final String accountNumber,
                                     final String type,
                                     final String path,
-                                    final String name ) throws AuthException {
+                                    final String name ) {
     return new EuareResourceName( accountNumber, type, path, name ).toString( );
   }
 

@@ -40,6 +40,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.compute.common.NatGatewayType;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
@@ -372,7 +373,7 @@ public class VpcManager {
                       "IncorrectState", "Instance '"+instanceId+"' is not 'running' or 'stopped'" );
                 }
                 networkInterface.attach( NetworkInterfaceAttachment.create(
-                    Identifier.eni_attach.generate( ),
+                    Identifier.eni_attach.generate( ctx.getUser( ) ),
                     vm,
                     vm.getDisplayName( ),
                     vm.getOwnerAccountNumber( ),
@@ -423,7 +424,7 @@ public class VpcManager {
       @Override
       public DhcpOptionSet get( ) {
         try {
-          final DhcpOptionSet dhcpOptionSet = DhcpOptionSet.create( ctx.getUserFullName(), Identifier.dopt.generate( ) );
+          final DhcpOptionSet dhcpOptionSet = DhcpOptionSet.create( ctx.getUserFullName(), Identifier.dopt.generate( ctx.getUser( ) ) );
           for ( final DhcpConfigurationItemType item : request.getDhcpConfigurationSet( ).getItem( ) ) {
             final List<String> values = item.values( );
             boolean validValue = false;
@@ -471,7 +472,7 @@ public class VpcManager {
       @Override
       public InternetGateway get( ) {
         try {
-          return internetGateways.save( InternetGateway.create( ctx.getUserFullName( ), Identifier.igw.generate( ) ) );
+          return internetGateways.save( InternetGateway.create( ctx.getUserFullName( ), Identifier.igw.generate( ctx.getUser( ) ) ) );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
@@ -507,7 +508,7 @@ public class VpcManager {
                 "NAT gateway limit exceeded for availability zone " + subnet.getAvailabilityZone( ) );
           }
 
-          final String natGatewayId = Identifier.nat.generate( );
+          final String natGatewayId = Identifier.nat.generate( ctx.getUser( ) );
           final Vpc vpc = subnet.getVpc( );
           return natGateways.save(
               NatGateway.create( ctx.getUserFullName( ), vpc, subnet, natGatewayId, clientToken, allocationId ) );
@@ -540,7 +541,7 @@ public class VpcManager {
           if ( networkAclsForVpc >= VpcConfiguration.getNetworkAclsPerVpc( ) ) {
             throw new ClientComputeException( "NetworkAclLimitExceeded", "Network ACL limit exceeded for " + vpc.getDisplayName( ) );
           }
-          return networkAcls.save( NetworkAcl.create( ctx.getUserFullName( ), vpc, Identifier.acl.generate( ), false ) );
+          return networkAcls.save( NetworkAcl.create( ctx.getUserFullName( ), vpc, Identifier.acl.generate( ctx.getUser( ) ), false ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
         } catch ( Exception ex ) {
@@ -688,7 +689,7 @@ public class VpcManager {
               Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
             throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue", "Invalid security groups (inconsistent VPC)" ) );
           }
-          final String identifier = Identifier.eni.generate();
+          final String identifier = Identifier.eni.generate( ctx.getUser( ) );
           if ( privateIp != null ) {
             final Cidr cidr = Cidr.parse( subnet.getCidr( ) );
             if ( !cidr.contains( privateIp ) ) {
@@ -836,7 +837,7 @@ public class VpcManager {
           if ( routeTablesForVpc >= VpcConfiguration.getRouteTablesPerVpc( ) ) {
             throw new ClientComputeException( " RouteTableLimitExceeded", "Route table limit exceeded for " + vpc.getDisplayName( ) );
           }
-          return routeTables.save( RouteTable.create( ctx.getUserFullName( ), vpc, Identifier.rtb.generate(), vpc.getCidr(), false ) );
+          return routeTables.save( RouteTable.create( ctx.getUserFullName( ), vpc, Identifier.rtb.generate( ctx.getUser( ) ), vpc.getCidr(), false ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
         } catch ( Exception ex ) {
@@ -898,7 +899,7 @@ public class VpcManager {
               ctx.getUserFullName( ),
               vpc,
               networkAcl,
-              Identifier.subnet.generate( ),
+              Identifier.subnet.generate( ctx.getUser( ) ),
               request.getCidrBlock( ),
               availabilityZone.get() ) );
         } catch ( VpcMetadataNotFoundException ex ) {
@@ -969,15 +970,15 @@ public class VpcManager {
             } catch ( VpcMetadataNotFoundException e ) {
               options = dhcpOptionSets.save( DhcpOptionSet.createDefault(
                   vpcOwnerFullName,
-                  Identifier.dopt.generate(),
+                  Identifier.dopt.generate( ctx.getUser( ) ),
                   VmInstances.INSTANCE_SUBDOMAIN ) );
             }
             vpc =
-                vpcs.save( Vpc.create( vpcOwnerFullName, Identifier.vpc.generate(), options, vpcCidr, createDefault ) );
+                vpcs.save( Vpc.create( vpcOwnerFullName, Identifier.vpc.generate( ctx.getUser( ) ), options, vpcCidr, createDefault ) );
             routeTable =
-                routeTables.save( RouteTable.create( vpcOwnerFullName, vpc, Identifier.rtb.generate(), vpc.getCidr(), true ) );
+                routeTables.save( RouteTable.create( vpcOwnerFullName, vpc, Identifier.rtb.generate( ctx.getUser( ) ), vpc.getCidr(), true ) );
             networkAcl =
-                networkAcls.save( NetworkAcl.create( vpcOwnerFullName, vpc, Identifier.acl.generate(), true ) );
+                networkAcls.save( NetworkAcl.create( vpcOwnerFullName, vpc, Identifier.acl.generate( ctx.getUser( ) ), true ) );
             final NetworkGroup group = NetworkGroup.create(
                 vpcOwnerFullName,
                 vpc,
@@ -999,7 +1000,7 @@ public class VpcManager {
               internetGateway =
                   internetGateways.lookupByVpc( vpcAccountFullName, vpc.getDisplayName(), Functions.identity( ) );
             } catch ( final VpcMetadataNotFoundException e ) {
-              internetGateway = internetGateways.save( InternetGateway.create( vpcOwnerFullName, Identifier.igw.generate( ) ) );
+              internetGateway = internetGateways.save( InternetGateway.create( vpcOwnerFullName, Identifier.igw.generate( ctx.getUser( ) ) ) );
               internetGateway.setVpc( vpc );
             }
 
@@ -1032,7 +1033,7 @@ public class VpcManager {
                   vpcOwnerFullName,
                   vpc,
                   networkAcl,
-                  Identifier.subnet.generate( ),
+                  Identifier.subnet.generate( ctx.getUser( ) ),
                   subnetCidrs.remove( 0 ),
                   zone ) );
               subnet.setDefaultForAz( true );
@@ -1752,7 +1753,7 @@ public class VpcManager {
                       "Network ACL "+networkAclId+" and subnet "+subnet.getDisplayName( )+" belong to different networks" );
                 }
                 subnet.setNetworkAcl( networkAcl );
-                subnet.setNetworkAclAssociationId( Identifier.aclassoc.generate() );
+                subnet.setNetworkAclAssociationId( Identifier.aclassoc.generate( ctx.getUser( ) ) );
               } catch ( VpcMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidNetworkAclID.NotFound", "Network ACL not found '" + request.getAssociationId() + "'" ) );
               } catch ( Exception e ) {
@@ -2025,6 +2026,8 @@ public class VpcManager {
     return reply;
   }
 
+  private enum LongIdStyle { Always, Configurable, Never }
+
   private enum Identifier {
     acl( "networkAcl" ),
     aclassoc( "networkAclAssociation" ),
@@ -2033,9 +2036,9 @@ public class VpcManager {
     ela_attach( "networkInterfaceAttachment" ),
     eni( "networkInterface" ),
     eni_attach( "networkInterfaceAttachment" ),
-    i( "instance" ),
+    i( "instance", LongIdStyle.Configurable ),
     igw( "internetGateway" ),
-    nat( "natGateway", true ),
+    nat( "natGateway", LongIdStyle.Always ),
     rtb( "routeTable" ),
     rtbassoc( "routeTableAssociation" ),
     sg( "securityGroup" ),
@@ -2044,17 +2047,17 @@ public class VpcManager {
     ;
 
     private final String code;
-    private final boolean longIdentifier;
+    private final LongIdStyle longIdStyle;
     private final String defaultParameter;
     private final String defaultListParameter;
 
     Identifier( final String defaultParameter ) {
-      this( defaultParameter, false );
+      this( defaultParameter, LongIdStyle.Never );
     }
 
-    Identifier( final String defaultParameter, final boolean longIdentifier ) {
+    Identifier( final String defaultParameter, final LongIdStyle longIdStyle ) {
       this.code = "InvalidParameterValue";
-      this.longIdentifier = longIdentifier;
+      this.longIdStyle = longIdStyle;
       this.defaultParameter = defaultParameter;
       this.defaultListParameter = defaultParameter + "s";
     }
@@ -2063,10 +2066,16 @@ public class VpcManager {
       return name( ).replace( '_', '-' );
     }
 
-    public String generate( ) {
-      return longIdentifier ?
-          ResourceIdentifiers.generateLongString( prefix( ) ) :
-          ResourceIdentifiers.generateString( prefix( ) );
+    public String generate( final UserPrincipal identity ) {
+      switch ( longIdStyle ) {
+        case Never:
+          return ResourceIdentifiers.generateString( prefix( ) );
+        case Always:
+          return ResourceIdentifiers.generateLongString( prefix( ) );
+        case Configurable:
+          return IdentityIdFormats.generate( Accounts.getAuthenticatedArn( identity ), prefix( ) );
+      }
+      throw new IllegalStateException( "Unexpected long identity value " + longIdStyle );
     }
 
     public String normalize( final String identifier ) throws EucalyptusCloudException {

@@ -47,7 +47,7 @@ import com.google.common.collect.Sets;
 /**
  *
  */
-@SuppressWarnings( "Guava" )
+@SuppressWarnings( { "Guava", "StaticPseudoFunctionalStyleMethod" } )
 @ConfigurableClass(
     root = "cloud",
     description = "Properties for compute."
@@ -64,6 +64,7 @@ public class ResourceIdentifiers {
   private static final ConcurrentMap<String,ResourceIdentifierCanonicalizer> canonicalizers = Maps.newConcurrentMap();
   private static final AtomicReference<ResourceIdentifierCanonicalizer> defaultCanonicalizer =
       new AtomicReference<>( new LowerResourceIdentifierCanonicalizer( ) );
+  @SuppressWarnings( "unused" )
   @ConfigurableField(
       description = "Name of the canonicalizer for resource identifiers.",
       initial = LowerResourceIdentifierCanonicalizer.NAME,
@@ -72,6 +73,7 @@ public class ResourceIdentifiers {
   )
   public static volatile String IDENTIFIER_CANONICALIZER = LowerResourceIdentifierCanonicalizer.NAME;
 
+  @SuppressWarnings( "WeakerAccess" )
   @ConfigurableField(
       description = "List of resource identifier prefixes for short identifiers (i|r|snap|vol|*)",
       displayName = "short_identifier_prefixes",
@@ -79,6 +81,7 @@ public class ResourceIdentifiers {
   )
   public static volatile String SHORT_IDENTIFIER_PREFIXES = "";
 
+  @SuppressWarnings( "WeakerAccess" )
   @ConfigurableField(
       description = "List of resource identifier prefixes for long identifiers (i|r|snap|vol|*)",
       displayName = "long_identifier_prefixes",
@@ -90,6 +93,7 @@ public class ResourceIdentifiers {
     canonicalizers.put( canonicalizer.getName( ).toLowerCase( ), canonicalizer );
   }
 
+  @SuppressWarnings( "unused" )
   public static Optional<ResourceIdentifierCanonicalizer> getCanonicalizer( final String name ) {
     return Optional.fromNullable( canonicalizers.get( name.toLowerCase( ) ) );
   }
@@ -103,16 +107,22 @@ public class ResourceIdentifiers {
         generateShort( prefix );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static ResourceIdentifier generateShort( final String prefix ) {
     return parse( Crypto.generateId( prefix ) );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static ResourceIdentifier generateLong( final String prefix ) {
     return parse( Crypto.generateLongId( prefix ) );
   }
 
   public static String generateString( final String prefix ) {
     return generate( prefix ).getIdentifier( );
+  }
+
+  public static String generateShortString( final String prefix ) {
+    return generateShort( prefix ).getIdentifier( );
   }
 
   public static String generateLongString( final String prefix ) {
@@ -140,6 +150,7 @@ public class ResourceIdentifiers {
     return Lists.newArrayList( Iterables.transform( identifiers, normalize( ) ) );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static Function<String,String> normalize( ) throws InvalidResourceIdentifier {
     return ResourceIdentifierNormalizeTransform.ENFORCE;
   }
@@ -148,13 +159,9 @@ public class ResourceIdentifiers {
     return ResourceIdentifierNormalizeTransform.ATTEMPT;
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static Function<String,String> normalize( final String expectedPrefix ) {
-    return new Function<String,String>( ){
-      @Override
-      public String apply( final String identifier ) {
-        return parse( expectedPrefix, identifier ).getIdentifier( );
-      }
-    };
+    return identifier -> parse( expectedPrefix, identifier ).getIdentifier( );
   }
 
   @SuppressWarnings( "ConstantConditions" )
@@ -176,7 +183,7 @@ public class ResourceIdentifiers {
         canonicalizer.canonicalizeHex( identifierText.substring( hexOffset ) ) );
   }
 
-  private static boolean useLongIdentifierForPrefix( final String prefix ) {
+  public static boolean useLongIdentifierForPrefix( final String prefix ) {
     //noinspection ConstantConditions
     return !shortIdentifierPrefixes.apply( SHORT_IDENTIFIER_PREFIXES ).contains( prefix ) &&
         longIdentifierPrefixes.apply( LONG_IDENTIFIER_PREFIXES ).contains( prefix );
@@ -221,6 +228,7 @@ public class ResourceIdentifiers {
     public abstract String apply( final String identifier );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static final class ResourceIdentifierCanonicalizerChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange( final ConfigurableProperty t, final String newValue ) throws ConfigurablePropertyException {
@@ -237,6 +245,7 @@ public class ResourceIdentifiers {
     }
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static final class ResourceIdentifierPrefixListChangeListener implements PropertyChangeListener<String> {
     private static final Pattern prefixPattern = Pattern.compile( "[a-z](?:[a-z-]{0,30}[a-z])?" );
 
