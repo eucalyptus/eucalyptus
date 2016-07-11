@@ -489,6 +489,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.transientVolumeState = null;
   }
 
+  @Override
+  protected String createUniqueName() {
+    return getDisplayName( ) == null ? null : getDisplayName( ).substring( 0, 10 );  //TODO:STEVE: this will impact instance lookup post upgrade
+  }
+
   /**
    * Clear references that are not valid for a terminated instance
    */
