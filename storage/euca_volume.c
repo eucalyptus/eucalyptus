@@ -510,7 +510,7 @@ char *find_local_iqn(void){
             if (tmp)
                 *tmp = '\0';
         }
-        ptr = NULL;
+        EUCA_FREE(ptr);
     }
 
     return strdup(iqn);
@@ -544,7 +544,11 @@ void setup_iscsi(char *euca_home, char *configFile)
 
     init_iscsi(euca_home,
                (ceph_user == NULL) ? (DEFAULT_CEPH_USER) : (ceph_user),
-               (ceph_keys == NULL) ? (DEFAULT_CEPH_KEYRING) : (ceph_keys), (ceph_conf == NULL) ? (DEFAULT_CEPH_CONF) : (ceph_conf));
+               (ceph_keys == NULL) ? (DEFAULT_CEPH_KEYRING) : (ceph_keys),
+               (ceph_conf == NULL) ? (DEFAULT_CEPH_CONF) : (ceph_conf));
+    EUCA_FREE(ceph_user);
+    EUCA_FREE(ceph_keys);
+    EUCA_FREE(ceph_conf);
 }
 
 //!
