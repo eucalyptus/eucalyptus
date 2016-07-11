@@ -3644,7 +3644,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
  * @return 0 on success or 1 on failure
  */
 int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr, xmlDocPtr doc) {
-    int rc;
+    int rc = 0;
     char expression[2048];
     char **results = NULL;
     int max_results = 0, i;
@@ -3719,7 +3719,7 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
  * @return 0 on success or 1 on failure
  */
 int gni_populate_natgateway(gni_nat_gateway *natg, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr, xmlDocPtr doc) {
-    int rc;
+    int rc = 0;
     char expression[2048];
     char **results = NULL;
     int max_results = 0, i;
@@ -3799,7 +3799,7 @@ int gni_populate_natgateway(gni_nat_gateway *natg, xmlNodePtr xmlnode, xmlXPathC
  * @return 0 on success or 1 on failure
  */
 int gni_populate_networkacl(gni_network_acl *netacl, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr, xmlDocPtr doc) {
-    int rc;
+    int rc = 0;
     char expression[2048];
     char **results = NULL;
     int max_results = 0, i;
