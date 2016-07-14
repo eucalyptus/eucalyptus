@@ -109,6 +109,7 @@ public class PolicySpec {
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
+  public static final String IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER = "addclientidtoopenidconnectprovider";
   public static final String IAM_ADDROLETOINSTANCEPROFILE = "addroletoinstanceprofile";
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
   public static final String IAM_CHANGEPASSWORD = "changepassword";
@@ -118,6 +119,7 @@ public class PolicySpec {
   public static final String IAM_CREATEGROUP = "creategroup";
   public static final String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
   public static final String IAM_CREATELOGINPROFILE = "createloginprofile";
+  public static final String IAM_CREATEOPENIDCONNECTPROVIDER = "createopenidconnectprovider";
   public static final String IAM_CREATEROLE = "createrole";
   public static final String IAM_CREATEUSER = "createuser";
   public static final String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
@@ -131,6 +133,7 @@ public class PolicySpec {
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
   public static final String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
   public static final String IAM_DELETELOGINPROFILE = "deleteloginprofile";
+  public static final String IAM_DELETEOPENIDCONNECTPROVIDER = "deleteopenidconnectprovider";
   public static final String IAM_DELETEROLE = "deleterole";
   public static final String IAM_DELETEROLEPOLICY = "deleterolepolicy";
   public static final String IAM_DELETESERVERCERTIFICATE = "deleteservercertificate";
@@ -146,6 +149,7 @@ public class PolicySpec {
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
   public static final String IAM_GETINSTANCEPROFILE = "getinstanceprofile";
   public static final String IAM_GETLOGINPROFILE = "getloginprofile";
+  public static final String IAM_GETOPENIDCONNECTPROVIDER = "getopenidconnectprovider";
   public static final String IAM_GETROLE = "getrole";
   public static final String IAM_GETROLEPOLICY = "getrolepolicy";
   public static final String IAM_GETSERVERCERTIFICATE = "getservercertificate";
@@ -161,6 +165,7 @@ public class PolicySpec {
   public static final String IAM_LISTINSTANCEPROFILES = "listinstanceprofiles";
   public static final String IAM_LISTINSTANCEPROFILESFORROLE = "listinstanceprofilesforrole";
   public static final String IAM_LISTMFADEVICES = "listmfadevices";
+  public static final String IAM_LISTOPENIDCONNECTPROVIDERS = "listopenidconnectproviders";
   public static final String IAM_LISTROLEPOLICIES = "listrolepolicies";
   public static final String IAM_LISTROLES = "listroles";
   public static final String IAM_LISTSERVERCERTIFICATES = "listservercertificates";
@@ -173,6 +178,7 @@ public class PolicySpec {
   public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
   public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
   public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
+  public static final String IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER = "removeclientidfromopenidconnectprovider";
   public static final String IAM_REMOVEROLEFROMINSTANCEPROFILE = "removerolefrominstanceprofile";
   public static final String IAM_REMOVEUSERFROMGROUP = "removeuserfromgroup";
   public static final String IAM_RESYNCMFADEVICE = "resyncmfadevice";
@@ -181,6 +187,7 @@ public class PolicySpec {
   public static final String IAM_UPDATEASSUMEROLEPOLICY = "updateassumerolepolicy";
   public static final String IAM_UPDATEGROUP = "updategroup";
   public static final String IAM_UPDATELOGINPROFILE = "updateloginprofile";
+  public static final String IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT = "updateopenidconnectproviderthumbprint";
   public static final String IAM_UPDATESERVERCERTIFICATE = "updateservercertificate";
   public static final String IAM_UPDATESIGNINGCERTIFICATE = "updatesigningcertificate";
   public static final String IAM_UPDATEUSER = "updateuser";

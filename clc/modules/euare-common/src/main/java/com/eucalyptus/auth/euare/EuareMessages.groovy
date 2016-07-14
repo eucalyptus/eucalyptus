@@ -1389,3 +1389,107 @@ public class InstanceProfileListType extends EucalyptusData {
   ArrayList<InstanceProfileType> member = new ArrayList<InstanceProfileType>();
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEOPENIDCONNECTPROVIDER )
+public class CreateOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  ArrayList<String> clientIDList;
+  ArrayList<String> thumbprintList;
+  String url;
+  public CreateOpenIdConnectProviderType() {  }
+}
+
+public class CreateOpenIdConnectProviderResponseType extends EuareMessage {
+  CreateOpenIdConnectProviderResultType createOpenIdConnectProviderResult = new CreateOpenIdConnectProviderResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateOpenIdConnectProviderResponseType() {  }
+}
+
+public class CreateOpenIdConnectProviderResultType extends EucalyptusData {
+  String openIDConnectProviderArn = "";
+  public CreateOpenIdConnectProviderResultType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEOPENIDCONNECTPROVIDER )
+public class DeleteOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn;
+  public DeleteOpenIdConnectProviderType() {  }
+}
+public class DeleteOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS )
+public class ListOpenIdConnectProvidersType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  public ListOpenIdConnectProvidersType() {  }
+}
+
+public class ListOpenIdConnectProvidersResponseType extends EuareMessage {
+  ListOpenIdConnectProvidersResult listOpenIdConnectProvidersResult = new ListOpenIdConnectProvidersResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListOpenIdConnectProvidersResponseType() {  }
+}
+
+public class ListOpenIdConnectProvidersResult extends EucalyptusData {
+  ArrayList<String> arn;
+  public ListOpenIdConnectProvidersResult() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETOPENIDCONNECTPROVIDER )
+public class GetOpenIdConnectProvidersType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn = "";
+  public GetOpenIdConnectProvidersType() {  }
+}
+
+public class GetOpenIdConnectProvidersResponseType extends EuareMessage {
+  GetOpenIdConnectProvidersResult getOpenIdConnectProvidersResult = new GetOpenIdConnectProvidersResult();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetOpenIdConnectProvidersResponseType() {  }
+}
+
+public class GetOpenIdConnectProvidersResult extends EucalyptusData {
+  ArrayList<String> clientIdList;
+  Date createDate;
+  ArrayList<String> thumbprintList;
+  String url;
+  public GetOpenIdConnectProvidersResult() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER )
+public class AddClientIdToOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String clientID;
+  String openIDConnectProviderArn;
+  public AddClientIdToOpenIdConnectProviderType() {  }
+}
+public class AddClientidToOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public AddClientidToOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER )
+public class RemoveClientIdFromOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String clientID;
+  String openIDConnectProviderArn;
+  public RemoveClientIdFromOpenIdConnectProviderType() {  }
+}
+public class RemoveClientIdFromOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public RemoveClientIdFromOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT )
+public class UpdateOpenIdConnectProviderThumbprintType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn;
+  ArrayList<String> thumbprintList;
+  public UpdateOpenIdConnectProviderThumbprintType() {  }
+}
+public class UpdateOpenIdConnectProviderThumbprintResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public UpdateOpenIdConnectProviderThumbprintResponseType() {  }
+}
