@@ -691,7 +691,7 @@ public class VpcManager {
           }
           final String mac = NetworkInterfaceHelper.mac( identifier );
           final String ip = NetworkInterfaceHelper.allocate( vpc.getDisplayName( ), subnet.getDisplayName( ), identifier, mac, privateIp );
-          return networkInterfaces.save( NetworkInterface.create(
+          final NetworkInterface networkInterface = networkInterfaces.save( NetworkInterface.create(
               ctx.getUserFullName(),
               vpc,
               subnet,
@@ -703,6 +703,8 @@ public class VpcManager {
                   VmInstances.dnsName( ip, DomainNames.internalSubdomain( ) ) :
                   null,
               firstNonNull( request.getDescription( ), "" ) ) );
+          PrivateAddresses.associate( ip, networkInterface );
+          return networkInterface;
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet not found '" + request.getSubnetId() + "'" ) );
         } catch ( ResourceAllocationException ex ) {

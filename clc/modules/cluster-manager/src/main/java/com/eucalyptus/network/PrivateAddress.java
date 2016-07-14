@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
@@ -30,16 +31,26 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.util.PersistentReference;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.internal.vm.VmInstance_;
+import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig_;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment_;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface_;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import groovy.sql.Sql;
 
 /**
@@ -48,12 +59,16 @@ import groovy.sql.Sql;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_private_addresses" )
-public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstance> implements RestrictedType {
+public class PrivateAddress extends PersistentReference<PrivateAddress, PrivateAddressReferrer> implements RestrictedType {
   private static final long serialVersionUID = 1L;
 
   @OneToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_instance_fk" )
-  private VmInstance                       instance;
+  private VmInstance instance;
+
+  @OneToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_network_interface_fk" )
+  private NetworkInterface networkInterface;
 
   @Column( name = "metadata_address_scope" )
   private String scope;
@@ -124,14 +139,27 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   }
 
   @Override
-  protected void setReference( VmInstance referrer ) {
-    this.setInstance( referrer );
+  protected void setReference( PrivateAddressReferrer referrer ) {
+    if ( referrer instanceof VmInstance ) {
+      this.setInstance( (VmInstance) referrer );
+      this.setNetworkInterface( null );
+    } else if ( referrer instanceof NetworkInterface ) {
+      this.setInstance( null );
+      this.setNetworkInterface( (NetworkInterface) referrer );
+    } else if ( referrer == null ) {
+      this.setInstance( null );
+      this.setNetworkInterface( null );
+    } else {
+      throw new IllegalArgumentException( "Unknown referrer type " + referrer.getClass( ) );
+    }
     this.setAssignedPartition( referrer==null ? null : referrer.getPartition() );
   }
 
   @Override
-  protected VmInstance getReference( ) {
-    return this.getInstance( );
+  protected PrivateAddressReferrer getReference( ) {
+    return this.getInstance( ) != null ?
+        this.getInstance( ) :
+        this.getNetworkInterface( );
   }
 
   public void releasing( ) throws ResourceAllocationException {
@@ -149,8 +177,8 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   }
 
   @Nullable
-  public String getInstanceId( ) {
-    return CloudMetadatas.toDisplayName( ).apply( instance );
+  public String getOwnerId( ) {
+    return CloudMetadatas.toDisplayName( ).apply( getReference( ) );
   }
 
   private VmInstance getInstance( ) {
@@ -159,6 +187,14 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
 
   private void setInstance( VmInstance instance ) {
     this.instance = instance;
+  }
+
+  public NetworkInterface getNetworkInterface() {
+    return networkInterface;
+  }
+
+  public void setNetworkInterface( final NetworkInterface networkInterface ) {
+    this.networkInterface = networkInterface;
   }
 
   public String getScope( ) {
@@ -202,7 +238,7 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
         .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
         .namespace( this.getOwnerAccountNumber( ) )
         .relativeId(
-            "scope", Objects.firstNonNull( this.getScope( ), "global" ),
+            "scope", MoreObjects.firstNonNull( this.getScope( ), "global" ),
             "private-address", this.getDisplayName( ) );
   }
 
@@ -210,6 +246,7 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   protected void ensureTransaction() {
   }
 
+  @SuppressWarnings( { "unused", "WeakerAccess" } )
   @Upgrades.PreUpgrade( value = Eucalyptus.class, since = Upgrades.Version.v4_1_0 )
   public static class PrivateAddressPreUpgrade41 implements Callable<Boolean> {
     private static final Logger logger = Logger.getLogger( PrivateAddressPreUpgrade41.class );
@@ -228,6 +265,53 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
         if ( sql != null ) {
           sql.close( );
         }
+      }
+    }
+  }
+
+  @SuppressWarnings( { "unused", "WeakerAccess" } )
+  @Upgrades.EntityUpgrade( entities = PrivateAddress.class, since = Upgrades.Version.v4_3_0, value = Eucalyptus.class )
+  public enum PrivateAddressEntityUpgrade43 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( PrivateAddress.PrivateAddressEntityUpgrade43.class );
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      updatePrivateAddressOwnership( );
+      return true;
+    }
+
+    /**
+     * Update private addresses owned by instances to be owned by the primary network interface instead
+     */
+    private void updatePrivateAddressOwnership( ) {
+      try ( final TransactionResource tx = Entities.transactionFor( PrivateAddress.class ) ) {
+        final List<PrivateAddress> addresses = Entities.criteriaQuery( PrivateAddress.class )
+            .join( PrivateAddress_.instance )
+            .join( VmInstance_.networkConfig )
+            .join( VmNetworkConfig_.networkInterfaces )
+            .join( NetworkInterface_.attachment )
+            .whereEqual( NetworkInterfaceAttachment_.deviceIndex, 0 )
+            .list( );
+
+        for ( final PrivateAddress address : addresses ) {
+          final PrivateAddressReferrer referrer = address.getReference( );
+          if ( referrer instanceof VmInstance ) {
+            final VmInstance instance = (VmInstance) referrer;
+            final NetworkInterface networkInterface = Iterables.get( instance.getNetworkInterfaces( ), 0, null );
+            if ( networkInterface != null ) {
+              LOG.info( "Updating private ip " + address.getDisplayName( ) + " owner from " +
+                  instance.getDisplayName( ) + " to " + networkInterface.getDisplayName( ) );
+              try {
+                address.reclaim( networkInterface );
+              } catch ( final ResourceAllocationException e ) {
+                LOG.error( "Error changing owner for private ip " + address.getDisplayName( ), e );
+              }
+            }
+          }
+        }
+
+        tx.commit( );
       }
     }
   }

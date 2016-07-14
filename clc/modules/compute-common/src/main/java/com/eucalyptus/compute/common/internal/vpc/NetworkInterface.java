@@ -47,6 +47,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -70,7 +71,7 @@ import com.google.common.collect.Sets;
     @Index( name = "metadata_network_interfaces_display_name_idx", columnList = "metadata_display_name" ),
     @Index( name = "metadata_network_interfaces_instance_idx", columnList = "metadata_instance_id" ),
 }  )
-public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata {
+public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata, PrivateAddressReferrer {
 
   private static final long serialVersionUID = 1L;
 
@@ -280,8 +281,8 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
   private Collection<NetworkInterfaceTag> tags;
 
   @Override
-  public String getPartition() {
-    return "eucalyptus";
+  public String getPartition( ) {
+    return availabilityZone;
   }
 
   @Override

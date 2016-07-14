@@ -24,6 +24,7 @@ import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
 import com.eucalyptus.util.Pair
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.compute.common.internal.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
 import com.google.common.base.Function
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
@@ -78,6 +79,13 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   }
 
   @Override
+  void associate( String address, VpcNetworkInterface networkInterface ) throws ResourceAllocationException {
+    getPersistence( ).withFirstMatch( PrivateAddress.named( networkInterface.getVpc( ).getDisplayName( ), address ), null ) { PrivateAddress privateAddress ->
+      privateAddress.set( networkInterface )
+    }
+  }
+
+  @Override
   String release( String scope, String address, String ownerId ) {
     boolean torndown = false
     String tag = getDistinctPersistence( ).withFirstMatch( PrivateAddress.named( scope, address ), ownerId ) { PrivateAddress privateAddress ->
@@ -97,7 +105,7 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   @Override
   boolean verify( String scope, String address, String ownerId ) {
     getPersistence( ).withFirstMatch( PrivateAddress.named( scope, address ), ownerId ) { PrivateAddress privateAddress ->
-      ownerId != null && ownerId == privateAddress.instanceId
+      ownerId != null && ownerId == privateAddress.ownerId
     }.with{
       present ? get( ) : false
     }

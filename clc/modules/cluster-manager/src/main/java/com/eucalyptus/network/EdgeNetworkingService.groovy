@@ -120,11 +120,11 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           }
           break
         case PrivateIPResource:
-          releasePrivateIp( request.vpc, networkResource.value, networkResource.ownerId, networkResource.ownerId )
+          releasePrivateIp( request.vpc, networkResource.value, networkResource.ownerId )
           break
         case VpcNetworkInterfaceResource:
           String ip = ((VpcNetworkInterfaceResource)networkResource).privateIp
-          releasePrivateIp( request.vpc, ip, networkResource.ownerId, networkResource.value )
+          releasePrivateIp( request.vpc, ip, networkResource.value )
           break
       }
     }
@@ -169,7 +169,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
           vpcNetworkInterfaceResource.vpc ?: request.vpc,
           vpcNetworkInterfaceResource.subnet ?: request.subnet,
           new PrivateIPResource(
-            ownerId: vpcNetworkInterfaceResource.ownerId,
+            ownerId: vpcNetworkInterfaceResource.value,
             value: vpcNetworkInterfaceResource.privateIp
           )
       ).getAt( 0 )?.with{
@@ -259,15 +259,14 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
 
   private void releasePrivateIp( final String vpcId,
                                  final String ip,
-                                 final String ownerId,
-                                 final String relatedResource ) {
+                                 final String ownerId ) {
     try {
       String tag = PrivateAddresses.release( vpcId, ip, ownerId )
       if ( Strings.startsWith( 'subnet-' ).apply( tag ) ) {
         updateFreeAddressesForSubnet( tag )
       }
     } catch ( e ) {
-      logger.error( "Error releasing private IP address ${ip} for ${relatedResource}", e )
+      logger.error( "Error releasing private IP address ${ip} for ${ownerId}", e )
     }
   }
 

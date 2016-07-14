@@ -22,6 +22,7 @@ package com.eucalyptus.network
 import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
 import com.eucalyptus.compute.common.internal.vm.VmInstance
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterface as VpcNetworkInterface
 import com.google.common.base.Function
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
@@ -71,6 +72,10 @@ class PrivateAddresses {
 
   static void associate( String address, VmInstance instance ) throws ResourceAllocationException {
     allocator.associate( address, instance )
+  }
+
+  static void associate( String address, VpcNetworkInterface networkInterface ) throws ResourceAllocationException {
+    allocator.associate( address, networkInterface )
   }
 
   /**

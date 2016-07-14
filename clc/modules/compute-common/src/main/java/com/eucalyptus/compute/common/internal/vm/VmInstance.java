@@ -111,6 +111,7 @@ import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.compute.common.internal.images.Images;
+import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
@@ -178,7 +179,7 @@ import com.google.common.collect.Sets;
     @Index( name = "metadata_vm_private_address_idx", columnList = "metadata_vm_private_address" ),
     @Index( name = "metadata_vm_public_address_idx", columnList = "metadata_vm_public_address" ),
 } )
-public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata {
+public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetadata, PrivateAddressReferrer {
   private static final long    serialVersionUID = 1L;
   private static final Logger  LOG              = Logger.getLogger( VmInstance.class );
 

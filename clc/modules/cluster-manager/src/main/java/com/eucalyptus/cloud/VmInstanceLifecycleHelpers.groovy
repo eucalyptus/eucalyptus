@@ -413,7 +413,9 @@ class VmInstanceLifecycleHelpers {
         builder.onBuild({ VmInstance instance ->
           instance.updateMacAddress( resource.mac )
           VmInstances.updatePrivateAddress( instance, resource.value )
-          PrivateAddresses.associate( resource.value, instance )
+          if ( !instance.vpcId ) {
+            PrivateAddresses.associate( resource.value, instance )
+          }
         } as Callback<VmInstance>)
       }
     }
@@ -443,7 +445,9 @@ class VmInstanceLifecycleHelpers {
       resource?.with{
         instance.updateMacAddress( resource.mac )
         VmInstances.updatePrivateAddress( instance, resource.value )
-        PrivateAddresses.associate( resource.value, instance )
+        if ( !instance.vpcId ) {
+          PrivateAddresses.associate( resource.value, instance )
+        }
       }
     }
 
@@ -1215,7 +1219,6 @@ class VmInstanceLifecycleHelpers {
           final VpcNetworkInterfaceResource resource = resources.find{ NetworkResource networkResource ->
             networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device == 0
           } as VpcNetworkInterfaceResource
-          if ( resource.privateIp!=null ) PrivateAddresses.associate( resource.privateIp, instance )
           VpcNetworkInterface networkInterface = resource.mac == null ?
               RestrictedTypes.resolver( VpcNetworkInterface ).apply( resource.value ) :
               networkInterfaces.save( VpcNetworkInterface.create(
@@ -1233,6 +1236,9 @@ class VmInstanceLifecycleHelpers {
                       null as String,
                   firstNonNull( resource.description, "" )
               ) )
+          if ( resource.privateIp != null ) {
+            PrivateAddresses.associate( resource.privateIp, networkInterface )
+          }
           instance.updateMacAddress( networkInterface.macAddress )
           VmInstances.updatePrivateAddress( instance, networkInterface.privateIpAddress )
           resource.privateIp = networkInterface.privateIpAddress
@@ -1270,9 +1276,6 @@ class VmInstanceLifecycleHelpers {
               { VpcNetworkInterfaceResource networkInterfaceResource -> networkInterfaceResource.device }
           )
           secondaryResources.each { VpcNetworkInterfaceResource secondaryResource ->
-            if ( secondaryResource.privateIp ) {
-              PrivateAddresses.associate( secondaryResource.privateIp, instance )
-            }
             final Subnet subnet = secondaryResource.subnet == null ?
                 null :
                 RestrictedTypes.resolver( Subnet ).apply( secondaryResource.subnet )
@@ -1293,6 +1296,9 @@ class VmInstanceLifecycleHelpers {
                         null as String,
                     firstNonNull( secondaryResource.description, "" )
                 ) )
+            if ( secondaryResource.privateIp ) {
+              PrivateAddresses.associate( secondaryResource.privateIp, secondaryNetworkInterface )
+            }
             secondaryResource.privateIp = secondaryNetworkInterface.privateIpAddress
             secondaryResource.mac = secondaryNetworkInterface.macAddress
             secondaryNetworkInterface.attach( NetworkInterfaceAttachment.create(
