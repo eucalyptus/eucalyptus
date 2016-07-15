@@ -1438,24 +1438,24 @@ public class ListOpenIdConnectProvidersResult extends EucalyptusData {
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETOPENIDCONNECTPROVIDER )
-public class GetOpenIdConnectProvidersType extends EuareMessage implements EuareMessageWithDelegate {
+public class GetOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
   String delegateAccount;
   String openIDConnectProviderArn = "";
-  public GetOpenIdConnectProvidersType() {  }
+  public GetOpenIdConnectProviderType() {  }
 }
 
-public class GetOpenIdConnectProvidersResponseType extends EuareMessage {
-  GetOpenIdConnectProvidersResult getOpenIdConnectProvidersResult = new GetOpenIdConnectProvidersResult();
+public class GetOpenIdConnectProviderResponseType extends EuareMessage {
+  GetOpenIdConnectProviderResult getOpenIdConnectProviderResult = new GetOpenIdConnectProviderResult();
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
-  public GetOpenIdConnectProvidersResponseType() {  }
+  public GetOpenIdConnectProviderResponseType() {  }
 }
 
-public class GetOpenIdConnectProvidersResult extends EucalyptusData {
+public class GetOpenIdConnectProviderResult extends EucalyptusData {
   ArrayList<String> clientIdList;
   Date createDate;
   ArrayList<String> thumbprintList;
   String url;
-  public GetOpenIdConnectProvidersResult() {  }
+  public GetOpenIdConnectProviderResult() {  }
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER )

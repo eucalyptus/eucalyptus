@@ -253,7 +253,7 @@ public class AssumeRoleWithWebIdentityType extends TokenMessage {
 
 public class AssumeRoleWithWebIdentityResponseType extends TokenMessage {
   public AssumeRoleWithWebIdentityResponseType() {  }
-  AssumeRoleWithWebIdentityResultType assumeRoleResult = new AssumeRoleWithWebIdentityResultType();
+  AssumeRoleWithWebIdentityResultType assumeRoleWithWebIdentityResult = new AssumeRoleWithWebIdentityResultType();
   TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType();
 }
 
