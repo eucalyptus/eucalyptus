@@ -55,6 +55,7 @@
         <value name="Timestamp" field="timeStamp" usage="optional"/>
         <value name="Bucket" field="bucket" usage="optional"/>
         <value name="Key" field="key" usage="optional"/>
+        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping
@@ -209,7 +210,6 @@
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
-        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping
@@ -227,7 +227,6 @@
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
-        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="SetObjectAccessControlPolicyTypeResponse"
@@ -405,7 +404,6 @@
                 usage="optional"/>
         <value name="DeleteAfterGet" field="deleteAfterGet" usage="optional"/>
         <value name="GetTorrent" field="getTorrent" usage="optional"/>
-        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="GetObjectResponse"
@@ -430,7 +428,6 @@
         <value name="IfMatch" field="ifMatch"/>
         <value name="IfNoneMatch" field="ifNoneMatch"/>
         <value name="ReturnCompleteObjectOnConditionFailure" field="returnCompleteObjectOnConditionFailure"/>
-        <value name="VersionId" field="versionId" usage="optional"/>
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
@@ -451,7 +448,6 @@
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
-        <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
     <mapping name="HeadObjectResponse"
@@ -488,7 +484,6 @@
         <structure
                 map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
                 usage="optional"/>
-        <value name="versionId" field="versionId"/>
     </mapping>
 
     <mapping name="DeleteVersionResponse"
