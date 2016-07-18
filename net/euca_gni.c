@@ -2566,7 +2566,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
     rc += evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
         LOGTRACE("Found %d managed subnets\n", nodeset.nodeNr);
-        gni->managedSubnet = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_subnet));
+        gni->managedSubnet = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_managedsubnet));
         gni->max_managedSubnets = nodeset.nodeNr;
 
         for (j = 0; j < gni->max_managedSubnets; j++) {
