@@ -1779,6 +1779,13 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
         do_outstructs = 1;
     }
 
+    if (out_max_instance_names) {
+        *out_max_instance_names = 0;
+    }
+    if (out_max_instances) {
+        *out_max_instances = 0;
+    }
+
     if (!do_outnames && !do_outstructs) {
         LOGEXTREME("nothing to do, both output variables are NULL\n");
         return (0);
@@ -1789,12 +1796,10 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
     }
     if (do_outnames) {
         *out_instance_names = EUCA_ZALLOC_C(secgroup->max_instances, sizeof (char *));
-        *out_max_instance_names = 0;
         ret_instance_names = *out_instance_names;
     }
     if (do_outstructs) {
         *out_instances = EUCA_ZALLOC_C(secgroup->max_instances, sizeof (gni_instance));
-        *out_max_instances = 0;
         ret_instances = *out_instances;
     }
 
