@@ -510,10 +510,10 @@ char *find_local_iqn(void){
             if (tmp)
                 *tmp = '\0';
         }
-        EUCA_FREE(ptr);
+        ptr = NULL;
     }
 
-    return strdup(iqn);
+    return iqn;
 }
 //!
 //! Prints the command help to stderr
