@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -155,6 +155,7 @@ class NetworkInfoBroadcasterTest {
         }
       },
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+      { [ ] } as Supplier<List<Cluster>>,
       { '1.1.1.1' } as Supplier<String>,
       { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
       [] as Set<String>,
@@ -274,6 +275,7 @@ class NetworkInfoBroadcasterTest {
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
         [] as Set<String>,
@@ -496,6 +498,7 @@ class NetworkInfoBroadcasterTest {
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
         [] as Set<String>,
@@ -655,7 +658,8 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
-        { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { [ ] } as Supplier<List<Cluster>>,
+        { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]), cluster('cluster1', '7.7.7.7', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
         [] as Set<String>,
@@ -805,6 +809,7 @@ class NetworkInfoBroadcasterTest {
           }
         },
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
         { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
         [] as Set<String>,
