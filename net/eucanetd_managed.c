@@ -1090,8 +1090,8 @@ boolean managed_has_sg_changed(globalNetworkInfo * pGni, lni_t * pLni) {
             ret |= ((ipt_chain_find_rule(pLni->pIpTables, IPT_TABLE_FILTER, IPT_CHAIN_FORWARD, sRule) == NULL) ? 1 : 0);
 
             // then check the group specific IPT rules (temporary one here)
-            if (pSecGroup->max_grouprules) {
-                for (j = 0; j < pSecGroup->max_grouprules; j++) {
+            if (pSecGroup->max_ingress_rules) {
+                for (j = 0; j < pSecGroup->max_ingress_rules; j++) {
                     // are we authorizing 1 group into another?
                     if (strlen(pSecGroup->ingress_rules[j].groupId) == 0) {
                         // This is CIDR-based rule
@@ -1623,8 +1623,8 @@ int managed_setup_sg_filters(globalNetworkInfo * pGni) {
             ipt_chain_add_rule(config->ipt, IPT_TABLE_FILTER, IPT_CHAIN_FORWARD, sRule);
 
             // then put all the group specific IPT rules (temporary one here)
-            if (pSecGroup->max_grouprules) {
-                for (j = 0; j < pSecGroup->max_grouprules; j++) {
+            if (pSecGroup->max_ingress_rules) {
+                for (j = 0; j < pSecGroup->max_ingress_rules; j++) {
                     // are we authorizing 1 group into another?
                     if (strlen(pSecGroup->ingress_rules[j].groupId) == 0) {
                         // This is CIDR-based rule
