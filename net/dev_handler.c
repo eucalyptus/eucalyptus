@@ -1223,6 +1223,10 @@ dev_entry *dev_create_bridge(const char *psBridgeName, const char *psStpState)
     if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "sethello", psBridgeName, "2", NULL) != EUCA_OK) {
         LOGERROR("Fail to set hello time on bridge device '%s'. error=%d\n", psBridgeName, rc);
     }
+    // RHEL7/CentOS7 - set bridge interface in promiscuous mode
+    if (euca_execlp(&rc, config->cmdprefix, "ip", "link", "set", "dev", psBridgeName, "promisc", "on", NULL) != EUCA_OK) {
+        LOGERROR("Fail to set bridge device '%s' in promisc. error=%d\n", psBridgeName, rc);
+    }
     // This must work since we know the device exists
     dev_get_bridges(psBridgeName, &pBridge, &nbBridges);
     return (pBridge);
