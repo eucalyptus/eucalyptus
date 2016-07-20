@@ -71,7 +71,7 @@ web_prop_dir	= ${TOP}/clc/modules/www/conf
 #
 # $ make CLOUD_LIBS_BRANCH=mylibsbranch
 #
-CLOUD_LIBS_BRANCH?=maint-4.1
+CLOUD_LIBS_BRANCH?=maint-4.3
 
 #
 # If this is set to anything but '0', we will completely
