@@ -226,7 +226,6 @@ int get_xpath_xml(const char *xml_path, const char *xpath, char *buf, int buf_le
 
     INIT();
 
-    LOGTRACE("searching for '%s' in '%s'\n", xpath, xml_path);
     pthread_mutex_lock(&xml_mutex);
     {
         if ((doc = xmlParseFile(xml_path)) != NULL) {
@@ -297,7 +296,6 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
 
     INIT();
 
-    fprintf(stderr, "searching for '%s' in '%s'\n", xpath, xml_path);
     pthread_mutex_lock(&xml_mutex);
     {
         if ((doc = xmlParseFile(xml_path)) != NULL) {
@@ -385,7 +383,6 @@ int loop_through_volumes(const char *xml_path, eucaVolume volumes[EUCA_MAX_VOLUM
 #define MKLIBVIRTVOLPATH(_suffix)   snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/libvirt/disk/%s", (i + 1), _suffix);
 #define XGET_STR_FREE(_XPATH, _dest)                                                 \
 {                                                                                    \
-    fprintf(stderr, "reading up to %lu of " #_dest " from %s\n", sizeof(_dest), xml_path);  \
     if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
         fprintf(stderr, "failed to read %s from %s\n", (_XPATH), xml_path);                 \
         for (int z = 0; res_array[z] != NULL; z++)                                   \
@@ -522,8 +519,8 @@ void usage(void)
 {
     fprintf(stderr, "usage: SCclient [command] [options]\n"
             "\tcommands:\t\t\trequired options:\n"
-            "\t\tConnectVolumes\t\t[-i]\n"
-            "\t\tDisconnectVolumes\t[-i]\n"
+            "\t\tConnectVolumes\t\t[-i] [str] [-s] [str]\n"
+            "\t\tDisconnectVolumes\t[-i] [str] [-s] [str]\n"
             "\toptions:\n"
             "\t\t-h \t\t- this help information\n"
             "\t\t-s [host:port] \t- SC endpoint\n"
@@ -567,6 +564,9 @@ int main(int argc, char **argv)
     char *instance_id = NULL;
     char *iqn = NULL;
     int ch = 0;
+
+    log_file_set(NULL, NULL);
+    log_params_set(EUCA_LOG_ALL, 0, 1);
 
     while ((ch = getopt(argc, argv, "hn:h:s:i:")) != -1) {
         switch (ch) {
@@ -633,7 +633,7 @@ int main(int argc, char **argv)
     printf("Found local iqn=%s and local ip=%s\n", iqn, ip);
 
     for(int i = 0; i < EUCA_MAX_VOLUMES; i++){
-        if(strlen(volumes[i].state) == 0) continue;
+        if(strlen(volumes[i].state) == 0 || strcmp(volumes[i].state, VOL_STATE_ATTACHED)) continue;
 
         printf("Performing operation on volume %d\nid=%s\ntoken=%s\ndevice=%s\nconnectionstring=%s\nbus=%s\nserial=%s\n", 
                i, volumes[i].id, volumes[i].attachment_token, volumes[i].device, volumes[i].connection_string, volumes[i].bus, volumes[i].serial);

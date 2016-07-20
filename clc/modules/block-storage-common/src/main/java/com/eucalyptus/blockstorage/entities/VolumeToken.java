@@ -285,18 +285,20 @@ public class VolumeToken extends AbstractPersistent {
             }
           }
 
-          Predicate<VolumeExportRecord> notActive = new Predicate<VolumeExportRecord>() {
-            @Override
-            public boolean apply(VolumeExportRecord record) {
-              return !record.getIsActive();
-            }
-          };
-
-          // If no records are active, then invalidate the token
-          if (Iterators.all(tokenEntity.getExportRecords().iterator(), notActive)) {
-            // Invalidate the token as well.
-            tok.setIsValid(Boolean.FALSE);
-          }
+          // Token represents the logical attachment state, export record represents actual state. This function is meant for modifying the export
+          // record. Commenting out the below code since it modifies the token
+          // Predicate<VolumeExportRecord> notActive = new Predicate<VolumeExportRecord>() {
+          // @Override
+          // public boolean apply(VolumeExportRecord record) {
+          // return !record.getIsActive();
+          // }
+          // };
+          //
+          // // If no records are active, then invalidate the token
+          // if (Iterators.all(tokenEntity.getExportRecords().iterator(), notActive)) {
+          // // Invalidate the token as well.
+          // tok.setIsValid(Boolean.FALSE);
+          // }
           Entities.flush(tokenEntity);
           return tokenEntity;
         } catch (Exception e) {
