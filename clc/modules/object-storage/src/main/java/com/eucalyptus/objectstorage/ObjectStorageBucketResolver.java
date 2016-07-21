@@ -29,9 +29,12 @@ import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
@@ -66,7 +69,7 @@ public class ObjectStorageBucketResolver extends DnsResolver {
       final List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress( );
       final List<Record> records = Lists.newArrayList( );
       records.addAll( osgIps.stream( )
-          .map( osgIp -> DomainNameRecords.addressRecord( name, osgIp ) )
+          .map( osgIp -> DomainNameRecords.addressRecord( name, maphost( request.getLocalAddress( ), osgIp ) ) )
           .collect( Collectors.toList( ) ) );
       return DnsResponse.forName( query.getName( ) ).answer( records );
     } catch( final Exception ex ) {
@@ -88,5 +91,13 @@ public class ObjectStorageBucketResolver extends DnsResolver {
         throw new EucalyptusCloudException("ObjectStorage not ENABLED");
       }
     }
+  }
+
+  private static InetAddress maphost( final InetAddress listenerAddress,
+                                      final InetAddress hostAddress ) {
+    return Hosts.maphost(
+        hostAddress,
+        listenerAddress,
+        Internets.getInterfaceCidr( listenerAddress ).or( Cidr.of( 0, 0 ) ) );
   }
 }
