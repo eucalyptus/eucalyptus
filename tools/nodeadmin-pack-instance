@@ -32,7 +32,6 @@ import os.path
 import stat
 import signal
 import shutil
-import socket
 
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
@@ -108,10 +107,6 @@ def _time_out(func, args=(), kwargs={}, timeout_duration=1, default=None):
 def _parse_args():
     parser = argparse.ArgumentParser(description="Pack an instance from libvirt and "
                                      "place artifacts in an packed file",
-                                     epilog="The following environment variables must be established as well:\n"
-                                     "EUCALYPTUS=/\n"
-                                     "AXIS2C_HOME=/usr/lib64/axis2c\n"
-                                     "LD_LIBRARY_PATH=$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart\n",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
 
     group_i = parser.add_mutually_exclusive_group(required=True)
@@ -123,7 +118,7 @@ def _parse_args():
 
     parser.add_argument("-o", "--output-directory",
                         help="location to store resulting packed file(s)",
-                        default=".")
+                        required=True)
     parser.add_argument("--shutdown",
                         help="shutdown the instance first instead of suspend",
                         action="store_true")
@@ -133,9 +128,6 @@ def _parse_args():
     parser.add_argument("--no-compression",
                         help="skip compression during packing operation",
                         action="store_true")
-    parser.add_argument("--sc-host-port",
-                        help="the host and port of the storage controller",
-                        required=True)
 
     args = parser.parse_args()
     loglevel = logging.INFO
@@ -198,17 +190,6 @@ def _lookup_domain(conn, instance_name):
                                  instance_name)
 
     return domain
-
-
-def _disconnect_volumes(instance_id, sc_host_port):
-    scclient_args = [
-        "DisconnectVolumes", "-s", sc_host_port, "-i", instance_id]
-    scclient_cmd = [_NODEADMIN_VOLUME] + scclient_args
-
-    rc = check_call(scclient_cmd)
-    if rc:
-        raise NodeAdminPackError(
-            "Failed to unexport volume with args %s (%d)", ",".join(scclient_args))
 
 
 def _modify_libvirt_xml(instance_path):
@@ -362,7 +343,8 @@ def _gather_files(instance_name, instance_path):
             os.path.dirname(new_link[1]), "%s%s" % (new_link[0], _BLOCK_SAVE))
 
         if not os.path.exists(block_save_file):
-            logging.debug("Skipping linking %s as there is no associated %s file", new_link[1], block_save_file)
+            logging.debug("Skipping linking %s as there is no associated %s file", new_link[
+                          1], block_save_file)
             continue
 
         os.rename(new_link[1], "%s.orig" % new_link[1])
@@ -404,7 +386,7 @@ def pack_instance(instance, output_file, shutdown, skip_compression, sc_host_por
     _modify_libvirt_xml(instance_tuple[1])
     _create_tar(tar_files, output_file, skip_compression)
 
-    _disconnect_volumes(instance_tuple[0], sc_host_port)
+    # _disconnect_volumes(instance_tuple[0], sc_host_port)
 
     return 0
 
@@ -433,31 +415,6 @@ def _place_stop_delete_file():
              stat.S_IXGRP | stat.S_IRGRP | stat.S_IROTH | stat.S_IXOTH)
 
 
-def _check_for_axisc_environment():
-    env_eucalyptus = len(os.getenv("EUCALYPTUS") or "") > 0
-    env_axis2c_home = len(os.getenv("AXIS2C_HOME") or "") > 0
-    env_ld_library_path = len(os.getenv("LD_LIBRARY_PATH") or "") > 0
-    return (env_eucalyptus and env_axis2c_home and env_ld_library_path)
-
-
-def _test_sc_connection(sc_host_port):
-    s = socket.socket()
-    if sc_host_port.find(":") != -1:
-        try:
-            address = sc_host_port.split(":")[0]
-            port = int(sc_host_port.split(":")[1].strip())
-            s.connect((address, port))
-        except Exception as e:
-            raise NodeAdminPackError(
-                "something's wrong with %s:%d. Exception is %s" % (address, port, e))
-        finally:
-            s.close()
-        return
-
-    raise NodeAdminPackError(
-        "Please check %s for the correct host and port of the storage controller.\n", sc_host_port)
-
-
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -468,14 +425,10 @@ def _main(args, log_level):
             "Node controller service is running. Please stop this service before continuing.")
         return 1
 
-    if not _check_for_axisc_environment():
-        logging.error(
-            "Missing environment variables $EUCALYPTUS, $AXIS2C_HOME and LD_LIBRARY_PATH")
-        return 1
-
-    _test_sc_connection(args.sc_host_port)
-
     _place_stop_delete_file()
+
+    if not os.path.exists(args.output_directory):
+        os.makedirs(args.output_directory)
 
     if args.all:
         logging.info("packing all instances")
