@@ -386,8 +386,6 @@ def pack_instance(instance, output_file, shutdown, skip_compression, sc_host_por
     _modify_libvirt_xml(instance_tuple[1])
     _create_tar(tar_files, output_file, skip_compression)
 
-    # _disconnect_volumes(instance_tuple[0], sc_host_port)
-
     return 0
 
 
