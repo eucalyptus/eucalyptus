@@ -317,6 +317,7 @@ public class PolicySpec {
   public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
   public static final String STS_DECODEAUTHORIZATIONMESSAGE = "decodeauthorizationmessage";
   public static final String STS_GETACCESSTOKEN = "getaccesstoken"; // eucalyptus extension
+  public static final String STS_GETCALLERIDENTITY = "getcalleridentity";
   public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
   public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";

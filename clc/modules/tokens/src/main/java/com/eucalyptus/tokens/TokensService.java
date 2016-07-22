@@ -63,6 +63,7 @@ import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
@@ -93,10 +95,36 @@ import org.apache.log4j.Logger;
 /**
  * Service component for temporary access tokens
  */
-@SuppressWarnings( "UnusedDeclaration" )
+@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed
 public class TokensService {
   private static final Logger LOG = Logger.getLogger( TokensService.class );
+
+  public GetCallerIdentityResponseType getCallerIdentity(
+      final GetCallerIdentityType request
+  ) throws EucalyptusCloudException {
+    final GetCallerIdentityResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final UserPrincipal user = ctx.getUser( );
+    final String arn;
+    final String userId;
+    final String account = ctx.getAccountNumber( );
+    try {
+      final Optional<RoleSecurityTokenAttributes> roleAttributes = RoleSecurityTokenAttributes.forUser( user );
+      if ( roleAttributes.isPresent( ) ) {
+        arn = "arn:aws:sts::"+account+":assumed-role/" + roleAttributes.get( ).getSessionName( );
+        userId = user.getAuthenticatedId( ) + ":" + roleAttributes.get( ).getSessionName( );
+      } else {
+        arn = Accounts.getUserArn( user );
+        userId = user.getUserId( );
+      }
+    } catch ( final AuthException e ) {
+      throw new EucalyptusCloudException( e.getMessage( ), e );
+    }
+    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+    reply.setResult( new GetCallerIdentityResultType( arn, userId, account ) );
+    return reply;
+  }
 
   public GetSessionTokenResponseType getSessionToken( final GetSessionTokenType request ) throws EucalyptusCloudException {
     final GetSessionTokenResponseType reply = request.getReply();
