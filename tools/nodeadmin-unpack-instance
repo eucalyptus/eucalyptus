@@ -30,6 +30,7 @@ import logging
 import os
 import os.path
 import signal
+import socket
 
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
@@ -270,6 +271,24 @@ def _check_for_axisc_environment():
     return (env_eucalyptus and env_axis2c_home and env_ld_library_path)
 
 
+def _test_sc_connection(sc_host_port):
+    s = socket.socket()
+    if sc_host_port.find(":") != -1:
+        try:
+            address = sc_host_port.split(":")[0]
+            port = int(sc_host_port.split(":")[1].strip())
+            s.connect((address, port))
+        except Exception as e:
+            raise NodeAdminUnpackError(
+                "something's wrong with %s:%d. Exception is %s" % (address, port, e))
+        finally:
+            s.close()
+        return
+
+    raise NodeAdminUnpackError(
+        "Please check %s for the correct host and port of the storage controller.\n", sc_host_port)
+
+
 def main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -283,6 +302,8 @@ def main(args, log_level):
         logging.error(
             "Missing environment variables $EUCALYPTUS, $AXIS2C_HOME and LD_LIBRARY_PATH")
         return 1
+
+    _test_sc_connection(args.sc_host_port)
 
     logging.info("unpack on %s", args.packed_file)
 

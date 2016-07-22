@@ -32,6 +32,7 @@ import os.path
 import stat
 import signal
 import shutil
+import socket
 
 from subprocess import check_call, Popen, PIPE
 from ConfigParser import ConfigParser
@@ -437,6 +438,24 @@ def _check_for_axisc_environment():
     return (env_eucalyptus and env_axis2c_home and env_ld_library_path)
 
 
+def _test_sc_connection(sc_host_port):
+    s = socket.socket()
+    if sc_host_port.find(":") != -1:
+        try:
+            address = sc_host_port.split(":")[0]
+            port = int(sc_host_port.split(":")[1].strip())
+            s.connect((address, port))
+        except Exception as e:
+            raise NodeAdminPackError(
+                "something's wrong with %s:%d. Exception is %s" % (address, port, e))
+        finally:
+            s.close()
+        return
+
+    raise NodeAdminPackError(
+        "Please check %s for the correct host and port of the storage controller.\n", sc_host_port)
+
+
 def _main(args, log_level):
     logging.basicConfig(format="%(levelname)s: %(message)s", level=log_level)
     logging.debug("Your Arguments: %s", args)
@@ -452,12 +471,14 @@ def _main(args, log_level):
             "Missing environment variables $EUCALYPTUS, $AXIS2C_HOME and LD_LIBRARY_PATH")
         return 1
 
+    _test_sc_connection(args.sc_host_port)
+
     _place_stop_delete_file()
 
     if args.all:
-        logging.debug("packing all instances")
+        logging.info("packing all instances")
         for instance in _list_instances():
-            logging.debug("packing instance %s", instance)
+            logging.info("packing instance %s", instance)
             output_file = os.path.join(
                 args.output_directory, instance + _PACK_TAR)
             rc = pack_instance(
@@ -469,7 +490,7 @@ def _main(args, log_level):
                 logging.info(
                     "Packed instance %s located at %s", instance, output_file)
     else:
-        logging.debug("packing instance %s", args.instance)
+        logging.info("packing instance %s", args.instance)
         output_file = os.path.join(
             args.output_directory, args.instance + _PACK_TAR)
         rc = pack_instance(
