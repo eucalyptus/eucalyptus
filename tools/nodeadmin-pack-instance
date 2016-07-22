@@ -358,15 +358,17 @@ def _gather_files(instance_name, instance_path):
                  for link_file in link_files]
 
     for new_link in new_links:
+        block_save_file = os.path.join(
+            os.path.dirname(new_link[1]), "%s%s" % (new_link[0], _BLOCK_SAVE))
+
+        if not os.path.exists(block_save_file):
+            logging.debug("Skipping linking %s as there is no associated %s file", new_link[1], block_save_file)
+            continue
+
         os.rename(new_link[1], "%s.orig" % new_link[1])
-        os.symlink(os.path.join(os.path.dirname(new_link[1]), "%s%s" %
-                                (new_link[0], _BLOCK_SAVE)), new_link[1])
+        os.symlink(block_save_file, new_link[1])
 
-    target_files = [os.path.join(instance_path, file) for file in os.listdir(instance_path)
-                    if os.path.splitext(file)[1] not in
-                    [".dm", ".deps", ".sig", ".lock", ".loopback"]]
-
-    return target_files
+    return glob("%s/*" % instance_path)
 
 
 def pack_instance(instance, output_file, shutdown, skip_compression, sc_host_port):
