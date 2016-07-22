@@ -274,9 +274,9 @@ def _check_for_axisc_environment():
 def _test_sc_connection(sc_host_port):
     s = socket.socket()
     if sc_host_port.find(":") != -1:
-        address = sc_host_port.split(":")[0]
-        port = int(sc_host_port.split(":")[1].strip())
         try:
+            address = sc_host_port.split(":")[0]
+            port = int(sc_host_port.split(":")[1].strip())
             s.connect((address, port))
         except Exception as e:
             raise NodeAdminUnpackError(
