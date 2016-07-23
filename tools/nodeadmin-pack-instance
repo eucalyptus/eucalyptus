@@ -340,7 +340,7 @@ def _gather_files(instance_name, instance_path):
 
     for new_link in new_links:
         block_save_file = os.path.join(
-            os.path.dirname(new_link[1]), "%s%s" % (new_link[0], _BLOCK_SAVE))
+            os.path.dirname(new_link[1]), "%s%s" % (os.path.splitext(new_link[0])[0], _BLOCK_SAVE))
 
         if not os.path.exists(block_save_file):
             logging.debug("Skipping linking %s as there is no associated %s file", new_link[
@@ -353,7 +353,7 @@ def _gather_files(instance_name, instance_path):
     return glob("%s/*" % instance_path)
 
 
-def pack_instance(instance, output_file, shutdown, skip_compression, sc_host_port):
+def pack_instance(instance, output_file, shutdown, skip_compression):
     logging.debug("attempting to pack instance %s", instance)
     instance_tuple = None
 
@@ -435,7 +435,7 @@ def _main(args, log_level):
             output_file = os.path.join(
                 args.output_directory, instance + _PACK_TAR)
             rc = pack_instance(
-                instance, output_file, args.shutdown, args.no_compression, args.sc_host_port)
+                instance, output_file, args.shutdown, args.no_compression)
             if rc:
                 logging.warn(
                     "Failed packing instance %s (%d)", instance, rc)
@@ -447,7 +447,7 @@ def _main(args, log_level):
         output_file = os.path.join(
             args.output_directory, args.instance + _PACK_TAR)
         rc = pack_instance(
-            args.instance, output_file, args.shutdown, args.no_compression, args.sc_host_port)
+            args.instance, output_file, args.shutdown, args.no_compression)
 
         if rc:
             logging.warn(
