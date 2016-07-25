@@ -656,6 +656,8 @@ int main(int argc, char **argv)
 
             /***********************************************************/
         } else if (!strcmp(command, "DisconnectVolumes")) {
+            setup_iscsi(euca_home, configFile);
+
             if (disconnect_iscsi_target(volumes[i].connection_string, 0)) {
                 fprintf(stderr, "Error disconnecting ebs volume %s.\n", volumes[i].id);
                 exit(1);
