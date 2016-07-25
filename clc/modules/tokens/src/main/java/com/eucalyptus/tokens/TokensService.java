@@ -172,6 +172,71 @@ public class TokensService {
     return reply;
   }
 
+  public AssumeRoleWithWebIdentityResponseType assumeRoleWithWebIdentity( final AssumeRoleWithWebIdentityType request ) throws EucalyptusCloudException {
+    final AssumeRoleWithWebIdentityResponseType reply = request.getReply( );
+    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+
+    // Verify that access is not via a role or password credentials.
+    //
+    // It is not currently safe to allow access via a role (see EUCA-8416).
+    // Other forms of temporary credential are not forbidden by the pipeline at
+    // the time of authentication.
+    final Context ctx = Contexts.lookup( );
+    final Subject subject = ctx.getSubject( );
+    final Set<QueryIdCredential> queryIdCreds = subject == null ?
+        Collections.<QueryIdCredential>emptySet( ) :
+        subject.getPublicCredentials( QueryIdCredential.class );
+    if ( queryIdCreds.size( ) == 1 && 
+        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) && 
+        Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
+      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
+    }
+    rejectPasswordCredentials( );
+
+    final BaseRole role = lookupRole( request.getRoleArn( ) );
+
+    //TODO Should we fail if a policy is supplied? (since we ignore it)
+    try {
+      /* This code needs to change to look verify web identity
+      ExternalIdContext.doWithExternalId(
+          request.getExternalId(),
+          EucalyptusCloudException.class,
+          new Callable<BaseRole>() {
+            @Override
+            public BaseRole call() throws TokensException {
+              try {
+                return RestrictedTypes.doPrivilegedWithoutOwner(
+                    Accounts.getRoleFullName( role ),
+                    new RoleResolver( role ) );
+              } catch ( final AuthException e ) {
+                throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
+              }
+            }
+          } );
+      */
+
+      final SecurityToken token = SecurityTokenManager.issueSecurityToken(
+          role,
+          Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
+      reply.getAssumeRoleResult().setCredentials( new CredentialsType(
+          token.getAccessKeyId(),
+          token.getSecretKey(),
+          token.getToken(),
+          token.getExpires()
+      ) );
+      reply.getAssumeRoleResult().setAssumedRoleUser( new AssumedRoleUserType(
+          role.getRoleId() + ":" + request.getRoleSessionName(),
+          assumedRoleArn( role, request.getRoleSessionName() )
+      ) );
+    } catch ( final SecurityTokenValidationException e ) {
+      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+    } catch ( final AuthException e ) {
+      throw new EucalyptusCloudException( e.getMessage(), e );
+    }
+
+    return reply;
+  }
+
   public GetAccessTokenResponseType getAccessToken( final GetAccessTokenType request ) throws EucalyptusCloudException {
     final GetAccessTokenResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );

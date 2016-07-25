@@ -83,6 +83,7 @@ import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.OpenIdConnectProvider;
 import com.eucalyptus.auth.euare.ServerCertificates;
 import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
@@ -93,6 +94,7 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
@@ -101,6 +103,7 @@ import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
@@ -799,4 +802,74 @@ public class DatabaseAccountProxy implements EuareAccount {
       throw ex;
     }
   }
+
+  @Override
+  public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException {
+    if(! OpenIdConnectProvider.isUrlValid(url))
+      throw new AuthException(AuthException.INVALID_OPENID_PROVIDER_URL);
+    try{
+      final EuareOpenIdConnectProvider found = lookupOpenIdConnectProvider(url);
+      if(found!=null)
+        throw new AuthException(AuthException.OPENID_PROVIDER_ALREADY_EXISTS);
+      return found;
+    }catch(final NoSuchElementException ex){
+      ;
+    }catch(final AuthException ex){
+      if(! AuthException.OPENID_PROVIDER_NO_SUCH_ENTITY.equals(ex.getMessage()))
+        throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final OpenIdProviderEntity newOpenIdProvider = new OpenIdProviderEntity( url );
+      newOpenIdProvider.getClientIDs().addAll( clientIDList );
+      newOpenIdProvider.getThumbprints().addAll( thumbprintList );
+      final OpenIdProviderEntity persistedOpenIdProvider = Entities.persist( newOpenIdProvider );
+      db.commit( );
+      return new DatabaseOpenIdProviderProxy( persistedOpenIdProvider );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add openid connect provider: " + url + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.OPENID_PROVIDER_CREATE_FAILURE, e );
+    }
+  }
+
+  public EuareOpenIdConnectProvider lookupOpenIdConnectProvider(final String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity openidproviderEntity = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      return new DatabaseOpenIdProviderProxy( openidproviderEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get openid provider " + url + " for " + accountName );
+      throw new AuthException( AuthException.OPENID_PROVIDER_NO_SUCH_ENTITY, e );
+    }
+  }
+
+  @Override
+  public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException {
+  }
+
+  @Override
+  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException {
+    return null;
+  }
+
+  @Override
+  public List<String> listOpenIdConnectProviders() throws AuthException {
+    return null;
+  }
+
+  @Override
+  public void addClientIdToOpenIdConnectProvider(String clientId, String arn) throws AuthException {
+  }
+
+  @Override
+  public void removeClientIdFromOpenIdConnectProvider(String clientId, String arn) throws AuthException {
+  }
+
+  @Override
+  public void updateOpenIdConnectProviderThumbprint(String arn, List<String> thumbprintList) throws AuthException {
+  }
+
 }

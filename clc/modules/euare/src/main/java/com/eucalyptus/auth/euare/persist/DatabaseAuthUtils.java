@@ -76,6 +76,8 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
@@ -231,6 +233,19 @@ public class DatabaseAuthUtils {
       policyEntities.remove( policy );
     }
     return policy;
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static OpenIdProviderEntity getUniqueOpenIdConnectProvider( String url, String accountName ) throws Exception {
+    try {
+      return Entities.criteriaQuery( OpenIdProviderEntity.class ).whereEqual( OpenIdProviderEntity_.url, url )
+        .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
+      throw new NoSuchElementException( "Can not find openid connect provider " + url + " in " + accountName );
+    }
   }
 
   /**
