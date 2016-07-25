@@ -656,18 +656,10 @@ int main(int argc, char **argv)
 
             /***********************************************************/
         } else if (!strcmp(command, "DisconnectVolumes")) {
-            CHECK_PARAM(ip, "ip");
-            CHECK_PARAM(iqn, "iqn");
-            CHECK_PARAM(sc_hostport, "sc host and port");
-
-            setup_iscsi(euca_home, configFile);
-            euca_init_cert();
-
-            if (disconnect_ebs_volume(sc_url, 1, policyFile, volumes[i].attachment_token, volumes[i].connection_string, ip, iqn) != EUCA_OK) {
+            if (disconnect_iscsi_target(volumes[i].connection_string, 0)) {
                 fprintf(stderr, "Error disconnecting ebs volume %s.\n", volumes[i].id);
                 exit(1);
             }
-
             /***********************************************************/
         } else {
             fprintf(stderr, "ERROR: command %s unknown (try -h)\n", command);
