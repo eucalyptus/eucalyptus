@@ -1454,10 +1454,10 @@ public class GetOpenIdConnectProviderResponseType extends EuareMessage {
 }
 
 public class GetOpenIdConnectProviderResult extends EucalyptusData {
-  ArrayList<String> clientIdList;
-  Date createDate;
-  ArrayList<String> thumbprintList;
   String url;
+  Date createDate;
+  ArrayList<String> clientIDList;
+  ArrayList<String> thumbprintList;
   public GetOpenIdConnectProviderResult() {  }
 }
 
@@ -1468,7 +1468,7 @@ public class AddClientIdToOpenIdConnectProviderType extends EuareMessage impleme
   String openIDConnectProviderArn;
   public AddClientIdToOpenIdConnectProviderType() {  }
 }
-public class AddClientidToOpenIdConnectProviderResponseType extends EuareMessage {
+public class AddClientIdToOpenIdConnectProviderResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public AddClientidToOpenIdConnectProviderResponseType() {  }
 }

@@ -218,13 +218,13 @@ public class TokensService {
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
           Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
-      reply.getAssumeRoleResult().setCredentials( new CredentialsType(
+      reply.getAssumeRoleWithWebIdentityResult().setCredentials( new CredentialsType(
           token.getAccessKeyId(),
           token.getSecretKey(),
           token.getToken(),
           token.getExpires()
       ) );
-      reply.getAssumeRoleResult().setAssumedRoleUser( new AssumedRoleUserType(
+      reply.getAssumeRoleWithWebIdentityResult().setAssumedRoleUser( new AssumedRoleUserType(
           role.getRoleId() + ":" + request.getRoleSessionName(),
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );

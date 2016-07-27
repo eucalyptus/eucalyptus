@@ -33,17 +33,9 @@ public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider, Euare
 
   void setUrl( String url ) throws AuthException;
 
-  Date getCreateDate( );
-
-  String getToken( );
-  void setToken( String token ) throws AuthException;
-  String resetToken( ) throws AuthException;
+  Date getCreationTimestamp();
 
   List<String> getThumbprints( ) throws AuthException;
-  void addThumbprint( String thumbprint );
-  void removeThumbprint( String thumbprint );
 
   List<String> getClientIds( ) throws AuthException;
-  void addClientId( String clientId );
-  void removeClientId( String clientId );
 }

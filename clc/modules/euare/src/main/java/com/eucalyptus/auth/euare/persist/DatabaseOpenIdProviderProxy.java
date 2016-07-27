@@ -65,6 +65,11 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   }
 
   @Override
+  public String getName() {
+    return this.delegate.getUrl();
+  }
+
+  @Override
   public String getDisplayName() {
     return this.delegate.getUrl();
   }
@@ -97,6 +102,21 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   @Override
   public String getUrl() {
     return this.delegate.getUrl();
+  }
+
+  @Override
+  public void setUrl( String url ) {
+    this.delegate.setUrl(url);
+  }
+
+  @Override
+  public List<String> getThumbprints() {
+    return this.delegate.getThumbprints();
+  }
+
+  @Override
+  public List<String> getClientIds() {
+    return this.delegate.getClientIDs();
   }
 
   @Override
