@@ -30,7 +30,7 @@
   <include path="classpath:ec2-base.xml" />
   <include path="classpath:ec2-instances-14-05-01.xml" />
   <include path="classpath:ec2-bundling.xml" />
-  <include path="classpath:ec2-images-13-02-01.xml" />
+  <include path="classpath:ec2-images-15-04-15.xml" />
   <include path="classpath:ec2-image-attr.xml" />
   <include path="classpath:ec2-import-13-10-15.xml" />
   <include path="classpath:ec2-export-12-05-01.xml" />

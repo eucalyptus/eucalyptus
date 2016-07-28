@@ -184,6 +184,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
 //      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
 //      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      i.setCreationDate( arg0.getCreationTimestamp( ) );
       return i;
     }
   }
@@ -210,6 +211,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
 //      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
 //      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      i.setCreationDate( arg0.getCreationTimestamp( ) );
       return i;
     }
   }
@@ -246,6 +248,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
 //      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
 //      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      i.setCreationDate( arg0.getCreationTimestamp( ) );
       return i;
     }
   }
@@ -284,6 +287,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
 //      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
+      i.setCreationDate( arg0.getCreationTimestamp( ) );
       return i;
     }
   }
