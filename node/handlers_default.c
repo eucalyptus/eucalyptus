@@ -736,39 +736,48 @@ int find_and_start_instance(char *psInstanceId)
             virDomainFree(dom);
 
             if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
-                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                int rc;
-                snprintf(iface, 16, "vn_%s", pInstance->instanceId);
+                bridge_instance_interfaces_remove(&nc_state, pInstance);
+/*
+                                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+                                int rc;
+                                snprintf(iface, 16, "vn_%s", pInstance->instanceId);
 
-                // If this device does not have a 'brport' path, this isn't a bridge device
-                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                if (!check_directory(sPath)) {
-                    LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
-                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
-                    rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                    if (rc) {
-                        LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
-                    }
-                }
+                                // If this device does not have a 'brport' path, this isn't a bridge device
+                                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+                                if (!check_directory(sPath)) {
+                                    LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
+                                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
+                                    rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                                    if (rc) {
+                                        LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
+                                    }
+                                }
 
-                // Repeat process for secondary interfaces as well
-                for (int i=0; i < EUCA_MAX_NICS; i++) {
-                   if (strlen(pInstance->secNetCfgs[i].interfaceId) == 0)
-                       continue;
+                                // Repeat process for secondary interfaces as well
+                                for (int i=0; i < EUCA_MAX_NICS; i++) {
+                                   if (strlen(pInstance->secNetCfgs[i].interfaceId) == 0)
+                                       continue;
 
-                   snprintf(iface, 16, "vn_%s", pInstance->secNetCfgs[i].interfaceId);
+                                   snprintf(iface, 16, "vn_%s", pInstance->secNetCfgs[i].interfaceId);
 
-                   // If this device does not have a 'brport' path, this isn't a bridge device
-                   snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                   if (!check_directory(sPath)) {
-                       LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
-                       snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
-                       rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                       if (rc) {
-                           LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
-                       }
-                   }
-                }
+                                   // If this device does not have a 'brport' path, this isn't a bridge device
+                                   snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+                                   if (!check_directory(sPath)) {
+                                       LOGDEBUG("[%s] removing instance interface %s from host bridge\n", pInstance->instanceId, iface);
+                                       snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, pInstance->params.guestNicDeviceName, iface);
+                                       rc = timeshell(cmd, obuf, ebuf, 256, 10);
+                                       if (rc) {
+                                           LOGERROR("[%s] unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n", SP(pInstance->instanceId));
+                                       }
+                                   }
+                                }
+                 */
+                // Fix for EUCA-12608
+                if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+                    char iface[16];
+                    snprintf(iface, 16, "vn_%s", pInstance->instanceId);
+                    bridge_interface_set_hairpin(&nc_state, pInstance, iface);
+                } 
             }
         }
         unlock_hypervisor_conn();
@@ -1697,10 +1706,13 @@ int attach_network_interface_instance(const ncInstance *pInstance, const char *i
             LOGTRACE("[%s][%s] attached network interface to guest, rc=%d\n", pInstance->instanceId, interfaceId, err);
 
             // remove the instance interface
-            char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+            //char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+            char iface[16];
 
             snprintf(iface, 16, "vn_%s", interfaceId);
+            bridge_interface_remove(&nc_state, pInstance, iface);
 
+/*
             // If this device does not have a 'brport' path, this isn't a bridge device
             snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
             if (!check_directory(sPath)) {
@@ -1711,6 +1723,7 @@ int attach_network_interface_instance(const ncInstance *pInstance, const char *i
                     LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
                 }
             }
+*/
 
             break;
         }

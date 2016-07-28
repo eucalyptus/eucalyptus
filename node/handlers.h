@@ -381,6 +381,9 @@ void set_serial_and_bus(const char *vol, const char *dev, char *serial, int seri
 int instance_network_gate(ncInstance *instance, time_t timeout_seconds);
 char *gettok(char *haystack, char *needle);
 int find_interface_changes(char *gni_path);
+int bridge_interface_remove(struct nc_state_t *nc, ncInstance *instance, char *iface);
+int bridge_instance_interfaces_remove(struct nc_state_t *nc, ncInstance *instance);
+int bridge_interface_set_hairpin(struct nc_state_t *nc, ncInstance *instance, char *iface);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

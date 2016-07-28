@@ -901,7 +901,7 @@ virConnectPtr lock_hypervisor_conn()
     pthread_t thread = { 0 };
     long long thread_par = 0L;
     boolean bail = FALSE;
-    boolean try_again = FALSE;
+    //boolean try_again = FALSE;
     struct timespec ts = { 0 };
     virConnectPtr tmp_conn = NULL;
 
@@ -1530,7 +1530,9 @@ void *monitoring_thread(void *arg)
             // query for current state, if any
             refresh_instance_info(nc, instance);
 
-            if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+            if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                bridge_instance_interfaces_remove(nc, instance);
+/*
                 char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
                 int rc;
                 snprintf(iface, 16, "vn_%s", instance->instanceId);
@@ -1566,8 +1568,15 @@ void *monitoring_thread(void *arg)
                         }
                     }
                 }
+*/
             }
-        
+
+            // Fix for EUCA-12608
+            if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
+                char iface[16];
+                snprintf(iface, 16, "vn_%s", instance->instanceId);
+                bridge_interface_set_hairpin(nc, instance, iface);
+            } 
 
             // time out logic for migration-ready instances
             if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
@@ -1915,6 +1924,8 @@ void *startup_thread(void *arg)
                     virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
 
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                        bridge_instance_interfaces_remove(&nc_state, instance);
+/*
                         char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
                         snprintf(iface, 16, "vn_%s", instance->instanceId);
 
@@ -1947,7 +1958,14 @@ void *startup_thread(void *arg)
                                 }
                             }
                         }
+*/
                     }
+                    // Fix for EUCA-12608
+                    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+                        char iface[16];
+                        snprintf(iface, 16, "vn_%s", instance->instanceId);
+                        bridge_interface_set_hairpin(&nc_state, instance, iface);
+                    } 
 
                     exit(0);
                 } else {
@@ -2554,7 +2572,7 @@ static int init(void)
     if (nc_state.config_max_cores) {
         nc_state.cores_max = nc_state.config_max_cores;
         if (nc_state.cores_max > nc_state.phy_max_cores)
-            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %d\n", nc_state.cores_max, nc_state.phy_max_cores);
+            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %lld\n", nc_state.cores_max, nc_state.phy_max_cores);
     } else {
         nc_state.cores_max = nc_state.phy_max_cores;
     }
@@ -4125,4 +4143,97 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
     
     LOGERROR("[%s] timed out waiting for instance network information to appear before booting instance\n", SP(instance->instanceId));
     return(1);
+}
+
+/**
+ * Removes instance NIC specified in the argument from bridge.
+ * @param nc [in] pointer to nc_state data structure.
+ * @param instance [in] pointer to ncInstance data structure of the instance of interest.
+ * @param iface [in] pointer to string with the interface name of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int bridge_interface_remove(struct nc_state_t *nc, ncInstance *instance, char *iface) {
+    char cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+    int rc = 0;
+
+    if (!nc || !instance || !iface) {
+        LOGWARN("Invalid argument: cannot remove NULL bridge interface.\n");
+        return (1);
+    }
+    LOGTRACE("checking if VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+
+    // If this device does not have a 'brport' path, this isn't a bridge device
+    snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
+    if (!check_directory(sPath)) {
+        LOGTRACE("VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+        snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+        rc = timeshell(cmd, obuf, ebuf, 256, 10);
+        if (rc) {
+            LOGERROR("unable to remove instance interface from bridge: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
+            LOGINFO("Failed to remove %s from %s\n", iface, instance->params.guestNicDeviceName);
+        } else {
+            LOGTRACE("VM interface removed from bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
+        }
+    }
+    return (rc);
+}
+
+/**
+ * Removes instance NIC(s) from bridge.
+ * @param nc [in] pointer to nc_state data structure.
+ * @param instance [in] pointer to ncInstance data structure of the instance of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int bridge_instance_interfaces_remove(struct nc_state_t *nc, ncInstance *instance) {
+    char iface[16];
+    int rc = 0;
+    
+    if (!nc || !instance) {
+        LOGWARN("Invalid argument: cannot remove NULL bridge interface.\n");
+        return (1);
+    }
+    snprintf(iface, 16, "vn_%s", instance->instanceId);
+    rc += bridge_interface_remove(nc, instance, iface);
+
+    // Repeat process for secondary interfaces as well
+    for (int i = 0; i < EUCA_MAX_NICS; i++) {
+        if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
+            continue;
+
+        snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
+        rc += bridge_interface_remove(nc, instance, iface);
+    }
+    
+    return (rc);
+}
+
+/**
+ * Enables hairpin mode of a linux bridge port (instance interface) - address EUCA-12608
+ * @param nc [in] pointer to nc_state data structure.
+ * @param instance [in] pointer to ncInstance data structure of the instance of interest.
+ * @param iface [in] pointer to string with the interface name of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int bridge_interface_set_hairpin(struct nc_state_t *nc, ncInstance *instance, char *iface) {
+    char cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
+    int rc = 0;
+
+    if (!nc || !instance || !iface) {
+        LOGWARN("Invalid argument: cannot set hairpin on NULL bridge interface.\n");
+        return (1);
+    }
+
+    // Make sure that this is a bridge port and that hairpin mode is supported
+    snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/hairpin_mode", iface);
+    if (!check_directory(sPath)) {
+        snprintf(cmd, EUCA_MAX_PATH, "%s brctl hairpin %s %s on", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
+        rc = timeshell(cmd, obuf, ebuf, 256, 10);
+        if (rc) {
+            LOGERROR("Unable to set hairpin mode for %s port on %s\n", iface, instance->params.guestNicDeviceName);
+            LOGINFO("%s may suffer limited connectivity (EUCA-12608)\n", instance->instanceId);
+        } else {
+            LOGTRACE("%s/%s hairpin mode is on\n", iface, instance->params.guestNicDeviceName);
+        }
+    }
+    return (rc);
 }
