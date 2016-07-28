@@ -1214,10 +1214,10 @@
   </mapping>
   <mapping name="ListOpenIdConnectProvidersResponse" class="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="listOpenIdConnectProvidersResult" usage="required" map-as="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResult"/>
+    <structure field="listOpenIdConnectProvidersResult" usage="required" map-as="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResultType"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="ListOpenIdConnectProvidersResult" class="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResult">
+  <mapping name="ListOpenIdConnectProvidersResult" class="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResultType">
     <collection field="arn">
       <value name="member" type="java.lang.String"/>
     </collection>
@@ -1229,16 +1229,16 @@
   </mapping>
   <mapping name="GetOpenIdConnectProviderResponse" class="com.eucalyptus.auth.euare.GetOpenIdConnectProviderResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
-    <structure field="getOpenIdConnectProviderResult" usage="required" map-as="com.eucalyptus.auth.euare.GetOpenIdConnectProviderResult"/>
+    <structure field="getOpenIdConnectProviderResult" usage="required" map-as="com.eucalyptus.auth.euare.GetOpenIdConnectProviderResultType"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
-  <mapping name="GetOpenIdConnectProviderResult" class="com.eucalyptus.auth.euare.GetOpenIdConnectProviderResult">
+  <mapping name="GetOpenIdConnectProviderResult" class="com.eucalyptus.auth.euare.GetOpenIdConnectProviderResultType">
     <value name="Url" field="url" usage="required" type="java.lang.String"/>
     <value name="CreateDate" field="createDate" usage="optional"/>
     <collection field="clientIDList">
       <value name="member" type="java.lang.String"/>
     </collection>
-    <collection field="thumbprintList">
+    <collection name="ThumbprintList" field="thumbprintList">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>

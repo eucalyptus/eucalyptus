@@ -1430,14 +1430,14 @@ public class ListOpenIdConnectProvidersType extends EuareMessage implements Euar
 }
 
 public class ListOpenIdConnectProvidersResponseType extends EuareMessage {
-  ListOpenIdConnectProvidersResult listOpenIdConnectProvidersResult = new ListOpenIdConnectProvidersResult();
+  ListOpenIdConnectProvidersResultType listOpenIdConnectProvidersResult = new ListOpenIdConnectProvidersResultType();
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public ListOpenIdConnectProvidersResponseType() {  }
 }
 
-public class ListOpenIdConnectProvidersResult extends EucalyptusData {
+public class ListOpenIdConnectProvidersResultType extends EucalyptusData {
   ArrayList<String> arn;
-  public ListOpenIdConnectProvidersResult() {  }
+  public ListOpenIdConnectProvidersResultType() {  }
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETOPENIDCONNECTPROVIDER )
@@ -1448,17 +1448,17 @@ public class GetOpenIdConnectProviderType extends EuareMessage implements EuareM
 }
 
 public class GetOpenIdConnectProviderResponseType extends EuareMessage {
-  GetOpenIdConnectProviderResult getOpenIdConnectProviderResult = new GetOpenIdConnectProviderResult();
+  GetOpenIdConnectProviderResultType getOpenIdConnectProviderResult = new GetOpenIdConnectProviderResultType();
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public GetOpenIdConnectProviderResponseType() {  }
 }
 
-public class GetOpenIdConnectProviderResult extends EucalyptusData {
+public class GetOpenIdConnectProviderResultType extends EucalyptusData {
   String url;
   Date createDate;
-  ArrayList<String> clientIDList;
-  ArrayList<String> thumbprintList;
-  public GetOpenIdConnectProviderResult() {  }
+  ArrayList<String> clientIDList = new ArrayList<String>();
+  ArrayList<String> thumbprintList = new ArrayList<String>();
+  public GetOpenIdConnectProviderResultType() {  }
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER )
