@@ -4225,7 +4225,7 @@ int bridge_interface_set_hairpin(struct nc_state_t *nc, ncInstance *instance, ch
 
     // Make sure that this is a bridge port and that hairpin mode is supported
     snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/hairpin_mode", iface);
-    if (!check_directory(sPath)) {
+    if (!check_file(sPath)) {
         snprintf(cmd, EUCA_MAX_PATH, "%s brctl hairpin %s %s on", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
         rc = timeshell(cmd, obuf, ebuf, 256, 10);
         if (rc) {
