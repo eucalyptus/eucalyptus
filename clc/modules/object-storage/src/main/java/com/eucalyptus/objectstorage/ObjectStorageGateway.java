@@ -1004,7 +1004,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    ObjectEntity objectEntity = null;
+    if (Strings.isNullOrEmpty(request.getVersionId()) || request.getVersionId().equalsIgnoreCase(ObjectStorageProperties.NULL_VERSION_ID)) {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } else {
+      objectEntity = getObjectEntityAndCheckPermissions(request.getGetObjectVersionAccessControlPolicyType(), request.getVersionId());
+    }
 
     // Get the listing from the back-end and copy results in.
     GetObjectAccessControlPolicyResponseType reply = request.getReply();
@@ -1098,7 +1103,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(final SetObjectAccessControlPolicyType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    ObjectEntity objectEntity = null;
+    if (Strings.isNullOrEmpty(request.getVersionId()) || request.getVersionId().equalsIgnoreCase(ObjectStorageProperties.NULL_VERSION_ID)) {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } else {
+      objectEntity = getObjectEntityAndCheckPermissions(request.getSetObjectVersionAccessControlPolicyType(), request.getVersionId());
+    }
 
     SetObjectAccessControlPolicyResponseType reply = request.getReply();
     final String bucketOwnerId = objectEntity.getBucket().getOwnerCanonicalId();
@@ -1158,7 +1168,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public GetObjectResponseType getObject(final GetObjectType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    ObjectEntity objectEntity = null;
+    if (Strings.isNullOrEmpty(request.getVersionId()) || request.getVersionId().equalsIgnoreCase(ObjectStorageProperties.NULL_VERSION_ID)) {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } else {
+      objectEntity = getObjectEntityAndCheckPermissions(request.getObjectStorageDataGetVersionRequestType(), request.getVersionId());
+    }
+    
     // Handle 100-continue here.
     if (objectEntity.getIsDeleteMarker()) {
       throw new NoSuchKeyException(request.getKey());
@@ -1230,7 +1246,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    ObjectEntity objectEntity = null;
+    if (Strings.isNullOrEmpty(request.getVersionId()) || request.getVersionId().equalsIgnoreCase(ObjectStorageProperties.NULL_VERSION_ID)) {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } else {
+      objectEntity = getObjectEntityAndCheckPermissions(request.getObjectStorageDataGetVersionRequestType(), request.getVersionId());
+    }
+
     if (objectEntity.getIsDeleteMarker()) {
       throw new NoSuchKeyException(request.getKey());
     }
@@ -1421,8 +1443,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public HeadObjectResponseType headObject(HeadObjectType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
-
+    ObjectEntity objectEntity = null;
+    if (Strings.isNullOrEmpty(request.getVersionId()) || request.getVersionId().equalsIgnoreCase(ObjectStorageProperties.NULL_VERSION_ID)) {
+      objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+    } else {
+      objectEntity = getObjectEntityAndCheckPermissions(request.getObjectStorageDataGetVersionRequestType(), request.getVersionId());
+    }
+    
     if (objectEntity.getIsDeleteMarker()) {
       throw new NoSuchKeyException(request.getKey());
     }
