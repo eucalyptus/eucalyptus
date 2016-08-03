@@ -99,9 +99,9 @@ import groovy.sql.Sql;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "openid_provider", indexes = {
-    @Index( name = "openid_provider_url_idx", columnList = "openid_provider_url" ),
-    @Index( name = "openid_provider_owning_account_idx", columnList = "openid_provider_owning_account" )
+@Table( name = "auth_openid_provider", indexes = {
+    @Index( name = "auth_openid_provider_url_idx", columnList = "auth_openid_provider_url" ),
+    @Index( name = "auth_openid_provider_owning_account_idx", columnList = "auth_openid_provider_owning_account" )
 } )
 public class OpenIdProviderEntity extends AbstractPersistent implements Serializable {
 
@@ -109,27 +109,27 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
   private static final long serialVersionUID = 1L;
 
   // User name
-  @Column( name = "openid_provider_url" )
+  @Column( name = "auth_openid_provider_url" )
   String url;
 
   // List of client ids
   @ElementCollection
-  @CollectionTable( name = "openid_provider_client_ids" )
-  @Column( name = "openid_provider_client_id" )
-  @JoinColumn( name = "openid_provider_url" )
-  @OrderColumn( name = "openid_provider_index")
+  @CollectionTable( name = "auth_openid_provider_client_ids" )
+  @Column( name = "auth_openid_provider_client_id" )
+  @JoinColumn( name = "auth_openid_provider_url" )
+  @OrderColumn( name = "auth_openid_provider_index")
   private List<String> clientIDs = Lists.newArrayList();
 
   // List of thumbprints
   @ElementCollection
-  @CollectionTable( name = "openid_provider_thumbprints" )
-  @Column( name = "openid_provider_thumbprint" )
-  @JoinColumn( name = "openid_provider_url" )
-  @OrderColumn( name = "openid_provider_index")
+  @CollectionTable( name = "auth_openid_provider_thumbprints" )
+  @Column( name = "auth_openid_provider_thumbprint" )
+  @JoinColumn( name = "auth_openid_provider_url" )
+  @OrderColumn( name = "auth_openid_provider_index")
   private List<String> thumbprints = Lists.newArrayList();
 
   @ManyToOne
-  @JoinColumn( name = "auth_role_owning_account", nullable = false )
+  @JoinColumn( name = "auth_openid_provider_owning_account", nullable = false )
   private AccountEntity account;
 
   public OpenIdProviderEntity( ) {
