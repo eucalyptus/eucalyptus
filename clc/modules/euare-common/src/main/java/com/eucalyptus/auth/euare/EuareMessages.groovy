@@ -68,7 +68,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Euare
-import com.eucalyptus.ws.WebServiceError;
+import com.eucalyptus.ws.WebServiceError
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
@@ -1392,14 +1393,12 @@ public class InstanceProfileListType extends EucalyptusData {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEOPENIDCONNECTPROVIDER )
 public class CreateOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
-  String delegateAccount;
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> clientIDList;
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> thumbprintList;
-  @HttpParameterMapping(parameter="Url")
-  String url;
-  public CreateOpenIdConnectProviderType() {  }
+  String delegateAccount
+  @HttpParameterMapping(parameter="ClientIDList.member")
+  ArrayList<String> clientIDList = Lists.newArrayList( )
+  @HttpParameterMapping(parameter="ThumbprintList.member")
+  ArrayList<String> thumbprintList = Lists.newArrayList( )
+  String url
 }
 
 public class CreateOpenIdConnectProviderResponseType extends EuareMessage {
