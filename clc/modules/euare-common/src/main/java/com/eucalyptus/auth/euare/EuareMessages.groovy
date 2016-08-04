@@ -1397,6 +1397,7 @@ public class CreateOpenIdConnectProviderType extends EuareMessage implements Eua
   ArrayList<String> clientIDList;
   @HttpParameterMapping(parameter="member")
   ArrayList<String> thumbprintList;
+  @HttpParameterMapping(parameter="Url")
   String url;
   public CreateOpenIdConnectProviderType() {  }
 }

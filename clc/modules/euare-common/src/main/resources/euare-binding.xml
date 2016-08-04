@@ -1180,18 +1180,18 @@
     <value name="ServerPk" field="serverPk" usage="required" />
     <value name="Signature" field="signature" usage="optional" />
   </mapping>
-  <mapping name="CreateOpenIdConnectProvider" class="com.eucalyptus.auth.euare.CreateOpenIdConnectProviderType" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateOpenIDConnectProvider" class="com.eucalyptus.auth.euare.CreateOpenIdConnectProviderType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
-    <collection field="clientIDList">
+    <collection field="clientIDList" name="ClientIDList">
       <value name="member" type="java.lang.String"/>
     </collection>
-    <collection field="thumbprintList">
+    <collection field="thumbprintList" name="ThumbprintList">
       <value name="member" type="java.lang.String"/>
     </collection>
-    <value name="Url" field="url" usage="required"/>
+    <value name="Url" field="url" usage="optional"/>
   </mapping>
-  <mapping name="CreateOpenIdConnectProviderResponse" class="com.eucalyptus.auth.euare.CreateOpenIdConnectProviderResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+  <mapping name="CreateOpenIDConnectProviderResponse" class="com.eucalyptus.auth.euare.CreateOpenIdConnectProviderResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <structure field="createOpenIdConnectProviderResult" usage="required" map-as="com.eucalyptus.auth.euare.CreateOpenIdConnectProviderResultType"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
