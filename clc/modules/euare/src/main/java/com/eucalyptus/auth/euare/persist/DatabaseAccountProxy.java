@@ -805,6 +805,7 @@ public class DatabaseAccountProxy implements EuareAccount {
 
   @Override
   public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException {
+    Debugging.logError( LOG, null, "in Database layer: createOpenIdConnectProvider()");
     if(! OpenIdConnectProvider.isUrlValid(url))
       throw new AuthException(AuthException.INVALID_OPENID_PROVIDER_URL);
     try{
@@ -826,6 +827,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       final OpenIdProviderEntity newOpenIdProvider = new OpenIdProviderEntity( url );
       newOpenIdProvider.getClientIDs().addAll( clientIDList );
       newOpenIdProvider.getThumbprints().addAll( thumbprintList );
+      newOpenIdProvider.setAccount( account );
       final OpenIdProviderEntity persistedOpenIdProvider = Entities.persist( newOpenIdProvider );
       db.commit( );
       return new DatabaseOpenIdProviderProxy( persistedOpenIdProvider );

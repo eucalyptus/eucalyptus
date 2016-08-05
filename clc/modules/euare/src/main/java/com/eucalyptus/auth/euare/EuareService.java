@@ -90,6 +90,7 @@ import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -2367,4 +2368,33 @@ public class EuareService {
   protected AutoCloseable readonlyTx( ) {
     return Entities.readOnlyDistinctTransactionFor( UserEntity.class );
   }
+
+  /* open id services */
+  public CreateOpenIdConnectProviderResponseType createOpenIdConnectProvider( final CreateOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+    final CreateOpenIdConnectProviderResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    try {
+      final EuareOpenIdConnectProvider newOpenIDConnectProvider = Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl( ), request.getClientIDList( ), request.getThumbprintList() );
+      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( request.getUrl() );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create openid connect provider by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Openid connect provider quota exceeded" );
+        } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "OpenIDConnectProvider " + request.getUrl( ) + " already exists." );
+        } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid provider url " + request.getUrl() );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
 }
