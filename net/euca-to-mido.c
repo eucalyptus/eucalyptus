@@ -4016,24 +4016,36 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup * vpcsecgroup) {
     return (ret);
 }
 
-//!
-//! Parses the given gni_rule to get its corresponding mido_parsed_chain_rule.
-//!
-//! @param[in]  mido current mido_config data structure.
-//! @param[in]  rule gni_rule of interest.
-//! @param[out] parsed_rule data structure to store the parsed results.
-//!
-//! @return 0 if the parse is successful. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule
+ * @param mido [in] mido current mido_config data structure.
+ * @param rule [in] rule gni_rule of interest.
+ * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
+ * @return  0 if the parse is successful. 1 otherwise.
+ */
 int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
+    char *version = NULL;
+    int ret = 0;
+    midonet_api_get_version(&version);
+    if (version && strlen(version)) {
+        if (!strcmp(version, "v1.9")) {
+            ret = parse_mido_secgroup_rule_v1(mido, rule, parsed_rule);
+        } else if (!strcmp(version, "v5.0")) {
+            ret = parse_mido_secgroup_rule_v5(mido, rule, parsed_rule);
+        }
+    }
+    EUCA_FREE(version);
+    return (ret);
+}
+
+/**
+ * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule (MN1.9)
+ * @param mido [in] mido current mido_config data structure.
+ * @param rule [in] rule gni_rule of interest.
+ * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
+ * @return  0 if the parse is successful. 1 otherwise.
+ */
+int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
     char subnet_buf[24];
     char slashnet_buf[8];
     int rc = 0;
@@ -4098,6 +4110,87 @@ int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chai
             break;
         case -1: // All protocols
             snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "0");
+            break;
+        default:
+            // Protocols accepted by EC2 are ICMP/TCP/UDP.
+            break;
+    }
+
+    return (ret);
+}
+
+/**
+ * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule (MN5)
+ * @param mido [in] mido current mido_config data structure.
+ * @param rule [in] rule gni_rule of interest.
+ * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
+ * @return  0 if the parse is successful. 1 otherwise.
+ */
+int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
+    char subnet_buf[24];
+    char slashnet_buf[8];
+    int rc = 0;
+    int ret = 0;
+    mido_vpc_secgroup *rule_sg = NULL;
+
+    if (!mido || !rule || !parsed_rule) {
+        LOGWARN("Invalid argument: cannot parse NULL secgroup.\n");
+        return (1);
+    }
+    LOGTRACE("Parsing secgroup rule\n");
+
+    clear_parsed_chain_rule(parsed_rule);
+
+    // determine if the source is a CIDR or another SG (default CIDR if it is either unset (implying 0.0.0.0) or set explicity)
+    if (strlen(rule->groupId)) {
+        rc = find_mido_vpc_secgroup(mido, rule->groupId, &rule_sg);
+        if (!rc && rule_sg && rule_sg->midos[VPCSG_IAGALL] && rule_sg->midos[VPCSG_IAGALL]->init) {
+            LOGTRACE("FOUND SRC IPADDRGROUP MATCH: %s/%s\n", rule_sg->midos[VPCSG_IAGALL]->name, rule_sg->midos[VPCSG_IAGALL]->uuid);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_GRPUUID], 64, "%s", rule_sg->midos[VPCSG_IAGALL]->uuid);
+        } else {
+            // source SG set, but is not present (no instances membership)
+            LOGWARN("%s referenced but not found\n", rule->groupId);
+            return (1);
+        }
+    } else {
+        // source SG is not set, default CIDR 0.0.0.0 or set explicitly
+        subnet_buf[0] = slashnet_buf[0] = '\0';
+        if (strlen(rule->cidr)) {
+            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", subnet_buf);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", slashnet_buf);
+        } else {
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", "0.0.0.0");
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", "0");
+        }
+    }
+
+    // protocol
+    snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "%d", rule->protocol);
+    switch (rule->protocol) {
+        case 1: // ICMP
+            if (rule->icmpType != -1) {
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", rule->icmpType);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", rule->icmpType);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
+            }
+            if (rule->icmpCode != -1) {
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->icmpCode);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->icmpCode);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+            }
+            break;
+        case 6:  // TCP
+        case 17: // UDP
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->fromPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->toPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+            break;
+        case -1: // All protocols
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "null");
             break;
         default:
             // Protocols accepted by EC2 are ICMP/TCP/UDP.
@@ -5165,12 +5258,34 @@ int check_mido_tunnelzone() {
 
 /**
  * Searches for BGP configuration in midocore, and returns a string containing midonet-cli
- * commands to recover the BGP configuration.
+ * commands to recover the BGP configuration. Compatible with MN1.9.
  * @param mido [in] data structure that holds MidoNet configuration
  * @return string containing midonet-cli commands to recover the found BGP configuration.
  * NULL if BGP is not found.
  */
 char *discover_mido_bgps(mido_config *mido) {
+    char *version = NULL;
+    char *ret = NULL;
+    midonet_api_get_version(&version);
+    if (version && strlen(version)) {
+        if (!strcmp(version, "v1.9")) {
+            ret = discover_mido_bgps_v1(mido);
+        } else if (!strcmp(version, "v5.0")) {
+            ret = discover_mido_bgps_v5(mido);
+        }
+    }
+    EUCA_FREE(version);
+    return (ret);
+}
+
+/**
+ * Searches for BGP configuration in midocore, and returns a string containing midonet-cli
+ * commands to recover the BGP configuration. Compatible with MN1.9.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return string containing midonet-cli commands to recover the found BGP configuration.
+ * NULL if BGP is not found.
+ */
+char *discover_mido_bgps_v1(mido_config *mido) {
     int rc = 0;
     midoname **bgps = NULL;
     int max_bgps = 0;
@@ -5210,7 +5325,7 @@ char *discover_mido_bgps(mido_config *mido) {
             continue;
         }
         resptr = &(res[strlen(res)]);
-        snprintf(resptr, 2048, "GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
+        snprintf(resptr, 1024, "GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
         EUCA_FREE(interfaceName);
         EUCA_FREE(networkAddress);
         EUCA_FREE(networkLength);
@@ -5233,7 +5348,7 @@ char *discover_mido_bgps(mido_config *mido) {
                     continue;
                 }
                 resptr = &(res[strlen(res)]);
-                snprintf(resptr, 2048, "router EUCART port GW[%d] add bgp local-AS %s peer-AS %s peer %s\n", i, localAS, peerAS, peerAddr);
+                snprintf(resptr, 1024, "router EUCART port GW[%d] add bgp local-AS %s peer-AS %s peer %s\n", i, localAS, peerAS, peerAddr);
                 rc = mido_get_bgp_routes(bgps[0], &bgp_routes, &max_bgp_routes);
                 if (!rc && bgp_routes && max_bgp_routes) {
                     for (int j = 0; j < max_bgp_routes; j++) {
@@ -5244,7 +5359,7 @@ char *discover_mido_bgps(mido_config *mido) {
                             continue;
                         }
                         resptr = &(res[strlen(res)]);
-                        snprintf(resptr, 2048, "router EUCART port GW[%d] bgp bgp0 add route net %s/%s\n", i, nwPrefix, prefixLength);
+                        snprintf(resptr, 1024, "router EUCART port GW[%d] bgp bgp0 add route net %s/%s\n", i, nwPrefix, prefixLength);
                         EUCA_FREE(nwPrefix);
                         EUCA_FREE(prefixLength);
                     }
@@ -5259,6 +5374,106 @@ char *discover_mido_bgps(mido_config *mido) {
         }
         EUCA_FREE(bgps);
     }
+    return (res);
+}
+
+/**
+ * Searches for BGP configuration in midocore, and returns a string containing midonet-cli
+ * commands to recover the BGP configuration. Compatible with MN5.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return string containing midonet-cli commands to recover the found BGP configuration.
+ * NULL if BGP is not found.
+ */
+char *discover_mido_bgps_v5(mido_config *mido) {
+    int rc = 0;
+    midoname **bgps = NULL;
+    int max_bgps = 0;
+    midoname **bgp_routes = NULL;
+    int max_bgp_routes = 0;
+    char *localAS = NULL;
+    char *peerAddr = NULL;
+    char *peerAS = NULL;
+    char *nwPrefix = NULL;
+    char *prefixLength = NULL;
+    char *res = NULL;
+    char *resptr = NULL;
+    char *interfaceName = NULL;
+    char *networkAddress = NULL;
+    char *networkLength = NULL;
+    char *portAddress = NULL;
+    char *portMac = NULL;
+    if (!mido || !mido->midocore || !mido->midocore->eucart) {
+        return (NULL);
+    }
+    res = EUCA_ZALLOC_C(2048, sizeof (char));
+    resptr = &(res[0]);
+    mido_core *midocore = mido->midocore;
+    for (int i = 0; i < midocore->max_gws; i++) {
+        mido_getel_midoname(midocore->gwports[i], "interfaceName", &interfaceName);
+        mido_getel_midoname(midocore->gwports[i], "networkAddress", &networkAddress);
+        mido_getel_midoname(midocore->gwports[i], "networkLength", &networkLength);
+        mido_getel_midoname(midocore->gwports[i], "portAddress", &portAddress);
+        mido_getel_midoname(midocore->gwports[i], "portMac", &portMac);
+        if (!interfaceName || !networkAddress || !networkLength || !portAddress || !portMac) {
+            LOGWARN("failed to retrieve gateway port information\n");
+            EUCA_FREE(interfaceName);
+            EUCA_FREE(networkAddress);
+            EUCA_FREE(networkLength);
+            EUCA_FREE(portAddress);
+            EUCA_FREE(portMac);
+            continue;
+        }
+        resptr = &(res[strlen(res)]);
+        snprintf(resptr, 1024, "GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
+        resptr = &(res[strlen(res)]);
+        snprintf(resptr, 1024, "router name eucart add route src 0.0.0.0/0 dst %s/%s port GW[%d] type normal\n", networkAddress, networkLength, i);
+        EUCA_FREE(interfaceName);
+        EUCA_FREE(networkAddress);
+        EUCA_FREE(networkLength);
+        EUCA_FREE(portAddress);
+        EUCA_FREE(portMac);
+    }
+    if (midocore->eucart) {
+        mido_getel_midoname(midocore->eucart->obj, "asNumber", &localAS);
+        if (localAS && strlen(localAS) && strcmp(localAS, "0")) {
+            resptr = &(res[strlen(res)]);
+            snprintf(resptr, 1024, "router name eucart set asn %s\n", localAS);
+        }
+        EUCA_FREE(localAS);
+    }
+    bgps = NULL;
+    rc = mido_get_bgps(midocore->eucart->obj, &bgps, &max_bgps);
+    for (int i = 0; i < max_bgps; i++) {
+        mido_getel_midoname(bgps[i], "address", &peerAddr);
+        mido_getel_midoname(bgps[0], "asNumber", &peerAS);
+        if (!peerAS || !peerAS) {
+            LOGWARN("failed to retrieve bgp information\n");
+            continue;
+        }
+        resptr = &(res[strlen(res)]);
+        snprintf(resptr, 2048, "router name eucart add bgp-peer asn %s address %s\n", peerAS, peerAddr);
+        EUCA_FREE(peerAddr);
+        EUCA_FREE(peerAS);
+    }
+    EUCA_FREE(bgps);
+    rc = mido_get_bgp_routes(midocore->eucart->obj, &bgp_routes, &max_bgp_routes);
+    if (!rc && bgp_routes && max_bgp_routes) {
+        for (int i = 0; i < max_bgp_routes; i++) {
+            mido_getel_midoname(bgp_routes[i], "subnetAddress", &nwPrefix);
+            mido_getel_midoname(bgp_routes[i], "subnetLength", &prefixLength);
+            if (!nwPrefix || !prefixLength) {
+                LOGWARN("failed to retrieve bgp routes\n");
+                continue;
+            }
+            resptr = &(res[strlen(res)]);
+            snprintf(resptr, 1024, "router name eucart add bgp-network net %s/%s\n", nwPrefix, prefixLength);
+            EUCA_FREE(nwPrefix);
+            EUCA_FREE(prefixLength);
+        }
+    } else {
+        LOGWARN("routes not found for bgp %s\n", bgps[0]->uuid);
+    }
+    EUCA_FREE(bgp_routes);
     return (res);
 }
 
@@ -5727,11 +5942,20 @@ int connect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_su
     }
 
     // DNAT
+    // Condition using nwDstAddress instead of ipAddrGroupDst due to bug in MN5
+    // TODO: revert to use ipAddrGroupDst once MN5 bug is fixed (in order to avoid possible inconsistencies)
+    rc = mido_create_rule(vpc->rt_preelipchain, vpc->midos[VPC_VPCRT_PREELIPCHAIN], &(vpcinstance->midos[INST_ELIP_PRE]),
+            NULL, "type", "dnat", "flowAction", "continue", "nwDstAddress",
+            ipAddr_pub, "nwDstLength", "32", "natTargets", "jsonlist", "natTargets:addressTo",
+            ipAddr_priv, "natTargets:addressFrom", ipAddr_priv, "natTargets:portFrom", "0",
+            "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+/*
     rc = mido_create_rule(vpc->rt_preelipchain, vpc->midos[VPC_VPCRT_PREELIPCHAIN], &(vpcinstance->midos[INST_ELIP_PRE]),
             NULL, "type", "dnat", "flowAction", "continue", "ipAddrGroupDst",
             vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP]->uuid, "natTargets", "jsonlist", "natTargets:addressTo",
             ipAddr_priv, "natTargets:addressFrom", ipAddr_priv, "natTargets:portFrom", "0",
             "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+*/
     if (rc) {
         LOGERROR("cannot create elip dnat rule: check midonet health\n");
         ret++;
@@ -6330,9 +6554,13 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     }
 
     // apply PRECHAIN and POST chain to VPCRT_UPLINK port (support custom routes based on source routing)
+    char *portmac = NULL;
+    if (vpc->midos[VPC_VPCRT_UPLINK] && vpc->midos[VPC_VPCRT_UPLINK]->port && vpc->midos[VPC_VPCRT_UPLINK]->port->portmac) {
+        portmac = vpc->midos[VPC_VPCRT_UPLINK]->port->portmac;
+    }
     rc = mido_update_port(vpc->midos[VPC_VPCRT_UPLINK], "outboundFilterId", vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]->uuid,
             "inboundFilterId", vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]->uuid, "id", vpc->midos[VPC_VPCRT_UPLINK]->uuid,
-            "networkAddress", nw, "portAddress", ip, "type", "Router", NULL);
+            "networkAddress", nw, "networkLength", sn, "portAddress", ip, "portMac", portmac, "type", "Router", NULL);
     if (rc > 0) {
         LOGERROR("cannot update router port infilter and/or outfilter: check midonet health\n");
         return (1);

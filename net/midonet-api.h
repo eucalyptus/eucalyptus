@@ -120,6 +120,61 @@
 
 #define MIDO_CACHE_THREAD_NAME_LEN             8
 
+#define APPLICATION_JSON_V5                               "application/vnd.org.midonet.Application-v5+json"
+#define APPLICATION_HOST_INTERFACE_PORT_V1                "application/vnd.org.midonet.HostInterfacePort-v1+json"
+#define APPLICATION_PORT_LINK_V1                          "application/vnd.org.midonet.PortLink-v1+json"
+#define APPLICATION_BGP_JSON_V1                           "application/vnd.org.midonet.Bgp-v1+json"
+#define APPLICATION_BGP_PEER_JSON_V1                      "application/vnd.org.midonet.BgpPeer-v1+json"
+#define APPLICATION_AD_ROUTE_JSON_V1                      "application/vnd.org.midonet.AdRoute-v1+json"
+#define APPLICATION_BGP_NETWORK_JSON_V1                   "application/vnd.org.midonet.BgpNetwork-v1+json"
+#define APPLICATION_BRIDGE_JSON_V2                        "application/vnd.org.midonet.Bridge-v2+json"
+#define APPLICATION_BRIDGE_JSON_V4                        "application/vnd.org.midonet.Bridge-v4+json"
+#define APPLICATION_DHCP_SUBNET_JSON_V2                   "application/vnd.org.midonet.DhcpSubnet-v2+json"
+#define APPLICATION_DHCP_HOST_JSON_V2                     "application/vnd.org.midonet.DhcpHost-v2+json"
+#define APPLICATION_PORT_JSON_V2                          "application/vnd.org.midonet.Port-v2+json"
+#define APPLICATION_PORT_JSON_V3                          "application/vnd.org.midonet.Port-v3+json"
+#define APPLICATION_CHAIN_JSON_V1                         "application/vnd.org.midonet.Chain-v1+json"
+#define APPLICATION_RULE_JSON_V2                          "application/vnd.org.midonet.Rule-v2+json"
+#define APPLICATION_HOST_JSON_V2                          "application/vnd.org.midonet.Host-v2+json"
+#define APPLICATION_HOST_JSON_V3                          "application/vnd.org.midonet.Host-v3+json"
+#define APPLICATION_INTERFACE_JSON_V1                     "application/vnd.org.midonet.Interface-v1+json"
+#define APPLICATION_IP_ADDR_GROUP_JSON_V1                 "application/vnd.org.midonet.IpAddrGroup-v1+json"
+#define APPLICATION_IP_ADDR_GROUP_ADDR_JSON_V1            "application/vnd.org.midonet.IpAddrGroupAddr-v1+json"
+#define APPLICATION_PORT_GROUP_JSON_V1                    "application/vnd.org.midonet.PortGroup-v1+json"
+#define APPLICATION_PORT_GROUP_PORT_JSON_V1               "application/vnd.org.midonet.PortGroupPort-v1+json"
+#define APPLICATION_ROUTER_JSON_V2                        "application/vnd.org.midonet.Router-v2+json"
+#define APPLICATION_ROUTER_JSON_V3                        "application/vnd.org.midonet.Router-v3+json"
+#define APPLICATION_ROUTE_JSON_V1                         "application/vnd.org.midonet.Route-v1+json"
+#define APPLICATION_TUNNEL_ZONE_JSON_V1                   "application/vnd.org.midonet.TunnelZone-v1+json"
+#define APPLICATION_TUNNEL_ZONE_HOST_JSON_V1              "application/vnd.org.midonet.TunnelZoneHost-v1+json"
+#define APPLICATION_SYSTEM_STATE_JSON_V2                  "application/vnd.org.midonet.SystemState-v2+json"
+#define APPLICATION_COLLECTION_BGP_JSON_V1                "application/vnd.org.midonet.collection.Bgp-v1+json"
+#define APPLICATION_COLLECTION_BGP_PEER_JSON_V1           "application/vnd.org.midonet.collection.BgpPeer-v1+json"
+#define APPLICATION_COLLECTION_AD_ROUTE_JSON_V1           "application/vnd.org.midonet.collection.AdRoute-v1+json"
+#define APPLICATION_COLLECTION_BGP_NETWORK_JSON_V1        "application/vnd.org.midonet.collection.BgpNetwork-v1+json"
+#define APPLICATION_COLLECTION_BRIDGE_JSON_V2             "application/vnd.org.midonet.collection.Bridge-v2+json"
+#define APPLICATION_COLLECTION_BRIDGE_JSON_V4             "application/vnd.org.midonet.collection.Bridge-v4+json"
+#define APPLICATION_COLLECTION_DHCP_SUBNET_JSON_V2        "application/vnd.org.midonet.collection.DhcpSubnet-v2+json"
+#define APPLICATION_COLLECTION_DHCP_HOST_JSON_V2          "application/vnd.org.midonet.collection.DhcpHost-v2+json"
+#define APPLICATION_COLLECTION_PORT_JSON_V2               "application/vnd.org.midonet.collection.Port-v2+json"
+#define APPLICATION_COLLECTION_PORT_JSON_V3               "application/vnd.org.midonet.collection.Port-v3+json"
+#define APPLICATION_COLLECTION_CHAIN_JSON_V1              "application/vnd.org.midonet.collection.Chain-v1+json"
+#define APPLICATION_COLLECTION_RULE_JSON_V2               "application/vnd.org.midonet.collection.Rule-v2+json"
+#define APPLICATION_COLLECTION_HOST_JSON_V2               "application/vnd.org.midonet.collection.Host-v2+json"
+#define APPLICATION_COLLECTION_HOST_JSON_V3               "application/vnd.org.midonet.collection.Host-v3+json"
+#define APPLICATION_COLLECTION_INTERFACE_JSON_V1          "application/vnd.org.midonet.collection.Interface-v1+json"
+#define APPLICATION_COLLECTION_IP_ADDR_GROUP_JSON_V1      "application/vnd.org.midonet.collection.IpAddrGroup-v1+json"
+#define APPLICATION_COLLECTION_IP_ADDR_GROUP_ADDR_JSON_V1 "application/vnd.org.midonet.collection.IpAddrGroupAddr-v1+json"
+#define APPLICATION_COLLECTION_PORT_GROUP_JSON_V1         "application/vnd.org.midonet.collection.PortGroup-v1+json"
+#define APPLICATION_COLLECTION_PORT_GROUP_PORT_JSON_V1    "application/vnd.org.midonet.collection.PortGroupPort-v1+json"
+#define APPLICATION_COLLECTION_ROUTER_JSON_V2             "application/vnd.org.midonet.collection.Router-v2+json"
+#define APPLICATION_COLLECTION_ROUTER_JSON_V3             "application/vnd.org.midonet.collection.Router-v3+json"
+#define APPLICATION_COLLECTION_ROUTE_JSON_V1              "application/vnd.org.midonet.collection.Route-v1+json"
+#define APPLICATION_COLLECTION_TUNNEL_ZONE_JSON_V1        "application/vnd.org.midonet.collection.TunnelZone-v1+json"
+#define APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON_V1   "application/vnd.org.midonet.collection.TunnelZoneHost-v1+json"
+
+#define MIDO_MTYPE_MAX_LEN 128
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -160,6 +215,54 @@ enum mido_cache_pthreads_t {
     MIDO_CACHE_THREAD_CHAIN,
     MIDO_CACHE_THREAD_IPAG,
     MIDO_CACHE_THREAD_END
+};
+
+enum mido_mtype_index_t {
+    APPLICATION_JSON,
+    APPLICATION_HOST_INTERFACE_PORT,
+    APPLICATION_PORT_LINK,
+    APPLICATION_BGP_JSON,
+    APPLICATION_BGP_PEER_JSON,
+    APPLICATION_AD_ROUTE_JSON,
+    APPLICATION_BGP_NETWORK_JSON,
+    APPLICATION_BRIDGE_JSON,
+    APPLICATION_DHCP_SUBNET_JSON,
+    APPLICATION_DHCP_HOST_JSON,
+    APPLICATION_PORT_JSON,
+    APPLICATION_CHAIN_JSON,
+    APPLICATION_RULE_JSON,
+    APPLICATION_HOST_JSON,
+    APPLICATION_INTERFACE_JSON,
+    APPLICATION_IP_ADDR_GROUP_JSON,
+    APPLICATION_IP_ADDR_GROUP_ADDR_JSON,
+    APPLICATION_PORT_GROUP_JSON,
+    APPLICATION_PORT_GROUP_PORT_JSON,
+    APPLICATION_ROUTER_JSON,
+    APPLICATION_ROUTE_JSON,
+    APPLICATION_TUNNEL_ZONE_JSON,
+    APPLICATION_TUNNEL_ZONE_HOST_JSON,
+    APPLICATION_SYSTEM_STATE_JSON,
+    APPLICATION_COLLECTION_BGP_JSON,
+    APPLICATION_COLLECTION_BGP_PEER_JSON,
+    APPLICATION_COLLECTION_AD_ROUTE_JSON,
+    APPLICATION_COLLECTION_BGP_NETWORK_JSON,
+    APPLICATION_COLLECTION_BRIDGE_JSON,
+    APPLICATION_COLLECTION_DHCP_SUBNET_JSON,
+    APPLICATION_COLLECTION_DHCP_HOST_JSON,
+    APPLICATION_COLLECTION_PORT_JSON,
+    APPLICATION_COLLECTION_CHAIN_JSON,
+    APPLICATION_COLLECTION_RULE_JSON,
+    APPLICATION_COLLECTION_HOST_JSON,
+    APPLICATION_COLLECTION_INTERFACE_JSON,
+    APPLICATION_COLLECTION_IP_ADDR_GROUP_JSON,
+    APPLICATION_COLLECTION_IP_ADDR_GROUP_ADDR_JSON,
+    APPLICATION_COLLECTION_PORT_GROUP_JSON,
+    APPLICATION_COLLECTION_PORT_GROUP_PORT_JSON,
+    APPLICATION_COLLECTION_ROUTER_JSON,
+    APPLICATION_COLLECTION_ROUTE_JSON,
+    APPLICATION_COLLECTION_TUNNEL_ZONE_JSON,
+    APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON,
+    APPLICATION_MAX_INDEX
 };
 
 /*----------------------------------------------------------------------------*\
@@ -205,8 +308,7 @@ typedef struct midoname_t {
     char *uuid;
     char *jsonbuf;
     char *resource_type;
-    char *content_type;
-    char *vers;
+    char *media_type;
     char *uri;
     midoname_ipagip_extras *ipagip;
     midoname_rule_extras *rule;
@@ -392,7 +494,7 @@ void mido_info_http_count_total();
 void mido_free_mido_parsed_route(mido_parsed_route *route);
 void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes);
 
-int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname);
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *media_type, char *uri, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname *name);
 void mido_free_midoname_list(midoname * name, int max_name);
 int mido_update_midoname(midoname *name);
@@ -431,8 +533,12 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
 int mido_delete_route(midonet_api_router *router, midoname *name);
 int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max);
 
-int mido_get_bgps(midoname *port, midoname ***outnames, int *outnames_max);
-int mido_get_bgp_routes(midoname *bgp, midoname ***outnames, int *outnames_max);
+int mido_get_bgps(midoname *dev, midoname ***outnames, int *outnames_max);
+int mido_get_bgps_v1(midoname *port, midoname ***outnames, int *outnames_max);
+int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max);
+int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max);
+int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_max);
+int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max);
 
 int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char *slashnet,
         char *gw, u32 *dnsServers, int max_dnsServers, int *foundidx);
@@ -519,11 +625,11 @@ midoname *mido_get_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipaddrgroup, int pos)
 
 int mido_create_resource(midoname *parents, int max_parents, midoname *newname, midoname **outname, ...);
 int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname, midoname **outname, va_list * al);
-int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al);
+int mido_update_resource(midoname *name, va_list *al);
 int mido_print_resource(char *resource_type, midoname * name);
 int mido_delete_resource(midoname * parentname, midoname * name);
-int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, midoname ***outnames, int *outnames_max);
-int mido_refresh_resource(midoname *resc, char *apistr);
+int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, char *mtype, midoname ***outnames, int *outnames_max);
+int mido_refresh_resource(midoname *resc);
 
 int mido_cmp_midoname_to_input(midoname *name, ...);
 int mido_cmp_midoname_to_input_json(midoname *name, ...);
@@ -535,6 +641,7 @@ char *mido_jsonize(char *tenant, va_list * al);
 
 void midonet_api_init(void);
 void midonet_api_cleanup(void);
+void midonet_api_get_version(char **version);
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
 int mido_libcurl_init(mido_libcurl_handles *handles);
 int mido_libcurl_cleanup(mido_libcurl_handles *handles);
@@ -544,8 +651,8 @@ int mido_libcurl_release_handle(mido_libcurl_handles *handles, CURL *handle);
 int mido_libcurl_release_gethandle(mido_libcurl_handles *handles, CURL *handle);
 
 int midonet_http_get(char *url, char *apistr, char **out_payload);
-int midonet_http_put(char *url, char *resource_type, char *vers, char *payload);
-int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload);
+int midonet_http_put(char *url, char *apistr, char *payload);
+int midonet_http_post(char *url, char *apistr, char *payload, char **out_payload);
 int midonet_http_delete(char *url);
 
 midoname_list *midoname_list_new(void);

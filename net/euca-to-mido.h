@@ -382,6 +382,8 @@ int clear_mido_gnitags(mido_config *mido);
 int check_mido_tunnelzone();
 
 char *discover_mido_bgps(mido_config *mido);
+char *discover_mido_bgps_v1(mido_config *mido);
+char *discover_mido_bgps_v5(mido_config *mido);
 
 int populate_mido_core(mido_config *mido, mido_core *midocore);
 int create_mido_core(mido_config *mido, mido_core *midocore);
@@ -434,6 +436,8 @@ int delete_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup);
 int find_mido_vpc_secgroup(mido_config *mido, char *secgroupname, mido_vpc_secgroup **outvpcsecgroup);
 
 int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
+int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
+int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
 int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
 int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
