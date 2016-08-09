@@ -909,4 +909,19 @@ class Privileged {
     }
     return account.createOpenIdConnectProvider( url, clientIDs, thumbprints );
   }
+
+  public static void deleteOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, provider.getUrl(), account, IAM_DELETEROLE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.deleteOpenIdConnectProvider( provider.getUrl( ) );
+  }
+
+  public static boolean allowListOpenIdConnectProviders( AuthContext requestUser, EuareAccount account, String providerArn) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_LISTOPENIDCONNECTPROVIDERS ),
+            account.getAccountNumber( ),
+            providerArn );
+  }
 }

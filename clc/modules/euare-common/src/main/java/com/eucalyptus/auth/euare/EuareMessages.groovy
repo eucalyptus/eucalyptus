@@ -1436,8 +1436,23 @@ public class ListOpenIdConnectProvidersResponseType extends EuareMessage {
 }
 
 public class ListOpenIdConnectProvidersResultType extends EucalyptusData {
-  ArrayList<String> arn;
-  public ListOpenIdConnectProvidersResultType() {  }
+  OpenIdConnectProviderListType arns = new OpenIdConnectProviderListType();
+  public ListOpenIdConnectProvidersResultType() { }
+}
+
+public class OpenIdConnectProviderListType extends EucalyptusData {
+  ArrayList<ArnType> member = new ArrayList<ArnType>();
+  public OpenIdConnectProviderListType() {  }
+  public OpenIdConnectProviderListType( ArnType role ) {
+    member.add( role )
+  }
+}
+
+public class ArnType extends EucalyptusData {
+  String arn;
+  public ArnType(String arn) {
+    this.arn = arn;
+  }
 }
 
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETOPENIDCONNECTPROVIDER )

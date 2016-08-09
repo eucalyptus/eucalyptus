@@ -2453,18 +2453,17 @@ public class EuareService {
     if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list openid connect providers" );
     }
-    final ArrayList<String> providers = new ArrayList<String>();
+    final ArrayList<ArnType> providers = reply.getListOpenIdConnectProvidersResult( ).getArns().getMember();
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final String provider : account.listOpenIdConnectProviders() ) {
         if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, openIdConnectProviderUrlToArn( account, provider ) ) ) {
-          providers.add( provider );
+          providers.add( new ArnType( provider ) );
         }
       }
     } catch ( Exception e ) {
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
-    reply.getListOpenIdConnectProvidersResult( ).setArn(providers);
     return reply;
   }
 }
