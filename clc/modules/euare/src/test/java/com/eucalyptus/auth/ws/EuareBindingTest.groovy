@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.ws
 
 import com.eucalyptus.auth.euare.CreateOpenIdConnectProviderType
+import com.eucalyptus.auth.euare.DeleteOpenIdConnectProviderType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
@@ -55,6 +56,20 @@ class EuareBindingTest extends QueryBindingTestSupport {
           Url                       : 'https://auth.globus.org/',
           'ClientIDList.member.1'   : '659067ec-9698-44a8-88ea-db31e071447a',
           'ThumbprintList.member.1' : 'e26e90c1e76c7fc02d63c71913cc2291c52d8b58'
+        ]
+    )
+  }
+
+  @Test
+  void testDeleteOpenIdConnectProvider( ) {
+    bindAndAssertParameters(
+        DeleteOpenIdConnectProviderType,
+        "DeleteOpenIdConnectProvider",
+        new DeleteOpenIdConnectProviderType(
+          openIDConnectProviderArn: 'arn:aws:iam::123456789012:oidc-provider/auth.globus.org'
+        ) ,
+        [
+          OpenIDConnectProviderArn  : 'arn:aws:iam::123456789012:oidc-provider/auth.globus.org'
         ]
     )
   }

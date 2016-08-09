@@ -95,6 +95,7 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
@@ -850,15 +851,40 @@ public class DatabaseAccountProxy implements EuareAccount {
 
   @Override
   public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException {
-  }
-
-  @Override
-  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException {
-    return null;
+    final String accountName = this.delegate.getName( );
+    if (openIDConnectProviderArn == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( openIDConnectProviderArn, accountName );
+      Entities.delete( provider );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + openIDConnectProviderArn + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
   }
 
   @Override
   public List<String> listOpenIdConnectProviders() throws AuthException {
+    final List<String> results = Lists.newArrayList( );
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      List<OpenIdProviderEntity> providers = Entities
+          .criteriaQuery( OpenIdProviderEntity.class )
+          .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
+          .list( );
+      for ( final OpenIdProviderEntity provider : providers ) {
+        results.add( provider.getUrl() );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get openid connect providers for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get openid connect providers", e );
+    }
+  }
+
+  @Override
+  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException {
     return null;
   }
 

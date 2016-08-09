@@ -81,6 +81,8 @@ public interface EuareAccount extends AccountIdentifiers, BasePrincipal, Restric
 
   public EuareUser lookupAdmin() throws AuthException;
 
+  public EuareOpenIdConnectProvider lookupOpenIdConnectProvider( String url ) throws AuthException;
+
   public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
   public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
   public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;

@@ -2344,6 +2344,22 @@ public class EuareService {
     }
   }
   
+  private static EuareOpenIdConnectProvider lookupOpenIdConnectProvider( EuareAccount account, String url ) throws EucalyptusCloudException {
+    try {
+      return account.lookupOpenIdConnectProvider( url );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find openId connect provider " + url );
+        } else if ( AuthException.EMPTY_OPENID_PROVIDER_URL.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty openId connect provider url" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+
   private static ServerCertificateMetadataType getServerCertificateMetadata(final ServerCertificate cert){
     final ServerCertificateMetadataType metadata = 
         new ServerCertificateMetadataType();
@@ -2370,6 +2386,16 @@ public class EuareService {
   }
 
   /* open id services */
+  protected String openIdConnectProviderUrlToArn(final EuareAccount account, final String url) {
+    String name = url.substring("https://".length());
+    return new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "oidc-provider", name ).toString( );
+  }
+
+  protected String openIdConnectProviderArnToUrl(final String arn) {
+    final String OIDC = "oidc-provider";
+    return "https://" + arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
+  }
+
   public CreateOpenIdConnectProviderResponseType createOpenIdConnectProvider( final CreateOpenIdConnectProviderType request ) throws EucalyptusCloudException {
     final CreateOpenIdConnectProviderResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -2378,7 +2404,7 @@ public class EuareService {
     final EuareAccount account = getRealAccount( ctx, request );
     try {
       final EuareOpenIdConnectProvider newOpenIDConnectProvider = Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl( ), request.getClientIDList( ), request.getThumbprintList() );
-      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( request.getUrl() );
+      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( openIdConnectProviderUrlToArn( account, newOpenIDConnectProvider.getUrl() ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -2397,4 +2423,48 @@ public class EuareService {
     return reply;
   }
 
+  public DeleteOpenIdConnectProviderResponseType deleteOpenIdConnectProvider( final DeleteOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+    final DeleteOpenIdConnectProviderResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final EuareOpenIdConnectProvider openIdConnectProviderFound = lookupOpenIdConnectProvider( account, openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
+    try {
+      Privileged.deleteOpenIdConnectProvider( requestUser, account, openIdConnectProviderFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete openid connect provider by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
+  public ListOpenIdConnectProvidersResponseType listOpenIdConnectProviders( final ListOpenIdConnectProvidersType request ) throws EucalyptusCloudException {
+    final ListOpenIdConnectProvidersResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list openid connect providers" );
+    }
+    final ArrayList<String> providers = new ArrayList<String>();
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      for ( final String provider : account.listOpenIdConnectProviders() ) {
+        if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, openIdConnectProviderUrlToArn( account, provider ) ) ) {
+          providers.add( provider );
+        }
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    reply.getListOpenIdConnectProvidersResult( ).setArn(providers);
+    return reply;
+  }
 }
