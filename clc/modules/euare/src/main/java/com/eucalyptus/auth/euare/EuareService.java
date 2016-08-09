@@ -2179,6 +2179,13 @@ public class EuareService {
     g.setCreateDate( groupFound.getCreateDate( ) );
   }
 
+  private void fillOpenIdConnectProviderResult( GetOpenIdConnectProviderResultType p, EuareOpenIdConnectProvider providerFound ) throws AuthException {
+    p.setUrl( providerFound.getUrl( ) );
+    p.getClientIDList().addAll( providerFound.getClientIds() );
+    p.getThumbprintList().addAll( providerFound.getThumbprints() );
+    p.setCreateDate( providerFound.getCreationTimestamp( ) );
+  }
+
   private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, EuareInstanceProfile instanceProfileFound ) throws AuthException {
     instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );
     instanceProfileType.setInstanceProfileId( instanceProfileFound.getInstanceProfileId() );
@@ -2459,6 +2466,27 @@ public class EuareService {
         if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, openIdConnectProviderUrlToArn( account, provider ) ) ) {
           providers.add( new ArnType( provider ) );
         }
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
+  public GetOpenIdConnectProviderResponseType getOpenIdConnectProvider( final GetOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+    final GetOpenIdConnectProviderResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list openid connect providers" );
+    }
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      EuareOpenIdConnectProvider provider = account.getOpenIdConnectProvider( openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
+      if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, request.getOpenIDConnectProviderArn() ) ) {
+        fillOpenIdConnectProviderResult( reply.getGetOpenIdConnectProviderResult(), provider );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );

@@ -1218,7 +1218,7 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
   <mapping name="ListOpenIDConnectProvidersResult" class="com.eucalyptus.auth.euare.ListOpenIdConnectProvidersResultType">
-    <structure name="OpenIDConnectProviderList" field="arns" usage="required" type="com.eucalyptus.auth.euare.OpenIdConnectProviderListType"/>
+    <structure field="arns" usage="required" type="com.eucalyptus.auth.euare.OpenIdConnectProviderListType"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.ArnType" abstract="true">
     <value name="Arn" field="arn" usage="required"/>

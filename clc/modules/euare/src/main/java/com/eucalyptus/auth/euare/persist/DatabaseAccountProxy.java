@@ -852,8 +852,9 @@ public class DatabaseAccountProxy implements EuareAccount {
   @Override
   public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException {
     final String accountName = this.delegate.getName( );
+    LOG.info(">>>>>>>>>>>>> THIS ISN'T REALLY USED RIGHT??? ");
     if (openIDConnectProviderArn == null ) {
-      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_ARN );
     }
     try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
       final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( openIDConnectProviderArn, accountName );
@@ -884,8 +885,18 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
-  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException {
-    return null;
+  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      return new DatabaseOpenIdProviderProxy( provider );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
   }
 
   @Override

@@ -80,6 +80,7 @@ public class AuthException extends Exception {
   public static final String EMPTY_ROLE_ID = "Empty role ID";
   public static final String EMPTY_ACCOUNT_NAME = "Empty account name";
   public static final String EMPTY_ACCOUNT_ID = "Empty account ID";
+  public static final String EMPTY_OPENID_PROVIDER_ARN = "Empty openId connect provider ARN";
   public static final String EMPTY_OPENID_PROVIDER_URL = "Empty openId connect provider URL";
   public static final String USER_DELETE_CONFLICT = "User has resources attached and can not be deleted";
   public static final String GROUP_DELETE_CONFLICT = "Group has resources attached and can not be deleted";
