@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2015 Eucalyptus Systems, Inc.
+  Copyright 2009-2016 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -65,8 +65,10 @@
       xmlns:spring="http://www.springframework.org/schema/beans"
       xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:int="http://www.springframework.org/schema/integration"
       xsi:schemaLocation="
         http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
         http://www.mulesoft.org/schema/mule/management http://www.mulesoft.org/schema/mule/management/3.4/mule-management.xsd
         http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
@@ -139,8 +141,77 @@
     </service>
   </model>
 
+  <!--
+    temporary link between mule and spring integration
+  -->
+  <endpoint name="EuareWS" address="vm://Euare" exchange-pattern="one-way"/>
+  <endpoint name="EuareInternalVM" address="vm://EuareInternal" exchange-pattern="request-response"/>
+  <endpoint name="IdentityWS" address="vm://Identity" exchange-pattern="one-way"/>
+  <endpoint name="IdentityInternalVM" address="vm://IdentityInternal" exchange-pattern="request-response"/>
+  <model name="mule-to-spring-integration">
+    <service name="mule-to-spring-integration-dispatch">
+      <inbound>
+        <vm:inbound-endpoint ref="EuareRequestQueueEndpoint" />
+        <inbound-endpoint ref="EuareWS" />
+        <inbound-endpoint ref="IdentityRequestQueueEndpoint" />
+        <inbound-endpoint ref="IdentityWS" />
+      </inbound>
+      <component>
+        <reflection-entry-point-resolver acceptVoidMethods="true">
+          <exclude-object-methods/>
+          <exclude-entry-point method="equals"/>
+          <exclude-entry-point method="getInvocationHandler"/>
+        </reflection-entry-point-resolver>
+        <spring-object bean="messaging-gateway-dispatch"/>
+      </component>
+    </service>
+    <service name="mule-to-spring-integration-request-reply">
+      <inbound>
+        <inbound-endpoint ref="EuareInternalVM" />
+        <inbound-endpoint ref="IdentityInternalVM" />
+      </inbound>
+      <component>
+        <reflection-entry-point-resolver acceptVoidMethods="true">
+          <exclude-object-methods/>
+          <exclude-entry-point method="equals"/>
+          <exclude-entry-point method="getInvocationHandler"/>
+        </reflection-entry-point-resolver>
+        <spring-object bean="messaging-gateway-request-response"/>
+      </component>
+    </service>
+  </model>
+  <!--
+    end temporary link between mule and spring integration
+  -->
+
   <spring:beans>
     <spring:import resource="classpath:eucalyptus-context.xml"/>
+
+    <!-- simple implementations for service components that can be overridden -->
+    #foreach( $component in $components )
+      <int:channel id="${component.name}-request"/>
+    #end
+
+    <!-- component channel request dispatch by type -->
+    <int:payload-type-router input-channel="request-queue">
+      #foreach( $component in $components )
+        #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
+        <int:mapping type="${msgType.getCanonicalName()}" channel="${component.name}-request"/>
+        #end
+      #end
+    </int:payload-type-router>
+
+    <!-- component channel response dispatch by type -->
+    <int:payload-type-router input-channel="response-queue" default-output-channel="default-reply-queue" resolution-required="false">
+      #foreach( $component in $components )
+        #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
+        <int:mapping type="${msgType.getCanonicalName()}" channel="${component.name}-response"/>
+        #end
+      #end
+    </int:payload-type-router>
+
+    <!-- import component configurations -->
+    <spring:import resource="classpath*:*-component-context.xml"/>
 
     <!-- Override some mule defaults -->
     <spring:bean name="_defaultPersistentQueueStore,_fileQueueStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryQueueStore"/>

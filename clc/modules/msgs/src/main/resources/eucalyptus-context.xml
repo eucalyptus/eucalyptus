@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2014 Eucalyptus Systems, Inc.
+  Copyright 2009-2016 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,11 +21,56 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:context="http://www.springframework.org/schema/context"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans
-         http://www.springframework.org/schema/beans/spring-beans.xsd
-         http://www.springframework.org/schema/context
-         http://www.springframework.org/schema/context/spring-context.xsd">
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
 
     <context:component-scan base-package="com.eucalyptus"/>
+
+    <!-- TODO:STEVE: configure executor -->
+    <bean id="springIntegrationRequestExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"/>
+
+    <int:chain id="dispatch-chain" input-channel="dispatch-queue" output-channel="request-queue">
+        <int:header-enricher>
+            <int:reply-channel ref="response-queue"/>
+        </int:header-enricher>
+    </int:chain>
+
+    <int:channel id="error-queue"/>
+
+    <int:channel id="error-reply-queue"/>
+
+    <int:channel id="default-reply-queue"/>
+
+    <int:channel id="dispatch-queue">
+        <!--
+        <int:dispatcher task-executor="springIntegrationRequestExecutor" load-balancer="none" failover="false"/>
+        -->
+    </int:channel>
+
+    <int:channel id="request-queue"/>
+
+    <int:channel id="response-queue"/>
+
+    <int:router input-channel="error-queue" expression="payload.failedMessage.headers.errorChannel" default-output-channel="error-reply-queue"/>
+
+    <int:service-activator input-channel="error-reply-queue" ref="replyQueue"/>
+
+    <int:service-activator input-channel="default-reply-queue" ref="replyQueue"/>
+
+    <int:gateway id="messaging-gateway-dispatch"
+                 async-executor=""
+                 service-interface="java.util.function.Consumer"
+                 default-request-channel="dispatch-queue"
+                 error-channel="error-queue"
+    />
+
+    <int:gateway id="messaging-gateway-request-response"
+                 async-executor=""
+                 service-interface="java.util.function.Function"
+                 default-request-channel="request-queue"
+    />
 
 </beans>

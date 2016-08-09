@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,16 +69,18 @@ import org.mule.api.MessagingException;
 import org.mule.api.MuleException;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.protocol.QueryBindingInfo;
 import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 
+@SuppressWarnings( "Guava" )
+@ComponentNamed
 public class ReplyQueue {
   private static Logger LOG = Logger.getLogger( ReplyQueue.class );
 
@@ -123,6 +125,32 @@ public class ReplyQueue {
       Contexts.responseError( cause );
     } else {
       Contexts.responseError( cause );
+    }
+  }
+
+  public void handle( final org.springframework.messaging.MessagingException messagingEx ) {
+    final EucalyptusWebServiceException webServiceException =
+        Exceptions.findCause( messagingEx, EucalyptusWebServiceException.class );
+    Object payload = messagingEx.getFailedMessage( ).getPayload( );
+    BaseMessage msg = convert( payload );
+    if( msg != null ) {
+      if ( webServiceException != null ) {
+        final Optional<Integer> statusCodeOptional = ErrorHandlerSupport.getHttpResponseStatus( webServiceException );
+        final HttpResponseStatus status = !statusCodeOptional.isPresent( ) ?
+            HttpResponseStatus.INTERNAL_SERVER_ERROR :
+            new HttpResponseStatus( statusCodeOptional.get(), "" );
+        Contexts.response( new ExceptionResponseType( msg, webServiceException.getCode( ), webServiceException.getMessage( ), status, webServiceException )  );
+      } else {
+        final Throwable cause = messagingEx.getCause( );
+        Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
+      }
+    } else {
+      LOG.error( "Failed to identify request context for received error: " + messagingEx.toString( ) );
+      final Throwable cause = messagingEx.getCause( );
+      Contexts.responseError( new WebServicesException(
+          "Failed to identify request context for received error: " + messagingEx.toString( ) + " while handling error: " + cause.getMessage( ),
+          cause,
+          HttpResponseStatus.NOT_ACCEPTABLE ) );
     }
   }
 

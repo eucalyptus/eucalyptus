@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,29 +20,29 @@
 package com.eucalyptus.auth.euare;
 
 import org.apache.log4j.Logger;
-import org.mule.api.MuleMessage;
-import org.mule.api.routing.filter.Filter;
+import org.springframework.integration.annotation.Filter;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
 import com.google.common.base.Optional;
 
 /**
- *  Mule filter that is true for requests for a remote region
+ *  Filter that is true for requests for a remote region
  */
-public class EuareRemoteRegionFilter implements Filter {
+@ComponentNamed
+public class EuareRemoteRegionFilter {
   private static final Logger logger = Logger.getLogger( EuareRemoteRegionFilter.class );
   private static final RegionConfigurationManager regionConfigurationManager = new RegionConfigurationManager( );
 
-  @Override
-  public boolean accept( final MuleMessage message ) {
-    final EuareMessage request = (EuareMessage) message.getPayload( );
-    return isNonLocalRegion( getRegion( request ) );
+  @Filter
+  public boolean accept( final EuareMessage message ) {
+    return isNonLocalRegion( getRegion( message ) );
   }
 
   static Optional<RegionInfo> getRegion( final EuareMessage request ) {
