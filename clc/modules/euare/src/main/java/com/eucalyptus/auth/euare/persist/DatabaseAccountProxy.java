@@ -852,7 +852,6 @@ public class DatabaseAccountProxy implements EuareAccount {
   @Override
   public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException {
     final String accountName = this.delegate.getName( );
-    LOG.info(">>>>>>>>>>>>> THIS ISN'T REALLY USED RIGHT??? ");
     if (openIDConnectProviderArn == null ) {
       throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_ARN );
     }
