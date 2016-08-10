@@ -911,7 +911,7 @@ class Privileged {
   }
 
   public static void deleteOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, provider.getUrl(), account, IAM_DELETEROLE, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_DELETEOPENIDCONNECTPROVIDER, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.deleteOpenIdConnectProvider( provider.getUrl( ) );
@@ -923,5 +923,34 @@ class Privileged {
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_LISTOPENIDCONNECTPROVIDERS ),
             account.getAccountNumber( ),
             providerArn );
+  }
+
+  public static boolean allowGetOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, String providerArn) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_GETOPENIDCONNECTPROVIDER ),
+            account.getAccountNumber( ),
+            providerArn );
+  }
+
+  public static void addClientIdToOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, String clientId ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.addClientIdToOpenIdConnectProvider( clientId, provider.getUrl( ) );
+  }
+
+  public static void removeClientIdFromOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, String clientId ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.removeClientIdFromOpenIdConnectProvider( clientId, provider.getUrl( ) );
+  }
+
+  public static void updateOpenIdConnectProviderThumbprint( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, List<String> thumbprints ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.updateOpenIdConnectProviderThumbprint( provider.getUrl( ), thumbprints );
   }
 }

@@ -2485,10 +2485,73 @@ public class EuareService {
     }
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       EuareOpenIdConnectProvider provider = account.getOpenIdConnectProvider( openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
-      if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, request.getOpenIDConnectProviderArn() ) ) {
+      if ( Privileged.allowGetOpenIdConnectProvider( requestUser, account, request.getOpenIDConnectProviderArn() ) ) {
         fillOpenIdConnectProviderResult( reply.getGetOpenIdConnectProviderResult(), provider );
       }
     } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
+  public AddClientIdToOpenIdConnectProviderResponseType addClientIdToOpenIdConnectProvider( final AddClientIdToOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+    final AddClientIdToOpenIdConnectProviderResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final EuareOpenIdConnectProvider openIdConnectProviderFound = lookupOpenIdConnectProvider( account, openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
+    try {
+      Privileged.addClientIdToOpenIdConnectProvider( requestUser, account, openIdConnectProviderFound, request.getClientID() );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add clientid to openid connect provider by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
+  public RemoveClientIdFromOpenIdConnectProviderResponseType removeClientIdFromOpenIdConnectProvider( final RemoveClientIdFromOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+    final RemoveClientIdFromOpenIdConnectProviderResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final EuareOpenIdConnectProvider openIdConnectProviderFound = lookupOpenIdConnectProvider( account, openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
+    try {
+      Privileged.removeClientIdFromOpenIdConnectProvider( requestUser, account, openIdConnectProviderFound, request.getClientID() );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove clientid from openid connect provider by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+    return reply;
+  }
+
+  public UpdateOpenIdConnectProviderThumbprintResponseType updateOpenIdConnectProvider( final UpdateOpenIdConnectProviderThumbprintType request ) throws EucalyptusCloudException {
+    final UpdateOpenIdConnectProviderThumbprintResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final EuareOpenIdConnectProvider openIdConnectProviderFound = lookupOpenIdConnectProvider( account, openIdConnectProviderArnToUrl( request.getOpenIDConnectProviderArn() ) );
+    try {
+      Privileged.updateOpenIdConnectProviderThumbprint( requestUser, account, openIdConnectProviderFound, request.getThumbprintList() );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update thumbprint for openid connect provider by " + ctx.getUser( ).getName( ) );
+        }
+      }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }

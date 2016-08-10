@@ -899,15 +899,54 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
-  public void addClientIdToOpenIdConnectProvider(String clientId, String arn) throws AuthException {
+  public void addClientIdToOpenIdConnectProvider(String clientId, String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      provider.getClientIDs().add(clientId);
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
   }
 
   @Override
-  public void removeClientIdFromOpenIdConnectProvider(String clientId, String arn) throws AuthException {
+  public void removeClientIdFromOpenIdConnectProvider(String clientId, String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      provider.getClientIDs().remove(clientId);
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
   }
 
   @Override
-  public void updateOpenIdConnectProviderThumbprint(String arn, List<String> thumbprintList) throws AuthException {
+  public void updateOpenIdConnectProviderThumbprint(String url, List<String> thumbprintList) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      provider.getThumbprints().clear();
+      provider.getThumbprints().addAll(thumbprintList);
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
   }
-
 }

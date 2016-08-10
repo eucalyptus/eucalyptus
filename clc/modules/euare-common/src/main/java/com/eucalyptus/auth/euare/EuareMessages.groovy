@@ -1504,8 +1504,8 @@ public class RemoveClientIdFromOpenIdConnectProviderResponseType extends EuareMe
 public class UpdateOpenIdConnectProviderThumbprintType extends EuareMessage implements EuareMessageWithDelegate {
   String delegateAccount;
   String openIDConnectProviderArn;
-  @HttpParameterMapping(parameter="member")
-  ArrayList<String> thumbprintList;
+  @HttpParameterMapping(parameter="ThumbprintList.member")
+  ArrayList<String> thumbprintList = Lists.newArrayList( )
   public UpdateOpenIdConnectProviderThumbprintType() {  }
 }
 public class UpdateOpenIdConnectProviderThumbprintResponseType extends EuareMessage {
