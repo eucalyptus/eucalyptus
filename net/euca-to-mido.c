@@ -5471,7 +5471,7 @@ char *discover_mido_bgps_v5(mido_config *mido) {
             EUCA_FREE(prefixLength);
         }
     } else {
-        LOGWARN("routes not found for bgp %s\n", bgps[0]->uuid);
+        LOGWARN("no bgp routes found\n");
     }
     EUCA_FREE(bgp_routes);
     return (res);
