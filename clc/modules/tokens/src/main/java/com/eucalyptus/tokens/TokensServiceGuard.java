@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,14 +21,18 @@ package com.eucalyptus.tokens;
 
 import static com.eucalyptus.tokens.TokensServiceConfiguration.getDisabledActions;
 import static com.eucalyptus.tokens.TokensServiceConfiguration.getEnabledActions;
+import javax.annotation.Nonnull;
+import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.context.ServiceAdvice;
 import com.eucalyptus.util.RestrictedTypes;
 
 /**
  * Guard component invoked before service actions.
  */
-public class TokensServiceGuard {
+@ComponentNamed
+public class TokensServiceGuard extends ServiceAdvice {
 
-  public TokenMessage actionCheck( final Object object ) throws TokensException {
+  public void beforeService( @Nonnull final Object object ) throws TokensException {
     // Check type
     if ( !(object instanceof TokenMessage ) ) {
       throw new TokensException( TokensException.Code.InvalidAction, "Invalid action" );
@@ -41,7 +45,5 @@ public class TokensServiceGuard {
         getDisabledActions().contains( action ) ) {
       throw new TokensException( TokensException.Code.ServiceUnavailable, "Service unavailable" );
     }
-
-    return message;
   }
 }

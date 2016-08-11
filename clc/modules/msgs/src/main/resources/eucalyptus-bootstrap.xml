@@ -148,13 +148,17 @@
   <endpoint name="EuareInternalVM" address="vm://EuareInternal" exchange-pattern="request-response"/>
   <endpoint name="IdentityWS" address="vm://Identity" exchange-pattern="one-way"/>
   <endpoint name="IdentityInternalVM" address="vm://IdentityInternal" exchange-pattern="request-response"/>
+  <endpoint name="TokensWS" address="vm://Tokens" exchange-pattern="one-way"/>
+  <endpoint name="TokensInternalVM" address="vm://TokensInternal" exchange-pattern="request-response"/>
   <model name="mule-to-spring-integration">
     <service name="mule-to-spring-integration-dispatch">
       <inbound>
-        <vm:inbound-endpoint ref="EuareRequestQueueEndpoint" />
+        <inbound-endpoint ref="EuareRequestQueueEndpoint" />
         <inbound-endpoint ref="EuareWS" />
         <inbound-endpoint ref="IdentityRequestQueueEndpoint" />
         <inbound-endpoint ref="IdentityWS" />
+        <inbound-endpoint ref="TokensRequestQueueEndpoint" />
+        <inbound-endpoint ref="TokensWS" />
       </inbound>
       <component>
         <reflection-entry-point-resolver acceptVoidMethods="true">
@@ -169,6 +173,7 @@
       <inbound>
         <inbound-endpoint ref="EuareInternalVM" />
         <inbound-endpoint ref="IdentityInternalVM" />
+        <inbound-endpoint ref="TokensInternalVM" />
       </inbound>
       <component>
         <reflection-entry-point-resolver acceptVoidMethods="true">
