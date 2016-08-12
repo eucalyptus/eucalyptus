@@ -144,6 +144,10 @@
   <!--
     temporary link between mule and spring integration
   -->
+  <endpoint name="AutoScalingBackendWS" address="vm://AutoScalingBackend" exchange-pattern="one-way"/>
+  <endpoint name="AutoScalingBackendInternalVM" address="vm://AutoScalingBackendInternal" exchange-pattern="request-response"/>
+  <endpoint name="AutoScalingWS" address="vm://AutoScaling" exchange-pattern="one-way"/>
+  <endpoint name="AutoScalingInternalVM" address="vm://AutoScalingInternal" exchange-pattern="request-response"/>
   <endpoint name="EuareWS" address="vm://Euare" exchange-pattern="one-way"/>
   <endpoint name="EuareInternalVM" address="vm://EuareInternal" exchange-pattern="request-response"/>
   <endpoint name="IdentityWS" address="vm://Identity" exchange-pattern="one-way"/>
@@ -153,6 +157,10 @@
   <model name="mule-to-spring-integration">
     <service name="mule-to-spring-integration-dispatch">
       <inbound>
+        <inbound-endpoint ref="AutoScalingBackendRequestQueueEndpoint" />
+        <inbound-endpoint ref="AutoScalingBackendWS" />
+        <inbound-endpoint ref="AutoScalingRequestQueueEndpoint" />
+        <inbound-endpoint ref="AutoScalingWS" />
         <inbound-endpoint ref="EuareRequestQueueEndpoint" />
         <inbound-endpoint ref="EuareWS" />
         <inbound-endpoint ref="IdentityRequestQueueEndpoint" />
@@ -171,6 +179,8 @@
     </service>
     <service name="mule-to-spring-integration-request-reply">
       <inbound>
+        <inbound-endpoint ref="AutoScalingBackendInternalVM" />
+        <inbound-endpoint ref="AutoScalingInternalVM" />
         <inbound-endpoint ref="EuareInternalVM" />
         <inbound-endpoint ref="IdentityInternalVM" />
         <inbound-endpoint ref="TokensInternalVM" />

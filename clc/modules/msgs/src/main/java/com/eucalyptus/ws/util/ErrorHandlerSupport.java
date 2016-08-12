@@ -46,6 +46,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ErrorDetail;
 import edu.ucsb.eucalyptus.msgs.ErrorResponse;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 /**
  * Support for service error handler implementations
@@ -63,7 +64,45 @@ public abstract class ErrorHandlerSupport {
     this.namespace = namespace;
     this.defaultCode = defaultCode;
   }
-  
+
+  public void handle( final org.springframework.messaging.MessagingException messagingEx ) {
+    final EucalyptusCloudException cloudException =
+        Exceptions.findCause( messagingEx, EucalyptusCloudException.class );
+    final Object payloadObject = messagingEx.getFailedMessage( ).getPayload( );
+    if( cloudException != null ) {
+      try {
+        final BaseMessage payload = parsePayload( payloadObject );
+        final HttpResponseStatus status;
+        final Role role;
+        final String code;
+        if ( cloudException instanceof EucalyptusWebServiceException ) {
+          final EucalyptusWebServiceException webServiceException = (EucalyptusWebServiceException) cloudException;
+          role = webServiceException.getRole();
+          code = webServiceException.getCode();
+        } else {
+          role = Role.Receiver;
+          code = defaultCode;
+        }
+        final Optional<Integer> statusCodeOptional = getHttpResponseStatus( cloudException );
+        status = !statusCodeOptional.isPresent( ) ?
+            HttpResponseStatus.INTERNAL_SERVER_ERROR :
+            new HttpResponseStatus( statusCodeOptional.get( ), code );
+        final BaseMessage errorResp = buildErrorResponse(
+            payload.getCorrelationId( ),
+            role,
+            code,
+            cloudException.getMessage()
+        );
+        Contexts.response( new BaseMessageSupplier( errorResp, status ) );
+      } catch ( final PayloadParseException e ) {
+        LOG.error( "Failed to parse payload ", e.getCause() );
+      }
+    } else {
+      final BaseMessage errorResp = buildFatalResponse( messagingEx.getCause( )==null?messagingEx:messagingEx.getCause( ) );
+      Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
+    }
+  }
+
   @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
   public void handle( final ExceptionMessage exMsg ) {
     EventRecord.here( getClass(), EventType.MSG_REPLY, exMsg.getPayload().getClass().getSimpleName() ).debug();
