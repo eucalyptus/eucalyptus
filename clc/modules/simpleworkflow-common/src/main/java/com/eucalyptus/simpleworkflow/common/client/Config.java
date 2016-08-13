@@ -33,7 +33,6 @@ import org.apache.http.NoHttpResponseException;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.mule.api.MessagingException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
@@ -303,7 +302,6 @@ public class Config {
     );
     workerObjectMapper.configure( DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false );
     workerObjectMapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
-    workerObjectMapper.addMixInAnnotations( MessagingException.class, MuleMixin.class );
     workerObjectMapper.enableDefaultTyping( com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.NON_FINAL );
     return workerObjectMapper;
   }
@@ -322,7 +320,4 @@ public class Config {
     return isMethodBackedByTransientField;
   }
 
-  @JsonIgnoreProperties( { "failingMessageProcessor" } )
-  private static final class MuleMixin {
-  }
 }

@@ -64,6 +64,7 @@ package com.eucalyptus.config;
 
 import java.util.List;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -76,6 +77,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
+@ComponentNamed
 public class PropertiesManager {
   private static Logger LOG = Logger.getLogger( PropertiesManager.class );
   

@@ -128,7 +128,7 @@ import com.eucalyptus.compute.common.backend.*;
  *
  */
 @SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration" } )
-@ComponentNamed
+@ComponentNamed("computeVpcManager")
 public class VpcManager {
 
   private static final Logger logger = Logger.getLogger( VpcManager.class );

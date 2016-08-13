@@ -39,6 +39,7 @@ import javax.persistence.EntityNotFoundException;
 import javax.persistence.OptimisticLockException;
 import javax.persistence.RollbackException;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.*;
 import org.apache.log4j.Logger;
 
@@ -219,6 +220,7 @@ import com.google.common.net.HostSpecifier;
  * @author Sang-Min Park
  */
 @SuppressWarnings( "UnusedDeclaration" )
+@ComponentNamed
 public class LoadBalancingBackendService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingBackendService.class );
   private static final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;

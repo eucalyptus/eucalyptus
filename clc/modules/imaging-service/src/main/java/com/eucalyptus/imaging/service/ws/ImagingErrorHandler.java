@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.imaging.service.ws;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.imaging.common.ErrorResponse;
@@ -31,6 +32,7 @@ import org.apache.log4j.Logger;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
+@ComponentNamed
 public class ImagingErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( ImagingErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";  //TODO:GEN2OOLS: Verify / replace default error code for service

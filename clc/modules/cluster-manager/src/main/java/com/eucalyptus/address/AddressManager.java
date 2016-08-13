@@ -112,7 +112,7 @@ import com.eucalyptus.compute.common.backend.DisassociateAddressType;
 import com.eucalyptus.compute.common.backend.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.backend.ReleaseAddressType;
 
-@ComponentNamed
+@ComponentNamed("computeAddressManager")
 public class AddressManager {
   
   private static final Logger LOG = Logger.getLogger( AddressManager.class );

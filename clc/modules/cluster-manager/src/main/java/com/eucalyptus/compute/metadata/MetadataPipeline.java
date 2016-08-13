@@ -78,7 +78,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -177,17 +176,17 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       if ( Logs.extreme( ).isDebugEnabled( ) ) {
         Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
       }
-      HttpResponse response = null;
-      if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
-        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
-        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ERROR_STRING.getBytes( ) );
-        response.setContent( buffer );
-        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
-      } else {
+      HttpResponse response;
+      if ( replyEx == null && reply instanceof byte[] ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
+        response.setContent( buffer );
+        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
+      } else {
+        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
+        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ERROR_STRING.getBytes( ) );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }

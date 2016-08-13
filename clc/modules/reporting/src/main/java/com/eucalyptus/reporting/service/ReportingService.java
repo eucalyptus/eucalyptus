@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.TimeZone;
 
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -55,6 +56,7 @@ import com.google.common.base.Objects;
  *
  */
 @ConfigurableClass(root="reporting", description = "Reporting only parameters")
+@ComponentNamed
 public class ReportingService {
 
   private static final Logger logger = Logger.getLogger( ReportingService.class );

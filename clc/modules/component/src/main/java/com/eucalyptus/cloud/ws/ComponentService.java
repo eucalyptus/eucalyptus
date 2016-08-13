@@ -67,12 +67,14 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds; 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.AsyncRequests;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 
+@ComponentNamed
 public class ComponentService {
 
 	private static Logger LOG = Logger.getLogger(ComponentService.class);
@@ -85,7 +87,7 @@ public class ComponentService {
     LOG.info("Component: "+service);
     try {
       BaseMessage reply = null;
-  		if(service.isVmLocal()) {//send direct to local component using mule registry directly
+  		if(service.isVmLocal()) {//send direct to local component using registry directly
         reply = ServiceContext.send(service.getComponentId().getLocalEndpointName(),request);
    		} else {//send remote
         reply = AsyncRequests.sendSync(service,request);

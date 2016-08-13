@@ -60,6 +60,7 @@ import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.workflow.DBCleanupService;
 import com.eucalyptus.cloudwatch.workflow.alarms.AlarmStateEvaluationDispatcher;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -81,6 +82,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@ComponentNamed
 public class CloudWatchBackendService {
 
   static {

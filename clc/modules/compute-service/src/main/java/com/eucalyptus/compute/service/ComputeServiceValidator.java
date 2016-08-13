@@ -21,25 +21,32 @@ package com.eucalyptus.compute.service;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.internal.account.ComputeAccounts;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceAdvice;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.MessageValidation;
 
 /**
  *
  */
-public class ComputeServiceValidator {
+@SuppressWarnings( "ConstantConditions" )
+@ComponentNamed
+public class ComputeServiceValidator extends ServiceAdvice {
 
-  public ComputeMessage validate( final ComputeMessage request ) throws EucalyptusCloudException {
+  @Override
+  protected void beforeService( @Nonnull final Object request ) throws EucalyptusCloudException {
     // Authorization check
     final AuthContextSupplier user = Contexts.lookup().getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( request ), user ) ) {
+    if ( !(request instanceof ComputeMessage) ||
+        !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( (ComputeMessage)request ), user ) ) {
       throw new ComputeServiceAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
@@ -58,8 +65,5 @@ public class ComputeServiceValidator {
     } catch ( AuthException e ) {
       throw new EucalyptusCloudException( e );
     }
-
-    return request;
   }
-
 }

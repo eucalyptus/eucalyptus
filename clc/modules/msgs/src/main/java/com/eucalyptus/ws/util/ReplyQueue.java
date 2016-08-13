@@ -93,7 +93,7 @@ public class ReplyQueue {
    */
   public String handle( BaseMessage responseMessage ) {
     Contexts.response( responseMessage );
-    return "";
+    return null;
   }
   
   public void handle( ExceptionMessage exMsg ) {
@@ -161,7 +161,7 @@ public class ReplyQueue {
     } else if ( payload instanceof HasRequest ) {
       ret = ( ( HasRequest ) payload ).getRequest( );
     } else if ( payload instanceof String ) {
-      try {
+      if ( !( (String) payload ).isEmpty( ) ) try {
         ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );

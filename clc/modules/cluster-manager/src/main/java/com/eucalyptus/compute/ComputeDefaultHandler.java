@@ -64,10 +64,12 @@ package com.eucalyptus.compute;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.UnimplementedMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
+@ComponentNamed
 public class ComputeDefaultHandler {
   
   private static Logger LOG = Logger.getLogger( ComputeDefaultHandler.class );

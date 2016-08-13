@@ -24,11 +24,9 @@ import static com.eucalyptus.loadbalancing.common.policy.LoadBalancingPolicySpec
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
 import java.util.NoSuchElementException;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingBackendMessage;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingServoBackendMessage;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
@@ -37,12 +35,12 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
-import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
@@ -51,6 +49,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
  *
  */
 @SuppressWarnings( "UnusedDeclaration" )
+@ComponentNamed
 public class LoadBalancingService {
 
   public LoadBalancingMessage dispatchAction( final LoadBalancingMessage request ) throws EucalyptusCloudException {
@@ -96,12 +95,6 @@ public class LoadBalancingService {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), (BaseMessage)request );
     } catch ( NoSuchElementException e ) {
       throw new LoadBalancingUnavailableException( "Service Unavailable" );
-    } catch ( ServiceDispatchException e ) {
-      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
-      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
-        throw (Exception) componentException.getCause( );
-      }
-      throw e;
     } catch ( final FailedRequestException e ) {
       if ( ((BaseMessage)request).getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
         return e.getRequest( );
@@ -114,12 +107,12 @@ public class LoadBalancingService {
 
   @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
   private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
-    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
-    if ( remoteFault != null ) {
-      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
-      final String code = remoteFault.getFaultCode( );
-      final String message = remoteFault.getFaultDetail( );
-      switch( status.getCode( ) ) {
+    final Optional<AsyncExceptions.AsyncWebServiceError> serviceErrorOption = AsyncExceptions.asWebServiceError( e );
+    if ( serviceErrorOption.isPresent( ) ) {
+      final AsyncExceptions.AsyncWebServiceError serviceError = serviceErrorOption.get( );
+      final String code = serviceError.getCode( );
+      final String message = serviceError.getMessage( );
+      switch( serviceError.getHttpErrorCode( ) ) {
         case 400:
           throw new LoadBalancingClientException( code, message );
         case 403:

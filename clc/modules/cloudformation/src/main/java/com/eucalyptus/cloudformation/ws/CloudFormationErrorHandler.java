@@ -20,12 +20,13 @@
 package com.eucalyptus.cloudformation.ws;
 
 import com.eucalyptus.cloudformation.CloudFormationErrorResponse;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 
-
+@ComponentNamed
 public class CloudFormationErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( CloudFormationErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";  

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,14 +56,13 @@ import com.eucalyptus.cloudwatch.common.msgs.Statistics;
 import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.service.queue.metricdata.MetricDataQueue;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.google.common.base.Optional;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MuleEventContext;
-import org.mule.api.lifecycle.Callable;
-import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage;
@@ -85,9 +84,11 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
 /**
  *
  */
-public class CloudWatchService implements Callable {
+@ComponentNamed
+public class CloudWatchService {
 
   private static final Logger LOG = Logger.getLogger(CloudWatchService.class);
+
   public PutMetricDataResponseType putMetricData(PutMetricDataType request)
     throws CloudWatchException {
     PutMetricDataResponseType reply = request.getReply();
@@ -213,7 +214,7 @@ public class CloudWatchService implements Callable {
     return reply;
   }
 
-  private CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
+  public CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
     if ( !Permissions.perhapsAuthorized(CloudWatchPolicySpec.VENDOR_CLOUDWATCH, getIamActionByMessageType( request ), user ) ) {
       throw new CloudWatchAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
@@ -241,12 +242,6 @@ public class CloudWatchService implements Callable {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( CloudWatchBackend.class ), request );
     } catch ( NoSuchElementException e ) {
       throw new CloudWatchUnavailableException( "Service Unavailable" );
-    } catch ( ServiceDispatchException e ) {
-      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
-      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
-        throw (Exception) componentException.getCause( );
-      }
-      throw e;
     } catch ( final FailedRequestException e ) {
       if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
         return e.getRequest( );
@@ -259,12 +254,12 @@ public class CloudWatchService implements Callable {
 
   @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
   private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
-    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
-    if ( remoteFault != null ) {
-      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
-      final String code = remoteFault.getFaultCode( );
-      final String message = remoteFault.getFaultDetail( );
-      switch( status.getCode( ) ) {
+    final Optional<AsyncExceptions.AsyncWebServiceError> serviceErrorOption = AsyncExceptions.asWebServiceError( e );
+    if ( serviceErrorOption.isPresent( ) ) {
+      final AsyncExceptions.AsyncWebServiceError serviceError = serviceErrorOption.get( );
+      final String code = serviceError.getCode( );
+      final String message = serviceError.getMessage( );
+      switch( serviceError.getHttpErrorCode( ) ) {
         case 400:
           throw new CloudWatchClientException( code, message );
         case 403:
@@ -312,12 +307,5 @@ public class CloudWatchService implements Callable {
       exception.initCause(e);
     }
     throw exception;
-  }
-
-  @Override
-  public Object onCall(MuleEventContext muleEventContext) throws Exception {
-    final CloudWatchMessage request = (CloudWatchMessage) muleEventContext.getMessage( ).getPayload( );
-    LOG.debug(request.toSimpleString());
-    return dispatchAction(request);
   }
 }

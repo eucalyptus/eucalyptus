@@ -75,6 +75,10 @@ import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
 import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
+import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
@@ -107,83 +111,87 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 public interface ObjectStorageService {
 
-  public abstract UpdateObjectStorageConfigurationResponseType updateObjectStorageConfiguration(UpdateObjectStorageConfigurationType request)
+  UpdateObjectStorageConfigurationResponseType updateObjectStorageConfiguration(UpdateObjectStorageConfigurationType request)
       throws EucalyptusCloudException;
 
-  public abstract GetObjectStorageConfigurationResponseType getObjectStorageConfiguration(GetObjectStorageConfigurationType request)
+  GetObjectStorageConfigurationResponseType getObjectStorageConfiguration(GetObjectStorageConfigurationType request)
       throws EucalyptusCloudException;
 
-  public abstract HeadBucketResponseType headBucket(HeadBucketType request) throws S3Exception;
+  HeadBucketResponseType headBucket(HeadBucketType request) throws S3Exception;
 
-  public abstract CreateBucketResponseType createBucket(CreateBucketType request) throws S3Exception;
+  CreateBucketResponseType createBucket(CreateBucketType request) throws S3Exception;
 
-  public abstract DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws S3Exception;
+  DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws S3Exception;
 
-  public abstract ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception;
+  ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception;
 
-  public abstract PostObjectResponseType postObject(PostObjectType request) throws S3Exception;
+  PostObjectResponseType postObject(PostObjectType request) throws S3Exception;
 
-  public abstract DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception;
+  DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception;
 
-  public abstract ListBucketResponseType listBucket(ListBucketType request) throws S3Exception;
+  ListBucketResponseType listBucket(ListBucketType request) throws S3Exception;
 
-  public abstract GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws S3Exception;
+  GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws S3Exception;
 
-  public abstract SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception;
+  SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception;
 
-  public abstract GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception;
+  GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception;
 
-  public abstract SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception;
+  SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception;
 
-  public abstract PutObjectResponseType putObject(PutObjectType request) throws S3Exception;
+  PutObjectResponseType putObject(PutObjectType request) throws S3Exception;
 
-  public abstract GetObjectResponseType getObject(GetObjectType request) throws S3Exception;
+  GetObjectResponseType getObject(GetObjectType request) throws S3Exception;
 
-  public abstract GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception;
+  GetObjectExtendedResponseType getObjectExtended(GetObjectExtendedType request) throws S3Exception;
 
-  public abstract HeadObjectResponseType headObject(HeadObjectType request) throws S3Exception;
+  HeadObjectResponseType headObject(HeadObjectType request) throws S3Exception;
 
-  public abstract GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception;
+  GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception;
 
-  public abstract CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception;
+  CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception;
 
-  public abstract GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception;
+  GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception;
 
-  public abstract SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception;
+  SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception;
 
-  public abstract GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception;
+  GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception;
 
-  public abstract SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception;
+  SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception;
 
-  public abstract ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception;
+  ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception;
 
-  public abstract DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception;
+  DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception;
 
-  public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception;
+  InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception;
 
-  public abstract UploadPartResponseType uploadPart(UploadPartType request) throws S3Exception;
+  UploadPartResponseType uploadPart(UploadPartType request) throws S3Exception;
 
-  public abstract CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception;
+  CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception;
 
-  public abstract AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception;
+  AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception;
 
-  public abstract GetBucketLifecycleResponseType getBucketLifecycle(GetBucketLifecycleType request) throws S3Exception;
+  ListPartsResponseType listParts( ListPartsType request) throws S3Exception;
 
-  public abstract SetBucketLifecycleResponseType setBucketLifecycle(SetBucketLifecycleType request) throws S3Exception;
+  ListMultipartUploadsResponseType listMultipartUploads( ListMultipartUploadsType request) throws S3Exception;
 
-  public abstract DeleteBucketLifecycleResponseType deleteBucketLifecycle(DeleteBucketLifecycleType request) throws S3Exception;
+  GetBucketLifecycleResponseType getBucketLifecycle(GetBucketLifecycleType request) throws S3Exception;
 
-  public abstract GetBucketTaggingResponseType getBucketTagging(GetBucketTaggingType request) throws S3Exception;
+  SetBucketLifecycleResponseType setBucketLifecycle(SetBucketLifecycleType request) throws S3Exception;
 
-  public abstract SetBucketTaggingResponseType setBucketTagging(SetBucketTaggingType request) throws S3Exception;
+  DeleteBucketLifecycleResponseType deleteBucketLifecycle(DeleteBucketLifecycleType request) throws S3Exception;
 
-  public abstract DeleteBucketTaggingResponseType deleteBucketTagging(DeleteBucketTaggingType request) throws S3Exception;
+  GetBucketTaggingResponseType getBucketTagging(GetBucketTaggingType request) throws S3Exception;
 
-  public abstract GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception;
+  SetBucketTaggingResponseType setBucketTagging(SetBucketTaggingType request) throws S3Exception;
 
-  public abstract SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception;
+  DeleteBucketTaggingResponseType deleteBucketTagging(DeleteBucketTaggingType request) throws S3Exception;
 
-  public abstract DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception;
+  GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception;
 
-  public abstract DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
+  SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception;
+
+  DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception;
+
+  DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 }

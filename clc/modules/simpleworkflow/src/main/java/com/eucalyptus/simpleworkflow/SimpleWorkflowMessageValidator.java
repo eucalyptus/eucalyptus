@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,17 +20,21 @@
 package com.eucalyptus.simpleworkflow;
 
 import java.util.Map;
+import javax.annotation.Nonnull;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceAdvice;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 
 /**
  *
  */
-public class SimpleWorkflowMessageValidator {
+@ComponentNamed
+public class SimpleWorkflowMessageValidator extends ServiceAdvice {
 
-  public Object validate( final Object object ) throws SimpleWorkflowException {
-
+  @Override
+  protected void beforeService( @Nonnull final Object object ) throws SimpleWorkflowException {
     // check system-only mode
     final Context context = Contexts.lookup( );
     if ( SimpleWorkflowProperties.isSystemOnly() && !context.hasAdministrativePrivileges( ) ) {
@@ -45,7 +49,5 @@ public class SimpleWorkflowMessageValidator {
         throw new SimpleWorkflowClientException( "ValidationError", validationErrorsByField.values().iterator().next() );
       }
     }
-
-    return object;
   }
 }

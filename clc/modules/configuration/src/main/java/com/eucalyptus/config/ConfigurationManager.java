@@ -62,7 +62,6 @@
 
 package com.eucalyptus.config;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -74,7 +73,7 @@ import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -83,6 +82,7 @@ import com.google.common.collect.Sets;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+@ComponentNamed
 public class ConfigurationManager {
   public static Logger LOG                 = Logger.getLogger( ConfigurationManager.class );
   static String        CLUSTER_KEY_FSTRING = "cc-%s";

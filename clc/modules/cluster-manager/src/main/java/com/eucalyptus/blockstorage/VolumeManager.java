@@ -68,6 +68,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.AttachedVolume;
@@ -143,6 +144,7 @@ import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
 
+@ComponentNamed("computeVolumeManager")
 public class VolumeManager {
   private static final int VOL_CREATE_RETRIES = 10;
   

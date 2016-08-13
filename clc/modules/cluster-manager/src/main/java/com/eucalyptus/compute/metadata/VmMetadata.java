@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
@@ -94,6 +95,7 @@ import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+@ComponentNamed("computeVmMetadata")
 public class VmMetadata {
   private static//
   Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );

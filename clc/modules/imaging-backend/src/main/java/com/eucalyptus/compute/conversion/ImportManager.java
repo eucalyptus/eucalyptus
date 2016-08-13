@@ -79,6 +79,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ConversionTask;
 import com.eucalyptus.compute.common.backend.CancelConversionTaskResponseType;
 import com.eucalyptus.compute.common.backend.CancelConversionTaskType;
@@ -105,6 +106,7 @@ import com.google.common.collect.Iterables;
 
 import java.util.Collections;
 
+@ComponentNamed("computeImportManager")
 public class ImportManager {
   private static Logger    LOG                           = Logger.getLogger( ImportManager.class );  
   /**

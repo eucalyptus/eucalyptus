@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,29 +24,21 @@ import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_PUTINSTANCEIM
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.NoSuchElementException;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.backend.AbstractTaskScheduler.WorkerTask;
-import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskResponseType;
-import com.eucalyptus.imaging.common.backend.msgs.CancelConversionTaskType;
-import com.eucalyptus.imaging.common.backend.msgs.DescribeConversionTasksResponseType;
-import com.eucalyptus.imaging.common.backend.msgs.DescribeConversionTasksType;
-import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.backend.msgs.GetInstanceImportTaskResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.GetInstanceImportTaskType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
+@ComponentNamed
 public class ImagingBackendService {
   private static Logger LOG = Logger.getLogger( ImagingBackendService.class );
 

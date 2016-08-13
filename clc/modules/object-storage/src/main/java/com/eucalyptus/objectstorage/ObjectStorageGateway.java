@@ -49,6 +49,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -209,7 +210,6 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
@@ -227,12 +227,11 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
  * Operation handler for the ObjectStorageGateway. Main point of entry This class handles user and system requests.
  *
  */
+@ComponentNamed
 public class ObjectStorageGateway implements ObjectStorageService {
   private static Logger LOG = Logger.getLogger(ObjectStorageGateway.class);
   private static ObjectStorageProviderClient ospClient = null;
   private static final DateTimeComparator DATE_TIME_COMPARATOR = DateTimeComparator.getInstance(DateTimeFieldType.secondOfMinute());
-
-  public ObjectStorageGateway() {}
 
   public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
     LOG.debug("Checking ObjectStorageGateway preconditions");
@@ -2161,6 +2160,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     return bucket;
   }
 
+  @Override
   public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception {
     logRequest(request);
     Bucket bucket = null;
@@ -2210,6 +2210,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
   }
 
+  @Override
   public UploadPartResponseType uploadPart(final UploadPartType request) throws S3Exception {
     UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
     logRequest(request);
@@ -2302,6 +2303,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
   }
 
+  @Override
   public CompleteMultipartUploadResponseType completeMultipartUpload(final CompleteMultipartUploadType request) throws S3Exception {
     logRequest(request);
     Bucket bucket;
@@ -2365,6 +2367,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   }
 
+  @Override
   public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception {
     logRequest(request);
     ObjectEntity objectEntity;
@@ -2408,6 +2411,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   /*
    * Return parts for a given multipart request
    */
+  @Override
   public ListPartsResponseType listParts(ListPartsType request) throws S3Exception {
     logRequest(request);
 
@@ -2489,6 +2493,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   /*
    * Return all active multipart uploads for a bucket
    */
+  @Override
   public ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws S3Exception {
     Bucket bucket = getBucketAndCheckAuthorization(request);
 

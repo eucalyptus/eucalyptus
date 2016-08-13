@@ -72,6 +72,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityNotFoundException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -122,6 +123,7 @@ import com.eucalyptus.compute.common.backend.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.backend.RevokeSecurityGroupIngressType;
 
+@ComponentNamed("computeNetworkGroupManager")
 public class NetworkGroupManager {
 
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {

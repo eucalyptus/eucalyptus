@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.internal.tags.Tag;
@@ -70,6 +71,7 @@ import com.eucalyptus.compute.common.ResourceTag;
  * Service implementation for Tag operations
  */
 @ConfigurableClass( root = "tagging", description = "Parameters controlling tagging")
+@ComponentNamed("computeTagManager")
 public class TagManager {
   private static final Logger log = Logger.getLogger( TagManager.class );
   

@@ -75,6 +75,7 @@ import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemp
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -124,6 +125,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
+@ComponentNamed
 public class CloudFormationService {
 
   public static final String NO_UPDATES_ARE_TO_BE_PERFORMED = "No updates are to be performed.";

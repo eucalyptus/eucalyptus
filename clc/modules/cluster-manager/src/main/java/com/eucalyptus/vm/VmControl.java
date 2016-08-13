@@ -78,6 +78,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -179,6 +180,7 @@ import static com.eucalyptus.util.Strings.substringBefore;
 
 
 @SuppressWarnings( "UnusedDeclaration" )
+@ComponentNamed("computeVmControl")
 public class VmControl {
 
   private static Logger LOG = Logger.getLogger( VmControl.class );
