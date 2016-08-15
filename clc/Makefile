@@ -1,6 +1,6 @@
 # Makefile wrapper around ant
 #
-# Copyright 2009-2012 Eucalyptus Systems, Inc.
+# Copyright (c) 2009-2016 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,16 +62,18 @@
 
 include ../Makedefs
 
-theme_dir	= ${TOP}/clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes
-web_prop_dir	= ${TOP}/clc/modules/www/conf
-
 #
 # Default cloud-libs repository branch
 # Different branch can be specified by the user like this:
 #
 # $ make CLOUD_LIBS_BRANCH=mylibsbranch
 #
-CLOUD_LIBS_BRANCH?=maint-4.3
+CLOUD_LIBS_BRANCH ?= master
+ifeq ($(USE_BUNDLED_JARS), no)
+    CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus
+else
+    CLOUD_LIBS_DIR ?= lib
+endif
 
 #
 # If this is set to anything but '0', we will completely
@@ -88,7 +90,12 @@ CLOUD_LIBS_BRANCH?=maint-4.3
 ifeq ($(shell if test -d lib; then echo 1; else echo 0; fi), 0)
     $(shell rm -f .nogit)
 endif
-DISABLEGIT?=$(shell if test -f .nogit; then echo 1; else echo 0; fi)
+
+ifeq ($(USE_BUNDLED_JARS), no)
+    DISABLEGIT ?= 1
+else
+    DISABLEGIT ?= $(shell if test -f .nogit; then echo 1; else echo 0; fi)
+endif
 
 VERSION_MAJOR=$(shell echo $(VERSION) | cut -d. -f1)
 VERSION_MINOR=$(shell echo $(VERSION) | cut -d. -f2)
@@ -102,7 +109,6 @@ VERSION_PATCH=$(shell echo $(VERSION) | cut -d. -f3)
 # Note: This can be overridden by the user if they
 # specify a different branch when running make.
 #
-CLOUD_LIBS_BRANCH=master
 
 ifeq ($(DISABLEGIT), 0)
     $(info Using cloud-libs branch $(CLOUD_LIBS_BRANCH))
@@ -152,23 +158,23 @@ build: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) build-all
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) jar
+	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
+	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 	@make -C eucadmin
 
 build-test: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) build-test
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) jar
+	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
+	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 	@make -C eucadmin
 
 indent:
-	$(ANT) indent
+	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) indent
 	
 clean: deps
-	$(ANT) clean
+	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) clean
 	make -C eucadmin clean
 	rm -f .nogit
 ifeq ($(DISABLEGIT), 0)
@@ -182,16 +188,19 @@ endif
 
 distclean: clean
 	rm -rf ${TOP}/{deps,lib}
-	$(ANT) distclean
+	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) distclean
 	make -C eucadmin distclean
 
 install: build
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) install
-	@make -C eucadmin install
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) install
+	make -C eucadmin install
+ifneq ($(USE_BUNDLED_JARS), no)
+	install -D -m 0644 $(CLOUD_LIBS_DIR)/*.jar $(DESTDIR)$(datarootdir)/eucalyptus
+endif
 
 install-test: build-test
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) install
-	@make -C eucadmin install
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) install
+	make -C eucadmin install
 
 deploy: install
 
