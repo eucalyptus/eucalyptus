@@ -168,7 +168,7 @@
 				<length string="${junit.failure.path}" length="0" />
 			</not>
 		</condition>
-		<fail if="junit.failure" message="JUnit test failure"/>	
+		<fail if="junit.failure" message="JUnit test failure"/>
 	</target>
 
 	<!--================================== clean targets ==================================-->
@@ -192,22 +192,6 @@
 	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
 	<property name="euca.bin.dir" value="${euca.home}/usr/sbin" />
 	<target name="install"> <!-- depends="build-all,jar" -->
-		<!-- copy libraries over -->
-		<mkdir dir="${DESTDIR}${euca.lib.dir}" />
-		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
-			<fileset dir="${deps.lib.dir}">
-				<include name="**/*" />
-				<exclude name="**/gwt-api-checker-*.jar*" />
-				<exclude name="**/gwt-dev-*.jar*" />
-				<exclude name="**/gwt-soyc-vis-*.jar*" />
-				<exclude name="**/gwt-user-*.jar*" />
-				<exclude name="**/gwt-servlet-deps-*.jar*" />
-				<exclude name="**/validation-api*.jar*" />
-				<exclude name="**/derby-*.jar*" />
-				<exclude name="**/jmock-*.jar*" />
-				<exclude name="**/.git/" />
-			</fileset>
-		</copy>
 		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
 			<include name="**/euca-*" />

@@ -61,6 +61,10 @@ AC_ARG_ENABLE([systemd],
         AS_HELP_STRING([--enable-systemd], [install systemd artifacts]),
         [USE_SYSTEMD=$enableval],
         [USE_SYSTEMD=no])
+AC_ARG_ENABLE(bundled-jars,
+        AS_HELP_STRING([--disable-bundled-jars] [do not build against or install bundled jars]),
+        [USE_BUNDLED_JARS=$enableval],
+        [USE_BUNDLED_JARS=yes])
 AC_ARG_WITH(apache2-module-dir,
         [  --with-apache2-module-dir=<dir>      where Apache modules are installed],
         [APACHE2_MODULE_DIR="${withval}"])
@@ -298,6 +302,7 @@ AC_SUBST(LIBVIRT_HOME)
 AC_SUBST(PYTHON)
 AC_SUBST(RM)
 AC_SUBST(TOP)
+AC_SUBST(USE_BUNDLED_JARS)
 AC_SUBST(USE_SYSTEMD)
 AC_SUBST(USE_SYSVINIT)
 AC_SUBST(WSDL2C)
@@ -315,6 +320,7 @@ echo "    CFLAGS..............: ${CFLAGS}"
 echo "    LDFLAGS.............: ${LDFLAGS}"
 echo "    LIBS................: ${LIBS}"
 echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
+echo "    Use bundled jars....: ${USE_BUNDLED_JARS}"
 echo "    Use sysvinit........: ${USE_SYSVINIT}"
 echo "    Use systemd.........: ${USE_SYSTEMD}"
 echo ""
