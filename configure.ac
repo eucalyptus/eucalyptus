@@ -156,17 +156,7 @@ AC_PATH_PROG(RM, rm)
 AC_LANG_C
 
 if test -z "$WSDL2C"; then
-        # let's search for WSDL2C.sh
-        AC_PATH_PROG([WSDL2C], WSDL2C.sh,,${AXIS2C_HOME}/bin/tools/wsdl2c:$PATH)
-fi
-# HACK:  Sometimes WSDL2C.sh isn't executable for some reason.  We call sh on
-# it directly, so look for a non-executable file just in case.
-if test -z "$WSDL2C" && test -f ${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh; then
-        WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
-fi
-# check if we found WSDL2C.sh
-if test -z "$WSDL2C" ; then
-        AC_MSG_ERROR([Cannot find WSDL2C.sh!])
+        WSDL2C=`readlink -f devel/euca-WSDL2C.sh`
 fi
 
 # we need JAVA_HOME
