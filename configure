@@ -626,6 +626,7 @@ ac_includes_default="\
 ac_header_list=
 ac_func_list=
 ac_subst_vars='LTLIBOBJS
+WSDL2C
 USE_SYSVINIT
 USE_SYSTEMD
 TOP
@@ -651,7 +652,6 @@ LIBOBJS
 JAVA
 ANT
 JAVAC
-WSDL2C
 RM
 SET_MAKE
 INSTALL_DATA
@@ -4777,57 +4777,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 if test -z "$WSDL2C"; then
-        # let's search for WSDL2C.sh
-        # Extract the first word of "WSDL2C.sh", so it can be a program name with args.
-set dummy WSDL2C.sh; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_WSDL2C+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $WSDL2C in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_WSDL2C="$WSDL2C" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="${AXIS2C_HOME}/bin/tools/wsdl2c:$PATH"
-for as_dir in $as_dummy
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_WSDL2C="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-WSDL2C=$ac_cv_path_WSDL2C
-if test -n "$WSDL2C"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WSDL2C" >&5
-$as_echo "$WSDL2C" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-# HACK:  Sometimes WSDL2C.sh isn't executable for some reason.  We call sh on
-# it directly, so look for a non-executable file just in case.
-if test -z "$WSDL2C" && test -f ${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh; then
-        WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
-fi
-# check if we found WSDL2C.sh
-if test -z "$WSDL2C" ; then
-        as_fn_error $? "Cannot find WSDL2C.sh!" "$LINENO" 5
+        WSDL2C=`readlink -f devel/euca-WSDL2C.sh`
 fi
 
 # we need JAVA_HOME
