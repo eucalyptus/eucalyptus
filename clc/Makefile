@@ -139,7 +139,7 @@ ifeq ($(DISABLEGIT), 0)
 	#    know what you're doing. We won't touch it.
 	# 3. There is no 'lib' directory, so we'll checkout cloud-libs.
 	#
-	@if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
+	if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
 		cd $(PWD)/lib && git checkout $(CLOUD_LIBS_BRANCH); \
 		cd $(PWD)/lib && git pull origin $(CLOUD_LIBS_BRANCH); \
 	elif [ -d lib/ ]; then \
@@ -151,24 +151,24 @@ ifeq ($(DISABLEGIT), 0)
 	@# In the case where a user has chosen a custom repository,
 	@# we don't want to reset it each time they build.
 	@# The '.nogit' file will be removed by the 'clean' target.
-	@touch .nogit
+	touch .nogit
 endif
 
 build: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
-	@make -C eucadmin
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
+	make -C eucadmin
 
 build-test: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
-	@ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
-	@make -C eucadmin
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
+	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
+	make -C eucadmin
 
 indent:
 	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) indent
@@ -178,7 +178,7 @@ clean: deps
 	make -C eucadmin clean
 	rm -f .nogit
 ifeq ($(DISABLEGIT), 0)
-	@if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
+	if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
 		# Remove untracked files from the cloud-libs repository \
 		cd $(PWD)/lib && git clean -f -d; \
 		# Hard reset and modifications \
