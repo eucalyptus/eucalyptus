@@ -72,7 +72,7 @@ CLOUD_LIBS_BRANCH ?= master
 ifeq ($(USE_BUNDLED_JARS), no)
     CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus
 else
-    CLOUD_LIBS_DIR ?= lib
+    CLOUD_LIBS_DIR ?= $(CURDIR)/lib
 endif
 
 #
