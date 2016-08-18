@@ -36,10 +36,4 @@ public class PropertiesService extends ComponentId {
   public PropertiesService( ) {
     super( "Properties" );
   }
-    
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://PropertiesInternal";
-  }
-    
 }

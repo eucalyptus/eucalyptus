@@ -76,10 +76,4 @@ public class ComponentService extends ComponentId {
   public ComponentService( ) {
     super( "Component" );
   }
-  
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://ComponentInternal";
-  }
-  
 }

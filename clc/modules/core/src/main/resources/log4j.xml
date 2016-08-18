@@ -277,56 +277,6 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <!--
-  <category name="org.mule.DefaultMuleContext" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.transformer.codec.Base64Encoder" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.transformer.TransformerTemplate" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.config.spring" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.DefaultMuleMessage" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.registry.TransientRegistry" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.MuleSessionHandler" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  -->
-  <category name="org.mule" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.transformer.simple.ObjectToString">
-    <priority value="OFF" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.transformer.TransformerTemplate">
-    <priority value="OFF" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.module.client.MuleClient">
-    <priority value="OFF" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.mule.lifecycle.AbstractLifecycleManager">
-    <priority value="OFF" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
   <category name="org.jboss" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />

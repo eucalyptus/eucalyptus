@@ -65,18 +65,13 @@ package com.eucalyptus.component;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 import org.apache.log4j.Logger;
-import org.mule.util.queue.QueueConfiguration;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
@@ -86,8 +81,6 @@ import com.eucalyptus.util.Timers;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.RequestQueue;
 import com.google.common.base.Function;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -134,7 +127,6 @@ public class ServiceOperations {
     public Double getPriority( ) {
       return 0.3d;
     }
-
   }
 
   @SuppressWarnings( "unchecked" )

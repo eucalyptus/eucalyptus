@@ -75,8 +75,6 @@ public interface Dispatcher {
   
   public abstract String getName( );
   
-  public abstract URI getAddress( );
-  
   public abstract boolean isLocal( );
   
   public abstract String toString( );

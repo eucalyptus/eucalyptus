@@ -74,8 +74,6 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.stream.ChunkedStream;
-import org.mule.transport.NullPayload;
 
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
@@ -105,10 +103,7 @@ public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDown
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
-      if ( msge.getMessage( ) instanceof NullPayload ) {
-        LOG.error( "Received NULL response: " + ( ( NullPayload ) msge.getMessage( ) ).toString( ) );
-        msge.getFuture( ).cancel( );
-      } else if ( msge.getMessage( ) instanceof HttpResponse ) {
+      if ( msge.getMessage( ) instanceof HttpResponse ) {
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof IsData || msge.getMessage() instanceof HttpChunk ) {// Pass through for chunked messaging
         ctx.sendDownstream( e );

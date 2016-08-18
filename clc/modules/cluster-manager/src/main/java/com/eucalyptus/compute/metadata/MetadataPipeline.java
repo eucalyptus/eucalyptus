@@ -85,6 +85,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -163,7 +164,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
           } else if ( !Bootstrap.isFinished( ) ) {
             reply = "System is still starting up".getBytes( );
           } else {
-            reply = ServiceContext.send( "VmMetadata", newUri );
+            reply = ServiceContext.send( "eucalyptus-vmmetadata-request", newUri ).get( );
           }
         } catch ( Exception e1 ) {
           Logs.extreme( ).debug( e1, e1 );

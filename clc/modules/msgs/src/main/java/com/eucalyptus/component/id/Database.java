@@ -91,11 +91,6 @@ public class Database extends ComponentId {
   }
   
   @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ) ).toASCIIString( );
-  }
-  
-  @Override
   public String getServicePath( String... pathParts ) {
     return Databases.getServicePath( pathParts );
   }

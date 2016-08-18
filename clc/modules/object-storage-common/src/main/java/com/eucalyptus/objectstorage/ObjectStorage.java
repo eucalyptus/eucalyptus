@@ -98,10 +98,4 @@ public class ObjectStorage extends ComponentId {
   public String getInternalServicePath(final String... pathParts) {
     return "/internal/" + this.getClass().getSimpleName().toLowerCase();
   }
-
-  @Override
-  public String getLocalEndpointName() {
-    return "vm://ObjectStorageGatewayInternal";
-  }
-
 }

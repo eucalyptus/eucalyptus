@@ -121,7 +121,11 @@ public class VmMetadata {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
                                                                                             try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
                                                                                               final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId( ) );
-                                                                                              return ByteArray.newInstance( instance.getUserData() );
+                                                                                              final byte[] userData = instance.getUserData( );
+                                                                                              if ( userData == null ) {
+                                                                                                throw new NoSuchElementException( );
+                                                                                              }
+                                                                                              return ByteArray.newInstance( userData );
                                                                                             } catch ( NoSuchElementException e ) {
                                                                                               throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
                                                                                             }

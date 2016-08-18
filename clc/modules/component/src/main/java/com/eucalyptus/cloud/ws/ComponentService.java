@@ -88,7 +88,7 @@ public class ComponentService {
     try {
       BaseMessage reply = null;
   		if(service.isVmLocal()) {//send direct to local component using registry directly
-        reply = ServiceContext.send(service.getComponentId().getLocalEndpointName(),request);
+        reply = ServiceContext.<BaseMessage>send(service.getComponentId(),request).get();
    		} else {//send remote
         reply = AsyncRequests.sendSync(service,request);
    		}

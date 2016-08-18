@@ -62,43 +62,30 @@
 
 package com.eucalyptus.util.async;
 
-import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CallerContext;
 
 public class AsyncRequests {
   
-  private static Logger LOG = Logger.getLogger( AsyncRequests.class );
-  
-  private static final int LOCAL_THREADS = 64;
-  
   public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( final ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
       final CheckedListenableFuture<B> future = Futures.newGenericeFuture( );
-      Threads.enqueue( Empyrean.class, AsyncRequests.class, LOCAL_THREADS, new Callable<B>( ) {
-        public B call( ) {
-          try {
-            B ret = ServiceContext.send( config.getComponentId( ), msg );
-            future.set( ret );
-          } catch ( Exception ex ) {
-            future.setException( ex );
-          }
-          return null;
+      ServiceContext.<B>send( config.getComponentId( ), msg ).whenComplete( ( B response, Throwable throwable ) -> {
+        if ( throwable != null ) {
+          future.setException( throwable );
+        } else {
+          future.set( response );
         }
       } );
       return future;
-      
     } else {
       Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
         {
@@ -138,7 +125,7 @@ public class AsyncRequests {
     }
 
     if ( config.isVmLocal( ) ) {
-      return ServiceContext.send( config.getComponentId( ), msg );
+      return ServiceContext.<B>send( config.getComponentId( ), msg ).get( );
     } else {
       try {
         Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
@@ -158,27 +145,6 @@ public class AsyncRequests {
       }
     }
   }
-
-  /**
-   * Calls {@link AsyncRequest#dispatch(String) dispatch} safely.
-   *
-   * <P>This method guarantees that either the success or failure methods of
-   * the requests callback will be invoked.</P>
-   *
-   * @param request The request to dispatch
-   * @param clusterOrPartition The cluster or partition to dispatch to
-   * @deprecated
-   * @see AsyncRequest#dispatch(String)
-   */
-  @Deprecated
-  public static void dispatchSafely( final Request<?,?> request, final String clusterOrPartition ) {
-    try {
-      request.dispatch( clusterOrPartition );
-    } catch ( NoSuchElementException e ) {
-      // request not dispatched, invoke failure handler
-      request.getCallback().fireException( e );
-    }
-  }  
   
   public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
     return new AsyncRequest<A,B>( msgCallback ) {

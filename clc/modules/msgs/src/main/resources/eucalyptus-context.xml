@@ -29,8 +29,9 @@
 
     <context:component-scan base-package="com.eucalyptus"/>
 
-    <!-- TODO:STEVE: configure executor -->
-    <bean id="springIntegrationRequestExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"/>
+    <int:channel-interceptor order="100">
+        <bean class="com.eucalyptus.context.ContextPropagationChannelInterceptor"/>
+    </int:channel-interceptor>
 
     <int:chain id="dispatch-chain" input-channel="dispatch-queue" output-channel="request-queue">
         <int:header-enricher>
@@ -44,11 +45,7 @@
 
     <int:channel id="default-reply-queue"/>
 
-    <int:channel id="dispatch-queue">
-        <!--
-        <int:dispatcher task-executor="springIntegrationRequestExecutor" load-balancer="none" failover="false"/>
-        -->
-    </int:channel>
+    <int:channel id="dispatch-queue"/>
 
     <int:channel id="request-queue"/>
 

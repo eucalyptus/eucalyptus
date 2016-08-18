@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,9 @@ package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MessagingException;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.CollectionUtils;
@@ -46,7 +43,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ErrorDetail;
 import edu.ucsb.eucalyptus.msgs.ErrorResponse;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 /**
  * Support for service error handler implementations
@@ -65,7 +61,7 @@ public abstract class ErrorHandlerSupport {
     this.defaultCode = defaultCode;
   }
 
-  public void handle( final org.springframework.messaging.MessagingException messagingEx ) {
+  public void handle( final MessagingException messagingEx ) {
     final EucalyptusCloudException cloudException =
         Exceptions.findCause( messagingEx, EucalyptusCloudException.class );
     final Object payloadObject = messagingEx.getFailedMessage( ).getPayload( );
@@ -99,45 +95,6 @@ public abstract class ErrorHandlerSupport {
       }
     } else {
       final BaseMessage errorResp = buildFatalResponse( messagingEx.getCause( )==null?messagingEx:messagingEx.getCause( ) );
-      Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
-    }
-  }
-
-  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-  public void handle( final ExceptionMessage exMsg ) {
-    EventRecord.here( getClass(), EventType.MSG_REPLY, exMsg.getPayload().getClass().getSimpleName() ).debug();
-    final Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
-      try {
-        final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
-        final HttpResponseStatus status;
-        final Role role;
-        final String code;
-        if ( cloudException instanceof EucalyptusWebServiceException ) {
-          final EucalyptusWebServiceException webServiceException = (EucalyptusWebServiceException) cloudException;
-          role = webServiceException.getRole();
-          code = webServiceException.getCode();
-        } else {
-          role = Role.Receiver;
-          code = defaultCode;
-        }
-        final Optional<Integer> statusCodeOptional = getHttpResponseStatus( cloudException );
-        status = !statusCodeOptional.isPresent( ) ?
-            HttpResponseStatus.INTERNAL_SERVER_ERROR :
-            new HttpResponseStatus( statusCodeOptional.get( ), code );
-        final BaseMessage errorResp = buildErrorResponse( 
-            payload.getCorrelationId( ),
-            role,
-            code,
-            cloudException.getMessage()
-            );
-        Contexts.response( new BaseMessageSupplier( errorResp, status ) );
-      } catch ( final PayloadParseException e ) {
-        LOG.error( "Failed to parse payload ", e.getCause() );
-      }
-    } else {
-      final BaseMessage errorResp = buildFatalResponse( exception );
       Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
     }
   }

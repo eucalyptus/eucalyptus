@@ -336,10 +336,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     };
   }
   
-  public final String getEntryPoint( ) {
-    return this.capitalizedName + "RequestQueueEndpoint";
-  }
-  
   public final String getCapitalizedName( ) {
     return this.capitalizedName;
   }
@@ -357,18 +353,8 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return 8773;
   }
   
-  public String getLocalEndpointName( ) {
-    return String.format( "vm://%sInternal", this.getClass( ).getSimpleName( ) );
-  }
-  
-  public URI getLocalEndpointUri( ) {
-    final URI uri = URI.create( this.getLocalEndpointName( ) );
-    try {
-      uri.parseServerAuthority( );
-    } catch ( final URISyntaxException ex ) {
-      LOG.error( ex, ex );
-    }
-    return uri;
+  public String getChannelName( ) {
+    return String.format( "%s-request", getName( ) );
   }
   
   public String getServiceModelFileName( ) {

@@ -68,8 +68,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
-import org.mule.RequestContext;
-import org.mule.api.MuleMessage;
 
 import com.eucalyptus.BaseException;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -84,10 +82,10 @@ import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import edu.ucsb.eucalyptus.msgs.HasRequest;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class Contexts {
   private static Logger                          LOG             = Logger.getLogger( Contexts.class );
@@ -147,7 +145,6 @@ public class Contexts {
       throw new NoSuchContextException( "Found channel context " + channel + " but no corresponding context." );
     } else {
       Context ctx = channelContexts.get( channel );
-      ctx.setMuleEvent( RequestContext.getEvent( ) );
       return maybeImpersonating( ctx );
     }
   }
@@ -169,7 +166,11 @@ public class Contexts {
   }
   
   private static ThreadLocal<Context> tlContext = new ThreadLocal<Context>( );
-  
+
+  static Context threadLocal( ) {//GRZE: really unhappy these are public.
+    return tlContext.get( );
+  }
+
   public static void threadLocal( Context ctx ) {//GRZE: really unhappy these are public.
     tlContext.set( ctx );
   }
@@ -186,7 +187,7 @@ public class Contexts {
     return new Consumer<T>( ) {
       @Override
       public void accept( final T t ) {
-        final Context previously = tlContext.get( );
+        final Context previously = threadLocal( );
         threadLocal( context );
         try {
           consumer.accept( t );
@@ -211,13 +212,12 @@ public class Contexts {
       throw new NoSuchContextException( "Found correlation id " + correlationId + " but no corresponding context." );
     } else {
       Context ctx = uuidContexts.get( correlationId );
-      ctx.setMuleEvent( RequestContext.getEvent( ) );
       return maybeImpersonating( ctx );
     }
   }
   
   public static Context lookup( ) throws IllegalContextAccessException {
-    final Context ctx = tlContext.get( );
+    final Context ctx = threadLocal( );
     if ( ctx != null ) {
       return maybeImpersonating( ctx );
     }
@@ -229,8 +229,6 @@ public class Contexts {
         Logs.exhaust( ).error( e, e );
         throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request.", e );
       }
-    } else if ( RequestContext.getEvent( ) != null || RequestContext.getEventContext( ) != null ) {
-      throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) outside of a service." );
     } else {
       throw new IllegalContextAccessException( "Cannot access context implicitly using lookup(V) when not handling a request." );
     }
@@ -239,23 +237,8 @@ public class Contexts {
   @Nonnull
   public static Optional<String> lookupCorrelationId( ) {
     Context ctx;
-    if ( ( ctx = tlContext.get( ) ) != null ) {
+    if ( ( ctx = threadLocal( ) ) != null ) {
       return Optional.fromNullable( ctx.getCorrelationId( ) );
-    }
-    MuleMessage muleMsg;
-    if ( RequestContext.getEvent( ) != null && RequestContext.getEvent( ).getMessage( ) != null ) {
-      muleMsg = RequestContext.getEvent( ).getMessage( );
-    } else if ( RequestContext.getEventContext( ) != null && RequestContext.getEventContext( ).getMessage( ) != null ) {
-      muleMsg = RequestContext.getEventContext( ).getMessage( );
-    } else {
-      muleMsg = null;
-    }
-    final Object o = muleMsg==null ? null : muleMsg.getPayload( );
-    if ( o instanceof BaseMessage ) {
-      return Optional.fromNullable( ( ( BaseMessage ) o ).getCorrelationId( ) );
-    }
-    if ( o instanceof HasRequest ) {
-      return Optional.fromNullable( ( ( HasRequest ) o ).getRequest( ).getCorrelationId( ) );
     }
     return Optional.absent( );
   }
@@ -281,7 +264,8 @@ public class Contexts {
       clear( context.getCorrelationId( ) );
     }
   }
-  
+
+  @Nullable
   public static Context createWrapped( String dest, final BaseMessage msg ) {
     if ( uuidContexts.containsKey( msg.getCorrelationId( ) ) ) {
       return null;

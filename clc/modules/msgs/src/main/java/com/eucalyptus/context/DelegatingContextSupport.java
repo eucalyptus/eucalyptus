@@ -118,11 +118,6 @@ abstract class DelegatingContextSupport extends Context implements Wrapper<Conte
     delegate.setUser( user );
   }
 
-  @Override
-  public String getServiceName( ) {
-    return this.delegate.getServiceName( );
-  }
-
   public String toString( ) {
     return this.delegate.toString( );
   }

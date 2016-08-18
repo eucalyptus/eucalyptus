@@ -40,9 +40,6 @@ threadTtlSeconds = threadPollingIntervalSeconds + default_ext
 dbPollingIntervalSeconds = 60
 dbTtlSeconds = dbPollingIntervalSeconds + default_ext
 
-mulePollingIntervalSeconds = 60
-muleEventTtlSeconds = mulePollingIntervalSeconds + default_ext
-
 contextsIntervalSeconds = 60
 contextsEventTtlSeconds = contextsIntervalSeconds + default_ext
 
@@ -51,6 +48,5 @@ return [ ] +
         Sensors.JvmThreadSensors(threadPollingIntervalSeconds, threadTtlSeconds) +
         Sensors.DbConnectionPoolSensors(dbPollingIntervalSeconds, dbTtlSeconds) +
         Sensors.ComponentsSensor(componentsPollingIntervalSeconds, componentsCheckTtlSeconds) +
-        Sensors.MuleSensors(mulePollingIntervalSeconds, muleEventTtlSeconds) +
         Sensors.ContextSensor(contextsIntervalSeconds, contextsEventTtlSeconds)
 
