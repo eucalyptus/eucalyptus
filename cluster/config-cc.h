@@ -101,7 +101,7 @@ configEntry configKeysRestartCC[] = {
     ,
     {"VNET_MACMAP", NULL}
     ,
-    {"VNET_MODE", "SYSTEM"}
+    {"VNET_MODE", NETMODE_INVALID}
     ,
     {"VNET_NETMASK", NULL}
     ,
