@@ -724,6 +724,11 @@ ncInstance *load_instance_struct(const char *instanceId)
     // fix up the pointers
     vbr_parse(&(instance->params), NULL);
 
+    // save the struct back to disk after the upgrade routine had a chance to modify it
+    if (gen_instance_xml(instance) != EUCA_OK) {
+        LOGERROR("failed to create instance XML in %s\n", instance->xmlFilePath);
+        goto free;
+    }
     // remove the binary checkpoint because it is no longer needed and not used past 3.3
     unlink(checkpoint_path);
 
