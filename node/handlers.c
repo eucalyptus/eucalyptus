@@ -2779,8 +2779,8 @@ static int init(void)
 
     tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
     if (!tmp) {
-        LOGWARN("VNET_MODE is not defined, defaulting to '%s'\n", NETMODE_MANAGED_NOVLAN);
-        tmp = strdup(NETMODE_MANAGED_NOVLAN);
+        LOGWARN("VNET_MODE is not defined, defaulting to '%s'\n", NETMODE_INVALID);
+        tmp = strdup(NETMODE_INVALID);
         if (!tmp) {
             LOGFATAL("Out of memory\n");
             return (EUCA_FATAL_ERROR);
