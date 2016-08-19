@@ -248,17 +248,16 @@ def _find_instance(instance):
         "attempting to locate %s in libvirt at %s", instance, _QEMU_CONN)
     conn = _get_libvirt_connection()
     domain = _lookup_domain(conn, instance)
+    conn.close()
 
     instances_path = _get_instances_path()
 
     if domain:
-        conn.close()
         instance_path = glob(
             "%s/*/%s" % (os.path.join(instances_path, _WORK), instance))
         if len(instance_path):
             return (instance, instance_path[0])
 
-    conn.close()
     raise NodeAdminPackError("Failed to find instance %s", instance)
 
 
