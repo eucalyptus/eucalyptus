@@ -172,6 +172,7 @@ static int http_deletes_prev = 0;
 
 static char midonet_api_uribase[1024] = {0};
 static char midonet_api_version[16] = {0};
+static char midonet_api_mtypes[APPLICATION_MAX_INDEX][MIDO_MTYPE_MAX_LEN];
 
 static int mido_libcurl_initialized = 0;
 static mido_libcurl_handles libcurl_handles;
@@ -320,9 +321,9 @@ void mido_print_midoname(midoname * name) {
     if (name == NULL) {
         LOGWARN("Invalid argument: NULL midoname\n");
     } else {
-        LOGTRACE("init=%d tenant=%s name=%s uuid=%s resource_type=%s content_type=%s vers=%s\n",
+        LOGTRACE("init=%d tenant=%s name=%s uuid=%s resource_type=%s media_type=%s\n",
                 name->init, SP(name->tenant), SP(name->name), SP(name->uuid), SP(name->resource_type),
-                SP(name->content_type), SP(name->vers));
+                SP(name->media_type));
     }
 }
 
@@ -559,8 +560,7 @@ void mido_free_midoname(midoname * name) {
     EUCA_FREE(name->tenant);
     EUCA_FREE(name->jsonbuf);
     EUCA_FREE(name->resource_type);
-    EUCA_FREE(name->content_type);
-    EUCA_FREE(name->vers);
+    EUCA_FREE(name->media_type);
     EUCA_FREE(name->uri);
     if (name->ipagip) {
         EUCA_FREE(name->ipagip->ip);
@@ -725,7 +725,10 @@ int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max) 
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "tunnel_zones", "application/vnd.org.midonet.collection.TunnelZone-v1+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "tunnel_zones",
+            midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_JSON],
+            midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -751,7 +754,10 @@ int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnam
         }
         return (0);
     }
-    return (mido_get_resources(tzone, 1, tzone->tenant, "hosts", "application/vnd.org.midonet.collection.GreTunnelZoneHost-v1+json", outnames, outnames_max));
+    return (mido_get_resources(tzone, 1, tzone->tenant, "hosts",
+            midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON],
+            midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_HOST_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -797,7 +803,7 @@ midonet_api_router *mido_create_router(char *tenant, char *name, midoname **outn
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
     myname.resource_type = strdup("routers");
-    myname.content_type = strdup("Router");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_ROUTER_JSON]);
 
     rt = NULL;
     rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, NULL);
@@ -834,28 +840,18 @@ int mido_read_router(midoname * name)
 }
 */
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make midocache compatible
-//!
-int mido_update_router(midoname * name, ...)
-{
+/**
+ * Updates information about a router with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the router of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_router(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("routers", "Router", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -940,7 +936,7 @@ midonet_api_bridge *mido_create_bridge(char *tenant, char *name, midoname **outn
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
     myname.resource_type = strdup("bridges");
-    myname.content_type = strdup("Bridge");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_BRIDGE_JSON]);
 
     br = NULL;
     rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, NULL);
@@ -977,27 +973,18 @@ int mido_read_bridge(midoname * name)
 }
 */
 
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make this compatible with midocache
-//!
-int mido_update_bridge(midoname * name, ...)
-{
+/**
+ * Updates information about a bridge with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the bridge of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_bridge(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("bridges", "Bridge", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -1082,8 +1069,7 @@ int mido_create_portgroup(char *tenant, char *name, midoname **outname) {
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
     myname.resource_type = strdup("port_groups");
-    myname.content_type = strdup("PortGroup");
-    myname.vers = strdup("v1");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_PORT_GROUP_JSON]);
 
     rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, "stateful", "true", NULL);
     if (rc == 0) {
@@ -1097,12 +1083,18 @@ int mido_create_portgroup(char *tenant, char *name, midoname **outname) {
     return (rc);
 }
 
-// TODO: make midocache compatible
-int mido_update_portgroup(midoname * name, ...) {
+/**
+ * Updates information about a port-group with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the port-group of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_portgroup(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("port_groups", "PortGroup", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -1156,7 +1148,10 @@ int mido_get_portgroups(char *tenant, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "port_groups", "application/vnd.org.midonet.collection.PortGroup-v1+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "port_groups",
+            midonet_api_mtypes[APPLICATION_COLLECTION_PORT_GROUP_JSON],
+            midonet_api_mtypes[APPLICATION_PORT_GROUP_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -1233,8 +1228,7 @@ int mido_create_portgroup_port(midoname *portgroup, midoname *port, midoname **o
     bzero(&myname, sizeof(midoname));
     myname.tenant = strdup(portgroup->tenant);
     myname.resource_type = strdup("ports");
-    myname.content_type = strdup("PortGroupPort");
-    myname.vers = strdup("v1");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_PORT_GROUP_PORT_JSON]);
 
     rc = mido_create_resource(portgroup, 1, &myname, &out, "portId", port->uuid, NULL);
     if (rc == 0) {
@@ -1298,7 +1292,10 @@ int mido_get_portgroup_ports(midoname *portgroup, midoname ***outnames, int *out
         }
         return (0);
     }
-    return (mido_get_resources(portgroup, 1, portgroup->tenant, "ports", "application/vnd.org.midonet.collection.PortGroupPort-v1+json", outnames, outnames_max));
+    return (mido_get_resources(portgroup, 1, portgroup->tenant, "ports",
+            midonet_api_mtypes[APPLICATION_COLLECTION_PORT_GROUP_PORT_JSON],
+            midonet_api_mtypes[APPLICATION_PORT_GROUP_PORT_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -1344,7 +1341,7 @@ midonet_api_ipaddrgroup *mido_create_ipaddrgroup(char *tenant, char *name, midon
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
     myname.resource_type = strdup("ip_addr_groups");
-    myname.content_type = strdup("IpAddrGroup");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_JSON]);
 
     ig = NULL;
     rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, NULL);
@@ -1359,50 +1356,18 @@ midonet_api_ipaddrgroup *mido_create_ipaddrgroup(char *tenant, char *name, midon
     return (ig);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_ipaddrgroup(midoname * name)
-{
-    return (mido_read_resource("ip_addr_groups", name, NULL));
-}
-*/
-
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make midocache compatible
-//!
-int mido_update_ipaddrgroup(midoname * name, ...)
-{
+/**
+ * Updates information about an ip-addr-group with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the ip-addr-group of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_ipaddrgroup(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("ip_addr_groups", "IpAddrGroup", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -1472,7 +1437,10 @@ int mido_get_ipaddrgroups(char *tenant, midoname ***outnames, int *outnames_max)
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups", "application/vnd.org.midonet.collection.IpAddrGroup-v1+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "ip_addr_groups",
+            midonet_api_mtypes[APPLICATION_COLLECTION_IP_ADDR_GROUP_JSON],
+            midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -1651,7 +1619,7 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
         bzero(&myname, sizeof (midoname));
         myname.tenant = strdup(devname->tenant);
         myname.resource_type = strdup("dhcp");
-        myname.content_type = strdup("DhcpSubnet");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_DHCP_SUBNET_JSON]);
 
         // Parse DNS Servers
         char *dnslist = EUCA_ZALLOC_C(max_dnsServers * 16, sizeof (char));
@@ -1711,28 +1679,18 @@ int mido_read_dhcp(midoname * name)
 }
 */
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make midocache compatible
-//!
-int mido_update_dhcp(midoname * name, ...)
-{
+/**
+ * Updates information about a dhcp with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the dhcp of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_dhcp(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("dhcp", "DhcpSubnet", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -1806,7 +1764,10 @@ int mido_get_dhcps(midoname *devname, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(devname, 1, devname->tenant, "dhcp", "application/vnd.org.midonet.collection.DhcpSubnet-v2+json", outnames, outnames_max));
+    return (mido_get_resources(devname, 1, devname->tenant, "dhcp",
+            midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_SUBNET_JSON],
+            midonet_api_mtypes[APPLICATION_DHCP_SUBNET_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -1902,7 +1863,10 @@ int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, 
 
     mido_copy_midoname(&(parents[0]), devname);
     mido_copy_midoname(&(parents[1]), dhcp);
-    rc = mido_get_resources(parents, 2, devname->tenant, "hosts", "application/vnd.org.midonet.collection.DhcpHost-v2+json", outnames, outnames_max);
+    rc = mido_get_resources(parents, 2, devname->tenant, "hosts",
+            midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_HOST_JSON],
+            midonet_api_mtypes[APPLICATION_DHCP_HOST_JSON],
+            outnames, outnames_max);
     mido_free_midoname_list(parents, 2);
 
     return (rc);
@@ -2000,8 +1964,7 @@ int mido_create_dhcphost(midonet_api_bridge *bridge, midoname *dhcp, char *name,
         myname.name = strdup(name);
         myname.tenant = strdup(bridge->obj->tenant);
         myname.resource_type = strdup("hosts");
-        myname.content_type = strdup("DhcpHost");
-        myname.vers = strdup("v2");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_DHCP_HOST_JSON]);
 
         parents = EUCA_ZALLOC_C(2, sizeof (midoname));
 
@@ -2114,7 +2077,7 @@ midonet_api_chain *mido_create_chain(char *tenant, char *name, midoname **outnam
     myname.tenant = strdup(tenant);
     myname.name = strdup(name);
     myname.resource_type = strdup("chains");
-    myname.content_type = strdup("Chain");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_CHAIN_JSON]);
 
     ch = NULL;
     rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, NULL);
@@ -2151,28 +2114,18 @@ int mido_read_chain(midoname * name)
 }
 */
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make midocache compatible
-//!
-int mido_update_chain(midoname * name, ...)
-{
+/**
+ * Updates information about a chain with the parameters in the variable argument section.
+ * @param [in] name midoname structure of the chain of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_chain(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("chains", "Chain", "v1", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -2278,7 +2231,7 @@ int mido_create_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipag, midoname *ipaddrgr
         bzero(&myname, sizeof (midoname));
         myname.tenant = strdup(ig->obj->tenant);
         myname.resource_type = strdup("ip_addrs");
-        myname.content_type = strdup("IpAddrGroupAddr");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_ADDR_JSON]);
 
         LOGTRACE("\tadding %s to %s\n", ip, ig->obj->name);
         rc = mido_create_resource(ig->obj, 1, &myname, &out, "addr", ip, "version", "4", NULL);
@@ -2395,7 +2348,9 @@ int mido_get_ipaddrgroup_ips(midoname *ipaddrgroup, midoname ***outnames, int *o
         return (0);
     }
     return (mido_get_resources(ipaddrgroup, 1, ipaddrgroup->tenant, "ip_addrs",
-            "application/vnd.org.midonet.collection.IpAddrGroupAddr-v1+json", outnames, outnames_max));
+            midonet_api_mtypes[APPLICATION_COLLECTION_IP_ADDR_GROUP_ADDR_JSON],
+            midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_ADDR_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -2614,8 +2569,7 @@ int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname,
         bzero(&myname, sizeof (midoname));
         myname.tenant = strdup(chain->tenant);
         myname.resource_type = strdup("rules");
-        myname.content_type = strdup("Rule");
-        myname.vers = strdup("v2");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_RULE_JSON]);
 
         rc = mido_create_resource_v(chain, 1, &myname, &out, &ap);
         if (rc == 0) {
@@ -2720,8 +2674,7 @@ int mido_create_port(midoname *devname, char *port_type, char *ip, char *nw,
 
     myname.tenant = strdup(devname->tenant);
     myname.resource_type = strdup("ports");
-    myname.content_type = strdup("Port");
-    myname.vers = strdup("v2");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_PORT_JSON]);
 
     if (ip && nw && slashnet) {
         if (mac) {
@@ -2973,50 +2926,18 @@ int mido_find_port_from_list(midoname **ports, int max_ports, char *ip, char *nw
     return (ret);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_port(midoname * name)
-{
-    return (mido_read_resource("ports", name, "application/vnd.org.midonet.Port-v2+json"));
-}
-*/
-
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: make this midocache compatible
-//!
-int mido_update_port(midoname * name, ...)
-{
+/**
+ * Updates information about a port with the parameters in the variable argument section.
+ * @param [in] name midoname structure of a port of interest (checks are not performed)
+ * @param [in] ... variable argument section (key-value pairs)
+ * @return  0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_port(midoname *name, ...) {
     va_list al = { {0} };
     int ret = 0;
     va_start(al, name);
-    ret = mido_update_resource("ports", "Port", "v2", name, &al);
+    ret = mido_update_resource(name, &al);
     va_end(al);
 
     return (ret);
@@ -3140,9 +3061,15 @@ int mido_get_ports(midoname *devname, midoname ***outnames, int *outnames_max) {
     }
 
     if (devname) {
-        return (mido_get_resources(devname, 1, devname->tenant, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
+        return (mido_get_resources(devname, 1, devname->tenant, "ports",
+                midonet_api_mtypes[APPLICATION_COLLECTION_PORT_JSON],
+                midonet_api_mtypes[APPLICATION_PORT_JSON],
+                outnames, outnames_max));
     } else {
-        return (mido_get_resources(NULL, 0, VPCMIDO_TENANT, "ports", "application/vnd.org.midonet.collection.Port-v2+json", outnames, outnames_max));
+        return (mido_get_resources(NULL, 0, VPCMIDO_TENANT, "ports",
+                midonet_api_mtypes[APPLICATION_COLLECTION_PORT_JSON],
+                midonet_api_mtypes[APPLICATION_PORT_JSON],
+                outnames, outnames_max));
     }
 }
 
@@ -3152,7 +3079,7 @@ int mido_get_ports(midoname *devname, midoname ***outnames, int *outnames_max) {
  * @return 0 on success. Positive number otherwise.
  */
 int mido_refresh_port(midoname *port) {
-    return (mido_refresh_resource(port, "application/vnd.org.midonet.Port-v2+json"));
+    return (mido_refresh_resource(port));
 }
 
 /**
@@ -3274,7 +3201,10 @@ int mido_get_rules(midoname *chainname, midoname ***outnames, int *outnames_max)
         }
         return (0);
     }
-    return (mido_get_resources(chainname, 1, chainname->tenant, "rules", "application/vnd.org.midonet.collection.Rule-v2+json", outnames, outnames_max));
+    return (mido_get_resources(chainname, 1, chainname->tenant, "rules",
+            midonet_api_mtypes[APPLICATION_COLLECTION_RULE_JSON],
+            midonet_api_mtypes[APPLICATION_RULE_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -3294,7 +3224,9 @@ int mido_reload_rules(midonet_api_chain *chain) {
     int *outnames_max = &(chain->max_rules);
     chain->rules_count = 0;
     int rc = mido_get_resources(chain->obj, 1, chain->obj->tenant, "rules",
-            "application/vnd.org.midonet.collection.Rule-v2+json", outnames, outnames_max);
+            midonet_api_mtypes[APPLICATION_COLLECTION_RULE_JSON],
+            midonet_api_mtypes[APPLICATION_RULE_JSON],
+            outnames, outnames_max);
     if (rc) {
         LOGWARN("Failed to reload %s rules\n", chain->obj->name);
         return (1);
@@ -3438,7 +3370,7 @@ int mido_link_host_port(midoname *host, char *interface, midoname *device, midon
     myname.tenant = strdup(device->tenant);
     myname.name = strdup("port");
     myname.resource_type = strdup("ports");
-    myname.content_type = NULL;
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_HOST_INTERFACE_PORT]);
 
     // check to see if the port is already mapped
     rc = mido_getel_midoname(port, "hostInterfacePort", &hinterface);
@@ -3482,7 +3414,7 @@ int mido_link_ports(midoname *a, midoname *b) {
     myname.tenant = strdup(a->tenant);
     myname.name = strdup("link");
     myname.resource_type = strdup("link");
-    myname.content_type = NULL;
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_PORT_LINK]);
 
     // check to see if link already exists before making new link
 /*
@@ -3520,29 +3452,16 @@ int mido_link_ports(midoname *a, midoname *b) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] resource_type
-//! @param[in] content_type
-//! @param[in] name
-//! @param[in] al
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_update_resource(char *resource_type, char *content_type, char *vers, midoname * name, va_list * al)
-{
+/**
+ * Update a MidoNet resource with the parameters in the list of variable arguments.
+ * @param name [in] midoname structure with the MidoNet resource of interest.
+ * @param al [in] list of variable arguments.
+ * @return 0 on success. -1 if update is not needed (all parameters are already in
+ * place). 1 on failure.
+ */
+int mido_update_resource(midoname *name, va_list *al) {
     int rc = 0, ret = 0;
     char *payload=NULL;
-    char hbuf[EUCA_MAX_PATH];
     va_list ala = { {0} }, alb = { {0} };
 
     // check to see if resource needs updating
@@ -3561,27 +3480,14 @@ int mido_update_resource(char *resource_type, char *content_type, char *vers, mi
     va_end(ala);
        
     if (payload) {
-        rc = midonet_http_put(name->uri, content_type, vers, payload);
+        rc = midonet_http_put(name->uri, name->media_type, payload);
         if (rc) {
             ret = 1;
         }
         EUCA_FREE(payload);
     }
-    hbuf[0] = '\0';
     if (!ret) {
-        if (!name->content_type || strlen(name->content_type) <= 0) {
-            if (!content_type || strlen(content_type) <= 0) {
-                snprintf(hbuf, EUCA_MAX_PATH, "application/json");
-            } else {
-                snprintf(hbuf, EUCA_MAX_PATH, "application/vnd.org.midonet.%s-%s+json",
-                        content_type, ((vers == NULL) || (strlen(vers) <= 0)) ? "v1" : vers);
-            }
-        } else {
-            snprintf(hbuf, EUCA_MAX_PATH, "application/vnd.org.midonet.%s-%s+json",
-                    name->content_type, ((name->vers == NULL) || (strlen(name->vers) <= 0)) ? "v1" : name->vers);
-        }
-
-        rc = midonet_http_get(name->uri, hbuf, &payload);
+        rc = midonet_http_get(name->uri, name->media_type, &payload);
         if (rc) {
             LOGWARN("Failed to retrieve new resource from %s\n", name->uri);
             ret = 1;
@@ -3892,7 +3798,7 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
                     rc = mido_cmp_midoname_to_input_json_v(outmn, al);
                     if (rc) {
                         LOGINFO("\t create_resource_v() applying changes to %s/%s\n", outmn->name, outmn->jsonbuf);
-                        mido_update_resource(newname->resource_type, newname->content_type, newname->vers, outmn, al);
+                        mido_update_resource(outmn, al);
                         ret = -2;
                     } else {
                         LOGINFO("\t create_resource_v() object already in mido %s\n", outmn->name);
@@ -3933,9 +3839,8 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
         }
 
         // perform the create
-        rc = midonet_http_post(url, newname->content_type, newname->vers, payload, &outloc);
+        rc = midonet_http_post(url, newname->media_type, payload, &outloc);
         if (rc) {
-            LOGERROR("midonet_http_post(%s, ...) failed\n", url);
             ret = 1;
         }
     } else {
@@ -3946,7 +3851,7 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
     // if all goes well, store the new resource
     if (!ret) {
         if (outmn && outloc) {
-            rc = midonet_http_get(outloc, NULL, &outhttp);
+            rc = midonet_http_get(outloc, newname->media_type, &outhttp);
             if (rc) {
                 LOGWARN("Failed to retrieve new resource from %s\n", outloc);
                 ret = 1;
@@ -3971,6 +3876,12 @@ int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname
     return (ret);
 }
 
+/**
+ * Compares midoname structures a and b.
+ * @param a midoname structure of interest.
+ * @param b midoname structure of interest.
+ * @return 
+ */
 int mido_cmp_midoname(midoname *a, midoname *b) {
     int ret=0;
 
@@ -3982,7 +3893,6 @@ int mido_cmp_midoname(midoname *a, midoname *b) {
         return(1);
     }
 
-    
     ret = strcmp(a->tenant, b->tenant);
     if (!ret) ret = strcmp(a->name, b->name);
     if (!ret) ret = strcmp(a->uuid, b->uuid);
@@ -3990,8 +3900,7 @@ int mido_cmp_midoname(midoname *a, midoname *b) {
         if (!ret) ret = strcmp(a->jsonbuf, b->jsonbuf);
     }
     if (!ret) ret = strcmp(a->resource_type, b->resource_type);
-    if (!ret) ret = strcmp(a->content_type, b->content_type);
-    if (!ret) ret = strcmp(a->vers, b->vers);
+    if (!ret) ret = strcmp(a->media_type, b->media_type);
     if (!ret) ret = strcmp(a->uri, b->uri);
     
     if (ret) {
@@ -4000,24 +3909,13 @@ int mido_cmp_midoname(midoname *a, midoname *b) {
     return(0);
 }
 
-//!
-//!
-//!
-//! @param[in] dst
-//! @param[in] src
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-void mido_copy_midoname(midoname * dst, midoname * src)
-{
+/**
+ * Duplicates data from src midoname structure to dst midoname structure. NULL fields
+ * are ignored. dst is initialized before processing.
+ * @param [in] dst midoname structure
+ * @param [in] src midoname structure
+ */
+void mido_copy_midoname(midoname *dst, midoname *src) {
     if (!dst || !src) {
         return;
     }
@@ -4040,10 +3938,8 @@ void mido_copy_midoname(midoname * dst, midoname * src)
         dst->jsonbuf = strdup(src->jsonbuf);
     if (src->resource_type)
         dst->resource_type = strdup(src->resource_type);
-    if (src->content_type)
-        dst->content_type = strdup(src->content_type);
-    if (src->vers)
-        dst->vers = strdup(src->vers);
+    if (src->media_type)
+        dst->media_type = strdup(src->media_type);
     if (src->uri)
         dst->uri = strdup(src->uri);
 
@@ -4071,8 +3967,20 @@ void mido_copy_midoname(midoname * dst, midoname * src)
 //!
 //! @note
 //!
-int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *content_type, char *vers, char *uri, char *jsonbuf, midoname * outname)
-{
+/**
+ * Create a midoname datastructure with the parameters in the argument.
+ * @param [in] tenant MN tenant ID.
+ * @param [in] name name of the MN object.
+ * @param [in] uuid UUID of the MN object.
+ * @param [in] resource_type MN resource type.
+ * @param [in] media_type MN media type.
+ * @param [in] uri MN URI.
+ * @param [in] jsonbuf buffer that holds the full MN object information.
+ * @param [out] outname pointer to midoname data structure that will be filled
+ * with the information in the argument.
+ * @return 0 on success.
+ */
+int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *media_type, char *uri, char *jsonbuf, midoname * outname) {
     if (!outname) {
         return (1);
     }
@@ -4086,12 +3994,10 @@ int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_ty
         outname->uuid = strdup(uuid);
     if (resource_type)
         outname->resource_type = strdup(resource_type);
-    if (content_type)
-        outname->content_type = strdup(content_type);
+    if (media_type)
+        outname->media_type = strdup(media_type);
     if (jsonbuf)
         outname->jsonbuf = strdup(jsonbuf);
-    if (vers)
-        outname->vers = strdup(vers);
     if (uri)
         outname->uri = strdup(uri);
 
@@ -4445,6 +4351,66 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
 void midonet_api_init(void) {
     mido_libcurl_init(&libcurl_handles);
     mido_initialize_apiuribase();
+    
+    // Initialize media_types array
+    for (int i = 0; i < APPLICATION_MAX_INDEX; i++) {
+        midonet_api_mtypes[i][0] = '\0';
+    }
+    snprintf(midonet_api_mtypes[APPLICATION_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_JSON_V5);
+    snprintf(midonet_api_mtypes[APPLICATION_HOST_INTERFACE_PORT], MIDO_MTYPE_MAX_LEN, APPLICATION_HOST_INTERFACE_PORT_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_PORT_LINK], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_LINK_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_SYSTEM_STATE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_SYSTEM_STATE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_BGP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BGP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_BGP_PEER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BGP_PEER_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_AD_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_AD_ROUTE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_BGP_NETWORK_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BGP_NETWORK_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BRIDGE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_DHCP_SUBNET_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_DHCP_SUBNET_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_DHCP_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_DHCP_HOST_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_CHAIN_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_CHAIN_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_RULE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_RULE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_HOST_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_INTERFACE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_INTERFACE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_IP_ADDR_GROUP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_IP_ADDR_GROUP_ADDR_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_IP_ADDR_GROUP_ADDR_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_PORT_GROUP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_GROUP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_PORT_GROUP_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_GROUP_PORT_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_ROUTER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_ROUTER_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_ROUTE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_TUNNEL_ZONE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_TUNNEL_ZONE_HOST_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_SYSTEM_STATE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_SYSTEM_STATE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BGP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BGP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BGP_PEER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BGP_PEER_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_AD_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_AD_ROUTE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BGP_NETWORK_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BGP_NETWORK_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BRIDGE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_SUBNET_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_DHCP_SUBNET_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_DHCP_HOST_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_PORT_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_CHAIN_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_CHAIN_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_RULE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_RULE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_HOST_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_INTERFACE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_INTERFACE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_IP_ADDR_GROUP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_IP_ADDR_GROUP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_IP_ADDR_GROUP_ADDR_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_IP_ADDR_GROUP_ADDR_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_PORT_GROUP_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_PORT_GROUP_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_PORT_GROUP_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_PORT_GROUP_PORT_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_ROUTER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_ROUTER_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_ROUTE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_TUNNEL_ZONE_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON_V1);
+    if (!strncmp(midonet_api_version, "v5.0", 16)) {
+        snprintf(midonet_api_mtypes[APPLICATION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_JSON_V3);
+        snprintf(midonet_api_mtypes[APPLICATION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BRIDGE_JSON_V4);
+        snprintf(midonet_api_mtypes[APPLICATION_ROUTER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_ROUTER_JSON_V3);
+        snprintf(midonet_api_mtypes[APPLICATION_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_HOST_JSON_V3);
+        snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_PORT_JSON_V3);
+        snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BRIDGE_JSON_V4);
+        snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_ROUTER_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_ROUTER_JSON_V3);
+        snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_HOST_JSON_V3);
+    }
 }
 
 /**
@@ -4452,6 +4418,21 @@ void midonet_api_init(void) {
  */
 void midonet_api_cleanup(void) {
     mido_libcurl_cleanup(&libcurl_handles);
+}
+
+/**
+ * Gets the MidoNet API version.
+ * @param [out] version string representation of detected MidoNet API version.
+ * Caller is responsible to release the memory allocated.
+ */
+void midonet_api_get_version(char **version) {
+    if (version) {
+        if (!strlen(midonet_api_version)) {
+            *version = strdup("unknown");
+        } else {
+            *version = strdup(midonet_api_version);
+        }
+    }
 }
 
 /**
@@ -4695,12 +4676,11 @@ int midonet_http_get(char *url, char *apistr, char **out_payload) {
 /**
  * Performs http PUT operation using libcurl
  * @param url [in] the http url of interest.
- * @param resource_type [in] mido resource type, used to build the media type.
- * @param vers [in] mido resource type version, used to build the media type string.
+ * @param apistr [in] API string (media type), to be used in "Content-Type: ____" http header
  * @param payload [in] a JSON string to be used as the payload of this operation.
  * @return 0 on success. Positive integer on any failure.
  */
-int midonet_http_put(char *url, char *resource_type, char *vers, char *payload) {
+int midonet_http_put(char *url, char *apistr, char *payload) {
     CURL *curl = NULL;
     CURLcode curlret;
     struct mem_params_t mem_reader_params = { 0, 0 };
@@ -4727,10 +4707,10 @@ int midonet_http_put(char *url, char *resource_type, char *vers, char *payload) 
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&mem_reader_params);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (long)mem_reader_params.size);
 
-    if (resource_type && vers) {
-        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-%s+json", resource_type, vers);
-    } else if (resource_type) {
-        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-%s+json", resource_type, "v1");
+    if (apistr && strlen(apistr)) {
+        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: %s", apistr);
+    } else {
+        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/json");
     }
     headers = curl_slist_append(headers, hbuf);
     snprintf(hbuf, EUCA_MAX_PATH, "Expect:");
@@ -4804,14 +4784,13 @@ static size_t header_find_location(char *content, size_t size, size_t nmemb, voi
 /**
  * Performs http POST operation using libcurl
  * @param url [in] the http url of interest.
- * @param resource_type [in] mido resource type, used to build the media type.
- * @param vers [in] mido resource type version, used to build the media type string.
+ * @param apistr [in] API string (media type), to be used in "Content-Type: ____" http header
  * @param payload [in] a JSON string to be used as the payload of this operation.
  * @param out_payload [out] optional pointer to a string where the results of this
  * POST operation will be stored.
  * @return 0 on success. Positive integer on any failure.
  */
-int midonet_http_post(char *url, char *resource_type, char *vers, char *payload, char **out_payload) {
+int midonet_http_post(char *url, char *apistr, char *payload, char **out_payload) {
     CURL *curl = NULL;
     CURLcode curlret;
     int ret = 0;
@@ -4837,14 +4816,10 @@ int midonet_http_post(char *url, char *resource_type, char *vers, char *payload,
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, strlen(payload));
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_find_location);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, &loc);
-    if (!resource_type || strlen(resource_type) <= 0) {
-        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/json");
+    if (apistr && strlen(apistr)) {
+        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: %s", apistr);
     } else {
-        if (resource_type && vers) {
-            snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-%s+json", resource_type, vers);
-        } else if (resource_type) {
-            snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-%s+json", resource_type, "v1");
-        }
+        snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/json");
     }
     headers = curl_slist_append(headers, hbuf);
     //    headers = curl_slist_append(headers, "Content-Type: application/vnd.org.midonet");
@@ -5088,7 +5063,7 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
         bzero(&myname, sizeof (midoname));
         myname.tenant = strdup(router->tenant);
         myname.resource_type = strdup("routes");
-        myname.content_type = NULL;
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_ROUTE_JSON]);
 
         if (strcmp(next_hop_ip, "UNSET")) {
             rc = mido_create_resource(router, 1, &myname, &out, "srcNetworkAddr", src,
@@ -5165,51 +5140,108 @@ int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(router, 1, router->tenant, "routes", "application/vnd.org.midonet.collection.Route-v1+json", outnames, outnames_max));
+    return (mido_get_resources(router, 1, router->tenant, "routes",
+            midonet_api_mtypes[APPLICATION_COLLECTION_ROUTE_JSON],
+            midonet_api_mtypes[APPLICATION_ROUTE_JSON],
+            outnames, outnames_max));
 }
 
 /**
- * Retrieves an array of pointers to midonet object representing router port bgps.
+ * Retrieves an array of pointers to midonet object representing bgps.
  * This call does not update and/or access midocache.
- * @param port [in] port of interest.
+ * @param dev [in] device (router port MN1.9 or router MN5) of interest.
+ * @param outnames [out] an array of pointers to midonet objects representing bgps, to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_bgps(midoname *dev, midoname ***outnames, int *outnames_max) {
+    if (!strcmp(midonet_api_version, "v1.9")) {
+        return (mido_get_bgps_v1(dev, outnames, outnames_max));
+    } else if (!strcmp(midonet_api_version, "v5.0")) {
+        return (mido_get_bgps_v5(dev, outnames, outnames_max));
+    } else {
+        return (1);
+    }
+}
+
+/**
+ * Retrieves an array of pointers to midonet object representing bgps (MN1.9).
+ * This call does not update and/or access midocache.
+ * @param port [in] router port of interest.
  * @param outnames [out] an array of pointers to midonet objects representing router port bgps, to be returned
  * @param outnames_max [out] number of elements in the outnames array
  * @return 0 on success. 1 otherwise.
  */
-int mido_get_bgps(midoname *port, midoname ***outnames, int *outnames_max) {
+int mido_get_bgps_v1(midoname *port, midoname ***outnames, int *outnames_max) {
     return (mido_get_resources(port, 1, VPCMIDO_TENANT, "bgps",
-            "application/vnd.org.midonet.collection.Bgp-v1+json", outnames, outnames_max));
+            midonet_api_mtypes[APPLICATION_COLLECTION_BGP_JSON],
+            midonet_api_mtypes[APPLICATION_BGP_JSON],
+            outnames, outnames_max));
+}
+
+/**
+ * Retrieves an array of pointers to midonet object representing bgps (MN5).
+ * This call does not update and/or access midocache.
+ * @param router [in] router of interest.
+ * @param outnames [out] an array of pointers to midonet objects representing router port bgps, to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max) {
+    return (mido_get_resources(router, 1, VPCMIDO_TENANT, "bgp_peers",
+            midonet_api_mtypes[APPLICATION_COLLECTION_BGP_PEER_JSON],
+            midonet_api_mtypes[APPLICATION_BGP_PEER_JSON],
+            outnames, outnames_max));
 }
 
 /**
  * Retrieves an array of pointers to midonet object representing routes of a bgp.
  * This call does not update and/or access midocache.
- * @param port [in] port of interest.
+ * @param dev [in] device (bgp MN1.9, or router MN5) of interest.
  * @param outnames [out] an array of pointers to midonet objects representing routes of a bgp, to be returned
  * @param outnames_max [out] number of elements in the outnames array
  * @return 0 on success. 1 otherwise.
  */
-int mido_get_bgp_routes(midoname *bgp, midoname ***outnames, int *outnames_max) {
-    return (mido_get_resources(bgp, 1, VPCMIDO_TENANT, "ad_routes",
-            "application/vnd.org.midonet.collection.AdRoute-v1+json", outnames, outnames_max));
+int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max) {
+    if (!strcmp(midonet_api_version, "v1.9")) {
+        return (mido_get_bgp_routes_v1(dev, outnames, outnames_max));
+    } else if (!strcmp(midonet_api_version, "v5.0")) {
+        return (mido_get_bgp_routes_v5(dev, outnames, outnames_max));
+    } else {
+        return (1);
+    }
 }
 
-//!
-//!
-//!
-//! @param[in] one
-//! @param[in] two
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Retrieves an array of pointers to midonet object representing routes of a bgp (MN1.9).
+ * This call does not update and/or access midocache.
+ * @param bgp [in] bgp of interest.
+ * @param outnames [out] an array of pointers to midonet objects representing routes of a bgp, to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_max) {
+    return (mido_get_resources(bgp, 1, VPCMIDO_TENANT, "ad_routes",
+            midonet_api_mtypes[APPLICATION_COLLECTION_AD_ROUTE_JSON],
+            midonet_api_mtypes[APPLICATION_AD_ROUTE_JSON],
+            outnames, outnames_max));
+}
+
+/**
+ * Retrieves an array of pointers to midonet object representing routes of a bgp (MN5).
+ * This call does not update and/or access midocache.
+ * @param router [in] router of interest.
+ * @param outnames [out] an array of pointers to midonet objects representing routes of a bgp, to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max) {
+    return (mido_get_resources(router, 1, VPCMIDO_TENANT, "bgp_networks",
+            midonet_api_mtypes[APPLICATION_COLLECTION_BGP_NETWORK_JSON],
+            midonet_api_mtypes[APPLICATION_BGP_NETWORK_JSON],
+            outnames, outnames_max));
+}
+
 /**
  * Compares json_object one and two. Specifically, checks whether all elements in
  * one are present (and match) in two. 
@@ -5299,23 +5331,6 @@ int mido_cmp_midoname_to_input_json(midoname *name, ...) {
     va_end(al);
     return (ret);
 }
-
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] al
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
 
 /**
  * Checks if a NULL terminated list of variable arguments (consisting of key-value
@@ -5503,7 +5518,10 @@ int mido_get_routers(char *tenant, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "routers", "application/vnd.org.midonet.collection.Router-v2+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "routers",
+            midonet_api_mtypes[APPLICATION_COLLECTION_ROUTER_JSON],
+            midonet_api_mtypes[APPLICATION_ROUTER_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -5571,7 +5589,10 @@ int mido_get_bridges(char *tenant, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "bridges", "application/vnd.org.midonet.collection.Bridge-v2+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "bridges",
+            midonet_api_mtypes[APPLICATION_COLLECTION_BRIDGE_JSON],
+            midonet_api_mtypes[APPLICATION_BRIDGE_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -5640,7 +5661,10 @@ int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max) {
         }
         return (0);
     }
-    return (mido_get_resources(NULL, 0, tenant, "chains", "application/vnd.org.midonet.collection.Chain-v1+json", outnames, outnames_max));
+    return (mido_get_resources(NULL, 0, tenant, "chains",
+            midonet_api_mtypes[APPLICATION_COLLECTION_CHAIN_JSON],
+            midonet_api_mtypes[APPLICATION_CHAIN_JSON],
+            outnames, outnames_max));
 }
 
 /**
@@ -5687,13 +5711,14 @@ midonet_api_chain *mido_get_chain(char *name) {
  * @param max_parents [in] number of parents.
  * @param tenant [in] MidoNet tenant string.
  * @param resource_type [in] type of the resource of interest (e.g., routers, bridges, etc)
- * @param apistr [in] string to be appended on REST call header (typically the MidoNet media type)
+ * @param apistr [in] string to be appended on REST call header (typically the MidoNet collections media type)
+ * @param mtype [in] media type of expected individual mido objects (MidoNet media type).
  * @param outnames [out] array of pointers to midoname structures of the retrieved objects.
  * @param outnames_max [out] number of retrieved objects.
  * @return 0 on success, 1 otherwise.
  */
 int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *resource_type,
-        char *apistr, midoname ***outnames, int *outnames_max) {
+        char *apistr, char *mtype, midoname ***outnames, int *outnames_max) {
     int rc = 0, ret = 0, i = 0;
     char *payload = NULL, url[EUCA_MAX_PATH], tmpbuf[EUCA_MAX_PATH];
     midoname **names = NULL;
@@ -5735,8 +5760,10 @@ int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *r
                         names[names_max]->tenant = strdup(tenant);
                         names[names_max]->jsonbuf = strdup(json_object_to_json_string(resource));
                         names[names_max]->resource_type = strdup(resource_type);
-                        names[names_max]->content_type = NULL;
                         names[names_max]->init = 1;
+                        if (mtype && strlen(mtype)) {
+                            names[names_max]->media_type = strdup(mtype);
+                        }
                         mido_update_midoname(names[names_max]);
                         names_max++;
                     }
@@ -5757,10 +5784,9 @@ int mido_get_resources(midoname *parents, int max_parents, char *tenant, char *r
 /**
  * Retrieves an MidoNet object from MidoNet-API to refresh the in-memory data.
  * @param resc [in] pointer to a MidoNet object to be refreshed.
- * @param apistr [in] string to be appended on REST call header (typically the MidoNet media type)
  * @return 0 on success, 1 otherwise.
  */
-int mido_refresh_resource(midoname *resc, char *apistr) {
+int mido_refresh_resource(midoname *resc) {
     int rc=0;
     char hbuf[EUCA_MAX_PATH];
     
@@ -5774,15 +5800,10 @@ int mido_refresh_resource(midoname *resc, char *apistr) {
     url = resc->uri;
     
     hbuf[0] = '\0';
-    if (apistr && strlen(apistr)) {
-        snprintf(hbuf, EUCA_MAX_PATH, "%s", apistr);
+    if (!resc->media_type || strlen(resc->media_type) <= 0) {
+        snprintf(hbuf, EUCA_MAX_PATH, "application/json");
     } else {
-        if (!resc->resource_type || strlen(resc->resource_type) <= 0) {
-            snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/json");
-        } else {
-            snprintf(hbuf, EUCA_MAX_PATH, "Content-Type: application/vnd.org.midonet.%s-%s+json",
-                    resc->resource_type, ((resc->vers == NULL) || (strlen(resc->vers) <= 0)) ? "v1" : resc->vers);
-        }
+        snprintf(hbuf, EUCA_MAX_PATH, "%s", resc->media_type);
     }
     LOGTRACE("\t refreshing %s %s\n", url, hbuf);
 
@@ -5837,7 +5858,7 @@ int mido_get_hosts(midoname ***outnames, int *outnames_max) {
 
     bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "%s/hosts", midonet_api_uribase);
-    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Host-v2+json", &payload);
+    rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_COLLECTION_HOST_JSON], &payload);
     if (!rc) {
         struct json_object *jobj = NULL, *host = NULL, *el = NULL;
 
@@ -5872,7 +5893,7 @@ int mido_get_hosts(midoname ***outnames, int *outnames_max) {
                             }
 
                             names[names_max]->resource_type = strdup("hosts");
-                            names[names_max]->content_type = NULL;
+                            names[names_max]->media_type = strdup(midonet_api_mtypes[APPLICATION_HOST_JSON]);
                             names[names_max]->init = 1;
                             names_max++;
                         }
@@ -5985,7 +6006,7 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
 
     bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "%s/hosts/%s/interfaces", midonet_api_uribase, host->uuid);
-    rc = midonet_http_get(url, "application/vnd.org.midonet.collection.Interface-v1+json", &payload);
+    rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_COLLECTION_INTERFACE_JSON], &payload);
     if (!rc) {
         struct json_object *jobj = NULL, *interface = NULL, *el = NULL;
 
@@ -6056,7 +6077,7 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
                                 names[names_max].name = strdup(json_object_get_string(el));
                             }
                             names[names_max].resource_type = strdup("interfaces");
-                            names[names_max].content_type = NULL;
+                            names[names_max].media_type = strdup(midonet_api_mtypes[APPLICATION_INTERFACE_JSON]);
                             names[names_max].init = 1;
                             names_max++;
                         }
@@ -6105,7 +6126,9 @@ int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max) {
         return (1);
     }
     LOGTRACE("retrieving IPv4 addresses of %s\n", host->name);
-    rc = mido_get_interfaces(host, MIDO_HOST_INTERFACE_ALL, (MIDO_HOST_INTERFACE_ENDPOINT_PHYSICAL | MIDO_HOST_INTERFACE_ENDPOINT_UNKNOWN), &names, &names_max);
+    rc = mido_get_interfaces(host, MIDO_HOST_INTERFACE_ALL,
+            (MIDO_HOST_INTERFACE_ENDPOINT_PHYSICAL | MIDO_HOST_INTERFACE_ENDPOINT_UNKNOWN |
+            MIDO_HOST_INTERFACE_ENDPOINT_DATAPAH), &names, &names_max);
 
     if ((rc == 0) && (names != NULL) && (names_max > 0)) {
         *outnames_max = 0;
@@ -6154,7 +6177,7 @@ int mido_check_state(void) {
     bzero(url, EUCA_MAX_PATH);
     snprintf(url, EUCA_MAX_PATH, "%s/system_state", midonet_api_uribase);
 
-    rc = midonet_http_get(url, "application/vnd.org.midonet.SystemState-v2+json", &outbuf);
+    rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_SYSTEM_STATE_JSON], &outbuf);
     EUCA_FREE(outbuf);
     return (rc);
 }
@@ -6172,7 +6195,7 @@ int mido_initialize_apiuribase(void) {
     snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/");
 
     for (int i = 0; i < 30 && rc; i++) {
-        rc = midonet_http_get(url, "application/vnd.org.midonet.Application-v5+json", &outbuf);
+        rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
         if (rc) {
             sleep(1);
         }
