@@ -104,14 +104,14 @@ generated/stubs: $(SCWSDL)
 
 build: all
 
-buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o objectstorage.o diskutil.o map.o OSGclient euca-blobs $(SCCLIENT) $(TESTS) euca_volume
+buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o objectstorage.o diskutil.o map.o OSGclient euca-blobs $(SCCLIENT) $(TESTS) $(NODEADMIN_TOOL_NAME)
 
 client: $(SCCLIENT) OSGclient
 
 $(SCCLIENT): $(SCCLIENT).c generated/stubs $(WSSECLIBS) storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS)
 	$(CC) -o $(SCCLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SCCLIENT).c -DMODE=1 storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS)
 
-euca_volume: euca_volume.c generated/stubs $(WSSECLIBS) storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS)
+$(NODEADMIN_TOOL_NAME): euca_volume.c generated/stubs $(WSSECLIBS) storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS)
 	$(CC) -o $(NODEADMIN_TOOL_NAME) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) euca_volume.c -DMODE=1 storage-controller.o ebs_utils.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS) `xslt-config --cflags` `xslt-config --libs`
 
 euca-blobs: Makefile blobstore.c blobstore.h $(EUCA_BLOBS_OBJS)

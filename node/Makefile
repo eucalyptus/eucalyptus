@@ -216,6 +216,9 @@ test_xml2: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca
 libvirt_tortura: libvirt_tortura.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
 
+libvirt_nag: libvirt_nag.c ../util/ipc.o ../util/misc.o ../util/log.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o 
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_nag libvirt_nag.c -lvirt ../util/ipc.o ../util/misc.o ../util/log.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o 
+
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
 	$(INSTALL) $(SERVICE_SO) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
