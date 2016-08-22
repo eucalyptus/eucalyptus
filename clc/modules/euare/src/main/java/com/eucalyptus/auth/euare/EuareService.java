@@ -2392,15 +2392,17 @@ public class EuareService {
     return Entities.readOnlyDistinctTransactionFor( UserEntity.class );
   }
 
+  private static String OIDC_URL_PREFIX = "https://";
+
   /* open id services */
   protected String openIdConnectProviderUrlToArn(final EuareAccount account, final String url) {
-    String name = url.substring("https://".length());
-    return new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "oidc-provider", name ).toString( );
+    String name = url.substring(OIDC_URL_PREFIX.length());
+    return new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "", name ).toString( );
   }
 
   protected String openIdConnectProviderArnToUrl(final String arn) {
-    final String OIDC = "oidc-provider";
-    return "https://" + arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
+    final String OIDC = PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
+    return OIDC_URL_PREFIX + arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
   }
 
   public CreateOpenIdConnectProviderResponseType createOpenIdConnectProvider( final CreateOpenIdConnectProviderType request ) throws EucalyptusCloudException {

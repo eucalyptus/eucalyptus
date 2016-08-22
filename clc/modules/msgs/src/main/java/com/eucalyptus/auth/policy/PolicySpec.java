@@ -440,7 +440,7 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
   public static final String IAM_RESOURCE_ACCESS_KEY = "access-key";
   public static final String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
-  public static final String IAM_RESOURCE_OPENID_CONNECT_PROVIDER = "openid-provider";
+  public static final String IAM_RESOURCE_OPENID_CONNECT_PROVIDER = "oidc-provider";
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";
