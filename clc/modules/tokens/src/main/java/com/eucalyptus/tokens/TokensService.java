@@ -247,9 +247,10 @@ public class TokensService {
       // verify JWT signature
       final String keysJson = readUrl( (String)config.get("jwks_uri") );
       final JSONObject keys = JSONObject.fromObject(keysJson);
-      final String jwks_n = (String)((JSONObject)((JSONArray)keys.get("keys")).get(0)).get("n");
-      final String jwks_e = (String)((JSONObject)((JSONArray)keys.get("keys")).get(0)).get("e");
-      final String jwks_alg = (String)((JSONObject)((JSONArray)keys.get("keys")).get(0)).get("alg");
+      final JSONObject keyData = (JSONObject)((JSONArray)keys.get("keys")).get(0);
+      final String jwks_n = (String)(keyData).get("n");
+      final String jwks_e = (String)(keyData).get("e");
+      final String jwks_alg = (String)(keyData).get("alg");
       final String thumbprint = DigestUtils.sha1Hex(jwks_n);
       if ( !provider.getThumbprints().contains(thumbprint) ) {
         throw new TokensException( TokensException.Code.ValidationError, "thumbprint does not match" );
