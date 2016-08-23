@@ -55,6 +55,12 @@ public interface Principal {
         }
       }
     },
+    Federated {
+      @Override
+      public String convertForUserMatching( final String principal ) {
+        return principal;
+      }
+    },
     Service {
       @Override
       public String convertForUserMatching( final String principal ) {

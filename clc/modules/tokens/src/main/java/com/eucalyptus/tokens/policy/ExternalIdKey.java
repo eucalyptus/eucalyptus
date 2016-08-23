@@ -20,11 +20,14 @@
 package com.eucalyptus.tokens.policy;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PolicyEvaluationContext;
+import com.eucalyptus.auth.PolicyEvaluationWriteContextKey;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.StringConditionOp;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.util.TypedKey;
 import net.sf.json.JSONException;
 
 /**
@@ -34,9 +37,13 @@ import net.sf.json.JSONException;
 public class ExternalIdKey implements Key {
   static final String KEY_NAME = "sts:externalid";
 
+  private static final TypedKey<String> EXTERNAL_ID_KEY = TypedKey.create( "ExternalID" );
+  public static final PolicyEvaluationWriteContextKey<String> CONTEXT_KEY =
+      PolicyEvaluationWriteContextKey.create( EXTERNAL_ID_KEY );
+
   @Override
   public String value() throws AuthException {
-    return ExternalIdContext.getExternalId();
+    return PolicyEvaluationContext.get( ).getAttribute( EXTERNAL_ID_KEY );
   }
 
   @Override

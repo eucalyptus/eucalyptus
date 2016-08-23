@@ -28,12 +28,12 @@ import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyEvaluationContext;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -49,7 +49,7 @@ import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.tokens.policy.ExternalIdContext;
+import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -134,21 +134,16 @@ public class TokensService {
 
     //TODO Should we fail if a policy is supplied? (since we ignore it)
     try {
-      ExternalIdContext.doWithExternalId(
-          request.getExternalId(),
-          EucalyptusCloudException.class,
-          new Callable<BaseRole>() {
-            @Override
-            public BaseRole call() throws TokensException {
-              try {
-                return RestrictedTypes.doPrivilegedWithoutOwner(
-                    Accounts.getRoleFullName( role ),
-                    new RoleResolver( role ) );
-              } catch ( final AuthException e ) {
-                throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
-              }
-            }
-          } );
+      try {
+        PolicyEvaluationContext.builder( )
+            .attr( ExternalIdKey.CONTEXT_KEY, request.getExternalId( ) )
+            .build( ).doWithContext( () ->
+            RestrictedTypes.doPrivilegedWithoutOwner(
+                Accounts.getRoleFullName( role ),
+                new RoleResolver( role ) ) );
+      } catch ( final Exception e ) {
+        throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
+      }
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
