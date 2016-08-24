@@ -1222,7 +1222,7 @@ static int update_elastic_ips(globalNetworkInfo * pGni)
                 LOGERROR("could not execute: adding ips\n");
                 ret = 1;
             }
-            euca_exec_no_wait(config->cmdprefix, "arping", "-c", "5", "-w", "1", "-U", "-I", config->pubInterface, strptra, NULL);
+            euca_exec_wait(1, config->cmdprefix, "arping", "-c", "1", "-U", "-I", config->pubInterface, strptra, NULL);
 
             snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);

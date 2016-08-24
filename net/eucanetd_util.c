@@ -877,6 +877,37 @@ int euca_exec_no_wait(const char *file, ...)
 }
 
 /**
+ * Forks a process to execute a command specified in the variable argument section.
+ * Waits up to timeout_sec for the child process to exit. No action taken on timeout.
+ * @param timeout_sec time to wait for the child process executing the command of interest.
+ * @param file first string of the command of interest.
+ * @param ... variable argument section.
+ * @return EUCA_OK on success.
+ */
+int euca_exec_wait(int timeout_sec, const char *file, ...) {
+    int result = 0;
+    char **argv = NULL;
+
+    va_list va;
+    va_start(va, file);
+    argv = build_argv(file, va);
+    va_end(va);
+    if (argv == NULL)
+        return EUCA_INVALID_ERROR;
+
+    pid_t pid;
+    int status = 0;
+    result = euca_execvp_fd(&pid, NULL, NULL, NULL, argv);
+    free_char_list(argv);
+    
+    if (timeout_sec > 0) {
+        timewait(pid, &status, timeout_sec);
+    }
+
+    return result;
+}
+
+/**
  * Invokes euca_execvp_fd with passed command
  * @param command that should be executed with parameters. Parameters must be separated by one space.
  * @return exit code from executed script
