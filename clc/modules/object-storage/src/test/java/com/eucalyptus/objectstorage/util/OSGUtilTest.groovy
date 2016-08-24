@@ -18,9 +18,10 @@
  * additional information or have any questions.
  */
 
-package com.eucalyptus.objectstorage.pipeline.binding;
+package com.eucalyptus.objectstorage.util;
 
-import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpRequest
+import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import groovy.transform.CompileStatic;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -31,94 +32,68 @@ import org.junit.Test;
  * Created by zhill on 3/7/14.
  */
 @CompileStatic
-public class ObjectStorageRESTBindingTest {
+public class OSGUtilTest {
 
   @Test
   public void testGetOperation() throws Exception {
-    ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
-
-          @Override
-          protected Map<String, String> populateOperationMap() {
-            return null
-          }
-
-          @Override
-          protected Map<String, String> populateUnsupportedOperationMap() {
-            return null
-          }
-        };
-
     MappingHttpRequest request;
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
-    String path = binding.getOperationPath(request);
+    String path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket/object".equals(path));
   }
 
   @Test
   public void testGetOperationPath() throws Exception {
-    ObjectStorageRESTBinding binding = new ObjectStorageRESTBinding() {
-
-          @Override
-          protected Map<String, String> populateOperationMap() {
-            return null
-          }
-
-          @Override
-          protected Map<String, String> populateUnsupportedOperationMap() {
-            return null
-          }
-        };
-
     MappingHttpRequest request;
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket/object");
-    String path = binding.getOperationPath(request);
+    String path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket/object".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/bucket");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstorage/services/objectstorage/bucket");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/services/objectstorage/bucket".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/objectstoragebucket/object");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/services/objectstoragebucket/object".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket/object".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/bucket/object/");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket/object/".equals(path));
 
     //Test with /services/Walrus path for legacy
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket/object");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket/object".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus/bucket");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/bucket".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrus");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("".equals(path));
 
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/services/Walrusbucket/object");
-    path = binding.getOperationPath(request);
+    path = OSGUtil.getOperationPath(request, ObjectStorageRESTPipeline.getServicePaths());
     assert("/services/Walrusbucket/object".equals(path));
 
 
