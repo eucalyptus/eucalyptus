@@ -62,7 +62,6 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -79,21 +78,28 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.collect.Maps;
 
 public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
   private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTBinding.class);
 
-  @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
-    newMap.put(BUCKET + HttpMethod.POST.toString(), "PostObject");
-    return newMap;
+  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
+  static {
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.POST.toString(), "PostObject");
   }
 
+  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
+  static {
+  }
+
+  @Override
+  protected Map<String, String> populateOperationMap() {
+    return SUPPORTED_OPS;
+  }
+
+  @Override
   protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-    // Object operations
-    return opsMap;
+    return UNSUPPORTED_OPS;
   }
 
   @Override
@@ -110,9 +116,8 @@ public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
           MappingHttpRequest request = (MappingHttpRequest) msgEvent.getMessage();
           if (request.getFormFields() != null
               && request.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString()) != null) {
-            firstChunk =
-                new DefaultHttpChunk((ChannelBuffer) request.getFormFields()
-                    .get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString()));
+            firstChunk = new DefaultHttpChunk(
+                (ChannelBuffer) request.getFormFields().get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString()));
             if (request.isChunked()) {
               firstChunkEvent = new UpstreamMessageEvent(channelHandlerContext.getChannel(), firstChunk, msgEvent.getRemoteAddress());
             }

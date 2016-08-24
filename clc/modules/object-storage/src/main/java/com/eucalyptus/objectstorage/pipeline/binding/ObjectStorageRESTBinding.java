@@ -348,7 +348,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
     String[] target = null;
-    String path = getOperationPath(httpRequest);
+    String path = OSGUtil.getOperationPath(httpRequest, ObjectStorageRESTPipeline.getServicePaths());
     boolean objectstorageInternalOperation = false;
 
     String hostBucket = null;
@@ -1019,28 +1019,28 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return partList;
   }
 
-  /**
-   * Removes the service path for processing the bucket/key split.
-   * 
-   * @param httpRequest
-   * @return
-   */
-  protected String getOperationPath(MappingHttpRequest httpRequest) {
-    for (String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
-      if (httpRequest.getServicePath().startsWith(pathCandidate)) {
-        String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
-        if (!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
-          // The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
-          // So, don't remove the service path because that changes the semantics.
-          break;
-        } else {
-          return opPath;
-        }
-      }
-    }
-
-    return httpRequest.getServicePath();
-  }
+//  /**
+//   * Removes the service path for processing the bucket/key split.
+//   * 
+//   * @param httpRequest
+//   * @return
+//   */
+//  protected String getOperationPath(MappingHttpRequest httpRequest) {
+//    for (String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
+//      if (httpRequest.getServicePath().startsWith(pathCandidate)) {
+//        String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
+//        if (!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
+//          // The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
+//          // So, don't remove the service path because that changes the semantics.
+//          break;
+//        } else {
+//          return opPath;
+//        }
+//      }
+//    }
+//
+//    return httpRequest.getServicePath();
+//  }
 
   protected String getLocationConstraint(MappingHttpRequest httpRequest) throws S3Exception {
     String locationConstraint = null;

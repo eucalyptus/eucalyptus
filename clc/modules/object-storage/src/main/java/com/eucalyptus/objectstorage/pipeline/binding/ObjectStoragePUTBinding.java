@@ -62,25 +62,25 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.google.common.collect.Maps;
 
 public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
   private static Logger LOG = Logger.getLogger(ObjectStoragePUTBinding.class);
 
-  private static final Map<String, String> SUPPORTED_OPS = new HashMap<>();
+  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
   static {
     // Bucket operations
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
-    SUPPORTED_OPS
-        .put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(),
+        "SetBucketVersioningStatus");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
@@ -103,7 +103,7 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
         "CompleteMultipartUpload");
   }
 
-  private static final Map<String, String> UNSUPPORTED_OPS = new HashMap<>();
+  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
   static {
     // Bucket operations
 
@@ -111,7 +111,8 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
     UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
 
     // Notification
-    // opsMap.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(),
+        "PUT Bucket notification");
 
     // Website
     UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
@@ -124,6 +125,7 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
     return SUPPORTED_OPS;
   }
 
+  @Override
   protected Map<String, String> populateUnsupportedOperationMap() {
     return UNSUPPORTED_OPS;
   }
