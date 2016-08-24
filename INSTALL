@@ -79,8 +79,8 @@ Install the following tools and repos needed for building:
 
 >>>>> Command 1b: 
 # yum install git yum-utils wget \
-    http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm \
-    http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-5.el6.elrepo.noarch.rpm
+    http://mirror.math.princeton.edu/pub/epel/7/x86_64/e/epel-release-7-7.noarch.rpm \
+    http://elrepo.org/linux/elrepo/el7/x86_64/RPMS/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 
 Install the Eucalyptus repository that will allow yum to find the packages
 needed for building Eucalyptus that are not in the other repos. Point your
