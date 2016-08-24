@@ -27,7 +27,6 @@ clean:
 distclean: clean
 
 install: deploy
-ifeq ($(USE_SYSTEMD), yes)
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/sysctl.d
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
@@ -39,10 +38,8 @@ ifeq ($(USE_SYSTEMD), yes)
 	# For backwards compatibility with ``service eucalyptus-cc/nc start''
 	ln -fs eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	ln -fs eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
-endif
 
 uninstall:
-ifeq ($(USE_SYSTEMD), yes)
 # Extra "if" checks prevent e.g. "rm -f /..../system/*.service" removing files we didn't install.
 	@if [ -n "$$(/bin/ls modules-load.d/*.conf)" ]; then \
 		for conf_file in modules-load.d/*.conf; do \
@@ -66,4 +63,3 @@ ifeq ($(USE_SYSTEMD), yes)
 	fi
 	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
-endif

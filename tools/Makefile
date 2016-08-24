@@ -75,7 +75,6 @@ clean:
 
 distclean:
 	@echo "removing generated files scripts ..."
-	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus eucalyptus-sc eucalyptus-nc
 	@make -C imaging distclean
 
 install: build
@@ -112,11 +111,9 @@ install: build
 	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 libvirt.xsl $(DESTDIR)$(etcdir)/eucalyptus
-	@$(INSTALL) -m 755 create-loop-devices $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 nc-hooks/example.sh $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks/
 	@$(INSTALL) -m 755 generate-migration-keys.sh $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 authorize-migration-keys.pl $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 conntrack_kernel_params $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
@@ -133,18 +130,8 @@ install: build
 	@$(INSTALL) -m 755 nodeadmin-unpack-instance $(DESTDIR)$(sbindir)/nodeadmin-unpack-instance
 	@make -C status install
 	@make -C imaging install
-ifeq ($(USE_SYSVINIT), yes)
-	$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
-	$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
-	$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
-	$(INSTALL) -m 755 eucanetd $(DESTDIR)$(etcdir)/init.d
-endif
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
-	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-nc
-	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cc
-	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucanetd
 	@$(RM) -f $(DESTDIR)$(etcdir)/logrotate.d/eucalyptus
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/httpd*
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf
@@ -160,10 +147,8 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/create-loop-devices
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/generate-migration-keys.sh
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys.pl
-	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/conntrack_kernel_params
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca-upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf

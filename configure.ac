@@ -53,14 +53,6 @@ CFLAGS="${CFLAGS} -Wall -fPIC -DHAVE_CONFIG_H -std=gnu99"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net -I${TOP}/util/stats"
 
 # Arguments checking
-AC_ARG_ENABLE([sysvinit],
-        AS_HELP_STRING([--enable-sysvinit], [install System V init artifacts]),
-        [USE_SYSVINIT=$enableval],
-        [USE_SYSVINIT=no])
-AC_ARG_ENABLE([systemd],
-        AS_HELP_STRING([--enable-systemd], [install systemd artifacts]),
-        [USE_SYSTEMD=$enableval],
-        [USE_SYSTEMD=no])
 AC_ARG_ENABLE(bundled-jars,
         AS_HELP_STRING([--disable-bundled-jars] [do not build against or install bundled jars]),
         [USE_BUNDLED_JARS=$enableval],
@@ -270,11 +262,7 @@ AC_CONFIG_FILES([Makedefs
                  clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
                  cluster/eucalyptus-cluster
                  node/eucalyptus-node
-                 tools/eucalyptus-cc:tools/eucalyptus-cc.in
-                 tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
-                 tools/eucalyptus-nc:tools/eucalyptus-nc.in
                  tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in
-                 tools/eucanetd:tools/eucanetd.in
                  tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in
                  tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in
                  clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in])
@@ -303,8 +291,6 @@ AC_SUBST(PYTHON)
 AC_SUBST(RM)
 AC_SUBST(TOP)
 AC_SUBST(USE_BUNDLED_JARS)
-AC_SUBST(USE_SYSTEMD)
-AC_SUBST(USE_SYSVINIT)
 AC_SUBST(WSDL2C)
 
 
@@ -321,8 +307,6 @@ echo "    LDFLAGS.............: ${LDFLAGS}"
 echo "    LIBS................: ${LIBS}"
 echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
 echo "    Use bundled jars....: ${USE_BUNDLED_JARS}"
-echo "    Use sysvinit........: ${USE_SYSVINIT}"
-echo "    Use systemd.........: ${USE_SYSTEMD}"
 echo ""
 echo "  Build Tools:"
 echo "    ANT.................: ${ANT} (${ant_version})"

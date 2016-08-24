@@ -114,5 +114,3 @@ INDENTFLAGS	= -nbad -bap -nbc -bbo -hnl -br -brs -c40 -cd40 -ncdb -ce -cli0 -d0 
 
 # compile time configurations
 USE_BUNDLED_JARS = @USE_BUNDLED_JARS@
-USE_SYSTEMD = @USE_SYSTEMD@
-USE_SYSVINIT = @USE_SYSVINIT@

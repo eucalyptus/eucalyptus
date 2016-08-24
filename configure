@@ -627,8 +627,6 @@ ac_header_list=
 ac_func_list=
 ac_subst_vars='LTLIBOBJS
 WSDL2C
-USE_SYSVINIT
-USE_SYSTEMD
 USE_BUNDLED_JARS
 TOP
 LIBVIRT_HOME
@@ -723,8 +721,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-enable_sysvinit
-enable_systemd
 enable_bundled_jars
 with_apache2_module_dir
 with_axis2
@@ -1363,8 +1359,6 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-sysvinit       install System V init artifacts
-  --enable-systemd        install systemd artifacts
   --disable-bundled-jars do not build against or install bundled jars
 
   --enable-debug                       include debugging info when compiling
@@ -3642,20 +3636,6 @@ CFLAGS="${CFLAGS} -Wall -fPIC -DHAVE_CONFIG_H -std=gnu99"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net -I${TOP}/util/stats"
 
 # Arguments checking
-# Check whether --enable-sysvinit was given.
-if test "${enable_sysvinit+set}" = set; then :
-  enableval=$enable_sysvinit; USE_SYSVINIT=$enableval
-else
-  USE_SYSVINIT=no
-fi
-
-# Check whether --enable-systemd was given.
-if test "${enable_systemd+set}" = set; then :
-  enableval=$enable_systemd; USE_SYSTEMD=$enableval
-else
-  USE_SYSTEMD=no
-fi
-
 # Check whether --enable-bundled-jars was given.
 if test "${enable_bundled_jars+set}" = set; then :
   enableval=$enable_bundled_jars; USE_BUNDLED_JARS=$enableval
@@ -7680,15 +7660,13 @@ done
 
 
 # Time to substitute and generate the files
-ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in cluster/eucalyptus-cluster node/eucalyptus-node tools/eucalyptus-cc:tools/eucalyptus-cc.in tools/eucalyptus-cloud:tools/eucalyptus-cloud.in tools/eucalyptus-nc:tools/eucalyptus-nc.in tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/eucanetd:tools/eucanetd.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
+ac_config_files="$ac_config_files Makedefs clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in cluster/eucalyptus-cluster node/eucalyptus-node tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in"
 
 
 
 cat >>confdefs.h <<_ACEOF
 #define EUCA_VERSION "$EUCA_VERSION"
 _ACEOF
-
-
 
 
 
@@ -8415,11 +8393,7 @@ do
     "clc/modules/bootstrap/src/main/native/arguments.ggo") CONFIG_FILES="$CONFIG_FILES clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in" ;;
     "cluster/eucalyptus-cluster") CONFIG_FILES="$CONFIG_FILES cluster/eucalyptus-cluster" ;;
     "node/eucalyptus-node") CONFIG_FILES="$CONFIG_FILES node/eucalyptus-node" ;;
-    "tools/eucalyptus-cc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cc:tools/eucalyptus-cc.in" ;;
-    "tools/eucalyptus-cloud") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-cloud:tools/eucalyptus-cloud.in" ;;
-    "tools/eucalyptus-nc") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-nc:tools/eucalyptus-nc.in" ;;
     "tools/eucalyptus-logrotate.conf") CONFIG_FILES="$CONFIG_FILES tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in" ;;
-    "tools/eucanetd") CONFIG_FILES="$CONFIG_FILES tools/eucanetd:tools/eucanetd.in" ;;
     "tools/imaging/setup.cfg.template") CONFIG_FILES="$CONFIG_FILES tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in" ;;
     "tools/imaging/eucatoolkit/__init__.py") CONFIG_FILES="$CONFIG_FILES tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in" ;;
     "clc/modules/bootstrap/src/main/resources/version.properties") CONFIG_FILES="$CONFIG_FILES clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in" ;;
@@ -9020,8 +8994,6 @@ echo "    LDFLAGS.............: ${LDFLAGS}"
 echo "    LIBS................: ${LIBS}"
 echo "    Debugging Enabled...: ${DEBUGGING_ENABLED:-no}"
 echo "    Use bundled jars....: ${USE_BUNDLED_JARS}"
-echo "    Use sysvinit........: ${USE_SYSVINIT}"
-echo "    Use systemd.........: ${USE_SYSTEMD}"
 echo ""
 echo "  Build Tools:"
 echo "    ANT.................: ${ANT} (${ant_version})"
