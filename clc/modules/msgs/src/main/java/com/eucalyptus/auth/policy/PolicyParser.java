@@ -460,14 +460,13 @@ public class PolicyParser {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
     }
-    final Class<? extends Key> keyClass = Keys.getKeyClass( key );
-    if ( keyClass == null ) {
+    final Key keyObj = Keys.getKeyByName( key );
+    if ( keyObj == null ) {
       throw new JSONException( "Condition key '" + key + "' is not supported" );
     }
-    if ( isQuota && !QuotaKey.class.isAssignableFrom( keyClass ) ) {
+    if ( isQuota && !(keyObj instanceof QuotaKey)) {
       throw new JSONException( "Quota statement can only use quota keys.'" + key + "' is invalid." );
     }
-    final Key keyObj = Keys.getKeyInstance( keyClass );
     if ( !NullConditionOp.class.equals( typeClass ) ) {
       keyObj.validateConditionType( typeClass );
     }
