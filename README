@@ -15,7 +15,7 @@ Requirements and Technical Notes
   on the same physical server or on separate physical servers as business,
   security, and resource needs dictate.
 
-* The Node Controller requires libvirt and either Xen or KVM.
+* The Node Controller requires libvirt and KVM.
 
 * The libraries that Eucalyptus depends on are described in detail in
   the INSTALL file.

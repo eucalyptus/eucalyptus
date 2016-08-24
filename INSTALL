@@ -29,9 +29,9 @@ The process consists of:
 ***NOTE*** The following instructions are subject to change and 
 may be INCOMPLETE. Contributions encouraged! :)
 
-Eucalyptus only supports 64-bit installations on CentOS/RHEL v6.7.
+Eucalyptus only supports 64-bit installations on CentOS/RHEL 7.
 
-These instructions were tested on the "Minimal" distribution of CentOS v6.7.
+These instructions were tested on the "Minimal" distribution of CentOS 7.
 
 We will use the Eucalyptus RPM build process to build the source code,
 install it to a certain directory tree, and create the RPM packages. Those
@@ -79,8 +79,7 @@ Install the following tools and repos needed for building:
 
 >>>>> Command 1b: 
 # yum install git yum-utils wget \
-    http://download.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm \
-    http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-5.el6.elrepo.noarch.rpm
+    http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 Install the Eucalyptus repository that will allow yum to find the packages
 needed for building Eucalyptus that are not in the other repos. Point your
@@ -88,8 +87,8 @@ Web browser to:
 http://downloads.eucalyptus.com/software/eucalyptus/nightly/devel
 
 Drill down to find the latest version of the RPM for your desired Linux
-platform, for "x86_64" (not "source"). As of this writing, the subdirs "6",
-"6Server", and "6Workstation" all point to the same repositories. Look for
+platform, for "x86_64" (not "source"). As of this writing, the subdirs "7",
+"7Server", and "7Workstation" all point to the same repositories. Look for
 the latest version of:
 
 eucalyptus-release-nightly-<...>.rpm
@@ -311,25 +310,6 @@ Do not use any other directory besides "/", or neither "make" nor "rpmbuild"
 will work. Future "rpmbuild"s will continue to work as long as it's defined
 this way.
 
-As of Eucalyptus v4.3 (in development), you will be able to choose whether
-to build packages to be installed on RHEL v6, or on RHEL v7. The only build
-difference is the service boot startup method.
-
-Depending on your choice, add the following environment variable to your
-.bashrc, or another file you can source before executing the commands that
-use them.
-
-To build for RHEL v6:
-
-export EUCASTART=--enable-sysvinit 
-
-To build for RHEL v7:
-
-export EUCASTART=--enable-systemd
-
-Log out and in again, or "source <this file>".
-
-
 Run the "configure" script to prepare the system to build:
 
 >>>>> Command 8a: 
@@ -339,9 +319,7 @@ Run the "configure" script to prepare the system to build:
 # ./configure --with-axis2==/usr/share/java/axis2 \
 --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
---with-db-home=/ \
---with-wsdl2c-sh=$EUCAGIT/eucalyptus/devel/euca-WSDL2C.sh \
-$EUCASTART
+--with-db-home=/usr
 
 Run the "make" commands below. 
 
