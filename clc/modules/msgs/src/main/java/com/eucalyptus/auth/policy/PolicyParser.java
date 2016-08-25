@@ -92,6 +92,7 @@ import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Parameters;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
@@ -244,7 +245,18 @@ public class PolicyParser {
     final JSONObject principal = JsonUtils.getByType( JSONObject.class, statement, principalElement );
     if ( principal == null ) return null;
 
-    final String principalType = JsonUtils.checkBinaryOption( principal, PrincipalType.AWS.name(), PrincipalType.Service.name() );
+    String principalType = null;
+    for ( final PrincipalType type : PrincipalType.values( ) ) {
+      if ( principal.containsKey( type.name( ) ) ) {
+        if ( principalType != null ) {
+          throw new JSONException( "Element " + principalType + " and " + type.name( ) + " can not be both present" );
+        }
+        principalType = type.name( );
+      }
+    }
+    if ( principalType == null ) {
+      throw new JSONException( "One of element " + ( Joiner.on( " or " ).join( PrincipalType.values( ) ) ) + " is required" );
+    }
     final List<String> values = JsonUtils.parseStringOrStringList( principal, principalType );
     if ( values.size( ) < 1 && attachmentType.isPrincipalRequired() ) {
       throw new JSONException( "Empty principal values" );
@@ -448,14 +460,13 @@ public class PolicyParser {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
     }
-    final Class<? extends Key> keyClass = Keys.getKeyClass( key );
-    if ( keyClass == null ) {
+    final Key keyObj = Keys.getKeyByName( key );
+    if ( keyObj == null ) {
       throw new JSONException( "Condition key '" + key + "' is not supported" );
     }
-    if ( isQuota && !QuotaKey.class.isAssignableFrom( keyClass ) ) {
+    if ( isQuota && !(keyObj instanceof QuotaKey)) {
       throw new JSONException( "Quota statement can only use quota keys.'" + key + "' is invalid." );
     }
-    final Key keyObj = Keys.getKeyInstance( keyClass );
     if ( !NullConditionOp.class.equals( typeClass ) ) {
       keyObj.validateConditionType( typeClass );
     }

@@ -183,6 +183,38 @@ public class PolicyParserTest {
     assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
   }
 
+  @Test
+  public void testParseFederatedAssumeRolePolicy() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": {\n" +
+            "         \"Federated\": [ \"https://auth.globus.org\" ]\n" +
+            "      },\n" +
+            "      \"Action\": [ \"sts:AssumeRole\" ]\n" +
+            "    } ]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getResourceInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Statement authorizations", policy.getAuthorizations() );
+    assertEquals( "Statement authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization principal", authorization.getPrincipal() );
+    Principal principal = authorization.getPrincipal();
+    assertEquals( "Principal type", Principal.PrincipalType.Federated, principal.getType() );
+    assertEquals( "Principal values", Sets.newHashSet( "https://auth.globus.org" ), principal.getValues() );
+    assertEquals( "Principal not", false, principal.isNotPrincipal() );
+    assertNotNull( "Authorization null", authorization );
+    assertEquals( "Authorization actions", Sets.newHashSet( "sts:assumerole" ), authorization.getActions() );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
+    assertNotNull( "Authorization resources", authorization.getResources() );
+    assertEquals( "Authorization resource count", 0, authorization.getResources().size() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
+  }
+
   @Test(expected = PolicyParseException.class )
   public void testParseAssumeRolePolicyMissingPrincipal() throws Exception {
     String policyJson =

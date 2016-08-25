@@ -64,14 +64,17 @@ package com.eucalyptus.auth.policy.key;
 
 import static com.eucalyptus.auth.policy.key.Key.EvaluationConstraint;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Ordered;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
@@ -117,9 +120,24 @@ public class Keys {
   public static final String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
   public static final String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
 
-  private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
+  private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newConcurrentMap( );
+  private static final Map<String, KeyProvider> KEY_PROVIDER_MAP = Maps.newConcurrentMap( );
 
-  public static Key getKeyInstance( Class<? extends Key> keyClass ) {
+  /**
+   * Get a key using all registered providers in priority order
+   */
+  public static Key getKeyByName( final String name ) {
+    final List<KeyProvider> providers = Lists.newArrayList( KEY_PROVIDER_MAP.values( ) );
+    Collections.sort( providers, Ordered.comparator( ) );
+    for ( final KeyProvider provider : providers ) {
+      if ( provider.provides( name ) ) {
+        return provider.getKey( name );
+      }
+    }
+    return null;
+  }
+
+  static Key getKeyInstance( Class<? extends Key> keyClass ) {
     try {
       Key key = keyClass.newInstance( );
       return key;
@@ -134,7 +152,7 @@ public class Keys {
     }
   }
   
-  public static Class<? extends Key> getKeyClass( String name ) {
+  static Class<? extends Key> getKeyClass( String name ) {
     return KEY_MAP.get( name );
   }
 
@@ -155,6 +173,14 @@ public class Keys {
       return false;
     }
     KEY_MAP.put( keyName, keyClass );
+    return true;
+  }
+
+  public synchronized static boolean registerKeyProvider( KeyProvider provider ) {
+    if ( KEY_PROVIDER_MAP.containsKey( provider.getName( ) ) ) {
+      return false;
+    }
+    KEY_PROVIDER_MAP.put( provider.getName( ), provider );
     return true;
   }
 

@@ -81,6 +81,8 @@ import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.PolicyEvaluationContext;
+import com.eucalyptus.auth.PolicyEvaluationWriteContextKey;
 import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
@@ -89,6 +91,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
+import com.eucalyptus.auth.principal.Principal.PrincipalType;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -128,6 +131,14 @@ public class RestrictedTypes {
   static Logger LOG = Logger.getLogger( RestrictedTypes.class );
 
   private static final Interner<AllocationScope> allocationInterner = Interners.newWeakInterner( );
+
+  private static final TypedKey<PrincipalType> principalTypeKey = TypedKey.create( "PrincipalType" );
+  private static final TypedKey<String> principalNameKey = TypedKey.create( "PrincipalName" );
+
+  public static final PolicyEvaluationWriteContextKey<PrincipalType> principalTypeContextKey =
+      PolicyEvaluationWriteContextKey.create( principalTypeKey );
+  public static final PolicyEvaluationWriteContextKey<String> principalNameContextKey =
+      PolicyEvaluationWriteContextKey.create( principalNameKey );
 
   /**
    * Map request to policy language's action string.
@@ -536,13 +547,18 @@ public class RestrictedTypes {
                                         + rscType, ex );
       }
 
-      final Principal.PrincipalType principalType;
+      final PolicyEvaluationContext policyEvaluationContext = PolicyEvaluationContext.get( );
+      final PrincipalType principalType;
       final String principalName;
-      if ( Principals.isSameUser( requestUser, Principals.systemUser() ) ) {
-        principalType = Principal.PrincipalType.Service;
+      if ( policyEvaluationContext.hasAttribute( principalTypeKey ) &&
+          policyEvaluationContext.hasAttribute( principalNameKey ) ) {
+        principalType = policyEvaluationContext.getAttribute( principalTypeKey );
+        principalName = policyEvaluationContext.getAttribute( principalNameKey );
+      } else if ( Principals.isSameUser( requestUser, Principals.systemUser() ) ) {
+        principalType = PrincipalType.Service;
         principalName = "ec2.amazon.com";
       } else {
-        principalType = Principal.PrincipalType.AWS;
+        principalType = PrincipalType.AWS;
         principalName = Accounts.getUserArn( requestUser );
       }
 
