@@ -141,7 +141,7 @@ def _get_conf_value(variable_name):
 
 
 def _find_instance(packed_path):
-    tar_cmd = ["/bin/tar", "-xzOf", packed_path,
+    tar_cmd = ["/bin/tar", "-xOf", packed_path,
                "--wildcards", "*/instance.xml"]
 
     proc = Popen(tar_cmd, stdout=PIPE)
