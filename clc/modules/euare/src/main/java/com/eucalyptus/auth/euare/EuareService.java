@@ -2466,7 +2466,7 @@ public class EuareService {
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final String provider : account.listOpenIdConnectProviders() ) {
         if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, openIdConnectProviderUrlToArn( account, provider ) ) ) {
-          providers.add( new ArnType( provider ) );
+          providers.add( new ArnType( openIdConnectProviderUrlToArn( account, provider ) ) );
         }
       }
     } catch ( Exception e ) {

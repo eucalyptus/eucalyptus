@@ -39,6 +39,8 @@ import java.security.SignatureException;
 import java.security.NoSuchAlgorithmException;;
 import java.security.InvalidKeyException;;
 import java.security.NoSuchProviderException;;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.spec.InvalidKeySpecException;;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Collections;
@@ -49,6 +51,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
@@ -251,9 +254,9 @@ public class TokensService {
       final String jwks_n = (String)(keyData).get("n");
       final String jwks_e = (String)(keyData).get("e");
       final String jwks_alg = (String)(keyData).get("alg");
-      final String thumbprint = DigestUtils.sha1Hex(jwks_n);
-      if ( !provider.getThumbprints().contains(thumbprint) ) {
-        throw new TokensException( TokensException.Code.ValidationError, "thumbprint does not match" );
+      final String thumbprint = getServerCertThumbprint( (String)config.get("jwks_uri") );
+      if ( !provider.getThumbprints().contains( thumbprint.toLowerCase() ) ) {
+        throw new TokensException( TokensException.Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
       final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
       final BigInteger publicExponent = new BigInteger( 1, Base64.decodeBase64(jwks_e) );
@@ -271,7 +274,7 @@ public class TokensService {
       if ( !(provider.getClientIds().contains( jwtBody.get("aud") ) ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "clientID does not match" );
       }
-      final String expiration = (String)jwtBody.get("exp");
+      final long expiration = (long)jwtBody.getLong("exp") * 1000;
       if ( new Date(expiration).compareTo( new Date() ) < 0 ) {
         throw new TokensException( TokensException.Code.ValidationError, "web token has expired" );
       }
@@ -292,21 +295,9 @@ public class TokensService {
           role.getRoleId() + ":" + request.getRoleSessionName(),
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
-    } catch ( final NoSuchProviderException e ) {
+    } catch ( CertificateEncodingException | NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e ) {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final NoSuchAlgorithmException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final InvalidKeySpecException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final InvalidKeyException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final SignatureException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final IOException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final JSONException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
-    } catch ( final SecurityTokenValidationException e ) {
+    } catch ( InvalidKeyException | SignatureException | IOException | JSONException | SecurityTokenValidationException e ) {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
@@ -320,6 +311,17 @@ public class TokensService {
     final InputStream istr = (InputStream)location.openConnection().getContent();
     Scanner s = new Scanner(istr).useDelimiter("\\A");
     return ( s.hasNext() ? s.next() : "" );
+  }
+
+  public static String getServerCertThumbprint(String url) throws IOException, MalformedURLException, CertificateEncodingException {
+    URL location = new URL( url );
+    URLConnection conn = location.openConnection();
+    conn.getContent();  // ignore content, we just need the transaction to get the cert
+    if (conn instanceof HttpsURLConnection) {
+      Certificate cert = ((HttpsURLConnection)conn).getServerCertificates()[0];
+      return DigestUtils.sha1Hex(cert.getEncoded()).toUpperCase();
+    }
+    return null;
   }
 
   public GetAccessTokenResponseType getAccessToken( final GetAccessTokenType request ) throws EucalyptusCloudException {
