@@ -724,30 +724,6 @@ ncInstance *load_instance_struct(const char *instanceId)
     // fix up the pointers
     vbr_parse(&(instance->params), NULL);
 
-    // perform any upgrade-related manipulations to bring the struct up to date
-
-    // copy EBS entries from VBR[] to volumes[], as ebs vols are always in volumes[] as of 4.1.0
-    for (int i = 0; ((i < EUCA_MAX_VBRS) && (i < instance->params.virtualBootRecordLen)); i++) {
-        virtualBootRecord *vbr = &(instance->params.virtualBootRecord[i]);
-        if (vbr->locationType == NC_LOCATION_SC) {
-            char *volumeId = vbr->id; // id is 'emi-XXXX', replace it with 'vol-XXXX'
-            ebs_volume_data *vol_data = NULL;
-            if (deserialize_volume(vbr->resourceLocation, &vol_data) == 0) {
-                volumeId = vol_data->volumeId;
-            }
-            if (save_volume(instance,
-                            volumeId,
-                            vbr->resourceLocation, // attachmentToken
-                            vbr->preparedResourceLocation, // connect_string
-                            vbr->guestDeviceName,
-                            VOL_STATE_ATTACHED,
-                            vbr->backingPath) == NULL) { // the XML
-                LOGERROR("[%s] failed to add record for volume %s during instance adoption\n", instance->instanceId, volumeId);
-            }
-            EUCA_FREE(vol_data);
-        }
-    }
-
     // save the struct back to disk after the upgrade routine had a chance to modify it
     if (gen_instance_xml(instance) != EUCA_OK) {
         LOGERROR("failed to create instance XML in %s\n", instance->xmlFilePath);
