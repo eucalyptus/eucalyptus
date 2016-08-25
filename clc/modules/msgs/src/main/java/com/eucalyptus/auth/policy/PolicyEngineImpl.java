@@ -529,7 +529,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
-      Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
+      Key key = Keys.getKeyByName( cond.getKey( ) );
       final boolean applies = key.canApply( action );
       if ( key instanceof ContractKey ) {
         if ( applies ) contractEval.addContract( ( ContractKey ) key, cond.getValues( ) );
@@ -581,7 +581,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       PolicyScope scope = policy.getPolicyScope();
       String principalId = getAuthorizationPrincipalId( scope, accountId, userId );
       for ( Condition cond : auth.getConditions( ) ) {
-        Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
+        Key key = Keys.getKeyByName( cond.getKey( ) );
         if ( !( key instanceof QuotaKey ) ) {
           LOG.debug( "Key " + cond.getKey( ) + " is not a quota" );
           continue;

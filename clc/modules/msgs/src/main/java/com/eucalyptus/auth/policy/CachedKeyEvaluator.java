@@ -72,21 +72,21 @@ import com.google.common.collect.Maps;
 public class CachedKeyEvaluator {
 
   private final Map<String,String> evaluatedKeys;
-  private final Map<Class<? extends Key>, String> cache = Maps.newHashMap( );
+  private final Map<String,String> cache = Maps.newHashMap( );
   
   public CachedKeyEvaluator( Map<String,String> evaluatedKeys ) {
     this.evaluatedKeys = evaluatedKeys;
   }
   
   public String getValue( final Key key ) throws AuthException {
-    String value = cache.get( key.getClass( ) );
+    String value = cache.get( key.name( ) );
     if ( value == null ) {
       final PolicyKey policyKey = Ats.from( key.getClass( ) ).get( PolicyKey.class );
       value = policyKey==null ? null : evaluatedKeys.get( policyKey.value() );
       if ( value == null ) {
         value = key.value( );
       }
-      cache.put( key.getClass( ), value );
+      cache.put( key.name( ), value );
     }
     return value;
   }

@@ -65,8 +65,13 @@ package com.eucalyptus.auth.policy.key;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.system.Ats;
 
 public interface Key {
+
+  default String name( ) {
+    return Ats.from( getClass( ) ).get( PolicyKey.class ).value( );
+  }
 
   String value( ) throws AuthException;
   
