@@ -66,9 +66,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
@@ -86,9 +91,15 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3ExtendedException;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageExtendedType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
+import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
@@ -126,16 +137,21 @@ public class OSGUtil {
 
   private static BaseMessage convertException(String correlationId, Throwable ex) {
     BaseMessage errMsg;
-    if (ex instanceof ObjectStorageException) {
+    if (ex instanceof S3ExtendedException){
+      S3ExtendedException e = (S3ExtendedException) ex;
+      errMsg =
+          new ObjectStorageErrorMessageExtendedType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+              Internets.localHostAddress(), e.getLogData(), e.getRequestMethod());
+    } else if (ex instanceof ObjectStorageException) {
       ObjectStorageException e = (ObjectStorageException) ex;
       errMsg =
           new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
               Internets.localHostAddress(), e.getLogData());
-      errMsg.setCorrelationId(correlationId);
-      return errMsg;
     } else {
       return null;
     }
+    errMsg.setCorrelationId(correlationId);
+    return errMsg;
   }
 
   public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
@@ -333,4 +349,144 @@ public class OSGUtil {
     }
     return hostBucket;
   }
+  
+  public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
+      String requestMethod, List<String> requestHeaders) {
+    CorsMatchResult corsMatchResult = new CorsMatchResult();
+    boolean found = false;
+    boolean anyOrigin = false;
+    CorsRule corsRuleMatch = null;
+    
+    for (CorsRule corsRule : corsRules ) {
+
+      if (corsRule == null) {
+        continue;
+      }
+      
+      corsRuleMatch = corsRule; // will only be used if we find a match
+      
+      // Does the origin match any origin's regular expression in the rule?
+      // Note: AWS matches origins case-sensitively! Even though URL domains
+      // are typically case-insensitive. Follow AWS's behavior.
+      List<String> allowedOrigins = corsRule.getAllowedOrigins();
+      found = false;
+      for (String allowedOrigin : allowedOrigins) {
+        String allowedOriginRegex = "\\Q" + allowedOrigin.replace("*", "\\E.*?\\Q") + "\\E";
+        Pattern p = Pattern.compile(allowedOriginRegex);
+        Matcher m = p.matcher(requestOrigin);
+        boolean match = m.matches();
+        if (match) {
+          anyOrigin = (allowedOrigin.equals("*"));
+          found = true;
+          break;  // stop looking through the origins for this rule
+        }
+      }
+      if (!found) {
+        continue;  // go to the next CORS rule
+      }
+      
+      // Does the HTTP verb match any verb in the rule?
+      List<String> allowedMethods = corsRule.getAllowedMethods();
+      found = false;
+      for (String allowedMethod : allowedMethods) {
+        if (requestMethod.equals(allowedMethod)) {
+          found = true;
+          break;  // stop looking through the methods for this rule
+        }
+      }
+      if (!found) {
+        continue;  // go to the next CORS rule
+      }
+      
+      // If there are no Access-Control-Request-Headers, or if there are
+      // no AllowedHeaders in the CORS rule, then skip this check.
+      // We have matched the current CORS rule. Stop looking through them.
+      if (requestHeaders == null || requestHeaders.size() == 0) {
+        break;
+      }
+      List<String> allowedHeaders = corsRule.getAllowedHeaders();
+      if (allowedHeaders == null || allowedHeaders.size() == 0) {
+        break;
+      }
+
+      // Does every request header in the comma-delimited list in 
+      // Access-Control-Request-Headers have a matching entry in the 
+      // allowed headers in the rule?
+      // Headers are matched case-insensitively.
+      found = false;
+      Pattern[] allowedHeaderRegexPattern = new Pattern[allowedHeaders.size()];
+      for (String requestHeader : requestHeaders) {
+        found = false;
+        for (int idx = 0; idx < allowedHeaders.size(); idx++) {
+          if (allowedHeaderRegexPattern[idx] == null) {
+            String allowedHeaderRegex = "\\Q" + allowedHeaders.get(idx).replace("*", "\\E.*?\\Q") + "\\E";
+            allowedHeaderRegexPattern[idx] = Pattern.compile(allowedHeaderRegex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+          }
+          Matcher matcher = allowedHeaderRegexPattern[idx].matcher(requestHeader);
+          boolean match = matcher.matches();
+          if (match) {
+            found = true;
+            break;  // stop looking through the allowed headers for this request header
+          }
+        }
+        if (!found) {
+          // No allowed header matches this request header, so this rule fails to match
+          break;  // stop looking through the request headers
+        }
+      }  // end for each request header
+      if (found) {
+        // Request headers are OK too, so everything in the request matches 
+        // this rule. Stop looking through CORS rules.
+        break;
+      }
+    }  // end for each CORS rule
+
+    if (found) {
+      corsMatchResult.setCorsRuleMatch(corsRuleMatch);
+      corsMatchResult.setAnyOrigin(anyOrigin);
+    }
+    return corsMatchResult;
+  }
+  
+  public static void setCorsInfo(ObjectStorageRequestType request, BaseMessage msg, String bucketUuid) {
+    // NOTE: The getBucket() might be the bucket name, or might be the UUID, depending on how it's used by the caller.
+    // So, we don't depend on it to be either one. We just copy it to the reply so it shows up in 
+    // cases that normally use it, like exception messages.
+    // The getBucketUuid() is the field we depend on to look up bucket entities in the DB.
+    // 
+    // Don't change any response fields that are already set.
+    
+    if (request != null && msg != null) {
+      if (msg instanceof ObjectStorageResponseType) {
+        ObjectStorageResponseType response = (ObjectStorageResponseType) msg;
+        if (response.getOrigin() == null) {
+          response.setOrigin(request.getOrigin());
+        }
+        if (response.getHttpMethod() == null) {
+          response.setHttpMethod(request.getHttpMethod());
+        }
+        if (response.getBucket() == null) {
+          response.setBucket(request.getBucket());
+        }
+        if (response.getBucketUuid() == null) {
+          response.setBucketUuid(bucketUuid);
+        }
+      } else if (msg instanceof ObjectStorageDataResponseType) {
+        ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
+        if (response.getOrigin() == null) {
+          response.setOrigin(request.getOrigin());
+        }
+        if (response.getHttpMethod() == null) {
+          response.setHttpMethod(request.getHttpMethod());
+        }
+        if (response.getBucket() == null) {
+          response.setBucket(request.getBucket());
+        }
+        if (response.getBucketUuid() == null) {
+          response.setBucketUuid(bucketUuid);
+        }
+      }
+    }
+  }
+
 }

@@ -51,9 +51,12 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.PreflightRequest
+import com.eucalyptus.storage.msgs.s3.PreflightResponse
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
+
 import com.google.common.collect.Maps
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -66,8 +69,18 @@ import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageResponseType extends ObjectStorageRequestType {
   HttpResponseStatus status; //Most should be 200-ok, but for deletes etc it may be 204-No Content
+  protected String bucketUuid;
 
   def ObjectStorageResponseType() {}
+
+  public String getBucketUuid() {
+    return bucketUuid;
+  }
+
+  public void setBucketUuid(String bucketUuid) {
+    this.bucketUuid = bucketUuid;
+  }
+
 }
 
 @ComponentMessage(ObjectStorage.class)
@@ -81,8 +94,12 @@ public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
 public class ObjectStorageRequestType extends BaseMessage {
   protected Date timeStamp;
   BucketLogData logData;
+  // This is sometimes the bucket name, sometimes the bucket UUID.
+  //TODO: Stop doing that! Make separate fields.
   protected String bucket;
   protected String key;
+  protected String origin;
+  protected String httpMethod;
 
   public ObjectStorageRequestType() {}
 
@@ -117,6 +134,22 @@ public class ObjectStorageRequestType extends BaseMessage {
 
   public Date getTimestamp() {
     return this.timeStamp;
+  }
+
+  public String getOrigin() {
+    return origin;
+  }
+
+  public void setOrigin(String origin) {
+    this.origin = origin;
+  }
+
+  public String getHttpMethod() {
+    return httpMethod;
+  }
+
+  public void setHttpMethod(String httpMethod) {
+    this.httpMethod = httpMethod;
   }
 
   public UserPrincipal getUser() {
@@ -156,12 +189,16 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
   String cacheControl;
   String contentEncoding;
   String expires;
+  String origin;
+  String httpMethod;
+  String bucket;
+  String bucketUuid;
 }
 
 public class ObjectStorageDataGetRequestType extends ObjectStorageDataRequestType {
   protected Channel channel;
   Map<String,String> responseHeaderOverrides;
-
+  
   public Channel getChannel() {
     return channel;
   }
@@ -239,6 +276,25 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
 
   public String getResource() {
     return resource;
+  }
+}
+
+public class ObjectStorageErrorMessageExtendedType extends ObjectStorageErrorMessageType {
+  String method;
+
+  def ObjectStorageErrorMessageExtendedType() {}
+
+  def ObjectStorageErrorMessageExtendedType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData,
+  String method) {
+    super(message,code,status,resourceType,resource,requestId,hostId,logData);
+    this.method = method;
   }
 }
 
@@ -465,7 +521,7 @@ public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
 }
 
-/* PUT /bucket/object with x-amz-copy-src header */
+/* PUT /bucket/object with x-amz-copy-source header */
 
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_GETOBJECT])
@@ -842,6 +898,21 @@ public class GetBucketCorsResponseType extends ObjectStorageResponseType {
 public class DeleteBucketCorsType extends ObjectStorageRequestType {}
 
 public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
+
+/* OPTIONS /bucket/object */
+@AdminOverrideAllowed
+// Does not require any specific permissions
+//@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+// Does not require any specific ACL permissions
+//@RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
+public class PreflightCheckCorsType extends ObjectStorageRequestType {
+  PreflightRequest preflightRequest;
+}
+
+public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
+  PreflightResponse preflightResponse;
+}
 
 
 // AddObject not used yet

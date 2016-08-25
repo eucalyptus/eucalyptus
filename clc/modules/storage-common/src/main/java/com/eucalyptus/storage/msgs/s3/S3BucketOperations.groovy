@@ -21,6 +21,12 @@
 @GroovyAddClassUUID
 package com.eucalyptus.storage.msgs.s3
 
+import java.util.ArrayList
+import java.util.List;
+
+import org.jboss.netty.handler.codec.http.HttpMethod;
+
+import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 
@@ -252,21 +258,95 @@ public class SetRESTBucketAccessControlPolicyResponse extends S3Response {
 /*
  * Data types
  */
+public class AllowedCorsMethods {
+
+  // Valid methods for a CORS rule are: GET, HEAD, PUT, POST, DELETE
+  public static List<HttpMethod> methodList = new ArrayList<HttpMethod>();
+
+  static {
+    methodList.add(HttpMethod.GET);
+    methodList.add(HttpMethod.HEAD);
+    methodList.add(HttpMethod.PUT);
+    methodList.add(HttpMethod.POST);
+    methodList.add(HttpMethod.DELETE);
+  }
+
+}
+
 public class CorsConfiguration {
   List<CorsRule> rules;
 }
 
 public class CorsRule {
   String id;
-	//TODO: Change these String arrays to List<String> which didn't work 
-	//  with JiBX bindings for some reason.
-  String[] allowedOrigins;
-  String[] allowedMethods;
-  String[] allowedHeaders;
+  int sequence;
+  List<String> allowedOrigins;
+  List<String> allowedMethods;
+  List<String> allowedHeaders;
   int maxAgeSeconds;
-  String[] exposeHeaders;
+  List<String> exposeHeaders;
 }
 
+public class CorsMatchResult {
+  CorsRule CorsRuleMatch = null;
+  boolean anyOrigin = false;
+}
+
+public class PreflightRequest {
+  String origin;
+  String method;
+  List<String> requestHeaders;
+
+  public String toString() {
+    StringBuffer output = new StringBuffer();
+    output.append(
+        "Origin: " + origin +
+        "\nMethod: " + method +
+        "\nRequest Headers:");
+    if (requestHeaders == null || requestHeaders.size() == 0) {
+      output.append(" null");
+    } else {
+      for (String requestHeader : requestHeaders) {
+        output.append("\n  " + requestHeader);
+      }
+    }
+    return output;
+  }
+}
+
+public class PreflightResponse {
+  String origin;
+  List<String> methods;
+  int maxAgeSeconds;
+  List<String> allowedHeaders;
+  List<String> exposeHeaders;
+
+  public String toString() {
+    StringBuffer output = new StringBuffer();
+    output.append(
+        "Origin: " + origin +
+        //"\nMethod: " + method +
+        "\nMax Age, Seconds: " + maxAgeSeconds +
+        "\nAllowed Headers:");
+    if (allowedHeaders == null || allowedHeaders.size() == 0) {
+      output.append(" null");
+    } else {
+      for (String allowedHeader : allowedHeaders) {
+        output.append("\n  " + allowedHeader);
+      }
+    }
+    output.append(
+        "\nExpose Headers:");
+    if (exposeHeaders == null || exposeHeaders.size() == 0) {
+      output.append(" null");
+    } else {
+      for (String exposeHeader : exposeHeaders) {
+        output.append("\n  " + exposeHeader);
+      }
+    }
+    return output;
+  }
+}
 /*
  * --------------------
  * BUCKET WEBSITE
@@ -437,9 +517,9 @@ public class Transition extends Expiration {
 /*
  * DELETE /bucket/?lifecycle
  *//*
-public class DeleteBucketLifecycleRequest extends S3Request {}
-public class DeleteBucketLifecycleResponse extends S3Response {}
-*/
+ public class DeleteBucketLifecycleRequest extends S3Request {}
+ public class DeleteBucketLifecycleResponse extends S3Response {}
+ */
 
 /* 
  * --------------------
@@ -473,30 +553,30 @@ public class DeleteBucketPolicyResponse extends S3Response {}
  * POST /bucket/?delete
  */
 public class DeleteMultipleObjectsMessage {
-	Boolean quiet;
-	List<DeleteMultipleObjectsEntry> objects;
+  Boolean quiet;
+  List<DeleteMultipleObjectsEntry> objects;
 }
 public class DeleteMultipleObjectsMessageReply {
-	List<DeleteMultipleObjectsEntryVersioned> deleted;
-	List<DeleteMultipleObjectsError> errors;
+  List<DeleteMultipleObjectsEntryVersioned> deleted;
+  List<DeleteMultipleObjectsError> errors;
 }
 
 public class DeleteMultipleObjectsEntry {
-	String key;
-	String versionId;
+  String key;
+  String versionId;
 }
 
 public class DeleteMultipleObjectsEntryVersioned extends DeleteMultipleObjectsEntry {
-	Boolean deleteMarker;
-	String deleteMarkerVersionId;
+  Boolean deleteMarker;
+  String deleteMarkerVersionId;
 }
 
 public class DeleteMultipleObjectsError extends DeleteMultipleObjectsEntry {
-	DeleteMultipleObjectsErrorCode code;
-	String message;
+  DeleteMultipleObjectsErrorCode code;
+  String message;
 }
 
 public enum DeleteMultipleObjectsErrorCode {
-	AccessDenied,
-	InternalError;
+  AccessDenied,
+  InternalError;
 }

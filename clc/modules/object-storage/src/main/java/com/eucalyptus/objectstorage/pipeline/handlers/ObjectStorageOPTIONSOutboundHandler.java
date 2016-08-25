@@ -63,6 +63,7 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import java.util.Date;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -71,70 +72,95 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ChannelPipelineCoverage("one")
-public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
+public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger(ObjectStorageOPTIONSOutboundHandler.class);
 
   @Override
   public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      LOG.debug("LPT In HEAD outbound handler, msg is: " + msg.getClass());
-      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
-      if (msg instanceof ObjectStorageDataResponseType) {
-        ObjectStorageDataResponseType headResponse = (ObjectStorageDataResponseType) msg;
+      httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
 
-        httpResponse.setHeader(HttpHeaders.Names.ETAG, "\"" + headResponse.getEtag() + "\""); // etag in quotes, per s3-spec.
-
-        // Fix for euca-9081
-        String contentType = headResponse.getContentType();
-        if (!Strings.isNullOrEmpty(contentType)) {
-          httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+      if (msg instanceof PreflightCheckCorsResponseType) {
+        PreflightCheckCorsResponseType preflightResponseMsg = (PreflightCheckCorsResponseType) msg;
+        PreflightResponse preflightResponseFields = preflightResponseMsg.getPreflightResponse();
+        httpResponse.setStatus(preflightResponseMsg.getStatus());
+        httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, preflightResponseFields.getOrigin());
+        
+        List<String> methodList = preflightResponseFields.getMethods();
+        if (methodList != null) {
+          // Convert list into "[method1, method2, ...]"
+          String methods = methodList.toString();
+          if (methods.length() > 2) {
+            // Chop off brackets
+            methods = methods.substring(1, methods.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, methods);
+          }
+        }
+        
+        List<String> allowHeadersList = preflightResponseFields.getAllowedHeaders();
+        if (allowHeadersList != null) {
+          // Convert list into "[allowHeader1, allowHeader2, ...]"
+          String allowHeaders = allowHeadersList.toString();
+          if (allowHeaders.length() > 2) {
+            // Chop off brackets
+            allowHeaders = allowHeaders.substring(1, allowHeaders.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_HEADERS, allowHeaders);
+          }
+        }
+        
+        List<String> exposeHeadersList = preflightResponseFields.getExposeHeaders();
+        if (exposeHeadersList != null) {
+          // Convert list into "[exposeHeader1, exposeHeader2, ...]"
+          String exposeHeaders = exposeHeadersList.toString();
+          if (exposeHeaders.length() > 2) {
+            // Chop off brackets
+            exposeHeaders = exposeHeaders.substring(1, exposeHeaders.length()-1);
+            httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS, exposeHeaders);
+          }
+        }
+        
+        if (preflightResponseFields.getMaxAgeSeconds() > 0) {
+          httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE, preflightResponseFields.getMaxAgeSeconds());
+        }
+        // Set the "allow credentials" header to true only if the matching 
+        // CORS rule is NOT "any origin", otherwise don't set the header.
+        if (preflightResponseFields.getOrigin() != null && 
+            !preflightResponseFields.getOrigin().equals("*")) {
+          httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
 
-        String contentLength = String.valueOf(headResponse.getSize());
-        if (!Strings.isNullOrEmpty(contentLength)) {
-          httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, contentLength);
-        }
+        // Match AWS behavior. Always contains these 3 header names. 
+        // It tells the user agent: If you cache this request+response, only
+        // give the cached response to a future request if all these headers 
+        // match the ones in the cached request. Otherwise, send the request 
+        // to the server, don't use the cached response.
+        httpResponse.setHeader(HttpHeaders.Names.VARY, 
+            HttpHeaders.Names.ORIGIN + ", " +
+                HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS + ", " +
+                HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD);
 
-        if (!Strings.isNullOrEmpty(headResponse.getVersionId())
-            && !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
-          httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
-        }
-
-        // Add user metadata
-        for (MetaDataEntry m : headResponse.getMetaData()) {
-          httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
-        }
-
-        Date lastModified = headResponse.getLastModified();
-        if (lastModified != null) {
-          httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, DateFormatter.dateToHeaderFormattedString(lastModified));
-        }
-
-        // add copied headers
-        OSGUtil.addCopiedHeadersToResponse(httpResponse, headResponse);
+        // No body in this preflight response that has no error.
+        // Error responses are handled separately as S3Exception objects.
+        httpResponse.setMessage(null);
+        // Need to set this to zero to prevent client from waiting for more.
+        httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, 0);
       }
-
-      // Need to add the CORS headers before the next line where we null out
-      // the Message that contains the response fields we need.
-      ObjectStorageGateway.addCorsResponseHeaders(httpResponse);
-
-      // Since a HEAD response, never include a body
-      httpResponse.setMessage(null);
     }
   }
 }

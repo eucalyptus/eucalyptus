@@ -64,8 +64,8 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOPTIONSOutboundHandler;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundExceptionHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class ObjectStorageOPTIONSOutboundStage implements UnrollableStage {
@@ -82,8 +82,8 @@ public class ObjectStorageOPTIONSOutboundStage implements UnrollableStage {
 
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast("objectstorage-options-outbound", new ObjectStorageOPTIONSOutboundHandler());
     pipeline.addLast("objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler());
-    pipeline.addLast("objectstorage-outbound", new ObjectStorageOutboundHandler());
   }
 
 }

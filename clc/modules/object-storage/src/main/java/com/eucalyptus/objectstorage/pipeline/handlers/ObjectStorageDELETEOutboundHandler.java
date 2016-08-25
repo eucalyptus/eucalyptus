@@ -72,6 +72,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.DeleteResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
@@ -90,6 +91,7 @@ public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+      LOG.debug("LPT In DELETE outbound handler, msg is: " + msg.getClass());
 
       if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
         if (msg instanceof DeleteResponseType) {
@@ -107,8 +109,14 @@ public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
           httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, msg.getCorrelationId());
         }
         httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
+        
+        // Need to add the CORS headers before the next line where we null out
+        // the Message that contains the response fields we need.
+        ObjectStorageGateway.addCorsResponseHeaders(httpResponse);
+
         // Since a DELETE response, never include a body
         httpResponse.setMessage(null);
+        
       }
     }
   }
