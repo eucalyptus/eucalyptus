@@ -60,6 +60,8 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
+use IPC::Open2;
+
 $SK_TARGET = "target";
 $SK_PORTAL = "portal"; # current portal
 $SK_PPORTAL = "pportal"; # persistent portal
@@ -94,8 +96,15 @@ sub sanitize_path {
 }
 
 sub run_cmd {
-  my ($print_on_error, $exit_on_error, $command) = @_;
-  my @outlines = qx($command 2>&1);
+  my ($print_on_error, $exit_on_error, $command, $input) = @_;
+  my $pid = open2(\*OUTPUT, \*INPUT, $command . " 2>&1");
+  if (defined $input) {
+    print INPUT $input;
+  }
+  INPUT->autoflush();
+  close INPUT;
+  my @outlines = <OUTPUT>;
+  waitpid($pid, 0);
   if ($? != 0) {
     check_and_log_fault($command, @outlines);
     $print_on_error and print STDERR "Failed to run '$command': @outlines";
@@ -319,4 +328,3 @@ sub get_disk_by_id_path {
     return "";
   }
 }
-
