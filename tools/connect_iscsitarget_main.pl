@@ -436,17 +436,7 @@ sub setup_virsh_secret {
   $secret .= "  </usage>\n";
 	$secret .= "</secret>\n";
 
-	$secret_path =  $euca_home."/var/lib/eucalyptus/virsh_ceph_secret.xml";
-		  
-	if (open SECRET_FH, ">$secret_path") {
-		print SECRET_FH "$secret";
-		close SECRET_FH;
-	} else {
-		print STDERR "Unable to create $secret_path.\n";
-		do_exit(1);
-	}
-			
-	run_cmd(1, 1, "virsh secret-define --file $secret_path");
+	run_cmd(1, 1, "virsh secret-define --file /dev/stdin", $secret);
 	run_cmd(1, 1, "virsh secret-set-value $uuid --base64 $ceph_key");
 	run_cmd(1, 0, "rm -f $secret_path");
 }
