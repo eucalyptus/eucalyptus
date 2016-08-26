@@ -127,7 +127,7 @@ import com.eucalyptus.compute.common.backend.*;
 /**
  *
  */
-@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration" } )
+@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration", "Guava", "Convert2Lambda", "RedundantTypeArguments", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed
 public class VpcManager {
 
@@ -909,11 +909,15 @@ public class VpcManager {
     final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
     final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
-    final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
-    if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or(
-        !requestedCidr.transform( Cidr.prefix( ) ).transform( Functions.forPredicate( Range.closed( 16, 28 ) ) )
-        .or( createDefault ) ) ) {
-      throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+    if ( !createDefault ) {
+      final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
+      if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or( true ) ||
+          requestedCidr
+              .transform( Cidr.prefix( ) )
+              .transform( Functions.forPredicate( Predicates.not( Range.closed( 16, 28 ) ) ) ).or( true )
+      ) {
+        throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+      }
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
@@ -2101,10 +2105,12 @@ public class VpcManager {
     }
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   protected <E extends AbstractPersistent> Supplier<E> transactional( final Supplier<E> supplier ) {
     return Entities.asTransaction( supplier );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   protected <E extends AbstractPersistent,P> Function<P,E> transactional( final Function<P,E> function ) {
     return Entities.asTransaction( function );
   }
