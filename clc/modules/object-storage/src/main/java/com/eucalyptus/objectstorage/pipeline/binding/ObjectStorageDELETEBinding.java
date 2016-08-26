@@ -62,52 +62,55 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.google.common.collect.Maps;
 
 public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
   private static Logger LOG = Logger.getLogger(ObjectStorageDELETEBinding.class);
 
-  @Override
-  protected Map<String, String> populateOperationMap() {
-    Map<String, String> newMap = new HashMap<>();
-
+  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
+  static {
     // Bucket operations
-    newMap.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
 
     // Cross-Origin Resource Sharing (cors)
-    newMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
 
     // Object operations
-    newMap.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(),
+        "DeleteVersion");
 
     // Multipart Uploads
-    newMap.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
+    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
         "AbortMultipartUpload");
-
-    return newMap;
   }
 
-  protected Map<String, String> populateUnsupportedOperationMap() {
-    Map<String, String> opsMap = new HashMap<>();
-
+  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
+  static {
     // Bucket operations
 
     // Policy
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
 
     // Website
-    opsMap.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
+    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
+  }
 
-    // Object operations
-    return opsMap;
+  @Override
+  protected Map<String, String> populateOperationMap() {
+    return SUPPORTED_OPS;
+  }
+
+  @Override
+  protected Map<String, String> populateUnsupportedOperationMap() {
+    return UNSUPPORTED_OPS;
   }
 }

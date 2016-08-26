@@ -66,9 +66,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Set;
 
 import javax.crypto.Cipher;
 
+import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferIndexFinder;
@@ -102,6 +104,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 public class OSGUtil {
+  private static Logger LOG = Logger.getLogger(OSGUtil.class);
+
   private static final Splitter hostSplitter = Splitter.on(':').limit(2);
 
   public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
@@ -128,9 +132,8 @@ public class OSGUtil {
     BaseMessage errMsg;
     if (ex instanceof ObjectStorageException) {
       ObjectStorageException e = (ObjectStorageException) ex;
-      errMsg =
-          new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
-              Internets.localHostAddress(), e.getLogData());
+      errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+          Internets.localHostAddress(), e.getLogData());
       errMsg.setCorrelationId(correlationId);
       return errMsg;
     } else {
@@ -249,17 +252,17 @@ public class OSGUtil {
    * @param request
    * @return true if the request is of type S3 PUT object or upload part. false for all other requests
    */
-  public static boolean isPUTDataRequest(HttpRequest request) {
+  public static boolean isPUTDataRequest(HttpRequest request, Set<String> servicePaths) {
     MappingHttpRequest mappingRequest = null;
 
     // put data and upload part only
-    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
-        && request instanceof MappingHttpRequest
-        && ((mappingRequest = ((MappingHttpRequest) request)).getParameters() == null || mappingRequest.getParameters().isEmpty()
+    if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && request instanceof MappingHttpRequest
+        && !isBucketOp((mappingRequest = (MappingHttpRequest) request), servicePaths)
+        && (mappingRequest.getParameters() == null || mappingRequest.getParameters().isEmpty()
             || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
             || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
-            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase()) || mappingRequest
-            .getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase()))) {
+            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase())
+            || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase()))) {
       return true;
     }
 
@@ -273,17 +276,18 @@ public class OSGUtil {
    * @return true if the request is of type S3 PUT acl, versioning, lifecycle, tagging, notification, initiate mpu - POST uploads, complete mpu - POST
    *         uploadId, mult delete - POST delete. false for all other requests
    */
-  public static boolean isPUTMetadataRequest(HttpRequest request) {
+  public static boolean isPUTMetadataRequest(HttpRequest request, Set<String> servicePaths) {
     MappingHttpRequest mappingRequest = null;
     String contentType = null;
 
-    // put metadata only
+    // put metadata only - any bucket operation should be considered as metadata
     if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && request instanceof MappingHttpRequest
-        && (mappingRequest = ((MappingHttpRequest) request)).getParameters() != null && !mappingRequest.getParameters().isEmpty()
-        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
-        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
-        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase())
-        && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase())) {
+        && (isBucketOp((mappingRequest = (MappingHttpRequest) request), servicePaths)
+            || (mappingRequest.getParameters() != null && !mappingRequest.getParameters().isEmpty()
+                && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
+                && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
+                && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase())
+                && !mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString().toLowerCase())))) {
       return true;
     }
 
@@ -332,5 +336,44 @@ public class OSGUtil {
       }
     }
     return hostBucket;
+  }
+
+  public static boolean isBucketOp(MappingHttpRequest httpRequest, Set<String> servicePaths) {
+    try {
+      String hostBucket = null;
+      String[] target = null;
+      String path = getOperationPath(httpRequest, servicePaths);
+      if ((hostBucket = getBucketFromHostHeader(httpRequest)) != null) {
+        path = "/" + hostBucket + path;
+      }
+      return (path.length() > 0 && (target = getTarget(path)) != null && target.length == 1);
+    } catch (Exception e) {
+      LOG.warn("Considering the request to be non-bucket op, unable to identify bucket and object in request due to", e);
+    }
+
+    return false;
+  }
+
+  /**
+   * Removes the service path for processing the bucket/key split.
+   * 
+   * @param httpRequest
+   * @return
+   */
+  public static String getOperationPath(MappingHttpRequest httpRequest, Set<String> servicePaths) {
+    for (String pathCandidate : servicePaths) {
+      if (httpRequest.getServicePath().startsWith(pathCandidate)) {
+        String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
+        if (!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
+          // The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
+          // So, don't remove the service path because that changes the semantics.
+          break;
+        } else {
+          return opPath;
+        }
+      }
+    }
+
+    return httpRequest.getServicePath();
   }
 }
