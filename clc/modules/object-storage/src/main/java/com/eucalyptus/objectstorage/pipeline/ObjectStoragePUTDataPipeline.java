@@ -94,7 +94,7 @@ public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
   @Override
   public boolean checkAccepts(HttpRequest message) {
     // Accept PUT object or upload part operations only
-    if (super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message)) {
+    if (super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message, ObjectStorageRESTPipeline.getServicePaths())) {
       return true;
     }
 

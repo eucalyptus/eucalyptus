@@ -81,14 +81,10 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import com.eucalyptus.org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -128,6 +124,7 @@ import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.Permission;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.X_AMZ_GRANT;
+import com.eucalyptus.org.apache.tools.ant.util.DateUtils;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
@@ -316,7 +313,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       throw new BindingException(errMsg.toString());
     }
 
-    if ( Logs.extreme( ).isTraceEnabled( ) ) {
+    if (Logs.extreme().isTraceEnabled()) {
       Logs.extreme().trace(groovyMsg.toString());
     }
     try {
@@ -348,7 +345,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
     String[] target = null;
-    String path = getOperationPath(httpRequest);
+    String path = OSGUtil.getOperationPath(httpRequest, ObjectStorageRESTPipeline.getServicePaths());
     boolean objectstorageInternalOperation = false;
 
     String hostBucket = null;
@@ -602,8 +599,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("taggingConfiguration", getTagging(httpRequest));
     }
 
-    if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
-        && params.containsKey(ObjectStorageProperties.BucketParameter.cors.toString())) {
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.cors.toString())) {
       operationParams.put("corsConfiguration", getCors(httpRequest));
     }
 
@@ -725,7 +721,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   private static final Ordering<String> STRING_COMPARATOR = Ordering.natural();
 
   protected List<String> responseHeadersForStoring = Collections.unmodifiableList(STRING_COMPARATOR.sortedCopy(Lists.newArrayList(
-  // per REST API PUT Object docs as of 10/13/2014
+      // per REST API PUT Object docs as of 10/13/2014
       HttpHeaders.Names.CACHE_CONTROL, "Content-Disposition", // strangely not included
       HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Names.CONTENT_LENGTH,
       // HttpHeaders.Names.CONTENT_MD5, // handled elsewhere
@@ -1017,29 +1013,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       throw new BindingException("Unable to parse part list " + ex.getMessage());
     }
     return partList;
-  }
-
-  /**
-   * Removes the service path for processing the bucket/key split.
-   * 
-   * @param httpRequest
-   * @return
-   */
-  protected String getOperationPath(MappingHttpRequest httpRequest) {
-    for (String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
-      if (httpRequest.getServicePath().startsWith(pathCandidate)) {
-        String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
-        if (!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
-          // The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
-          // So, don't remove the service path because that changes the semantics.
-          break;
-        } else {
-          return opPath;
-        }
-      }
-    }
-
-    return httpRequest.getServicePath();
   }
 
   protected String getLocationConstraint(MappingHttpRequest httpRequest) throws S3Exception {
@@ -1541,7 +1514,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   private CorsRule extractCorsRule(XMLParser parser, Node node) throws S3Exception {
     CorsRule corsRule = new CorsRule();
 
-    LOG.debug("In extractCorsRule"); //LPT
+    LOG.debug("In extractCorsRule"); // LPT
 
     try {
 
@@ -1556,7 +1529,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         try {
           int maxAgeSeconds = Integer.parseInt(maxAgeSecondsString);
           // Don't populate the max age if it's negative (invalid) or zero (the default)
-          if (maxAgeSeconds > 0) {  
+          if (maxAgeSeconds > 0) {
             corsRule.setMaxAgeSeconds(maxAgeSeconds);
           }
         } catch (NumberFormatException nfe) {
@@ -1598,15 +1571,15 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         throw new MalformedXMLException("/CORSConfiguration/CORSRule/" + element);
       }
       int elementNodesSize = elementNodes.getLength();
-      LOG.debug("elementNodes list size is " + elementNodesSize); //LPT
+      LOG.debug("elementNodes list size is " + elementNodesSize); // LPT
 
       if (elementNodesSize > 0) {
         elementArray = new String[elementNodesSize];
         for (int idx = 0; idx < elementNodes.getLength(); idx++) {
           Node elementNode = elementNodes.item(idx);
-          LOG.debug("Node value is <" + elementNode.getNodeValue() + ">"); //LPT
+          LOG.debug("Node value is <" + elementNode.getNodeValue() + ">"); // LPT
           elementArray[idx] = elementNode.getFirstChild().getNodeValue();
-          LOG.debug("Node first child value is <" + elementArray[idx] + ">"); //LPT
+          LOG.debug("Node first child value is <" + elementArray[idx] + ">"); // LPT
         }
       }
     } catch (S3Exception e) {

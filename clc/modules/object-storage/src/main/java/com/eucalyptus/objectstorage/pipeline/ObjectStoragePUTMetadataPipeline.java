@@ -95,7 +95,7 @@ public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline 
   public boolean checkAccepts(HttpRequest message) {
     // Accept PUT acl, versioning, lifecycle, tagging, notification, initiate mpu - POST uploads, complete mpu - POST uploadId, multi delete - POST
     // delete
-    if (super.checkAccepts(message) && OSGUtil.isPUTMetadataRequest(message)) {
+    if (super.checkAccepts(message) && OSGUtil.isPUTMetadataRequest(message, ObjectStorageRESTPipeline.getServicePaths())) {
       return true;
     }
 
