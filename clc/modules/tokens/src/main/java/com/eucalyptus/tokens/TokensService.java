@@ -230,6 +230,7 @@ public class TokensService {
       // parse JWT
       final String [] jwtParts = identityToken.split("\\.");
       final JSONObject jwtBody = JSONObject.fromObject( new String( Base64.decodeBase64(jwtParts[1]) ) );
+      LOG.info("jwt = "+jwtBody);
       final String jwtSignature = jwtParts[2];
       
       // get account id from role ARN
@@ -307,6 +308,7 @@ public class TokensService {
 
   protected static String readUrl(String url) throws IOException, MalformedURLException {
     final URL location = new URL( url );
+    LOG.info("reading from " + url);
     final InputStream istr = (InputStream)location.openConnection().getContent();
     Scanner s = new Scanner(istr).useDelimiter("\\A");
     return ( s.hasNext() ? s.next() : "" );
