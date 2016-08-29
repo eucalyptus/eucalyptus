@@ -850,17 +850,17 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
-  public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException {
+  public void deleteOpenIdConnectProvider(String url) throws AuthException {
     final String accountName = this.delegate.getName( );
-    if (openIDConnectProviderArn == null ) {
+    if (url == null ) {
       throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_ARN );
     }
     try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
-      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( openIDConnectProviderArn, accountName );
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
       Entities.delete( provider );
       db.commit( );
     } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + openIDConnectProviderArn + " in " + accountName );
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
     }
   }

@@ -71,9 +71,8 @@ import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
-import com.eucalyptus.auth.euare.persist.DatabaseOpenIdProviderProxy;
-import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -88,6 +87,7 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
@@ -95,6 +95,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
  */
 @SuppressWarnings( "UnusedDeclaration" )
 public class TokensService {
+  private static final Logger LOG = Logger.getLogger( TokensService.class );
 
   public GetSessionTokenResponseType getSessionToken( final GetSessionTokenType request ) throws EucalyptusCloudException {
     final GetSessionTokenResponseType reply = request.getReply();
@@ -236,7 +237,7 @@ public class TokensService {
       final String roleAccountId = roleArn.getAccount( );
 
       // fetch oidc provider
-      final OpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, (String)jwtBody.get("iss") );
+      final EuareOpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, (String)jwtBody.get("iss") );
 
       // oidc discovery
       final String configJson = readUrl( (String)jwtBody.get("iss") + "/.well-known/openid-configuration" );
@@ -291,10 +292,13 @@ public class TokensService {
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
     } catch ( CertificateEncodingException | NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e ) {
+      LOG.error("problem w/ assume role", e);
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( InvalidKeyException | SignatureException | IOException | JSONException | SecurityTokenValidationException e ) {
+      LOG.error("problem w/ assume role", e);
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
+      LOG.error("problem w/ assume role", e);
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
 
@@ -458,12 +462,13 @@ public class TokensService {
     }
   }
 
-  private static OpenIdConnectProvider lookupOpenIdConnectProvider( String account, final String url ) throws TokensException {
+  private static EuareOpenIdConnectProvider lookupOpenIdConnectProvider( String accountName, final String url ) throws TokensException {
     try {
-      OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, account );
-      return new DatabaseOpenIdProviderProxy( provider );
+      EuareAccount account = com.eucalyptus.auth.euare.Accounts.lookupAccountByName( accountName );
+      return account.lookupOpenIdConnectProvider( url );
     } catch ( Exception e ) {
-      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid openid connect provider: " + url );
+      e.printStackTrace();
+      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid openid connect provider: " + url + ", account: " + accountName);
     }
   }
 }
