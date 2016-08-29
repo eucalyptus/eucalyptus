@@ -230,7 +230,6 @@ public class TokensService {
       // parse JWT
       final String [] jwtParts = identityToken.split("\\.");
       final JSONObject jwtBody = JSONObject.fromObject( new String( Base64.decodeBase64(jwtParts[1]) ) );
-      LOG.info("jwt = "+jwtBody);
       final String jwtSignature = jwtParts[2];
       
       // get account id from role ARN
@@ -252,7 +251,8 @@ public class TokensService {
       final String jwks_e = (String)(keyData).get("e");
       final String jwks_alg = (String)(keyData).get("alg");
       final String thumbprint = getServerCertThumbprint( (String)config.get("jwks_uri") );
-      if ( !provider.getThumbprints().contains( thumbprint.toLowerCase() ) ) {
+      // TODO: improve this test to account for case issues
+      if ( !provider.getThumbprints().contains( thumbprint ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
       final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
@@ -309,7 +309,9 @@ public class TokensService {
   protected static String readUrl(String url) throws IOException, MalformedURLException {
     final URL location = new URL( url );
     LOG.info("reading from " + url);
-    final InputStream istr = (InputStream)location.openConnection().getContent();
+    URLConnection conn = location.openConnection();
+    SslSetup.configureHttpsUrlConnection( conn );
+    final InputStream istr = (InputStream)conn.getContent();
     Scanner s = new Scanner(istr).useDelimiter("\\A");
     return ( s.hasNext() ? s.next() : "" );
   }
@@ -317,6 +319,7 @@ public class TokensService {
   public static String getServerCertThumbprint(String url) throws IOException, MalformedURLException, CertificateEncodingException {
     URL location = new URL( url );
     URLConnection conn = location.openConnection();
+    SslSetup.configureHttpsUrlConnection( conn );
     conn.getContent();  // ignore content, we just need the transaction to get the cert
     if (conn instanceof HttpsURLConnection) {
       Certificate cert = ((HttpsURLConnection)conn).getServerCertificates()[0];

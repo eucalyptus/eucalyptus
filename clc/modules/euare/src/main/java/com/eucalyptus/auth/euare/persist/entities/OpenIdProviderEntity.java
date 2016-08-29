@@ -113,7 +113,7 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
   String url;
 
   // List of client ids
-  @ElementCollection
+  @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "auth_openid_provider_client_ids" )
   @Column( name = "auth_openid_provider_client_id" )
   @JoinColumn( name = "auth_openid_provider_url" )
@@ -121,7 +121,7 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
   private List<String> clientIDs = Lists.newArrayList();
 
   // List of thumbprints
-  @ElementCollection
+  @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "auth_openid_provider_thumbprints" )
   @Column( name = "auth_openid_provider_thumbprint" )
   @JoinColumn( name = "auth_openid_provider_url" )
