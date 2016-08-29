@@ -109,7 +109,8 @@ get_euca_version() {
   elif [ ! -e ${DIR}/etc/eucalyptus/eucalyptus-version ]; then 
     log "cannot locate ${DIR}/etc/eucalyptus/eucalyptus-version, --${FLAG} must point to a valid eucalyptus installation" 1>&2; exit 1
   else
-    head -n1 ${DIR}/etc/eucalyptus/eucalyptus-version
+    # strip version digits beyond the third one as those should not be relevant for upgrade
+    head -n1 ${DIR}/etc/eucalyptus/eucalyptus-version | sed 's/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/g'`
   fi  
 }
 
@@ -176,6 +177,8 @@ read_dot_upgrade() {
     OLD_EUCA_VERSION=$a
     OLD_EUCA_PATH=$b
   done < $EUCALYPTUS/etc/eucalyptus/.upgrade
+  # strip version digits beyond the third one as those should not be relevant for upgrade
+  OLD_EUCA_VERSION=`echo $OLD_EUCA_VERSION | sed 's/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/g'`
 }
 
 ## NOTE: Start reading here.
