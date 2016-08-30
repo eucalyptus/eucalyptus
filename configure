@@ -3643,6 +3643,13 @@ else
   USE_BUNDLED_JARS=yes
 fi
 
+# Check whether --enable-bundled-jars was given.
+if test "${enable_bundled_jars+set}" = set; then :
+  enableval=$enable_bundled_jars; USE_BUNDLED_JARS=$enableval
+else
+  USE_BUNDLED_JARS=yes
+fi
+
 
 # Check whether --with-apache2-module-dir was given.
 if test "${with_apache2_module_dir+set}" = set; then :
