@@ -113,5 +113,6 @@ INDENTTOOLS = indent
 INDENTFLAGS	= -nbad -bap -nbc -bbo -hnl -br -brs -c40 -cd40 -ncdb -ce -cli0 -d0 -di1 -nfc1 -i4 -nut -ip0 -l180 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -ss -ts4 -il0 -nip
 
 # compile time configurations
+USE_BUNDLED_JARS = @USE_BUNDLED_JARS@
 USE_SYSTEMD = @USE_SYSTEMD@
 USE_SYSVINIT = @USE_SYSVINIT@
