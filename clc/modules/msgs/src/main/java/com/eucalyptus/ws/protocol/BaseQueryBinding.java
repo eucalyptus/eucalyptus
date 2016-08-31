@@ -329,7 +329,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           } else {
             for ( final String item : Sets.newHashSet( params.keySet( ) ) ) {
               if ( item.startsWith( e.getKey( ) + "." ) || item.equals( e.getKey( ) ) ) {
-                subParams.put( item.replace( e.getKey( ) + ".", "" ), params.remove( item ) );
+                subParams.put( replaceStringPrefixIfExists(item, e.getKey( ) + ".", "" ), params.remove( item ) );
               }
             }
           }
@@ -621,4 +621,12 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       }
     }
   }
+
+  public static String replaceStringPrefixIfExists(String target, String oldPrefix, String newPrefix) {
+    if (target == null) throw new NullPointerException("target can not be null");
+    if (oldPrefix == null) throw new NullPointerException("oldPrefix can not be null");
+    if (newPrefix == null) throw new NullPointerException("newPrefix can not be null");
+    return target.startsWith(oldPrefix) ? newPrefix + target.substring(oldPrefix.length()) : target;
+  }
+
 }

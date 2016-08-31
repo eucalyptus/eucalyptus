@@ -236,7 +236,15 @@ class BaseQueryBindingTest {
     Class getElementClass(final String elementName) {
       requestMessageClasses.find{ Class clazz -> clazz.getSimpleName().equals( elementName.toString() ) }
     }
-  }  
+  }
+
+  @Test
+  void testReplaceStringPrefixIfExists( ) {
+    assertEquals(BaseQueryBinding.replaceStringPrefixIfExists("DataValue.Value","Value",""),"DataValue.Value");
+    assertEquals(BaseQueryBinding.replaceStringPrefixIfExists("Value.Value","Value.",""),"Value");
+    assertEquals(BaseQueryBinding.replaceStringPrefixIfExists("DataValue.Value","DataValue.",""),"Value");
+    assertEquals(BaseQueryBinding.replaceStringPrefixIfExists("DataValue.Value.Value","DataValue.","NewPrefix."),"NewPrefix.Value.Value");
+  }
 }
 
 class SingleSimpleTypes extends EucalyptusMessage {
