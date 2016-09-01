@@ -3597,7 +3597,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(route->destCidr, 16, "%s", results[i]);
+        snprintf(route->destCidr, 24, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);

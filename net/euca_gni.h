@@ -290,7 +290,7 @@ typedef struct gni_dhcp_os_t {
 } gni_dhcp_os;
 
 typedef struct gni_route_entry_t {
-    char destCidr[16];
+    char destCidr[24];
     char target[32];
     int applied;
 } gni_route_entry;
