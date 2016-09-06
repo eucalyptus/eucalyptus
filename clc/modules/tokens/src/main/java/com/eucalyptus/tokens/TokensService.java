@@ -23,17 +23,18 @@ import static com.eucalyptus.auth.AccessKeys.accessKeyIdentifier;
 import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
+import static com.eucalyptus.auth.policy.PolicySpec.PRINCIPAL;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.InputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.NoSuchAlgorithmException;
@@ -48,6 +49,7 @@ import java.util.Date;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
@@ -55,6 +57,8 @@ import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyEvaluationContext;
+import com.eucalyptus.auth.euare.policy.OpenIDConnectAudKey;
+import com.eucalyptus.auth.euare.policy.OpenIDConnectSubKey;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -63,7 +67,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
-import com.eucalyptus.auth.principal.OpenIdConnectProvider;
+import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
@@ -73,22 +77,20 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.io.BaseEncoding;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  * Service component for temporary access tokens
@@ -170,7 +172,7 @@ public class TokensService {
     try {
       try {
         PolicyEvaluationContext.builder( )
-            .attr( ExternalIdKey.CONTEXT_KEY, request.getExternalId( ) )
+            .attrIfNotNull( ExternalIdKey.CONTEXT_KEY, request.getExternalId( ) )
             .build( ).doWithContext( () ->
             RestrictedTypes.doPrivilegedWithoutOwner(
                 Accounts.getRoleFullName( role ),
@@ -212,15 +214,10 @@ public class TokensService {
     // the time of authentication.
     final Context ctx = Contexts.lookup( );
     final Subject subject = ctx.getSubject( );
-    final Set<QueryIdCredential> queryIdCreds = subject == null ?
-        Collections.<QueryIdCredential>emptySet( ) :
-        subject.getPublicCredentials( QueryIdCredential.class );
-    if ( queryIdCreds.size( ) == 1 && 
-        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) && 
-        Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
-      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
+    final Set<Object> queryIdCreds = subject == null ? Collections.emptySet( ) : subject.getPublicCredentials( );
+    if ( !queryIdCreds.isEmpty( ) ) {
+      throw new TokensException( TokensException.Code.AccessDenied, "Credentials not acceptable for action" );
     }
-    rejectPasswordCredentials( );
 
     final BaseRole role = lookupRole( request.getRoleArn( ) );
 
@@ -229,7 +226,9 @@ public class TokensService {
       final String identityToken = request.getWebIdentityToken();
       // parse JWT
       final String [] jwtParts = identityToken.split("\\.");
-      final JSONObject jwtBody = JSONObject.fromObject( new String( Base64.decodeBase64(jwtParts[1]) ) );
+      final JSONObject jwtBody = JSONObject.fromObject( new String(
+          BaseEncoding.base64Url( ).decode( jwtParts[1] ),
+          StandardCharsets.UTF_8 ) );
       final String jwtSignature = jwtParts[2];
       
       // get account id from role ARN
@@ -237,29 +236,30 @@ public class TokensService {
       final String roleAccountId = roleArn.getAccount( );
 
       // fetch oidc provider
-      final EuareOpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, (String)jwtBody.get("iss") );
+      final EuareOpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, jwtBody.getString("iss") );
 
       // oidc discovery
-      final String configJson = readUrl( (String)jwtBody.get("iss") + "/.well-known/openid-configuration" );
+      final String configJson = readUrl( jwtBody.getString("iss") + "/.well-known/openid-configuration" );
       final JSONObject config = JSONObject.fromObject(configJson);
 
       // verify JWT signature
-      final String keysJson = readUrl( (String)config.get("jwks_uri") );
+      final String keysJson = readUrl( config.getString("jwks_uri") );
       final JSONObject keys = JSONObject.fromObject(keysJson);
-      final JSONObject keyData = (JSONObject)((JSONArray)keys.get("keys")).get(0);
-      final String jwks_n = (String)(keyData).get("n");
-      final String jwks_e = (String)(keyData).get("e");
-      final String jwks_alg = (String)(keyData).get("alg");
-      final String thumbprint = getServerCertThumbprint( (String)config.get("jwks_uri") );
+      final JSONObject keyData = keys.getJSONArray("keys").getJSONObject(0);
+      final String jwks_n = keyData.getString("n");
+      final String jwks_e = keyData.getString("e");
+      final String jwks_alg = keyData.getString("alg");
+      final String thumbprint = getServerCertThumbprint( config.getString("jwks_uri") );
       // TODO: improve this test to account for case issues
       if ( !provider.getThumbprints().contains( thumbprint ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
-      final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
-      final BigInteger publicExponent = new BigInteger( 1, Base64.decodeBase64(jwks_e) );
-      final PublicKey key = KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(modulus, publicExponent));
-      final byte [] sigBytes = new Base64(true).decode(jwtParts[2]);
-      final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes();
+      final BigInteger modulus = new BigInteger( BaseEncoding.base64( ).decode( jwks_n ) );
+      final BigInteger publicExponent = new BigInteger( BaseEncoding.base64( ).decode( jwks_e ) );
+      final PublicKey key =
+          KeyFactory.getInstance( "RSA" ).generatePublic( new RSAPublicKeySpec(modulus, publicExponent) );
+      final byte [] sigBytes = BaseEncoding.base64Url( ).decode(jwtParts[2]);
+      final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes( StandardCharsets.UTF_8 );
       final Signature sig = Signature.getInstance("SHA512withRSA", "BC");
       sig.initVerify(key);
       sig.update(bytesToSign);
@@ -268,15 +268,34 @@ public class TokensService {
       }
 
       // verify aud = clientId and expiration is valid
-      if ( !(provider.getClientIds().contains( jwtBody.get("aud") ) ) ) {
+      final String aud = jwtBody.getString("aud");
+      final String sub = jwtBody.getString("sub");
+      if ( !(provider.getClientIds().contains( aud ) ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "clientID does not match" );
       }
-      final long expiration = (long)jwtBody.getLong("exp") * 1000;
+      if ( Strings.isNullOrEmpty( sub ) ) {
+        throw new TokensException( TokensException.Code.ValidationError, "Invalid subject" );
+      }
+      final long expiration = jwtBody.getLong("exp") * 1000;
       if ( new Date(expiration).compareTo( new Date() ) < 0 ) {
         throw new TokensException( TokensException.Code.ValidationError, "web token has expired" );
       }
 
       // verify assume role policy
+      try {
+        final String providerKey = URI.create( provider.getUrl( ) ).getAuthority( );
+        PolicyEvaluationContext.builder( )
+            .attr( RestrictedTypes.principalTypeContextKey, Principal.PrincipalType.Federated )
+            .attr( RestrictedTypes.principalNameContextKey, Accounts.getOpenIdConnectProviderArn( provider )  )
+            .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( providerKey, aud ) )
+            .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( providerKey, sub ) )
+            .build( ).doWithContext( () ->
+            RestrictedTypes.doPrivilegedWithoutOwner(
+                Accounts.getRoleFullName( role ),
+                new RoleResolver( role ) ) );
+      } catch ( final Exception e ) {
+        throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
+      }
 
       // issue credentials
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
@@ -306,7 +325,7 @@ public class TokensService {
     return reply;
   }
 
-  protected static String readUrl(String url) throws IOException, MalformedURLException {
+  protected static String readUrl(String url) throws IOException {
     final URL location = new URL( url );
     LOG.info("reading from " + url);
     URLConnection conn = location.openConnection();
@@ -316,14 +335,14 @@ public class TokensService {
     return ( s.hasNext() ? s.next() : "" );
   }
 
-  public static String getServerCertThumbprint(String url) throws IOException, MalformedURLException, CertificateEncodingException {
+  public static String getServerCertThumbprint(String url) throws IOException, CertificateEncodingException {
     URL location = new URL( url );
     URLConnection conn = location.openConnection();
     SslSetup.configureHttpsUrlConnection( conn );
     conn.getContent();  // ignore content, we just need the transaction to get the cert
     if (conn instanceof HttpsURLConnection) {
       Certificate cert = ((HttpsURLConnection)conn).getServerCertificates()[0];
-      return DigestUtils.sha1Hex(cert.getEncoded()).toUpperCase();
+      return Digest.SHA1.digestHex( cert.getEncoded( ) ).toUpperCase( );
     }
     return null;
   }
