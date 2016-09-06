@@ -76,6 +76,7 @@ import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -230,7 +231,6 @@ public class TokensService {
       // parse JWT
       final String [] jwtParts = identityToken.split("\\.");
       final JSONObject jwtBody = JSONObject.fromObject( new String( Base64.decodeBase64(jwtParts[1]) ) );
-      final String jwtSignature = jwtParts[2];
       
       // get account id from role ARN
       final Ern roleArn = Ern.parse( request.getRoleArn() );
@@ -240,30 +240,18 @@ public class TokensService {
       final EuareOpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, (String)jwtBody.get("iss") );
 
       // oidc discovery
-      final String configJson = readUrl( (String)jwtBody.get("iss") + "/.well-known/openid-configuration" );
+      final String configJson = readUrl( (String)jwtBody.get("iss") + "/.well-known/openid-configuration" ).getLeft();
       final JSONObject config = JSONObject.fromObject(configJson);
 
-      // verify JWT signature
-      final String keysJson = readUrl( (String)config.get("jwks_uri") );
-      final JSONObject keys = JSONObject.fromObject(keysJson);
-      final JSONObject keyData = (JSONObject)((JSONArray)keys.get("keys")).get(0);
-      final String jwks_n = (String)(keyData).get("n");
-      final String jwks_e = (String)(keyData).get("e");
-      final String jwks_alg = (String)(keyData).get("alg");
-      final String thumbprint = getServerCertThumbprint( (String)config.get("jwks_uri") );
+      final Pair<String, Certificate []> readResult = readUrl( (String)config.get("jwks_uri") );
       // TODO: improve this test to account for case issues
+      final String thumbprint = getServerCertThumbprint( readResult.getRight()[0] );
       if ( !provider.getThumbprints().contains( thumbprint ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
-      final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
-      final BigInteger publicExponent = new BigInteger( 1, Base64.decodeBase64(jwks_e) );
-      final PublicKey key = KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(modulus, publicExponent));
-      final byte [] sigBytes = new Base64(true).decode(jwtParts[2]);
-      final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes();
-      final Signature sig = Signature.getInstance("SHA512withRSA", "BC");
-      sig.initVerify(key);
-      sig.update(bytesToSign);
-      if ( !sig.verify(sigBytes) ) {
+      // verify JWT signature
+      final String keysJson = readResult.getLeft();
+      if ( isSignatureVerified( jwtParts, keysJson ) ) {
         throw new TokensException( TokensException.Code.ValidationError, "signature not valid" );
       }
 
@@ -306,26 +294,39 @@ public class TokensService {
     return reply;
   }
 
-  protected static String readUrl(String url) throws IOException, MalformedURLException {
+  protected static Pair<String, Certificate []> readUrl(String url) throws IOException, MalformedURLException {
     final URL location = new URL( url );
     LOG.info("reading from " + url);
     URLConnection conn = location.openConnection();
     SslSetup.configureHttpsUrlConnection( conn );
     final InputStream istr = (InputStream)conn.getContent();
+    Certificate [] certs = null;
+    if (conn instanceof HttpsURLConnection) {
+      certs = ((HttpsURLConnection)conn).getServerCertificates();
+    }
     Scanner s = new Scanner(istr).useDelimiter("\\A");
-    return ( s.hasNext() ? s.next() : "" );
+    return Pair.pair(( s.hasNext() ? s.next() : "" ), certs);
   }
 
-  public static String getServerCertThumbprint(String url) throws IOException, MalformedURLException, CertificateEncodingException {
-    URL location = new URL( url );
-    URLConnection conn = location.openConnection();
-    SslSetup.configureHttpsUrlConnection( conn );
-    conn.getContent();  // ignore content, we just need the transaction to get the cert
-    if (conn instanceof HttpsURLConnection) {
-      Certificate cert = ((HttpsURLConnection)conn).getServerCertificates()[0];
-      return DigestUtils.sha1Hex(cert.getEncoded()).toUpperCase();
-    }
-    return null;
+  public static String getServerCertThumbprint(Certificate cert) throws CertificateEncodingException {
+    return DigestUtils.sha1Hex(cert.getEncoded()).toUpperCase();
+  }
+
+  public static Boolean isSignatureVerified(String [] jwtParts, String jwkText) throws CertificateEncodingException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
+    final JSONObject keys = JSONObject.fromObject(jwkText);
+    final JSONObject keyData = (JSONObject)((JSONArray)keys.get("keys")).get(0);
+    final String jwks_n = (String)(keyData).get("n");
+    final String jwks_e = (String)(keyData).get("e");
+    final String jwks_alg = (String)(keyData).get("alg");
+    final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
+    final BigInteger publicExponent = new BigInteger( 1, Base64.decodeBase64(jwks_e) );
+    final PublicKey key = KeyFactory.getInstance("RSA").generatePublic(new RSAPublicKeySpec(modulus, publicExponent));
+    final byte [] sigBytes = new Base64(true).decode(jwtParts[2]);
+    final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes();
+    final Signature sig = Signature.getInstance("SHA512withRSA", "BC");
+    sig.initVerify(key);
+    sig.update(bytesToSign);
+    return !sig.verify(sigBytes);
   }
 
   public GetAccessTokenResponseType getAccessToken( final GetAccessTokenType request ) throws EucalyptusCloudException {
