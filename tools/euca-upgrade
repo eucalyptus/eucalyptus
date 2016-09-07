@@ -238,6 +238,9 @@ for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB}); do
     log "ERROR:  Upgrading failed for ${f//upgrade_/}.  See ${UP_LOG} for details."
   else
     log "$(echo "# Done upgrading:  ${f}" | sed 's/upgrade_//g;s/_//g')"
+    if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
+       rm -f $EUCALYPTUS/etc/eucalyptus/.upgrade
+    fi
   fi
 done
 ## NOTE: Don't bother reading past here.
