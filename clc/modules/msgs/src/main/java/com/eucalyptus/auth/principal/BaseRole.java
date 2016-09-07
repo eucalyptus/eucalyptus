@@ -29,7 +29,7 @@ import com.eucalyptus.auth.type.RestrictedType;
  *
  */
 @PolicyVendor( PolicySpec.VENDOR_IAM )
-@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
+@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = { "sts:assumerole", "sts:assumerolewithwebidentity" } )
 public interface BaseRole extends RestrictedType, RestrictedType.PolicyRestrictedType {
 
   String getAccountNumber( ) throws AuthException;

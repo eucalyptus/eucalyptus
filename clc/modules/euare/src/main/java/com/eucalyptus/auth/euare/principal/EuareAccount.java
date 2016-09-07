@@ -93,7 +93,7 @@ public interface EuareAccount extends AccountIdentifiers, BasePrincipal, Restric
   public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException;
   public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException;
   public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException;
-  public List<String> listOpenIdConnectProviders() throws AuthException;
+  public List<EuareOpenIdConnectProvider> listOpenIdConnectProviders() throws AuthException;
 
   public void addClientIdToOpenIdConnectProvider(String clientId, String arn) throws AuthException;
   public void removeClientIdFromOpenIdConnectProvider(String clientId, String arn) throws AuthException;
