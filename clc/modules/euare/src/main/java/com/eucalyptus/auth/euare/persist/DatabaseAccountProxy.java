@@ -866,15 +866,15 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
-  public List<String> listOpenIdConnectProviders() throws AuthException {
-    final List<String> results = Lists.newArrayList( );
+  public List<EuareOpenIdConnectProvider> listOpenIdConnectProviders() throws AuthException {
+    final List<EuareOpenIdConnectProvider> results = Lists.newArrayList( );
     try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
       List<OpenIdProviderEntity> providers = Entities
           .criteriaQuery( OpenIdProviderEntity.class )
           .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
           .list( );
       for ( final OpenIdProviderEntity provider : providers ) {
-        results.add( provider.getUrl() );
+        results.add( new DatabaseOpenIdProviderProxy( provider ) );
       }
       return results;
     } catch ( Exception e ) {

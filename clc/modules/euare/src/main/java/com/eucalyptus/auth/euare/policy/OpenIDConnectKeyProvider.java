@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.function.Function;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.KeyProvider;
-import com.eucalyptus.util.Strings;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -30,6 +29,7 @@ public class OpenIDConnectKeyProvider implements KeyProvider {
   private static final Map<String,Function<String,Key>> SUFFIX_TO_BUILDER_MAP =
       ImmutableMap.<String,Function<String,Key>>builder( )
           .put( "aud", OpenIDConnectAudKey::new )
+          .put( "sub", OpenIDConnectSubKey::new )
           .build( );
 
   @Override
@@ -48,6 +48,11 @@ public class OpenIDConnectKeyProvider implements KeyProvider {
   }
 
   private String suffix( String name ) {
-    return Strings.substringAfter( ":", name );
+    final int index = name == null ? -1 : name.lastIndexOf( ":" );
+    if ( index > 0 && index < name.length( ) ) {
+      return name.substring( index + 1 );
+    } else {
+      return "";
+    }
   }
 }

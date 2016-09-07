@@ -2390,12 +2390,7 @@ public class EuareService {
   private static String OIDC_URL_PREFIX = "https://";
 
   /* open id services */
-  protected String openIdConnectProviderUrlToArn(final EuareAccount account, final String url) {
-    String name = url.substring(OIDC_URL_PREFIX.length());
-    return new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "", name ).toString( );
-  }
-
-  protected String openIdConnectProviderArnToUrl(final String arn) {
+  protected static String openIdConnectProviderArnToUrl(final String arn) {
     final String OIDC = PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
     return OIDC_URL_PREFIX + arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
   }
@@ -2408,7 +2403,7 @@ public class EuareService {
     final EuareAccount account = getRealAccount( ctx, request );
     try {
       final EuareOpenIdConnectProvider newOpenIDConnectProvider = Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl( ), request.getClientIDList( ), request.getThumbprintList() );
-      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( openIdConnectProviderUrlToArn( account, newOpenIDConnectProvider.getUrl() ) );
+      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( Accounts.getOpenIdConnectProviderArn( newOpenIDConnectProvider ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -2459,9 +2454,9 @@ public class EuareService {
     }
     final ArrayList<ArnType> providers = reply.getListOpenIdConnectProvidersResult( ).getArns().getMember();
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
-      for ( final String provider : account.listOpenIdConnectProviders() ) {
-        if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, openIdConnectProviderUrlToArn( account, provider ) ) ) {
-          providers.add( new ArnType( openIdConnectProviderUrlToArn( account, provider ) ) );
+      for ( final EuareOpenIdConnectProvider provider : account.listOpenIdConnectProviders() ) {
+        if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, Accounts.getOpenIdConnectProviderArn( provider ) ) ) {
+          providers.add( new ArnType( Accounts.getOpenIdConnectProviderArn( provider ) ) );
         }
       }
     } catch ( Exception e ) {

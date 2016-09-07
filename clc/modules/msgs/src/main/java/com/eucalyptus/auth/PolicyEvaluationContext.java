@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.google.common.base.MoreObjects;
@@ -68,8 +69,30 @@ public class PolicyEvaluationContext {
   public static final class Builder {
     private final Map<TypedKey<?>,Object> attributes = Maps.newHashMap( );
 
-    public <T> Builder attr( final PolicyEvaluationWriteContextKey<T> key, T value ) {
+    public <T> Builder attr(
+                 final PolicyEvaluationWriteContextKey<T> key,
+        @Nonnull final T value ) {
+      //noinspection ConstantConditions
+      if ( value == null ) throw new NullPointerException( );
       attributes.put( key.getKey( ), value );
+      return this;
+    }
+
+    public <T> Builder attrIfNotNull(
+                  final PolicyEvaluationWriteContextKey<T> key,
+        @Nullable final T value ) {
+      if ( value != null ) {
+        attributes.put( key.getKey( ), value );
+      }
+      return this;
+    }
+
+    public <T extends CharSequence> Builder attrIfNotNullOrEmpty(
+                  final PolicyEvaluationWriteContextKey<T> key,
+        @Nullable final T value ) {
+      if ( value != null && value.length( ) > 0 ) {
+        attributes.put( key.getKey( ), value );
+      }
       return this;
     }
 

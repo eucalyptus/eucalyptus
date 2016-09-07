@@ -23,20 +23,20 @@ import com.eucalyptus.util.TypedKey;
 /**
  * @see OpenIDConnectKeyProvider
  */
-public class OpenIDConnectAudKey extends OpenIDConnectProviderKeySupport {
+public class OpenIDConnectSubKey extends OpenIDConnectProviderKeySupport {
 
-  private static final TypedKey<Pair<String,String>> OIDC_AUD_KEY = TypedKey.create( "OpenIDConnectAud" );
+  private static final TypedKey<Pair<String,String>> OIDC_SUB_KEY = TypedKey.create( "OpenIDConnectSub" );
   public static final PolicyEvaluationWriteContextKey<Pair<String,String>> CONTEXT_KEY =
-      PolicyEvaluationWriteContextKey.create( OIDC_AUD_KEY );
+      PolicyEvaluationWriteContextKey.create( OIDC_SUB_KEY );
 
-  public static final String SUFFIX = ":aud";
+  public static final String SUFFIX = ":sub";
 
-  public OpenIDConnectAudKey( final String name ) {
+  public OpenIDConnectSubKey( final String name ) {
     super( name, SUFFIX );
   }
 
   @Override
   public String value( ) throws AuthException {
-    return getValue( OIDC_AUD_KEY );
+    return getValue( OIDC_SUB_KEY );
   }
 }
