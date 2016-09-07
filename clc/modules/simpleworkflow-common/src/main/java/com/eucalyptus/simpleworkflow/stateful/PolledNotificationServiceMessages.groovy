@@ -38,6 +38,7 @@ class NotifyResponseType extends PolledNotificationServiceMessage {
 
 class PollForNotificationType extends PolledNotificationServiceMessage {
   String channel
+  Long timeout
 }
 
 class PollForNotificationResponseType extends PolledNotificationServiceMessage {

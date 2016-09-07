@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -2311,36 +2312,53 @@ public class SimpleWorkflowService {
     NotifyClient.notifyTaskList( accountFullName, domain, type, taskList );
   }
 
+  private static final long EXPIRY_MILLIS = TimeUnit.SECONDS.toMillis( 30 );
+
   private static void handleTaskPolling( final AccountFullName accountFullName,
                                          final String domain,
                                          final String type,
                                          final String taskList,
                                          final String correlationId,
                                          final SimpleWorkflowMessage emptyResponse,
-                                         final Callable<? extends SimpleWorkflowMessage> responseCallable ) {
+                                         final Callable<? extends SimpleWorkflowMessage> responseCallable) {
+    final Long pollTimeout = System.currentTimeMillis() + EXPIRY_MILLIS;
+    handleTaskPolling(accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, pollTimeout);
+  }
+
+  private static void handleTaskPolling( final AccountFullName accountFullName,
+                                         final String domain,
+                                         final String type,
+                                         final String taskList,
+                                         final String correlationId,
+                                         final SimpleWorkflowMessage emptyResponse,
+                                         final Callable<? extends SimpleWorkflowMessage> responseCallable,
+                                         final long pollTimeout) {
     final String list = Joiner.on('/').join( type, domain, taskList );
     try {
-      NotifyClient.pollTaskList( accountFullName, domain, type, taskList, Contexts.consumerWithCurrentContext( new Consumer<Boolean>() {
-        @Override
-        public void accept( final Boolean notified ) {
-          try {
-            if ( notified ) {
-              final SimpleWorkflowMessage taskResponse = responseCallable.call();
-              if ( taskResponse != null ) {
-                taskResponse.setCorrelationId( correlationId );
-                Contexts.response( taskResponse );
-                return;
-              }
-            }
-          } catch ( final InterruptedException e ) {
-            logger.info( "Interrupted while polling for task " + list, e );
-          } catch ( final Exception e ) {
-            logger.error( "Error polling for task " + list, e );
-          }
-          emptyResponse.setCorrelationId( correlationId );
-          Contexts.response( emptyResponse );
-        }
-      } ) );
+        NotifyClient.pollTaskList(accountFullName, domain, type, taskList, pollTimeout, Contexts.consumerWithCurrentContext(
+                (notified) -> {
+                  try {
+                    if (notified) {
+                      final SimpleWorkflowMessage taskResponse = responseCallable.call();
+                      if (taskResponse != null) {
+                        taskResponse.setCorrelationId(correlationId);
+                        Contexts.response(taskResponse);
+                        return;
+                      } else if ( System.currentTimeMillis() < pollTimeout ) {
+                        handleTaskPolling( accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, pollTimeout );
+                        return;
+                      }
+                    }
+
+                    emptyResponse.setCorrelationId(correlationId);
+                    Contexts.response(emptyResponse);
+                  } catch (final InterruptedException e) {
+                    logger.info("Interrupted while polling for task " + list, e);
+                  } catch (final Exception e) {
+                    logger.error("Error polling for task " + list, e);
+                  }
+                }
+        ));
     } catch ( Exception e ) {
       logger.error( "Error polling for task " + list, e );
       emptyResponse.setCorrelationId( correlationId );

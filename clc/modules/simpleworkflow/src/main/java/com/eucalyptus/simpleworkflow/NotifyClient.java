@@ -140,15 +140,18 @@ public class NotifyClient {
                                    final String domain,
                                    final String type,
                                    final String taskList,
+                                   final long timeout,
                                    final Consumer<Boolean> resultConsumer ) throws Exception {
-    pollTaskList( new NotifyTaskList( accountFullName, domain, type, taskList ), resultConsumer );
+    pollTaskList( new NotifyTaskList( accountFullName, domain, type, taskList ), timeout, resultConsumer );
   }
 
   public static void pollTaskList( final NotifyTaskList taskList,
+                                   final long timeout,
                                    final Consumer<Boolean> resultConsumer ) throws Exception {
     final Consumer<Boolean> consumer = Consumers.once( resultConsumer );
     final PollForNotificationType poll = new PollForNotificationType( );
     poll.setChannel( taskList.getChannelName( ) );
+    poll.setTimeout( timeout );
 
     if ( Bootstrap.isShuttingDown( ) ) {
       delayedPollFailure( 1000L, consumer );

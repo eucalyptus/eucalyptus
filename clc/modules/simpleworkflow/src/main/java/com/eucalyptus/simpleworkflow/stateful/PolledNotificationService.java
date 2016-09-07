@@ -51,7 +51,6 @@ import com.google.common.collect.Lists;
  */
 @ComponentNamed
 public class PolledNotificationService {
-
   private static final Logger logger = Logger.getLogger( PolledNotificationService.class );
 
   private static final ConcurrentMap<String,Pollers> pollersByChannel = new ConcurrentHashMap<>( );
@@ -79,7 +78,7 @@ public class PolledNotificationService {
     final Context context = Contexts.lookup( );
     if ( context.hasAdministrativePrivileges( ) ) {
       final Future<PollForNotificationResponseType> response =
-          addPoller( poll.getChannel( ), new Poller( poll.getChannel( ), poll.getCorrelationId( ) ) );
+          addPoller( poll.getChannel( ), new Poller( poll.getChannel( ), poll.getCorrelationId( ), poll.getTimeout() ) );
       checkNotify( poll.getChannel( ) );
       try {
         return response.get( );
@@ -173,6 +172,7 @@ public class PolledNotificationService {
 
     public void addPoller( final Poller poller ) {
       touch( );
+      pollersQueue.remove( poller );
       pollersQueue.add( poller );
     }
 
@@ -292,14 +292,18 @@ public class PolledNotificationService {
   private static final class Poller {
     private static final long EXPIRY_MILLIS = TimeUnit.SECONDS.toMillis( 30 );
 
-    private final long timestamp;
+    private long timeout;
     private final String channel;
     private final String correlationId;
     private final CheckedListenableFuture<PollForNotificationResponseType> future;
 
     private Poller( final String channel,
-                    final String correlationId ) {
-      this.timestamp = System.currentTimeMillis( );
+                    final String correlationId,
+                    Long timeout) {
+      if (timeout == null)
+        this.timeout = System.currentTimeMillis() +  EXPIRY_MILLIS;
+      else
+        this.timeout = timeout;
       this.channel = channel;
       this.correlationId = correlationId;
       this.future = Futures.newGenericeFuture( );
@@ -310,10 +314,6 @@ public class PolledNotificationService {
       } catch ( NoSuchContextException e ) {
         // leave future unset
       }
-    }
-
-    public long getTimestamp() {
-      return timestamp;
     }
 
     public String getChannel() {
@@ -337,7 +337,7 @@ public class PolledNotificationService {
     }
 
     public boolean isExpired( final long time ) {
-      return ( timestamp + EXPIRY_MILLIS ) < time;
+      return timeout < time;
     }
 
     public String toString( ) {
@@ -345,6 +345,35 @@ public class PolledNotificationService {
         .add( "channel", getChannel( ) )
         .add( "correlationId", getCorrelationId( ) )
         .toString();
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+      if (other == null)
+        return false;
+      if (!(other instanceof Poller))
+        return false;
+      final Poller otherPoller = (Poller) other;
+      if (this.getChannel()!= null) {
+        if (! this.getChannel().equals(otherPoller.getChannel())) {
+          return false;
+        }
+      }
+      if (this.getCorrelationId()!=null) {
+        if (! this.getCorrelationId().equals(otherPoller.getCorrelationId())) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = super.hashCode( );
+      result = prime * result + ( (this.channel == null )  ? 0 : this.channel.hashCode() );
+      result = prime * result + ( (this.correlationId == null) ? 0 : this.correlationId.hashCode() );
+      return result;
     }
   }
 
