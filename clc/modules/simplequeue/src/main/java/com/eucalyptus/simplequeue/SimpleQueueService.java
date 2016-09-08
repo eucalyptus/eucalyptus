@@ -33,6 +33,7 @@ package com.eucalyptus.simplequeue;
 
 import com.amazonaws.util.BinaryUtils;
 import com.amazonaws.util.Md5Utils;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -53,6 +54,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 
+@ComponentNamed
 public class SimpleQueueService {
 
   static final Logger LOG = Logger.getLogger(SimpleQueueService.class);
