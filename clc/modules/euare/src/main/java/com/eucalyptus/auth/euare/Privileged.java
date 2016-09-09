@@ -917,20 +917,20 @@ class Privileged {
     account.deleteOpenIdConnectProvider( provider.getUrl( ) );
   }
 
-  public static boolean allowListOpenIdConnectProviders( AuthContext requestUser, EuareAccount account, String providerArn) throws AuthException {
+  public static boolean allowListOpenIdConnectProviders( AuthContext requestUser, EuareAccount account, String url) throws AuthException {
     return
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_LISTOPENIDCONNECTPROVIDERS ),
             account.getAccountNumber( ),
-            providerArn );
+            url );
   }
 
-  public static boolean allowGetOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, String providerArn) throws AuthException {
+  public static boolean allowGetOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, String url ) throws AuthException {
     return
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_GETOPENIDCONNECTPROVIDER ),
             account.getAccountNumber( ),
-            providerArn );
+            url );
   }
 
   public static void addClientIdToOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, String clientId ) throws AuthException {

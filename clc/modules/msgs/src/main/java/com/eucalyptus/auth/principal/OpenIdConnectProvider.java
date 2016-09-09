@@ -72,9 +72,33 @@ import com.eucalyptus.auth.type.RestrictedType;
  * 
  * @author dkavanagh
  */
-public interface OpenIdConnectProvider extends RestrictedType, AccountScopedPrincipal, Serializable {
-  
+public interface OpenIdConnectProvider extends RestrictedType, Serializable {
+
+  String getAccountNumber( ) throws AuthException;
+
+  /**
+   * The provider URL as used in the ARN
+   *
+   * This value does not start with the scheme or include any port.
+   *
+   * @return The account unique url for the provider.
+   */
   String getUrl( );
+
+  /**
+   * The host from the url.
+   */
+  String getHost( );
+
+  /**
+   * The port for the provider.
+   */
+  Integer getPort( );
+
+  /**
+   * The path from the url.
+   */
+  String getPath( );
 
   List<String> getClientIds( ) throws AuthException;
 

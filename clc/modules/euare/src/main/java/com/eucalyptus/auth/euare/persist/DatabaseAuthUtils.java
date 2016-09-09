@@ -423,7 +423,7 @@ public class DatabaseAuthUtils {
     return false;
   }
 
-  public static <T,PT> T getUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value ) throws Exception {
+  public static <T,PT> T getUnique( Class<T> entityClass, SingularAttribute<? super T, PT> property, PT value ) throws Exception {
     try {
       return criteriaQuery( restriction( entityClass ).equal( property, value ) ).uniqueResult( );
     } catch ( NoSuchElementException e ) {
@@ -431,7 +431,7 @@ public class DatabaseAuthUtils {
     }
   }
 
-  public static <T,PT> void invokeUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value, final Callback<T> c ) throws TransactionException {
+  public static <T,PT> void invokeUnique( Class<T> entityClass, SingularAttribute<? super T, PT> property, PT value, final Callback<T> c ) throws TransactionException {
     try ( final TransactionResource db = Entities.transactionFor( entityClass ) ) {
       T result = getUnique( entityClass, property, value );
       if ( c != null ) {

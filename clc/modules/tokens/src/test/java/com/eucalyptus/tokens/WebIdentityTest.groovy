@@ -25,15 +25,12 @@ import javax.crypto.Cipher
 
 import static org.hamcrest.CoreMatchers.*
 import static org.junit.Assert.*
+import static org.junit.Assume.*
 import org.hamcrest.Matcher
 import org.junit.Test
-
 import org.junit.BeforeClass
 import java.security.Security
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import com.eucalyptus.auth.principal.Certificate
-
-import static org.junit.Assume.assumeThat
 
 /**
  * Unit tests for assume role with web identity token validation

@@ -23,13 +23,11 @@ import static com.eucalyptus.auth.AccessKeys.accessKeyIdentifier;
 import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
-import static com.eucalyptus.auth.policy.PolicySpec.PRINCIPAL;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.InputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -49,7 +47,6 @@ import java.util.Date;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
@@ -57,6 +54,8 @@ import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyEvaluationContext;
+import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
+import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.euare.policy.OpenIDConnectAudKey;
 import com.eucalyptus.auth.euare.policy.OpenIDConnectSubKey;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -67,6 +66,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
@@ -83,7 +83,6 @@ import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
-import org.apache.commons.codec.binary.Base64;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -230,16 +229,20 @@ public class TokensService {
       final JSONObject jwtBody = JSONObject.fromObject( new String(
           BaseEncoding.base64Url( ).decode( jwtParts[1] ),
           StandardCharsets.UTF_8 ) );
+      final String issuerUrl = jwtBody.getString("iss");
       
       // get account id from role ARN
       final Ern roleArn = Ern.parse( request.getRoleArn() );
       final String roleAccountId = roleArn.getAccount( );
 
       // fetch oidc provider
-      final EuareOpenIdConnectProvider provider = lookupOpenIdConnectProvider( roleAccountId, jwtBody.getString("iss") );
+      final OIDCIssuerIdentifier issuerIdentifier = OIDCUtils.parseIssuerIdentifier( issuerUrl );
+      final OpenIdConnectProvider provider =
+          lookupOpenIdConnectProvider( roleAccountId, issuerIdentifier.getHost( ) + issuerIdentifier.getPath( ) );
+      final String trustedProviderUrl = OIDCUtils.buildIssuerIdentifier( provider );
 
       // oidc discovery
-      final String configJson = readUrl( jwtBody.getString("iss") + "/.well-known/openid-configuration" ).getLeft();
+      final String configJson = readUrl( trustedProviderUrl + "/.well-known/openid-configuration" ).getLeft();
       final JSONObject config = JSONObject.fromObject(configJson);
 
       final Pair<String, Certificate []> readResult = readUrl( (String)config.get("jwks_uri") );
@@ -270,12 +273,11 @@ public class TokensService {
 
       // verify assume role policy
       try {
-        final String providerKey = URI.create( provider.getUrl( ) ).getAuthority( );
         PolicyEvaluationContext.builder( )
             .attr( RestrictedTypes.principalTypeContextKey, Principal.PrincipalType.Federated )
             .attr( RestrictedTypes.principalNameContextKey, Accounts.getOpenIdConnectProviderArn( provider )  )
-            .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( providerKey, aud ) )
-            .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( providerKey, sub ) )
+            .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), aud ) )
+            .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), sub ) )
             .build( ).doWithContext( () ->
             RestrictedTypes.doPrivilegedWithoutOwner(
                 Accounts.getRoleFullName( role ),
@@ -298,7 +300,7 @@ public class TokensService {
           role.getRoleId() + ":" + request.getRoleSessionName(),
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
-    } catch ( CertificateEncodingException | NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e ) {
+    } catch ( IllegalArgumentException | CertificateEncodingException | NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e ) {
       LOG.error("problem w/ assume role", e);
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( InvalidKeyException | SignatureException | IOException | JSONException | SecurityTokenValidationException e ) {
@@ -336,14 +338,11 @@ public class TokensService {
     final String jwks_n = keyData.getString("n");
     final String jwks_e = keyData.getString("e");
     final String jwks_alg = keyData.getString("alg");
-    final BigInteger modulus = new BigInteger( 1, Base64.decodeBase64(jwks_n) );
-    final BigInteger publicExponent = new BigInteger( 1, Base64.decodeBase64(jwks_e) );
-    //final BigInteger modulus = new BigInteger( BaseEncoding.base64Url( ).decode( jwks_n ) );
-    //final BigInteger publicExponent = new BigInteger( BaseEncoding.base64Url( ).decode( jwks_e ) );
+    final BigInteger modulus = new BigInteger( 1, BaseEncoding.base64Url().decode(jwks_n) );
+    final BigInteger publicExponent = new BigInteger( 1, BaseEncoding.base64Url().decode(jwks_e) );
     final PublicKey key =
         KeyFactory.getInstance( "RSA" ).generatePublic( new RSAPublicKeySpec(modulus, publicExponent) );
-    final byte [] sigBytes = new Base64(true).decode(jwtParts[2]);
-    //final byte [] sigBytes = BaseEncoding.base64Url( ).decode(jwtParts[2]);
+    final byte [] sigBytes = BaseEncoding.base64Url( ).decode(jwtParts[2]);
     final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes( StandardCharsets.UTF_8 );
     final Signature sig = Signature.getInstance("SHA512withRSA", "BC");
     sig.initVerify(key);
