@@ -392,7 +392,7 @@ public class DatabaseAuthUtils {
   }
 
   /**
-   * Check if the account is empty (no roles, no groups, no users).
+   * Check if the account is empty (no roles, no groups, no users, etc).
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
@@ -406,7 +406,17 @@ public class DatabaseAuthUtils {
           .whereEqual( AccountEntity_.name, accountName )
           .uniqueResult( );
 
-      return roles + groups == 0;
+      final long profiles = Entities.count( InstanceProfileEntity.class )
+          .join( InstanceProfileEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+
+      final long providers = Entities.count( OpenIdProviderEntity.class )
+          .join( OpenIdProviderEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+
+      return roles + groups + profiles + providers == 0;
     } catch ( Exception e ) {
       throw new AuthException( "Error checking if account is empty", e );
     }

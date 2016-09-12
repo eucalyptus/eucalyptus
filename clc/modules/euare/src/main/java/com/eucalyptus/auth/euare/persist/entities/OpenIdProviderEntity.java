@@ -79,6 +79,8 @@ import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AuxiliaryDatabaseObject;
+import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.util.Parameters;
@@ -96,6 +98,30 @@ import com.google.common.collect.Lists;
         columnList = "auth_openid_provider_owning_account, auth_openid_provider_url",
         unique = true )
 )
+@AuxiliaryDatabaseObjects({
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_openid_provider_thumbprints " +
+            "drop constraint if exists fk_4sbcar6frb0561yxdk3nbr5j8, " +
+            "add constraint fk_4sbcar6frb0561yxdk3nbr5j8 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id) on delete cascade",
+        drop = "alter table ${schema}.auth_openid_provider_thumbprints " +
+            "drop constraint if exists fk_4sbcar6frb0561yxdk3nbr5j8, " +
+            "add constraint fk_4sbcar6frb0561yxdk3nbr5j8 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id)"
+    ),
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_openid_provider_client_ids " +
+            "drop constraint if exists fk_n61cf93ta40slfv6i8qg0x7r1, " +
+            "add constraint fk_n61cf93ta40slfv6i8qg0x7r1 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id) on delete cascade",
+        drop = "alter table ${schema}.auth_openid_provider_client_ids " +
+            "drop constraint if exists fk_n61cf93ta40slfv6i8qg0x7r1, " +
+            "add constraint fk_n61cf93ta40slfv6i8qg0x7r1 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id)"
+    ),
+})
 public class OpenIdProviderEntity extends AbstractPersistent implements Serializable {
 
   private static final long serialVersionUID = 1L;
