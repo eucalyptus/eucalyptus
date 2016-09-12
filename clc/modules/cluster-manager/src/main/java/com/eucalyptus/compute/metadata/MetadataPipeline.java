@@ -78,7 +78,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -86,6 +85,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -164,7 +164,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
           } else if ( !Bootstrap.isFinished( ) ) {
             reply = "System is still starting up".getBytes( );
           } else {
-            reply = ServiceContext.send( "VmMetadata", newUri );
+            reply = ServiceContext.send( "eucalyptus-vmmetadata-request", newUri ).get( );
           }
         } catch ( Exception e1 ) {
           Logs.extreme( ).debug( e1, e1 );
@@ -177,17 +177,17 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       if ( Logs.extreme( ).isDebugEnabled( ) ) {
         Logs.extreme( ).debug( "VmMetadata reply info: " + reply + " " + replyEx );
       }
-      HttpResponse response = null;
-      if ( replyEx != null || reply == null || reply instanceof NullPayload ) {
-        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
-        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
-        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ERROR_STRING.getBytes( ) );
-        response.setContent( buffer );
-        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
-      } else {
+      HttpResponse response;
+      if ( replyEx == null && reply instanceof byte[] ) {
         response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.OK );
         response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ( byte[] ) reply );
+        response.setContent( buffer );
+        response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
+      } else {
+        response = new DefaultHttpResponse( request.getProtocolVersion( ), HttpResponseStatus.NOT_FOUND );
+        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain" );
+        ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( ERROR_STRING.getBytes( ) );
         response.setContent( buffer );
         response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString( buffer.readableBytes( ) ) );
       }

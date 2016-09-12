@@ -68,8 +68,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.mule.util.StringUtils;
 
 import com.ceph.rbd.Rbd;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
@@ -433,7 +433,7 @@ public class CephRbdProvider implements SANProvider {
     // snapshotIqn is of the form pool/image, get the pool information
     String poolName = separateAndReturnPoolName(snapshotIqn);
 
-    if (StringUtils.isNotBlank(poolName)) {
+    if ( StringUtils.isNotBlank(poolName)) {
       rbdService.createSnapshot(snapshotId, snapshotPoint, poolName);
     } else {
       LOG.warn("Cannot create Ceph snapshot " + snapshotPoint + " on image " + snapshotId + ". Missing pool information");

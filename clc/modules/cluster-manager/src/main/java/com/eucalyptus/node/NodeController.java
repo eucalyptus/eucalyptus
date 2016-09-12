@@ -85,11 +85,6 @@ public class NodeController extends ComponentId {
   }
   
   @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-  }
-  
-  @Override
   public String getServicePath( final String... pathParts ) {
     return "/axis2/services/EucalyptusNC";
   }

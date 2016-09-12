@@ -1,0 +1,73 @@
+<!--
+  (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:int="http://www.springframework.org/schema/integration"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd"
+>
+  <int:channel id="eucalyptus-address-request"/>
+  <int:channel id="eucalyptus-cluster-request"/>
+  <int:channel id="eucalyptus-export-request"/>
+  <int:channel id="eucalyptus-image-request"/>
+  <int:channel id="eucalyptus-import-request"/>
+  <int:channel id="eucalyptus-keypair-request"/>
+  <int:channel id="eucalyptus-networkgroup-request"/>
+  <int:channel id="eucalyptus-snapshot-request"/>
+  <int:channel id="eucalyptus-tag-request"/>
+  <int:channel id="eucalyptus-vmcontrol-request"/>
+  <int:channel id="eucalyptus-vmtype-request"/>
+  <int:channel id="eucalyptus-volume-request"/>
+  <int:channel id="eucalyptus-vpc-request"/>
+  <int:channel id="eucalyptus-default-request"/>
+  <int:channel id="eucalyptus-vmmetadata-request"/>
+
+  <int:payload-type-router input-channel="eucalyptus-request">
+    <int:mapping type="com.eucalyptus.compute.common.VmAddressMessage" channel="eucalyptus-address-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.CloudTopologyMessage" channel="eucalyptus-cluster-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmExportMessage" channel="eucalyptus-export-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmImageMessage" channel="eucalyptus-image-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmImportMessage" channel="eucalyptus-import-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmKeyPairMessage" channel="eucalyptus-keypair-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmSecurityMessage" channel="eucalyptus-networkgroup-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.BlockSnapshotMessage" channel="eucalyptus-snapshot-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.ResourceTagMessage" channel="eucalyptus-tag-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmControlMessage" channel="eucalyptus-vmcontrol-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmTypeMessage" channel="eucalyptus-vmtype-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.BlockVolumeMessage" channel="eucalyptus-volume-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VpcMessage" channel="eucalyptus-vpc-request"/>
+    <int:mapping type="edu.ucsb.eucalyptus.msgs.BaseMessage" channel="eucalyptus-default-request"/>
+  </int:payload-type-router>
+
+  <int:service-activator input-channel="eucalyptus-address-request" ref="computeAddressManager"/>
+  <int:service-activator input-channel="eucalyptus-cluster-request" ref="computeClusterEndpoint"/>
+  <int:service-activator input-channel="eucalyptus-export-request" ref="computeExportManager"/>
+  <int:service-activator input-channel="eucalyptus-image-request" ref="computeImageManager"/>
+  <int:service-activator input-channel="eucalyptus-import-request" ref="computeImportManager"/>
+  <int:service-activator input-channel="eucalyptus-keypair-request" ref="computeKeyPairManager"/>
+  <int:service-activator input-channel="eucalyptus-networkgroup-request" ref="computeNetworkGroupManager"/>
+  <int:service-activator input-channel="eucalyptus-snapshot-request" ref="computeSnapshotManager"/>
+  <int:service-activator input-channel="eucalyptus-tag-request" ref="computeTagManager"/>
+  <int:service-activator input-channel="eucalyptus-vmcontrol-request" ref="computeVmControl"/>
+  <int:service-activator input-channel="eucalyptus-vmtype-request" ref="computeVmTypesManager"/>
+  <int:service-activator input-channel="eucalyptus-volume-request" ref="computeVolumeManager"/>
+  <int:service-activator input-channel="eucalyptus-vpc-request" ref="computeVpcManager"/>
+  <int:service-activator input-channel="eucalyptus-default-request" ref="computeDefaultHandler"/>
+  <int:service-activator input-channel="eucalyptus-vmmetadata-request" ref="computeVmMetadata"/>
+
+</beans>

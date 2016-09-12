@@ -68,9 +68,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.mule.RequestContext;
-import org.mule.api.MuleEvent;
-import org.mule.module.client.MuleClient;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -114,17 +111,15 @@ public abstract class ServiceDispatcher implements Dispatcher {
   
   public static Dispatcher lookup( ServiceConfiguration configuration ) {
     return configuration.isVmLocal( )
-      ? new LocalDispatcher( configuration, configuration.getComponentId( ).getLocalEndpointUri( ) )
+      ? new LocalDispatcher( configuration )
       : new RemoteDispatcher( configuration, ServiceUris.internal( configuration ) );
   }
   
   static abstract class AbstractDispatcher implements Dispatcher {
     private final ServiceConfiguration serviceConfiguration;
-    private final URI                  address;
-    
-    AbstractDispatcher( ServiceConfiguration serviceConfiguration, URI address ) {
+
+    AbstractDispatcher( ServiceConfiguration serviceConfiguration ) {
       this.serviceConfiguration = serviceConfiguration;
-      this.address = address;
     }
     
     public final ComponentId getComponentId( ) {
@@ -135,44 +130,43 @@ public abstract class ServiceDispatcher implements Dispatcher {
       return this.serviceConfiguration.getFullName( ).toString( );
     }
     
-    public final URI getAddress( ) {
-      return address;
-    }
-    
-    protected final NioClient getNioClient( ) throws Exception {
-      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ),
-                            ComponentIds.lookup( Empyrean.class ).getClientPipeline( ) );
-    }
-    
     protected final ServiceConfiguration getServiceConfiguration( ) {
       return this.serviceConfiguration;
     }
     
     @Override
     public String toString( ) {
-      return String.format( "Dispatcher:serviceConfiguration=%s:address=%s:isLocal()=%s", this.serviceConfiguration, this.address, this.isLocal( ) );
+      return String.format( "Dispatcher:serviceConfiguration=%s:isLocal()=%s", this.serviceConfiguration, this.isLocal( ) );
     }
   }
   
   static class RemoteDispatcher extends AbstractDispatcher {
-    
+    private final URI                  address;
+
     RemoteDispatcher( ServiceConfiguration serviceConfiguration, URI address ) {
-      super( serviceConfiguration, address );
+      super( serviceConfiguration );
+      this.address = address;
     }
-    
+
+    public final URI getAddress( ) {
+      return address;
+    }
+
+    protected final NioClient getNioClient( ) throws Exception {
+      return new NioClient( this.address.getHost( ), this.address.getPort( ), this.address.getPath( ),
+          ComponentIds.lookup( Empyrean.class ).getClientPipeline( ) );
+    }
+
+
     public void dispatch( BaseMessage msg ) {
-      MuleEvent context = RequestContext.getEvent( );
       try {
         this.getNioClient( ).dispatch( msg );
       } catch ( Exception e ) {
         LOG.error( e );
-      } finally {
-        RequestContext.setEvent( context );
       }
     }
     
     public BaseMessage send( BaseMessage msg ) throws EucalyptusCloudException {
-      MuleEvent context = RequestContext.getEvent( );
       try {
         return this.getNioClient( ).send( msg );
       } catch ( Exception e ) {
@@ -186,8 +180,6 @@ public abstract class ServiceDispatcher implements Dispatcher {
         } else {
           throw new EucalyptusCloudException( msg.getClass( ).getSimpleName( ) + ": " + rootCause.getMessage( ), rootCause );
         }
-      } finally {
-        RequestContext.setEvent( context );
       }
     }
     
@@ -199,28 +191,24 @@ public abstract class ServiceDispatcher implements Dispatcher {
   }
   
   static class LocalDispatcher extends AbstractDispatcher {
-    private MuleClient muleClient;
-    
-    LocalDispatcher( ServiceConfiguration serviceConfiguration, URI address ) {
-      super( serviceConfiguration, address );
+
+    LocalDispatcher( ServiceConfiguration serviceConfiguration ) {
+      super( serviceConfiguration );
     }
     
     @Override
     public void dispatch( BaseMessage msg ) {
-      MuleEvent context = RequestContext.getEvent( );
       try {
-        ServiceContext.dispatch( this.getServiceConfiguration( ).getComponentId( ).getLocalEndpointName( ), msg );
+        ServiceContext.dispatch( this.getServiceConfiguration( ).getComponentId( ), msg );
       } catch ( Exception e ) {
         LOG.error( e );
-      } finally {
-        RequestContext.setEvent( context );
       }
     }
     
     @Override
     public BaseMessage send( BaseMessage msg ) {
       try {
-        return ServiceContext.send( this.getComponentId( ), msg );
+        return ServiceContext.<BaseMessage>send( this.getComponentId( ), msg ).get( );
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex.getMessage( ), ex );
       }

@@ -21,9 +21,9 @@ package com.eucalyptus.reporting.service.ws;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MessagingException;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -31,6 +31,7 @@ import com.eucalyptus.reporting.service.ReportingErrorResponseType;
 import com.eucalyptus.reporting.service.ReportingErrorType;
 import com.eucalyptus.reporting.service.ReportingException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -38,19 +39,19 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 /**
  *
  */
+@ComponentNamed
 public class ReportingErrorHandler {
   private static final Logger log = Logger.getLogger( ReportingErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";
 
-  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-  public void handle( ExceptionMessage exMsg ) {
-    EventRecord.here(ReportingErrorHandler.class, EventType.MSG_REPLY, exMsg.getPayload().getClass().getSimpleName()).debug( );
-    log.trace("Caught exception while servicing: " + exMsg.getPayload());
-    Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
+  public void handle( final MessagingException exception ) {
+    final Object payloadObject = exception.getFailedMessage( ).getPayload( );
+    final EucalyptusCloudException cloudException = Exceptions.findCause( exception, EucalyptusCloudException.class );
+    EventRecord.here(ReportingErrorHandler.class, EventType.MSG_REPLY, payloadObject.getClass().getSimpleName()).debug( );
+    log.trace("Caught exception while servicing: " + payloadObject);
+    if ( cloudException != null ) {
       try {
-        final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
+        final BaseMessage payload = parsePayload( payloadObject );
         final ReportingErrorResponseType errorResp = new ReportingErrorResponseType( );
         final HttpResponseStatus status;
         final String code;

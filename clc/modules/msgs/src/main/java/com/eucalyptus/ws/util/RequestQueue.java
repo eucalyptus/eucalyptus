@@ -69,10 +69,9 @@ import com.eucalyptus.records.Logs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class RequestQueue {
-  public static String ENDPOINT = "RequestQueue";
+  public static String ENDPOINT = "dispatch-queue";
   private static Logger  LOG = Logger.getLogger( RequestQueue.class );
-  private static boolean acceptable;
-  
+
   public BaseMessage handle( BaseMessage msg ) {
     if( Logs.isExtrrreeeme() ) {
       Logs.extreme( ).info( String.format( "%s:%s:%s:%s:%s", RequestQueue.class, EventType.MSG_RECEIVED, msg.getCorrelationId( ), Contexts.lookup( ).getUserFullName( ), msg.toSimpleString( ) ) );

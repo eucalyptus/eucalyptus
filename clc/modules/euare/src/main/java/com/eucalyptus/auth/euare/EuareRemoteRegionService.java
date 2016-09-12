@@ -27,8 +27,6 @@ import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MuleEventContext;
-import org.mule.api.lifecycle.Callable;
 import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
@@ -54,12 +52,10 @@ import com.google.common.collect.Iterables;
  *
  */
 @ComponentNamed
-public class EuareRemoteRegionService implements Callable {
+public class EuareRemoteRegionService {
   private static final Logger logger = Logger.getLogger( EuareRemoteRegionService.class );
 
-  @Override
-  public EuareMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
-    final EuareMessage euareRequest = (EuareMessage) muleEventContext.getMessage( ).getPayload( );
+  public EuareMessage callRemote( final EuareMessage euareRequest ) throws EucalyptusCloudException {
     final Optional<RegionInfo> regionInfo = EuareRemoteRegionFilter.getRegion( euareRequest );
     final String previousUserId = euareRequest.getUserId( );
     final Binding binding = BindingManager.getDefaultBinding( );

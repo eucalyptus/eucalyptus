@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2015 Eucalyptus Systems, Inc.
+  Copyright 2009-2016 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -59,92 +59,41 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:management="http://www.mulesoft.org/schema/mule/management"
-      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
-      xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+<beans xmlns="http://www.springframework.org/schema/beans"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:int="http://www.springframework.org/schema/integration"
       xsi:schemaLocation="
         http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
-        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
-        http://www.mulesoft.org/schema/mule/management http://www.mulesoft.org/schema/mule/management/3.4/mule-management.xsd
-        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
-        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
-  <configuration>
-    <default-threading-profile 
-            doThreading="true"
-            maxThreadsActive="256"
-            poolExhaustedAction="RUN" />
-  </configuration>
-  <management:jmx-server/>
-  <euca:connector name="eucaws" />
-  <vm:connector name="internal-async">
-    <service-overrides
-        sessionHandler="org.mule.session.NullSessionHandler"/>
-    <vm:queue-profile maxOutstandingMessages="1024" />
-  </vm:connector>
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" exchange-pattern="one-way" />
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" exchange-pattern="one-way" />
-  <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" exchange-pattern="one-way" />
-  <spring:beans>
-    <spring:import resource="classpath:empyrean-model.xml" />
-  </spring:beans>
-  #foreach( $component in $components )
-      <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" exchange-pattern="one-way" />
-  #end 
-  <model name="eucalyptus-bootstrap">
-    <default-service-exception-strategy>
-      <outbound-endpoint ref="ReplyQueueEndpoint" />
-    </default-service-exception-strategy>
-    <service name="ReplyQueue">
-      <inbound>
-        <inbound-endpoint ref="ReplyQueueEndpoint" />
-      </inbound>
-      <component>
-        <singleton-object class="com.eucalyptus.ws.util.ReplyQueue"/>
-      </component>
-    </service>
-    <service name="RequestQueue">
-      <inbound>
-        <inbound-endpoint ref="RequestQueueEndpoint" />
-      </inbound>
-      <component>
-        <singleton-object class="com.eucalyptus.ws.util.RequestQueue"/>
-      </component>
-      <outbound>
-        <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" 
-                             exchange-pattern="one-way" 
-                             disableTransportTransformer="true"/>
-          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
-        </filtering-router>
-        #foreach( $component in $components )
-          #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
-          <filtering-router >
-            <outbound-endpoint ref="${component.getEntryPoint()}" 
-                               exchange-pattern="one-way"
-                               disableTransportTransformer="true"/>
-            <payload-type-filter expectedType="${msgType.getCanonicalName()}" />
-          </filtering-router>
-          #end
+        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+
+    <import resource="classpath:eucalyptus-context.xml"/>
+
+    <!-- simple implementations for service components that can be overridden -->
+    <int:channel id="bootstrap-request"/>
+    #foreach( $component in $components )
+      <int:channel id="${component.name}-request"/>
+    #end
+
+    <!-- component channel request dispatch by type -->
+    <int:payload-type-router input-channel="request-queue">
+      <int:mapping type="com.eucalyptus.empyrean.EmpyreanMessage" channel="bootstrap-request"/>
+      #foreach( $component in $components )
+        #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
+        <int:mapping type="${msgType.getCanonicalName()}" channel="${component.name}-request"/>
         #end
-        <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" 
-                             exchange-pattern="one-way"
-                             disableTransportTransformer="true"/>
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-        </filtering-router>
-      </outbound>
-    </service>
-  </model>
+      #end
+    </int:payload-type-router>
 
-  <spring:beans>
-    <spring:import resource="classpath:eucalyptus-context.xml"/>
+    <!-- component channel response dispatch by type -->
+    <int:payload-type-router input-channel="response-queue" default-output-channel="default-reply-queue" resolution-required="false">
+      #foreach( $component in $components )
+        #foreach( $msgType in ${ComponentMessages.forComponent( $component )} )
+        <int:mapping type="${msgType.getCanonicalName()}" channel="${component.name}-response"/>
+        #end
+      #end
+    </int:payload-type-router>
 
-    <!-- Override some mule defaults -->
-    <spring:bean name="_defaultPersistentQueueStore,_fileQueueStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryQueueStore"/>
-    <spring:bean name="_localPersistentObjectStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryObjectStore"/>
-    <spring:bean name="_localUserObjectStore" class="org.mule.util.store.DefaultObjectStoreFactoryBean" factory-method="createDefaultInMemoryObjectStore"/>
-  </spring:beans>
-</mule>
+    <!-- import component configurations -->
+    <import resource="classpath*:*-component-context.xml"/>
+
+</beans>

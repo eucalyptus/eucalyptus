@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,13 +76,11 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import javax.annotation.Nonnull;
 
 import org.apache.log4j.Logger;
-import org.mule.api.MuleException;
-import org.mule.api.lifecycle.Startable;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Regions;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
@@ -127,7 +125,8 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
 
-public class ClusterEndpoint implements Startable {
+@ComponentNamed("computeClusterEndpoint")
+public class ClusterEndpoint {
   
   private static Logger                                LOG              = Logger.getLogger( ClusterEndpoint.class );
   
@@ -144,10 +143,6 @@ public class ClusterEndpoint implements Startable {
                                                                                 return verbose;
                                                                               }
                                                                             } );
-  
-  public void start( ) throws MuleException {
-    Clusters.getInstance( );
-  }
   
   public MigrateInstancesResponseType migrateInstances( final MigrateInstancesType request ) throws EucalyptusCloudException {
     final MigrateInstancesResponseType reply = request.getReply( );

@@ -62,37 +62,20 @@
 
 package com.eucalyptus.context;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.Charset;
-import java.util.LinkedList;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
-import org.mule.MessageExchangePattern;
-import org.mule.api.MuleContext;
-import org.mule.api.MuleException;
-import org.mule.api.context.MuleContextFactory;
-import org.mule.api.endpoint.EndpointBuilder;
-import org.mule.api.endpoint.InboundEndpoint;
-import org.mule.api.service.Service;
-import org.mule.api.transformer.Transformer;
-import org.mule.config.ConfigResource;
-import org.mule.config.DefaultMuleConfiguration;
-import org.mule.config.spring.SpringXmlConfigurationBuilder;
-import org.mule.context.DefaultMuleContextBuilder;
-import org.mule.context.DefaultMuleContextFactory;
-import org.mule.endpoint.EndpointURIEndpointBuilder;
-import org.mule.module.client.MuleClient;
-import org.mule.service.ServiceCompositeMessageSource;
-import org.mule.transformer.TransformerUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -106,7 +89,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
@@ -130,7 +112,6 @@ public class ServiceContextManager {
       new Thread(() -> {
         try {
           singleton.update( );
-          ServiceContextManager.getClient( );
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
@@ -143,17 +124,13 @@ public class ServiceContextManager {
   private static Logger                                LOG               = Logger.getLogger( ServiceContextManager.class );
   private static ServiceContextManager                 singleton         = new ServiceContextManager( );
   
-  private static final MuleContextFactory              contextFactory    = new DefaultMuleContextFactory( );
-  private final ConcurrentNavigableMap<String, String> endpointToService = new ConcurrentSkipListMap<>();
-  private final ConcurrentNavigableMap<String, String> serviceToEndpoint = new ConcurrentSkipListMap<>();
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
   private final AtomicBoolean                          running           = new AtomicBoolean( true );
   private final Lock                                   canHasWrite;
   private final Lock                                   canHasRead;
   private final BlockingQueue<ServiceConfiguration>    queue             = new LinkedBlockingQueue<>();
-  private volatile MuleContext                         context;
-  private MuleClient                                   client;
-  
+  private volatile ConfigurableApplicationContext      context;
+
   private ServiceContextManager( ) {
     ReentrantReadWriteLock canHas = new ReentrantReadWriteLock();
     this.canHasRead = canHas.readLock( );
@@ -183,52 +160,6 @@ public class ServiceContextManager {
           checkParam(context, notNullValue());
           try {
             this.context.start();
-            // Extend MuleClient to override method with fix as per pull request:
-            // - https://github.com/mulesoft/mule/pull/124
-            this.client = new MuleClient(this.context) {
-              @Override
-              protected InboundEndpoint getDefaultClientEndpoint(final Service service, final Object payload, final boolean sync) throws MuleException {
-                if (!(service.getMessageSource() instanceof ServiceCompositeMessageSource)) {
-                  throw new IllegalStateException(
-                      "Only 'CompositeMessageSource' is supported with MuleClient.sendDirect() and MuleClient.dispatchDirect()");
-                }
-
-                // as we are bypassing the message transport layer we need to check that
-                InboundEndpoint endpoint = ((ServiceCompositeMessageSource) service.getMessageSource()).getEndpoints().get(0);
-                if (endpoint != null) {
-                  List<Transformer> transformers = endpoint.getTransformers();
-                  if (transformers != null && !transformers.isEmpty()) {
-                    // the original code here really did just check the first exception
-                    // as far as i can tell
-                    if (TransformerUtils.isSourceTypeSupportedByFirst(transformers,
-                        payload.getClass())) {
-                      return endpoint;
-                    } else {
-                      EndpointBuilder builder = new EndpointURIEndpointBuilder(endpoint);
-                      builder.setTransformers(new LinkedList<>());
-                      builder.setExchangePattern(MessageExchangePattern.REQUEST_RESPONSE);
-                      return getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
-                    }
-                  } else {
-                    return endpoint;
-                  }
-                } else {
-                  EndpointBuilder builder = new EndpointURIEndpointBuilder("vm://mule.client", getMuleContext());
-                  builder.setName("muleClientProvider");
-                  endpoint = getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
-                }
-                return endpoint;
-              }
-            };
-            this.endpointToService.clear();
-            this.serviceToEndpoint.clear();
-            for (final Service service : this.context.getRegistry().lookupObjects(Service.class)) {
-              final ServiceCompositeMessageSource source = (ServiceCompositeMessageSource) service.getMessageSource();
-              for (final InboundEndpoint in : source.getEndpoints()) {
-                this.endpointToService.put(in.getEndpointURI().toString(), service.getName());
-                this.serviceToEndpoint.put(service.getName(), in.getEndpointURI().toString());
-              }
-            }
           } catch (final Exception e) {
             LOG.error(e, e);
             throw Exceptions.toUndeclared(new ServiceInitializationException("Failed to start service this.context.", e));
@@ -240,17 +171,11 @@ public class ServiceContextManager {
     }
   }
                                  
-  private static final String EMPTY_MODEL = "<mule xmlns=\"http://www.mulesoft.org/schema/mule/core\"\n"
-                                            +
-                                            "      xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-                                            +
-                                            "      xsi:schemaLocation=\"\n"
-                                            +
-                                            "       http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd\">\n"
-                                            +
-                                            "</mule>\n";
+  private static final String EMPTY_CONTEXT = "<beans xmlns=\"http://www.springframework.org/schema/beans\" " +
+      "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
+      "xsi:schemaLocation=\"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd\"/>";
   
-  private MuleContext createContext( ) {
+  private ConfigurableApplicationContext createContext( ) {
     // Many-to-one services must be ordered last so they do not receive messages
     // for backend components that use sub-classes of the frontend components.
     final List<ComponentId> currentComponentIds = Lists.newArrayList( Ordering.natural( )
@@ -259,12 +184,11 @@ public class ServiceContextManager {
             Functions.compose( Classes.canonicalNameFunction( ), Functions.<ComponentId>identity( ) ) ) )
         .sortedCopy( ComponentIds.list( ) ) );
     LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
-    final Set<ConfigResource> configs = Sets.newHashSet( );
-    MuleContext muleCtx = null;
+    final Set<Resource> configs = Sets.newHashSet( );
+    ConfigurableApplicationContext context = null;
     for ( final ComponentId componentId : currentComponentIds ) {
       final Component component = Components.lookup( componentId );
-      final String errMsg = "Failed to render model for: " + componentId
-                            + " because of: ";
+      final String errMsg = "Failed to render model for: " + componentId + " because of: ";
       LOG.info( "-> Rendering configuration for " + componentId.name( ) );
       try {
         final String serviceModel = this.loadModel( componentId );
@@ -273,51 +197,47 @@ public class ServiceContextManager {
                                           .withProperty( "ComponentMessages", ComponentMessages.class )
                                           .withProperty( "thisComponent", componentId )
                                           .evaluate( serviceModel );
-        final ConfigResource configRsc = createConfigResource( componentId, outString );
+        final Resource configRsc = createConfigResource( componentId, outString );
         configs.add( configRsc );
       } catch ( final Exception ex ) {
         LOG.error( errMsg + ex.getMessage( ), ex );
       }
     }
     try {
-      final SpringXmlConfigurationBuilder builder = new SpringXmlConfigurationBuilder( configs.toArray( new ConfigResource[] {} ) );
-      final DefaultMuleContextBuilder muleContextBuilder = new DefaultMuleContextBuilder( );
-      final DefaultMuleConfiguration muleConfiguration = new DefaultMuleConfiguration( );
-      muleConfiguration.setWorkingDirectory( BaseDirectory.RUN.getChildPath( "mule" ) );
-      muleContextBuilder.setMuleConfiguration( muleConfiguration );
-      muleCtx = contextFactory.createMuleContext( builder, muleContextBuilder );
+      final Resource[] configResources = configs.toArray( new Resource[ configs.size( ) ] );
+      context = new ClassPathXmlApplicationContext(  ){
+        @Override
+        protected Resource[] getConfigResources( ) {
+          return configResources;
+        }
+      };
+      context.refresh( );
       this.enabledCompIds.clear( );
       this.enabledCompIds.addAll( currentComponentIds );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
-    return muleCtx;
+    return context;
   }
   
   private String loadModel( final ComponentId componentId ) {
     try {
-      return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), Charset.defaultCharset( ) );
+      return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), StandardCharsets.UTF_8 );
     } catch ( final Exception ex ) {
-      return EMPTY_MODEL;
+      return EMPTY_CONTEXT;
     }
   }
   
-  private static ConfigResource createConfigResource( final ComponentId componentId, final String outString ) {
-    final ByteArrayInputStream bis = new ByteArrayInputStream( outString.getBytes( ) );
+  private static Resource createConfigResource( final ComponentId componentId, final String outString ) {
     Logs.extreme( ).trace( "===================================" );
     Logs.extreme( ).trace( outString );
     Logs.extreme( ).trace( "===================================" );
-    return new ConfigResource( componentId.getServiceModelFileName( ), bis );
+    return new ByteArrayResource( outString.getBytes( ), componentId.getServiceModelFileName( ) );
   }
   
   private static String FAIL_MSG = "ESB client not ready because the service bus has not been started.";
   
-  static MuleClient getClient( ) throws MuleException {
-    singleton.update( );
-    return singleton.client;
-  }
-  
-  static MuleContext getContext( ) throws MuleException {
+  static ApplicationContext getContext( ) {
     singleton.update( );
     return singleton.context;
   }
@@ -328,8 +248,12 @@ public class ServiceContextManager {
       if ( this.context != null ) {
         try {
           this.context.stop( );
-          this.context.dispose( );
-        } catch ( final MuleException ex ) {
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
+        try {
+          this.context.close( );
+        } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
       }
@@ -340,46 +264,6 @@ public class ServiceContextManager {
   
   public static void shutdown( ) {
     singleton.stop( );
-  }
-  
-  public static String mapServiceToEndpoint( final String service ) throws Exception {
-    checkParam( service, notNullValue() );
-    if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
-      try {
-        String dest = service;
-        if ( ( !service.startsWith( "vm://" ) && !singleton.serviceToEndpoint.containsKey( service ) ) ) {
-          dest = "vm://RequestQueue";
-        } else if ( !service.startsWith( "vm://" ) ) {
-          dest = singleton.serviceToEndpoint.get( dest );
-        }
-        return dest;
-      } finally {
-        singleton.canHasRead.unlock( );
-      }
-    }
-    throw Exceptions.notFound( "Failed to dispatch: " + service );
-  }
-  
-  public static String mapEndpointToService( final String endpoint ) throws Exception {
-    checkParam( endpoint, notNullValue() );
-    if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
-      try {
-        String dest = endpoint;
-        if ( ( endpoint.startsWith( "vm://" ) && !singleton.endpointToService.containsKey( endpoint ) ) ) {
-          throw new ServiceDispatchException( "No such endpoint: " + endpoint
-                                              + " in endpoints="
-                                              + singleton.endpointToService.entrySet( ) );
-          
-        }
-        if ( endpoint.startsWith( "vm://" ) ) {
-          dest = singleton.endpointToService.get( endpoint );
-        }
-        return dest;
-      } finally {
-        singleton.canHasRead.unlock( );
-      }
-    }
-    throw Exceptions.notFound( "Failed to dispatch: " + endpoint );
   }
   
 }

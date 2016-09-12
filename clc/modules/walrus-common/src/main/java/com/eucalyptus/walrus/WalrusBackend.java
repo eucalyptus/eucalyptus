@@ -79,10 +79,4 @@ public class WalrusBackend extends ComponentId {
   public String getInternalNamespaceSuffix() {
     return "/walrus/backend";
   }
-
-  @Override
-  public String getLocalEndpointName() {
-    return "vm://BukkitInternal";
-  }
-
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,19 +21,23 @@ package com.eucalyptus.cloudformation;
 
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceAdvice;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 import static com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+import javax.annotation.Nonnull;
 
 /**
  *
  */
-public class CloudFormationValidator {
+@ComponentNamed
+public class CloudFormationValidator extends ServiceAdvice {
 
-  public Object validate( final Object object ) throws CloudFormationException {
-
+  @Override
+  protected void beforeService( @Nonnull final Object object ) throws Exception {
     // Authorization check
     if ( object instanceof BaseMessage ) {
       final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
@@ -41,8 +45,6 @@ public class CloudFormationValidator {
         throw new AccessDeniedException( "You are not authorized to perform this operation." );
       }
     }
-
-    return object;
   }
 
 }

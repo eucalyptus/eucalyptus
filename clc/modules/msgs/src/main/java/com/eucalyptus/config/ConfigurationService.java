@@ -78,10 +78,4 @@ public class ConfigurationService extends ComponentId {
   public ConfigurationService( ) {
     super( "Configuration" );
   }
-  
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://ConfigurationInternal";
-  }
-  
 }

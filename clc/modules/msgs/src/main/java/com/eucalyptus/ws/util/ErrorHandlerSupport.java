@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,9 @@ package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MessagingException;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.CollectionUtils;
@@ -63,15 +60,14 @@ public abstract class ErrorHandlerSupport {
     this.namespace = namespace;
     this.defaultCode = defaultCode;
   }
-  
-  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-  public void handle( final ExceptionMessage exMsg ) {
-    EventRecord.here( getClass(), EventType.MSG_REPLY, exMsg.getPayload().getClass().getSimpleName() ).debug();
-    final Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
+
+  public void handle( final MessagingException messagingEx ) {
+    final EucalyptusCloudException cloudException =
+        Exceptions.findCause( messagingEx, EucalyptusCloudException.class );
+    final Object payloadObject = messagingEx.getFailedMessage( ).getPayload( );
+    if( cloudException != null ) {
       try {
-        final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
+        final BaseMessage payload = parsePayload( payloadObject );
         final HttpResponseStatus status;
         final Role role;
         final String code;
@@ -87,18 +83,18 @@ public abstract class ErrorHandlerSupport {
         status = !statusCodeOptional.isPresent( ) ?
             HttpResponseStatus.INTERNAL_SERVER_ERROR :
             new HttpResponseStatus( statusCodeOptional.get( ), code );
-        final BaseMessage errorResp = buildErrorResponse( 
+        final BaseMessage errorResp = buildErrorResponse(
             payload.getCorrelationId( ),
             role,
             code,
             cloudException.getMessage()
-            );
+        );
         Contexts.response( new BaseMessageSupplier( errorResp, status ) );
       } catch ( final PayloadParseException e ) {
         LOG.error( "Failed to parse payload ", e.getCause() );
       }
     } else {
-      final BaseMessage errorResp = buildFatalResponse( exception );
+      final BaseMessage errorResp = buildFatalResponse( messagingEx.getCause( )==null?messagingEx:messagingEx.getCause( ) );
       Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
     }
   }

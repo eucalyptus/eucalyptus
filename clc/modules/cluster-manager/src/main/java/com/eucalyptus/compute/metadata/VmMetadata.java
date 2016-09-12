@@ -70,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
@@ -94,6 +95,7 @@ import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
+@ComponentNamed("computeVmMetadata")
 public class VmMetadata {
   private static//
   Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
@@ -119,7 +121,11 @@ public class VmMetadata {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
                                                                                             try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
                                                                                               final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId( ) );
-                                                                                              return ByteArray.newInstance( instance.getUserData() );
+                                                                                              final byte[] userData = instance.getUserData( );
+                                                                                              if ( userData == null ) {
+                                                                                                throw new NoSuchElementException( );
+                                                                                              }
+                                                                                              return ByteArray.newInstance( userData );
                                                                                             } catch ( NoSuchElementException e ) {
                                                                                               throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
                                                                                             }

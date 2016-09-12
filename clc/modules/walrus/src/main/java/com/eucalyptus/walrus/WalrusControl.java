@@ -64,6 +64,7 @@ package com.eucalyptus.walrus;
 
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.Checker;
@@ -114,7 +115,8 @@ import java.util.concurrent.ScheduledFuture;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
-public class WalrusControl {
+@ComponentNamed
+public class WalrusControl implements WalrusService {
 
   private static Logger LOG = Logger.getLogger(WalrusControl.class);
 
@@ -209,83 +211,99 @@ public class WalrusControl {
     }
   }
 
-  public HeadBucketResponseType HeadBucket(HeadBucketType request) throws EucalyptusCloudException {
+  @Override
+  public HeadBucketResponseType HeadBucket( HeadBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.headBucket(request);
   }
 
-  public CreateBucketResponseType CreateBucket(CreateBucketType request) throws EucalyptusCloudException {
+  @Override
+  public CreateBucketResponseType CreateBucket( CreateBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.createBucket(request);
   }
 
-  public DeleteBucketResponseType DeleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+  @Override
+  public DeleteBucketResponseType DeleteBucket( DeleteBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.deleteBucket(request);
   }
 
-  public ListAllMyBucketsResponseType ListAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException {
+  @Override
+  public ListAllMyBucketsResponseType ListAllMyBuckets( ListAllMyBucketsType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.listAllMyBuckets(request);
   }
 
-  public PutObjectResponseType PutObject(PutObjectType request) throws EucalyptusCloudException {
+  @Override
+  public PutObjectResponseType PutObject( PutObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.putObject(request);
   }
 
-  public PutObjectInlineResponseType PutObjectInline(PutObjectInlineType request) throws EucalyptusCloudException {
+  @Override
+  public PutObjectInlineResponseType PutObjectInline( PutObjectInlineType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.putObjectInline(request);
   }
 
-  public DeleteObjectResponseType DeleteObject(DeleteObjectType request) throws EucalyptusCloudException {
+  @Override
+  public DeleteObjectResponseType DeleteObject( DeleteObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.deleteObject(request);
   }
 
-  public ListBucketResponseType ListBucket(ListBucketType request) throws EucalyptusCloudException {
+  @Override
+  public ListBucketResponseType ListBucket( ListBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.listBucket(request);
   }
 
-  public GetObjectAccessControlPolicyResponseType GetObjectAccessControlPolicy(GetObjectAccessControlPolicyType request)
+  @Override
+  public GetObjectAccessControlPolicyResponseType GetObjectAccessControlPolicy( GetObjectAccessControlPolicyType request )
       throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.getObjectAccessControlPolicy(request);
   }
 
-  public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
+  @Override
+  public GetObjectResponseType GetObject( GetObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.getObject(request);
   }
 
-  public GetObjectExtendedResponseType GetObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
+  @Override
+  public GetObjectExtendedResponseType GetObjectExtended( GetObjectExtendedType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.getObjectExtended(request);
   }
 
-  public CopyObjectResponseType CopyObject(CopyObjectType request) throws EucalyptusCloudException {
+  @Override
+  public CopyObjectResponseType CopyObject( CopyObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.copyObject(request);
   }
 
-  public InitiateMultipartUploadResponseType InitiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
+  @Override
+  public InitiateMultipartUploadResponseType InitiateMultipartUpload( InitiateMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.initiateMultipartUpload(request);
   }
 
-  public UploadPartResponseType UploadPart(UploadPartType request) throws EucalyptusCloudException {
+  @Override
+  public UploadPartResponseType UploadPart( UploadPartType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.uploadPart(request);
   }
 
-  public CompleteMultipartUploadResponseType CompleteMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+  @Override
+  public CompleteMultipartUploadResponseType CompleteMultipartUpload( CompleteMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.completeMultipartUpload(request);
   }
 
-  public AbortMultipartUploadResponseType AbortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
+  @Override
+  public AbortMultipartUploadResponseType AbortMultipartUpload( AbortMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
     return walrusManager.abortMultipartUpload(request);
   }

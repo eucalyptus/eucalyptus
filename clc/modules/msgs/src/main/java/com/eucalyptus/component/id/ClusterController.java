@@ -91,11 +91,6 @@ public class ClusterController extends ComponentId {
     return 8774;
   }
   
-  @Override
-  public String getLocalEndpointName( ) {
-    return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
-  }
-  
   private static ChannelPipelineFactory clusterPipeline;
   
   @Override
@@ -133,11 +128,6 @@ public class ClusterController extends ComponentId {
     @Override
     public Integer getPort( ) {
       return 8774;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ), this.getPort( ) ).toASCIIString( );
     }
     
     @Override

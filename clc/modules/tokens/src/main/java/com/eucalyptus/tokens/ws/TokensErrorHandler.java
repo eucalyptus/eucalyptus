@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@ package com.eucalyptus.tokens.ws;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MessagingException;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.tokens.TokensErrorResponseType;
 import com.eucalyptus.tokens.TokensErrorType;
 import com.eucalyptus.binding.BindingManager;
@@ -31,23 +31,25 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.tokens.TokensException;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
+@SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+@ComponentNamed
 public class TokensErrorHandler {
   private static final Logger LOG = Logger.getLogger( TokensErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";
 
-  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-  public void handle( final ExceptionMessage exMsg ) {
-    EventRecord.here( TokensErrorHandler.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug();
-    LOG.trace( "Caught exception while servicing: " + exMsg.getPayload( ) );
-    final Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
+  public void handle( final MessagingException exception ) {
+    final Object payloadObject = exception.getFailedMessage( ).getPayload( );
+    final EucalyptusCloudException cloudException = Exceptions.findCause( exception, EucalyptusCloudException.class );
+    EventRecord.here( TokensErrorHandler.class, EventType.MSG_REPLY, payloadObject.getClass( ).getSimpleName( ) ).debug( );
+    LOG.trace( "Caught exception while servicing: " + payloadObject );
+    if ( cloudException != null ) {
       try {
-        final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
+        final BaseMessage payload = parsePayload( payloadObject );
         final TokensErrorResponseType errorResp = new TokensErrorResponseType( );
         final HttpResponseStatus status;
         final String code;

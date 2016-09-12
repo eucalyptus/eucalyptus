@@ -63,6 +63,7 @@
 package com.eucalyptus.compute.conversion;
 
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.backend.CancelExportTaskResponseType;
 import com.eucalyptus.compute.common.backend.CancelExportTaskType;
 import com.eucalyptus.compute.common.backend.CreateInstanceExportTaskResponseType;
@@ -74,6 +75,7 @@ import com.eucalyptus.compute.common.backend.DescribeExportTasksType;
  * @todo doc
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+@ComponentNamed("computeExportManager")
 public class ExportManager {
 
   public CancelExportTaskResponseType cancelExportTask( CancelExportTaskType request ) {

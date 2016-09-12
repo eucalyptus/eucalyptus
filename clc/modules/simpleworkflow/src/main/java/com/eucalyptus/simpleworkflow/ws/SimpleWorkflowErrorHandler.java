@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 package com.eucalyptus.simpleworkflow.ws;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowErrorResponse;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
@@ -28,6 +29,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
+@ComponentNamed
 public class SimpleWorkflowErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( SimpleWorkflowErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";

@@ -34,8 +34,6 @@ public class Sensors {
     private static final Logger LOG = Logger.getLogger(Sensors.class);
     private static final String COMPONENT_NAME_PREFIX = "euca.components";
     private static final String CONTEXT_SENSOR_NAME = COMPONENT_NAME_PREFIX + ".message_contexts";
-    private static final String MULE_APP_TOTAL_SENSOR_NAME = "euca.mule.total";
-    private static final String MULE_SERVICES_SENSOR_NAME = "euca.mule.services";
     private static final String DB_POOL_SENSOR_NAME = "euca.db.connection_pools";
     private static final String MEMORY_NAME_PREFIX = "euca.jvm.memory";
     private static final String THREAD_SENSOR_NAME = "euca.jvm.threads.state";
@@ -171,31 +169,6 @@ public class Sensors {
             LOG.error("Failed to build service sensors", f);
             throw Exceptions.toUndeclared(f);
         }
-    }
-
-    /**
-     * Returns a single sensor the runs check on each local mule service and queue
-     * a system metric for that state.
-     *
-     * @return
-     */
-    public static List<SensorEntry> MuleSensors(final int pollingInterval, final long ttl) {
-        //Single sensor that outputs all component states
-        List<SensorEntry> sensors = Lists.newArrayList();
-        List<String> tags = Lists.newArrayList();
-        tags.add(pollingIntervalTag(pollingInterval));
-        try {
-            sensors.add(new SensorEntry(BaseStatsSensor.buildSensor(MULE_APP_TOTAL_SENSOR_NAME,
-                    "Application total messaging statistics for Mule message bus",
-                    tags,
-                    ttl,
-                    MuleSensor.TOTAL),
-                    pollingInterval));
-        } catch (Exception e) {
-            LOG.error("Error loading db pool sensor.");
-            throw Exceptions.toUndeclared(e);
-        }
-        return sensors;
     }
 
     /**

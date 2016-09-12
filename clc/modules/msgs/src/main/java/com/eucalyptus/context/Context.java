@@ -72,7 +72,6 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.server.MessageStatistics;
 import edu.ucsb.eucalyptus.msgs.EvaluatedIamConditionKey;
-import java.lang.ref.WeakReference;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -86,7 +85,6 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.mule.api.MuleEvent;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
@@ -104,13 +102,12 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
   private static Logger                LOG       = Logger.getLogger( Context.class );
-  private String                 correlationId;
+  private String                       correlationId;
   private Long                         creationTime;
   private BaseMessage                  request   = null;
   private final MappingHttpRequest     httpRequest;
   private final Channel                channel;
   private final boolean                channelManaged;
-  private WeakReference<MuleEvent>     muleEvent = new WeakReference<>( null );
   private UserPrincipal                user      = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
@@ -258,22 +255,6 @@ public class Context {
     };
   }
   
-  void setMuleEvent( MuleEvent event ) {
-    if ( event != null && this.muleEvent.get( ) == null ) {
-//      LOG.debug( EventType.CONTEXT_EVENT + " associated event context found for " + this.correlationId + " other corrId: " + event.getId( ) );
-      this.muleEvent = new WeakReference<MuleEvent>( event );
-    }
-  }
-  
-  public String getServiceName( ) {
-    MuleEvent e;
-    if ( ( e = this.muleEvent.get( ) ) != null ) {
-      return e.getFlowConstruct( ).getName( );
-    } else {
-      return this.httpRequest.getServicePath( ).replaceAll( "/services/", "" ).replaceAll( "[/?].+", "" );
-    }
-  }
-
   @Nullable
   public Subject getSubject( ) {
     return check( this.subject );
@@ -286,10 +267,6 @@ public class Context {
   }
   
   void clear( ) {
-    if ( this.muleEvent != null ) {
-      this.muleEvent.clear( );
-      this.muleEvent = null;
-    }
     if ( this.channelManaged ) {
       this.channel.close( );
     }

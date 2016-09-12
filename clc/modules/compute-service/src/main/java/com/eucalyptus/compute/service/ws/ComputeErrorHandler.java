@@ -20,6 +20,7 @@
 package com.eucalyptus.compute.service.ws;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ErrorDetail;
 import com.eucalyptus.compute.common.ErrorResponse;
 import com.eucalyptus.ws.Role;
@@ -29,6 +30,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
+@ComponentNamed
 public class ComputeErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( ComputeErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";

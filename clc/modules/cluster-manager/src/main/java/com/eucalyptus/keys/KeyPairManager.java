@@ -74,6 +74,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.internal.util.DuplicateMetadataException;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
@@ -105,6 +106,7 @@ import com.eucalyptus.compute.common.backend.DeleteKeyPairType;
 import com.eucalyptus.compute.common.backend.ImportKeyPairResponseType;
 import com.eucalyptus.compute.common.backend.ImportKeyPairType;
 
+@ComponentNamed("computeKeyPairManager")
 public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
   

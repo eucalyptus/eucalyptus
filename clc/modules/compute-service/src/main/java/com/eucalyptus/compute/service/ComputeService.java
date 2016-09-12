@@ -38,9 +38,6 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
-import org.mule.api.MuleEventContext;
-import org.mule.api.lifecycle.Callable;
-import org.mule.component.ComponentException;
 
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -105,7 +102,6 @@ import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -152,7 +148,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
  */
 @SuppressWarnings( "UnusedDeclaration" )
 @ComponentNamed
-public class ComputeService implements Callable {
+public class ComputeService {
   private static Logger LOG = Logger.getLogger( ComputeService.class );
 
   private final DhcpOptionSets dhcpOptionSets;
@@ -1324,15 +1320,7 @@ public class ComputeService implements Callable {
     return request.getReply( );
   }
 
-  @Override
-  public ComputeMessage onCall( final MuleEventContext muleEventContext ) throws EucalyptusCloudException {
-    final ComputeMessage request = (ComputeMessage) muleEventContext.getMessage( ).getPayload( );
-    return proxy( request );
-  }
-
-  private ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
-    LOG.debug(request.toSimpleString());
-
+  public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {
       BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
@@ -1340,7 +1328,6 @@ public class ComputeService implements Callable {
       final ComputeMessage response =
           (ComputeMessage) BaseMessages.deepCopy( backendResponse, request.getReply( ).getClass( ) );
       response.setCorrelationId( request.getCorrelationId() );
-      LOG.debug(response.toSimpleString());
       return response;
     } catch ( Exception e ) {
       handleServiceException( e );
@@ -1685,12 +1672,6 @@ public class ComputeService implements Callable {
       return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), request );
     } catch ( final NoSuchElementException e ) {
       throw new ComputeServiceUnavailableException( "Service Unavailable" );
-    } catch ( final ServiceDispatchException e ) {
-      final ComponentException componentException = Exceptions.findCause( e, ComponentException.class );
-      if ( componentException != null && componentException.getCause( ) instanceof Exception ) {
-        throw (Exception) componentException.getCause( );
-      }
-      throw e;
     } catch ( final FailedRequestException e ) {
       if ( request.getReply( ).getClass( ).isInstance( e.getRequest( ) ) ) {
         return e.getRequest( );

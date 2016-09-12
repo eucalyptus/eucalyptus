@@ -62,35 +62,26 @@
 
 package com.eucalyptus.context;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.apache.log4j.Logger;
-import org.mule.DefaultMuleEvent;
-import org.mule.RequestContext;
-import org.mule.api.MuleContext;
-import org.mule.api.MuleEvent;
-import org.mule.api.MuleException;
-import org.mule.api.MuleMessage;
-import org.mule.api.MuleSession;
-import org.mule.api.construct.FlowConstruct;
-import org.mule.api.endpoint.OutboundEndpoint;
-import org.mule.api.transport.Connector;
-import org.mule.api.transport.ConnectorException;
-import org.mule.api.transport.DispatchException;
-import org.mule.api.transport.MessageDispatcher;
-import org.mule.config.i18n.MessageFactory;
-import org.mule.config.spring.SpringXmlConfigurationBuilder;
-import org.mule.module.client.MuleClient;
-import org.mule.session.DefaultMuleSession;
-import org.mule.transport.vm.VMConnector;
-import org.mule.transport.vm.VMMessageDispatcherFactory;
+import org.springframework.integration.core.MessagingTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.MessagingException;
+import org.springframework.messaging.core.BeanFactoryMessageChannelDestinationResolver;
+import org.springframework.messaging.support.ErrorMessage;
+import org.springframework.messaging.support.GenericMessage;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -98,25 +89,31 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @ConfigurableClass( root = "bootstrap.servicebus", description = "Parameters having to do with the service bus." )
 public class ServiceContext {
-  static Logger                                LOG                      = Logger.getLogger( ServiceContext.class );
-  private static SpringXmlConfigurationBuilder builder;
+  private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
+  private static LinkedBlockingQueue<Pair<Long,CompletableFuture<?>>> FUTURE_QUEUE = new LinkedBlockingQueue<>( );
   @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public static Integer                        MAX_OUTSTANDING_MESSAGES = 256;
+  public volatile static Integer               MAX_OUTSTANDING_MESSAGES = 256;
   @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public static Integer                        WORKERS_PER_STAGE        = 16;                                      //TODO:GRZE: finish this thought later.
+  public volatile static Integer               WORKERS_PER_STAGE        = 16;                                      //TODO:GRZE: finish this thought later.
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
-  public static Integer                        HUP                      = 0;
+  public volatile static Integer               HUP                      = 0;
   @ConfigurableField( initial = "64", description = "Internal connector core pool size." )
-  public static Integer                        MIN_SCHEDULER_CORE_SIZE  = 64;
+  public volatile static Integer               MIN_SCHEDULER_CORE_SIZE  = 64;
+  @ConfigurableField( initial = "256", description = "Message dispatch default pool size." )
+  public volatile static Integer               DISPATCH_POOL_SIZE  = 256;
   @ConfigurableField( initial = "60", description = "Message context timeout (seconds)" )
-  public static Integer                        CONTEXT_TIMEOUT  = 60;
+  public volatile static Integer               CONTEXT_TIMEOUT  = 60;
 
   public static class HupListener implements PropertyChangeListener {
     @Override
@@ -126,130 +123,170 @@ public class ServiceContext {
       }
     }
   }
-  
-  private static final VMMessageDispatcherFactory  dispatcherFactory = new VMMessageDispatcherFactory( );
-  private static final AtomicReference<MuleClient> client            = new AtomicReference<MuleClient>( null );
-  private static final BootstrapException          failEx            = new BootstrapException(
-                                                                                                    "Attempt to use esb client before the service bus has been started." );
-  
-  public static void dispatch( String dest, Object msg ) throws Exception {
-    dest = ServiceContextManager.mapServiceToEndpoint( dest );
-    MuleContext muleCtx;
-    try {
-      muleCtx = ServiceContextManager.getContext( );
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service context reference: "
-                                          + ex.getMessage( ), ex );
-    }
-    OutboundEndpoint endpoint;
-    try {
-      endpoint = muleCtx.getEndpointFactory( ).getOutboundEndpoint( dest );
-      perhapsConfigureConnector( endpoint.getConnector( ) );
-    } catch ( MuleException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service endpoint reference: "
-                                          + ex.getMessage( ), ex );
-    }
-    MuleSession muleSession = new DefaultMuleSession( );
-    final Context ctx;
-    if( msg instanceof BaseMessage) {
-      msg = ((BaseMessage) msg).lookupAndSetCorrelationId();
-      ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
-    }else
-      ctx = null;
-    
-    MessageDispatcher dispatcher = null;
-    try {
-      dispatcher = dispatcherFactory.create( endpoint );
-      dispatcher.initialise( );
-      dispatcher.start( );
-      MuleMessage muleMsg = dispatcher.createMuleMessage( msg );
-      MuleEvent muleEvent = new DefaultMuleEvent( muleMsg, endpoint.getExchangePattern(), (FlowConstruct) null, muleSession );
-      dispatcher.process( muleEvent );
-    } catch ( DispatchException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Error while dispatching message (" + msg + ") to " + dest + " caused by: " + ex.getMessage( ), ex );
-    } catch ( MuleException ex ) {
-      LOG.error( ex, ex );
-      throw new ServiceDispatchException( "Failed to dispatch message to " + dest + " caused by failure to obtain service dispatcher reference: "
-                                          + ex.getMessage( ), ex );
-    } finally {
-      if ( dispatcher != null ) dispatcher.dispose( );
-    }
-    if ( ctx != null ) {
-      Threads.enqueue( Empyrean.class, ServiceContext.class, 8, new Callable<Boolean>( ) {
-        private final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
-        private final String contextCorrelationId = ctx.getCorrelationId( );
 
-        @Override
-        public Boolean call( ) {
-          try {
-            long sleepTime = clearContextTime - System.currentTimeMillis( );
-            if ( sleepTime > 1 ) {
-              Thread.sleep( sleepTime );
+  public static class ServiceContextFutureTimeoutEventListener implements EventListener<ClockTick> {
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new ServiceContextFutureTimeoutEventListener( ) );
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      try {
+        final long timeout = TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT * 2 );
+        final long now = System.currentTimeMillis( );
+        while ( true ) {
+          final Pair<Long,CompletableFuture<?>> futurePair = FUTURE_QUEUE.peek( );
+          boolean timedOut = false;
+          if ( futurePair != null &&
+              ( futurePair.getRight( ).isDone( ) || ( timedOut = futurePair.getLeft( ) + timeout < now ) ) ) {
+            FUTURE_QUEUE.remove( );
+            if ( timedOut ) {
+              futurePair.getRight( ).cancel( true );
             }
-            Contexts.clear( contextCorrelationId );
-          } catch ( InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
+          } else {
+            break;
           }
-          return true;
         }
-      } );
-    }
-  }
-  
-  public static <T> T send( ComponentId dest, Object msg ) throws Exception {
-    return send( dest.getLocalEndpointName( ), msg );
-  }
-  
-  public static <T> T send( String dest, Object msg ) throws Exception {
-    dest = ServiceContextManager.mapEndpointToService( dest );
-    MuleEvent context = RequestContext.getEvent( );
-    Context ctx = null;
-    if ( msg instanceof BaseMessage ) {
-     msg = ((BaseMessage) msg).lookupAndSetCorrelationId();
-      ctx = Contexts.createWrapped( dest, ( BaseMessage ) msg );
-    }
-    try {
-      MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, msg, null );
-      
-      if ( reply.getExceptionPayload( ) != null ) {
-        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getException( ).getMessage( ),
-                                                                    reply.getExceptionPayload( ).getException( ) ) );
-      } else {
-        return ( T ) reply.getPayload( );
+      } catch ( Exception e ) {
+        LOG.error( e, e );
       }
-    } catch ( Exception e ) {
-      throw Exceptions.trace( new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) + " to service " + dest
-                                                                  + " because: " + e.getMessage( ), e ) );
-    } finally {
+    }
+  }
+
+  public static <M> void dispatch( ComponentId dest, M msg ) throws Exception {
+    dispatch( getExecutor( dest ), dest.getChannelName( ), msg );
+  }
+
+  public static <M> void dispatch( String dest, M msg ) throws Exception {
+    dispatch( getExecutor( ), dest, msg );
+  }
+
+  public static <M> void dispatch( Executor executor, String dest, M msg ) throws Exception {
+    final CompletableFuture<?> errorFuture = new CompletableFuture<>( );
+    executor.execute( runWithContext( dest, msg, ctx -> {
+      try {
+        final MessagingTemplate template = getMessagingTemplate( );
+        final MessageChannel channel = template.getDestinationResolver().resolveDestination( dest );
+        errorFuture.complete( null );
+        final GenericMessage<M> message = new GenericMessage<>( msg );
+        template.send( channel, message );
+      } catch ( MessagingException e ) {
+        if ( errorFuture.isDone( ) ) {
+          final MessagingTemplate template = getMessagingTemplate( );
+          final Object errorChannelObject = e.getFailedMessage( ) != null ?
+              e.getFailedMessage( ).getHeaders( ).get( MessageHeaders.ERROR_CHANNEL ) : null;
+          if ( errorChannelObject instanceof MessageChannel ) {
+            template.send( (MessageChannel) errorChannelObject, new ErrorMessage( e ) );
+          } else {
+            template.send( Objects.toString( errorChannelObject, "error-reply-queue" ), new ErrorMessage( e ) );
+          }
+        } else {
+          final String msgType = msg.getClass( ).getSimpleName( );
+          final Throwable throwable = Exceptions.trace( new ServiceDispatchException(
+              "Failed to dispatch message " + msgType + " to service " + dest + " because: " + e.getMessage( ), e ) );
+          errorFuture.completeExceptionally( throwable );
+        }
+      }
       if ( ctx != null ) {
+        Threads.enqueue( Empyrean.class, ServiceContext.class, 8, new Callable<Boolean>( ) {
+          private final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( CONTEXT_TIMEOUT );
+          private final String contextCorrelationId = ctx.getCorrelationId( );
+
+          @Override
+          public Boolean call( ) {
+            try {
+              long sleepTime = clearContextTime - System.currentTimeMillis( );
+              if ( sleepTime > 1 ) {
+                Thread.sleep( sleepTime );
+              }
+              Contexts.clear( contextCorrelationId );
+            } catch ( InterruptedException ex ) {
+              Thread.currentThread( ).interrupt( );
+            }
+            return true;
+          }
+        } );
+      }
+    } ) );
+    try {
+      errorFuture.get( );
+    } catch ( ExecutionException e ) {
+      throw Exceptions.toException( e.getCause( ) );
+    }
+  }
+
+  public static <T> CompletableFuture<T> send( final ComponentId dest, final BaseMessage msg ) {
+    return send( getExecutor( dest ), dest.getChannelName( ), msg );
+  }
+
+  public static <M,T> CompletableFuture<T> send(
+      final String dest,
+      final M msg
+  ) {
+    return send( getExecutor( ), dest, msg );
+  }
+
+  public static <M,T> CompletableFuture<T> send(
+      final Executor executor,
+      final String dest,
+      final M msg
+  ) {
+    final CompletableFuture<T> completableFuture = future( );
+    executor.execute( runWithContext( dest, msg, ctx -> {
+      try {
+        final MessagingTemplate template = getMessagingTemplate( );
+        @SuppressWarnings( "unchecked" )
+        final Message<T> response = (Message<T>) template.sendAndReceive( dest, new GenericMessage<>( msg ) );
+        completableFuture.complete( response==null?null:response.getPayload( ) );
+      } catch ( Exception e ) {
+        completableFuture.completeExceptionally( Exceptions.trace(
+            new ServiceDispatchException( "Failed to send message " + msg.getClass( ).getSimpleName( ) +
+                " to service " + dest + " because: " + e.getMessage( ), e ) ) );
+      }
+    } ) );
+    return completableFuture;
+  }
+
+  private static <T> CompletableFuture<T> future( ) {
+    final CompletableFuture<T> future = new CompletableFuture<>( );
+    FUTURE_QUEUE.offer( Pair.pair( System.currentTimeMillis( ), future ) );
+    return future;
+  }
+
+  private static MessagingTemplate getMessagingTemplate( ) {
+    final MessagingTemplate template = new MessagingTemplate( );
+    template.setDestinationResolver( new BeanFactoryMessageChannelDestinationResolver( ServiceContextManager.getContext( ) ) );
+    return template;
+  }
+
+  private static <M> Runnable runWithContext( final String dest, final M msg, final Consumer<Context> runnable ) {
+    return () -> {
+      Context ctx = null;
+      if ( msg instanceof BaseMessage ) {
+        BaseMessage baseMessage = (BaseMessage) msg;
+        baseMessage.lookupAndSetCorrelationId( );
+        ctx = Contexts.createWrapped( dest, baseMessage );
+        try {
+          Contexts.threadLocal( ctx == null ? Contexts.lookup( baseMessage.getCorrelationId( ) ) : ctx );
+        } catch ( NoSuchContextException e ) {
+          // no contextual context
+        }
+      }
+      try {
+        runnable.accept( ctx );
+      } finally {
+        Contexts.threadLocal( null );
         Contexts.clear( ctx );
       }
-      RequestContext.setEvent( context );
-    }
+    };
   }
-  
-  private static void perhapsConfigureConnector( final Connector connector ) throws MuleException {
-    if ( !connector.isStarted( ) ) try {
-      connector.start( );
-    } catch ( IllegalArgumentException e ) {
-      if ( !connector.isStarted( ) ) {
-        throw new ConnectorException( MessageFactory.createStaticMessage( "Error starting connector" ), connector,  e );  
-      }
-    }
-    
-    if ( connector instanceof VMConnector ) {
-      final VMConnector vmConnector = (VMConnector) connector;
-      final ScheduledExecutorService scheduledExecutorService = vmConnector.getScheduler();
-      if ( scheduledExecutorService instanceof ScheduledThreadPoolExecutor ) {
-        final ScheduledThreadPoolExecutor threadPoolExecutor = 
-            (ScheduledThreadPoolExecutor) scheduledExecutorService;  
-        if ( threadPoolExecutor.getCorePoolSize( ) < MIN_SCHEDULER_CORE_SIZE  ) {
-          threadPoolExecutor.setCorePoolSize( MIN_SCHEDULER_CORE_SIZE );   
-        }
-      }
-    }
+
+  private static Executor getExecutor( ComponentId componentId ) {
+    return Threads.lookup( componentId.getClass( ), ServiceContext.class ).limitTo( MIN_SCHEDULER_CORE_SIZE ).getExecutorService( );
+  }
+
+  private static Executor getExecutor( ) {
+    return Threads.lookup( Empyrean.class, ServiceContext.class, "dispatch" ).limitTo( DISPATCH_POOL_SIZE ).getExecutorService( );
   }
 }

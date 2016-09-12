@@ -47,7 +47,6 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.mule.component.ComponentException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
@@ -1244,26 +1243,10 @@ public class ActivityManager {
         logger.debug( "Activity error", throwable );
       }
 
-      final String message;
-      final FailedRequestException failedRequestException = Exceptions.findCause( throwable, FailedRequestException.class );
-      final EucalyptusRemoteFault remoteFault = Exceptions.findCause( throwable, EucalyptusRemoteFault.class );
-      final EucalyptusCloudException cloudException = Exceptions.findCause( throwable, EucalyptusCloudException.class );
-      final ComponentException componentException = Exceptions.findCause( throwable, ComponentException.class );
-      if ( failedRequestException != null ) {
-        message = failedRequestException.getRequest( ).toSimpleString( ); // request here means response ...
-      } else if ( remoteFault != null ) {
-        final String code = remoteFault.getFaultCode( );
-        final String detail = remoteFault.getFaultDetail( );
-        message = "Service error (" + code + "): " + detail;
-      } else if ( cloudException != null ) {
-        message = cloudException.getMessage( );
-      } else if ( componentException != null && componentException.getCause( ) != null ) {
-        message = componentException.getCause( ).getMessage( );
-      } else {
-        message = throwable.getMessage( );
-      }
-
-      setActivityFinalStatus( ActivityStatusCode.Failed, message, null );
+      setActivityFinalStatus(
+          ActivityStatusCode.Failed,
+          AsyncExceptions.asWebServiceErrorMessage( throwable, throwable.getMessage( ) ),
+          null );
       return false;
     }
 

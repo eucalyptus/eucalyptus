@@ -75,11 +75,6 @@ import com.eucalyptus.component.annotation.PublicService;
 public class Dns extends ComponentId {
   
   @Override
-  public String getLocalEndpointName( ) {
-    return "vm://DNSControlInternal";
-  }
-  
-  @Override
   public boolean isDistributedService( ) {
     return true;
   }

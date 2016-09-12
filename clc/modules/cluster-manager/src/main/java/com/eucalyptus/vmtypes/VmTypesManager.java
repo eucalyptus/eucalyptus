@@ -64,6 +64,7 @@
 package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
@@ -92,6 +93,7 @@ import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
+@ComponentNamed("computeVmTypesManager")
 public class VmTypesManager {
   enum VmAvailabilityToZoneStatus implements Function<VmTypeAvailability, VmTypeZoneStatus> {
     INSTANCE;

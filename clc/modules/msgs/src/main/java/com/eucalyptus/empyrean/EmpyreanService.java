@@ -77,6 +77,7 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 import com.eucalyptus.component.ServiceOrderings;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.groups.ServiceGroups;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -111,6 +112,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 
+@ComponentNamed
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
   
@@ -222,7 +224,7 @@ public class EmpyreanService {
     }
   }
   
-  public static ServiceConfiguration findService( final String name ) {
+  private static ServiceConfiguration findService( final String name ) {
     checkParam( name, notNullValue() );
     Predicate<ServiceConfiguration> nameOrFullName = new Predicate<ServiceConfiguration>( ) {
       

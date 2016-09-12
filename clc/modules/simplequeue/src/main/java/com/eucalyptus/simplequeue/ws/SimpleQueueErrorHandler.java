@@ -15,6 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.ws;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.simplequeue.SimpleQueueErrorResponse;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
@@ -22,8 +23,9 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 
 /**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ *
  */
+@ComponentNamed
 public class SimpleQueueErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( SimpleQueueErrorHandler.class );
   private static final String INTERNAL_FAILURE = "InternalFailure";

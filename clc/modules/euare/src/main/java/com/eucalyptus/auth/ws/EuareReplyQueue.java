@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,47 +66,27 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.api.MessagingException;
-import org.mule.api.MuleMessage;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
 import com.eucalyptus.auth.euare.ErrorResponseType;
 import com.eucalyptus.auth.euare.ErrorType;
 import com.eucalyptus.auth.euare.EuareException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
+@ComponentNamed
 public class EuareReplyQueue {
   private static Logger                                 LOG                   = Logger.getLogger( EuareReplyQueue.class );
-  
-  public static void handle( String service, MuleMessage responseMessage, BaseMessage request ) {
-    BaseMessage reply = null;
-    if ( responseMessage.getExceptionPayload( ) == null ) {
-      reply = ( BaseMessage ) responseMessage.getPayload( );
-    } else {
-      Throwable t = responseMessage.getExceptionPayload( ).getException( );
-      t = ( t.getCause() == null ) ? t : t.getCause( );
-      reply = new EucalyptusErrorMessageType( service, request, t.getMessage( ) );
-    }
-    String corrId = reply.getCorrelationId( );
-    EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, reply.getCorrelationId( ), reply.getClass( ).getSimpleName( ) ).debug( );    
-    try {
-      Context context = Contexts.lookup( corrId );
-      Channel channel = context.getChannel( );
-      Channels.write( channel, reply );
-      Contexts.clear(context);
-    } catch ( NoSuchContextException e ) {
-      LOG.trace( e, e );
-    }
-  }
-  
+
   public void handle( BaseMessage responseMessage ) {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
     LOG.debug( "HERE: " + responseMessage );
@@ -122,21 +102,19 @@ public class EuareReplyQueue {
     }
   }
 
-  public void handle( ExceptionMessage exMsg ) {
-    EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, exMsg.getPayload( ).getClass( ).getSimpleName( ) ).debug( );
-    Throwable exception = exMsg.getException( );
-    if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
+  public void handle( Throwable exception ) {
+    if ( exception instanceof MessagingException && Exceptions.isCausedBy( exception, EucalyptusCloudException.class ) ) {
       HttpResponseStatus status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
       String errorName = EuareException.INTERNAL_FAILURE;
-      if ( exception.getCause( ) instanceof EuareException ) {
-        EuareException euareException = ( EuareException ) exception.getCause( );
+      if ( Exceptions.isCausedBy( exception, EuareException.class ) ) {
+        EuareException euareException = Exceptions.findCause( exception, EuareException.class );
         status = euareException.getStatus( );
         errorName = euareException.getError( );
       }
       ErrorResponseType errorResp = new ErrorResponseType( );
       BaseMessage payload = null;
       try {
-        payload = parsePayload( exMsg.getPayload( ) );
+        payload = parsePayload( ((MessagingException)exception).getFailedMessage( ).getPayload( ) );
       } catch ( Exception e ) {
         LOG.error( "Failed to parse payload ", e );
       }
@@ -147,7 +125,7 @@ public class EuareReplyQueue {
         ErrorType error = new ErrorType( );
         error.setType( "Sender" );
         error.setCode( errorName );
-        error.setMessage( exception.getCause( ).getMessage( ) );
+        error.setMessage( Exceptions.findCause( exception, EucalyptusCloudException.class ).getMessage( ) );
         errorResp.getErrorList( ).add( error );
         this.handle( errorResp );
       }

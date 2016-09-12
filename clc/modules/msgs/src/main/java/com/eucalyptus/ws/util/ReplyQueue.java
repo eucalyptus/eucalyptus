@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,65 +64,54 @@ package com.eucalyptus.ws.util;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.mule.RequestContext;
-import org.mule.api.MessagingException;
-import org.mule.api.MuleException;
-import org.mule.message.ExceptionMessage;
+import org.springframework.messaging.MessagingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServicesException;
-import com.eucalyptus.ws.protocol.QueryBindingInfo;
 import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 
+@SuppressWarnings( "Guava" )
+@ComponentNamed
 public class ReplyQueue {
   private static Logger LOG = Logger.getLogger( ReplyQueue.class );
 
   /**
-   * A string is returned to keep mules chaining router happy. If void then
-   * when debug logging is enabled routing fails as message access of mules
-   * VoidMuleEvent throws UnsupportedOperationException and this is not
-   * handled within mule (see eucalyptus-model.xml for use of
-   * "chaining-router")
+   *
    */
   public String handle( BaseMessage responseMessage ) {
     Contexts.response( responseMessage );
-    return "";
+    return null;
   }
   
-  public void handle( ExceptionMessage exMsg ) {
-    Throwable cause = exMsg.getException( );
-
-    if ( cause instanceof MessagingException ) {
-      MessagingException messagingEx = ( ( MessagingException ) cause );
-      cause = messagingEx.getCause( );
-      Object payload = exMsg.getPayload( );
-      BaseMessage msg = convert( payload );
-      if( msg != null ) {
-        if ( cause instanceof EucalyptusWebServiceException ) {
-          final Optional<Integer> statusCodeOptional = ErrorHandlerSupport.getHttpResponseStatus( cause );
-          final HttpResponseStatus status = !statusCodeOptional.isPresent( ) ?
-              HttpResponseStatus.INTERNAL_SERVER_ERROR :
-              new HttpResponseStatus( statusCodeOptional.get(), "" );
-          Contexts.response( new ExceptionResponseType( msg, ((EucalyptusWebServiceException) cause).getCode( ), cause.getMessage( ), status, cause )  );
-        } else {
-          Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
-        }
+  public void handle( final MessagingException messagingEx ) {
+    final EucalyptusWebServiceException webServiceException =
+        Exceptions.findCause( messagingEx, EucalyptusWebServiceException.class );
+    Object payload = messagingEx.getFailedMessage( ).getPayload( );
+    BaseMessage msg = convert( payload );
+    if( msg != null ) {
+      if ( webServiceException != null ) {
+        final Optional<Integer> statusCodeOptional = ErrorHandlerSupport.getHttpResponseStatus( webServiceException );
+        final HttpResponseStatus status = !statusCodeOptional.isPresent( ) ?
+            HttpResponseStatus.INTERNAL_SERVER_ERROR :
+            new HttpResponseStatus( statusCodeOptional.get(), "" );
+        Contexts.response( new ExceptionResponseType( msg, webServiceException.getCode( ), webServiceException.getMessage( ), status, webServiceException )  );
       } else {
-        LOG.error( "Failed to identify request context for received error: " + exMsg.toString( ) );
-        cause = new WebServicesException( "Failed to identify request context for received error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
-        Contexts.responseError( cause );
+        final Throwable cause = messagingEx.getCause( );
+        Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
       }
-    } else if ( cause instanceof MuleException ) {
-      LOG.error( "Error service request: " + cause.getMessage( ), cause );
-      cause = new WebServicesException( cause.getMessage( ), cause, HttpResponseStatus.NOT_FOUND );
-      Contexts.responseError( cause );
     } else {
-      Contexts.responseError( cause );
+      LOG.error( "Failed to identify request context for received error: " + messagingEx.toString( ) );
+      final Throwable cause = messagingEx.getCause( );
+      Contexts.responseError( new WebServicesException(
+          "Failed to identify request context for received error: " + messagingEx.toString( ) + " while handling error: " + cause.getMessage( ),
+          cause,
+          HttpResponseStatus.NOT_ACCEPTABLE ) );
     }
   }
 
@@ -133,23 +122,10 @@ public class ReplyQueue {
     } else if ( payload instanceof HasRequest ) {
       ret = ( ( HasRequest ) payload ).getRequest( );
     } else if ( payload instanceof String ) {
-      try {
+      if ( !( (String) payload ).isEmpty( ) ) try {
         ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
       } catch ( Exception ex ) {
         LOG.error( ex , ex );
-      }
-    } else {
-      payload = RequestContext.getEvent( ).getMessage( ).getPayload( );
-      if ( payload instanceof BaseMessage ) {
-        ret = ( BaseMessage ) payload;
-//      } else if ( payload instanceof Allocation ) {
-//        ret = ( ( Allocation ) payload ).getRequest( );
-      } else if ( payload instanceof String ) {
-        try {
-          ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
-        }
       }
     }
     return ret;

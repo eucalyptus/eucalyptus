@@ -62,6 +62,7 @@
 
 package com.eucalyptus.notifications;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.notifications.AddPermissionResponseType;
 import com.eucalyptus.notifications.AddPermissionType;
 import com.eucalyptus.notifications.ConfirmSubscriptionResponseType;
@@ -90,6 +91,7 @@ import com.eucalyptus.notifications.UnsubscribeResponseType;
 import com.eucalyptus.notifications.UnsubscribeType;
 
 
+@ComponentNamed
 public class NotificationsService {
   public ConfirmSubscriptionResponseType confirmSubscription(ConfirmSubscriptionType request) {
     ConfirmSubscriptionResponseType reply = request.getReply( );

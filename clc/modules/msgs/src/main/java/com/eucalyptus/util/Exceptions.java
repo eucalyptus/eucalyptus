@@ -265,6 +265,17 @@ public class Exceptions {
     return toUndeclared( cause.getMessage( ), cause );
   }
 
+  public static Exception toException( String message, Throwable cause ) {
+    if ( cause instanceof Exception ) {
+      return (Exception) cause;
+    }
+    return toUndeclared( message, cause );
+  }
+
+  public static Exception toException( Throwable cause ) {
+    return toException( cause.getMessage( ), cause );
+  }
+
   public static <T extends Throwable> RuntimeException rethrow(
       @Nonnull final RuntimeException e,
       @Nonnull final Class<T> cause

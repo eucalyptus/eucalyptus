@@ -77,6 +77,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.DeviceMapping;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
@@ -133,6 +134,7 @@ import com.eucalyptus.compute.common.backend.RegisterImageType;
 import com.eucalyptus.compute.common.backend.ResetImageAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetImageAttributeType;
 
+@ComponentNamed("computeImageManager")
 public class ImageManager {
   
   public static Logger        LOG = Logger.getLogger( ImageManager.class );
