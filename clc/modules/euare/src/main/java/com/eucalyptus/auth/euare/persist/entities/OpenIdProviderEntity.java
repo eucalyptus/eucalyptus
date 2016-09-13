@@ -62,12 +62,11 @@
 
 package com.eucalyptus.auth.euare.persist.entities;
 
-import static com.eucalyptus.upgrade.Upgrades.Version.*;
+import static org.hamcrest.CoreMatchers.*;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import javax.persistence.CascadeType;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -76,84 +75,139 @@ import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
-import org.apache.log4j.Logger;
-import com.eucalyptus.auth.util.Identifiers;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AuxiliaryDatabaseObject;
 import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
-import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Parameters;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
-import groovy.sql.Sql;
 
 /**
- * Database entity for a user.
+ *
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_openid_provider", indexes = {
-    @Index( name = "auth_openid_provider_url_idx", columnList = "auth_openid_provider_url" ),
-    @Index( name = "auth_openid_provider_owning_account_idx", columnList = "auth_openid_provider_owning_account" )
-} )
+@Table( name = "auth_openid_provider", indexes =
+    @Index(
+        name = "auth_openid_provider_account_url_idx",
+        columnList = "auth_openid_provider_owning_account, auth_openid_provider_url",
+        unique = true )
+)
+@AuxiliaryDatabaseObjects({
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_openid_provider_thumbprints " +
+            "drop constraint if exists fk_4sbcar6frb0561yxdk3nbr5j8, " +
+            "add constraint fk_4sbcar6frb0561yxdk3nbr5j8 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id) on delete cascade",
+        drop = "alter table ${schema}.auth_openid_provider_thumbprints " +
+            "drop constraint if exists fk_4sbcar6frb0561yxdk3nbr5j8, " +
+            "add constraint fk_4sbcar6frb0561yxdk3nbr5j8 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id)"
+    ),
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_openid_provider_client_ids " +
+            "drop constraint if exists fk_n61cf93ta40slfv6i8qg0x7r1, " +
+            "add constraint fk_n61cf93ta40slfv6i8qg0x7r1 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id) on delete cascade",
+        drop = "alter table ${schema}.auth_openid_provider_client_ids " +
+            "drop constraint if exists fk_n61cf93ta40slfv6i8qg0x7r1, " +
+            "add constraint fk_n61cf93ta40slfv6i8qg0x7r1 foreign key (openidproviderentity_id) " +
+            "REFERENCES ${schema}.auth_openid_provider(id)"
+    ),
+})
 public class OpenIdProviderEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
 
-  // User name
-  @Column( name = "auth_openid_provider_url" )
-  String url;
+  @Column( name = "auth_openid_provider_url", nullable = false, updatable = false )
+  private String url;
 
-  // List of client ids
+  @Column( name = "auth_openid_provider_host", nullable = false, updatable = false )
+  private String host;
+
+  @Column( name = "auth_openid_provider_port", nullable = false, updatable = false )
+  private Integer port;
+
+  @Column( name = "auth_openid_provider_path", nullable = false, updatable = false )
+  private String path;
+
   @ElementCollection( fetch = FetchType.EAGER )
-  @CollectionTable( name = "auth_openid_provider_client_ids" )
+  @CollectionTable(
+      name = "auth_openid_provider_client_ids",
+      joinColumns = @JoinColumn( name = "openidproviderentity_id", referencedColumnName = "id" ) )
   @Column( name = "auth_openid_provider_client_id" )
-  @JoinColumn( name = "auth_openid_provider_url" )
   @OrderColumn( name = "auth_openid_provider_index")
   private List<String> clientIDs = Lists.newArrayList();
 
-  // List of thumbprints
   @ElementCollection( fetch = FetchType.EAGER )
-  @CollectionTable( name = "auth_openid_provider_thumbprints" )
+  @CollectionTable(
+      name = "auth_openid_provider_thumbprints",
+      joinColumns = @JoinColumn( name = "openidproviderentity_id", referencedColumnName = "id" ) )
   @Column( name = "auth_openid_provider_thumbprint" )
-  @JoinColumn( name = "auth_openid_provider_url" )
   @OrderColumn( name = "auth_openid_provider_index")
   private List<String> thumbprints = Lists.newArrayList();
 
   @ManyToOne
-  @JoinColumn( name = "auth_openid_provider_owning_account", nullable = false )
+  @JoinColumn( name = "auth_openid_provider_owning_account", nullable = false, updatable = false )
   private AccountEntity account;
 
-  public OpenIdProviderEntity( ) {
-    this.clientIDs = new ArrayList( );
-    this.thumbprints = new ArrayList( );
+  @SuppressWarnings( "WeakerAccess" )
+  protected OpenIdProviderEntity( ) {
   }
 
-  public OpenIdProviderEntity( final String url ) {
+  @SuppressWarnings( "WeakerAccess" )
+  protected OpenIdProviderEntity( final AccountEntity account, final String host, final Integer port, final String path ) {
     this( );
-    this.url = url;
+    setAccount( account );
+    setUrl( host + path );
+    setHost( host );
+    setPort( port );
+    setPath( path );
   }
 
-  public static OpenIdProviderEntity newInstanceWithUrl( final String url ) {
-    OpenIdProviderEntity u = new OpenIdProviderEntity( );
-    u.url = url;
-    return u;
+  /**
+   * Create a new provider in the given account with the specified url.
+   *
+   * The host/path is used to construct the url for the provider. The url is
+   * the last component in the ARN for the provider.
+   *
+   * @param account The owning account
+   * @param host The host for the provider
+   * @param port The port for the provider
+   * @param path The path for the provider
+   * @return The new entity
+   */
+  public static OpenIdProviderEntity create(
+      @Nonnull final AccountEntity account,
+      @Nonnull final String host,
+      @Nonnull final Integer port,
+      @Nonnull final String path
+  ) {
+    Parameters.checkParam( "account", account, notNullValue( ) );
+    Parameters.checkParam( "host", host, allOf( notNullValue(), not( containsString( ":" ) ) ) );
+    Parameters.checkParam( "port", port, notNullValue( ) );
+    Parameters.checkParam( "path", host, allOf( notNullValue(), not( containsString( ":" ) ) ) );
+    return new OpenIdProviderEntity( account, host, port, path );
   }
 
-  public static EntityRestriction<OpenIdProviderEntity> named(final String url){
+  public static EntityRestriction<OpenIdProviderEntity> named(
+      @Nonnull  final AccountEntity account,
+      @Nullable final String url
+  ){
     return Entities.restriction( OpenIdProviderEntity.class )
+        .equal( OpenIdProviderEntity_.account, account )
         .equalIfNonNull( OpenIdProviderEntity_.url, url )
         .build( );
   }
 
+  @SuppressWarnings( "RedundantIfStatement" )
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -167,11 +221,14 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
 
   @Override
   public String toString( ) {
-    StringBuilder sb = new StringBuilder( );
-    sb.append( "OpenIdProvider(" );
-    sb.append( "Url=" ).append( this.getUrl( ) ).append( ", " );
-    sb.append( ")" );
-    return sb.toString( );
+    return MoreObjects.toStringHelper( OpenIdProviderEntity.class )
+        .add( "url", getUrl( ) )
+        .add( "port", getPort( ) )
+        .toString( );
+  }
+
+  public String getEntityId( ) {
+    return super.getId( );
   }
 
   public String getUrl( ) {
@@ -180,6 +237,30 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
 
   public void setUrl( String url ) {
     this.url = url;
+  }
+
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost( final String host ) {
+    this.host = host;
+  }
+
+  public Integer getPort( ) {
+    return port;
+  }
+
+  public void setPort( final Integer port ) {
+    this.port = port;
+  }
+
+  public String getPath( ) {
+    return path;
+  }
+
+  public void setPath( final String path ) {
+    this.path = path;
   }
 
   public List<String> getClientIDs( ) {

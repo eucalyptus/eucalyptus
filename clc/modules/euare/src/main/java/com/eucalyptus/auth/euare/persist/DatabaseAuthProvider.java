@@ -70,13 +70,14 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
-import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
@@ -104,7 +105,6 @@ import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
-import com.eucalyptus.entities.Entities.EntityCriteriaSubqueryCallback;
 import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.base.Optional;
@@ -240,111 +240,75 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       if ( recursive ) {
         Entities.delete( PolicyEntity.class )
-            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
-                subquery
-                    .join( PolicyEntity_.group )
-                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-              }
-            } ).delete( );
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, subquery -> subquery
+                .join( PolicyEntity_.group )
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) ).delete( );
 
         Entities.delete( PolicyEntity.class )
-            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
-                subquery
-                    .join( PolicyEntity_.role )
-                    .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-              }
-            } ).delete( );
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, subquery -> subquery
+                .join( PolicyEntity_.role )
+                .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
 
         Entities.delete( AccessKeyEntity.class )
-            .whereIn( AccessKeyEntity_.id, AccessKeyEntity.class, AccessKeyEntity_.id, new EntityCriteriaSubqueryCallback<AccessKeyEntity, String>( ) {
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<AccessKeyEntity, String> subquery ) {
-                subquery
-                    .join( AccessKeyEntity_.user )
-                    .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
-                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-              }
-            } ).delete( );
+            .whereIn( AccessKeyEntity_.id, AccessKeyEntity.class, AccessKeyEntity_.id, subquery -> subquery
+                .join( AccessKeyEntity_.user )
+                .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
 
         Entities.delete( CertificateEntity.class )
-            .whereIn( CertificateEntity_.id, CertificateEntity.class, CertificateEntity_.id, new EntityCriteriaSubqueryCallback<CertificateEntity, String>( ) {
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<CertificateEntity, String> subquery ) {
-                subquery
-                    .join( CertificateEntity_.user )
-                    .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
-                    .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-              }
-            } ).delete( );
+            .whereIn( CertificateEntity_.id, CertificateEntity.class, CertificateEntity_.id, subquery -> subquery
+                .join( CertificateEntity_.user )
+                .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
 
         // This deletes the entries from the user/group join table first, meaning that no users
         // are then deleted as users can no longer be joined. We then delete all users that are
         // not in any group as any valid user is in at least the special user group (GroupEntity#userGroup)
         Entities.delete( UserEntity.class )
-            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, new EntityCriteriaSubqueryCallback<UserEntity, String>( ) {
-          @Override
-          public void restrict( final Entities.EntityCriteriaSubquery<UserEntity, String> subquery ) {
-            subquery
+            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, subquery -> subquery
                 .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, Boolean.TRUE )
-                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-          }
-        } ).delete( );
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
         Entities.delete( UserEntity.class )
-            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, new EntityCriteriaSubqueryCallback<UserEntity, String>( ) {
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<UserEntity, String> subquery ) {
-                subquery
-                    .joinLeft( UserEntity_.groups ).where( Entities.restriction( GroupEntity.class ).isNull( GroupEntity_.id ) );
-              }
-            } ).delete( );
+            .whereIn( UserEntity_.uniqueName, UserEntity.class, UserEntity_.uniqueName, subquery -> subquery
+                .joinLeft( UserEntity_.groups ).where( Entities.restriction( GroupEntity.class ).isNull( GroupEntity_.id ) ) )
+            .delete( );
 
         Entities.delete( ServerCertificateEntity.class )
-            .where(
-                Entities.restriction( ServerCertificateEntity.class )
-                    .equal( ServerCertificateEntity_.ownerAccountNumber, account.get( ).getAccountNumber( ) ).build( ) )
+            .whereEqual( ServerCertificateEntity_.ownerAccountNumber, account.get( ).getAccountNumber( ) )
             .delete( );
 
         Entities.delete( InstanceProfileEntity.class )
-            .whereIn( InstanceProfileEntity_.id, InstanceProfileEntity.class, InstanceProfileEntity_.id, new EntityCriteriaSubqueryCallback<InstanceProfileEntity, String>( ) {
-          @Override
-          public void restrict( final Entities.EntityCriteriaSubquery<InstanceProfileEntity, String> subquery ) {
-            subquery
-                .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-          }
-        } ).delete( );
+            .whereIn( InstanceProfileEntity_.id, InstanceProfileEntity.class, InstanceProfileEntity_.id, subquery -> subquery
+                .join( InstanceProfileEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
+
+        Entities.delete( OpenIdProviderEntity.class )
+            .whereIn( OpenIdProviderEntity_.id, OpenIdProviderEntity.class, OpenIdProviderEntity_.id, subquery -> subquery
+                .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
 
         // Delete roles and the assume role policies that they referenced
         Entities.delete( RoleEntity.class )
-            .whereIn( RoleEntity_.id, RoleEntity.class, RoleEntity_.id, new EntityCriteriaSubqueryCallback<RoleEntity,String>(){
-          @Override
-          public void restrict( final Entities.EntityCriteriaSubquery<RoleEntity, String> subquery ) {
-            subquery.join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-          }
-        } ).delete( );
+            .whereIn( RoleEntity_.id, RoleEntity.class, RoleEntity_.id, subquery -> subquery
+                .join( RoleEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
         Entities.delete( PolicyEntity.class )
-            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, new EntityCriteriaSubqueryCallback<PolicyEntity,String>(){
-              @Override
-              public void restrict( final Entities.EntityCriteriaSubquery<PolicyEntity, String> subquery ) {
-                subquery
-                    .where( Entities.restriction( PolicyEntity.class )
-                        .isNull( PolicyEntity_.role )
-                        .isNull( PolicyEntity_.group )
-                    )
-                    .joinLeft( PolicyEntity_.assumeRole ).where( Entities.restriction( RoleEntity.class ).isNull( RoleEntity_.id ) );;
-              }
-            } ).delete( );
+            .whereIn( PolicyEntity_.id, PolicyEntity.class, PolicyEntity_.id, subquery -> subquery
+                .where( Entities.restriction( PolicyEntity.class )
+                    .isNull( PolicyEntity_.role )
+                    .isNull( PolicyEntity_.group )
+                )
+                .joinLeft( PolicyEntity_.assumeRole ).where( Entities.restriction( RoleEntity.class ).isNull( RoleEntity_.id ) ) )
+            .delete( );
 
         Entities.delete( GroupEntity.class )
-            .whereIn( GroupEntity_.id, GroupEntity.class, GroupEntity_.id, new EntityCriteriaSubqueryCallback<GroupEntity,String>(){
-          @Override
-          public void restrict( final Entities.EntityCriteriaSubquery<GroupEntity, String> subquery ) {
-            subquery.join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName );
-          }
-        } ).delete( );
+            .whereIn( GroupEntity_.id, GroupEntity.class, GroupEntity_.id, subquery -> subquery
+                .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
       }
       Entities.delete( account.get( ) );
       db.commit( );

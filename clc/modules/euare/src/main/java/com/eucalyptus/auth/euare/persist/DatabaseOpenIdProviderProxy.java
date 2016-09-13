@@ -19,32 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
-import com.eucalyptus.auth.euare.checker.InvalidValueException;
-import com.eucalyptus.auth.euare.checker.ValueChecker;
-import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 /**
@@ -57,27 +47,21 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   private static Logger LOG = Logger.getLogger( DatabaseOpenIdProviderProxy.class );
 
   private OpenIdProviderEntity delegate;
-  private transient Supplier<String> accountNumberSupplier =
-      DatabaseAuthUtils.getAccountNumberSupplier( this );
 
-  public DatabaseOpenIdProviderProxy( OpenIdProviderEntity delegate ) {
+  @SuppressWarnings( "WeakerAccess" )
+  public DatabaseOpenIdProviderProxy( final OpenIdProviderEntity delegate ) {
     this.delegate = delegate;
   }
 
   @Override
-  public String getName() {
-    return this.delegate.getUrl();
-  }
-
-  @Override
-  public String getDisplayName() {
-    return this.delegate.getUrl();
+  public String getDisplayName( ) {
+    return this.delegate.getUrl( );
   }
 
   @Override
   public OwnerFullName getOwner() {
     try {
-      return AccountFullName.getInstance( getAccount().getAccountNumber() );
+      return AccountFullName.getInstance( getAccount( ).getAccountNumber( ) );
     } catch ( AuthException e ) {
       throw Exceptions.toUndeclared( e );
     }
@@ -87,13 +71,8 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {
-      DatabaseAuthUtils.invokeUnique( OpenIdProviderEntity.class, OpenIdProviderEntity_.url, this.delegate.getUrl(), new Tx<OpenIdProviderEntity>( ) {
-        @Override
-        public void fire( OpenIdProviderEntity t ) {
-          sb.append( t.toString( ) );
-        }
-      } );
-    } catch ( ExecutionException e ) {
+      dbCallback( "toString", openIDProviderEntity -> sb.append( openIDProviderEntity.toString( ) ) );
+    } catch ( AuthException e ) {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString();
@@ -105,8 +84,18 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   }
 
   @Override
-  public void setUrl( String url ) {
-    this.delegate.setUrl(url);
+  public String getHost() {
+    return this.delegate.getHost();
+  }
+
+  @Override
+  public Integer getPort( ) {
+    return this.delegate.getPort();
+  }
+
+  @Override
+  public String getPath() {
+    return this.delegate.getPath();
   }
 
   @Override
@@ -126,7 +115,7 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
 
   @Override
   public String getAccountNumber() throws AuthException {
-    return DatabaseAuthUtils.extract( accountNumberSupplier );
+    return getAccount( ).getAccountNumber( );
   }
 
   public EuareAccount getAccount( ) throws AuthException {
@@ -134,46 +123,24 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
       return new DatabaseAccountProxy( delegate.getAccount( ) );  
     } else {
       final List<EuareAccount> results = Lists.newArrayList( );
-      dbCallback( "getAccount", new Callback<OpenIdProviderEntity>( ) {
-        @Override
-        public void fire( final OpenIdProviderEntity openidproviderEntity ) {
-          results.add( new DatabaseAccountProxy( openidproviderEntity.getAccount( ) ) );
-        }
-      } );
+      dbCallback(
+          "getAccount",
+          openIDProviderEntity -> results.add( new DatabaseAccountProxy( openIDProviderEntity.getAccount( ) ) ) );
       return results.get( 0 );
-    }
-  }
-
-  private void check( ValueChecker checker, String error, String value ) throws AuthException {
-    try {
-      checker.check( value );
-    } catch ( InvalidValueException e ) {
-      Debugging.logError( LOG, e, error + " " + value );
-      throw new AuthException( error, e );
     }
   }
 
   private void dbCallback( final String description,
                            final Callback<OpenIdProviderEntity> updateCallback ) throws AuthException {
     try {
-      DatabaseAuthUtils.invokeUnique( OpenIdProviderEntity.class, OpenIdProviderEntity_.url, getUrl(), new Tx<OpenIdProviderEntity>( ) {
-        @Override
-        public void fire( final OpenIdProviderEntity openidproviderEntity ) {
-          updateCallback.fire( openidproviderEntity );
-        }
-      } );
+      DatabaseAuthUtils.invokeUnique(
+          OpenIdProviderEntity.class,
+          OpenIdProviderEntity_.id,
+          delegate.getEntityId( ),
+          (Tx<OpenIdProviderEntity>) updateCallback::fire );
     } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to " + description + " for " + this.delegate );
       throw new AuthException( e );
     }
-  }
-
-  private OpenIdProviderEntity getOpenIdProviderEntity( ) throws Exception {
-    return DatabaseAuthUtils.getUnique( OpenIdProviderEntity.class, OpenIdProviderEntity_.url, getUrl() );
-  }
-
-  private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {
-    in.defaultReadObject( );
-    this.accountNumberSupplier = DatabaseAuthUtils.getAccountNumberSupplier( this );
   }
 }

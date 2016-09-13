@@ -1772,9 +1772,9 @@ public class Entities {
      *
      * @see CriteriaBuilder#equal(Expression, Object)
      */
-    public EntityRestrictionBuilder<E> equalIfNonNull(
-        @Nonnull final SingularAttribute<? super E, String> attribute,
-        @Nullable final String value
+    public <V> EntityRestrictionBuilder<E> equalIfNonNull(
+        @Nonnull final SingularAttribute<? super E, V> attribute,
+        @Nullable final V value
     ) {
       if ( value != null ) {
         equal( attribute, value );

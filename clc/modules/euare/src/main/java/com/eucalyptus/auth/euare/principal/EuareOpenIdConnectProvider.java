@@ -20,22 +20,13 @@
 package com.eucalyptus.auth.euare.principal;
 
 import java.util.Date;
-import java.util.List;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 
 /**
  *
  */
-public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider, EuareAccountScopedPrincipal {
-
-  String getUrl( );
-
-  void setUrl( String url ) throws AuthException;
+public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider {
 
   Date getCreationTimestamp();
 
-  List<String> getThumbprints( ) throws AuthException;
-
-  List<String> getClientIds( ) throws AuthException;
 }

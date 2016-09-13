@@ -395,7 +395,7 @@ public class Accounts {
         provider.getAccountNumber( ),
         PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER,
         "/",
-        URI.create( provider.getName( ) ).getAuthority( ) ); //TODO:STEVE:provider should have host(/port?) available?
+        provider.getUrl( ) );
   }
 
   protected static String buildArn( final String accountNumber,

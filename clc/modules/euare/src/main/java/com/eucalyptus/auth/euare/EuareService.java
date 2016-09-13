@@ -2387,22 +2387,23 @@ public class EuareService {
     return Entities.readOnlyDistinctTransactionFor( UserEntity.class );
   }
 
-  private static String OIDC_URL_PREFIX = "https://";
-
   /* open id services */
   protected static String openIdConnectProviderArnToUrl(final String arn) {
     final String OIDC = PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
-    return OIDC_URL_PREFIX + arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
+    return arn.substring( arn.indexOf(OIDC) + OIDC.length() + 1 );
   }
 
-  public CreateOpenIdConnectProviderResponseType createOpenIdConnectProvider( final CreateOpenIdConnectProviderType request ) throws EucalyptusCloudException {
+  public CreateOpenIdConnectProviderResponseType createOpenIdConnectProvider(
+      final CreateOpenIdConnectProviderType request
+  ) throws EucalyptusCloudException {
     final CreateOpenIdConnectProviderResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final EuareAccount account = getRealAccount( ctx, request );
     try {
-      final EuareOpenIdConnectProvider newOpenIDConnectProvider = Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl( ), request.getClientIDList( ), request.getThumbprintList() );
+      final EuareOpenIdConnectProvider newOpenIDConnectProvider =
+          Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl(), request.getClientIDList(), request.getThumbprintList() );
       reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( Accounts.getOpenIdConnectProviderArn( newOpenIDConnectProvider ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
@@ -2410,9 +2411,9 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create openid connect provider by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Openid connect provider quota exceeded" );
-        } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+        } else if ( AuthException.OPENID_PROVIDER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "OpenIDConnectProvider " + request.getUrl( ) + " already exists." );
-        } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+        } else if ( AuthException.INVALID_OPENID_PROVIDER_URL.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid provider url " + request.getUrl() );
         }
       }

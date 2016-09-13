@@ -83,11 +83,12 @@ import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
-import com.eucalyptus.auth.euare.OpenIdConnectProvider;
 import com.eucalyptus.auth.euare.ServerCertificates;
 import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
+import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
@@ -807,28 +808,37 @@ public class DatabaseAccountProxy implements EuareAccount {
   @Override
   public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException {
     Debugging.logError( LOG, null, "in Database layer: createOpenIdConnectProvider()");
-    if(! OpenIdConnectProvider.isUrlValid(url))
-      throw new AuthException(AuthException.INVALID_OPENID_PROVIDER_URL);
-    try{
-      final EuareOpenIdConnectProvider found = lookupOpenIdConnectProvider(url);
-      if(found!=null)
-        throw new AuthException(AuthException.OPENID_PROVIDER_ALREADY_EXISTS);
-      return found;
-    }catch(final NoSuchElementException ex){
-      ;
-    }catch(final AuthException ex){
-      if(! AuthException.OPENID_PROVIDER_NO_SUCH_ENTITY.equals(ex.getMessage()))
+    final OIDCIssuerIdentifier issuerIdentifier;
+    final String issuerUrl;
+    try {
+      issuerIdentifier = OIDCUtils.parseIssuerIdentifier( url );
+      issuerUrl = issuerIdentifier.getHost( ) + issuerIdentifier.getPath( );
+      if ( issuerUrl.length() > 255 ) {
+        throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_URL );
+      }
+    } catch ( final IllegalArgumentException e ) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_URL );
+    }
+
+    try {
+      lookupOpenIdConnectProvider( issuerUrl );
+      throw new AuthException(AuthException.OPENID_PROVIDER_ALREADY_EXISTS);
+    } catch( final AuthException ex ) {
+      if(!AuthException.OPENID_PROVIDER_NO_SUCH_ENTITY.equals(ex.getMessage())) {
         throw ex;
-    }catch(final Exception ex){
-      throw ex;
+      }
     }
 
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
-      final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
-      final OpenIdProviderEntity newOpenIdProvider = new OpenIdProviderEntity( url );
+      final AccountEntity account =
+          DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final OpenIdProviderEntity newOpenIdProvider = OpenIdProviderEntity.create(
+          account,
+          issuerIdentifier.getHost( ),
+          issuerIdentifier.getPort( ),
+          issuerIdentifier.getPath( ) );
       newOpenIdProvider.getClientIDs().addAll( clientIDList );
       newOpenIdProvider.getThumbprints().addAll( thumbprintList );
-      newOpenIdProvider.setAccount( account );
       final OpenIdProviderEntity persistedOpenIdProvider = Entities.persist( newOpenIdProvider );
       db.commit( );
       return new DatabaseOpenIdProviderProxy( persistedOpenIdProvider );
