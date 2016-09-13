@@ -84,10 +84,8 @@ import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
-import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
@@ -100,8 +98,6 @@ import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.EventRecord;
-import com.eucalyptus.records.EventType;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
@@ -149,9 +145,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
 
   @OneToMany( cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "group" )
   private Set<NetworkRule> networkRules = new HashSet<>( );
-
-  @OneToOne( cascade = CascadeType.ALL, fetch = FetchType.EAGER, optional = true, orphanRemoval = true, mappedBy = "networkGroup" )
-  private ExtantNetwork    extantNetwork;
 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )
   private Collection<NetworkGroupTag> tags;
@@ -252,14 +245,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return createUniqueName( getOwnerAccountNumber( ), getVpcId( ), getDisplayName( ) );
   }
 
-  @PreRemove
-  private void preRemove( ) {
-    if ( this.extantNetwork != null && this.extantNetwork.teardown( ) ) {
-      Entities.delete( this.extantNetwork );
-      this.extantNetwork = null;
-    }
-  }
-  
   @PrePersist
   @PreUpdate
   private void prePersist( ) {
@@ -370,27 +355,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.getOwnerAccountNumber( ) + "-" + this.getNaturalId( );
   }
   
-  public ExtantNetwork getExtantNetwork( ) {
-    return this.extantNetwork;
-  }
-  
-  public void setExtantNetwork( final ExtantNetwork extantNetwork ) {
-    this.extantNetwork = extantNetwork;
-  }
-  
-  public boolean hasExtantNetwork( ) {
-    return this.extantNetwork != null;
-  }
-
-  public boolean clearExtantNetwork( ) {
-    if ( extantNetwork != null ) {
-      EventRecord.here( NetworkGroup.class, EventType.VLAN_RELEASED, "VLAN released: " + extantNetwork.getTag( ) ).info();
-      setExtantNetwork( null );
-      return true;
-    }
-    return false;
-  }
-
   public static Function<NetworkGroup,String> groupId( ) {
     return FilterFunctions.GROUP_ID;
   }

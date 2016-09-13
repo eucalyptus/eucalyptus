@@ -69,7 +69,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -77,10 +76,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.compute.common.internal.network.ExtantNetwork;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NetworkGroupTag;
 import com.eucalyptus.compute.common.internal.network.NetworkPeer;
@@ -95,13 +92,10 @@ import com.eucalyptus.compute.common.UserIdGroupPairType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -118,8 +112,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 
 @ConfigurableClass( root = "cloud.network",
                     description = "Default values used to bootstrap networking state discovery." )
@@ -129,16 +121,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   public static final Pattern VPC_GROUP_DESC_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
 
-  @ConfigurableField( description = "Default max network index." )
-  public static volatile Long         GLOBAL_MAX_NETWORK_INDEX      = 4096l;
-  @ConfigurableField( description = "Default min network index." )
-  public static volatile Long         GLOBAL_MIN_NETWORK_INDEX      = 2l;
-  @ConfigurableField( description = "Default max vlan tag." )
-  public static volatile Integer      GLOBAL_MAX_NETWORK_TAG        = 4096;
-  @ConfigurableField( description = "Default min vlan tag." )
-  public static volatile Integer      GLOBAL_MIN_NETWORK_TAG        = 1;
-  @ConfigurableField( description = "Minutes before a pending tag allocation timesout and is released." )
-  public static volatile Integer      NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
   public static volatile Integer      NETWORK_INDEX_PENDING_TIMEOUT = 35;
   @ConfigurableField( description = "Minutes before a pending system public address allocation timesout and is released.", initial = "35" )
@@ -152,152 +134,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   @ConfigurableField( description = "Maximum time to apply network information (seconds)." )
   public static volatile Integer      MAX_BROADCAST_APPLY           = 120;
 
-  public static class NetworkRangeConfiguration {
-    private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
-    private Integer maxNetworkTag   = GLOBAL_MAX_NETWORK_TAG;
-    private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
-    private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
-    
-    public Integer getMinNetworkTag( ) {
-      return this.minNetworkTag;
-    }
-    
-    public void setMinNetworkTag( final Integer minNetworkTag ) {
-      
-      this.minNetworkTag = minNetworkTag;
-    }
-    
-    public Integer getMaxNetworkTag( ) {
-      return this.maxNetworkTag;
-    }
-    
-    public void setMaxNetworkTag( final Integer maxNetworkTag ) {
-      this.maxNetworkTag = maxNetworkTag;
-    }
-    
-    public Long getMaxNetworkIndex( ) {
-      return this.maxNetworkIndex;
-    }
-    
-    public void setMaxNetworkIndex( final Long maxNetworkIndex ) {
-      this.maxNetworkIndex = maxNetworkIndex;
-    }
-    
-    public Long getMinNetworkIndex( ) {
-      return this.minNetworkIndex;
-    }
-    
-    public void setMinNetworkIndex( final Long minNetworkIndex ) {
-      this.minNetworkIndex = minNetworkIndex;
-    }
-    
-    @Override
-    public String toString( ) {
-      StringBuilder builder = new StringBuilder( );
-      builder.append( "NetworkRangeConfiguration:" );
-      if ( this.minNetworkTag != null ) builder.append( "minNetworkTag=" ).append( this.minNetworkTag ).append( ":" );
-      if ( this.maxNetworkTag != null ) builder.append( "maxNetworkTag=" ).append( this.maxNetworkTag ).append( ":" );
-      if ( this.minNetworkIndex != null ) builder.append( "minNetworkIndex=" ).append( this.minNetworkIndex ).append( ":" );
-      if ( this.maxNetworkIndex != null ) builder.append( "maxNetworkIndex=" ).append( this.maxNetworkIndex );
-      return builder.toString( );
-    }
-    
-  }
-
-  static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
-
-  public static synchronized void updateNetworkRangeConfiguration( ) {
-    final AtomicReference<NetworkRangeConfiguration> equalityCheck = new AtomicReference<NetworkRangeConfiguration>( null );
-    try {
-      Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
-
-        @Override
-        public void fire( final ClusterConfiguration input ) {
-          NetworkRangeConfiguration comparisonConfig = new NetworkRangeConfiguration( );
-          comparisonConfig.setMinNetworkTag( input.getMinNetworkTag( ) );
-          comparisonConfig.setMaxNetworkTag( input.getMaxNetworkTag( ) );
-          comparisonConfig.setMinNetworkIndex( input.getMinNetworkIndex( ) );
-          comparisonConfig.setMaxNetworkIndex( input.getMaxNetworkIndex( ) );
-          Logs.extreme( ).debug( "Updating cluster config: " + input.getName( ) + " " + comparisonConfig.toString( ) );
-          if ( equalityCheck.compareAndSet( null, comparisonConfig ) ) {
-            Logs.extreme( ).debug( "Initialized cluster config check: " + equalityCheck.get( ) );
-          } else {
-            NetworkRangeConfiguration currentConfig = equalityCheck.get( );
-            List<String> errors = Lists.newArrayList( );
-            if ( !currentConfig.getMinNetworkTag( ).equals( comparisonConfig.getMinNetworkTag( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: min vlan tag " + currentConfig.getMinNetworkTag( ) + " != " + comparisonConfig.getMinNetworkTag( ) );
-            } else if ( !currentConfig.getMaxNetworkTag( ).equals( comparisonConfig.getMaxNetworkTag( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: max vlan tag " + currentConfig.getMaxNetworkTag( ) + " != " + comparisonConfig.getMaxNetworkTag( ) );
-            } else if ( !currentConfig.getMinNetworkIndex( ).equals( comparisonConfig.getMinNetworkIndex( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: min net index " + currentConfig.getMinNetworkIndex( ) + " != " + comparisonConfig.getMinNetworkIndex( ) );
-            } else if ( !currentConfig.getMaxNetworkIndex( ).equals( comparisonConfig.getMaxNetworkIndex( ) ) ) {
-              errors.add( input.getName( ) + " network config mismatch: max net index " + currentConfig.getMaxNetworkIndex( ) + " != " + comparisonConfig.getMaxNetworkIndex( ) );
-            }
-          }
-        }
-      } );
-    } catch ( RuntimeException ex ) {
-      Logs.extreme( ).error( ex, ex );
-      throw ex;
-    } catch ( TransactionException ex ) {
-      LOG.error( ex );
-      Logs.extreme( ).error( ex, ex );
-    }
-
-    netConfig = new NetworkRangeConfiguration( );
-    try {
-      Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
-
-        @Override
-        public void fire( final ClusterConfiguration input ) {
-          netConfig.setMinNetworkTag( Ints.max( netConfig.getMinNetworkTag(), input.getMinNetworkTag() ) );
-          netConfig.setMaxNetworkTag( Ints.min( netConfig.getMaxNetworkTag( ), input.getMaxNetworkTag( ) ) );
-          netConfig.setMinNetworkIndex( Longs.max( netConfig.getMinNetworkIndex(), input.getMinNetworkIndex() ) );
-          netConfig.setMaxNetworkIndex( Longs.min( netConfig.getMaxNetworkIndex( ), input.getMaxNetworkIndex( ) ) );
-        }
-      } );
-      Logs.extreme( ).debug( "Updated network configuration: " + netConfig.toString( ) );
-    } catch ( final TransactionException ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
-    try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      final List<NetworkGroup> ret = Entities.query( NetworkGroup.withOwner( null ) );
-      for ( NetworkGroup group : ret ) {
-        ExtantNetwork exNet = group.getExtantNetwork( );
-        if ( exNet != null && ( exNet.getTag( ) > netConfig.getMaxNetworkTag( ) || exNet.getTag( ) < netConfig.getMinNetworkTag( ) ) ) {
-          if ( exNet.teardown( ) ) {
-            Entities.delete( exNet );
-            group.clearExtantNetwork( );
-          }
-        }
-      }
-      db.commit( );
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-      LOG.error( ex );
-    }
-  }
-
-  public static List<Long> networkIndexInterval( ) {
-    final List<Long> interval = Lists.newArrayList( );
-    for ( Long i = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( ); i++ ) {
-      interval.add( i );
-    }
-    return interval;
-  }
-  
-  public static List<Integer> networkTagInterval( ) {
-    final List<Integer> interval = Lists.newArrayList( );
-    for ( Integer i = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( ); i < NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( ); i++ ) {
-      interval.add( i );
-    }
-    return interval;
-  }
-  
-  public static synchronized NetworkRangeConfiguration networkingConfiguration( ) {
-    return netConfig;
-  }
-  
   public static NetworkGroup delete( final String groupId ) throws MetadataException {
     try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
       final NetworkGroup ret = Entities.uniqueResult( NetworkGroup.withGroupId( null, groupId ) );
@@ -372,55 +208,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
       throw new NoSuchMetadataException( "Failed to find security group: " + name +", for vpc: " + vpcId + " for " + ownerFullName, ex );
-    }
-  }
-
-  public static void periodicCleanup( ) {
-    updateNetworkRangeConfiguration( );
-    releaseUnusedExtantNetworks( );
-  }
-
-  private static void releaseUnusedExtantNetworks( ) {
-    try {
-      final List<NetworkGroup> groups = NetworkGroups.lookupUnusedExtant( );
-      for ( NetworkGroup net : groups ) {
-        try ( final TransactionResource tx = Entities.distinctTransactionFor( NetworkGroup.class ) ) {
-          net = Entities.merge( net );
-          if ( net.hasExtantNetwork( ) && !net.getExtantNetwork( ).inUse( ) ) {
-            final ExtantNetwork exNet = net.getExtantNetwork( );
-            if ( exNet.teardown( ) ) {
-              Entities.delete( exNet );
-              net.clearExtantNetwork( );
-            }
-          }
-          tx.commit( );
-        } catch ( final Exception ex ) {
-          LOG.debug( ex );
-          Logs.extreme( ).error( ex, ex );
-        }
-      }
-    } catch ( MetadataException ex ) {
-      LOG.error( ex );
-    }
-  }
-
-  private static List<NetworkGroup> lookupUnusedExtant( ) throws MetadataException {
-    try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      return Entities.query(
-          NetworkGroup.withOwner( null ),
-          true,
-          Restrictions.and(
-              Restrictions.lt( "extantNetwork.lastUpdateTimestamp", new Date( System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( 1 ) ) ),
-              Restrictions.isNotNull( "extantNetwork.tag" ),
-              Restrictions.isEmpty( "extantNetwork.indexes" )
-          ),
-          ImmutableMap.of(
-              "extantNetwork", "extantNetwork"
-          )
-      );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Error looking up extant groups", ex );
     }
   }
 

@@ -24,7 +24,6 @@ import com.eucalyptus.compute.common.network.NetworkingService
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.LockResource
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 
 import javax.annotation.Nonnull
 import java.lang.reflect.InvocationHandler
@@ -55,16 +54,7 @@ class DispatchingNetworkingService {
       LockResource.withLock( delegateLock.writeLock( ) ) {
         if ( delegateNeedsUpdatingFor( networkMode ) ) {
           networkingServiceDelegateMode = networkMode
-          switch( networkMode ) {
-            case NetworkMode.EDGE:
-            case NetworkMode.VPCMIDO:
-              networkingServiceDelegate = poolInvoked(new EdgeNetworkingService())
-              break
-            case NetworkMode.MANAGED:
-            case NetworkMode.MANAGED_NOVLAN:
-              networkingServiceDelegate = poolInvoked(new ManagedNetworkingService())
-              break
-          }
+          networkingServiceDelegate = poolInvoked(new EdgeNetworkingService())
         }
         void
       }

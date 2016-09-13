@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<eucafaults version="1" description="Templates for the fault subsystem">
+  <fault
+    id="1017"
+    message="Invalid network configuration. Networking for instances not operational.">
+
+    <condition
+      message="Unable to apply network configuration"/>
+
+    <cause
+      message="Managed networking modes are no longer supported"/>
+
+    <initiator
+      message="Eucalyptus"/>
+
+    <location
+      message="Eucalyptus"/>
+
+    <resolution>
+      <message>
+          Use a supported networking mode [ EDGE | VPCMIDO ]
+      </message>
+    </resolution>
+  </fault>
+</eucafaults>

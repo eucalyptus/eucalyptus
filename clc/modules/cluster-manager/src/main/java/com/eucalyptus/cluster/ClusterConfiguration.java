@@ -63,12 +63,13 @@
 package com.eucalyptus.cluster;
 
 import java.io.Serializable;
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
-import javax.persistence.PrePersist;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
@@ -76,7 +77,10 @@ import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
-import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
@@ -95,39 +99,15 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @Column( name = "cluster_network_mode" )
   @ConfigurableField( description = "Currently configured network mode", displayName = "Network mode", readonly = true )
   private/*NetworkMode*/String networkMode;
-  
-  @Column( name = "cluster_use_network_tags" )
-  @ConfigurableField( description = "Indicates whether vlans are in use or not.", displayName = "Uses vlans", readonly = true )
-  private Boolean               useNetworkTags;
-  
-  @ConfigurableField( description = "Minimum vlan tag to use (0 < x < max_vlan <= 4096)", displayName = "Min vlan", readonly = true )
-  @Column( name = "cluster_min_network_tag" )
-  private Integer               minNetworkTag;
-  
-  @ConfigurableField( description = "Maximum vlan tag to use (0 < min_vlan < x < 4096)", displayName = "Max vlan", readonly = true )
-  @Column( name = "cluster_max_network_tag" )
-  private Integer               maxNetworkTag;
-  
-  @ConfigurableField( description = "Maximum usable network index (0 < min_network_index < x)", displayName = "Max network index", readonly = true )
-  @Column( name = "cluster_min_addr" )
-  private Long                  minNetworkIndex;
-  
-  @ConfigurableField( description = "Maximum usable network index (0 < x < max_network_index)", displayName = "Min network index", readonly = true )
-  @Column( name = "cluster_min_vlan" )
-  private Long                  maxNetworkIndex;
-  
-  @ConfigurableField( description = "Number of total addresses per network (including unusable gateway addresses controlled by the system)", displayName = "Addresses per network (ADDRS_PER_NET)", readonly = true )
-  @Column( name = "cluster_addrs_per_net" )
-  private Integer               addressesPerNetwork;
-  
+
   @ConfigurableField( description = "IP subnet used by the cluster's virtual private networking.", displayName = "Virtual network subnet (VNET_SUBNET)", readonly = true )
   @Column( name = "cluster_vnet_subnet" )
   private String                vnetSubnet;
-  
+
   @ConfigurableField( description = "Netmask used by the cluster's virtual private networking.", displayName = "Virtual network netmask (VNET_NETMASK)", readonly = true )
   @Column( name = "cluster_vnet_netmask" )
   private String                vnetNetmask;
-  
+
   @ConfigurableField( description = "IP version used by the cluster's virtual private networking.", displayName = "Virtual network IP version", readonly = true )
   @Column( name = "cluster_vnet_type" )
   private String                vnetType              = "ipv4";
@@ -145,8 +125,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   
   public ClusterConfiguration( String partition, String name, String hostName, Integer port, Integer minVlan, Integer maxVlan ) {
     super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-    this.minNetworkTag = minVlan;
-    this.maxNetworkTag = maxVlan;
     this.sourceHostName = hostName;
   }
   
@@ -156,26 +134,7 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
       this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
     }
   }
-  
-  @PrePersist
-  private void defaultsOnCommit( ) {
-    if ( this.useNetworkTags == null ) {
-      this.useNetworkTags = Boolean.TRUE;
-    }
-    if ( this.minNetworkIndex == null ) {
-      this.minNetworkIndex = NetworkGroups.networkingConfiguration( ).getMinNetworkIndex( );
-    }
-    if ( this.maxNetworkIndex == null ) {
-      this.maxNetworkIndex = NetworkGroups.networkingConfiguration( ).getMaxNetworkIndex( );
-    }
-    if ( this.minNetworkTag == null ) {
-      this.minNetworkTag = NetworkGroups.networkingConfiguration( ).getMinNetworkTag( );
-    }
-    if ( this.maxNetworkTag == null ) {
-      this.maxNetworkTag = NetworkGroups.networkingConfiguration( ).getMaxNetworkTag( );
-    }
-  }
-  
+
   public String getInsecureServicePath( ) {
     return INSECURE_SERVICE_PATH;
   }
@@ -201,71 +160,23 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   public void setNetworkMode( String networkMode ) {
     this.networkMode = networkMode;
   }
-  
-  public Boolean getUseNetworkTags( ) {
-    return this.useNetworkTags;
-  }
-  
-  public void setUseNetworkTags( Boolean useNetworkTags ) {
-    this.useNetworkTags = useNetworkTags;
-  }
-  
-  public Integer getMinNetworkTag( ) {
-    return this.minNetworkTag;
-  }
-  
-  public void setMinNetworkTag( Integer minNetworkTag ) {
-    this.minNetworkTag = minNetworkTag;
-  }
-  
-  public Integer getMaxNetworkTag( ) {
-    return this.maxNetworkTag;
-  }
-  
-  public void setMaxNetworkTag( Integer maxNetworkTag ) {
-    this.maxNetworkTag = maxNetworkTag;
-  }
-  
-  public Long getMinNetworkIndex( ) {
-    return this.minNetworkIndex;
-  }
-  
-  public void setMinNetworkIndex( Long minNetworkIndex ) {
-    this.minNetworkIndex = minNetworkIndex;
-  }
-  
-  public Long getMaxNetworkIndex( ) {
-    return this.maxNetworkIndex;
-  }
-  
-  public void setMaxNetworkIndex( Long maxNetworkIndex ) {
-    this.maxNetworkIndex = maxNetworkIndex;
-  }
-  
-  public Integer getAddressesPerNetwork( ) {
-    return this.addressesPerNetwork;
-  }
-  
-  public void setAddressesPerNetwork( Integer addressesPerNetwork ) {
-    this.addressesPerNetwork = addressesPerNetwork;
-  }
-  
+
   public String getVnetSubnet( ) {
     return this.vnetSubnet;
   }
-  
+
   public void setVnetSubnet( String vnetSubnet ) {
     this.vnetSubnet = vnetSubnet;
   }
-  
+
   public String getVnetNetmask( ) {
     return this.vnetNetmask;
   }
-  
+
   public void setVnetNetmask( String vnetNetmask ) {
     this.vnetNetmask = vnetNetmask;
   }
-  
+
   public String getVnetType( ) {
     return this.vnetType;
   }
@@ -288,5 +199,35 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
 
   public void setSourceHostName( String aliasHostName ) {
     this.sourceHostName = aliasHostName;
+  }
+
+  @PreUpgrade( value = Empyrean.class, since = Upgrades.Version.v4_4_0 )
+  public static class ClusterConfiguration440PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( ClusterConfiguration440PreUpgrade.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_config" );
+        sql.execute( "alter table config_component_base " +
+            "drop column if exists cluster_addrs_per_net, " +
+            "drop column if exists cluster_max_network_tag, " +
+            "drop column if exists cluster_min_addr, " +
+            "drop column if exists cluster_min_network_tag, " +
+            "drop column if exists cluster_min_vlan, " +
+            "drop column if exists cluster_use_network_tags"
+        );
+
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error updating cloud schema", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
   }
 }

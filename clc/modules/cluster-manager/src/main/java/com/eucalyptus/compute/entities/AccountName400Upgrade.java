@@ -28,9 +28,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
-import com.eucalyptus.compute.common.internal.network.ExtantNetwork;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
-import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex;
 import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -45,10 +43,8 @@ public class AccountName400Upgrade extends AccountMetadata.AccountName400Upgrade
   private static final List<Class<? extends AccountMetadata>> accountMetadataClasses =
       ImmutableList.<Class<? extends AccountMetadata>>builder()
           .add( AllocatedAddressEntity.class )
-          .add( ExtantNetwork.class )
           .add( ImageInfo.class )
           .add( NetworkGroup.class )
-          .add( PrivateNetworkIndex.class )
           .add( Snapshot.class )
           .add( SshKeyPair.class )
           .add( Tag.class )

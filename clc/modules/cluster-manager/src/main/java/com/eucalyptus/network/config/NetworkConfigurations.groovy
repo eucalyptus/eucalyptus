@@ -25,8 +25,10 @@ import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Components
+import com.eucalyptus.component.Faults
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.id.ClusterController
+import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
@@ -36,7 +38,6 @@ import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
 import com.eucalyptus.network.DispatchingNetworkingService
 import com.eucalyptus.network.IPRange
-import com.eucalyptus.network.ManagedSubnets
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
@@ -49,6 +50,8 @@ import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
 import com.google.common.base.Strings
+import com.google.common.base.Supplier
+import com.google.common.base.Suppliers
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
@@ -64,6 +67,7 @@ import org.springframework.validation.ValidationUtils
 
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  *
@@ -74,6 +78,8 @@ class NetworkConfigurations {
   private static final Logger logger = Logger.getLogger( NetworkConfigurations )
   private static final boolean validateConfiguration =
       Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.config.validateNetworkConfiguration', 'true' ) )
+  private static final AtomicReference<Supplier<Void>> managedFaultSupplier =
+      new AtomicReference<>( Suppliers.memoize( managedFaultSupplier( ) ) );
 
   static Optional<NetworkConfiguration> getNetworkConfiguration( ) {
     NetworkConfigurations.networkConfigurationFromProperty
@@ -84,7 +90,13 @@ class NetworkConfigurations {
     String configurationText = NetworkGroups.NETWORK_CONFIGURATION
     if ( !Strings.isNullOrEmpty( configurationText ) ) {
       try {
-        configuration = Optional.of( parse( configurationText ) )
+        Optional<NetworkConfiguration> parsedConfiguration = Optional.of( parse( configurationText ) );
+        if ( parsedConfiguration.get( ).managedSubnet ) {
+          managedFaultSupplier.get( ).get( );
+        } else {
+          managedFaultSupplier.set( Suppliers.memoize( managedFaultSupplier( ) ) )
+          configuration = parsedConfiguration
+        }
       } catch ( NetworkConfigurationException e ) {
         throw Exceptions.toUndeclared( e )
       }
@@ -105,15 +117,8 @@ class NetworkConfigurations {
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services( ).each { ServiceConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
-          boolean managed = ['MANAGED', 'MANAGED-NOVLAN'].contains(networkConfiguration.mode)
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult((ClusterConfiguration)config)
           clusterConfiguration.networkMode = GObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
-          clusterConfiguration.addressesPerNetwork = managed ? ( networkConfiguration?.managedSubnet?.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) : -1
-          clusterConfiguration.useNetworkTags = managed
-          clusterConfiguration.minNetworkTag = networkConfiguration?.managedSubnet?.minVlan ?: ManagedSubnet.MIN_VLAN
-          clusterConfiguration.maxNetworkTag = networkConfiguration?.managedSubnet?.maxVlan ?: ManagedSubnet.MAX_VLAN
-          clusterConfiguration.minNetworkIndex = (managed ? ManagedSubnet.MIN_INDEX : -1) as Long
-          clusterConfiguration.maxNetworkIndex = (managed ? ( clusterConfiguration.addressesPerNetwork - 1 ) : -1) as Long
 
           if ( networkConfiguration?.managedSubnet ) {
             clusterConfiguration.vnetSubnet = networkConfiguration?.managedSubnet?.subnet
@@ -129,21 +134,11 @@ class NetworkConfigurations {
             clusterConfiguration.vnetNetmask = subnet?.netmask ?: defaultSubnet?.netmask
           }
 
-          if ( managed ) { // cap max vlan based on available networks
-            clusterConfiguration.maxNetworkTag = ManagedSubnets.restrictToMaximumSegment(
-                clusterConfiguration.vnetSubnet,
-                clusterConfiguration.vnetNetmask,
-                clusterConfiguration.addressesPerNetwork,
-                clusterConfiguration.maxNetworkTag
-            )
-          }
-
           void
         }
       }
       db.commit( );
     }
-    NetworkGroups.periodicCleanup( )
   }
 
   @Nullable
@@ -385,6 +380,14 @@ class NetworkConfigurations {
 
   private static Iterable<String> iterateRangesAsString( Iterable<String> rangeIterable ) {
     Iterables.transform( iterateRanges( rangeIterable ).left, PrivateAddresses.fromInteger( ) )
+  }
+
+  private static Supplier<Void> managedFaultSupplier( ) {
+    return {
+      logger.error( "Managed network modes not supported, network configuration ignored" )
+      Faults.forComponent( Eucalyptus ).havingId( 1017 ).log( )
+      void
+    } as Supplier<Void>
   }
 
   static class NetworkConfigurationPropertyChangeListener implements PropertyChangeListener<String> {

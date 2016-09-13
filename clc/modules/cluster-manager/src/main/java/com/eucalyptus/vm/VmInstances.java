@@ -142,7 +142,6 @@ import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
 import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
-import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
@@ -2003,7 +2002,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     private VmBootRecord        vmBootRecord;
     private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
-    private Optional<PrivateNetworkIndex> networkIndex = Optional.absent( );
     private Boolean             usePrivateAddressing;
     private Boolean             zombie;
     private Boolean             disableApiTermination;
@@ -2025,11 +2023,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     public Builder networkGroups( final List<NetworkGroup> groups ) {
       this.networkRulesGroups = groups;
-      return this;
-    }
-
-    public Builder networkIndex( final PrivateNetworkIndex index ) {
-      this.networkIndex = Optional.fromNullable( index );
       return this;
     }
 
@@ -2104,7 +2097,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
       VmInstance instance = new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
-          this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.disableApiTermination, this.expiration );
+          this.networkRulesGroups, this.usePrivateAddressing, this.disableApiTermination, this.expiration );
       instance.setNaturalId( uuid );
       if ( Boolean.TRUE.equals( this.zombie ) ) {
         instance.getRuntimeState( ).zombie( );

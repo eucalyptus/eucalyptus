@@ -89,7 +89,6 @@ import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -142,7 +141,6 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
-import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
@@ -225,17 +223,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   )
   private Set<NetworkGroupId>  networkGroupIds = Sets.newHashSet( );
 
-  @NotFound( action = NotFoundAction.IGNORE )
-  @OneToOne( fetch = FetchType.LAZY,
-             cascade = { CascadeType.ALL },
-             orphanRemoval = true,
-             optional = true )
-  @JoinColumn( name = "metadata_vm_network_index",
-               nullable = true,
-               insertable = true,
-               updatable = true )
-  private PrivateNetworkIndex  networkIndex;
- 
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "instance" )
   private Collection<VmInstanceTag> tags;
 
@@ -440,7 +427,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                      final VmLaunchRecord launchRecord,
                      final VmPlacement placement,
                      final List<NetworkGroup> networkRulesGroups,
-                     final Optional<PrivateNetworkIndex> networkIndex,
                      final Boolean usePrivateAddressing,
                      final Boolean disableApiTermination,
                      final Date expiration ) throws ResourceAllocationException {
@@ -459,9 +445,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this, usePrivateAddressing );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex.isPresent( )
-                                                                    ? Entities.merge( networkIndex.get().set( this ) )
-                                                                    : null;
     this.store( );
   }
 
@@ -500,7 +483,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.launchRecord = null;
     this.placement = null;
     this.privateNetwork = null;
-    this.networkIndex = null;
     this.usageStats = null;
     this.runtimeState = null;
     this.networkConfig = null;
@@ -787,10 +769,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
-  public PrivateNetworkIndex getNetworkIndex( ) {
-    return this.networkIndex;
-  }
-  
   private Boolean getPrivateNetwork( ) {
     return this.privateNetwork;
   }
@@ -967,10 +945,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } else {
       this.bootRecord.setUserData(userData.getBytes());
     }
-  }
-
-  public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
-    this.networkIndex = networkIndex;
   }
 
   public void setDisableApiTermination( final Boolean disableApiTermination ) {
@@ -1303,7 +1277,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     if ( this.placement != null ) builder2.append( "placement=" ).append( this.placement ).append( ":" );
     if ( this.privateNetwork != null ) builder2.append( "privateNetwork=" ).append( this.privateNetwork ).append( ":" );
     if ( Entities.isReadable( this.networkGroups ) ) builder2.append( "networkGroups=" ).append( this.networkGroups ).append( ":" );
-    if ( Entities.isReadable( this.networkIndex ) ) builder2.append( "networkIndex=" ).append( this.networkIndex );
     return builder2.toString( );
   }
   

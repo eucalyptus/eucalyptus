@@ -33,7 +33,6 @@ import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessExceptio
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException
 import com.eucalyptus.compute.common.internal.util.InvalidParameterCombinationMetadataException
 import com.eucalyptus.compute.common.internal.util.MetadataException
-import com.eucalyptus.compute.common.internal.util.ResourceAllocationException
 import com.eucalyptus.compute.common.internal.util.SecurityGroupLimitMetadataException
 import com.eucalyptus.component.Partition
 import com.eucalyptus.component.Partitions
@@ -49,7 +48,6 @@ import com.eucalyptus.compute.common.network.NetworkingFeature
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PrivateIPResource
-import com.eucalyptus.compute.common.network.PrivateNetworkIndexResource
 import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
@@ -74,12 +72,10 @@ import com.eucalyptus.compute.vpc.persist.PersistenceNetworkInterfaces
 import com.eucalyptus.compute.vpc.persist.PersistenceSubnets
 import com.eucalyptus.compute.vpc.persist.PersistenceVpcs
 import com.eucalyptus.entities.Entities
-import com.eucalyptus.entities.Transactions
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
-import com.eucalyptus.compute.common.internal.network.PrivateNetworkIndex
 import com.eucalyptus.network.PublicAddresses
 import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
@@ -457,7 +453,6 @@ class VmInstanceLifecycleHelpers {
         final VmState state ) {
       if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) ) try {
         if ( !instance.vpcId &&
-            instance.networkIndex == null &&
             !Strings.isNullOrEmpty( instance.privateAddress ) &&
             !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {
           Networking.instance.release( new ReleaseNetworkResourcesType( resources: [
@@ -467,89 +462,6 @@ class VmInstanceLifecycleHelpers {
         }
       } catch ( final Exception ex ) {
         logger.error( "Error releasing private address '${instance.privateAddress}' on instance '${instance.displayName}' clean up.", ex )
-      }
-    }
-  }
-
-  static final class PrivateNetworkIndexVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
-    private static final Logger logger = Logger.getLogger( PrivateNetworkIndexVmInstanceLifecycleHelper )
-
-    @Override
-    void prepareNetworkAllocation(
-        final Allocation allocation,
-        final PrepareNetworkResourcesType prepareNetworkResourcesType ) {
-      if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PrivateNetworkIndexResource ) ) {
-        allocation?.allocationTokens?.each{ ResourceToken token ->
-          Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
-            resource instanceof PrivateNetworkIndexResource && resource.ownerId != null }
-          token.getAttribute(NetworkResourcesKey).removeAll( resources )
-          prepareNetworkResourcesType.resources.addAll( resources )
-        }
-      }
-    }
-
-    @Override
-    void prepareVmRunType(
-        final ResourceToken resourceToken,
-        final VmRunBuilder builder ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String mac, String privateIp ->
-        builder.vlan( vlan )
-        builder.networkIndex( networkIndex )
-        builder.macAddress( mac )
-        builder.privateAddress( privateIp )
-      }
-    }
-
-    @Override
-    void prepareVmInstance(
-        final ResourceToken resourceToken,
-        final VmInstanceBuilder builder) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String mac, String privateIp ->
-        builder.networkIndex( Transactions.find( PrivateNetworkIndex.named( vlan, networkIndex ) ) )
-        builder.onBuild({ VmInstance instance ->
-          instance.updateMacAddress( mac )
-          VmInstances.updatePrivateAddress( instance, privateIp )
-        } as Callback<VmInstance>)
-      }
-    }
-
-    @Override
-    void startVmInstance(
-        final ResourceToken resourceToken,
-        final VmInstance instance ) {
-      doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex, String mac, String privateIp ->
-        Entities.transaction( PrivateNetworkIndex ) {
-          Entities.uniqueResult( PrivateNetworkIndex.named( vlan, networkIndex ) ).with{
-            set( instance )
-            instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) )
-            instance.updateMacAddress( mac )
-            VmInstances.updatePrivateAddress( instance, privateIp )
-          }
-        }
-      }
-    }
-
-    @Override
-    void cleanUpInstance(
-        final VmInstance instance,
-        final VmState state ) {
-      if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) && Entities.isPersistent( instance ) ) try {
-        if ( instance.networkIndex != null ) {
-          instance.networkIndex.release( )
-          instance.networkIndex.teardown( )
-          instance.networkIndex = null
-        }
-      } catch ( final ResourceAllocationException ex ) {
-        logger.error( "Error cleaning up network index '${instance.networkIndex}' for instance '${instance.displayName}'", ex )
-      }
-    }
-
-    private <V> V doWithPrivateNetworkIndex( final ResourceToken resourceToken,
-                                             final Closure<V> closure ) {
-      PrivateNetworkIndexResource resource = ( PrivateNetworkIndexResource ) \
-          resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateNetworkIndexResource }
-      resource?.with{
-        closure.call( tag,  Long.valueOf( value ), mac, privateIp )
       }
     }
   }
