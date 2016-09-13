@@ -195,6 +195,7 @@ static boolean gInitialized = FALSE;
  //! @name EDGE Mode Network Driver APIs
 static int network_driver_init(eucanetdConfig * pEucanetdConfig);
 static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
+static int network_driver_upgrade(globalNetworkInfo * pGni);
 static int network_driver_system_flush(globalNetworkInfo * pGni);
 //static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
 //static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
@@ -237,6 +238,7 @@ struct driver_handler_t edgeDriverHandler = {
     .name = NETMODE_EDGE,
     .init = network_driver_init,
     .cleanup = network_driver_cleanup,
+    .upgrade = network_driver_upgrade,
     .system_flush = network_driver_system_flush,
     .system_maint = NULL,
     //.system_scrub = network_driver_system_scrub,
@@ -328,24 +330,90 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
     return (ret);
 }
 
-//!
-//! Responsible for flushing any networking artifacts implemented by this
-//! network driver.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre The driver must be initialized already
-//!
-//! @post On success, all networking mode artifacts will be flushed from the system. If any
-//!       failure occurred. The system is left in a non-deterministic state and a subsequent
-//!       call to this API may resolve the remaining issues.
-//!
-//! @note
-//!
+/**
+ * Upgrades 4.3 EDGE constructs to 4.4 EDGE constructs.
+ * iptables chain names and ipset names are changed from EU_hash to sg-xxxxxxxx
+ * naming style. Pre 4.3 iptables chains and ipsets are cleared - necessary iptables
+ * chains and ipsets are created in the first successful eucanetd iteration.
+ * 
+ * @param pGni [in] a pointer to our global network information structure
+ * @return 0 on success or 1 on any error
+ * 
+ * @pre
+ *     - The driver must be initialized already
+ *     - pGni must not be NULL
+ *
+ * @post
+ *     - On success all EU_hash iptables chains and ipsets are flushed
+ *     - On failure, the system is left in an undetermined state
+ *
+ * @note
+ *
+ * @TODO:
+ *     This will not be needed for 4.4+ (if upgrade path from 4.3 is not supported)
+ */
+static int network_driver_upgrade(globalNetworkInfo * pGni) {
+    int rc = 0;
+    int ret = 0;
+
+    LOGINFO("Upgrade 4.3 '%s' network driver artifacts.\n", DRIVER_NAME());
+
+    // this only applies to NC components
+    if (!PEER_IS_NC(eucanetdPeer)) {
+        // no-op
+        return (0);
+    }
+    // Is our driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // iptables
+    rc |= ipt_handler_init(config->ipt, config->cmdprefix, NULL);
+    rc |= ipt_handler_repopulate(config->ipt);
+    // delete legacy (pre 4.4) chains
+    rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+    rc |= ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
+    rc |= ipt_handler_deploy(config->ipt);
+    if (rc) {
+        LOGERROR("Failed to upgrade 4.3 %s IP Tables artifacts.\n", DRIVER_NAME());
+        ret = 1;
+    }
+    // ipsets
+    rc = 0;
+    rc |= ips_handler_init(config->ips, config->cmdprefix);
+    rc |= ips_handler_repopulate(config->ips);
+    // delete legacy (pre 4.4) ipsets
+    rc |= ips_handler_deletesetmatch(config->ips, "EU_");
+    rc |= ips_handler_print(config->ips);
+    rc |= ips_handler_deploy(config->ips, 1);
+    if (rc) {
+        LOGERROR("Failed to upgrade 4.3 %s ipset artifacts.\n", DRIVER_NAME());
+        ret = 1;
+    }
+    // ebtables
+    // no upgrade operation required
+
+    return (ret);
+}
+
+/**
+ * Responsible for flushing any networking artifacts implemented by this
+ * network driver.
+ *
+ * @param pGni [in] a pointer to the Global Network Information structure
+ *
+ * @return 0 on success or 1 if any failure occurred.
+ *
+ * @see
+ *
+ * @pre The driver must be initialized already
+ *
+ * @post On success, all networking mode artifacts will be flushed from the system. If any
+ *       failure occurred. The system is left in a non-deterministic state and a subsequent
+ *       call to this API may resolve the remaining issues.
+ *
+ */
 static int network_driver_system_flush(globalNetworkInfo * pGni)
 {
     int rc = 0;
@@ -372,7 +440,12 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
     rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
     rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
+    
+    // Flush pre-4.4 iptables chains, just in case
     rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+
+    rc |= ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
+
     // Flush core artifacts
     if (config->flushmode == FLUSH_ALL) {
         rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EUCA_");
@@ -400,7 +473,11 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     rc = 0;
     rc |= ips_handler_init(config->ips, config->cmdprefix);
     rc |= ips_handler_repopulate(config->ips);
+    
+    // Delete pre-4.4 ipsets, just in case
     rc |= ips_handler_deletesetmatch(config->ips, "EU_");
+    
+    rc |= ips_handler_deletesetmatch(config->ips, "sg-");
     rc |= ips_handler_deletesetmatch(config->ips, "EUCA_");
     rc |= ips_handler_print(config->ips);
     rc |= ips_handler_deploy(config->ips, 1);
@@ -545,29 +622,26 @@ static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pL
 }
 */
 
-//!
-//! This takes care of implementing the security-group artifacts necessary. This will add or
-//! remove networking rules pertaining to the groups and their membership.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre \li Both pGni and pLni must not be NULL
-//!      \li the driver must have been initialized
-//!
-//! @post On success, the networking artifacts should be implemented. On failure, the
-//!       current state of the system may be left in a non-deterministic state. A
-//!       subsequent call to this API may resolve the left over issues.
-//!
-//! @note For EDGE mode, this means installing the IP table rules for the groups and the
-//!       IP sets for the groups' members
-//!
-static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
-{
+/**
+ * Implements security-group artifacts. This will add or remove remove networking
+ * rules pertaining to the groups and their membership.
+ * 
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param pLni [in] a pointer to the Local Network Information structure
+ * @return 0 on success or 1 if any failure occurred.
+ * 
+ * @pre \li Both pGni and pLni must not be NULL
+ *      \li the driver must have been initialized
+ *
+ * @post On success, the networking artifacts should be implemented. On failure, the
+ *       current state of the system may be left in a non-deterministic state. A
+ *       subsequent call to this API may resolve the left over issues.
+ *
+ * @note For EDGE mode, this means installing the IP table rules for the groups and the
+ *       IP sets for the groups' members
+ *
+ */
+static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
 #define MAX_RULE_LEN              1024
 
     int i = 0;
@@ -636,7 +710,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
 
     // clear all chains that we're about to (re)populate with latest network metadata
-    rc = ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+    rc = ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
     rc = ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_IN");
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_OUT");
@@ -645,7 +719,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
 
     // reset and create ipsets for allprivate and noneuca subnet sets
-    rc = ips_handler_deletesetmatch(config->ips, "EU_");
+    rc = ips_handler_deletesetmatch(config->ips, "sg-");
 
     ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
     ips_set_flush(config->ips, "EUCA_ALLPRIVATE");
@@ -655,7 +729,7 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     ips_set_flush(config->ips, "EUCA_ALLNONEUCA");
     ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", "127.0.0.1", 32);
 
-    // add addition of private non-euca subnets to EUCA_ALLPRIVATE, here
+    // add additional private non-euca subnets to EUCA_ALLNONEUCA, here
     for (i = 0; i < pGni->max_subnets; i++) {
         strptra = hex2dot(pGni->subnets[i].subnet);
         slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - pGni->subnets[i].netmask) + 1))));
@@ -680,123 +754,106 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
         max_instances = 0;
 
         secgroup = &(pGni->secgroups[i]);
+        chainname = strdup(secgroup->name);
         rule[0] = '\0';
-        rc = gni_secgroup_get_chainname(pGni, secgroup, &chainname);
-        if (rc) {
-            LOGERROR("cannot get chain name from security group: check above log errors for details\n");
-            ret = 1;
-        } else {
 
-            ips_handler_add_set(config->ips, chainname);
-            ips_set_flush(config->ips, chainname);
+        ips_handler_add_set(config->ips, chainname);
+        ips_set_flush(config->ips, chainname);
 
-            strptra = hex2dot(config->vmGatewayIP);
-            ips_set_add_ip(config->ips, chainname, strptra);
-            ips_set_add_ip(config->ips, "EUCA_ALLNONEUCA", strptra);
-            EUCA_FREE(strptra);
+        strptra = hex2dot(config->vmGatewayIP);
+        ips_set_add_ip(config->ips, chainname, strptra);
+        ips_set_add_ip(config->ips, "EUCA_ALLNONEUCA", strptra);
+        EUCA_FREE(strptra);
 
-            rc = gni_secgroup_get_instances(pGni, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
+        rc = gni_secgroup_get_instances(pGni, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
 
-            for (j = 0; j < max_instances; j++) {
-                if (instances[j].privateIp) {
-                    strptra = hex2dot(instances[j].privateIp);
-                    ips_set_add_ip(config->ips, chainname, strptra);
-                    ips_set_add_ip(config->ips, "EUCA_ALLPRIVATE", strptra);
-                    EUCA_FREE(strptra);
-                }
-                if (instances[j].publicIp) {
-                    strptra = hex2dot(instances[j].publicIp);
-                    ips_set_add_ip(config->ips, chainname, strptra);
-                    EUCA_FREE(strptra);
-                }
+        for (j = 0; j < max_instances; j++) {
+            if (instances[j].privateIp) {
+                strptra = hex2dot(instances[j].privateIp);
+                ips_set_add_ip(config->ips, chainname, strptra);
+                ips_set_add_ip(config->ips, "EUCA_ALLPRIVATE", strptra);
+                EUCA_FREE(strptra);
             }
+            if (instances[j].publicIp) {
+                strptra = hex2dot(instances[j].publicIp);
+                ips_set_add_ip(config->ips, chainname, strptra);
+                EUCA_FREE(strptra);
+            }
+        }
 
-            EUCA_FREE(instances);
+        EUCA_FREE(instances);
 
-            // add forward chain
-            ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
-            ipt_chain_flush(config->ipt, "filter", chainname);
+        // add forward chain
+        ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
+        ipt_chain_flush(config->ipt, "filter", chainname);
 
-            // add jump rule
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
-            ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+        // add jump rule
+        snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
+        ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
 
-            // populate forward chain
+        // populate forward chain
 
-            // this one needs to be first
-            snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src -j ACCEPT", chainname, chainname);
-            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-            // make sure conntrack rule is in place
-            //snprintf(rule, MAX_RULE_LEN, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
-            //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+        // this one needs to be first
+        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src -j ACCEPT", chainname, chainname);
+        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
 
-            // then put all the group specific IPT rules (temporary one here)
-            if (secgroup->max_ingress_rules) {
-                for (j = 0; j < secgroup->max_ingress_rules; j++) {
-                    // If this rule is in reference to another group, lets add this IP set here
-                    if (strlen(secgroup->ingress_rules[j].groupId) != 0) {
-                        // Create the IP set first and add localhost as a holder
-                        //ips_handler_add_set(config->ips, secgroup->ingress_rules[j].groupId);
-                        //ips_set_add_ip(config->ips, secgroup->ingress_rules[j].groupId, "127.0.0.1");
-                        rc = gni_find_secgroup(pGni, secgroup->ingress_rules[j].groupId, &refsecgroup);
-                        if (0 != rc) {
-                            LOGWARN("Could not find referenced security group %s. Skipping ingress rule.\n", secgroup->ingress_rules[j].groupId);
-                        } else {
-                            LOGDEBUG("Found referenced security group %s owner %s\n", refsecgroup->name, refsecgroup->accountId);
-                            refchainname = NULL;
-                            rc = gni_secgroup_get_chainname(pGni, refsecgroup, &refchainname);
-                            if (rc) {
-                                LOGERROR("cannot get chain name from security group: check above log errors for details\n");
-                                ret = 1;
-                            } else {
-                                ips_handler_add_set(config->ips, refchainname);
-                                ips_set_add_ip(config->ips, refchainname, "127.0.0.1");
-                                // Next add the rule
-                                //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
-                                //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-                                ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
-                                strptra = strdup(rule);
-                                snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, refchainname, strptra);
-                                ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-                                EUCA_FREE(strptra);
-                            }
-                            EUCA_FREE(refchainname);
-                        }
-
+        // then put all the group specific IPT rules (temporary one here)
+        if (secgroup->max_ingress_rules) {
+            for (j = 0; j < secgroup->max_ingress_rules; j++) {
+                // If this rule is in reference to another group, lets add this IP set here
+                if (strlen(secgroup->ingress_rules[j].groupId) != 0) {
+                    rc = gni_find_secgroup(pGni, secgroup->ingress_rules[j].groupId, &refsecgroup);
+                    if (0 != rc) {
+                        LOGWARN("Could not find referenced security group %s. Skipping ingress rule.\n", secgroup->ingress_rules[j].groupId);
                     } else {
+                        LOGDEBUG("Found referenced security group %s owner %s\n", refsecgroup->name, refsecgroup->accountId);
+                        refchainname = NULL;
+                        refchainname = strdup(refsecgroup->name);
+                        ips_handler_add_set(config->ips, refchainname);
+                        ips_set_add_ip(config->ips, refchainname, "127.0.0.1");
+                        // Next add the rule
+                        //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
+                        //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                         ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
                         strptra = strdup(rule);
-                        snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
+                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, refchainname, strptra);
                         ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                         EUCA_FREE(strptra);
+                        EUCA_FREE(refchainname);
+                    }
+                } else {
+                    ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
+                    strptra = strdup(rule);
+                    snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
+                    ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                    EUCA_FREE(strptra);
 
-                        // Check if this rule refers to a public IP that this NC is responsible for
-                        if (secgroup->ingress_rules[j].cidr) {
-                            // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all)
-                            cidrnm = (u32) 0xffffffff << (32 - secgroup->ingress_rules[j].cidrSlashnet);
-                            if (secgroup->ingress_rules[j].cidrSlashnet != 0) {
-                                // Search for public IPs that this NC is responsible
-                                for (k = 0; k < max_myinstances; k++) {
-                                    if (((myinstances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
-                                            ((myinstances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
-                                        strptra = hex2dot(myinstances[k].privateIp);
-                                        LOGDEBUG("Found instance private IP (%s) local to this NC affected by rule (%s).\n", strptra, secgroup->grouprules[j].name);
-                                        ingress_gni_to_iptables_rule(strptra, &(secgroup->ingress_rules[j]), rule, 1);
-                                        LOGDEBUG("Created new iptables rule: %s\n", rule);
-                                        EUCA_FREE(strptra);
-                                        strptra = strdup(rule);
-                                        snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
-                                        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-                                        EUCA_FREE(strptra);
-                                    }
+                    // Check if this rule refers to a public IP that this NC is responsible for
+                    if (secgroup->ingress_rules[j].cidr) {
+                        // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all)
+                        cidrnm = (u32) 0xffffffff << (32 - secgroup->ingress_rules[j].cidrSlashnet);
+                        if (secgroup->ingress_rules[j].cidrSlashnet != 0) {
+                            // Search for public IPs that this NC is responsible
+                            for (k = 0; k < max_myinstances; k++) {
+                                if (((myinstances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((myinstances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    strptra = hex2dot(myinstances[k].privateIp);
+                                    LOGDEBUG("Found instance private IP (%s) local to this NC affected by rule (%s).\n", strptra, secgroup->grouprules[j].name);
+                                    ingress_gni_to_iptables_rule(strptra, &(secgroup->ingress_rules[j]), rule, 1);
+                                    LOGDEBUG("Created new iptables rule: %s\n", rule);
+                                    EUCA_FREE(strptra);
+                                    strptra = strdup(rule);
+                                    snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
+                                    ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                                    EUCA_FREE(strptra);
                                 }
                             }
                         }
                     }
                 }
             }
-            EUCA_FREE(chainname);
         }
+        EUCA_FREE(chainname);
     }
     EUCA_FREE(myinstances);
 
