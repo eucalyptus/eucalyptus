@@ -114,19 +114,22 @@ class NetworkInfoBroadcasts {
   static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
                                                 final NetworkInfoSource networkInfoSource,
                                                 final Supplier<List<Cluster>> clusterSupplier,
+                                                final Supplier<List<Cluster>> otherClusterSupplier,
                                                 final Supplier<String> clcHostSupplier,
                                                 final Function<List<String>,List<String>> systemNameserverLookup,
                                                 final Set<String> dirtyPublicAddresses,
                                                 final Set<RouteKey> invalidStateRoutes /*out*/ ) {
-    Iterable<Cluster> clusters = clusterSupplier.get( )
+    boolean vpcmido = 'VPCMIDO' == configuration.orNull()?.mode
+    boolean managed = ( ( 'MANAGED' == configuration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == configuration.orNull()?.mode ) )
+    Iterable<Cluster> clusters = vpcmido ?
+        Lists.newArrayList( Iterables.filter( Iterables.concat( clusterSupplier.get( ), otherClusterSupplier.get( ) ), uniquePartitionPredicate( ) ) ) :
+        clusterSupplier.get( )
     Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
         Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
         configuration
     NetworkInfo info = networkConfiguration
         .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
         .or( new NetworkInfo( ) )
-    boolean vpcmido = 'VPCMIDO' == networkConfiguration.orNull()?.mode
-    boolean managed = ( ( 'MANAGED' == networkConfiguration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == networkConfiguration.orNull()?.mode ) )
 
     // populate clusters
     info.configuration.clusters = new NIClusters(
@@ -664,6 +667,10 @@ class NetworkInfoBroadcasts {
           )
       )
     }
+  }
+
+  private static Predicate<Cluster> uniquePartitionPredicate( Set<String> partitionNames = Sets.newHashSet( ) ) {
+    { Cluster cluster -> partitionNames.add( cluster.partition )  } as Predicate<Cluster>
   }
 
   interface VersionedNetworkView {
