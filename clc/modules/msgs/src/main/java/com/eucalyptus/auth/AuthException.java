@@ -134,8 +134,9 @@ public class AuthException extends Exception {
   public static final String SERVER_CERT_INVALID_FORMAT = "Server certificate/private-key is malformed";
   public static final String INVALID_SIGNATURE ="Signature cannot be verified";
   public static final String INVALID_OPENID_PROVIDER_URL = "OpenID connect provider url is invalid";
+  public static final String INVALID_OPENID_PROVIDER_CLIENT_ID = "OpenID connect provider client id is invalid";
+  public static final String INVALID_OPENID_PROVIDER_THUMBPRINT = "OpenID connect provider thumbprint is invalid";
   public static final String OPENID_PROVIDER_ALREADY_EXISTS = "OpenID connect provider with the same url already exists";
-  public static final String OPENID_PROVIDER_NO_SUCH_ENTITY = "No OpenID connect provider with the requested url exist";
   public static final String OPENID_PROVIDER_CREATE_FAILURE = "Can not create openid connect provider";
   public AuthException( ) {
     super( );

@@ -75,6 +75,7 @@ public class EuareException extends EucalyptusWebServiceException {
   public static final String NO_SUCH_ENTITY = "NoSuchEntity";
   public static final String INTERNAL_FAILURE = "InternalFailure";
   public static final String NOT_AUTHORIZED = "NotAuthorized";
+  public static final String ACCESS_DENIED = "AccessDenied";
   public static final String DELETE_CONFLICT = "DeleteConflict";
   public static final String NOT_IMPLEMENTED = "NotImplemented";
   public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
