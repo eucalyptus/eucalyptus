@@ -25,6 +25,7 @@ import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequ
 import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
@@ -536,7 +537,7 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String userId = user.getUserId();
+      final String userId;
       final String accountId = ctx.getAccountNumber();
       final String accountAlias = ctx.getAccountAlias();
       final String stackName = request.getStackName();
@@ -551,6 +552,10 @@ public class CloudFormationService {
         }
         final String stackAccountId = stackEntity.getAccountId( );
 
+        // If this is the eucalyptus admin get the stack userId so we can delete all resources.
+        if(user.isSystemAdmin())
+          userId = Accounts.lookupPrincipalByAccountNumber(stackAccountId).getUserId();
+        else  userId = user.getUserId();
 
         if (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
           stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) {
