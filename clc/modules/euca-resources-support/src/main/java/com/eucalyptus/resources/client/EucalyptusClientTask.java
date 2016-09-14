@@ -21,8 +21,8 @@ package com.eucalyptus.resources.client;
 
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.spockframework.util.Nullable;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.util.Callback;
