@@ -127,7 +127,7 @@ import com.eucalyptus.compute.common.backend.*;
 /**
  *
  */
-@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration", "Convert2Lambda", "Guava", "StaticPseudoFunctionalStyleMethod", "ThrowableResultOfMethodCallIgnored" } )
+@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration", "Guava", "Convert2Lambda", "RedundantTypeArguments", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed
 public class VpcManager {
 
@@ -918,11 +918,15 @@ public class VpcManager {
     final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
     final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
-    final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
-    if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or(
-        !requestedCidr.transform( Cidr.prefix( ) ).transform( Functions.forPredicate( Range.closed( 16, 28 ) ) )
-        .or( createDefault ) ) ) {
-      throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+    if ( !createDefault ) {
+      final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
+      if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or( true ) ||
+          requestedCidr
+              .transform( Cidr.prefix( ) )
+              .transform( Functions.forPredicate( Predicates.not( Range.closed( 16, 28 ) ) ) ).or( true )
+      ) {
+        throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+      }
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
