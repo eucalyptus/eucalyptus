@@ -20,12 +20,16 @@
 package com.eucalyptus.auth.euare.principal;
 
 import java.util.Date;
+import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 
 /**
  *
  */
 public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider {
+
+  Pattern CLIENT_ID_PATTERN = Pattern.compile( "^.{1,255}$" );
+  Pattern THUMPRINT_PATTERN = Pattern.compile( "^(?:[0-9a-fA-F]{2}){20,127}$" );
 
   Date getCreationTimestamp();
 
