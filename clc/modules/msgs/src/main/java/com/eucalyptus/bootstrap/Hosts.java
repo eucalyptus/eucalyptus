@@ -76,6 +76,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.*;
 import org.apache.log4j.Logger;
@@ -1056,6 +1057,26 @@ public class Hosts {
         }
       } ).orNull( );
     }
+  }
+
+  /**
+   * Map the given host address to an alternative address matching the given cidr
+   */
+  public static InetAddress maphost( final InetAddress hostAddress,
+                                     final InetAddress preferredLocalAddress,
+                                     final Cidr mapToCidr ) {
+    InetAddress result = hostAddress;
+    try{
+      final Host host = Hosts.lookup( hostAddress );
+      if ( host != null && host.isLocalHost( ) ) {
+        result = preferredLocalAddress;
+      } else if ( host != null ) {
+        result = Iterables.tryFind( host.getHostAddresses( ), mapToCidr ).or( result );
+      }
+    } catch( final Exception ex ){
+      LOG.error( "Failed to map the host address: " + ex.getMessage( ) );
+    }
+    return result;
   }
 
   public static boolean contains( final String hostDisplayName ) {
