@@ -65,15 +65,10 @@ package com.eucalyptus.component;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 
 import java.net.InetAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
@@ -84,25 +79,21 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Cidr;
-import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * DNS Resolver which bases replies on the current system topology.
@@ -358,52 +349,12 @@ public class TopologyDnsResolver extends DnsResolver {
     return this.getClass( ).getSimpleName( );
   }
 
-  @SuppressWarnings( "ConstantConditions" )
-  public static InetAddress maphost( final InetAddress listenerAddress,
-                                     final InetAddress hostAddress ) {
-    InetAddress result = hostAddress;
-    try{
-      final NetworkInterface networkInterface = NetworkInterface.getByInetAddress(listenerAddress);
-      short prefix = networkInterface.getInterfaceAddresses().get(0).getNetworkPrefixLength();
-      for(final InterfaceAddress ifaddr : networkInterface.getInterfaceAddresses()){
-        if (listenerAddress.equals(ifaddr.getAddress())) {
-          prefix= ifaddr.getNetworkPrefixLength();
-          break;
-        }
-      }
-      final Cidr listenerCidr = Cidr.fromAddress(listenerAddress, prefix);
-      final Host host = Hosts.lookup(hostAddress);
-      if ( host.isLocalHost( ) ) {
-        result = listenerAddress;
-      } else if ( host != null ) {
-        result = Iterables.tryFind(host.getHostAddresses(), listenerCidr).or(result);
-      }
-    }
-    catch(final Exception ex){
-      LOG.error("failed to map the host address: " + ex.getMessage());
-    }
-    return result;
+  private static InetAddress maphost( final InetAddress listenerAddress,
+                                      final InetAddress hostAddress ) {
+    return Hosts.maphost(
+        hostAddress,
+        listenerAddress,
+        Internets.getInterfaceCidr( listenerAddress ).or( Cidr.of( 0, 0 ) ) );
   }
 
-  private static Map<Cidr,Cidr> parse( final Function<String,Cidr> cidrTransform,
-                                       final String cidrMappingList ) {
-    final Map<String,String> cidrMappingText =
-        Splitter.on( CharMatcher.anyOf( ",;:" ) ).omitEmptyStrings().trimResults( ).withKeyValueSeparator(
-            Splitter.on( Pattern.compile( "-?>" ) ).omitEmptyStrings( ).trimResults( ).limit( 2 )
-        ).split( Objects.toString( cidrMappingList, "" ) );
-    return CollectionUtils.transform(
-        cidrMappingText,
-        Maps.<Cidr,Cidr>newHashMap( ),
-        cidrTransform,
-        cidrTransform );
-  }
-
-  private static enum CidrMapTransform implements Function<String,Map<Cidr,Cidr>> {
-    INSTANCE;
-
-    @Override
-    public Map<Cidr, Cidr> apply( final String cidrMappingList ) {
-      return parse( Functions.compose( CollectionUtils.<Cidr>optionalOrNull( ), Cidr.parse( ) ), cidrMappingList );
-    }
-  }
 }
