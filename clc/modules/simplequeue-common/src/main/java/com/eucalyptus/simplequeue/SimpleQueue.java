@@ -36,7 +36,7 @@ import com.eucalyptus.util.techpreview.TechPreview;
 @FaultLogPrefix( "services" )
 @ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema )
 @Description( "Simple Queue API service" )
-@TechPreview
+@TechPreview(enableByDefaultProperty = "enable.sqs.tech.preview")
 public class SimpleQueue extends ComponentId {
   private static final long serialVersionUID = 1L;
 

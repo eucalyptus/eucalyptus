@@ -31,6 +31,6 @@
     <int:service-activator ref="simpleQueueService"/>
   </int:chain>
 
-  <int:service-activator input-channel="simplequeue" ref="simpleQueueErrorHandler"/>
+  <int:service-activator input-channel="simplequeue-error" ref="simpleQueueErrorHandler"/>
 
 </beans>

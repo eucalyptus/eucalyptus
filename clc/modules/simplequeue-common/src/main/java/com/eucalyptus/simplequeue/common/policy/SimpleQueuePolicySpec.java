@@ -43,4 +43,5 @@ public interface SimpleQueuePolicySpec {
   String SIMPLEQUEUE_SENDMESSAGE = "sendmessage";
   String SIMPLEQUEUE_SENDMESSAGEBATCH = "sendmessagebatch";
   String SIMPLEQUEUE_SETQUEUEATTRIBUTES = "setqueueattributes";
+  String RESOURCE_TYPE ="queue"; // Placeholder for ARN (arn has no type)
 }
