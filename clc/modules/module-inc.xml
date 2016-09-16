@@ -99,8 +99,16 @@
 	<property name="test.resources.dir" value="${basedir}/src/test/resources" />
 	<property name="target.dir" value="${project.basedir}/target" />
 	<property name="jar.file" value="${target.dir}/${ant.project.name}-${euca.version}.jar" />
-	<property name="lib.dir" value="${project.basedir}/lib" />
+	<property name="lib.dir.default" value="${project.basedir}/lib" />
+	<property name="lib.dir.sources" value="/source/eucalyptus-cloud-libs" />
 	<property name="modules.dir" value="${project.basedir}/modules" />
+	<condition property="lib.dir" value="${lib.dir.default}">
+		<available file="${lib.dir.default}" type="dir"/>
+	</condition>
+	<condition property="lib.dir" value="${lib.dir.sources}">
+		<available file="${lib.dir.sources}" type="dir"/>
+	</condition>
+	<fail unless="lib.dir" message="libraries directory could not be detected, please set lib.dir"/>
 	<!--================================== module properties  ==================================-->
 	<property name="jar.build.includes" value="**/*"/>
 	<property name="jar.build.excludes" value=""/>

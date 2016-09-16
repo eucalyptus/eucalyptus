@@ -78,22 +78,12 @@
 		</filterchain>
 	</loadfile>
 	<!--================================== other vars ==================================-->
-	<property name="deps.lib.dir" value="lib" />
 	<property name="tools.dir" value="tools/src" />
 	<property name="deps.lib" value="cloud-lib" />
 	<property name="bind.timestamp" value="target/.bind-timestamp" />
 	<property name="bind.msgs" value="modules/msgs/src/main/resources/msgs-binding.xml" />
     <property name="ivy.jar" value="/usr/share/java/ivy.jar" />
-	<!--================================== groovy builder ==================================-->
-	<path id="groovy-classpath">
-		<fileset dir="${deps.lib.dir}">
-			<include name="**/*.jar" />
-		</fileset>
-		<fileset dir="/usr/share/java">
-			<include name="**/*.jar" />
-		</fileset>
-	</path>
-
+	<!--================================== build helpers ===============================-->
 	<!-- Fix for RHEL bug 810067 -->
 	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
 
@@ -102,7 +92,6 @@
 	</ivy:buildlist>
 	<echo message="**** BUILDPATH: ${toString:build-module-path}" level="verbose" />
 
-	<taskdef onerror="ignore" name="groovy" classpathref="groovy-classpath" classname="org.codehaus.groovy.ant.Groovy" />
 	<macrodef name="call-module-target">
 		<attribute name="target" />
 		<sequential>
