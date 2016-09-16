@@ -298,8 +298,6 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
         try {
           this.result.setException( ex );
         } catch ( Exception t ) {}
-      } else {
-        this.requestResult.get( );
       }
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
