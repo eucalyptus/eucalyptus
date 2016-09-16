@@ -61,7 +61,6 @@ import com.eucalyptus.network.NetworkInfoBroadcasts.VersionedNetworkView;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LockResource;
-import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.SemaphoreResource;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -100,6 +99,7 @@ import static com.google.common.hash.Hashing.goodFastHash;
 /**
  *
  */
+@SuppressWarnings( { "Guava", "Convert2Lambda", "StaticPseudoFunctionalStyleMethod" } )
 public class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster.class );
 
@@ -174,6 +174,7 @@ public class NetworkInfoBroadcaster {
   public static void requestNetworkInfoBroadcast( ) {
     final long requestedTime = System.currentTimeMillis( );
     final Callable<Void> broadcastRequest = new Callable<Void>( ) {
+      @SuppressWarnings( "unused" )
       @Override
       public Void call( ) throws Exception {
         boolean shouldBroadcast = false;
@@ -213,12 +214,13 @@ public class NetworkInfoBroadcaster {
     Threads.enqueue( Eucalyptus.class, NetworkInfoBroadcaster.class, 5, task );
   }
 
-  @SuppressWarnings("UnnecessaryQualifiedReference")
+  @SuppressWarnings( { "UnnecessaryQualifiedReference", "WeakerAccess", "unused" } )
   static void broadcastNetworkInfo( ) {
     try ( final SemaphoreResource semaphore = SemaphoreResource.acquire( activeBroadcastSemaphore ) ) {
       // populate with info directly from configuration
       final Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.getNetworkConfiguration( );
       final List<com.eucalyptus.cluster.Cluster> clusters = Clusters.getInstance( ).listValues( );
+      final List<com.eucalyptus.cluster.Cluster> otherClusters = Clusters.getInstance( ).listDisabledValues( );
 
       final NetworkInfoSource source = cacheSource( );
       final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
@@ -228,6 +230,7 @@ public class NetworkInfoBroadcaster {
               networkConfiguration,
               source,
               Suppliers.ofInstance( clusters ),
+              Suppliers.ofInstance( otherClusters ),
               new Supplier<String>( ) {
                 @Override
                 public String get() {
@@ -257,6 +260,7 @@ public class NetworkInfoBroadcaster {
     }
   }
 
+  @SuppressWarnings( "serial" )
   private static int fingerprint(
       final NetworkInfoSource source,
       final List<com.eucalyptus.cluster.Cluster> clusters,
@@ -266,6 +270,7 @@ public class NetworkInfoBroadcaster {
     final HashFunction hashFunction = goodFastHash( 32 );
     final Hasher hasher = hashFunction.newHasher( );
     final Funnel<VersionedNetworkView> versionedItemFunnel = new Funnel<VersionedNetworkView>() {
+      @SuppressWarnings( "NullableProblems" )
       @Override
       public void funnel( final VersionedNetworkView o, final PrimitiveSink primitiveSink ) {
         primitiveSink.putString( o.getId( ), StandardCharsets.UTF_8 );
@@ -285,6 +290,7 @@ public class NetworkInfoBroadcaster {
     return hasher.hash( ).asInt( );
   }
 
+  @SuppressWarnings( { "WeakerAccess", "unused" } )
   public static class NetworkInfoBroadcasterEventListener implements EventListener<ClockTick> {
     private final int intervalTicks = 3;
     private volatile int counter = 0;

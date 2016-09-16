@@ -73,6 +73,7 @@ import com.eucalyptus.network.config.ManagedSubnet
 import com.eucalyptus.network.config.MidonetGateway
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.Strings as EucaStrings;
@@ -114,19 +115,22 @@ class NetworkInfoBroadcasts {
   static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
                                                 final NetworkInfoSource networkInfoSource,
                                                 final Supplier<List<Cluster>> clusterSupplier,
+                                                final Supplier<List<Cluster>> otherClusterSupplier,
                                                 final Supplier<String> clcHostSupplier,
                                                 final Function<List<String>,List<String>> systemNameserverLookup,
                                                 final Set<String> dirtyPublicAddresses,
                                                 final Set<RouteKey> invalidStateRoutes /*out*/ ) {
-    Iterable<Cluster> clusters = clusterSupplier.get( )
+    boolean vpcmido = 'VPCMIDO' == configuration.orNull()?.mode
+    boolean managed = ( ( 'MANAGED' == configuration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == configuration.orNull()?.mode ) )
+    Iterable<Cluster> clusters = vpcmido ?
+        Lists.newArrayList( Iterables.filter( Iterables.concat( clusterSupplier.get( ), otherClusterSupplier.get( ) ), uniquePartitionPredicate( ) ) ) :
+        clusterSupplier.get( )
     Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
         Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
         configuration
     NetworkInfo info = networkConfiguration
         .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
         .or( new NetworkInfo( ) )
-    boolean vpcmido = 'VPCMIDO' == networkConfiguration.orNull()?.mode
-    boolean managed = ( ( 'MANAGED' == networkConfiguration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == networkConfiguration.orNull()?.mode ) )
 
     // populate clusters
     info.configuration.clusters = new NIClusters(
@@ -298,6 +302,13 @@ class NetworkInfoBroadcasts {
           vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
       )
     } )
+    vpcs.findAll{ VpcNetworkView vpc -> !activeVpcs.contains(vpc.id) }.each { Object vpcViewObj -> // processing for any inactive vpcs
+      final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
+      routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.each { Object routeTableObj ->
+        RouteTableNetworkView routeTable = routeTableObj as RouteTableNetworkView
+        CollectionUtils.each( routeTable.routes, activeRoutePredicate )
+      }
+    }
 
     // populate instances
     Map<String,Collection<NetworkInterfaceNetworkView>> instanceIdToNetworkInterfaces = (Map<String,Collection<NetworkInterfaceNetworkView>> ) ((ArrayListMultimap<String,NetworkInterfaceNetworkView>) networkInterfaces.inject(ArrayListMultimap.<String,NetworkInterfaceNetworkView>create()){
@@ -664,6 +675,10 @@ class NetworkInfoBroadcasts {
           )
       )
     }
+  }
+
+  private static Predicate<Cluster> uniquePartitionPredicate( Set<String> partitionNames = Sets.newHashSet( ) ) {
+    { Cluster cluster -> partitionNames.add( cluster.partition )  } as Predicate<Cluster>
   }
 
   interface VersionedNetworkView {

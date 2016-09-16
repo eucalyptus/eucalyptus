@@ -127,7 +127,7 @@ import com.eucalyptus.compute.common.backend.*;
 /**
  *
  */
-@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration" } )
+@SuppressWarnings( { "UnnecessaryLocalVariable", "UnusedDeclaration", "Guava", "Convert2Lambda", "RedundantTypeArguments", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed("computeVpcManager")
 public class VpcManager {
 
@@ -193,8 +193,8 @@ public class VpcManager {
             public void fire( final Vpc vpc ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) try {
                 final DhcpOptionSet dhcpOptionSet = "default".equals( dhcpOptionsId ) ?
-                    dhcpOptionSets.lookupByExample( DhcpOptionSet.exampleDefault( accountFullName ), accountFullName, "default", Predicates.alwaysTrue( ), Functions.<DhcpOptionSet>identity() ):
-                    dhcpOptionSets.lookupByName( accountFullName, dhcpOptionsId, Functions.<DhcpOptionSet>identity( ) );
+                    dhcpOptionSets.lookupByExample( DhcpOptionSet.exampleDefault( accountFullName ), accountFullName, "default", Predicates.alwaysTrue( ), Functions.identity() ):
+                    dhcpOptionSets.lookupByName( accountFullName, dhcpOptionsId, Functions.identity( ) );
                 vpc.setDhcpOptionSet( dhcpOptionSet );
               } catch ( VpcMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidDhcpOptionsID.NotFound", "DHCP options not found '" + request.getDhcpOptionsId() + "'" ) );
@@ -229,7 +229,7 @@ public class VpcManager {
             @Override
             public void fire( final RouteTable routeTable ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
-                final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity( ) );
+                final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.identity( ) );
 
                 if ( !subnet.getVpc( ).getDisplayName( ).equals( routeTable.getVpc( ).getDisplayName( ) ) ) {
                   throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue",
@@ -281,15 +281,22 @@ public class VpcManager {
             @Override
             public void fire( final InternetGateway internetGateway ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( internetGateway ) ) try {
-                final Vpc vpc = vpcs.lookupByName( accountFullName, vpcId, Functions.<Vpc>identity( ) );
+                final Vpc vpc = vpcs.lookupByName( accountFullName, vpcId, Functions.identity( ) );
                 if ( internetGateway.getVpc( ) != null ) {
                   throw Exceptions.toUndeclared( new ClientComputeException( "Resource.AlreadyAssociated",
                       "resource "+gatewayId+" is already attached to network " + internetGateway.getVpc( ).getDisplayName() ) );
                 }
+                try {
+                  internetGateways.lookupByVpc( null, vpcId, Functions.identity( ) );
+                  throw Exceptions.toUndeclared( new ClientComputeException( "InvalidParameterValue",
+                      "Network "+vpcId+" already has an internet gateway attached" ) );
+                } catch ( final VpcMetadataNotFoundException e ) {
+                  // expected
+                }
                 internetGateway.setVpc( vpc );
-              } catch ( VpcMetadataNotFoundException e ) {
+              } catch ( final VpcMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
-              } catch ( Exception e ) {
+              } catch ( final Exception e ) {
                 throw Exceptions.toUndeclared( e );
               } else {
                 throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to attach internet gateway" ) );
@@ -488,12 +495,12 @@ public class VpcManager {
         try {
           final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
           if ( clientToken != null ) try {
-            return natGateways.lookupByClientToken( accountFullName, clientToken, Functions.<NatGateway>identity( ) );
+            return natGateways.lookupByClientToken( accountFullName, clientToken, Functions.identity( ) );
           } catch ( final VpcMetadataNotFoundException e ) {
             // create new NAT gateway with the given client token
           }
 
-          final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.<Subnet>identity( ) );
+          final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.identity( ) );
           final long natGatewayCount = natGateways.countByZone( accountFullName, subnet.getAvailabilityZone( ) );
           if ( natGatewayCount >= VpcConfiguration.getNatGatewaysPerAvailabilityZone( ) ) {
             throw new ClientComputeException( "NatGatewayLimitExceeded",
@@ -525,7 +532,7 @@ public class VpcManager {
       @Override
       public NetworkAcl get( ) {
         try {
-          final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName( ).asAccountFullName( ), vpcId, Functions.<Vpc>identity( ) );
+          final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName( ).asAccountFullName( ), vpcId, Functions.identity( ) );
           final long networkAclsForVpc = networkAcls.countByExample(
               NetworkAcl.exampleWithOwner( ctx.getUserFullName( ).asAccountFullName( ) ),
               Restrictions.eq( "vpc.displayName", vpcId ),
@@ -559,7 +566,7 @@ public class VpcManager {
     if ( !protocolOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
     }
-    if ( !Range.closed( 1, 32766 ).apply( request.getRuleNumber( ) ) ) {
+    if ( !Range.closed( 1, 32766 ).contains( request.getRuleNumber( ) ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Rule number invalid: " + request.getRuleNumber( ) );
     }
     final Supplier<NetworkAclEntry> allocator = transactional( new Supplier<NetworkAclEntry>( ) {
@@ -571,6 +578,7 @@ public class VpcManager {
               accountFullName,
               request.getNetworkAclId(),
               new Callback<NetworkAcl>( ) {
+                @SuppressWarnings( "OptionalGetWithoutIsPresent" )
                 @Override
                 public void fire( final NetworkAcl networkAcl ) {
                   if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) try {
@@ -666,10 +674,10 @@ public class VpcManager {
       @Override
       public NetworkInterface get( ) {
         try {
-          final Subnet subnet = subnets.lookupByName( null, subnetId, Functions.<Subnet>identity() );
+          final Subnet subnet = subnets.lookupByName( null, subnetId, Functions.identity() );
           final Vpc vpc = subnet.getVpc( );
           final Set<NetworkGroup> groups = request.getGroupSet( )==null || request.getGroupSet( ).groupIds( ).isEmpty( ) ?
-              Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkGroup>identity( ) ) ) :
+              Sets.newHashSet( securityGroups.lookupDefault( vpc.getDisplayName( ), Functions.identity( ) ) ) :
               Sets.newHashSet( Iterables.transform(
                   Identifier.sg.normalize( request.getGroupSet( ).groupIds( ) ),
                   RestrictedTypes.resolver( NetworkGroup.class ) ) );
@@ -748,13 +756,13 @@ public class VpcManager {
       public Route get( ) {
         try {
           final NetworkInterface networkInterface = networkInterfaceId == null ? null :
-              networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.<NetworkInterface>identity( ) );
+              networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.identity( ) );
           final VmInstance instance = instanceId == null ? null :
               VmInstances.lookup( instanceId );
           final InternetGateway internetGateway = gatewayId == null ? null :
-              internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
+              internetGateways.lookupByName( accountFullName, gatewayId, Functions.identity() );
           final NatGateway natGateway = natGatewayId == null ? null :
-              natGateways.lookupByName( accountFullName, natGatewayId, Functions.<NatGateway>identity() );
+              natGateways.lookupByName( accountFullName, natGatewayId, Functions.identity() );
           routeTables.updateByExample(
               RouteTable.exampleWithName( accountFullName, routeTableId ),
               accountFullName,
@@ -819,7 +827,7 @@ public class VpcManager {
       @Override
       public RouteTable get( ) {
         try {
-          final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName().asAccountFullName(), vpcId, Functions.<Vpc>identity() );
+          final Vpc vpc = vpcs.lookupByName( ctx.getUserFullName().asAccountFullName(), vpcId, Functions.identity() );
 
           final long routeTablesForVpc = routeTables.countByExample(
               RouteTable.exampleWithOwner( ctx.getUserFullName( ).asAccountFullName( ) ),
@@ -863,15 +871,16 @@ public class VpcManager {
       throw new ClientComputeException( "InvalidParameterValue", "Availability zone invalid: " + request.getAvailabilityZone( ) );
     }
     final Supplier<Subnet> allocator = new Supplier<Subnet>( ) {
+      @SuppressWarnings( "OptionalGetWithoutIsPresent" )
       @Override
       public Subnet get( ) {
         try {
           final Vpc vpc =
-              vpcs.lookupByName( accountFullName, vpcId, Functions.<Vpc>identity( ) );
+              vpcs.lookupByName( accountFullName, vpcId, Functions.identity( ) );
           final Iterable<Subnet> subnetsInVpc = subnets.listByExample(
               Subnet.exampleWithOwner( accountFullName ),
               CollectionUtils.propertyPredicate( vpc.getDisplayName(), Subnets.FilterStringFunctions.VPC_ID ),
-              Functions.<Subnet>identity( ) );
+              Functions.identity( ) );
           if ( Iterables.size( subnetsInVpc ) >= VpcConfiguration.getSubnetsPerVpc( ) ) {
             throw new ClientComputeException( "SubnetLimitExceeded", "Subnet limit exceeded for " + vpc.getDisplayName( ) );
           }
@@ -884,7 +893,7 @@ public class VpcManager {
               Iterables.any( existingCidrs, subnetCidr.get( ).containedBy() ) ) {
             throw new ClientComputeException( "InvalidSubnet.Conflict", "Cidr conflict for " + request.getCidrBlock( ) );
           }
-          final NetworkAcl networkAcl = networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() );
+          final NetworkAcl networkAcl = networkAcls.lookupDefault( vpc.getDisplayName(), Functions.identity() );
           return subnets.save( Subnet.create(
               ctx.getUserFullName( ),
               vpc,
@@ -909,11 +918,15 @@ public class VpcManager {
     final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
     final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
-    final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
-    if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or(
-        !requestedCidr.transform( Cidr.prefix( ) ).transform( Functions.forPredicate( Range.closed( 16, 28 ) ) )
-        .or( createDefault ) ) ) {
-      throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+    if ( !createDefault ) {
+      final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
+      if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or( true ) ||
+          requestedCidr
+              .transform( Cidr.prefix( ) )
+              .transform( Functions.forPredicate( Predicates.not( Range.closed( 16, 28 ) ) ) ).or( true )
+      ) {
+        throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
+      }
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
@@ -933,9 +946,9 @@ public class VpcManager {
 
             // check for existing vpc
             try {
-              vpc = vpcs.lookupDefault( vpcAccountFullName, Functions.<Vpc>identity() );
-              routeTable = routeTables.lookupMain( vpc.getDisplayName( ), Functions.<RouteTable>identity( ) );
-              networkAcl = networkAcls.lookupDefault( vpc.getDisplayName( ), Functions.<NetworkAcl>identity( ) );
+              vpc = vpcs.lookupDefault( vpcAccountFullName, Functions.identity() );
+              routeTable = routeTables.lookupMain( vpc.getDisplayName( ), Functions.identity( ) );
+              networkAcl = networkAcls.lookupDefault( vpc.getDisplayName( ), Functions.identity( ) );
             } catch ( final VpcMetadataNotFoundException e ) {
               // so create it
             }
@@ -952,7 +965,7 @@ public class VpcManager {
                   vpcAccountFullName,
                   "default",
                   Predicates.alwaysTrue(),
-                  Functions.<DhcpOptionSet>identity() );
+                  Functions.identity() );
             } catch ( VpcMetadataNotFoundException e ) {
               options = dhcpOptionSets.save( DhcpOptionSet.createDefault(
                   vpcOwnerFullName,
@@ -984,7 +997,7 @@ public class VpcManager {
             InternetGateway internetGateway;
             try {
               internetGateway =
-                  internetGateways.lookupByVpc( vpcAccountFullName, vpc.getDisplayName(), Functions.<InternetGateway>identity( ) );
+                  internetGateways.lookupByVpc( vpcAccountFullName, vpc.getDisplayName(), Functions.identity( ) );
             } catch ( final VpcMetadataNotFoundException e ) {
               internetGateway = internetGateways.save( InternetGateway.create( vpcOwnerFullName, Identifier.igw.generate( ) ) );
               internetGateway.setVpc( vpc );
@@ -1071,7 +1084,7 @@ public class VpcManager {
           final DhcpOptionSet dhcpOptionSet = dhcpOptionSets.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<DhcpOptionSet>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( dhcpOptionSet ) ) {
             dhcpOptionSets.delete( dhcpOptionSet );
           } else {
@@ -1095,7 +1108,7 @@ public class VpcManager {
           final InternetGateway internetGateway = internetGateways.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<InternetGateway>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( internetGateway ) ) {
             internetGateways.delete( internetGateway );
           } else {
@@ -1168,7 +1181,7 @@ public class VpcManager {
           final NetworkAcl networkAcl = networkAcls.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<NetworkAcl>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) {
             if ( networkAcl.getDefaultForVpc( ) ) {
               throw new ClientComputeException(
@@ -1238,7 +1251,7 @@ public class VpcManager {
           final NetworkInterface networkInterface = networkInterfaces.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<NetworkInterface>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( networkInterface ) ) {
             if ( networkInterface.isAttached( ) ) {
               throw new ClientComputeException( "" +
@@ -1313,7 +1326,7 @@ public class VpcManager {
           final RouteTable routeTable = routeTables.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<RouteTable>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
             if ( routeTable.getMain( ) ) {
               throw new ClientComputeException(
@@ -1342,7 +1355,7 @@ public class VpcManager {
           final Subnet subnet = subnets.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<Subnet>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) {
             subnets.delete( subnet );
           } else {
@@ -1366,30 +1379,30 @@ public class VpcManager {
           final Vpc vpc = vpcs.lookupByName(
               accountAndId.getLeft( ).orNull( ),
               accountAndId.getRight( ),
-              Functions.<Vpc>identity( ) );
+              Functions.identity( ) );
           if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
             if ( Boolean.TRUE.equals( vpc.getDefaultVpc( ) ) &&  Contexts.lookup( ).isAdministrator( ) ) {
               final List<Subnet> defaultSubnets = subnets.listByExample(
                   Subnet.exampleDefault( AccountFullName.getInstance( vpc.getOwnerAccountNumber( ) ), null ),
                   Predicates.alwaysTrue( ),
-                  Functions.<Subnet>identity( ) );
+                  Functions.identity( ) );
               for ( final Subnet subnet : defaultSubnets ) {
                 subnets.delete( subnet );
               }
               try {
                 final InternetGateway internetGateway =
-                    internetGateways.lookupByVpc( null, vpc.getDisplayName( ), Functions.<InternetGateway>identity( ) );
+                    internetGateways.lookupByVpc( null, vpc.getDisplayName( ), Functions.identity( ) );
                 internetGateways.delete( internetGateway );
               } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             }
             try {
-              networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.<NetworkAcl>identity() ) );
+              networkAcls.delete( networkAcls.lookupDefault( vpc.getDisplayName(), Functions.identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             try {
-              routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.<RouteTable>identity() ) );
+              routeTables.delete( routeTables.lookupMain( vpc.getDisplayName(), Functions.identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             try {
-              securityGroups.delete( securityGroups.lookupDefault( vpc.getDisplayName(), Functions.<NetworkGroup>identity() ) );
+              securityGroups.delete( securityGroups.lookupDefault( vpc.getDisplayName(), Functions.identity() ) );
             } catch ( VpcMetadataNotFoundException e ) { /* so no need to delete */ }
             vpcs.delete( vpc );
           } else {
@@ -1439,7 +1452,7 @@ public class VpcManager {
             @Override
             public void fire( final InternetGateway internetGateway ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( internetGateway ) ) try {
-                final Vpc vpc = vpcs.lookupByName( accountFullName, vpcId, Functions.<Vpc>identity( ) );
+                final Vpc vpc = vpcs.lookupByName( accountFullName, vpcId, Functions.identity( ) );
                 if ( internetGateway.getVpc( ) == null || !vpc.getDisplayName( ).equals( internetGateway.getVpc( ).getDisplayName( ) ) ) {
                   throw Exceptions.toUndeclared( new ClientComputeException( "Gateway.NotAttached",
                       "resource "+gatewayId+" is not attached to network " + vpcId ) );
@@ -1723,7 +1736,7 @@ public class VpcManager {
             @Override
             public void fire( final Subnet subnet ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( subnet ) ) try {
-                final NetworkAcl networkAcl = networkAcls.lookupByName( accountFullName, networkAclId, Functions.<NetworkAcl>identity( ) );
+                final NetworkAcl networkAcl = networkAcls.lookupByName( accountFullName, networkAclId, Functions.identity( ) );
                 if ( !subnet.getVpc( ).getDisplayName( ).equals( networkAcl.getVpc( ).getDisplayName( ) ) ) {
                   throw new ClientComputeException( "InvalidParameterValue",
                       "Network ACL "+networkAclId+" and subnet "+subnet.getDisplayName( )+" belong to different networks" );
@@ -1763,7 +1776,7 @@ public class VpcManager {
     if ( !protocolOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
     }
-    if ( !Range.closed( 1, 32766 ).apply( request.getRuleNumber( ) ) ) {
+    if ( !Range.closed( 1, 32766 ).contains( request.getRuleNumber( ) ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Rule number invalid: " + request.getRuleNumber( ) );
     }
     try {
@@ -1772,6 +1785,7 @@ public class VpcManager {
           accountFullName,
           request.getNetworkAclId(),
           new Callback<NetworkAcl>( ) {
+            @SuppressWarnings( "OptionalGetWithoutIsPresent" )
             @Override
             public void fire( final NetworkAcl networkAcl ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( networkAcl ) ) try {
@@ -1869,13 +1883,13 @@ public class VpcManager {
             public void fire( final RouteTable routeTable ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
                 final NetworkInterface networkInterface = networkInterfaceId == null ? null :
-                    networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.<NetworkInterface>identity( ) );
+                    networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.identity( ) );
                 final VmInstance instance = instanceId == null ? null :
                     VmInstances.lookup( instanceId );
                 final InternetGateway internetGateway = gatewayId == null ? null :
-                    internetGateways.lookupByName( accountFullName, gatewayId, Functions.<InternetGateway>identity() );
+                    internetGateways.lookupByName( accountFullName, gatewayId, Functions.identity() );
                 final NatGateway natGateway = natGatewayId == null ? null :
-                    natGateways.lookupByName( accountFullName, natGatewayId, Functions.<NatGateway>identity() );
+                    natGateways.lookupByName( accountFullName, natGatewayId, Functions.identity() );
 
                 final List<Route> routes = routeTable.getRoutes( );
                 final Optional<Route> oldRoute =
@@ -1923,7 +1937,7 @@ public class VpcManager {
             @Override
             public String apply( final RouteTable routeTable ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) try {
-                final RouteTable newRouteTable = routeTables.lookupByName( accountFullName, routeTableId, Functions.<RouteTable>identity( ) );
+                final RouteTable newRouteTable = routeTables.lookupByName( accountFullName, routeTableId, Functions.identity( ) );
                 final RouteTableAssociation association = Iterables.find(
                     routeTable.getRouteTableAssociations( ),
                     CollectionUtils.propertyPredicate( associationId, RouteTables.AssociationFilterStringFunctions.ASSOCIATION_ID ) );
@@ -2101,10 +2115,12 @@ public class VpcManager {
     }
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   protected <E extends AbstractPersistent> Supplier<E> transactional( final Supplier<E> supplier ) {
     return Entities.asTransaction( supplier );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   protected <E extends AbstractPersistent,P> Function<P,E> transactional( final Function<P,E> function ) {
     return Entities.asTransaction( function );
   }
@@ -2129,7 +2145,7 @@ public class VpcManager {
                                                             final Integer ruleNumber ) {
     return Predicates.and(
         ruleNumber == null ?
-            Predicates.<NetworkAclEntry>alwaysTrue( ) :
+            Predicates.alwaysTrue( ) :
             CollectionUtils.propertyPredicate(
               ruleNumber,
               NetworkAcls.NetworkAclEntryFilterIntegerFunctions.RULE_NUMBER ),
