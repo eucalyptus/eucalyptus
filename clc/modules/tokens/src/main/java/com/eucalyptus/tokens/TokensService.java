@@ -165,6 +165,11 @@ public class TokensService {
     }
     rejectPasswordCredentials( );
 
+    // basic parameter validation
+    if ( request.getRoleSessionName( ) == null || !request.getRoleSessionName( ).matches( "[\\w+=,.@-]{2,64}" ) ) {
+      throw new TokensException( TokensException.Code.ValidationError, "Invalid role session name" );
+    }
+
     final BaseRole role = lookupRole( request.getRoleArn( ) );
 
     try {
