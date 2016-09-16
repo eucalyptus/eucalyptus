@@ -62,22 +62,6 @@
 
 package com.eucalyptus.ws.server;
 
-import javax.annotation.Nullable;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelDownstreamHandler;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.DownstreamMessageEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.timeout.IdleStateEvent;
 import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -93,23 +77,29 @@ import com.eucalyptus.records.Logs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
+
+import javax.annotation.Nullable;
 
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger             LOG         = Logger.getLogger( ServiceContextHandler.class );
-  private ChannelLocal<Long>        startTime   = new ChannelLocal<Long>( );
-  private ChannelLocal<Long>        openTime    = new ChannelLocal<Long>( );
-  private ChannelLocal<BaseMessage> messageType = new ChannelLocal<BaseMessage>( ) {
-                                                  
+  private ChannelLocal<Long>        startTime   = new ChannelLocal<Long>(true);
+  private ChannelLocal<Long>        openTime    = new ChannelLocal<Long>(true);
+  private ChannelLocal<BaseMessage> messageType = new ChannelLocal<BaseMessage>(true) {
                                                   @Override
                                                   protected BaseMessage initialValue( Channel channel ) {
                                                     return new BaseMessage( );
                                                   }
                                                 };
-  
+
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME:GRZE: handle exceptions cleanly. convert to msg type and write.
     LOG.debug( ctx.getChannel( ), e.getCause( ) );
   }
-  
+
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
@@ -124,7 +114,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       ctx.sendDownstream( e );
     }
   }
-  
+
   private MessageEvent makeDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
     MappingHttpRequest request = null;
     Context reqCtx = null;
@@ -160,14 +150,14 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       return new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     }
   }
-  
+
   private void setStatus( final MappingHttpResponse response, final ChannelEvent e ) {
     if ( e instanceof MessageEvent ) {
       final MessageEvent msge = ( MessageEvent ) e;
       if ( msge.getMessage( ) instanceof BaseMessageSupplier ) {
         final HttpResponseStatus status = ((BaseMessageSupplier) msge.getMessage()).getStatus();
         if ( status != null ) {
-          response.setStatus( status );  
+          response.setStatus( status );
         }
       }
     }
@@ -180,7 +170,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     if ( Logs.isExtrrreeeme( ) ) LOG.trace( this.getClass( ).getSimpleName( ) + "[incoming]:" + ( msg != null
       ? msg.getClass( ).getSimpleName( )
       : "" ) + " " + e );
-    
+
     if ( e instanceof ChannelStateEvent ) {
       ChannelStateEvent evt = ( ChannelStateEvent ) e;
       switch ( evt.getState( ) ) {
@@ -211,14 +201,14 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       ctx.sendUpstream( e );
     }
   }
-  
+
   private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceDispatchException {
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
     this.messageType.set( ctx.getChannel( ), msg );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
     ServiceOperations.dispatch( msg );
   }
-  
+
   private void channelClosed( ChannelHandlerContext ctx, ChannelStateEvent evt ) {
     if ( Contexts.exists( ctx.getChannel( ) ) ) {
       try {
@@ -239,9 +229,9 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       Logs.extreme( ).trace( ex, ex );
     }
   }
-  
+
   private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
     this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
   }
-  
+
 }
