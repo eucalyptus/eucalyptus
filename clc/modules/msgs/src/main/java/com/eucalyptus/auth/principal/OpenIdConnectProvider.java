@@ -60,62 +60,48 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.auth.principal;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.ws.EucalyptusWebServiceException;
-import com.eucalyptus.ws.Role;
+import java.io.Serializable;
+import java.util.List;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.type.RestrictedType;
 
-public class EuareException extends EucalyptusWebServiceException {
+/**
+ * The interface for a user in Eucalyptus.
+ * 
+ * @author dkavanagh
+ */
+public interface OpenIdConnectProvider extends RestrictedType, Serializable {
 
-  private static final long serialVersionUID = 1L;
+  String getAccountNumber( ) throws AuthException;
 
-  public static final String ENTITY_ALREADY_EXISTS = "EntityAlreadyExists";
-  public static final String LIMIT_EXCEEDED = "LimitExceeded";
-  public static final String NO_SUCH_ENTITY = "NoSuchEntity";
-  public static final String INTERNAL_FAILURE = "InternalFailure";
-  public static final String NOT_AUTHORIZED = "NotAuthorized";
-  public static final String ACCESS_DENIED = "AccessDenied";
-  public static final String DELETE_CONFLICT = "DeleteConflict";
-  public static final String NOT_IMPLEMENTED = "NotImplemented";
-  public static final String MALFORMED_POLICY_DOCUMENT = "MalformedPolicyDocument";
-  public static final String DUPLICATE_CERTIFICATE = "DuplicateCertificate";
-  public static final String INVALID_CERTIFICATE = "InvalidCertificate";
-  public static final String MALFORMED_CERTIFICATE = "MalformedCertificate";
-  public static final String INVALID_NAME = "InvalidName";
-  public static final String INVALID_ID = "InvalidId";
-  public static final String INVALID_PATH = "InvalidPath";
-  public static final String INVALID_VALUE = "InvalidValue";
-  public static final String VALIDATION_ERROR = "ValidationError";
+  /**
+   * The provider URL as used in the ARN
+   *
+   * This value does not start with the scheme or include any port.
+   *
+   * @return The account unique url for the provider.
+   */
+  String getUrl( );
 
-  private HttpResponseStatus status;
+  /**
+   * The host from the url.
+   */
+  String getHost( );
 
-  public EuareException( HttpResponseStatus status, String error ) {
-    this( status, error, "Internal error" );
-  }
+  /**
+   * The port for the provider.
+   */
+  Integer getPort( );
 
-  public EuareException( HttpResponseStatus status, String error, String message, Throwable cause ) {
-    super( error, statusAsRole( status ), message );
-    initCause( cause );
-    this.status = status;
-  }
+  /**
+   * The path from the url.
+   */
+  String getPath( );
 
-  public EuareException( HttpResponseStatus status, String error, String message ) {
-    super( error, statusAsRole( status ), message );
-    this.status = status;
-  }
+  List<String> getClientIds( ) throws AuthException;
 
-  public HttpResponseStatus getStatus( ) {
-    return this.status;
-  }
+  List<String> getThumbprints( ) throws AuthException;
 
-  public String getError( ) {
-    return getCode( );
-  }
-
-  private static Role statusAsRole( final HttpResponseStatus status ) {
-    return status.getCode( ) >= 400 && status.getCode( ) < 500 ?
-        Role.Sender :
-        Role.Receiver;
-  }
 }

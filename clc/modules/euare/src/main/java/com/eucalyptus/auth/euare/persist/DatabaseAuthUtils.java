@@ -76,6 +76,8 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
@@ -234,6 +236,19 @@ public class DatabaseAuthUtils {
   }
 
   /**
+   * Must call within a transaction.
+   */
+  public static OpenIdProviderEntity getUniqueOpenIdConnectProvider( String url, String accountName ) throws Exception {
+    try {
+      return Entities.criteriaQuery( OpenIdProviderEntity.class ).whereEqual( OpenIdProviderEntity_.url, url )
+        .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
+      throw new NoSuchElementException( "Can not find openid connect provider " + url + " in " + accountName );
+    }
+  }
+
+  /**
    * Check if the user name follows the IAM spec.
    * http://docs.amazonwebservices.com/IAM/latest/UserGuide/index.html?Using_Identifiers.html
    * 
@@ -377,7 +392,7 @@ public class DatabaseAuthUtils {
   }
 
   /**
-   * Check if the account is empty (no roles, no groups, no users).
+   * Check if the account is empty (no roles, no groups, no users, etc).
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
@@ -391,7 +406,17 @@ public class DatabaseAuthUtils {
           .whereEqual( AccountEntity_.name, accountName )
           .uniqueResult( );
 
-      return roles + groups == 0;
+      final long profiles = Entities.count( InstanceProfileEntity.class )
+          .join( InstanceProfileEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+
+      final long providers = Entities.count( OpenIdProviderEntity.class )
+          .join( OpenIdProviderEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+
+      return roles + groups + profiles + providers == 0;
     } catch ( Exception e ) {
       throw new AuthException( "Error checking if account is empty", e );
     }
@@ -408,7 +433,7 @@ public class DatabaseAuthUtils {
     return false;
   }
 
-  public static <T,PT> T getUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value ) throws Exception {
+  public static <T,PT> T getUnique( Class<T> entityClass, SingularAttribute<? super T, PT> property, PT value ) throws Exception {
     try {
       return criteriaQuery( restriction( entityClass ).equal( property, value ) ).uniqueResult( );
     } catch ( NoSuchElementException e ) {
@@ -416,7 +441,7 @@ public class DatabaseAuthUtils {
     }
   }
 
-  public static <T,PT> void invokeUnique( Class<T> entityClass, SingularAttribute<T, PT> property, PT value, final Callback<T> c ) throws TransactionException {
+  public static <T,PT> void invokeUnique( Class<T> entityClass, SingularAttribute<? super T, PT> property, PT value, final Callback<T> c ) throws TransactionException {
     try ( final TransactionResource db = Entities.transactionFor( entityClass ) ) {
       T result = getUnique( entityClass, property, value );
       if ( c != null ) {

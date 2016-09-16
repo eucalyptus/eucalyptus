@@ -80,6 +80,8 @@ public class AuthException extends Exception {
   public static final String EMPTY_ROLE_ID = "Empty role ID";
   public static final String EMPTY_ACCOUNT_NAME = "Empty account name";
   public static final String EMPTY_ACCOUNT_ID = "Empty account ID";
+  public static final String EMPTY_OPENID_PROVIDER_ARN = "Empty openId connect provider ARN";
+  public static final String EMPTY_OPENID_PROVIDER_URL = "Empty openId connect provider URL";
   public static final String USER_DELETE_CONFLICT = "User has resources attached and can not be deleted";
   public static final String GROUP_DELETE_CONFLICT = "Group has resources attached and can not be deleted";
   public static final String ROLE_DELETE_CONFLICT = "Role has resources attached and can not be deleted";
@@ -109,6 +111,7 @@ public class AuthException extends Exception {
   public static final String USER_GROUP_DELETE = "Can not delete user group";
   public static final String NO_SUCH_CERTIFICATE = "No such certificate";
   public static final String NO_SUCH_KEY = "No such access key";
+  public static final String NO_SUCH_OPENID_CONNECT_PROVIDER = "No such openId connect provider";
   public static final String DELETE_SYSTEM_ACCOUNT = "Can not delete system account";
   public static final String ACCESS_DENIED = "Access to the resource is denied";
   public static final String QUOTA_EXCEEDED = "Resource quota is exceeded";
@@ -130,6 +133,11 @@ public class AuthException extends Exception {
   public static final String SERVER_CERT_DELETE_CONFLICT = "Server certificate is attached to subordinate entities";
   public static final String SERVER_CERT_INVALID_FORMAT = "Server certificate/private-key is malformed";
   public static final String INVALID_SIGNATURE ="Signature cannot be verified";
+  public static final String INVALID_OPENID_PROVIDER_URL = "OpenID connect provider url is invalid";
+  public static final String INVALID_OPENID_PROVIDER_CLIENT_ID = "OpenID connect provider client id is invalid";
+  public static final String INVALID_OPENID_PROVIDER_THUMBPRINT = "OpenID connect provider thumbprint is invalid";
+  public static final String OPENID_PROVIDER_ALREADY_EXISTS = "OpenID connect provider with the same url already exists";
+  public static final String OPENID_PROVIDER_CREATE_FAILURE = "Can not create openid connect provider";
   public AuthException( ) {
     super( );
   }

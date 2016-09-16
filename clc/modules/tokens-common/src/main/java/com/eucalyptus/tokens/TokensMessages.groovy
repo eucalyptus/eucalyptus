@@ -239,3 +239,31 @@ public class AssumedRoleUserType extends EucalyptusData {
     this.arn = arn
   }
 }
+
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_ASSUMEROLEWITHWEBIDENTITY )
+public class AssumeRoleWithWebIdentityType extends TokenMessage {
+  String roleArn;
+  String roleSessionName;
+  String policy;
+  String providerId;
+  Integer durationSeconds;
+  String webIdentityToken;
+  public AssumeRoleWithWebIdentityType() {  }
+}
+
+public class AssumeRoleWithWebIdentityResponseType extends TokenMessage {
+  public AssumeRoleWithWebIdentityResponseType() {  }
+  AssumeRoleWithWebIdentityResultType assumeRoleWithWebIdentityResult = new AssumeRoleWithWebIdentityResultType();
+  TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType();
+}
+
+public class AssumeRoleWithWebIdentityResultType extends EucalyptusData {
+  CredentialsType credentials;
+  AssumedRoleUserType assumedRoleUser;
+  Integer packedPolicySize;
+  String audience;
+  String provider;
+  String subjectFromWebIdentityToken;
+  public AssumeRoleWithWebIdentityResultType() {  }
+}
+

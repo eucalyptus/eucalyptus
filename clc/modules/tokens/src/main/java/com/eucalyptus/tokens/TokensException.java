@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,10 @@ public class TokensException extends EucalyptusCloudException {
 
   enum Code {
     AccessDenied( HttpResponseStatus.FORBIDDEN, "Sender" ),
+    ExpiredTokenException,
+    IDPCommunicationError,
     InvalidAction,
+    InvalidIdentityToken,
     InvalidParameterValue,
     MissingAuthenticationToken( HttpResponseStatus.FORBIDDEN, "Sender" ),
     ServiceUnavailable( HttpResponseStatus.SERVICE_UNAVAILABLE, "Receiver" ),

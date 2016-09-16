@@ -65,9 +65,11 @@ package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.policy.annotation.PolicyAction;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Euare
-import com.eucalyptus.ws.WebServiceError;
+import com.eucalyptus.ws.WebServiceError
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
@@ -1389,3 +1391,124 @@ public class InstanceProfileListType extends EucalyptusData {
   ArrayList<InstanceProfileType> member = new ArrayList<InstanceProfileType>();
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_CREATEOPENIDCONNECTPROVIDER )
+public class CreateOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  @HttpParameterMapping(parameter="ClientIDList.member")
+  ArrayList<String> clientIDList = Lists.newArrayList( )
+  @HttpParameterMapping(parameter="ThumbprintList.member")
+  ArrayList<String> thumbprintList = Lists.newArrayList( )
+  String url
+}
+
+public class CreateOpenIdConnectProviderResponseType extends EuareMessage {
+  CreateOpenIdConnectProviderResultType createOpenIdConnectProviderResult = new CreateOpenIdConnectProviderResultType( );
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public CreateOpenIdConnectProviderResponseType() {  }
+}
+
+public class CreateOpenIdConnectProviderResultType extends EucalyptusData {
+  String openIDConnectProviderArn = "";
+  public CreateOpenIdConnectProviderResultType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETEOPENIDCONNECTPROVIDER )
+public class DeleteOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn;
+  public DeleteOpenIdConnectProviderType() {  }
+}
+public class DeleteOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DeleteOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS )
+public class ListOpenIdConnectProvidersType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  public ListOpenIdConnectProvidersType() {  }
+}
+
+public class ListOpenIdConnectProvidersResponseType extends EuareMessage {
+  ListOpenIdConnectProvidersResultType listOpenIdConnectProvidersResult = new ListOpenIdConnectProvidersResultType();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public ListOpenIdConnectProvidersResponseType() {  }
+}
+
+public class ListOpenIdConnectProvidersResultType extends EucalyptusData {
+  OpenIdConnectProviderListType arns = new OpenIdConnectProviderListType();
+  public ListOpenIdConnectProvidersResultType() { }
+}
+
+public class OpenIdConnectProviderListType extends EucalyptusData {
+  ArrayList<ArnType> member = new ArrayList<ArnType>();
+  public OpenIdConnectProviderListType() {  }
+  public OpenIdConnectProviderListType( ArnType role ) {
+    member.add( role )
+  }
+}
+
+public class ArnType extends EucalyptusData {
+  String arn;
+  public ArnType(String arn) {
+    this.arn = arn;
+  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETOPENIDCONNECTPROVIDER )
+public class GetOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn = "";
+  public GetOpenIdConnectProviderType() {  }
+}
+
+public class GetOpenIdConnectProviderResponseType extends EuareMessage {
+  GetOpenIdConnectProviderResultType getOpenIdConnectProviderResult = new GetOpenIdConnectProviderResultType();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public GetOpenIdConnectProviderResponseType() {  }
+}
+
+public class GetOpenIdConnectProviderResultType extends EucalyptusData {
+  String url;
+  Date createDate;
+  ArrayList<String> clientIDList = new ArrayList<String>();
+  ArrayList<String> thumbprintList = new ArrayList<String>();
+  public GetOpenIdConnectProviderResultType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER )
+public class AddClientIdToOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String clientID;
+  String openIDConnectProviderArn;
+  public AddClientIdToOpenIdConnectProviderType() {  }
+}
+public class AddClientIdToOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public AddClientidToOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER )
+public class RemoveClientIdFromOpenIdConnectProviderType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String clientID;
+  String openIDConnectProviderArn;
+  public RemoveClientIdFromOpenIdConnectProviderType() {  }
+}
+public class RemoveClientIdFromOpenIdConnectProviderResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public RemoveClientIdFromOpenIdConnectProviderResponseType() {  }
+}
+
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT )
+public class UpdateOpenIdConnectProviderThumbprintType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount;
+  String openIDConnectProviderArn;
+  @HttpParameterMapping(parameter="ThumbprintList.member")
+  ArrayList<String> thumbprintList = Lists.newArrayList( )
+  public UpdateOpenIdConnectProviderThumbprintType() {  }
+}
+public class UpdateOpenIdConnectProviderThumbprintResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public UpdateOpenIdConnectProviderThumbprintResponseType() {  }
+}

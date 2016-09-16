@@ -376,25 +376,24 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Decision.DEFAULT;
     }
 
-    final Decision decision = processAuthorizations( evaluationContext.lookupAuthorizations( ), authorizationMatch ,action, resourceAccountNumber, resourceType, resourceName, keyEval, contractEval );
+    final Decision decision = processAuthorizations(
+        evaluationContext.lookupAuthorizations( ),
+        authorizationMatch,
+        action,
+        resourceAccountNumber,
+        resourceType,
+        resourceName,
+        evaluationContext.getPrincipalType( ),
+        evaluationContext.getPrincipalName( ),
+        keyEval,
+        contractEval );
     if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
       LOG.debug( "Request is rejected by authorization check, due to decision " + decision );
     }
     return decision;
   }
 
-  private Decision processAuthorizations( List<Authorization> authorizations,
-                                          AuthorizationMatch authorizationMatch,
-                                          String action,
-                                          String resourceAccountNumber,
-                                          String resourceType,
-                                          String resource,
-                                          CachedKeyEvaluator keyEval,
-                                          ContractKeyEvaluator contractEval ) throws AuthException {
-    return processAuthorizations( authorizations, authorizationMatch, action, resourceAccountNumber, resourceType, resource, null, null, keyEval, contractEval );
-  }
-
-    /**
+  /**
     * Process a list of authorizations against the current request. Collecting contracts from matching authorizations.
     *
     * @param authorizations The list of authorizations to process
@@ -450,8 +449,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
 
   private boolean matchPrincipal( Principal principal, PrincipalType principalType, String principalName ) throws AuthException {
-    return principalName == null || (
-        principal != null &&
+    return principal == null || (
         principal.getType() == principalType &&
         evaluateElement( matchOne( principalType.convertForUserMatching( principal.getValues() ), principalName, PATTERN_MATCHER ), principal.isNotPrincipal() ) );
   }
@@ -529,7 +527,7 @@ public class PolicyEngineImpl implements PolicyEngine {
   ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
-      Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
+      Key key = Keys.getKeyByName( cond.getKey( ) );
       final boolean applies = key.canApply( action );
       if ( key instanceof ContractKey ) {
         if ( applies ) contractEval.addContract( ( ContractKey ) key, cond.getValues( ) );
@@ -581,7 +579,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       PolicyScope scope = policy.getPolicyScope();
       String principalId = getAuthorizationPrincipalId( scope, accountId, userId );
       for ( Condition cond : auth.getConditions( ) ) {
-        Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
+        Key key = Keys.getKeyByName( cond.getKey( ) );
         if ( !( key instanceof QuotaKey ) ) {
           LOG.debug( "Key " + cond.getKey( ) + " is not a quota" );
           continue;

@@ -17,30 +17,20 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.auth.euare.principal;
 
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
-import com.eucalyptus.auth.policy.annotation.PolicyVendor;
-import com.eucalyptus.auth.type.RestrictedType;
+import java.util.Date;
+import java.util.regex.Pattern;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 
 /**
  *
  */
-@PolicyVendor( PolicySpec.VENDOR_IAM )
-@PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = { "sts:assumerole", "sts:assumerolewithwebidentity" } )
-public interface BaseRole extends RestrictedType, RestrictedType.PolicyRestrictedType {
+public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider {
 
-  String getAccountNumber( ) throws AuthException;
+  Pattern CLIENT_ID_PATTERN = Pattern.compile( "^.{1,255}$" );
+  Pattern THUMPRINT_PATTERN = Pattern.compile( "^(?:[0-9a-fA-F]{2}){20,127}$" );
 
-  String getRoleId( );
+  Date getCreationTimestamp();
 
-  String getRoleArn( ) throws AuthException;
-
-  String getPath( );
-
-  String getName( );
-
-  String getSecret( );
 }

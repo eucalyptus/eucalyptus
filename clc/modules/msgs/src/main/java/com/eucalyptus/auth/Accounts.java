@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth;
 
+import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
@@ -77,6 +78,7 @@ import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.User;
@@ -386,6 +388,14 @@ public class Accounts {
 
   public static String getInstanceProfileArn( final BaseInstanceProfile instanceProfile ) throws AuthException {
     return buildArn( instanceProfile.getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath( ), instanceProfile.getName( ) );
+  }
+
+  public static String getOpenIdConnectProviderArn( final OpenIdConnectProvider provider ) throws AuthException {
+    return buildArn(
+        provider.getAccountNumber( ),
+        PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER,
+        "/",
+        provider.getUrl( ) );
   }
 
   protected static String buildArn( final String accountNumber,

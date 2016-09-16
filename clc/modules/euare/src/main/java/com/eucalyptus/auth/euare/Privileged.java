@@ -83,6 +83,7 @@ import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
@@ -896,5 +897,60 @@ class Privileged {
             throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.updateServerCeritificate(certName, newCertName, newPath);
+  }
+
+  /* open id methods */
+  public static EuareOpenIdConnectProvider createOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, String url, List<String> clientIDs, List<String> thumbprints ) throws AuthException, PolicyParseException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "", account, IAM_CREATEOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, "", IAM_CREATEOPENIDCONNECTPROVIDER, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    return account.createOpenIdConnectProvider( url, clientIDs, thumbprints );
+  }
+
+  public static void deleteOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_DELETEOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.deleteOpenIdConnectProvider( provider.getUrl( ) );
+  }
+
+  public static boolean allowListOpenIdConnectProviders( AuthContext requestUser, EuareAccount account, String url) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_LISTOPENIDCONNECTPROVIDERS ),
+            account.getAccountNumber( ),
+            url );
+  }
+
+  public static boolean allowGetOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, String url ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, IAM_GETOPENIDCONNECTPROVIDER ),
+            account.getAccountNumber( ),
+            url );
+  }
+
+  public static void addClientIdToOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, String clientId ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.addClientIdToOpenIdConnectProvider( clientId, provider.getUrl( ) );
+  }
+
+  public static void removeClientIdFromOpenIdConnectProvider( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, String clientId ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.removeClientIdFromOpenIdConnectProvider( clientId, provider.getUrl( ) );
+  }
+
+  public static void updateOpenIdConnectProviderThumbprint( AuthContext requestUser, EuareAccount account, EuareOpenIdConnectProvider provider, List<String> thumbprints ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER, provider.getUrl(), account, IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.updateOpenIdConnectProviderThumbprint( provider.getUrl( ), thumbprints );
   }
 }

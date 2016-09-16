@@ -87,12 +87,16 @@ import com.eucalyptus.auth.euare.ServerCertificates;
 import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
+import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
+import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
@@ -101,6 +105,7 @@ import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
@@ -797,6 +802,192 @@ public class DatabaseAccountProxy implements EuareAccount {
       throw ex;
     }catch(final Exception ex){
       throw ex;
+    }
+  }
+
+  @Override
+  public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException {
+    Debugging.logError( LOG, null, "in Database layer: createOpenIdConnectProvider()");
+    final OIDCIssuerIdentifier issuerIdentifier;
+    final String issuerUrl;
+    try {
+      issuerIdentifier = OIDCUtils.parseIssuerIdentifier( url );
+      issuerUrl = issuerIdentifier.getHost( ) + issuerIdentifier.getPath( );
+      if ( issuerUrl.length() > 255 ) {
+        throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_URL );
+      }
+    } catch ( final IllegalArgumentException e ) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_URL );
+    }
+
+    if ( thumbprintList==null || thumbprintList.isEmpty( ) ||
+        !thumbprintList.stream( ).allMatch( EuareOpenIdConnectProvider.THUMPRINT_PATTERN.asPredicate( ) )) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_THUMBPRINT );
+    }
+    if ( thumbprintList.size( ) > AuthenticationLimitProvider.Values.getOpenIdConnectProviderThumprintLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    if ( clientIDList != null && !clientIDList.stream( ).allMatch( EuareOpenIdConnectProvider.CLIENT_ID_PATTERN.asPredicate( ) ) ) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_CLIENT_ID );
+    }
+    if ( clientIDList != null &&
+        clientIDList.size( ) > AuthenticationLimitProvider.Values.getOpenIdConnectProviderClientIdLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+
+    try {
+      lookupOpenIdConnectProvider( issuerUrl );
+      throw new AuthException(AuthException.OPENID_PROVIDER_ALREADY_EXISTS);
+    } catch( final AuthException ex ) {
+      if(!AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER.equals(ex.getMessage())) {
+        throw ex;
+      }
+    }
+
+    try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
+      final AccountEntity account =
+          DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final OpenIdProviderEntity newOpenIdProvider = OpenIdProviderEntity.create(
+          account,
+          issuerIdentifier.getHost( ),
+          issuerIdentifier.getPort( ),
+          issuerIdentifier.getPath( ) );
+      newOpenIdProvider.getClientIDs().addAll( clientIDList );
+      newOpenIdProvider.getThumbprints().addAll( thumbprintList );
+      final OpenIdProviderEntity persistedOpenIdProvider = Entities.persist( newOpenIdProvider );
+      db.commit( );
+      return new DatabaseOpenIdProviderProxy( persistedOpenIdProvider );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add openid connect provider: " + url + " in " + this.delegate.getName() );
+      throw new AuthException( AuthException.OPENID_PROVIDER_CREATE_FAILURE, e );
+    }
+  }
+
+  public EuareOpenIdConnectProvider lookupOpenIdConnectProvider(final String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity openidproviderEntity = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      return new DatabaseOpenIdProviderProxy( openidproviderEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get openid provider " + url + " for " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
+  }
+
+  @Override
+  public void deleteOpenIdConnectProvider(String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_ARN );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      Entities.delete( provider );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
+  }
+
+  @Override
+  public List<EuareOpenIdConnectProvider> listOpenIdConnectProviders() throws AuthException {
+    final List<EuareOpenIdConnectProvider> results = Lists.newArrayList( );
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      List<OpenIdProviderEntity> providers = Entities
+          .criteriaQuery( OpenIdProviderEntity.class )
+          .join( OpenIdProviderEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
+          .list( );
+      for ( final OpenIdProviderEntity provider : providers ) {
+        results.add( new DatabaseOpenIdProviderProxy( provider ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get openid connect providers for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get openid connect providers", e );
+    }
+  }
+
+  @Override
+  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      return new DatabaseOpenIdProviderProxy( provider );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
+  }
+
+  @Override
+  public void addClientIdToOpenIdConnectProvider(String clientId, String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    if ( clientId == null || !EuareOpenIdConnectProvider.CLIENT_ID_PATTERN.matcher( clientId ).matches( ) ) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_CLIENT_ID );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      if ( !provider.getClientIDs( ).contains( clientId ) ) {
+        provider.getClientIDs().add( clientId );
+      }
+      if ( provider.getClientIDs().size( ) >
+          AuthenticationLimitProvider.Values.getOpenIdConnectProviderClientIdLimit( ) ) {
+        throw new AuthException( AuthException.QUOTA_EXCEEDED );
+      }
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
+  }
+
+  @Override
+  public void removeClientIdFromOpenIdConnectProvider(String clientId, String url) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      provider.getClientIDs().remove(clientId);
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
+    }
+  }
+
+  @Override
+  public void updateOpenIdConnectProviderThumbprint(String url, List<String> thumbprintList) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if (url == null ) {
+      throw new AuthException( AuthException.EMPTY_OPENID_PROVIDER_URL );
+    }
+    if ( thumbprintList==null || thumbprintList.isEmpty( ) ||
+        !thumbprintList.stream( ).allMatch( EuareOpenIdConnectProvider.THUMPRINT_PATTERN.asPredicate( ) )) {
+      throw new AuthException( AuthException.INVALID_OPENID_PROVIDER_THUMBPRINT );
+    }
+    if ( thumbprintList.size( ) > AuthenticationLimitProvider.Values.getOpenIdConnectProviderThumprintLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
+      final OpenIdProviderEntity provider = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
+      provider.getThumbprints().clear();
+      provider.getThumbprints().addAll(thumbprintList);
+      db.commit( );
+      return;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to update openid connect provider: " + url + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
     }
   }
 }

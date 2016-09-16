@@ -21,7 +21,10 @@ package com.eucalyptus.tokens.ws;
 
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.security.auth.Subject;
 import javax.security.auth.login.CredentialExpiredException;
 import javax.security.auth.login.LoginException;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -38,19 +41,28 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.euare.DelegatingUserPrincipal;
 import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.crypto.util.SecurityHeader;
+import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.QueryPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 
 /**
  *
@@ -113,9 +125,12 @@ public class TokensQueryPipeline extends QueryPipeline {
     @Override
     public void incomingMessage( final MessageEvent event ) throws Exception {
       boolean usePasswordAuth = false;
+      boolean isAnonymous = false;
 
       if ( event.getMessage( ) instanceof MappingHttpRequest) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+        isAnonymous =
+            "AssumeRoleWithWebIdentity".equals( OperationParameter.getParameter( httpRequest.getParameters( ) ) );
         usePasswordAuth =
             !httpRequest.getParameters().containsKey( SecurityParameter.SignatureVersion.parameter() ) &&
             !httpRequest.getParameters().containsKey( SecurityParameter.X_Amz_Algorithm.parameter() ) &&
@@ -123,7 +138,9 @@ public class TokensQueryPipeline extends QueryPipeline {
       }
 
       final ChannelPipeline stagePipeline = Channels.pipeline();
-      if ( usePasswordAuth ) {
+      if ( isAnonymous ) {
+          stagePipeline.addLast( "tokens-anonymous", new AnonymousRequestHandler( ) );
+      } else if ( usePasswordAuth ) {
           stagePipeline.addLast( "tokens-password-authentication", new AccountUsernamePasswordHandler() );
       } else {
           standardAuthenticationStage.unrollStage( stagePipeline );
@@ -134,6 +151,27 @@ public class TokensQueryPipeline extends QueryPipeline {
       for ( final Map.Entry<String,ChannelHandler> handlerEntry : stagePipeline.toMap().entrySet() ) {
         pipeline.addAfter( addAfter, handlerEntry.getKey(), handlerEntry.getValue() );
         addAfter = handlerEntry.getKey();
+      }
+    }
+  }
+
+  public static class AnonymousRequestHandler extends MessageStackHandler {
+    @Override
+    public void incomingMessage( final MessageEvent event ) throws Exception {
+      if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+        final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+        final Context context = Contexts.lookup( httpRequest.getCorrelationId( ) );
+        final Subject subject = new Subject( );
+        final UserPrincipal principal = new DelegatingUserPrincipal( Principals.nobodyUser( ) ) {
+          @Nonnull
+          @Override
+          public List<PolicyVersion> getPrincipalPolicies( ) {
+            return ImmutableList.of( PolicyVersions.getAdministratorPolicy( ) );
+          }
+        };
+        subject.getPrincipals( ).add( principal );
+        context.setUser( principal );
+        context.setSubject( subject );
       }
     }
   }
