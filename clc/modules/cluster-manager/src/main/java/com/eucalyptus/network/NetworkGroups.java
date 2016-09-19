@@ -65,15 +65,12 @@ package com.eucalyptus.network;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
@@ -108,7 +105,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -121,7 +117,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   public static final Pattern VPC_GROUP_DESC_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
   private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
 
-  @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
+  @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released.", initial = "35" )
   public static volatile Integer      NETWORK_INDEX_PENDING_TIMEOUT = 35;
   @ConfigurableField( description = "Minutes before a pending system public address allocation timesout and is released.", initial = "35" )
   public static volatile Integer      ADDRESS_PENDING_TIMEOUT       = 35;
@@ -129,9 +125,9 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       description = "Network configuration document.",
       changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
   public static volatile String       NETWORK_CONFIGURATION         = "";
-  @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
+  @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds).", initial = "5" )
   public static volatile Integer      MIN_BROADCAST_INTERVAL        = 5;
-  @ConfigurableField( description = "Maximum time to apply network information (seconds)." )
+  @ConfigurableField( description = "Maximum time to apply network information (seconds).", initial = "120" )
   public static volatile Integer      MAX_BROADCAST_APPLY           = 120;
 
   public static NetworkGroup delete( final String groupId ) throws MetadataException {
