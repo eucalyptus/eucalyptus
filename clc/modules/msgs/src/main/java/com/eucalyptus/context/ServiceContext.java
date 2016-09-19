@@ -88,6 +88,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
@@ -102,18 +103,23 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ServiceContext {
   private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static LinkedBlockingQueue<Pair<Long,CompletableFuture<?>>> FUTURE_QUEUE = new LinkedBlockingQueue<>( );
-  @ConfigurableField( initial = "256", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public volatile static Integer               MAX_OUTSTANDING_MESSAGES = 256;
-  @ConfigurableField( initial = "16", description = "Max queue length allowed per service stage.", changeListener = HupListener.class )
-  public volatile static Integer               WORKERS_PER_STAGE        = 16;                                      //TODO:GRZE: finish this thought later.
+
   @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
-  public volatile static Integer               HUP                      = 0;
-  @ConfigurableField( initial = "64", description = "Internal connector core pool size." )
-  public volatile static Integer               MIN_SCHEDULER_CORE_SIZE  = 64;
-  @ConfigurableField( initial = "256", description = "Message dispatch default pool size." )
-  public volatile static Integer               DISPATCH_POOL_SIZE  = 256;
+  public volatile static Integer HUP = 0;
+
+  @ConfigurableField( initial = "256", description = "Common thread pool size (zero enables dispatch/component pools)" )
+  public volatile static Integer COMMON_THREAD_POOL_SIZE = 256;
+
+  @ConfigurableField( initial = "64", description = "Component thread pool size.",
+      changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static Integer COMPONENT_THREAD_POOL_SIZE = 64;
+
+  @ConfigurableField( initial = "256", description = "Message dispatch thread pool size.",
+      changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static Integer DISPATCH_THREAD_POOL_SIZE = 256;
+
   @ConfigurableField( initial = "60", description = "Message context timeout (seconds)" )
-  public volatile static Integer               CONTEXT_TIMEOUT  = 60;
+  public volatile static Integer CONTEXT_TIMEOUT = 60;
 
   public static class HupListener implements PropertyChangeListener {
     @Override
@@ -155,11 +161,11 @@ public class ServiceContext {
   }
 
   public static <M> void dispatch( ComponentId dest, M msg ) throws Exception {
-    dispatch( getExecutor( dest ), dest.getChannelName( ), msg );
+    dispatch( getComponentExecutor( dest ), dest.getChannelName( ), msg );
   }
 
   public static <M> void dispatch( String dest, M msg ) throws Exception {
-    dispatch( getExecutor( ), dest, msg );
+    dispatch( getDispatchExecutor( ), dest, msg );
   }
 
   public static <M> void dispatch( Executor executor, String dest, M msg ) throws Exception {
@@ -217,14 +223,14 @@ public class ServiceContext {
   }
 
   public static <T> CompletableFuture<T> send( final ComponentId dest, final BaseMessage msg ) {
-    return send( getExecutor( dest ), dest.getChannelName( ), msg );
+    return send( getComponentExecutor( dest ), dest.getChannelName( ), msg );
   }
 
   public static <M,T> CompletableFuture<T> send(
       final String dest,
       final M msg
   ) {
-    return send( getExecutor( ), dest, msg );
+    return send( getDispatchExecutor( ), dest, msg );
   }
 
   public static <M,T> CompletableFuture<T> send(
@@ -256,7 +262,8 @@ public class ServiceContext {
 
   private static MessagingTemplate getMessagingTemplate( ) {
     final MessagingTemplate template = new MessagingTemplate( );
-    template.setDestinationResolver( new BeanFactoryMessageChannelDestinationResolver( ServiceContextManager.getContext( ) ) );
+    template.setDestinationResolver(
+        new BeanFactoryMessageChannelDestinationResolver( ServiceContextManager.getContext( ) ) );
     return template;
   }
 
@@ -282,11 +289,25 @@ public class ServiceContext {
     };
   }
 
-  private static Executor getExecutor( ComponentId componentId ) {
-    return Threads.lookup( componentId.getClass( ), ServiceContext.class ).limitTo( MIN_SCHEDULER_CORE_SIZE ).getExecutorService( );
+  private static Executor getComponentExecutor( ComponentId componentId ) {
+    if ( COMMON_THREAD_POOL_SIZE > 0 ) {
+      return getCommonExecutor( );
+    } else {
+      return Threads
+          .lookup( componentId.getClass( ), ServiceContext.class, "component" )
+          .limitTo( COMPONENT_THREAD_POOL_SIZE );
+    }
   }
 
-  private static Executor getExecutor( ) {
-    return Threads.lookup( Empyrean.class, ServiceContext.class, "dispatch" ).limitTo( DISPATCH_POOL_SIZE ).getExecutorService( );
+  private static Executor getDispatchExecutor( ) {
+    if ( COMMON_THREAD_POOL_SIZE > 0 ) {
+      return getCommonExecutor( );
+    } else {
+      return Threads.lookup( Empyrean.class, ServiceContext.class, "dispatch" ).limitTo( DISPATCH_THREAD_POOL_SIZE );
+    }
+  }
+
+  private static Executor getCommonExecutor( ) {
+    return Threads.lookup( Empyrean.class, ServiceContext.class, "common" ).limitTo( COMMON_THREAD_POOL_SIZE );
   }
 }

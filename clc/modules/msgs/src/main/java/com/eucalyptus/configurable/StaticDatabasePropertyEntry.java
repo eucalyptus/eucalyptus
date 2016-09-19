@@ -691,5 +691,40 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       return true;
     }
   }
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_4_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade440 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade440.class );
+
+    private void deleteRemovedProperties( final Iterable<String> propertyNames ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final String propertyName : propertyNames ) try {
+          final StaticDatabasePropertyEntry property =
+              Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+                  .whereEqual( StaticDatabasePropertyEntry_.propName, propertyName )
+                  .uniqueResult( );
+          LOG.info( "Deleting cloud property: " + propertyName );
+          Entities.delete( property );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Property not found, skipped delete for: " + propertyName );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      deleteRemovedProperties( Lists.newArrayList(
+          "bootstrap.servicebus.max_outstanding_messages",
+          "bootstrap.servicebus.min_scheduler_core_size",
+          "bootstrap.servicebus.workers_per_stage"
+      ) );
+
+      return true;
+    }
+  }
 }
 
