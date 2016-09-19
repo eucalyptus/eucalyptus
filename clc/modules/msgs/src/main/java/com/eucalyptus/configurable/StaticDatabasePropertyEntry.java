@@ -720,7 +720,12 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       deleteRemovedProperties( Lists.newArrayList(
           "bootstrap.servicebus.max_outstanding_messages",
           "bootstrap.servicebus.min_scheduler_core_size",
-          "bootstrap.servicebus.workers_per_stage"
+          "bootstrap.servicebus.workers_per_stage",
+          "cloud.network.global_min_network_tag",
+          "cloud.network.global_max_network_tag",
+          "cloud.network.global_min_network_index",
+          "cloud.network.global_max_network_index",
+          "cloud.network.network_tag_pending_timeout"
       ) );
 
       return true;
