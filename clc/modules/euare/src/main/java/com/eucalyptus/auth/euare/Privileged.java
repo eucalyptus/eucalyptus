@@ -62,7 +62,7 @@
 
 package com.eucalyptus.auth.euare;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.*;
 
 import java.security.KeyPair;
 import java.security.cert.CertificateEncodingException;
@@ -100,10 +100,8 @@ import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 

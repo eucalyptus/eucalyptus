@@ -77,6 +77,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -310,11 +311,11 @@ public class VerifyMetadata {
         try {
           final AuthContextSupplier user = allocInfo.getAuthContext( );
           if ( !Permissions.isAuthorized(
-              PolicySpec.VENDOR_IAM,
+              IamPolicySpec.VENDOR_IAM,
               PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
               Accounts.getInstanceProfileFullName( profile ),
               AccountFullName.getInstance( profile.getAccountNumber( ) ),
-              PolicySpec.IAM_LISTINSTANCEPROFILES,
+              IamPolicySpec.IAM_LISTINSTANCEPROFILES,
               user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to access instance profile with ARN %s for %s",
@@ -324,11 +325,11 @@ public class VerifyMetadata {
 
           final Role role = profile.getRole( );
           if ( role != null && !Permissions.isAuthorized(
-                  PolicySpec.VENDOR_IAM,
+                  IamPolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),
                   AccountFullName.getInstance( role.getAccountNumber( ) ),
-                  PolicySpec.IAM_PASSROLE,
+                  IamPolicySpec.IAM_PASSROLE,
                   user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to pass role with ARN %s for %s",

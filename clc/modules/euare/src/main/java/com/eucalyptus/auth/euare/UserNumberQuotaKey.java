@@ -64,17 +64,17 @@ package com.eucalyptus.auth.euare;
 
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
-import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.PolicyScope;
 
-@PolicyKey( Keys.IAM_QUOTA_USER_NUMBER )
+@PolicyKey( IamPolicySpec.IAM_QUOTA_USER_NUMBER )
 public class UserNumberQuotaKey extends QuotaKey {
   
-  private static final String KEY = Keys.IAM_QUOTA_USER_NUMBER;
+  private static final String KEY = IamPolicySpec.IAM_QUOTA_USER_NUMBER;
   
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -83,7 +83,7 @@ public class UserNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_CREATEUSER ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_CREATEUSER ).equals( action ) ) {
       return true;
     }
     return false;

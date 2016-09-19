@@ -62,19 +62,21 @@
 
 package com.eucalyptus.auth.euare;
 
+import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.IAM_CREATEGROUP;
+import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.VENDOR_IAM;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
-import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.PolicyScope;
 
-@PolicyKey( Keys.IAM_QUOTA_GROUP_NUMBER )
+@PolicyKey( IamPolicySpec.IAM_QUOTA_GROUP_NUMBER )
 public class GroupNumberQuotaKey extends QuotaKey {
   
-  private static final String KEY = Keys.IAM_QUOTA_GROUP_NUMBER;
+  private static final String KEY = IamPolicySpec.IAM_QUOTA_GROUP_NUMBER;
   
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -83,7 +85,7 @@ public class GroupNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_CREATEGROUP ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( VENDOR_IAM, IAM_CREATEGROUP ).equals( action ) ) {
       return true;
     }
     return false;

@@ -65,14 +65,13 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  * The interface for a user in Eucalyptus.
  * 
  * @author dkavanagh
  */
-public interface OpenIdConnectProvider extends RestrictedType, Serializable {
+public interface OpenIdConnectProvider extends Serializable {
 
   String getAccountNumber( ) throws AuthException;
 

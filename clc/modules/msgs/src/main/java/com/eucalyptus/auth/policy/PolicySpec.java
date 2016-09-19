@@ -107,96 +107,6 @@ public class PolicySpec {
 	// Do not add vendors here (use modules)
 
   public static final String ALL_ACTION = "*";
-  
-  // IAM actions, based on API version 2010-05-08
-  public static final String IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER = "addclientidtoopenidconnectprovider";
-  public static final String IAM_ADDROLETOINSTANCEPROFILE = "addroletoinstanceprofile";
-  public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
-  public static final String IAM_CHANGEPASSWORD = "changepassword";
-  public static final String IAM_CREATEACCESSKEY = "createaccesskey";
-  public static final String IAM_CREATEACCOUNT = "createaccount"; // eucalyptus administrative extension
-  public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
-  public static final String IAM_CREATEGROUP = "creategroup";
-  public static final String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
-  public static final String IAM_CREATELOGINPROFILE = "createloginprofile";
-  public static final String IAM_CREATEOPENIDCONNECTPROVIDER = "createopenidconnectprovider";
-  public static final String IAM_CREATEROLE = "createrole";
-  public static final String IAM_CREATEUSER = "createuser";
-  public static final String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
-  public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
-  public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
-  public static final String IAM_DELETEACCOUNT = "deleteaccount"; // eucalyptus administrative extension
-  public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
-  public static final String IAM_DELETEACCOUNTPASSWORDPOLICY = "deleteaccountpasswordpolicy";
-  public static final String IAM_DELETEACCOUNTPOLICY = "deleteaccountpolicy"; // eucalyptus administrative extension
-  public static final String IAM_DELETEGROUP = "deletegroup";
-  public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
-  public static final String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
-  public static final String IAM_DELETELOGINPROFILE = "deleteloginprofile";
-  public static final String IAM_DELETEOPENIDCONNECTPROVIDER = "deleteopenidconnectprovider";
-  public static final String IAM_DELETEROLE = "deleterole";
-  public static final String IAM_DELETEROLEPOLICY = "deleterolepolicy";
-  public static final String IAM_DELETESERVERCERTIFICATE = "deleteservercertificate";
-  public static final String IAM_DELETESIGNINGCERTIFICATE = "deletesigningcertificate";
-  public static final String IAM_DELETEUSER = "deleteuser";
-  public static final String IAM_DELETEUSERPOLICY = "deleteuserpolicy";
-  public static final String IAM_DELETEVIRTUALMFADEVICE = "deletevirtualmfadevice";
-  public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
-  public static final String IAM_GETACCOUNTPASSWORDPOLICY = "getaccountpasswordpolicy";
-  public static final String IAM_GETACCOUNTPOLICY = "getaccountpolicy"; // eucalyptus administrative extension
-  public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
-  public static final String IAM_GETGROUP = "getgroup";
-  public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
-  public static final String IAM_GETINSTANCEPROFILE = "getinstanceprofile";
-  public static final String IAM_GETLOGINPROFILE = "getloginprofile";
-  public static final String IAM_GETOPENIDCONNECTPROVIDER = "getopenidconnectprovider";
-  public static final String IAM_GETROLE = "getrole";
-  public static final String IAM_GETROLEPOLICY = "getrolepolicy";
-  public static final String IAM_GETSERVERCERTIFICATE = "getservercertificate";
-  public static final String IAM_GETUSER = "getuser";
-  public static final String IAM_GETUSERPOLICY = "getuserpolicy";
-  public static final String IAM_LISTACCESSKEYS = "listaccesskeys";
-  public static final String IAM_LISTACCOUNTS = "listaccounts"; // eucalyptus administrative extension
-  public static final String IAM_LISTACCOUNTALIASES = "listaccountaliases";
-  public static final String IAM_LISTACCOUNTPOLICIES = "listaccountpolicies"; // eucalyptus administrative extension
-  public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
-  public static final String IAM_LISTGROUPS = "listgroups";
-  public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
-  public static final String IAM_LISTINSTANCEPROFILES = "listinstanceprofiles";
-  public static final String IAM_LISTINSTANCEPROFILESFORROLE = "listinstanceprofilesforrole";
-  public static final String IAM_LISTMFADEVICES = "listmfadevices";
-  public static final String IAM_LISTOPENIDCONNECTPROVIDERS = "listopenidconnectproviders";
-  public static final String IAM_LISTROLEPOLICIES = "listrolepolicies";
-  public static final String IAM_LISTROLES = "listroles";
-  public static final String IAM_LISTSERVERCERTIFICATES = "listservercertificates";
-  public static final String IAM_LISTSIGNINGCERTIFICATES = "listsigningcertificates";
-  public static final String IAM_LISTUSERPOLICIES = "listuserpolicies";
-  public static final String IAM_LISTUSERS = "listusers";
-  public static final String IAM_LISTVIRTUALMFADEVICES = "listvirtualmfadevices";
-  public static final String IAM_PASSROLE = "passrole";
-  public static final String IAM_PUTACCOUNTPOLICY = "putaccountpolicy"; // eucalyptus administrative extension
-  public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
-  public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
-  public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
-  public static final String IAM_REMOVECLIENTIDFROMOPENIDCONNECTPROVIDER = "removeclientidfromopenidconnectprovider";
-  public static final String IAM_REMOVEROLEFROMINSTANCEPROFILE = "removerolefrominstanceprofile";
-  public static final String IAM_REMOVEUSERFROMGROUP = "removeuserfromgroup";
-  public static final String IAM_RESYNCMFADEVICE = "resyncmfadevice";
-  public static final String IAM_UPDATEACCESSKEY = "updateaccesskey";
-  public static final String IAM_UPDATEACCOUNTPASSWORDPOLICY = "updateaccountpasswordpolicy";
-  public static final String IAM_UPDATEASSUMEROLEPOLICY = "updateassumerolepolicy";
-  public static final String IAM_UPDATEGROUP = "updategroup";
-  public static final String IAM_UPDATELOGINPROFILE = "updateloginprofile";
-  public static final String IAM_UPDATEOPENIDCONNECTPROVIDERTHUMBPRINT = "updateopenidconnectproviderthumbprint";
-  public static final String IAM_UPDATESERVERCERTIFICATE = "updateservercertificate";
-  public static final String IAM_UPDATESIGNINGCERTIFICATE = "updatesigningcertificate";
-  public static final String IAM_UPDATEUSER = "updateuser";
-  public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
-  public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
-  
-  // IAM actions extension for internal use by eucalyptus
-  public static final String IAM_DOWNLOADSERVERCERTIFICATE = "downloadservercertificate";
-  public static final String IAM_DOWNLOADCLOUDCERTIFICATE = "downloadcloudcertificate";
 
   // EC2 actions, based on API version 2013-07-15
   public static final String EC2_ALLOCATEADDRESS = "allocateaddress";
@@ -431,15 +341,11 @@ public class PolicySpec {
   // Wildcard
   public static final String ALL_RESOURCE = "*";
   
-  // IAM resource types
-  public static final String IAM_RESOURCE_ACCOUNT = "account"; // eucalyptus administrative extension
-  public static final String IAM_RESOURCE_GROUP = "group";
+  // IAM resource types (see IamPolicySpec for all resources)
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
   public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
-  public static final String IAM_RESOURCE_ACCESS_KEY = "access-key";
-  public static final String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
   public static final String IAM_RESOURCE_OPENID_CONNECT_PROVIDER = "oidc-provider";
 
   // EC2 resource types, extension to AWS IAM

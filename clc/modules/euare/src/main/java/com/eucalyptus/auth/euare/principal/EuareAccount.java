@@ -25,8 +25,8 @@ import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BasePrincipal;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
@@ -35,8 +35,8 @@ import com.eucalyptus.auth.type.RestrictedType;
 /**
  *
  */
-@PolicyVendor( PolicySpec.VENDOR_IAM )
-@PolicyResourceType( PolicySpec.IAM_RESOURCE_ACCOUNT )
+@PolicyVendor( IamPolicySpec.VENDOR_IAM )
+@PolicyResourceType( IamPolicySpec.IAM_RESOURCE_ACCOUNT )
 public interface EuareAccount extends AccountIdentifiers, BasePrincipal, RestrictedType, Serializable {
 
   public boolean hasAccountAlias( );

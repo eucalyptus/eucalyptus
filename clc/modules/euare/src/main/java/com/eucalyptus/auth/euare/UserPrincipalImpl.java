@@ -31,6 +31,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
@@ -42,7 +43,6 @@ import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Certificate;
@@ -145,7 +145,7 @@ public class UserPrincipalImpl implements UserPrincipal {
                 policies,
                 Iterables.transform(
                     group.getPolicies( ),
-                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.User, new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.User, new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
           }
         }
 
@@ -155,7 +155,7 @@ public class UserPrincipalImpl implements UserPrincipal {
                 policies,
                 Iterables.transform(
                     group.getPolicies( ),
-                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Group, new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
+                    Functions.compose( PolicyVersions.policyVersion( PolicyScope.Group, new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
           }
         }
       }

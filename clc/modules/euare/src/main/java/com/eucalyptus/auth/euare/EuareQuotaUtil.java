@@ -66,23 +66,27 @@ import com.eucalyptus.auth.AuthException;
 
 class EuareQuotaUtil {
 
-  public static long countUserByAccount( String accountId ) throws AuthException {
+  static long countUserByAccount( String accountId ) throws AuthException {
     return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getUsers( ).size( );
   }
 
-  public static long countGroupByAccount( String accountId ) throws AuthException {
+  static long countGroupByAccount( String accountId ) throws AuthException {
     return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getGroups( ).size( );
   }
 
-  public static long countRoleByAccount( String accountId ) throws AuthException {
+  static long countRoleByAccount( String accountId ) throws AuthException {
     return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getRoles( ).size( );
   }
 
-  public static long countInstanceProfileByAccount( String accountId ) throws AuthException {
+  static long countInstanceProfileByAccount( String accountId ) throws AuthException {
     return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).getInstanceProfiles( ).size( );
   }
 
-  public static long countServerCertificatesByAccount( String accountId ) throws AuthException {
+  static long countServerCertificatesByAccount( String accountId ) throws AuthException {
     return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).listServerCertificates( "/" ).size( );
+  }
+
+  static long countOpenIdConnectProvidersByAccount( String accountId ) throws AuthException {
+    return com.eucalyptus.auth.euare.Accounts.lookupAccountById( accountId ).listOpenIdConnectProviders( ).size( );
   }
 }

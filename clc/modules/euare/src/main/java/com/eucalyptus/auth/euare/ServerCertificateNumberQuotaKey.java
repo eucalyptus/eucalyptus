@@ -20,9 +20,9 @@
 package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
-import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.PolicyScope;
@@ -31,10 +31,10 @@ import net.sf.json.JSONException;
 /**
  *
  */
-@PolicyKey( Keys.IAM_QUOTA_SERVER_CERTIFICATE_NUMBER )
+@PolicyKey( IamPolicySpec.IAM_QUOTA_SERVER_CERTIFICATE_NUMBER )
 public class ServerCertificateNumberQuotaKey extends QuotaKey {
 
-  private static final String KEY = Keys.IAM_QUOTA_SERVER_CERTIFICATE_NUMBER;
+  private static final String KEY = IamPolicySpec.IAM_QUOTA_SERVER_CERTIFICATE_NUMBER;
 
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -43,7 +43,7 @@ public class ServerCertificateNumberQuotaKey extends QuotaKey {
 
   @Override
   public boolean canApply( String action ) {
-    return PolicySpec.qualifiedName( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPLOADSERVERCERTIFICATE ).equals( action );
+    return PolicySpec.qualifiedName( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_UPLOADSERVERCERTIFICATE ).equals( action );
   }
 
   @Override

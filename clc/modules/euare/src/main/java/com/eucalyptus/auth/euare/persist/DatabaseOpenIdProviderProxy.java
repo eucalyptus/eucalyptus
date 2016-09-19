@@ -54,20 +54,6 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
   }
 
   @Override
-  public String getDisplayName( ) {
-    return this.delegate.getUrl( );
-  }
-
-  @Override
-  public OwnerFullName getOwner() {
-    try {
-      return AccountFullName.getInstance( getAccount( ).getAccountNumber( ) );
-    } catch ( AuthException e ) {
-      throw Exceptions.toUndeclared( e );
-    }
-  }
-
-  @Override
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
     try {

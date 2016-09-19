@@ -66,12 +66,12 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
@@ -219,7 +219,7 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
   }
 
   public static String getGroupArn( final EuareGroup group ) throws AuthException {
-    return buildArn( group.getAccountNumber( ), PolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+    return buildArn( group.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
   }
 
   public static Predicate<EuareGroup> isUserGroup( ) {

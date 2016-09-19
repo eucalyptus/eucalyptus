@@ -85,6 +85,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
@@ -93,7 +94,6 @@ import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -183,7 +183,7 @@ public class EuareService {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTACCOUNTS, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTACCOUNTS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list accounts" );
     }
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
@@ -211,7 +211,7 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTGROUPS, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTGROUPS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list groups" );
     }
     reply.getListGroupsResult( ).setIsTruncated( false );
@@ -631,7 +631,7 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTUSERS, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTUSERS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list users" );
     }
     ListUsersResultType result = reply.getListUsersResult( );
@@ -1749,7 +1749,7 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTROLES, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTROLES, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list roles" );
     }
     reply.getListRolesResult( ).setIsTruncated( false );
@@ -2027,7 +2027,7 @@ public class EuareService {
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
       path = request.getPathPrefix( );
     }
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTINSTANCEPROFILES, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTINSTANCEPROFILES, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list instance profiles" );
     }
     reply.getListInstanceProfilesResult().setIsTruncated( false );
@@ -2163,7 +2163,7 @@ public class EuareService {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
-    u.setArn( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setArn( ( new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
     u.setCreateDate( userFound.getCreateDate( ) );
   }
   
@@ -2176,7 +2176,7 @@ public class EuareService {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
-    g.setArn( (new EuareResourceName( account.getAccountNumber(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
+    g.setArn( (new EuareResourceName( account.getAccountNumber(), IamPolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
     g.setCreateDate( groupFound.getCreateDate( ) );
   }
 
@@ -2390,7 +2390,7 @@ public class EuareService {
 
   /* open id services */
   protected static String openIdConnectProviderArnToUrl(final String arn) throws EuareException {
-    final String OIDC = PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
+    final String OIDC = IamPolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
     final int start = arn.indexOf(OIDC) + OIDC.length() + 1;
     if ( start > arn.length( ) || start < 0 ) {
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid provider ARN: " + arn );
@@ -2461,13 +2461,13 @@ public class EuareService {
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
     final EuareAccount account = getRealAccount( ctx, request );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS, ctx.getAuthContext( ) ) ) {
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTOPENIDCONNECTPROVIDERS, ctx.getAuthContext( ) ) ) {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.ACCESS_DENIED, "Not authorized to list openid connect providers" );
     }
     final ArrayList<ArnType> providers = reply.getListOpenIdConnectProvidersResult( ).getArns().getMember();
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final EuareOpenIdConnectProvider provider : account.listOpenIdConnectProviders() ) {
-        if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, Accounts.getOpenIdConnectProviderArn( provider ) ) ) {
+        if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, provider.getUrl( ) ) ) {
           providers.add( new ArnType( Accounts.getOpenIdConnectProviderArn( provider ) ) );
         }
       }
