@@ -54,8 +54,6 @@ public class BundleInstanceType extends VmBundleMessage {
   String uploadPolicy;
   @HttpParameterMapping(parameter="Storage.S3.UploadPolicySignature")
   String uploadPolicySignature;
-  String url;
-  String userKey;
 }
 public class BundleInstanceResponseType extends VmBundleMessage {
   BundleTask task;

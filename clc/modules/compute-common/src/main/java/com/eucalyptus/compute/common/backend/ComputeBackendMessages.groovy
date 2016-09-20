@@ -97,6 +97,18 @@ interface ComputeBackendMessage extends BaseMessageMarker {
 @InheritConstructors class ImportVolumeResponseType extends com.eucalyptus.compute.common.ImportVolumeResponseType implements ComputeBackendMessage { }
 
 // Instances
+@InheritConstructors class BundleInstanceResponseType extends com.eucalyptus.compute.common.BundleInstanceResponseType implements ComputeBackendMessage { }
+@InheritConstructors class BundleInstanceType extends com.eucalyptus.compute.common.BundleInstanceType implements ComputeBackendMessage {
+  String url
+  String userKey
+  String architecture
+}
+@InheritConstructors class BundleRestartInstanceResponseType extends com.eucalyptus.compute.common.BundleRestartInstanceResponseType implements ComputeBackendMessage { }
+@InheritConstructors class BundleRestartInstanceType extends com.eucalyptus.compute.common.BundleRestartInstanceType implements ComputeBackendMessage { }
+@InheritConstructors class CancelBundleTaskResponseType extends com.eucalyptus.compute.common.CancelBundleTaskResponseType implements ComputeBackendMessage { }
+@InheritConstructors class CancelBundleTaskType extends com.eucalyptus.compute.common.CancelBundleTaskType implements ComputeBackendMessage { }
+@InheritConstructors class DescribeBundleTasksResponseType extends com.eucalyptus.compute.common.DescribeBundleTasksResponseType implements ComputeBackendMessage { }
+@InheritConstructors class DescribeBundleTasksType extends com.eucalyptus.compute.common.DescribeBundleTasksType implements ComputeBackendMessage { }
 @InheritConstructors class GetConsoleOutputResponseType extends com.eucalyptus.compute.common.GetConsoleOutputResponseType implements ComputeBackendMessage { }
 @InheritConstructors class GetConsoleOutputType extends com.eucalyptus.compute.common.GetConsoleOutputType implements ComputeBackendMessage { }
 @InheritConstructors class GetPasswordDataResponseType extends com.eucalyptus.compute.common.GetPasswordDataResponseType implements ComputeBackendMessage { }
