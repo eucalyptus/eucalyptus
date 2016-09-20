@@ -219,6 +219,7 @@
     <value name="CapabilitiesReason" field="capabilitiesReason" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="Metadata" field="metadata" usage="optional"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.ParameterDeclarations"/>
     <value name="Version" field="version" usage="optional"/>
   </mapping>
