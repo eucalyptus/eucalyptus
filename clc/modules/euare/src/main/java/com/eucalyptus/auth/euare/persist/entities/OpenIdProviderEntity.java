@@ -63,8 +63,10 @@
 package com.eucalyptus.auth.euare.persist.entities;
 
 import static org.hamcrest.CoreMatchers.*;
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_4_0;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
@@ -78,14 +80,19 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AuxiliaryDatabaseObject;
 import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.Parameters;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
+import groovy.sql.Sql;
 
 /**
  *
@@ -223,7 +230,9 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
   public String toString( ) {
     return MoreObjects.toStringHelper( OpenIdProviderEntity.class )
         .add( "url", getUrl( ) )
+        .add( "host", getHost( ) )
         .add( "port", getPort( ) )
+        .add( "path", getPath( ) )
         .toString( );
   }
 
@@ -277,5 +286,36 @@ public class OpenIdProviderEntity extends AbstractPersistent implements Serializ
 
   public void setAccount( final AccountEntity account ) {
     this.account = account;
+  }
+
+  @SuppressWarnings( "WeakerAccess" )
+  @PreUpgrade( value = Euare.class, since = v4_4_0 )
+  public static class OpenIdProviderPreUpgrade440 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( OpenIdProviderPreUpgrade440.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_auth" );
+        // add delete cascade for provider references
+        sql.execute( "alter table auth_openid_provider_thumbprints " +
+            "drop constraint if exists fk_4sbcar6frb0561yxdk3nbr5j8, " +
+            "add constraint fk_4sbcar6frb0561yxdk3nbr5j8 foreign key (openidproviderentity_id) " +
+            "REFERENCES auth_openid_provider(id) on delete cascade" );
+        sql.execute( "alter table auth_openid_provider_client_ids " +
+            "drop constraint if exists fk_n61cf93ta40slfv6i8qg0x7r1, " +
+            "add constraint fk_n61cf93ta40slfv6i8qg0x7r1 foreign key (openidproviderentity_id) " +
+            "REFERENCES auth_openid_provider(id) on delete cascade" );
+        return true;
+      } catch ( final Exception ex ) {
+        logger.error( ex, ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
   }
 }
