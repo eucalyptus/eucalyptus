@@ -70,7 +70,7 @@ STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../u
 STDINC       +=
  
 # The Eucalyptus Network Library
-LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler ipr_handler dev_handler eucanetd_util
+LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler dev_handler eucanetd_util
 LIBNETOBJS   := $(LIBNET:=.o)
 LIBNETDEPS   := $(LIBNETOBJS) $(STDDEPS)
 LIBNETNAME   := libeucanet.a

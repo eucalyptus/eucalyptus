@@ -312,6 +312,7 @@ int ips_handler_repopulate(ips_handler * ipsh)
 
     rc = ips_handler_free(ipsh);
     if (rc) {
+        LOGERROR("could not reinitialize ips handler.\n");
         return (1);
     }
 
@@ -363,7 +364,7 @@ int ips_handler_repopulate(ips_handler * ipsh)
     }
     fclose(FH);
 
-    LOGINFO("ips populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGDEBUG("ips populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 

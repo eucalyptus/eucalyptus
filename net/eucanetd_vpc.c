@@ -488,8 +488,7 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
     }
     // Need a valid global network view
     if (!pGni) {
-        LOGERROR("Failed to run maintenance for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
-        return (1);
+        return (0);
     }
 
     // Make sure midoname buffer is available

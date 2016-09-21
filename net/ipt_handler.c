@@ -451,11 +451,13 @@ int ipt_handler_repopulate(ipt_handler * ipth)
 
     eucanetd_timer_usec(&tv);
     if (!ipth || !ipth->init) {
+        LOGERROR("Invalid argument: cannot reinitialize NULL ipt handler.\n");
         return (1);
     }
 
     rc = ipt_handler_free(ipth);
     if (rc) {
+        LOGERROR("could not reinitialize ipt handler.\n");
         return (1);
     }
 
@@ -510,7 +512,7 @@ int ipt_handler_repopulate(ipt_handler * ipth)
     }
     fclose(FH);
 
-    LOGINFO("ipt populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    LOGDEBUG("ipt populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
@@ -596,9 +598,10 @@ int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, ch
         snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
         snprintf(table->chains[table->max_chains].counters, 64, "%s", counters);
         if (!strcmp(table->chains[table->max_chains].name, "INPUT") ||
-            !strcmp(table->chains[table->max_chains].name, "FORWARD") ||
-            !strcmp(table->chains[table->max_chains].name, "OUTPUT") ||
-            !strcmp(table->chains[table->max_chains].name, "PREROUTING") || !strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
+                !strcmp(table->chains[table->max_chains].name, "FORWARD") ||
+                !strcmp(table->chains[table->max_chains].name, "OUTPUT") ||
+                !strcmp(table->chains[table->max_chains].name, "PREROUTING") ||
+                !strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
             table->chains[table->max_chains].ref_count = 1;
         }
         chain = &(table->chains[table->max_chains]);

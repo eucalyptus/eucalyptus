@@ -83,8 +83,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <net/if_arp.h>
-#include <netinet/if_ether.h>
-#include <linux/if_ether.h>
 
 #include <eucalyptus.h>
 #include <misc.h>
@@ -92,24 +90,19 @@
 #include <euca_string.h>
 #include <atomic_file.h>
 
+#include "euca_arp.h"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define ARP_HLEN                                 28 //!< ARP Header Length (28 bytes)
-#define VLAN_HLEN                                 6 //!< VLAN Header Length (4 bytes)
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-typedef struct ethhdr eth_header;
-typedef struct ether_arp arp_header;
-typedef struct vlan_hdr_t vlan_header;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -122,13 +115,6 @@ typedef struct vlan_hdr_t vlan_header;
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-//! 802.1Q VLAN Header
-struct vlan_hdr_t {
-    u_short tpid;                      //!< Tag Protocol Identifier
-    u_short tci;                       //!< Tag Control Information (3 bits PCP, 1 bit DEI, 12 bits VLAN Identifier)
-    u_short h_proto;                   //!< Next protocol in line
-} __attribute__ ((packed));
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -175,26 +161,15 @@ static void usage(void);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Sends a gratuitous ARP on behalf of a given host
-//!
-//! @param[in] psInterface a constant string pointer to the interface name to send onto
-//! @param[in] psIp a constant string pointer to the IP address of the host we are sending the gratuitous ARP for
-//! @param[in] psMac a constant string pointer to the MAC address associated with the IP address
-//! @param[in] vlan the VLAN identifier to use or -1 if no VLAN are to be used
-//!
-//! @return 0 on success or -1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static int send_gratuitous_arp(const char *psDevice, const char *psIp, const char *psMac, int vlan)
-{
+/**
+ * Sends a gratuitous ARP on behalf of a given host
+ * @param psDevice [in] a constant string pointer to the interface name to send onto
+ * @param psIp [in] psIp a constant string pointer to the IP address of the host we are sending the gratuitous ARP for
+ * @param psMac [in] psMac a constant string pointer to the MAC address associated with the IP address
+ * @param vlan [in] vlan the VLAN identifier to use or -1 if no VLAN are to be used
+ * @return  0 on success or -1 on failure
+ */
+static int send_gratuitous_arp(const char *psDevice, const char *psIp, const char *psMac, int vlan) {
     int rc = 0;
     int len = 0;
     int sock = 0;
@@ -248,7 +223,7 @@ static int send_gratuitous_arp(const char *psDevice, const char *psIp, const cha
         memcpy(pArp->arp_tpa, &ip, 4);
 
         // Calculate the length
-        len = ((u_char *) & pArp->arp_tpa[3]) - ((u_char *) pEth);
+        len = ((u_char *) & pArp->arp_tpa[3]) - ((u_char *) pEth) + 1;
 
         // Open a socket to transmit this packet
         if ((sock = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_ARP))) < 0) {

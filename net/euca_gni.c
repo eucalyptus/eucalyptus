@@ -221,6 +221,97 @@ int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup,
     return (1);
 }
 
+/**
+ * Retrieves security groups associated with the given list of instances.
+ * @param gni [in] pointer to global network information structure
+ * @param instances [in] pointer to array of instances structure of interest
+ * @param max_instances [in] number of entries in the array of instances
+ * @param out_secgroups [out] pointer to the list of structures representing security
+ * groups that were found. Caller is responsible to release the allocated memory
+ * @param max_out_secgroups [out] number of found security groups
+ * @return 0 on success, 1 otherwise
+ */
+int gni_get_secgroups_from_instances(globalNetworkInfo *gni, gni_instance *instances,
+        int max_instances, gni_secgroup ***out_secgroups, int *max_out_secgroups) {
+    char **sgnames = NULL;
+    int sgnames_max = 0;
+    gni_secgroup **result = NULL;
+    if (!instances || !out_secgroups || !gni) {
+        LOGWARN("Invalid argument: cannot get sgs from NULL\n");
+        return (1);
+    }
+    *max_out_secgroups = 0;
+    for (int i = 0; i < max_instances; i++) {
+        for (int j = 0; j < instances[i].max_secgroup_names; j++) {
+            euca_string_set_insert(&sgnames, &sgnames_max, instances[i].secgroup_names[j].name);
+        }
+    }
+    result = EUCA_ZALLOC_C(sgnames_max, sizeof(gni_secgroup *));
+    int sgcount = 0;
+    for (int i = 0; i < sgnames_max; i++) {
+        result[sgcount] = gni_get_secgroup(gni, sgnames[i], NULL);
+        if (result[sgcount] == NULL) {
+            LOGWARN("%s not found in global network view.\n", sgnames[i]);
+        } else {
+            sgcount++;
+        }
+        EUCA_FREE(sgnames[i]);
+    }
+    EUCA_FREE(sgnames);
+    *out_secgroups = result;
+    *max_out_secgroups = sgcount;
+    return (0);
+}
+
+/**
+ * Retrieves security groups that are referenced by the given list of security groups.
+ * @param gni [in] pointer to global network information structure
+ * @param sgs [in] pointer to array of security group structures of interest
+ * @param max_sgs [in] number of entries in the array of instances
+ * @param out_secgroups [out] pointer to the list of structures representing security
+ * groups that were found. Caller is responsible to release the allocated memory
+ * @param max_out_secgroups [out] number of found security groups
+ * @return 0 on success, 1 otherwise
+ */
+int gni_get_referenced_secgroups(globalNetworkInfo *gni, gni_secgroup **sgs,
+        int max_sgs, gni_secgroup ***out_secgroups, int *max_out_secgroups) {
+    char **sgnames = NULL;
+    int sgnames_max = 0;
+    gni_secgroup **result = NULL;
+    if (!sgs || !out_secgroups || !gni) {
+        LOGWARN("Invalid argument: cannot get referenced sgs from NULL\n");
+        return (1);
+    }
+    *max_out_secgroups = 0;
+    for (int i = 0; i < max_sgs; i++) {
+        for (int j = 0; j < sgs[i]->max_ingress_rules; j++) {
+            if (strlen(sgs[i]->ingress_rules[j].groupId) > 0) {
+                euca_string_set_insert(&sgnames, &sgnames_max, sgs[i]->ingress_rules[j].groupId);
+            }
+        }
+        for (int j = 0; j < sgs[i]->max_egress_rules; j++) {
+            if (strlen(sgs[i]->egress_rules[j].groupId) > 0) {
+                euca_string_set_insert(&sgnames, &sgnames_max, sgs[i]->egress_rules[j].groupId);
+            }
+        }
+    }
+    result = EUCA_ZALLOC_C(sgnames_max, sizeof(gni_secgroup *));
+    int sgcount = 0;
+    for (int i = 0; i < sgnames_max; i++) {
+        result[sgcount] = gni_get_secgroup(gni, sgnames[i], NULL);
+        if (result[sgcount] == NULL) {
+            LOGWARN("%s not found in global network view.\n", sgnames[i]);
+        } else {
+            sgcount++;
+        }
+        EUCA_FREE(sgnames[i]);
+    }
+    EUCA_FREE(sgnames);
+    *out_secgroups = result;
+    *max_out_secgroups = sgcount;
+    return (0);
+}
+
 //!
 //! Searches and returns a pointer to the route table data structure given its name in the argument..
 //!
@@ -440,29 +531,14 @@ int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
     return (1);
 }
 
-//!
-//! Looks up for the cluster for which we are assigned within a configured cluster list. We can
-//! be the cluster itself or one of its node.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] psGroupId a pointer to a constant string containing the Security-Group ID we're looking for
-//! @param[out] pSecGroup a pointer to the associated security group structure pointer
-//!
-//! @return 0 if a matching security group structure is found or 1 if not found or a failure occured
-//!
-//! @see
-//!
-//! @pre
-//!     All the provided parameter must be valid and non-NULL.
-//!
-//! @post
-//!     On success the value pointed by pSecGroup is valid. On failure, this value
-//!     is non-deterministic.
-//!
-//! @note
-//!
-int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup)
-{
+/**
+ * Looks up for the security group ID in the argument.
+ * @param gni [in] a pointer to the global network information structure
+ * @param psGroupId [in] a pointer to a constant string containing the Security-Group ID of interest
+ * @param pSecGroup [out] a pointer to the associated security group structure pointer
+ * @return 0 if a matching security group structure is found or 1 if not found or a failure occurred
+ */
+int gni_find_secgroup(globalNetworkInfo *gni, const char *psGroupId, gni_secgroup **pSecGroup) {
     int i = 0;
 
     if (!gni || !psGroupId || !pSecGroup) {
@@ -1360,28 +1436,18 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
     return (ret);
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  node
-//! @param[in]  instance_names
-//! @param[in]  max_instance_names
-//! @param[out] out_instance_names
-//! @param[out] out_max_instance_names
-//! @param[out] out_instances
-//! @param[out] out_max_instances
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Gets the instances hosted by the node in the argument.
+ * @param gni [in] global network information structure
+ * @param node [in] node of interest
+ * @param instance_names [in] optional list of instance names
+ * @param max_instance_names [in] number of instance names
+ * @param out_instance_names [out] list of instance names found
+ * @param out_max_instance_names [out] number of instance names found
+ * @param out_instances [out] array of structures representing instances that were found
+ * @param out_max_instances [out] number of entries in out_instances
+ * @return 0 on success, 1 otherwise.
+ */
 int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
         gni_instance ** out_instances, int *out_max_instances) {
     int ret = 0, getall = 0, i = 0, j = 0, k = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
@@ -1428,20 +1494,23 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
         ret_instances = *out_instances;
 
     retcount = 0;
-    for (i = 0; i < node->max_instance_names; i++) {
-        if (getall) {
-            if (do_outnames)
-                ret_instance_names[i] = strdup(node->instance_names[i].name);
-            if (do_outstructs) {
-                for (k = 0; k < gni->max_instances; k++) {
-                    if (!strcmp(gni->instances[k]->name, node->instance_names[i].name)) {
-                        memcpy(&(ret_instances[i]), gni->instances[k], sizeof (gni_instance));
-                        break;
-                    }
-                }
+    if (getall) {
+        for (i = 0; i < gni->max_instances; i++) {
+            if (retcount == node->max_instance_names) {
+                break;
             }
-            retcount++;
-        } else {
+            if (!strcmp(gni->instances[i]->node, node->name)) {
+                if (do_outstructs) {
+                    memcpy(&(ret_instances[retcount]), gni->instances[i], sizeof (gni_instance));
+                }
+                if (do_outnames) {
+                    ret_instance_names[retcount] = strdup(gni->instances[i]->name);
+                }
+                retcount++;
+            }
+        }
+    } else {
+        for (i = 0; i < node->max_instance_names; i++) {
             for (j = 0; j < max_instance_names; j++) {
                 if (!strcmp(instance_names[j], node->instance_names[i].name)) {
                     if (do_outnames) {
@@ -2443,7 +2512,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
     }
     EUCA_FREE(results);
 
-#ifdef USE_IP_ROUTE_HANDLER
     snprintf(expression, 2048, "./property[@name='publicGateway']/value");
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
@@ -2452,7 +2520,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
-#endif /* USE_IP_ROUTE_HANDLER */
 
     if (IS_NETMODE_VPCMIDO(gni)) {
         snprintf(expression, 2048, "./property[@name='mido']");
@@ -2767,22 +2834,17 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                             snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
                             EUCA_FREE(results[i]);
 
+                            for (l = 0; l < gni->max_instances; l++) {
+                                if (!strcmp(gni->instances[l]->name, gni->clusters[j].nodes[k].instance_names[i].name)) {
+                                    snprintf(gni->instances[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+                                    l = gni->max_instances;
+                                }
+                            }
                             if (IS_NETMODE_VPCMIDO(gni)) {
-                                for (l = 0; l < gni->max_instances; l++) {
-                                    if (!strcmp(gni->instances[l]->name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                                        snprintf(gni->instances[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
-                                    }
-                                }
-/*
-                                for (l = 0; l < gni->max_interfaces; l++) {
-                                    if (!strcmp(gni->interfaces[l].instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                                        snprintf(gni->interfaces[l].node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
-                                    }
-                                }
-*/
                                 for (l = 0; l < gni->max_ifs; l++) {
                                     if (!strcmp(gni->ifs[l]->instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
                                         snprintf(gni->ifs[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+                                        l = gni->max_ifs;
                                     }
                                 }
                             }
@@ -4263,14 +4325,6 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSDomain: %s\n", gni->instanceDNSDomain);
 
-#ifdef USE_IP_ROUTE_HANDLER
-    if (mode == GNI_ITERATE_PRINT) {
-        strptra = hex2dot(gni->publicGateway);
-        LOGTRACE("publicGateway: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-    }
-#endif /* USE_IP_ROUTE_HANDLER */
-
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("instanceDNSServers: \n");
     for (i = 0; i < gni->max_instanceDNSServers; i++) {
@@ -4796,7 +4850,7 @@ int ruleconvert(char *rulebuf, char *outrule)
 //! Creates an iptables rule using the source CIDR specified in the argument, and
 //! based on the ingress rule entry in the argument.
 //!
-//! @param[in] scidr a string containing a CIDR to be used in the output iptables rule to match the source (can ba a single IP address).
+//! @param[in] scidr a string containing a CIDR to be used in the output iptables rule to match the source (can be a single IP address).
 //! If null, the source address within the ingress rule will be used.
 //! @param[in] ingress_rule gni_rule structure containing an ingress rule.
 //! @param[in] flags integer containing extra conditions that will be added to the output iptables rule.

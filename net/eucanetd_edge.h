@@ -63,29 +63,11 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_EUCANETD_UTIL_H_
-#define _INCLUDE_EUCANETD_UTIL_H_
+#ifndef _INCLUDE_EUCANETD_EDGE_H_
+#define _INCLUDE_EUCANETD_EDGE_H_
 
 //!
-//! @file net/eucanetd_util.h
-//! Definition of various generic system utility specific APIs not found
-//! under the util module. Every function exposed here must start with the
-//! "eucanetd_" string.
-//!
-//! Coding Standard:
-//! Every function that has multiple words must follow the word1_word2_word3() naming
-//! convention and variables must follow the 'word1Word2Word3()' convention were no
-//! underscore is used and every word, except for the first one, starts with a capitalized
-//! letter. Whenever possible (not mendatory but strongly encouraged), prefixing a variable
-//! name with one or more of the following qualifier would help reading code:
-//!     - p - indicates a variable is a pointer (example: int *pAnIntegerPointer)
-//!     - s - indicates a string variable (examples: char sThisString[10], char *psAnotherString). When 's' is used on its own, this mean a static string.
-//!     - a - indicates an array of objects (example: int aAnArrayOfInteger[10])
-//!     - g - indicates a variable with global scope to the file or application (example: static eucanetdConfig gConfig)
-//!
-//! Any other function implemented must have its name start with "eucanetd" followed by an underscore
-//! and the rest of the function name with every words separated with an underscore character. For
-//! example: eucanetd_this_is_a_good_function_name().
+//! @file net/eucanetd_edge.h
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -94,15 +76,18 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include <netinet/in.h>
-#include <euca_network.h>
-#include <eucanetd_config.h>
+#include "eucanetd_config.h"
+#include "euca_gni.h"
+#include "euca_lni.h"
+#include "eucanetd.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#define EDGE_NETMETER_FILE_MAX_SIZE 10000000
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -116,11 +101,51 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+enum edge_ipaddr_type_t {
+    EDGE_IPV4_INVALID,
+    EDGE_IPV4_PUBLIC,
+    EDGE_IPV4_PRIVATE,
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+typedef struct edge_netmeter_instance_t {
+    char *instance_id;
+    char *ipaddr;
+    long pkts_in;
+    long bytes_in;
+    long pkts_out;
+    long bytes_out;
+    enum edge_ipaddr_type_t iptype;
+    boolean updated;
+} edge_netmeter_instance;
+
+typedef struct edge_netmeter_t {
+    int max_pub_ips;
+    int max_priv_ips;
+    edge_netmeter_instance **pub_ips;
+    edge_netmeter_instance **priv_ips;
+} edge_netmeter;
+
+typedef struct edge_config_t {
+    eucanetdConfig *config;
+    globalNetworkInfo *gni;
+    edge_netmeter *nmeter;
+
+    gni_cluster *my_cluster;
+    gni_node *my_node;
+    
+    gni_instance *my_instances;
+    int max_my_instances;
+    gni_secgroup **my_sgs;
+    int max_my_sgs;
+    gni_secgroup **ref_sgs;
+    int max_ref_sgs;
+} edge_config;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -134,40 +159,27 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! common API to restart the DHCP server
-int eucanetd_kick_dhcpd_server(eucanetdConfig *config);
+int do_edge_update_sgs(edge_config *edge);
+int do_edge_update_eips(edge_config *edge);
+int do_edge_update_l2(edge_config *edge);
+int do_edge_update_ips(edge_config *edge);
+int do_edge_update_netmeter(edge_config *edge);
 
-//! API to run a program and make sure only one copy of the program is running
-int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, boolean force, const char *psProgram, ...);
+int generate_dhcpd_config(edge_config *edge);
+int update_host_arp(edge_config *edge);
+int free_edge_config(edge_config *edge);
+int free_edge_netmeter_instance(edge_netmeter_instance *nm);
+int free_edge_netmeter_instances(edge_netmeter_instance **nms, int max_nms);
+int free_edge_netmeter(edge_netmeter *nm);
 
-//! Safely terminate a program executed by eucanetd_run_program()
-int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRootwrap);
+edge_netmeter_instance *find_edge_netmeter_instance(edge_netmeter_instance ***nms,
+        int *max_nms, char *instance_id, char *ipaddr, boolean force);
+int clean_edge_netmeter_instances(edge_netmeter_instance ***nms, int *max_nms);
+int clear_edge_netmeter_tag(edge_netmeter *nm);
 
-int unlink_handler_file(char *filename);
-int truncate_file(char *filename);
+int edge_dump_netmeter(edge_config *edge);
 
-int cidrsplit(char *ipname, char **ippart, int *nmpart);
-
-//! TODO: For EDGE mode, replace with proper API from dev_handler.h
-int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
-
-long int timer_get_interval_millis(struct timeval *ts, struct timeval *te);
-long int timer_get_interval_usec(struct timeval *ts, struct timeval *te);
-long int eucanetd_timer(struct timeval *t);
-long int eucanetd_timer_usec(struct timeval *t);
-long int eucanetd_get_timestamp();
-
-int euca_exec(const char *command);
-int euca_exec_no_wait(const char *file, ...);
-int euca_exec_wait(int timeout_sec, const char *file, ...);
-
-int euca_string_set_insert(char ***set, int *max_set, char *value);
-
-void *zalloc_check(size_t nmemb, size_t size);
-void *realloc_check(void *ptr, size_t nmemb, size_t size);
-void *append_ptrarr(void *arr, int *max_arr, void *ptr);
-void get_stack_trace ();
-
+boolean is_my_ip(edge_config *edge, u32 ip);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -181,23 +193,10 @@ void get_stack_trace ();
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef EUCA_ZALLOC_C
-#define EUCA_ZALLOC_C(_nmemb, _size)             zalloc_check((_nmemb), (_size))
-#define EUCA_REALLOC_C(_ptr, _nmemb, _size)      realloc_check((_ptr), (_nmemb), (_size))
-#endif /* ! EUCA_ZALLOC_C */
-
-#ifndef EUCA_APPEND_PTRARR
-#define EUCA_APPEND_PTRARR(_arr, _nmemb, _ptr)   append_ptrarr((_arr), (_nmemb), (_ptr))
-#endif /* ! EUCA_APPEND_PTRARR */
-
-#ifndef EUCA_GET_STACK_TRACE
-#define EUCA_GET_STACK_TRACE()                   get_stack_trace()
-#endif /* ! EUCA_GET_STACK_TRACE */
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_EUCANETD_UTIL_H_ */
+#endif /* ! _INCLUDE_EUCANETD_EDGE_H_ */

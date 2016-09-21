@@ -829,6 +829,19 @@ long int eucanetd_timer_usec(struct timeval *t)
     return ret;
 }
 
+/**
+ * Returns the current timestamp based on gettimeofday();
+ * @return current timestamp
+ */
+long int eucanetd_get_timestamp() {
+    long int res = 0;
+    struct timeval cur;
+    gettimeofday(&cur, NULL);
+    res = (long int) (cur.tv_sec * 1000) + (long int) (cur.tv_usec / 1000);
+    return (res);
+}
+
+
 static char **strsplit_on_space(const char* str) {
     const char* delim = " ";
     size_t tokens_alloc = 1;
@@ -926,6 +939,33 @@ int euca_exec(const char *command)
     }
     free_char_list(args);
     return result;
+}
+
+/**
+ * Inserts the given string (value) to the string list (set) in the argument.
+ * @param set [i/o] pointer to an array of pointers to strings. This array should
+ * not contain duplicates (i.e., a set data structure).
+ * @param max_set [i/o] pointer to integer representing the number of entries in the set
+ * @param value [in] string to be inserted
+ * @return 0 if the string is inserted. -1 if the string is already in the set. 1 on failure.
+ */
+int euca_string_set_insert(char ***set, int *max_set, char *value) {
+    char **result = NULL;
+    if (!set || !max_set || !value) {
+        LOGWARN("Invalid argument: cannot process NULL string value or set.\n");
+        return (1);
+    }
+    result = *set;
+    for (int i = 0; i < (*max_set); i++) {
+        if (!strcmp(result[i], value)) {
+            return (-1);
+        }
+    }
+    result = EUCA_REALLOC_C(result, *max_set + 1, sizeof(char *));
+    result[*max_set] = strdup(value);
+    (*max_set)++;
+    *set = result;
+    return (0);
 }
 
 /**

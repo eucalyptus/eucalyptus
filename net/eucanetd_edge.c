@@ -131,6 +131,8 @@
 #include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
+#include "eucanetd_edge.h"
+#include "euca_arp.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -179,6 +181,15 @@
 //! Set to TRUE when driver is initialized
 static boolean gInitialized = FALSE;
 
+static edge_config *edgeConfig_a = NULL;
+static edge_config *edgeConfig_b = NULL;
+static edge_config *edgeConfig = NULL;
+static edge_config *edgeConfigApplied = NULL;
+
+static edge_netmeter *netmeter = NULL;
+
+static int edgeMaintCount = 0;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -193,27 +204,16 @@ static boolean gInitialized = FALSE;
 
  //! @{
  //! @name EDGE Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig * pEucanetdConfig);
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush);
-static int network_driver_upgrade(globalNetworkInfo * pGni);
-static int network_driver_system_flush(globalNetworkInfo * pGni);
-//static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni);
-//static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni);
-static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni);
-static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni);
+static int network_driver_init(eucanetdConfig *pEucanetdConfig);
+static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
+static int network_driver_upgrade(globalNetworkInfo *pGni);
+static int network_driver_system_flush(globalNetworkInfo *pGni);
+static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni);
+//static int network_driver_implement_network(globalNetworkInfo *pGni, lni_t *pLni);
+//static int network_driver_implement_sg(globalNetworkInfo *pGni, lni_t *pLni);
+//static int network_driver_implement_addressing(globalNetworkInfo *pGni, lni_t *pLni);
+static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
 //! @}
-
-static int generate_dhcpd_config(globalNetworkInfo * pGni);
-
-static int update_private_ips(globalNetworkInfo * pGni);
-static int update_elastic_ips(globalNetworkInfo * pGni);
-static int update_l2_addressing(globalNetworkInfo * pGni);
-
-#ifdef USE_IP_ROUTE_HANDLER
-static int install_public_routes(globalNetworkInfo * pGni);
-static int install_private_routes(globalNetworkInfo * pGni);
-#endif /* USE_IP_ROUTE_HANDLER */
-static int update_host_arp(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -240,13 +240,11 @@ struct driver_handler_t edgeDriverHandler = {
     .cleanup = network_driver_cleanup,
     .upgrade = network_driver_upgrade,
     .system_flush = network_driver_system_flush,
-    .system_maint = NULL,
-    //.system_scrub = network_driver_system_scrub,
-    .system_scrub = NULL,
-    //.implement_network = network_driver_implement_network,
+    .system_maint = network_driver_system_maint,
+    .system_scrub = network_driver_system_scrub,
     .implement_network = NULL,
-    .implement_sg = network_driver_implement_sg,
-    .implement_addressing = network_driver_implement_addressing,
+    .implement_sg = NULL,
+    .implement_addressing = NULL,
     .handle_signal = NULL,
 };
 
@@ -256,27 +254,20 @@ struct driver_handler_t edgeDriverHandler = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Initialize the network driver.
-//!
-//! @param[in] pEucanetdConfig a pointer to our application configuration
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre \li The core application configuration must be completed prior calling
-//!      \li The driver must not be already initialized (if its the case, a no-op will occur)
-//!      \li The pEucanetdConfig parameter must not be NULL
-//!
-//! @post On success the driver is properly configured. On failure, the state of
-//!       the driver is non-deterministic. If the driver was previously initialized,
-//!       this will result into a no-op.
-//!
-//! @note
-//!
-static int network_driver_init(eucanetdConfig * pEucanetdConfig)
-{
+/**
+ * Initialize EDGE network driver.
+ * @param pEucanetdConfig [in] a pointer to eucanetd configuration structure
+ * @return 0 on success or 1 on any failure
+ * 
+ * @pre \li The core application configuration must be completed prior calling
+ *      \li The driver must not be already initialized (if its the case, a no-op will occur)
+ *      \li The pEucanetdConfig parameter must not be NULL
+ *
+ * @post On success the driver is properly configured. On failure, the state of
+ *       the driver is non-deterministic. If the driver was previously initialized,
+ *       this will result into a no-op.
+ */
+static int network_driver_init(eucanetdConfig * pEucanetdConfig) {
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
 
     // Make sure our given pointer is valid
@@ -289,34 +280,38 @@ static int network_driver_init(eucanetdConfig * pEucanetdConfig)
         LOGERROR("Networking '%s' mode already initialized. Skipping!\n", DRIVER_NAME());
         return (0);
     }
+    
+    netmeter = EUCA_ZALLOC_C(1, sizeof (edge_netmeter));
+    edgeConfig_a = EUCA_ZALLOC_C(1, sizeof (edge_config));
+    edgeConfig_a->config = pEucanetdConfig;
+    edgeConfig_a->nmeter = netmeter;
+    edgeConfig_b = EUCA_ZALLOC_C(1, sizeof (edge_config));
+    edgeConfig_b->config = pEucanetdConfig;
+    edgeConfig_b->nmeter = netmeter;
+    edgeConfig = edgeConfigApplied = NULL;
+
     // We are now initialize
     gInitialized = TRUE;
     return (0);
 }
 
-//!
-//! Cleans up the network driver. This will work even if the initial initialization
-//! fail for any reasons. This will reset anything that could have been half-way or
-//! fully configured. If forceFlush is set, then a network flush will be performed.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] forceFlush set to TRUE if a network flush needs to be performed
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre
-//!     The driver should have been initialized by now
-//!
-//! @post
-//!     On success, the network driver has been cleaned up and the system flushed
-//!     if forceFlush was set. On failure, the system state will be non-deterministic.
-//!
-//! @note
-//!
-static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
-{
+/**
+ * Cleans up the network driver. This will work even if the initial initialization
+ * fail for any reasons. This will reset anything that could have been half-way or
+ * fully configured. If forceFlush is set, then a network flush will be performed.
+ *
+ * 
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param forceFlush [in] set to TRUE if a network flush needs to be performed
+ * @return 0 on success or 1 if any failure occurred.
+ * @pre
+ *     The driver should have been initialized by now
+ *
+ * @post
+ *     On success, the network driver has been cleaned up and the system flushed
+ *     if forceFlush was set. On failure, the system state will be non-deterministic.
+ */
+static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush) {
     int ret = 0;
 
     LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
@@ -326,6 +321,12 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
             ret = 1;
         }
     }
+    free_edge_netmeter(netmeter);
+    free_edge_config(edgeConfig_a);
+    free_edge_config(edgeConfig_b);
+    EUCA_FREE(netmeter);
+    EUCA_FREE(edgeConfig_a);
+    EUCA_FREE(edgeConfig_b);
     gInitialized = FALSE;
     return (ret);
 }
@@ -352,7 +353,7 @@ static int network_driver_cleanup(globalNetworkInfo * pGni, boolean forceFlush)
  * @TODO:
  *     This will not be needed for 4.4+ (if upgrade path from 4.3 is not supported)
  */
-static int network_driver_upgrade(globalNetworkInfo * pGni) {
+static int network_driver_upgrade(globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
 
@@ -369,24 +370,30 @@ static int network_driver_upgrade(globalNetworkInfo * pGni) {
         return (1);
     }
     // iptables
-    rc |= ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    rc |= ipt_handler_repopulate(config->ipt);
-    // delete legacy (pre 4.4) chains
-    rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
-    rc |= ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
-    rc |= ipt_handler_deploy(config->ipt);
+    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
+    if (!rc) {
+        ipt_handler_repopulate(config->ipt);
+        // delete legacy (pre 4.4) chains
+        ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
+        ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", "-", "[0:0]");
+        ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_FILTER_FWD_DROPPED");
+        ipt_handler_print(config->ipt);
+        rc = ipt_handler_deploy(config->ipt);
+    }
     if (rc) {
         LOGERROR("Failed to upgrade 4.3 %s IP Tables artifacts.\n", DRIVER_NAME());
         ret = 1;
     }
     // ipsets
-    rc = 0;
-    rc |= ips_handler_init(config->ips, config->cmdprefix);
-    rc |= ips_handler_repopulate(config->ips);
-    // delete legacy (pre 4.4) ipsets
-    rc |= ips_handler_deletesetmatch(config->ips, "EU_");
-    rc |= ips_handler_print(config->ips);
-    rc |= ips_handler_deploy(config->ips, 1);
+    rc = ips_handler_init(config->ips, config->cmdprefix);
+    if (!rc) {
+        ips_handler_repopulate(config->ips);
+        // delete legacy (pre 4.4) ipsets
+        ips_handler_deletesetmatch(config->ips, "EU_");
+        ips_handler_print(config->ips);
+        rc = ips_handler_deploy(config->ips, 1);
+    }
     if (rc) {
         LOGERROR("Failed to upgrade 4.3 %s ipset artifacts.\n", DRIVER_NAME());
         ret = 1;
@@ -414,8 +421,7 @@ static int network_driver_upgrade(globalNetworkInfo * pGni) {
  *       call to this API may resolve the remaining issues.
  *
  */
-static int network_driver_system_flush(globalNetworkInfo * pGni)
-{
+static int network_driver_system_flush(globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
 
@@ -432,75 +438,79 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
         return (1);
     }
     // iptables
-    rc |= ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    rc |= ipt_handler_repopulate(config->ipt);
-    rc |= ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
-    rc |= ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_IN");
-    rc |= ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
-    rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
-    rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
-    rc |= ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
-    
-    // Flush pre-4.4 iptables chains, just in case
-    rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
+    if (!rc) {
+        ipt_handler_repopulate(config->ipt);
+        ipt_chain_flush(config->ipt, "raw", "EUCA_COUNTERS_IN");
+        ipt_chain_flush(config->ipt, "raw", "EUCA_COUNTERS_OUT");
+        ipt_chain_flush(config->ipt, "raw", "EUCA_RAW_PRE");
+        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
+        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED");
+        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
+        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
+        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
 
-    rc |= ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
+        ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
 
-    // Flush core artifacts
-    if (config->flushmode == FLUSH_ALL) {
-        rc |= ipt_table_deletechainmatch(config->ipt, "filter", "EUCA_");
-        rc |= ipt_table_deletechainmatch(config->ipt, "nat", "EUCA_");
-        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
-        rc |= ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
-        rc |= ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
+        // Flush core artifacts
+        if (config->flushmode == FLUSH_ALL) {
+            ipt_table_deletechainmatch(config->ipt, "raw", "EUCA_");
+            ipt_table_deletechainmatch(config->ipt, "filter", "EUCA_");
+            ipt_table_deletechainmatch(config->ipt, "nat", "EUCA_");
+            ipt_chain_flush_rule(config->ipt, "raw", "PREROUTING", "-A PREROUTING -j EUCA_RAW_PRE");
+            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
+            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
+            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
+            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
+        }
+        ipt_handler_print(config->ipt);
+        rc = ipt_handler_deploy(config->ipt);
     }
-    rc |= ipt_handler_print(config->ipt);
-    rc |= ipt_handler_deploy(config->ipt);
     if (rc) {
         LOGERROR("Failed to flush the IP Tables artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
     }
+
     // ipsets
-    rc = 0;
-    rc |= ips_handler_init(config->ips, config->cmdprefix);
-    rc |= ips_handler_repopulate(config->ips);
-    
-    // Delete pre-4.4 ipsets, just in case
-    rc |= ips_handler_deletesetmatch(config->ips, "EU_");
-    
-    rc |= ips_handler_deletesetmatch(config->ips, "sg-");
-    rc |= ips_handler_deletesetmatch(config->ips, "EUCA_");
-    rc |= ips_handler_print(config->ips);
-    rc |= ips_handler_deploy(config->ips, 1);
+    rc = ips_handler_init(config->ips, config->cmdprefix);
+    if (!rc) {
+        ips_handler_repopulate(config->ips);
+
+        ips_handler_deletesetmatch(config->ips, "sg-");
+        ips_handler_deletesetmatch(config->ips, "EUCA_");
+        ips_handler_print(config->ips);
+        rc = ips_handler_deploy(config->ips, 1);
+    }
     if (rc) {
         LOGERROR("Failed to flush the IP Sets artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
     }
+
     // ebtables
-    rc = 0;
-    rc |= ebt_handler_init(config->ebt, config->cmdprefix);
-    rc |= ebt_handler_repopulate(config->ebt);
-    rc |= ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
-    rc |= ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
-    rc |= ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
-    // Flush core artifacts
-    if (config->flushmode == FLUSH_ALL) {
-        rc |= ebt_table_deletechainmatch(config->ebt, "filter", "EUCA_");
-        rc |= ebt_table_deletechainmatch(config->ebt, "nat", "EUCA_");
-        rc |= ebt_chain_flush_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
-        rc |= ebt_chain_flush_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
-        rc |= ebt_chain_flush_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
+    rc = ebt_handler_init(config->ebt, config->cmdprefix);
+    if (!rc) {
+        ebt_handler_repopulate(config->ebt);
+        ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
+        ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
+        ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
+        // Flush core artifacts
+        if (config->flushmode == FLUSH_ALL) {
+            ebt_table_deletechainmatch(config->ebt, "filter", "EUCA_");
+            ebt_table_deletechainmatch(config->ebt, "nat", "EUCA_");
+            ebt_chain_flush_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
+            ebt_chain_flush_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
+            ebt_chain_flush_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
+        }
+        rc = ebt_handler_deploy(config->ebt);
     }
-    rc |= ebt_handler_deploy(config->ebt);
     if (rc) {
         LOGERROR("Failed to flush the EB Tables artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
@@ -527,19 +537,14 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
             for (j = 0; j < max_nets; j++) {
                 if (ips[j] == pGni->public_ips[i]) {
                     // this global public IP is assigned to the public interface
-
                     strptra = hex2dot(pGni->public_ips[i]);
                     snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                     EUCA_FREE(strptra);
                     euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix, "ip", "addr", "del", cmd,  "dev", config->pubInterface, NULL);
                     rc = rc >> 8;
                     if(!(rc == 0 || rc == 2)){
-                        LOGWARN("Failed to run ip addr del %s/32 dev %s", strptra, config->pubInterface);
+                        LOGERROR("Failed to run ip addr del %s/32 dev %s", strptra, config->pubInterface);
                         ret = 1;
-                    }
-
-                    if (ret) {
-                        LOGERROR("could not execute: flushing public ips\n");
                     }
                 }
             }
@@ -550,98 +555,140 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     return (ret);
 }
 
-//!
-//! This API checks the new GNI against the system view to decide what really
-//! needs to be done.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return A bitmask indicating what needs to be done. The following bits are
-//!         the ones to look for: EUCANETD_RUN_NETWORK_API, EUCANETD_RUN_SECURITY_GROUP_API
-//!         and EUCANETD_RUN_ADDRESSING_API.
-//!
-//! @see
-//!
-//! @pre \li Both pGni and pLni must not be NULL
-//!      \li The driver must be initialized prior to calling this API.
-//!
-//! @post
-//!
-//! @note
-//!
-/*
-static u32 network_driver_system_scrub(globalNetworkInfo * pGni, lni_t * pLni)
-{
-    LOGINFO("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
-    return (EUCANETD_RUN_ALL_API);
-}
-*/
+/**
+ * Maintenance activities to be executed when eucanetd is idle between polls.
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param pLni [in] a pointer to the Local Network Information structure
+ * @return 0 on success, 1 otherwise.
+ */
+static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni) {
+    int rc = 0;
+    struct timeval tv;
+    
+    LOGTRACE("Running maintenance for '%s' network driver.\n", DRIVER_NAME());
+    eucanetd_timer(&tv);
 
-//!
-//! This takes care of implementing the network artifacts necessary. This will add or
-//! remove devices, tunnels, etc. as necessary.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre Both pGni and pLni must not be NULL
-//!
-//! @post On success, the networking artifacts should be implemented. On failure, the
-//!       current state of the system may be left in a non-deterministic state. A
-//!       subsequent call to this API may resolve the remaining issues.
-//!
-//! @note For EDGE mode, we have no networking artifacts that we own.
-//!
-/*
-static int network_driver_implement_network(globalNetworkInfo * pGni, lni_t * pLni)
-{
-    LOGINFO("Implementing network artifacts for '%s' network driver.\n", DRIVER_NAME());
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to run maintenance activities. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // Need a valid global network view
+    if (!pGni) {
+        return (0);
+    }
+
+    if ((edgeMaintCount % 10) == 0) {
+        if (pGni == edgeConfig_a->gni) {
+            do_edge_update_netmeter(edgeConfig_a);
+        }
+        if (pGni == edgeConfig_b->gni) {
+            do_edge_update_netmeter(edgeConfig_b);
+        }
+    }
+    edgeMaintCount++;
+    return (rc);
+}
+
+/**
+ * EDGE system scrub. Detect instances and security groups relevant to local NC.
+ * Then, process security groups, elastic/public IPs, and DHCP.
+ * @param pGni a pointer to the current Global Network Information structure
+ * @param pGniApplied a pointer to the last applied Global Network Information structure
+ * @param pLni a pointer to the Local Network Information structure
+ * @return A bitmask indicating what needs to be done. The following bits are
+ * the ones to look for: EUCANETD_RUN_NO_API (GNI successfully applied), or
+ * EUCANETD_RUN_ERROR_API (failed to apply GNI).
+ */
+u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni) {
+    int rc = 0;
+    u32 ret = EUCANETD_RUN_NO_API;
+
+    struct timeval tv;
+
+    eucanetd_timer(&tv);
+    LOGTRACE("Scrubbing for '%s' network driver.\n", DRIVER_NAME());
 
     // this only applies to NC components
     if (!PEER_IS_NC(eucanetdPeer)) {
         // no-op
-        return (0);
+        return (EUCANETD_RUN_NO_API);
     }
     // Is the driver initialized?
     if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to implement network artifacts for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
-        return (1);
+        LOGERROR("Unable to execute system scrub. Driver not initialized.\n");
+        return (EUCANETD_RUN_ERROR_API);
     }
     // Are the global and local network view structures NULL?
     if (!pGni || !pLni) {
-        LOGERROR("Failed to implement network artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
-        return (1);
+        LOGERROR("Unable to execute system scrub. Invalid parameters provided.\n");
+        return (EUCANETD_RUN_ERROR_API);
     }
 
-    return (0);
+    if (edgeConfig == edgeConfig_a) {
+        edgeConfig = edgeConfig_b;
+        edgeConfigApplied = edgeConfig_a;
+    } else {
+        edgeConfig = edgeConfig_a;
+        edgeConfigApplied = edgeConfig_b;
+    }
+    free_edge_config(edgeConfig);
+    free_edge_config(edgeConfigApplied);
+    
+    edgeConfig->gni = pGni;
+    
+    rc = gni_find_self_cluster(pGni, &(edgeConfig->my_cluster));
+    if (rc) {
+        LOGERROR("unable to find cluster in global network view: check network config\n");
+        return (EUCANETD_RUN_ERROR_API);
+    }
+    rc = gni_find_self_node(pGni, &(edgeConfig->my_node));
+    if (rc) {
+        LOGERROR("unable to find node in global network view: check network config\n");
+        return (EUCANETD_RUN_ERROR_API);
+    }
+
+    rc = gni_node_get_instances(pGni, edgeConfig->my_node, NULL, 0, NULL, 0,
+            &(edgeConfig->my_instances), &(edgeConfig->max_my_instances));
+    if (rc) {
+        LOGWARN("unable to find instances hosted by this NC.\n");
+        return (EUCANETD_RUN_ERROR_API);
+    }
+    
+    rc = gni_get_secgroups_from_instances(pGni, edgeConfig->my_instances, edgeConfig->max_my_instances,
+            &(edgeConfig->my_sgs), &(edgeConfig->max_my_sgs));
+    if (rc) {
+        LOGWARN("unable to find security groups of instances hosted by this NC.\n");
+        return (EUCANETD_RUN_ERROR_API);
+    }
+
+    rc = gni_get_referenced_secgroups(pGni, edgeConfig->my_sgs, edgeConfig->max_my_sgs,
+            &(edgeConfig->ref_sgs), &(edgeConfig->max_ref_sgs));
+    if (rc) {
+        LOGWARN("unable to find referenced security groups.\n");
+        return (EUCANETD_RUN_ERROR_API);
+    }
+    
+    rc += do_edge_update_sgs(edgeConfig);
+    rc += do_edge_update_eips(edgeConfig);
+    rc += do_edge_update_l2(edgeConfig);
+    rc += do_edge_update_ips(edgeConfig);
+    rc += do_edge_update_netmeter(edgeConfig);
+
+    if (rc) {
+        ret = EUCANETD_RUN_ERROR_API;
+    }
+    return (ret);
 }
-*/
 
 /**
  * Implements security-group artifacts. This will add or remove remove networking
- * rules pertaining to the groups and their membership.
- * 
- * @param pGni [in] a pointer to the Global Network Information structure
- * @param pLni [in] a pointer to the Local Network Information structure
- * @return 0 on success or 1 if any failure occurred.
- * 
- * @pre \li Both pGni and pLni must not be NULL
- *      \li the driver must have been initialized
- *
- * @post On success, the networking artifacts should be implemented. On failure, the
- *       current state of the system may be left in a non-deterministic state. A
- *       subsequent call to this API may resolve the left over issues.
- *
- * @note For EDGE mode, this means installing the IP table rules for the groups and the
- *       IP sets for the groups' members
- *
+ * rules pertaining to the groups and their membership. Entails installing the
+ * iptables rules for the groups and the ipset for the sg members.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
  */
-static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
+int do_edge_update_sgs(edge_config *edge) {
 #define MAX_RULE_LEN              1024
 
     int i = 0;
@@ -649,175 +696,192 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
     int k = 0;
     int rc = 0;
     int ret = 0;
+    int ipcount = 0;
     int slashnet = 0;
-    int max_instances = 0;
     char *strptra = NULL;
+    char *vmgwip = NULL;
     char *chainname = NULL;
     char *refchainname = NULL;
     char rule[MAX_RULE_LEN] = "";
-    gni_cluster *mycluster = NULL;
+    gni_instance *instances;
+    int max_instances = 0;
     gni_secgroup *secgroup = NULL;
     gni_secgroup *refsecgroup = NULL;
-    gni_instance *instances = NULL;
-    int max_myinstances = 0;
-    gni_instance *myinstances = NULL;
-    gni_node *myself = NULL;
     u32 cidrnm = 0xffffffff;
+    struct timeval tv = { 0 };
 
-    LOGTRACE("Implementing security-group artifacts for '%s' network driver.\n", DRIVER_NAME());
+    eucanetd_timer(&tv);
+    LOGTRACE("Implementing security-group artifacts.\n");
 
-    // this only applies to NC components
-    if (!PEER_IS_NC(eucanetdPeer)) {
-        // no-op
-        return (0);
-    }
-    // Is the driver initialized?
-    if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
-        return (1);
-    }
-    // Are the global and local network view structures NULL?
-    if (!pGni || !pLni) {
-        LOGERROR("Failed to implement security-group artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
+    // Is EDGE configuration NULL?
+    if (!edge || !edge->config || !edge->gni) {
+        LOGERROR("Invalid argument: cannot update SGs from NULL configuration.\n");
         return (1);
     }
 
-    rc = gni_find_self_cluster(pGni, &mycluster);
-    if (rc) {
-        LOGERROR("cannot find cluster to which local node belongs, in global network view: check network config settings\n");
-        return (1);
-    }
     // pull in latest IPT state
-    rc = ipt_handler_repopulate(config->ipt);
-    if (rc) {
-        LOGERROR("cannot read current IPT rules: check above log errors for details\n");
-        return (1);
-    }
+    rc |= ipt_handler_repopulate(edge->config->ipt);
     // pull in latest IPS state
-    rc = ips_handler_repopulate(config->ips);
+    rc |= ips_handler_repopulate(edge->config->ips);
+
     if (rc) {
-        LOGERROR("cannot read current IPS sets: check above log errors for details\n");
+        LOGERROR("Failed to load iptables and/or ipset state\n");
         return (1);
     }
+
     // make sure euca chains are in place
-    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_PREUSERHOOK", "-", "[0:0]");
-    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD", "-", "[0:0]");
-    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_POSTUSERHOOK", "-", "[0:0]");
-    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_IN", "-", "[0:0]");
-    rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_OUT", "-", "[0:0]");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
+    ipt_table_add_chain(edge->config->ipt, "filter", "EUCA_FILTER_FWD_PREUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "filter", "EUCA_FILTER_FWD", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "filter", "EUCA_FILTER_FWD_POSTUSERHOOK", "-", "[0:0]");
+    ipt_chain_add_rule(edge->config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
+    ipt_chain_add_rule(edge->config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
 
-    // clear all chains that we're about to (re)populate with latest network metadata
-    rc = ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
-    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_IN");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_OUT");
-    rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
-    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_IN");
-    rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
+    // clear all chains that we're about to (re)populate with latest network view
+    ipt_chain_flush(edge->config->ipt, "filter", "EUCA_FILTER_FWD");
+    ipt_chain_flush(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED");
+    ipt_table_deletechainmatch(edge->config->ipt, "filter", "sg-");
+    ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD",
+            "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
 
-    // reset and create ipsets for allprivate and noneuca subnet sets
-    rc = ips_handler_deletesetmatch(config->ips, "sg-");
+    // reset and create ipsets for allprivate, ncprivate and noneuca subnet sets
+    ips_handler_deletesetmatch(edge->config->ips, "sg-");
 
-    ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
-    ips_set_flush(config->ips, "EUCA_ALLPRIVATE");
-    ips_set_add_net(config->ips, "EUCA_ALLPRIVATE", "127.0.0.1", 32);
+    ips_handler_add_set(edge->config->ips, "EUCA_NCPRIVATE");
+    ips_set_flush(edge->config->ips, "EUCA_NCPRIVATE");
+    
+    // Populate ipset with local private IPs
+    ipcount = 0;
+    for (i = 0; i < edge->max_my_instances; i++) {
+        gni_instance *inst = &(edge->my_instances[i]);
+        if (inst->privateIp) {
+            strptra = hex2dot(inst->privateIp);
+            ips_set_add_ip(edge->config->ips, "EUCA_NCPRIVATE", strptra);
+            ipcount++;
+            EUCA_FREE(strptra);
+        }
+    }
+    if (!ipcount) {
+        ips_set_add_net(edge->config->ips, "EUCA_NCPRIVATE", "127.0.0.1", 32);
+    }
 
-    ips_handler_add_set(config->ips, "EUCA_ALLNONEUCA");
-    ips_set_flush(config->ips, "EUCA_ALLNONEUCA");
-    ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", "127.0.0.1", 32);
+    ips_handler_add_set(edge->config->ips, "EUCA_ALLPRIVATE");
+    ips_set_flush(edge->config->ips, "EUCA_ALLPRIVATE");
 
-    // add additional private non-euca subnets to EUCA_ALLNONEUCA, here
-    for (i = 0; i < pGni->max_subnets; i++) {
-        strptra = hex2dot(pGni->subnets[i].subnet);
-        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - pGni->subnets[i].netmask) + 1))));
-        ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", strptra, slashnet);
+    // Populate ipset with all private IPs
+    for (i = 0; i < edge->gni->max_instances; i++) {
+        gni_instance *inst = edge->gni->instances[i];
+        if (inst->privateIp) {
+            strptra = hex2dot(inst->privateIp);
+            ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", strptra);
+            EUCA_FREE(strptra);
+        }
+    }
+    // add additional private non-euca subnets to EUCA_ALLPRIVATE
+    for (i = 0; i < edge->gni->max_subnets; i++) {
+        strptra = hex2dot(edge->gni->subnets[i].subnet);
+        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - edge->gni->subnets[i].netmask) + 1))));
+        ips_set_add_net(edge->config->ips, "EUCA_ALLPRIVATE", strptra, slashnet);
         EUCA_FREE(strptra);
     }
 
-    // find all instances that are local to this NC
-    rc = gni_find_self_node(pGni, &myself);
-    if (!rc) {
-        rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &myinstances, &max_myinstances);
-    } else {
-        LOGWARN("Failed to retrieve list of local instances.\n");
-        max_myinstances = 0;
-    }
+    // Forward packets generated by instances hosted by this NC and not destined
+    // to instances hosted by this NC (this should go to out of this NC). Packets
+    // destined to instances hosted by this NC are subject to SG chains
+    snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m physdev --physdev-in vn_i+ " 
+            "-m set ! --match-set EUCA_NCPRIVATE dst -j ACCEPT");
+    ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+    
+    // VM gateway IP
+    vmgwip = hex2dot(edge->config->vmGatewayIP);
+    ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", vmgwip);
 
-    // add chains/rules
-    for (i = 0; i < pGni->max_secgroups; i++) {
-        chainname = NULL;
-        secgroup = NULL;
-        instances = NULL;
-        max_instances = 0;
-
-        secgroup = &(pGni->secgroups[i]);
+    // add referenced SG ipsets
+    for (i = 0; i < edge->max_ref_sgs; i++) {
+        secgroup = edge->ref_sgs[i];
         chainname = strdup(secgroup->name);
-        rule[0] = '\0';
 
-        ips_handler_add_set(config->ips, chainname);
-        ips_set_flush(config->ips, chainname);
+        ips_handler_add_set(edge->config->ips, chainname);
+        ips_set_flush(edge->config->ips, chainname);
+        ips_set_add_ip(edge->config->ips, chainname, vmgwip);
 
-        strptra = hex2dot(config->vmGatewayIP);
-        ips_set_add_ip(config->ips, chainname, strptra);
-        ips_set_add_ip(config->ips, "EUCA_ALLNONEUCA", strptra);
-        EUCA_FREE(strptra);
-
-        rc = gni_secgroup_get_instances(pGni, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
+        max_instances = 0;
+        gni_secgroup_get_instances(edge->gni, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
 
         for (j = 0; j < max_instances; j++) {
             if (instances[j].privateIp) {
                 strptra = hex2dot(instances[j].privateIp);
-                ips_set_add_ip(config->ips, chainname, strptra);
-                ips_set_add_ip(config->ips, "EUCA_ALLPRIVATE", strptra);
+                ips_set_add_ip(edge->config->ips, chainname, strptra);
                 EUCA_FREE(strptra);
             }
             if (instances[j].publicIp) {
                 strptra = hex2dot(instances[j].publicIp);
-                ips_set_add_ip(config->ips, chainname, strptra);
+                ips_set_add_ip(edge->config->ips, chainname, strptra);
                 EUCA_FREE(strptra);
             }
         }
 
         EUCA_FREE(instances);
+        EUCA_FREE(chainname);
+    }
+
+    // add SGs of VMs hosted by this NC
+    for (i = 0; i < edge->max_my_sgs; i++) {
+        secgroup = edge->my_sgs[i];
+        chainname = strdup(secgroup->name);
+        rule[0] = '\0';
+
+        ips_handler_add_set(edge->config->ips, chainname);
+        ips_set_flush(edge->config->ips, chainname);
+        ips_set_add_ip(edge->config->ips, chainname, vmgwip);
+
+        max_instances = 0;
+        gni_secgroup_get_instances(edge->gni, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
+
+        for (j = 0; j < max_instances; j++) {
+            if (instances[j].privateIp) {
+                strptra = hex2dot(instances[j].privateIp);
+                ips_set_add_ip(edge->config->ips, chainname, strptra);
+                EUCA_FREE(strptra);
+            }
+            if (instances[j].publicIp) {
+                strptra = hex2dot(instances[j].publicIp);
+                ips_set_add_ip(edge->config->ips, chainname, strptra);
+                EUCA_FREE(strptra);
+            }
+        }
 
         // add forward chain
-        ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
-        ipt_chain_flush(config->ipt, "filter", chainname);
+        ipt_table_add_chain(edge->config->ipt, "filter", chainname, "-", "[0:0]");
+        ipt_chain_flush(edge->config->ipt, "filter", chainname);
 
         // add jump rule
         snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
-        ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+        ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", rule);
 
         // populate forward chain
 
         // this one needs to be first
         snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src -j ACCEPT", chainname, chainname);
-        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+        ipt_chain_add_rule(edge->config->ipt, "filter", chainname, rule);
 
         // then put all the group specific IPT rules (temporary one here)
         if (secgroup->max_ingress_rules) {
             for (j = 0; j < secgroup->max_ingress_rules; j++) {
                 // If this rule is in reference to another group, lets add this IP set here
                 if (strlen(secgroup->ingress_rules[j].groupId) != 0) {
-                    rc = gni_find_secgroup(pGni, secgroup->ingress_rules[j].groupId, &refsecgroup);
-                    if (0 != rc) {
+                    refsecgroup = gni_get_secgroup(edge->gni, secgroup->ingress_rules[j].groupId, NULL);
+                    if (refsecgroup == NULL) {
                         LOGWARN("Could not find referenced security group %s. Skipping ingress rule.\n", secgroup->ingress_rules[j].groupId);
                     } else {
                         LOGDEBUG("Found referenced security group %s owner %s\n", refsecgroup->name, refsecgroup->accountId);
                         refchainname = NULL;
                         refchainname = strdup(refsecgroup->name);
-                        ips_handler_add_set(config->ips, refchainname);
-                        ips_set_add_ip(config->ips, refchainname, "127.0.0.1");
-                        // Next add the rule
-                        //snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, secgroup->ingress_rules[j].groupId, secgroup->grouprules[j].name);
-                        //ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                         ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
                         strptra = strdup(rule);
-                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --set %s src %s -j ACCEPT", chainname, refchainname, strptra);
-                        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                        snprintf(rule, MAX_RULE_LEN, "-A %s -m set --match-set %s src %s -j ACCEPT", chainname, refchainname, strptra);
+                        ipt_chain_add_rule(edge->config->ipt, "filter", chainname, rule);
                         EUCA_FREE(strptra);
                         EUCA_FREE(refchainname);
                     }
@@ -825,26 +889,26 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
                     ingress_gni_to_iptables_rule(NULL, &(secgroup->ingress_rules[j]), rule, 0);
                     strptra = strdup(rule);
                     snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
-                    ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                    ipt_chain_add_rule(edge->config->ipt, "filter", chainname, rule);
                     EUCA_FREE(strptra);
 
                     // Check if this rule refers to a public IP that this NC is responsible for
                     if (secgroup->ingress_rules[j].cidr) {
-                        // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all)
+                        // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all, so the rule above suffices)
                         cidrnm = (u32) 0xffffffff << (32 - secgroup->ingress_rules[j].cidrSlashnet);
                         if (secgroup->ingress_rules[j].cidrSlashnet != 0) {
                             // Search for public IPs that this NC is responsible
-                            for (k = 0; k < max_myinstances; k++) {
-                                if (((myinstances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
-                                        ((myinstances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
-                                    strptra = hex2dot(myinstances[k].privateIp);
+                            for (k = 0; k < edge->max_my_instances; k++) {
+                                if (((edge->my_instances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
+                                        ((edge->my_instances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
+                                    strptra = hex2dot(edge->my_instances[k].privateIp);
                                     LOGDEBUG("Found instance private IP (%s) local to this NC affected by rule (%s).\n", strptra, secgroup->grouprules[j].name);
                                     ingress_gni_to_iptables_rule(strptra, &(secgroup->ingress_rules[j]), rule, 1);
                                     LOGDEBUG("Created new iptables rule: %s\n", rule);
                                     EUCA_FREE(strptra);
                                     strptra = strdup(rule);
                                     snprintf(rule, MAX_RULE_LEN, "-A %s %s -j ACCEPT", chainname, strptra);
-                                    ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                                    ipt_chain_add_rule(edge->config->ipt, "filter", chainname, rule);
                                     EUCA_FREE(strptra);
                                 }
                             }
@@ -853,18 +917,34 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
                 }
             }
         }
+
+        EUCA_FREE(instances);
         EUCA_FREE(chainname);
     }
-    EUCA_FREE(myinstances);
+    EUCA_FREE(vmgwip);
 
-    // last rule in place is to DROP if no accepts have made it past the FWD chains, and the dst IP is in the ALLPRIVATE ipset
+    // counter rules for dropped packets
+    ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_FILTER_FWD_DROPPED");
+    // Place rules to count dropped packets
+    for (i = 0; i < edge->max_my_instances; i++) {
+        strptra = hex2dot(edge->my_instances[i].privateIp);
+        // dropped private traffic
+        snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD_DROPPED -d %s/32 -m set --match-set EUCA_ALLPRIVATE src", strptra);
+        ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", rule);
+        // dropped public traffic
+        snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD_DROPPED -d %s/32 -m set ! --match-set EUCA_ALLPRIVATE src", strptra);
+        ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", rule);
+        EUCA_FREE(strptra);
+    }
+
+    // DROP if no accepts have made it past the FWD chains, and the dst IP is in the ALLPRIVATE ipset
     snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m set --match-set EUCA_ALLPRIVATE dst -j DROP");
-    ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+    ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", rule);
 
     // Deploy our IP sets
     if (1 || !ret) {
-        ips_handler_print(config->ips);
-        rc = ips_handler_deploy(config->ips, 0);
+        ips_handler_print(edge->config->ips);
+        rc = ips_handler_deploy(edge->config->ips, 0);
         if (rc) {
             LOGERROR("could not apply ipsets: check above log errors for details\n");
             ret = 1;
@@ -872,8 +952,8 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
     }
     // Deploy our IP Table rules
     if (1 || !ret) {
-        ipt_handler_print(config->ipt);
-        rc = ipt_handler_deploy(config->ipt);
+        ipt_handler_print(edge->config->ipt);
+        rc = ipt_handler_deploy(edge->config->ipt);
         if (rc) {
             LOGERROR("could not apply new rules: check above log errors for details\n");
             ret = 1;
@@ -881,107 +961,631 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni) {
     }
 
     if (1 || !ret) {
-        ips_handler_print(config->ips);
-        rc = ips_handler_deploy(config->ips, 1);
+        ips_handler_print(edge->config->ips);
+        rc = ips_handler_deploy(edge->config->ips, 1);
         if (rc) {
             LOGERROR("could not apply ipsets: check above log errors for details\n");
             ret = 1;
         }
     }
 
+    if (!ret) {
+        LOGINFO("\tsgs processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    }
+    return (ret);
+#undef MAX_RULE_LEN
+}
+
+
+/**
+ * Update the elastic IP artifacts. This will install the NAT rules for each one
+ * of them.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int do_edge_update_eips(edge_config *edge) {
+#define MAX_RULE_LEN               1024
+
+    int slashnet = 0;
+    int ret = 0;
+    int rc = 0;
+    int i = 0;
+    int j = 0;
+    int found = 0;
+    u32 nw = 0;
+    u32 nm = 0;
+    char cmd[EUCA_MAX_PATH] = "";
+    char rule[MAX_RULE_LEN] = "";
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    struct timeval tv = { 0 };
+
+    eucanetd_timer_usec(&tv);
+    LOGDEBUG("Updating public IP to private IP mappings.\n");
+
+    if (!edge || !edge->config || !edge->gni || !edge->my_cluster) {
+        LOGERROR("Invalid argument: cannot update EIPs from NULL configuration.\n");
+        return (1);
+    }
+
+    nw = edge->my_cluster->private_subnet.subnet;
+    nm = edge->my_cluster->private_subnet.netmask;
+
+    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - nm) + 1))));
+
+    // install EL IP addrs and NAT rules
+    rc = ipt_handler_repopulate(edge->config->ipt);
+    if (rc) {
+        LOGERROR("unable to reinitialize iptables handler\n");
+        return (1);
+    }
+
+    ipt_handler_add_table(edge->config->ipt, "raw");
+    ipt_table_add_chain(edge->config->ipt, "raw", "EUCA_RAW_PRE", "-", "[0:0]");
+    ipt_chain_add_rule(edge->config->ipt, "raw", "PREROUTING", "-A PREROUTING -j EUCA_RAW_PRE");
+
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_PRE_PREUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_PRE", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_PRE_POSTUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_POST_PREUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_POST", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_POST_POSTUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_OUT_PREUSERHOOK", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_OUT", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "nat", "EUCA_NAT_OUT_POSTUSERHOOK", "-", "[0:0]");
+
+    ipt_chain_add_rule(edge->config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
+    ipt_chain_add_rule(edge->config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
+
+    //ipt_handler_print(edge->config->ipt);
+    rc = ipt_handler_deploy(edge->config->ipt);
+    if (rc) {
+        LOGERROR("could not deploy iptables rules: check above log errors for details\n");
+        ret = 1;
+    }
+
+    rc = ipt_handler_repopulate(edge->config->ipt);
+
+    ipt_table_add_chain(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", "-", "[0:0]");
+    ipt_table_add_chain(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", "-", "[0:0]");
+    ipt_chain_flush(edge->config->ipt, "nat", "EUCA_NAT_PRE");
+    ipt_chain_flush(edge->config->ipt, "nat", "EUCA_NAT_POST");
+    ipt_chain_flush(edge->config->ipt, "nat", "EUCA_NAT_OUT");
+    ipt_chain_flush(edge->config->ipt, "raw", "EUCA_COUNTERS_IN");
+    ipt_chain_flush(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT");
+    ipt_chain_flush(edge->config->ipt, "raw", "EUCA_RAW_PRE");
+
+    strptra = hex2dot(nw);
+
+    if (edge->config->metadata_use_vm_private) {
+        // set a mark so that VM to metadata service requests are not SNATed
+        snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
+        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    }
+
+    snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+
+    ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_RAW_PRE", "-A EUCA_RAW_PRE -j EUCA_COUNTERS_IN");
+    ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_RAW_PRE", "-A EUCA_RAW_PRE -j EUCA_COUNTERS_OUT");
+
+    snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
+    ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", rule);
+
+    snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
+    ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", rule);
+
+    EUCA_FREE(strptra);
+
+    int max_instances = edge->max_my_instances;
+    gni_instance *instances = edge->my_instances;
+    for (i = 0; i < max_instances; i++) {
+        strptra = hex2dot(instances[i].publicIp);
+        strptrb = hex2dot(instances[i].privateIp);
+        LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
+        if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
+            // run some commands
+            snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
+            euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, edge->config->cmdprefix, "ip", "addr", "add", cmd, "dev", edge->config->pubInterface, NULL);
+            rc = rc >> 8;
+            if (!(rc == 0 || rc == 2)) {
+                LOGERROR("could not execute: adding ips\n");
+                ret = 1;
+            }
+            euca_exec_wait(1, edge->config->cmdprefix, "arping", "-c", "1", "-U", "-I", edge->config->pubInterface, strptra, NULL);
+
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+            rc = ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_PRE", rule);
+
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_OUT -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+            rc = ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_OUT", rule);
+
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_POST -s %s/32 -m mark ! --mark 0x2a/0x2a -j SNAT --to-source %s", strptrb, strptra);
+            rc = ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_POST", rule);
+
+            // public in counter (will potentially count dropped packets)
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/32", strptra);
+            rc = ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", rule);
+
+            // private in counter (will potentially count dropped packets)
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/32", strptrb);
+            rc = ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", rule);
+
+            // public out counter
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/32 -m set ! --match-set EUCA_ALLPRIVATE dst", strptrb);
+            rc = ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", rule);
+            
+            // private out counter            
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/32 -m set --match-set EUCA_ALLPRIVATE dst", strptrb);
+            rc = ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", rule);
+
+        }
+
+        EUCA_FREE(strptra);
+        EUCA_FREE(strptrb);
+    }
+
+    // Install the masquerade rules
+    if (edge->config->nc_proxy) {
+        strptra = hex2dot(edge->my_cluster->private_subnet.subnet);
+        slashnet = NETMASK_TO_SLASHNET(edge->my_cluster->private_subnet.netmask);
+
+        snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
+        ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_POST", rule);
+        EUCA_FREE(strptra);
+    }
+
+    // lastly, install metadata redirect rule
+    if (edge->config->metadata_ip) {
+        strptra = hex2dot(edge->config->clcMetadataIP);
+    } else {
+        strptra = hex2dot(edge->gni->enabledCLCIp);
+    }
+    snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
+    rc = ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    EUCA_FREE(strptra);
+
+    //  rc = ipt_handler_print(edge->config->ipt);
+    rc = ipt_handler_deploy(edge->config->ipt);
+    if (rc) {
+        LOGERROR("could not apply new ipt handler rules: check above log errors for details\n");
+        ret = 1;
+    }
+
+    // if all has gone well, now clear any public IPs that have not been mapped to private IPs
+    if (!ret) {
+        u32 *ips=NULL, *nms=NULL;
+        int max_nets;
+        
+        if (getdevinfo(edge->config->pubInterface, &ips, &nms, &max_nets)) {
+            // could not get interface info - only check below against instances
+            max_nets = 0;
+            ips = NULL;
+            nms = NULL;
+        }
+
+        for (i = 0; i < edge->gni->max_public_ips; i++) {
+            found = 0;
+            // only clear IPs that are not assigned to instances running on this node
+            if (!found && max_instances > 0) {
+                for (j = 0; j < max_instances && !found; j++) {
+                    if (instances[j].publicIp == edge->gni->public_ips[i]) {
+                        // this global public IP is assigned to an instance on this node, do not delete
+                        found = 1;
+                    }
+                }
+            }
+
+            // only clear IPs that are assigned on the public interface already
+            if (!found && max_nets > 0) {
+                found = 1;
+                for (j = 0; j < max_nets && found; j++) {
+                    if (ips[j] == edge->gni->public_ips[i]) {
+                        // this global public IP is assigned to the public interface currently (but not to an instance) - do the delete
+                        found = 0;
+                    }
+                }
+            }
+
+            if (!found) {
+                strptra = hex2dot(edge->gni->public_ips[i]);
+                snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
+                EUCA_FREE(strptra);
+                if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, edge->config->cmdprefix,
+                                         "ip", "addr", "del", cmd, "dev", edge->config->pubInterface, NULL) != EUCA_OK) {
+                    LOGERROR("could not execute: revoking no longer in use ips\n");
+                    ret = 1;
+                }
+            }
+        }
+        EUCA_FREE(ips);
+        EUCA_FREE(nms);
+    }
+    LOGINFO("\tpublic/elastic IPs processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (ret);
 
 #undef MAX_RULE_LEN
 }
 
-//!
-//! This takes care of implementing the addressing artifacts necessary. This will add or
-//! remove IP addresses and elastic IPs for each instances.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see update_private_ips(), update_elastic_ips(), update_l2_addressing()
-//!
-//! @pre \li Both pGni and pLni must not be NULL
-//!      \li the driver must have been initialized
-//!
-//! @post On success, the networking artifacts should be implemented. On failure, the
-//!       current state of the system may be left in a non-deterministic state. A
-//!       subsequent call to this API may resolve the left over issues.
-//!
-//! @note For EDGE mode, this means creating the DHCP configuration for private addresses,
-//!       installing the NAT rules for elastic IPs and the L2 addressing rules.
-//!
-static int network_driver_implement_addressing(globalNetworkInfo * pGni, lni_t * pLni)
-{
+/**
+ * Application of EBT rules to only allow unique and known IP<->MAC pairings to
+ * send traffic through the bridge
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int do_edge_update_l2(edge_config *edge) {
+    int i = 0;
     int rc = 0;
     int ret = 0;
+    int max_instances = 0;
+    char cmd[EUCA_MAX_PATH] = "";
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    char vnetinterface[64];
+    char *gwip = NULL;
+    char *brmac = NULL;
+    gni_instance *instances = NULL;
+    struct timeval tv = { 0 };
 
-    LOGTRACE("Implementing addressing artifacts for '%s' network driver.\n", DRIVER_NAME());
+    eucanetd_timer_usec(&tv);
+    LOGDEBUG("Updating IP/MAC pairing rules.\n");
 
-    // this only applies to NC components
-    if (!PEER_IS_NC(eucanetdPeer)) {
-        // no-op
-        return (0);
-    }
-    // Is the driver initialized?
-    if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to implement addressing artifacts for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
+    // Make sure our given parameter is valid
+    if (!edge || !edge->config || !edge->gni || !edge->my_cluster) {
+        LOGERROR("Invalid argument: cannot update EIPs from NULL configuration.\n");
         return (1);
     }
-    // Are the global and local network view structures NULL?
-    if (!pGni || !pLni) {
-        LOGERROR("Failed to implement addressing artifacts for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
-        return (1);
+
+    if (edge->config->nc_proxy) {
+        // Now update our host information by sending Gratuitous ARP as necessary
+        update_host_arp(edge);
     }
 
-    // Install the elastic IPs artifacts for instances
-    rc = update_elastic_ips(pGni);
-    if (rc) {
-        LOGERROR("could not complete update of public IPs: check above log errors for details\n");
+    ebt_handler_repopulate(edge->config->ebt);
+
+    ebt_table_add_chain(edge->config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
+    ebt_chain_add_rule(edge->config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
+    ebt_chain_flush(edge->config->ebt, "filter", "EUCA_EBT_FWD");
+
+    ebt_table_add_chain(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", "ACCEPT", "");
+    ebt_chain_add_rule(edge->config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
+    ebt_chain_flush(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE");
+
+    ebt_table_add_chain(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", "ACCEPT", "");
+    ebt_chain_add_rule(edge->config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
+    ebt_chain_flush(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST");
+
+    // add these for DHCP to pass
+    //    ebt_chain_add_rule(edge->config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+    //    ebt_chain_add_rule(edge->config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+
+    gwip = hex2dot(edge->config->vmGatewayIP);
+    brmac = INTFC2MAC(edge->config->bridgeDev);
+
+    if (gwip && brmac) {
+        // Add this one for DHCP to pass since windows may be requesting broadcast responses
+        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
+        rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+        if (!edge->config->nc_proxy) {
+            // If we're using the "fake" router option and have some instance running,
+            // we need to respond for out of network ARP request.
+            if (edge->config->nc_router && !edge->config->nc_router_ip && (max_instances > 0)) {
+                snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", gwip, brmac);
+                rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+            }
+        } else {
+            // Only allow ARP Reply to our bridge MAC
+            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i vn_i+ -d ! %s --arp-op Reply -j DROP ", brmac);
+            rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+            // Ensures only our Bridge can send ARP request to our VMs
+            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o vn_i+ --arp-mac-src ! %s -j DROP", brmac);
+            rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+        }
+
+        instances = edge->my_instances;
+        max_instances = edge->max_my_instances;
+        for (i = 0; i < max_instances; i++) {
+            if (instances[i].privateIp && maczero(instances[i].macAddress)) {
+                strptra = strptrb = NULL;
+                strptra = hex2dot(instances[i].privateIp);
+                hex2mac(instances[i].macAddress, &strptrb);
+
+                snprintf(vnetinterface, 63, "vn_%s", instances[i].name);
+
+                if (strptra && strptrb) {
+                    if (!edge->config->disable_l2_isolation) {
+                        //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
+
+                        // PRE Routing
+
+                        // basic MAC check
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -s ! %s -j DROP", vnetinterface, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // IPv4
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -s %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetinterface, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        if (edge->config->nc_proxy) {
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s --arp-ip-dst %s -j DROP", vnetinterface, strptra);
+                            ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", strptra, brmac);
+                            ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                            // Forces all ARP from VM to get replied with our Bridge MAC (Force forward to the bridge)
+                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s -j arpreply --arpreply-mac %s", vnetinterface, brmac);
+                            ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                        }
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-src ! %s -j DROP", vnetinterface, strptra);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Request -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Reply -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP -j DROP", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // RARP
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s "
+                                 "--arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // pass KVM migration weird packet
+                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x835 -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+
+                        // POST routing
+
+                        // IPv4
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -d ! %s --ip-proto udp --ip-dport 67:68 -j DROP", vnetinterface, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        // ARP
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply --arp-mac-dst ! %s -j DROP", vnetinterface, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-ip-dst ! %s -j DROP", vnetinterface, strptra);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply -j ACCEPT", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s -j DROP", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        // RARP
+                        snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s "
+                                 "--arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                        snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
+                        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+
+                    } else {
+                        if (edge->config->nc_router && !edge->config->nc_router_ip) {
+                            snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                            ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                        }
+                    }
+                } else {
+                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
+                            SP(strptrb), SP(gwip), SP(brmac));
+                    ret = 1;
+                }
+                EUCA_FREE(strptra);
+                EUCA_FREE(strptrb);
+            }
+        }
+    } else {
+        LOGWARN("could not retrieve one of: gwip (%s), brmac (%s): skipping but will retry\n", SP(gwip), SP(brmac));
         ret = 1;
     }
 
-    // Install the L2 addressing artifacts for instances
-    rc = update_l2_addressing(pGni);
+    if (!edge->config->disable_l2_isolation) {
+        // DROP everything from the instance by default
+        snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP");
+        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+        
+        // DROP everything to the instance by default
+        snprintf(cmd, EUCA_MAX_PATH, "-o vn_i+ -j DROP");
+        ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
+    }
+    EUCA_FREE(brmac);
+    EUCA_FREE(gwip);
+
+    ebt_handler_print(edge->config->ebt);
+    rc = ebt_handler_deploy(edge->config->ebt);
     if (rc) {
-        LOGERROR("could not complete update of public IPs: check above log errors for details\n");
+        LOGERROR("could not install ebtables rules: check above log errors for details\n");
         ret = 1;
     }
 
-    // Install the private IPs artifacts for instances
-    rc = update_private_ips(pGni);
-    if (rc) {
-        LOGERROR("could not complete update of private IPs: check above log errors for details\n");
-        ret = 1;
-    }
+    LOGINFO("\tL2 addressing processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
     return (ret);
 }
 
-//!
-//! Generates the DHCP server configuration so the instances can get their
-//! networking configuration information.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see
-//!
-//! @pre The pGni parameter MUST not be NULL
-//!
-//! @post On success the DHCP server configuration is created. On failure, the
-//!       DHCP configuration file should not exists.
-//!
-//! @note
-//!
-static int generate_dhcpd_config(globalNetworkInfo * pGni)
-{
-    int i = 0;
+/**
+ * Update the private IP addressing. This will ensure a DHCP configuration file
+ * is generated and the server restarted upon success.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int do_edge_update_ips(edge_config *edge) {
     int rc = 0;
+    struct timeval tv = { 0 };
+
+    eucanetd_timer_usec(&tv);
+    LOGDEBUG("Updating private IP and DHCPD handling.\n");
+
+    // Make sure our given parameter is valid
+    if (!edge || !edge->config || !edge->gni) {
+        LOGERROR("Invalid argument: cannot update ips from NULL configuration.\n");
+        return (1);
+    }
+
+    // Generate the DHCP configuration so instances can get their network config
+    if ((rc = generate_dhcpd_config(edge)) != 0) {
+        LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
+        return (1);
+    }
+    // Restart the DHCP server so it can pick up the new configuration
+    if ((rc = eucanetd_kick_dhcpd_server(edge->config)) != 0) {
+        LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
+        return (1);
+    }
+    LOGINFO("\tdhcp config processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (0);
+}
+
+/**
+ * Update netmeter. Go through each instance's public and private IP iptables counter
+ * rules and extract the updated counts.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int do_edge_update_netmeter(edge_config *edge) {
+#define MAX_RULE_LEN              1024
+    int rc = 0;
+    struct timeval tv = { 0 };
+
+    eucanetd_timer_usec(&tv);
+    LOGDEBUG("Updating netmeter.\n");
+
+    // Make sure our given parameter is valid
+    if (!edge || !edge->config || !edge->gni || !edge->nmeter) {
+        LOGERROR("Invalid argument: cannot update netmeter from NULL configuration.\n");
+        return (1);
+    }
+
+    clear_edge_netmeter_tag(edge->nmeter);
+    rc = ipt_handler_repopulate(edge->config->ipt);
+    if (rc) {
+        LOGWARN("Unable to update netmeter data.\n");
+        return (rc);
+    }
+
+    char *pubip = NULL;
+    char *privip = NULL;
+    gni_instance *vm = NULL;
+    edge_netmeter_instance *vmnm = NULL;
+    ipt_rule *iptrule = NULL;
+    char rule[MAX_RULE_LEN];
+    for (int i = 0; i < edge->max_my_instances; i++) {
+        vm = &(edge->my_instances[i]);
+        if (vm->privateIp) {
+            privip = hex2dot(vm->privateIp);
+        } else {
+            continue;
+        }
+        if (vm->publicIp) {
+            pubip = hex2dot(vm->publicIp);
+            vmnm = find_edge_netmeter_instance(&(edge->nmeter->pub_ips), &(edge->nmeter->max_pub_ips),
+                    vm->name, pubip, TRUE);
+            vmnm->iptype = EDGE_IPV4_PUBLIC;
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/32", pubip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", rule);
+            if (iptrule) {
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &(vmnm->pkts_in), &(vmnm->bytes_in));
+                vmnm->updated = TRUE;
+            }
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/32 -m set ! --match-set EUCA_ALLPRIVATE dst", privip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", rule);
+            if (iptrule) {
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &(vmnm->pkts_out), &(vmnm->bytes_out));
+                vmnm->updated = TRUE;
+            }
+            
+            // Subtract dropped packets
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD_DROPPED -d %s/32 -m set ! --match-set EUCA_ALLPRIVATE src", privip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", rule);
+            if (iptrule) {
+                long a = 0; long b = 0;
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &a, &b);
+                vmnm->pkts_out = vmnm->pkts_out - a;
+                vmnm->bytes_out = vmnm->bytes_out - b;
+            }
+        }
+        
+        {
+            vmnm = find_edge_netmeter_instance(&(edge->nmeter->priv_ips), &(edge->nmeter->max_priv_ips),
+                    vm->name, privip, TRUE);
+            vmnm->iptype = EDGE_IPV4_PRIVATE;
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/32", privip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_IN", rule);
+            if (iptrule) {
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &(vmnm->pkts_in), &(vmnm->bytes_in));
+                vmnm->updated = TRUE;
+            }
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/32 -m set --match-set EUCA_ALLPRIVATE dst", privip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "raw", "EUCA_COUNTERS_OUT", rule);
+            if (iptrule) {
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &(vmnm->pkts_out), &(vmnm->bytes_out));
+                vmnm->updated = TRUE;
+            }
+
+            // Subtract dropped packets
+            snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD_DROPPED -d %s/32 -m set --match-set EUCA_ALLPRIVATE src", privip);
+            iptrule = ipt_chain_find_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", rule);
+            if (iptrule) {
+                long a = 0; long b = 0;
+                sscanf(iptrule->counterstr, "[%ld:%ld]", &a, &b);
+                vmnm->pkts_out = vmnm->pkts_out - a;
+                vmnm->bytes_out = vmnm->bytes_out - b;
+            }
+        }
+        EUCA_FREE(pubip);
+        EUCA_FREE(privip);
+    }
+    edge_dump_netmeter(edge);
+    LOGDEBUG("\tnetmeter updated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (0);
+#undef MAX_RULE_LEN
+}
+
+/**
+ * Generates the DHCP server configuration so the instances can get their
+ * networking configuration information.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int generate_dhcpd_config(edge_config *edge) {
+    int i = 0;
     int ret = 0;
     int max_instances = 0;
     u32 nw = 0;
@@ -995,37 +1599,19 @@ static int generate_dhcpd_config(globalNetworkInfo * pGni)
     char *strptra = NULL;
     char dhcpd_config_path[EUCA_MAX_PATH] = "";
     FILE *OFH = NULL;
-    gni_node *myself = NULL;
-    gni_cluster *mycluster = NULL;
     gni_instance *instances = NULL;
 
-    // Make sure the given pointer is valid
-    if (!pGni) {
-        LOGERROR("Cannot configure DHCP server. Invalid parameter provided.\n");
-        return (1);
-    }
-    // Find our associated cluster
-    rc = gni_find_self_cluster(pGni, &mycluster);
-    if (rc) {
-        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
-        return (1);
-    }
-    // Find ourself as a node
-    rc = gni_find_self_node(pGni, &myself);
-    if (rc) {
-        LOGERROR("cannot find local node in global network state: check network config settings\n");
-        return (1);
-    }
-    // Get our instance list
-    rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &instances, &max_instances);
-    if (rc) {
-        LOGERROR("cannot find instances belonging to this node: check network config settings\n");
+    // Make sure our given parameter is valid
+    if (!edge || !edge->config || !edge->gni || !edge->my_cluster) {
+        LOGERROR("Invalid argument: cannot update dhcp from NULL configuration.\n");
         return (1);
     }
 
-    nw = mycluster->private_subnet.subnet;
-    nm = mycluster->private_subnet.netmask;
-    //    rt = mycluster->private_subnet.gateway;
+    nw = edge->my_cluster->private_subnet.subnet;
+    nm = edge->my_cluster->private_subnet.netmask;
+    
+    instances = edge->my_instances;
+    max_instances = edge->max_my_instances;
 
     // Open the DHCP configuration file
     snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
@@ -1043,16 +1629,16 @@ static int generate_dhcpd_config(globalNetworkInfo * pGni)
         router = hex2dot(config->vmGatewayIP);  // this is set by configuration
 
         fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n", network, netmask, netmask, broadcast);
-        if (strlen(pGni->instanceDNSDomain)) {
-            fprintf(OFH, "  option domain-name \"%s\";\n", pGni->instanceDNSDomain);
+        if (strlen(edge->gni->instanceDNSDomain)) {
+            fprintf(OFH, "  option domain-name \"%s\";\n", edge->gni->instanceDNSDomain);
         }
 
-        if (pGni->max_instanceDNSServers) {
-            strptra = hex2dot(pGni->instanceDNSServers[0]);
+        if (edge->gni->max_instanceDNSServers) {
+            strptra = hex2dot(edge->gni->instanceDNSServers[0]);
             fprintf(OFH, "  option domain-name-servers %s", SP(strptra));
             EUCA_FREE(strptra);
-            for (i = 1; i < pGni->max_instanceDNSServers; i++) {
-                strptra = hex2dot(pGni->instanceDNSServers[i]);
+            for (i = 1; i < edge->gni->max_instanceDNSServers; i++) {
+                strptra = hex2dot(edge->gni->instanceDNSServers[i]);
                 fprintf(OFH, ", %s", SP(strptra));
                 EUCA_FREE(strptra);
             }
@@ -1079,1057 +1665,376 @@ static int generate_dhcpd_config(globalNetworkInfo * pGni)
         fclose(OFH);
     }
 
-    // Free our instance list
-    EUCA_FREE(instances);
     return (ret);
 }
 
-//!
-//! Update the private IP addressing. This will ensure a DHCP configuration file
-//! is generated and the server restarted upon success.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see generate_dhcpd_config(), eucanetd_kick_dhcpd_server()
-//!
-//! @pre The pGni parameter must not be NULL
-//!
-//! @post On success, the DHCP server configuration is updated and the server
-//!       restarted
-//!
-//! @note
-//!
-static int update_private_ips(globalNetworkInfo * pGni)
-{
-    int rc = 0;
-    struct timeval tv = { 0 };
-
-    eucanetd_timer_usec(&tv);
-    LOGDEBUG("Updating private IP and DHCPD handling.\n");
-
-    // Make sure our given parameter is valid
-    if (!pGni) {
-        LOGERROR("Failed to update private IP addressing. Invalid parameters provided.\n");
-        return (1);
-    }
-#ifdef USE_IP_ROUTE_HANDLER
-    // Make sure we can install our private and public subnet routes if NC_PROXY is enabled
-    if (config->nc_proxy) {
-        if ((rc = install_private_routes(pGni)) != 0) {
-            LOGERROR("unable to generate private IP routes: check above log errors for details\n");
-            return (1);
-        }
-
-        if ((rc = install_public_routes(pGni)) != 0) {
-            LOGERROR("unable to generate private IP routes: check above log errors for details\n");
-            return (1);
-        }
-    }
-#endif /* USE_IP_ROUTE_HANDLER */
-    // Generate the DHCP configuration so instances can get their network config
-    if ((rc = generate_dhcpd_config(pGni)) != 0) {
-        LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
-        return (1);
-    }
-    // Restart the DHCP server so it can pick up the new configuration
-    if ((rc = eucanetd_kick_dhcpd_server(config)) != 0) {
-        LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
-        return (1);
-    }
-    LOGINFO("update_private_ips executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    return (0);
-}
-
-//!
-//! Update the elastic IP artifacts. This will install the NAT rules for each one
-//! of them.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre The pGni parameter must not be NULL
-//!
-//! @post On success, the networking artifacts should be implemented. On failure, the
-//!       current state of the system may be left in a non-deterministic state. A
-//!       subsequent call to this API may resolve the left over issues.
-//!
-//! @note
-//!
-static int update_elastic_ips(globalNetworkInfo * pGni)
-{
-#define MAX_RULE_LEN               1024
-
-    int slashnet = 0;
-    int ret = 0;
-    int rc = 0;
-    int i = 0;
-    int j = 0;
-    int found = 0;
-    int max_instances = 0;
-    u32 nw = 0;
-    u32 nm = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-    char rule[MAX_RULE_LEN] = "";
-    char *strptra = NULL;
-    char *strptrb = NULL;
-    gni_cluster *mycluster = NULL;
-    gni_node *myself = NULL;
-    gni_instance *instances = NULL;
-    struct timeval tv = { 0 };
-
-    eucanetd_timer_usec(&tv);
-    LOGDEBUG("Updating public IP to private IP mappings.\n");
-
-    // Make sure our given parameter is valid
-    if (!pGni) {
-        LOGERROR("Failed to update public IP to private IP mappings. Invalid parameters provided.\n");
-        return (1);
-    }
-    // Find our associated CC
-    rc = gni_find_self_cluster(pGni, &mycluster);
-    if (rc) {
-        LOGERROR("cannot locate cluster to which local node belongs, in global network view: check network config settings\n");
-        return (1);
-    }
-
-    nw = mycluster->private_subnet.subnet;
-    nm = mycluster->private_subnet.netmask;
-
-    //    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetpConfig->networks[0].nm) + 1))));
-    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - nm) + 1))));
-
-    // install EL IP addrs and NAT rules
-    rc = ipt_handler_repopulate(config->ipt);
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE_PREUSERHOOK", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE_POSTUSERHOOK", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST_PREUSERHOOK", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST_POSTUSERHOOK", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT_PREUSERHOOK", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT", "-", "[0:0]");
-    ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT_POSTUSERHOOK", "-", "[0:0]");
-
-    ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
-    ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
-    ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
-    ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
-    ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
-    ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
-    ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
-    ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
-    ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
-
-    //  rc = ipt_handler_print(config->ipt);
-    rc = ipt_handler_deploy(config->ipt);
-    if (rc) {
-        LOGERROR("could not add euca net chains: check above log errors for details\n");
-        ret = 1;
-    }
-
-    rc = ipt_handler_repopulate(config->ipt);
-
-    ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
-    ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
-    ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
-
-    //    strptra = hex2dot(vnetpConfig->networks[0].nw);
-    strptra = hex2dot(nw);
-
-    if (config->metadata_use_vm_private) {
-        // set a mark so that VM to metadata service requests are not SNATed
-        snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-    }
-
-    snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-
-    snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLNONEUCA dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-
-    snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
-
-    snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
-
-    EUCA_FREE(strptra);
-
-    rc = gni_find_self_node(pGni, &myself);
-    if (!rc) {
-        rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &instances, &max_instances);
-    }
-
-    for (i = 0; i < max_instances; i++) {
-        strptra = hex2dot(instances[i].publicIp);
-        strptrb = hex2dot(instances[i].privateIp);
-        LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
-        if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
-            // run some commands
-            snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
-            euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix, "ip", "addr", "add", cmd, "dev", config->pubInterface, NULL);
-            rc = rc >> 8;
-            if (!(rc == 0 || rc == 2)) {
-                LOGERROR("could not execute: adding ips\n");
-                ret = 1;
-            }
-            euca_exec_wait(1, config->cmdprefix, "arping", "-c", "1", "-U", "-I", config->pubInterface, strptra, NULL);
-
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-            rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_OUT -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-            rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_OUT", rule);
-
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_POST -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
-            rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
-
-            //snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -m conntrack --ctstate DNAT --ctorigdst %s/32", strptra);
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_IN -d %s/32", strptrb);
-            rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
-
-            //snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -m conntrack --ctstate SNAT --ctrepldst %s/32", strptra);
-            snprintf(rule, MAX_RULE_LEN, "-A EUCA_COUNTERS_OUT -s %s/32", strptrb);
-            rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
-
-        }
-
-        EUCA_FREE(strptra);
-        EUCA_FREE(strptrb);
-    }
-
-    // Install the masquerade rules
-    if (config->nc_proxy) {
-        strptra = hex2dot(mycluster->private_subnet.subnet);
-        slashnet = NETMASK_TO_SLASHNET(mycluster->private_subnet.netmask);
-
-        snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/%u -m mark ! --mark 0x2a -j MASQUERADE", strptra, slashnet);
-        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
-        EUCA_FREE(strptra);
-    }
-
-    // lastly, install metadata redirect rule
-    if (config->metadata_ip) {
-        strptra = hex2dot(config->clcMetadataIP);
-    } else {
-        strptra = hex2dot(pGni->enabledCLCIp);
-    }
-    snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", strptra);
-    rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-    EUCA_FREE(strptra);
-
-    //  rc = ipt_handler_print(config->ipt);
-    rc = ipt_handler_deploy(config->ipt);
-    if (rc) {
-        LOGERROR("could not apply new ipt handler rules: check above log errors for details\n");
-        ret = 1;
-    }
-
-    // if all has gone well, now clear any public IPs that have not been mapped to private IPs
-    if (!ret) {
-        u32 *ips=NULL, *nms=NULL;
-        int max_nets;
-        
-        if (getdevinfo(config->pubInterface, &ips, &nms, &max_nets)) {
-            // could not get interface info - only check below against instances
-            max_nets = 0;
-            ips = NULL;
-            nms = NULL;
-        }
-
-        for (i = 0; i < pGni->max_public_ips; i++) {
-            found = 0;
-            // only clear IPs that are not assigned to instances running on this node
-            if (!found && max_instances > 0) {
-                for (j = 0; j < max_instances && !found; j++) {
-                    if (instances[j].publicIp == pGni->public_ips[i]) {
-                        // this global public IP is assigned to an instance on this node, do not delete
-                        found = 1;
-                    }
-                }
-            }
-
-            // only clear IPs that are assigned on the public interface already
-            if (!found && max_nets > 0) {
-                found = 1;
-                for (j = 0; j < max_nets && found; j++) {
-                    if (ips[j] == pGni->public_ips[i]) {
-                        // this global public IP is assigned to the public interface currently (but not to an instance) - do the delete
-                        found = 0;
-                    }
-                }
-            }
-
-            if (!found) {
-                strptra = hex2dot(pGni->public_ips[i]);
-                snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
-                EUCA_FREE(strptra);
-                if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix,
-                                         "ip", "addr", "del", cmd, "dev", config->pubInterface, NULL) != EUCA_OK) {
-                    LOGERROR("could not execute: revoking no longer in use ips\n");
-                    ret = 1;
-                }
-            }
-        }
-        EUCA_FREE(ips);
-        EUCA_FREE(nms);
-    }
-    EUCA_FREE(instances);
-    LOGINFO("update_elastic_ips exected in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    return (ret);
-
-#undef MAX_RULE_LEN
-}
-
-//!
-//! Application of EBT rules to only allow unique and known IP<->MAC pairings to
-//! send traffic through the bridge
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if a failure occurred
-//!
-//! @see
-//!
-//! @pre The pGni parameter must not be NULL
-//!
-//! @post On success, the networking L2 artifacts should be implemented. On failure, the
-//!       current state of the system may be left in a non-deterministic state. A
-//!       subsequent call to this API may resolve the left over issues.
-//!
-//! @note
-//!
-static int update_l2_addressing(globalNetworkInfo * pGni)
-{
-    int i = 0;
-    int rc = 0;
-    int ret = 0;
-    int max_instances = 0;
-    char cmd[EUCA_MAX_PATH] = "";
-    char *strptra = NULL;
-    char *strptrb = NULL;
-    char vnetinterface[64];
-    char *gwip = NULL;
-    char *brmac = NULL;
-    gni_node *myself = NULL;
-    gni_cluster *mycluster = NULL;
-    gni_instance *instances = NULL;
-    struct timeval tv = { 0 };
-
-    eucanetd_timer_usec(&tv);
-    LOGDEBUG("Updating IP/MAC pairing rules.\n");
-
-    // Make sure our given parameter is valid
-    if (!pGni) {
-        LOGERROR("Failed to update IP/MAC pairing. Invalid parameters provided.\n");
-        return (1);
-    }
-
-    if (config->nc_proxy) {
-#ifdef USE_IP_ROUTE_HANDLER
-        // Populate our IP rules
-        ipr_handler_repopulate(config->ipr);
-
-        // Flush what we have, we'll re-add if necessary
-        ipr_handler_flush(config->ipr);
-#endif /* USE_IP_ROUTE_HANDLER */
-
-        // Now update our host information by sending Gratuitous ARP as necessary
-        update_host_arp();
-    }
-
-    // Find our associated cluster
-    rc = gni_find_self_cluster(pGni, &mycluster);
-    if (rc) {
-        LOGERROR("cannot find cluster to which local node belongs, in global network view: check network config settings\n");
-        return (1);
-    }
-
-    rc = ebt_handler_repopulate(config->ebt);
-
-    rc = ebt_table_add_chain(config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
-    rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
-    rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
-
-    rc = ebt_table_add_chain(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "ACCEPT", "");
-    rc = ebt_chain_add_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
-    rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
-
-    rc = ebt_table_add_chain(config->ebt, "nat", "EUCA_EBT_NAT_POST", "ACCEPT", "");
-    rc = ebt_chain_add_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
-    rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
-
-    // add these for DHCP to pass
-    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-    //    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
-
-    rc = gni_find_self_node(pGni, &myself);
-    if (!rc) {
-        rc = gni_node_get_instances(pGni, myself, NULL, 0, NULL, 0, &instances, &max_instances);
-    }
-
-    gwip = hex2dot(config->vmGatewayIP);
-    brmac = INTFC2MAC(config->bridgeDev);
-
-    if (gwip && brmac) {
-        // Add this one for DHCP to pass since windows may be requesting broadcast responses
-        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
-        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-        if (!config->nc_proxy) {
-            // If we're using the "fake" router option and have some instance running,
-            // we need to respond for out of network ARP request.
-            if (config->nc_router && !config->nc_router_ip && (max_instances > 0)) {
-                snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", gwip, brmac);
-                rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-            }
-        } else {
-            // Only allow ARP Reply to our bridge MAC
-            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i vn_i+ -d ! %s --arp-op Reply -j DROP ", brmac);
-            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-            // Ensures only our Bridge can send ARP request to our VMs
-            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o vn_i+ --arp-mac-src ! %s -j DROP", brmac);
-            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-        }
-
-
-        for (i = 0; i < max_instances; i++) {
-            if (instances[i].privateIp && maczero(instances[i].macAddress)) {
-                strptra = strptrb = NULL;
-                strptra = hex2dot(instances[i].privateIp);
-                hex2mac(instances[i].macAddress, &strptrb);
-
-                // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
-                //                vnetinterface = MAC2INTFC(strptrb);
-                snprintf(vnetinterface, 63, "vn_%s", instances[i].name);
-
-                if (strptra && strptrb) {
-                    if (!config->disable_l2_isolation) {
-                        //NOTE: much of this ruleset is a translation of libvirt FW example at http://libvirt.org/firewall.html
-
-                        // PRE Routing
-
-                        // basic MAC check
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -s ! %s -j DROP", vnetinterface, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        // IPv4
-                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -s %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetinterface, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        if (config->nc_proxy) {
-                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s --arp-ip-dst %s -j DROP", vnetinterface, strptra);
-                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", strptra, brmac);
-                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                            // Forces all ARP from VM to get replied with our Bridge MAC (Force forward to the bridge)
-                            snprintf(cmd, EUCA_MAX_PATH, "-p ARP -i %s -j arpreply --arpreply-mac %s", vnetinterface, brmac);
-                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-#ifdef USE_IP_ROUTE_HANDLER
-                            // If I don't have a public IP, confine the traffic to the private network routes
-                            if (!instances[i].publicIp) {
-                                snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_private", strptra);
-                            } else {
-                                snprintf(cmd, EUCA_MAX_PATH, "from %s lookup euca_public", strptra);
-                            }
-                            rc = ipr_handler_add_rule(config->ipr, cmd);
-#endif /* USE_IP_ROUTE_HANDLER */
-                        }
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-mac-src ! %s -j DROP", vnetinterface, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-src ! %s -j DROP", vnetinterface, strptra);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Request -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-op Reply -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP -j DROP", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        // RARP
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -s %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s "
-                                 "--arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x8035 -j DROP", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        // pass KVM migration weird packet
-                        snprintf(cmd, EUCA_MAX_PATH, "-i %s -p 0x835 -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-
-                        // POST routing
-
-                        // IPv4
-                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -d ! %s --ip-proto udp --ip-dport 67:68 -j DROP", vnetinterface, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o %s -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        // ARP
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply --arp-mac-dst ! %s -j DROP", vnetinterface, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-ip-dst ! %s -j DROP", vnetinterface, strptra);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Request -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s --arp-op Reply -j ACCEPT", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p ARP -o %s -j DROP", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        // RARP
-                        snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -d Broadcast --arp-op Request_Reverse --arp-ip-src 0.0.0.0 --arp-ip-dst 0.0.0.0 --arp-mac-src %s "
-                                 "--arp-mac-dst %s -j ACCEPT", vnetinterface, strptrb, strptrb);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                        snprintf(cmd, EUCA_MAX_PATH, "-p 0x8035 -o %s -j DROP", vnetinterface);
-                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-
-                    } else {
-                        if (config->nc_router && !config->nc_router_ip) {
-                            snprintf(cmd, EUCA_MAX_PATH, "-i %s -p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
-                            rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-                        }
-                    }
-                } else {
-                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
-                            SP(strptrb), SP(gwip), SP(brmac));
-                    ret = 1;
-                }
-                //                EUCA_FREE(vnetinterface);
-                EUCA_FREE(strptra);
-                EUCA_FREE(strptrb);
-            }
-        }
-    } else {
-        LOGWARN("could not retrieve one of: gwip (%s), brmac (%s): skipping but will retry\n", SP(gwip), SP(brmac));
-        ret = 1;
-    }
-
-    if (!config->disable_l2_isolation) {
-        // DROP everything from the instance by default
-        snprintf(cmd, EUCA_MAX_PATH, "-i vn_i+ -j DROP");
-        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
-        
-        // DROP everything to the instance by default
-        snprintf(cmd, EUCA_MAX_PATH, "-o vn_i+ -j DROP");
-        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
-    }
-    EUCA_FREE(brmac);
-    EUCA_FREE(gwip);
-    EUCA_FREE(instances);
-
-    rc = ebt_handler_print(config->ebt);
-    rc = ebt_handler_deploy(config->ebt);
-    if (rc) {
-        LOGERROR("could not install ebtables rules: check above log errors for details\n");
-        ret = 1;
-    }
-
-#ifdef USE_IP_ROUTE_HANDLER
-    if (config->nc_proxy) {
-        rc = ipr_handler_print(config->ipr);
-        rc = ipr_handler_deploy(config->ipr);
-        if (rc) {
-            LOGERROR("could not install ip rules: check above log errors for details\n");
-            ret = 1;
-        }
-    }
-#endif /* USE_IP_ROUTE_HANDLER */
-
-    LOGINFO("update_l2_addressing executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-
-    return (ret);
-}
-
-#ifdef USE_IP_ROUTE_HANDLER
-//!
-//! Checks whether or not we need to install our public routes. We only update this
-//! if the routes have changed.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see
-//!
-//! @pre
-//!     - The pGni parameter MUST not be NULL
-//!
-//! @post
-//!     - On success the public routes have been updated if changed
-//!     - If the routes have not changed, then the routes remain
-//!     - On failure the results are non-deterministic
-//!
-//! @note
-//!
-static int install_public_routes(globalNetworkInfo * pGni)
-{
-    int i = 0;
-    int fd = 0;
-    int rc = 0;
-    int ret = 0;
-    u32 slashnet = 0;
-    char *psTmpStr = NULL;
-    char *psFileContent = NULL;
-    char *psPublicGateway = NULL;
-    char *psPrivateSubnet = NULL;
-    char *psPrivateGateway = NULL;
-    char sCommand[EUCA_MAX_PATH] = "";
-    char cmd[EUCA_MAX_PATH] = "";
-    char sPublicRouteFile[EUCA_MAX_PATH] = "";
-    boolean found = TRUE;
-    gni_subnet *pSubnet = NULL;
-    gni_subnet *pMySubnet = NULL;
-    gni_cluster *pCluster = NULL;
-    gni_cluster *pMyCluster = NULL;
-
-    // Make sure the given pointer is valid
-    if (!pGni) {
-        LOGERROR("Cannot configure public routes. Invalid parameter provided.\n");
-        return (1);
-    }
-    // Find our associated cluster
-    if ((rc = gni_find_self_cluster(pGni, &pMyCluster)) != 0) {
-        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
-        return (1);
-    }
-    // Retrieve our subnet
-    pMySubnet = &pMyCluster->private_subnet;
-
-    // Create our temporary file to dump the rules when we work them
-    snprintf(sPublicRouteFile, EUCA_MAX_PATH, "/tmp/euca_public_route-XXXXXX");
-    if ((fd = safe_mkstemp(sPublicRouteFile)) < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", sPublicRouteFile);
-        return (1);
-    }
-    // Change the permissions on that temporary file
-    if (chmod(sPublicRouteFile, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sPublicRouteFile);
-    }
-    // Now close this file descriptor
-    close(fd);
-
-    // Now save our route table for analysis
-    if (euca_execlp_redirect(NULL, NULL, sPublicRouteFile, FALSE, NULL, FALSE, config->cmdprefix, "ip", "route", "list", "table", "euca_public", NULL) != EUCA_OK) {
-        LOGERROR("ip public route save failed\n");
-        unlink(sPublicRouteFile);
-        return (1);
-    }
-
-    // Now load the file content
-    if ((psFileContent = file2str(sPublicRouteFile)) == NULL) {
-        LOGERROR("Loading public route file '%s' failed.\n", sPublicRouteFile);
-        unlink(sPublicRouteFile);
-        return (1);
-    }
-
-    // We're done with the file now
-    unlink(sPublicRouteFile);
-
-    // Convert our public gateway
-    if ((psPublicGateway = hex2dot(pGni->publicGateway)) == NULL) {
-        LOGERROR("Failed to converd public gateway 0x%08x to string.\n", pGni->publicGateway);
-        return (1);
-    }
-
-    // Convert our private subnet
-    if ((psPrivateSubnet = hex2dot(pMySubnet->subnet)) == NULL) {
-        LOGERROR("Failed to converd private subnet 0x%08x to string.\n", pMySubnet->subnet);
-        EUCA_FREE(psPublicGateway);
-        return (1);
-    }
-
-    // Convert our private gateway
-    if ((psPrivateGateway = hex2dot(pMySubnet->gateway)) == NULL) {
-        LOGERROR("Failed to converd private gateway 0x%08x to string.\n", pMySubnet->gateway);
-        EUCA_FREE(psPublicGateway);
-        EUCA_FREE(psPrivateSubnet);
-        return (1);
-    }
-
-    // First check if we have our default gateway
-    if (strstr(psFileContent, psPublicGateway) != NULL) {
-        // Now check if we have all of the cluster's subnet present
-        for (i = 0, pCluster = pGni->clusters; ((i < pGni->max_clusters) && found); i++, pCluster++) {
-            if ((psTmpStr = hex2dot(pCluster->private_subnet.subnet)) != NULL) {
-                if (strstr(psFileContent, psTmpStr) == NULL) {
-                    found = FALSE;
-                }
-
-                EUCA_FREE(psTmpStr);
-            }
-        }
-
-        // Now check for the global subnet's presence if all other cluster subnets were present
-        if (found) {
-            for (i = 0, pSubnet = pGni->subnets; ((i < pGni->max_subnets) && found); i++, pSubnet++) {
-                if ((psTmpStr = hex2dot(pSubnet->subnet)) != NULL) {
-                    if (strstr(psFileContent, psTmpStr) == NULL) {
-                        found = FALSE;
-                    }
-
-                    EUCA_FREE(psTmpStr);
-                }
-            }
-        }
-    } else {
-        found = FALSE;
-    }
-
-    // We're now done with our old routes
-    EUCA_FREE(psFileContent);
-
-    // If we did not find any of the subnet's gateway, flush and rebuild
-    if (!found) {
-
-        // First, flush our routing table
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "flush", "table", "euca_public", NULL);
-        rc = rc >> 8;
-        if(!(rc == 0 || rc == 2)){
-            LOGWARN("Failed to run ip route flush table euca_public");
-        }
-
-        // Add our default gateway
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_public", config->cmdprefix, psPublicGateway, config->pubInterface);
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", "default", "via", psPublicGateway, "dev", config->pubInterface, "table", "euca_public", NULL);
-        rc = rc >> 8;
-        if(!(rc == 0 || rc == 2)){
-            LOGWARN("Failed to run %s", sCommand);
-            ret = 1;
-        }
-
-        // Take care of our own subnet
-        slashnet = NETMASK_TO_SLASHNET(pMySubnet->netmask);
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_public", config->cmdprefix, psPrivateSubnet, slashnet, config->privInterface);
-        snprintf(cmd, "%s/%u", psPrivateSubnet, slashnet);
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "dev", config->privInterface, "table", "euca_public", NULL);
-        rc = rc >> 8;
-        if(!(rc == 0 || rc == 2)){
-            LOGWARN("Failed to run %s", sCommand);
-            ret = 1;
-        }
-
-        // Then add our known subnets
-        for (i = 0, pSubnet = pGni->subnets; i < pGni->max_subnets; i++, pSubnet++) {
-            // Turn the subnet to string
-            if ((psTmpStr = hex2dot(pSubnet->subnet)) != NULL) {
-                // Retrieve our slashnet
-                slashnet = NETMASK_TO_SLASHNET(pSubnet->netmask);
-
-                // Now add the rule
-                snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
-                snprintf(cmd, "%s/%u", psTmpStr, slashnet,);
-                euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "via", psPrivateGateway, "dev", config->privInterface, "table", "euca_public", NULL);
-                rc = rc >> 8;
-                if(!(rc == 0 || rc == 2)){
-                    LOGWARN("Failed to run %s", sCommand);
-                    ret = 1;
-                }
-                EUCA_FREE(psTmpStr);
-            } else {
-                LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
-                ret = 1;
-            }
-        }
-
-        // Finally add our clusters subnet
-        for (i = 0, pCluster = pGni->clusters; i < pGni->max_clusters; i++, pCluster++) {
-            // We already took care of ourselves
-            if (pCluster == pMyCluster) {
-                continue;
-            }
-
-            // Turn the subnet to string
-            if ((psTmpStr = hex2dot(pCluster->private_subnet.subnet)) != NULL) {
-                // Retrieve our slashnet
-                slashnet = NETMASK_TO_SLASHNET(pCluster->private_subnet.netmask);
-
-                // Now add the rule
-                snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u via %s dev %s table euca_public", config->cmdprefix, psTmpStr, slashnet, psPrivateGateway, config->privInterface);
-                snprintf(cmd, "%s/%u", psTmpStr, slashnet,);
-                euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "via", psPrivateGateway, "dev", config->privInterface, "table", "euca_public", NULL);
-                rc = rc >> 8;
-                if(!(rc == 0 || rc == 2)){
-                    LOGWARN("Failed to run %s", sCommand);
-                    ret = 1;
-                }
-                EUCA_FREE(psTmpStr);
-            } else {
-                LOGWARN("Fail to convert subnet '0x%08x'!", pSubnet->subnet);
-                ret = 1;
-            }
-        }
-
-        if (ret) {
-            LOGERROR("could not execute: ip public route.\n");
-        }
-    }
-
-    EUCA_FREE(psPublicGateway);
-    EUCA_FREE(psPrivateSubnet);
-    EUCA_FREE(psPrivateGateway);
-    return (ret);
-}
-
-//!
-//! Checks whether or not we need to install our private routes. We only update this
-//! if the routes have changed.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see
-//!
-//! @pre
-//!     - The pGni parameter MUST not be NULL
-//!
-//! @post
-//!     - On success the public routes have been updated if changed
-//!     - If the routes have not changed, then the routes remain
-//!     - On failure the results are non-deterministic
-//!
-//! @note
-//!
-static int install_private_routes(globalNetworkInfo * pGni)
-{
-    int fd = 0;
-    int rc = 0;
-    int ret = 0;
-    u32 slashnet = 0;
-    char *psSubnet = NULL;
-    char *psGateway = NULL;
-    char *psFileContent = NULL;
-    char sCommand[EUCA_MAX_PATH] = "";
-    char cmd[EUCA_MAX_PATH] = "";
-    char sPrivateRouteFile[EUCA_MAX_PATH] = "";
-    boolean found = TRUE;
-    gni_subnet *pSubnet = NULL;
-    gni_cluster *pCluster = NULL;
-
-    // Make sure the given pointer is valid
-    if (!pGni) {
-        LOGERROR("Cannot configure private routes. Invalid parameter provided.\n");
-        return (1);
-    }
-    // Find our associated cluster
-    if ((rc = gni_find_self_cluster(pGni, &pCluster)) != 0) {
-        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
-        return (1);
-    }
-    // Retrieve our subnet
-    pSubnet = &pCluster->private_subnet;
-
-    // Create our temporary file to dump the rules when we work them
-    snprintf(sPrivateRouteFile, EUCA_MAX_PATH, "/tmp/euca_private_route-XXXXXX");
-    if ((fd = safe_mkstemp(sPrivateRouteFile)) < 0) {
-        LOGERROR("cannot create tmpfile '%s': check permissions\n", sPrivateRouteFile);
-        return (1);
-    }
-    // Change the permissions on that temporary file
-    if (chmod(sPrivateRouteFile, 0600)) {
-        LOGWARN("chmod failed: was able to create tmpfile '%s', but could not change file permissions\n", sPrivateRouteFile);
-    }
-    // Now close this file descriptor
-    close(fd);
-
-    // Now save our route table for analysis
-    if (euca_execlp_redirect(NULL, NULL, sPrivateRouteFile, FALSE, NULL, FALSE, config->cmdprefix, "ip", "route", "list", "table", "euca_private", NULL) != EUCA_OK) {
-        LOGERROR("ip private route save failed\n");
-        unlink(sPrivateRouteFile);
-        return (1);
-    }
-
-    // Now load the file content
-    if ((psFileContent = file2str(sPrivateRouteFile)) == NULL) {
-        LOGERROR("Loading private route file '%s' failed.\n", sPrivateRouteFile);
-        unlink(sPrivateRouteFile);
-        return (1);
-    }
-
-    // We're done with the file now
-    unlink(sPrivateRouteFile);
-
-    // Convert our gateway IP address to string representation
-    if ((psGateway = hex2dot(pSubnet->gateway)) == NULL) {
-        LOGERROR("invalid gateway IP '%u' for cluster '%s'.\n", pSubnet->gateway, pCluster->name);
-        return (1);
-    }
-
-    // Convert our subnet IP address to string representation
-    if ((psSubnet = hex2dot(pSubnet->subnet)) == NULL) {
-        LOGERROR("invalid subnet '%u' for cluster '%s'.\n", pSubnet->subnet, pCluster->name);
-        EUCA_FREE(psGateway);
-        return (1);
-    }
-
-    // First check if we can find our default private gateway and then check for our private subnet declaration
-    if (strstr(psFileContent, psGateway) == NULL) {
-        found = FALSE;
-    } else if (strstr(psFileContent, psSubnet) == NULL) {
-        found = FALSE;
-    }
-
-    // We're now done with our old routes
-    EUCA_FREE(psFileContent);
-
-    // If we didn't find it, then flush and add this default gateway
-    if (!found) {
-        // Retrieve our slashnet
-        slashnet = NETMASK_TO_SLASHNET(pSubnet->netmask);
-
-        // flush our routing table first
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route flush table euca_private", config->cmdprefix);
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "flush", "table", "euca_private", NULL);
-        rc = rc >> 8;
-        if(!(rc==0 || rc == 2)){
-            LOGWARN("Failed to run %s", sCommand);
-            ret = 1;
-        }
-
-
-        // Add our default gateway
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add default via %s dev %s table euca_private", config->cmdprefix, psGateway, config->privInterface);
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", "default", "via", psGateway, "dev", config->privInterface, "table", "euca_private", NULL);
-        rc = rc >> 8;
-        if(!(rc == 0 || rc == 2)){
-            LOGWARN("Failed to run %s", sCommand);
-            ret = 1;
-        }
-
-        // finally add our subnet to the mix so we can ping from one VM to another on the same bridge
-        snprintf(sCommand, EUCA_MAX_PATH, "%s ip route add %s/%u dev %s table euca_private", config->cmdprefix, psSubnet, slashnet, config->privInterface);
-        snprintf(cmd, EUCA_MAX_PATH, "%s/%u", psSubnet, slashnet);
-        euca_execlp(&rc, config->cmdprefix, "ip", "route", "add", cmd, "dev", config->privInterface, "table", "euca_private", NULL);
-        rc = rc >> 8;
-        if(!(rc == 0 || rc == 2)){
-            LOGWARN("Failed to run %s", sCommand);
-            ret = 1;
-        }
-
-        if (ret) {
-            LOGERROR("could not execute: ip private route.\n");
-        }
-    }
-
-    EUCA_FREE(psSubnet);
-    EUCA_FREE(psGateway);
-    return (ret);
-}
-#endif /* USE_IP_ROUTE_HANDLER */
-
-//!
-//! Go through the list of instances that we are managing on this node and
-//! send a gratuitous ARP for the newly created instances only
-//!
-//! @return 0 on success or 1 if a failure occurred
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static int update_host_arp(void)
-{
-#ifdef USE_EUCA_ARP
+/**
+ * Go through the list of instances that we are managing on this node and
+ * send a gratuitous ARP for the newly created instances
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. 1 on failure.
+ */
+int update_host_arp(edge_config *edge) {
     int i = 0;
     int rc = 0;
     int ret = 0;
     u8 aHexOut[ENET_BUF_SIZE] = { 0 };
     int bridgeMacLen = 0;
-    int maxInstances = 0;
+    int max_instances = 0;
     char *psTrimMac = NULL;
     char *psBridgeMac = NULL;
     char *psPrivateIp = NULL;
     char sRule[EUCA_MAX_PATH] = "";
     char sCommand[EUCA_MAX_PATH] = "";
-    gni_node *pNode = NULL;
-    gni_instance *pInstances = NULL;
+    gni_instance *instances = NULL;
+    struct timeval tv = { 0 };
 
-    LOGDEBUG("updating ARP rules for peers\n");
+    eucanetd_timer(&tv);
+    LOGDEBUG("updating ARP entries for peers\n");
 
-    rc = ebt_handler_repopulate(config->ebt);
-    if ((rc = gni_find_self_node(pGni, &pNode)) == 0) {
-        if ((rc = gni_node_get_instances(pGni, pNode, NULL, 0, NULL, 0, &pInstances, &maxInstances)) == 0) {
-            if ((psBridgeMac = INTFC2MAC(config->bridgeDev)) != NULL) {
-                if ((bridgeMacLen = strlen(psBridgeMac)) > 0) {
-                    // Conver the MAC to a trimmed down version for EB table comparison
-                    if (mac2hex(psBridgeMac, aHexOut)) {
-                        euca_hex2mac(aHexOut, &psTrimMac, TRUE);
+    if (!edge || !edge->config || !edge->gni || !edge->my_instances) {
+        return (0);
+    }
 
-                        // Not sent the gratuitous ARP for each instance with a private IP
-                        for (i = 0; i < maxInstances; i++) {
-                            if (pInstances[i].privateIp && maczero(pInstances[i].macAddress)) {
-                                psPrivateIp = hex2dot(pInstances[i].privateIp);
-                                snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
+    instances = edge->my_instances;
+    max_instances = edge->max_my_instances;
+    rc = ebt_handler_repopulate(edge->config->ebt);
+    if ((psBridgeMac = INTFC2MAC(edge->config->bridgeDev)) != NULL) {
+        if ((bridgeMacLen = strlen(psBridgeMac)) > 0) {
+            // Convert the MAC to a trimmed down version for EB table comparison
+            if (mac2hex(psBridgeMac, aHexOut)) {
+                euca_hex2mac(aHexOut, &psTrimMac, TRUE);
+
+                // Now send gratuitous ARP requests for each instance with a private IP
+                for (i = 0; i < max_instances; i++) {
+                    if (instances[i].privateIp && maczero(instances[i].macAddress)) {
+                        psPrivateIp = hex2dot(instances[i].privateIp);
+                        if (edge->config->nc_proxy) {
+                            snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
                                 if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
-                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", pInstances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
+                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
                                     snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
                                     euca_execlp(&rc, config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
                                     rc = rc >> 8;
                                     if(!(rc == 0 || rc == 2)){
                                         LOGWARN("Failed to run %s", sCommand);
                                         ret = 1;
-                                    }
                                 }
-                                EUCA_FREE(psPrivateIp);
                             }
                         }
-                        // Done with the MAC
-                        EUCA_FREE(psTrimMac);
+                        EUCA_FREE(psPrivateIp);
                     }
                 }
-                EUCA_FREE(psBridgeMac);
+                // Done with the MAC
+                EUCA_FREE(psTrimMac);
             }
         }
-
-        // Free our instances
-        EUCA_FREE(pInstances);
-
-        if (ret) {
-            LOGERROR("could not execute command sequence (check above log errors for details): gratuitous ARP.\n");
-        }
-
-        return (0);
+        EUCA_FREE(psBridgeMac);
     }
 
-    LOGERROR("cannot find local node in global network view: check network config settings\n");
-    return (1);
-#else /* USE_EUCA_ARP */
+    LOGINFO("\tGARP processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (ret);
+}
+
+/**
+ * Releases resources allocated for the given edge_config structure.
+ * @param edge [in] edge_config structure of interest
+ * @return 0 on success. 1 on any failure.
+ */
+int free_edge_config(edge_config *edge) {
+    if (edge == NULL) {
+        return (0);
+    }
+    if (edge->my_instances) {
+        EUCA_FREE(edge->my_instances);
+    }
+    edge->max_my_instances = 0;
+    if (edge->my_sgs) {
+        EUCA_FREE(edge->my_sgs);
+    }
+    edge->max_my_sgs = 0;
+    if (edge->ref_sgs) {
+        EUCA_FREE(edge->ref_sgs);
+    }
+    edge->max_ref_sgs = 0;
     return (0);
-#endif /* USE_EUCA_ARP */
+}
+
+/**
+ * Releases resources allocated for the given edge_netmeter_instance structure.
+ * @param nm [in] edge_netmeter_instance structure of interest
+ * @return 0 on success. 1 on any failure.
+ */
+int free_edge_netmeter_instance(edge_netmeter_instance *nm) {
+    if (nm == NULL) {
+        return (0);
+    }
+    if (nm->instance_id) {
+        EUCA_FREE(nm->instance_id);
+    }
+    if (nm->ipaddr) {
+        EUCA_FREE(nm->ipaddr);
+    }
+    memset(nm, 0, sizeof(edge_netmeter_instance));
+    return (0);
+}
+
+/**
+ * Releases resources allocated for the given array of edge_netmeter_instance
+ * structure pointers. Each entry in an array should be pointing to an independently
+ * allocated edge_netmeter_instance structure memory.
+ * @param nms [in] pointer to an array of edge_netmeter_instance structure pointers of interest
+ * @param max_nms [in] number of entries in the array
+ * @return 0 on success. 1 on any failure.
+ */
+int free_edge_netmeter_instances(edge_netmeter_instance **nms, int max_nms) {
+    if (!nms || !max_nms) {
+        return (0);
+    }
+    for (int i = 0; i < max_nms; i++) {
+        free_edge_netmeter_instance(nms[i]);
+        EUCA_FREE(nms[i]);
+        nms[i] = NULL;
+    }
+    return (0);
+}
+
+/**
+ * Releases resources allocated for the given edge_netmeter structure.
+ * @param nm [in] edge_netmeter structure of interest
+ * @return 0 on success. 1 on any failure.
+ */
+int free_edge_netmeter(edge_netmeter *nm) {
+    if (nm == NULL) {
+        return (0);
+    }
+    free_edge_netmeter_instances(nm->pub_ips, nm->max_pub_ips);
+    free_edge_netmeter_instances(nm->priv_ips, nm->max_priv_ips);
+    EUCA_FREE(nm->pub_ips);
+    EUCA_FREE(nm->priv_ips);
+    memset(nm, 0, sizeof(edge_netmeter));
+    return (0);
+}
+
+/**
+ * Searches an array of edge_netmeter_instance pointers for the entry specified in the
+ * argument.
+ * @param nms [i/o] pointer to an array of edge_netmeter_instance pointers
+ * @param max_nms [i/o] pointer to the number of entries in the array
+ * @param instance_id [in] instance ID of interest
+ * @param ipaddr [in] IP address of the instance of interest
+ * @param force [in] create an entry if the instance in the argument is not found.
+ * @return pointer to the edge_netmeter_instance structure of interest
+ */
+edge_netmeter_instance *find_edge_netmeter_instance(edge_netmeter_instance ***nms,
+        int *max_nms, char *instance_id, char *ipaddr, boolean force) {
+    if (!nms || !max_nms || !instance_id || !ipaddr) {
+        return (NULL);
+    }
+    edge_netmeter_instance **nms_updated = *nms;
+    edge_netmeter_instance *ret = NULL;
+    boolean found = FALSE;
+    for (int i = 0; i < *max_nms && !found; i++) {
+        if (nms_updated[i]) {
+            if (!strcmp(nms_updated[i]->instance_id, instance_id) &&
+                    !strcmp(nms_updated[i]->ipaddr, ipaddr)) {
+                ret = nms_updated[i];
+                found = TRUE;
+            }
+        }
+    }
+    if (!found && force) {
+        ret = EUCA_ZALLOC_C(1, sizeof(edge_netmeter_instance));
+        ret->instance_id = strdup(instance_id);
+        ret->ipaddr = strdup(ipaddr);
+        nms_updated = EUCA_APPEND_PTRARR(nms_updated, max_nms, ret);
+    }
+    *nms = nms_updated;
+    return (ret);
+}
+
+/**
+ * Removes entries that were not updated from the array of edge_netmeter_instance
+ * pointers. Memory allocated for the removed entries are freed.
+ * @param nms [i/o] pointer to an array of edge_netmeter_instance pointers
+ * @param max_nms [i/o] pointer to the number of entries in the array
+ * @return 0 on success; 1 on any failure.
+ */
+int clean_edge_netmeter_instances(edge_netmeter_instance ***nms, int *max_nms) {
+    int i = 0;
+    int r = 0;
+    
+    edge_netmeter_instance **result = NULL;
+    edge_netmeter_instance **n = *nms;
+    for (i = 0; i < *max_nms; i++) {
+        if (!(n[i]->updated)) {
+            free_edge_netmeter_instance(n[i]);
+            EUCA_FREE(n[i]);
+            n[i] = NULL;
+        }
+    }
+    result = EUCA_ZALLOC_C(*max_nms, sizeof (edge_netmeter_instance *));
+    for (i = 0; i < *max_nms; i++) {
+        if (n[i]) {
+            result[r] = n[i];
+            r++;
+        }
+    }
+    EUCA_FREE(n);
+    *nms = result;
+    *max_nms = r;
+    return (0);
+}
+
+/**
+ * Clears the "updated" flag of all netmeter entries.
+ * @param nm [in] edge_netmeter structure of interest.
+ * @return always 0.
+ */
+int clear_edge_netmeter_tag(edge_netmeter *nm) {
+    if (!nm) {
+        return (0);
+    }
+    for (int i = 0; i < nm->max_pub_ips; i++) {
+        if (nm->pub_ips[i]) {
+            nm->pub_ips[i]->updated = FALSE;
+        }
+    }
+    for (int i = 0; i < nm->max_priv_ips; i++) {
+        if (nm->priv_ips[i]) {
+            nm->priv_ips[i]->updated = FALSE;
+        }
+    }
+    return (0);
+}
+
+/**
+ * Dump EDGE netmeter to file(s).
+ * Each line represents an instance: time,i-ID,pub pkts in,pub bytes in,pub pkts out,pub bytes out,
+ * priv pkts in,priv bytes in,priv pkts out,priv pkts in.
+ * Successful execution of do_edge_update_netmeter() is required.
+ * @param  edge_config structure of interest
+ * @return always 0.
+ */
+int edge_dump_netmeter(edge_config *edge) {
+    int ret = 0;
+    struct timeval tv = { 0 };
+    FILE *SRFH;
+    FILE *NMFH;
+    FILE *DFH;
+    char sensorfname[EUCA_MAX_PATH];
+    char nmfname[EUCA_MAX_PATH];
+    char dfname[EUCA_MAX_PATH];
+    char dfname1[EUCA_MAX_PATH];
+    boolean dfname_exists = FALSE;
+
+    eucanetd_timer_usec(&tv);
+    LOGDEBUG("Dump netmeter to file(s).\n");
+
+    // Make sure our given parameter is valid
+    if (!edge || !edge->config || !edge->gni || !edge->nmeter) {
+        LOGERROR("Invalid argument: cannot dump netmeter from NULL configuration.\n");
+        return (1);
+    }
+
+    char ts[32] = { 0 };
+    time_t t = time(NULL);
+    struct tm tm = { 0 };
+    localtime_r(&t, &tm);
+    strftime(ts, 32, "%F_%T", &tm);
+
+    char *eucahome = NULL;
+    if (strcmp(edge->config->eucahome, "/")) {
+        eucahome = strdup(edge->config->eucahome);
+    } else {
+        eucahome = strdup("");
+    }
+    snprintf(sensorfname, EUCA_MAX_PATH, "/tmp/eucanetd_getstats_net.out");
+    snprintf(nmfname, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/edge_netmeter", eucahome);
+    snprintf(dfname, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/edge_netmeter_done", eucahome);
+    EUCA_FREE(eucahome);
+
+    long int timestamp = eucanetd_get_timestamp();
+    
+    unlink(sensorfname);
+    SRFH = fopen(sensorfname, "w");
+
+    unlink(nmfname);
+    NMFH = fopen(nmfname, "w");
+
+    if (access(dfname, F_OK) != -1) {
+        dfname_exists = TRUE;
+
+        struct stat statbuf = { 0 };
+        
+        if (stat(dfname, &statbuf) == 0) {
+            long dfsize = (long) statbuf.st_size;
+            if (dfsize > EDGE_NETMETER_FILE_MAX_SIZE) {
+                snprintf(dfname1, EUCA_MAX_PATH, "%s.1", dfname);
+                rename(dfname, dfname1);
+                dfname_exists = FALSE;
+            }
+        }
+    }
+    DFH = fopen(dfname, "a");
+
+    if (!NMFH || !DFH || !SRFH) {
+        LOGWARN("failed to open netmeter file(s)\n");
+        ret = 1;
+    } else {
+
+        fprintf(NMFH, "time,instance,ipaddr,type,pktin,bytesin,pktout,bytesout\n");
+        if (!dfname_exists) {
+            fprintf(DFH, "time,instance,ipaddr,type,pktin,bytesin,pktout,bytesout\n");
+        }
+
+        for (int i = 0; i < edge->nmeter->max_pub_ips; i++) {
+            edge_netmeter_instance *nm = edge->nmeter->pub_ips[i];
+            if (nm->updated) {
+                fprintf(NMFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
+                        nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
+                fprintf(SRFH, "%s\t%ld\tNetworkInExternal\tsummation\tdefault\t%ld\n",
+                        nm->instance_id, timestamp, nm->bytes_in);
+                fprintf(SRFH, "%s\t%ld\tNetworkOutExternal\tsummation\tdefault\t%ld\n",
+                        nm->instance_id, timestamp, nm->bytes_out);
+            } else {
+                fprintf(DFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
+                        nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
+            }
+        }
+        for (int i = 0; i < edge->nmeter->max_priv_ips; i++) {
+            edge_netmeter_instance *nm = edge->nmeter->priv_ips[i];
+            if (nm->updated) {
+                fprintf(NMFH, "%s,%s,%s,priv,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
+                        nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
+            } else {
+                fprintf(DFH, "%s,%s,%s,priv,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
+                        nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
+            }
+        }
+    }
+
+    if (SRFH) fclose(SRFH);
+    if (NMFH) fclose(NMFH);
+    if (DFH) fclose(DFH);
+    
+    clean_edge_netmeter_instances(&(edge->nmeter->pub_ips), &(edge->nmeter->max_pub_ips));
+    clean_edge_netmeter_instances(&(edge->nmeter->priv_ips), &(edge->nmeter->max_priv_ips));
+    LOGTRACE("\tdump netmeter to file(s) in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (ret);
+}
+
+/**
+ * Tests if the given ip is local (as specified by the edge_config structure in
+ * the argument)
+ * @param edge [in] edge_config structure of interest
+ * @param ip [in] IP address of interest
+ * @return TRUE if ip is found in edge. FALSE if ip is not found.
+ */
+boolean is_my_ip(edge_config *edge, u32 ip) {
+    for (int i = 0; i < edge->max_my_instances; i++) {
+        if (ip == edge->my_instances[i].privateIp) return (TRUE);
+        if (ip == edge->my_instances[i].publicIp) return (TRUE);
+    }
+    return (FALSE);
 }

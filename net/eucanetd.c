@@ -102,7 +102,6 @@
 
 #include "ipt_handler.h"
 #include "ips_handler.h"
-#include "ipr_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
 #include "eucanetd_config.h"
@@ -111,6 +110,7 @@
 #include "euca-to-mido.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
+#include "eucalyptus-config.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -447,12 +447,13 @@ int main(int argc, char **argv)
             break;
         case 'h':
         default:
-            printf("USAGE: %s OPTIONS\n"
+            printf("Eucalyptus version %s - eucanetd\n"
+                    "USAGE: %s OPTIONS\n"
                     "\t%-12s| debug - run eucanetd in foreground, all output to terminal\n"
                     "\t%-12s| flush - clear all eucanetd artifacts and exit\n"
                     "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n"
                     "\t\toptions '-f' and '-F' do not work in VPCMIDO mode\n",
-                    argv[0], "-d", "-F", "-f");
+                    EUCA_VERSION, argv[0], "-d", "-F", "-f");
             exit(1);
             break;
         }
@@ -483,7 +484,7 @@ int main(int argc, char **argv)
 
     eucanetd_setlog_bootstrap();
 
-    LOGINFO("eucanetd started\n");
+    LOGINFO("eucanetd (%s) started\n", EUCA_VERSION);
 
     // Install the signal handlers
     gIsRunning = TRUE;
@@ -786,7 +787,7 @@ int main(int argc, char **argv)
 
         if ((update_globalnet_failed == FALSE) && (update_globalnet == FALSE) && (gIsRunning == TRUE)) {
             if (pDriverHandler->system_maint) {
-                rc = pDriverHandler->system_maint(pGni, pLni);
+                rc = pDriverHandler->system_maint(pGniApplied, pLni);
                 if (rc != 0) {
                     LOGWARN("Failed to execute maintenance for %s.\n", pDriverHandler->name);
                 }
@@ -1060,26 +1061,6 @@ static int eucanetd_initialize(void) {
     config->polling_frequency = 5;
     config->init = 1;
     
-/*
-    if (!globalnetworkinfo) {
-        globalnetworkinfo = gni_init();
-        if (!globalnetworkinfo) {
-            LOGFATAL("out of memory\n");
-            exit(1);
-        }
-    }
-*/
-
-
-/*
-    if (!host_info) {
-        host_info = gni_init_hostname_info();
-        if (!host_info) {
-            LOGFATAL("out of memory\n");
-            exit(1);
-        }
-    }
-*/
     return (0);
 }
 
@@ -1485,15 +1466,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
             ret = 1;
         }
 
-#ifdef USE_IP_ROUTE_HANDLER
-        config->ipr = EUCA_ZALLOC_C(1, sizeof (ipr_handler));
-
-        if ((rc = ipr_handler_init(config->ipr, config->cmdprefix)) != 0) {
-            LOGERROR("could not initialize ipr_handler: check above log errors for details\n");
-            ret = 1;
-        }
-#endif /* USE_IP_ROUTE_HANDLER */
-
         config->ebt = EUCA_ZALLOC_C(1, sizeof (ebt_handler));
 
         rc = ebt_handler_init(config->ebt, config->cmdprefix);
@@ -1505,7 +1477,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         //
         // If an error has occurred we need to clean up temporary files
         // that were created for the iptables, ebtables, ipset
-        // and possibly ipr (if compiled)
         //
         if (ret) {
             //
@@ -1526,12 +1497,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
                 unlink_handler_file(config->ebt->ebt_asc_file);
                 EUCA_FREE(config->ebt);
             }
-#ifdef USE_IP_ROUTE_HANDLER
-            if (config->ipr) {
-                unlink_handler_file(config->ipr->sIpRuleFile);
-                EUCA_FREE(config->ipr);
-            }
-#endif /* USE_IP_ROUTE_HANDLER */
         }
     }
 

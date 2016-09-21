@@ -380,9 +380,7 @@ typedef struct globalNetworkInfo_t {
     char instanceDNSDomain[HOSTNAME_LEN];   //!< The DNS domain name to use for the instances
     u32 *instanceDNSServers;                //!< List of DNS servers
     int max_instanceDNSServers;             //!< Number of DNS servers in the list
-#ifdef USE_IP_ROUTE_HANDLER
     u32 publicGateway;                      //!< Public network default gateway
-#endif /* USE_IP_ROUTE_HANDLER */
     u32 *public_ips;                        //!< List of associated public IPs
     int max_public_ips;                     //!< Number of associated public IPs in the list
     gni_subnet *subnets;                    //!< List of global subnet information
@@ -394,8 +392,6 @@ typedef struct globalNetworkInfo_t {
     gni_instance **instances;               //!< List of instances information
     int max_instances;                      //!< Number of instances in the list
     boolean sorted_instances;
-    //gni_instance *interfaces;               //!< List of interfaces information
-    //int max_interfaces;                     //!< Number of interfaces in the list
     gni_instance **ifs;                     //!< List of interfaces information
     int max_ifs;                            //!< Number of interfaces in the list
     gni_secgroup *secgroups;                //!< List of security group information
@@ -485,6 +481,12 @@ int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup
         char **interface_names, int max_interface_names, char ***out_interface_names,
         int *out_max_interface_names, gni_instance *** out_interfaces, int *out_max_interfaces);
 int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname);
+
+int gni_get_secgroups_from_instances(globalNetworkInfo *gni, gni_instance *instances,
+        int max_instances, gni_secgroup ***out_secgroups, int *max_out_secgroups);
+int gni_get_referenced_secgroups(globalNetworkInfo *gni, gni_secgroup **sgs,
+        int max_sgs, gni_secgroup ***out_secgroups, int *max_out_secgroups);
+
 gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName);
 gni_vpcsubnet *gni_vpc_get_vpcsubnet(gni_vpc *vpc, const char *vpcsubnetName);
 int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance ***out_interfaces, int *max_out_interfaces);
