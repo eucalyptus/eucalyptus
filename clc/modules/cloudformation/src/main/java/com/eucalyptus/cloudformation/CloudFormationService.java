@@ -517,7 +517,7 @@ public class CloudFormationService {
     String[] validServicePaths = new String[]{ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH, ComponentIds.lookup(ObjectStorage.class).getServicePath()};
     String[] validDomains = new String[]{DomainNames.externalSubdomain().relativize( Name.root ).toString( )};
     S3Helper.BucketAndKey bucketAndKey = S3Helper.getBucketAndKeyFromUrl(url, validServicePaths, validHostBucketSuffixes, validDomains);
-    try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( new SecurityTokenAWSCredentialsProvider( user ) ) ) {
+    try ( final EucaS3Client eucaS3Client = EucaS3ClientFactory.getEucaS3Client( SecurityTokenAWSCredentialsProvider.forUserOrRole( user ) ) ) {
       if (eucaS3Client.getObjectMetadata(bucketAndKey.getBucket(), bucketAndKey.getKey()).getContentLength() > maxContentLength) {
         throw new ValidationErrorException(urlType + " exceeds maximum byte count, " + maxContentLength);
       }

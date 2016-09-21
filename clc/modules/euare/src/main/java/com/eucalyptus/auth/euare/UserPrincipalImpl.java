@@ -45,11 +45,15 @@ import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Certificate;
+import com.eucalyptus.auth.principal.HasRole;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.X509CertHelper;
@@ -68,7 +72,7 @@ import com.google.common.io.BaseEncoding;
 /**
  *
  */
-public class UserPrincipalImpl implements UserPrincipal {
+public class UserPrincipalImpl implements UserPrincipal, HasRole {
 
   private static final long serialVersionUID = 1L;
 
@@ -109,6 +113,9 @@ public class UserPrincipalImpl implements UserPrincipal {
 
   @Nullable
   private final Long passwordExpires;
+
+  @Nullable
+  private final Role role;
 
   @Nonnull
   private final ImmutableList<AccessKey> keys;
@@ -192,6 +199,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = systemAdmin;
     this.password = user.getPassword();
     this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
+    this.role = null;
     this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), ekeyWrapper( this ) ), AccessKeys.isActive( ) ) );
     this.certificates = ImmutableList.copyOf(
         Iterables.filter( Iterables.transform( user.getCertificates( ), ecertWrapper( this ) ), propertyPredicate( true, active( ) ) ) );
@@ -249,6 +257,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = user.isSystemUser();
     this.password = user.getPassword();
     this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
+    this.role = null;
     this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), keyWrapper( this ) ), AccessKeys.isActive( ) )  );
     this.certificates = ImmutableList.copyOf(
         Iterables.filter( user.getCertificates( ), propertyPredicate( true, active( ) ) ) );
@@ -256,7 +265,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.ptag = null;
   }
 
-  public UserPrincipalImpl( final EuareRole role ) throws AuthException {
+  public UserPrincipalImpl( final EuareRole role ) throws AuthException { //TODO:STEVE: how to get back to role from here?????
     final EuareAccount account = role.getAccount( );
     final EuareUser user = account.lookupAdmin();
     final List<PolicyVersion> policies = Lists.newArrayList( );
@@ -285,6 +294,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = user.isSystemUser( );
     this.password = null;
     this.passwordExpires = null;
+    this.role = immutableRole( role );
     this.keys = ImmutableList.copyOf( Collections.<AccessKey>emptyIterator( ) );
     this.certificates = ImmutableList.copyOf( Collections.<Certificate>emptyIterator() );
     this.principalPolicies = ImmutableList.copyOf( policies );
@@ -309,6 +319,7 @@ public class UserPrincipalImpl implements UserPrincipal {
     this.systemUser = principal.isSystemUser( );
     this.password = null;
     this.passwordExpires = null;
+    this.role = principal instanceof HasRole ? ((HasRole) principal).getRole( ) : null;
     this.keys = ImmutableList.copyOf( keys );
     this.certificates = ImmutableList.copyOf( principal.getCertificates() );
     this.principalPolicies = ImmutableList.copyOf( principal.getPrincipalPolicies() );
@@ -386,6 +397,11 @@ public class UserPrincipalImpl implements UserPrincipal {
     return passwordExpires;
   }
 
+  @Nullable
+  public Role getRole( ) {
+    return role;
+  }
+
   @Nonnull
   public ImmutableList<AccessKey> getKeys( ) {
     return keys;
@@ -440,6 +456,29 @@ public class UserPrincipalImpl implements UserPrincipal {
     return BaseEncoding.base64( ).encode( Digest.SHA256.digestBinary( StandardCharsets.UTF_8.encode( CharBuffer.wrap( Strings.concat(
         sequences
     ) ) ) ) );
+  }
+
+  private static Role immutableRole( final BaseRole role ) throws AuthException {
+    final String accountNumber = role.getAccountNumber( );
+    final String roleArn = role.getRoleArn( );
+    final String roleId = role.getRoleId( );
+    final String path = role.getPath( );
+    final String name = role.getName( );
+    final String secret = role.getSecret( );
+    final String displayName = role.getDisplayName( );
+    final OwnerFullName owner = role.getOwner( );
+    final PolicyVersion policyVersion = role.getPolicy( );
+    return new Role( ) {
+      @Override public String getAccountNumber( ) { return accountNumber; }
+      @Override public String getRoleArn( ) { return roleArn; }
+      @Override public String getRoleId( ) { return roleId; }
+      @Override public String getPath( ) { return path; }
+      @Override public String getName( ) { return name; }
+      @Override public String getSecret( ) { return secret; }
+      @Override public String getDisplayName( ) { return displayName; }
+      @Override public OwnerFullName getOwner( ) { return owner; }
+      @Override public PolicyVersion getPolicy( ) { return policyVersion; }
+    };
   }
 
   private static NonNullFunction<AccessKey,AccessKey> keyWrapper( final UserPrincipal userPrincipal ) {

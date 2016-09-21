@@ -27,6 +27,8 @@ import com.amazonaws.auth.BasicSessionCredentials;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.HasRole;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Supplier;
@@ -35,6 +37,7 @@ import com.google.common.base.Suppliers;
 /**
  *
  */
+@SuppressWarnings( { "Guava", "WeakerAccess" } )
 public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvider {
 
   private static final int DEFAULT_EXPIRATION_SECS = 900;
@@ -42,18 +45,24 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
   private final Supplier<User> user;
+  private final Supplier<Role> role;
   private final int expirationSecs;
   private final int preExpirySecs;
 
+  public static SecurityTokenAWSCredentialsProvider forUserOrRole( final User user ) {
+    if ( user instanceof HasRole && ((HasRole) user).getRole( ) != null ) {
+      return new SecurityTokenAWSCredentialsProvider( ((HasRole) user).getRole( ) );
+    } else {
+      return new SecurityTokenAWSCredentialsProvider( user );
+    }
+  }
+
   public SecurityTokenAWSCredentialsProvider( final AccountFullName accountFullName ) {
-    this( new Supplier<User>() {
-      @Override
-      public User get() {
-        try {
-          return Accounts.lookupPrincipalByAccountNumber( accountFullName.getAccountNumber( ) );
-        } catch ( AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
+    this( () -> {
+      try {
+        return Accounts.lookupPrincipalByAccountNumber( accountFullName.getAccountNumber( ) );
+      } catch ( AuthException e ) {
+        throw Exceptions.toUndeclared( e );
       }
     } );
   }
@@ -74,12 +83,22 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
     this( Suppliers.ofInstance( user ), expirationSecs, preExpirySecs );
   }
 
-  public SecurityTokenAWSCredentialsProvider(
+  public SecurityTokenAWSCredentialsProvider( final Supplier<User> user, final int expirationSecs, final int preExpirySecs ) {
+    this( user, null, expirationSecs, preExpirySecs );
+  }
+
+  public SecurityTokenAWSCredentialsProvider( final Role role ) {
+    this( null, Suppliers.ofInstance( role ), DEFAULT_EXPIRATION_SECS, DEFAULT_PRE_EXPIRY_SECS );
+  }
+
+  private SecurityTokenAWSCredentialsProvider(
       final Supplier<User> user,
+      final Supplier<Role> role,
       final int expirationSecs,
       final int preExpirySecs
   ) {
     this.user = user;
+    this.role = role;
     this.expirationSecs = Math.max( expirationSecs, DEFAULT_PRE_EXPIRY_SECS * 2 );
     this.preExpirySecs = preExpirySecs;
     refresh( );
@@ -96,18 +115,17 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
   }
 
   private Supplier<AWSCredentials> refreshCredentialsSupplier( ) {
-    return Suppliers.memoizeWithExpiration( new Supplier<AWSCredentials>( ) {
-      @Override
-      public AWSCredentials get() {
-        try {
-          final SecurityToken securityToken = SecurityTokenManager.issueSecurityToken( user.get(), expirationSecs );
-          return new BasicSessionCredentials(
-              securityToken.getAccessKeyId( ),
-              securityToken.getSecretKey( ),
-              securityToken.getToken( ) );
-        } catch ( final AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
+    return Suppliers.memoizeWithExpiration( () -> {
+      try {
+        final SecurityToken securityToken = user != null ?
+            SecurityTokenManager.issueSecurityToken( user.get( ), expirationSecs ) :
+            SecurityTokenManager.issueSecurityToken( role.get( ), expirationSecs );
+        return new BasicSessionCredentials(
+            securityToken.getAccessKeyId( ),
+            securityToken.getSecretKey( ),
+            securityToken.getToken( ) );
+      } catch ( final AuthException e ) {
+        throw Exceptions.toUndeclared( e );
       }
     }, expirationSecs - preExpirySecs, TimeUnit.SECONDS );
   }
