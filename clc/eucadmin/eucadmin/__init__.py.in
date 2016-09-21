@@ -31,7 +31,7 @@ from boto.roboto.awsqueryservice import AWSQueryService
 from boto.roboto.param import Param
 
 
-__version__ = '@EUCA_VERSION@'
+__version__ = '@EUCA_VERSION_FULL@'
 
 
 class EucAdmin(AWSQueryService):

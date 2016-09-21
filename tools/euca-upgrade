@@ -68,6 +68,7 @@ LEGAL_LONG_OPTS="help old new keys db force copyonly sameversion user"
 KEYDIR="/var/lib/eucalyptus/keys"
 DBDIR="/var/lib/eucalyptus/db"
 NEW_EUCA="/"
+EUCA_USER="eucalyptus"
 
 usage() {
 	echo "$0 [options]"
@@ -109,7 +110,8 @@ get_euca_version() {
   elif [ ! -e ${DIR}/etc/eucalyptus/eucalyptus-version ]; then 
     log "cannot locate ${DIR}/etc/eucalyptus/eucalyptus-version, --${FLAG} must point to a valid eucalyptus installation" 1>&2; exit 1
   else
-    head -n1 ${DIR}/etc/eucalyptus/eucalyptus-version
+    # strip version digits beyond the third one as those should not be relevant for upgrade
+    head -n1 ${DIR}/etc/eucalyptus/eucalyptus-version | sed 's/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/g'
   fi  
 }
 
@@ -176,6 +178,8 @@ read_dot_upgrade() {
     OLD_EUCA_VERSION=$a
     OLD_EUCA_PATH=$b
   done < $EUCALYPTUS/etc/eucalyptus/.upgrade
+  # strip version digits beyond the third one as those should not be relevant for upgrade
+  OLD_EUCA_VERSION=`echo $OLD_EUCA_VERSION | sed 's/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/g'`
 }
 
 ## NOTE: Start reading here.
@@ -206,9 +210,6 @@ if [ -z "$OLD_EUCA_PATH" ] || [ -z "$OLD_EUCA_VERSION" ]; then
   log "ERROR: Cannot find old Eucalyptus version or path in $EUCALYPTUS/etc/eucalyptus/.upgrade. Aborting."
   exit 1
 fi
-if [ -z "$NEW_EUCA_VERSION" ]; then
-  NEW_EUCA_VERSION=$(get_euca_version EUCALYPTUS)
-fi
 # Remove old unpacked webapp area
 rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
 # Remove old class cache
@@ -230,11 +231,14 @@ log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_D
 log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
 
 for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB}); do
-  log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
+  log "$(echo "Start upgrading: ${f}" | sed 's/upgrade_//g')"
   if ! $f; then
     log "ERROR:  Upgrading failed for ${f//upgrade_/}.  See ${UP_LOG} for details."
   else
-    log "$(echo "# Done upgrading:  ${f}" | sed 's/upgrade_//g;s/_//g')"
+    log "$(echo "Done upgrading: ${f}" | sed 's/upgrade_//g;s/_//g')"
+    if [ -e $EUCALYPTUS/etc/eucalyptus/.upgrade ]; then
+       rm -f $EUCALYPTUS/etc/eucalyptus/.upgrade
+    fi
   fi
 done
 ## NOTE: Don't bother reading past here.

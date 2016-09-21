@@ -22,7 +22,14 @@ AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_BUILD
-EUCA_VERSION="$PACKAGE_VERSION"
+
+# construct two version strings
+EUCA_VERSION_MAJOR=`echo $PACKAGE_VERSION | cut -d. -f1`
+EUCA_VERSION_MINOR=`echo $PACKAGE_VERSION | cut -d. -f2`
+EUCA_VERSION_PATCH=`echo $PACKAGE_VERSION | cut -d. -f3`
+EUCA_VERSION_HOTFIX=`echo $PACKAGE_VERSION | cut -d. -f4`
+EUCA_VERSION="${EUCA_VERSION_MAJOR}.${EUCA_VERSION_MINOR}.${EUCA_VERSION_PATCH}"
+EUCA_VERSION_FULL="$PACKAGE_VERSION"
 
 # let's figure out where is the source tree
 if test ${srcdir} = "." ; then
@@ -256,6 +263,7 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs
+                 admin-tools/eucalyptus_admin/__init__.py:admin-tools/eucalyptus_admin/__init__.py.in
                  clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in
                  clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
                  clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
@@ -299,7 +307,7 @@ AC_OUTPUT
 dnl Configuration output
 
 echo ""
-echo "  Eucalyptus ${EUCA_VERSION}"
+echo "  Eucalyptus ${EUCA_VERSION} (${EUCA_VERSION_FULL})"
 echo ""
 echo "  Flags and Settings:"
 echo "    CFLAGS..............: ${CFLAGS}"
