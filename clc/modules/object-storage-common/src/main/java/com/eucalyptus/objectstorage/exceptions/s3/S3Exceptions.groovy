@@ -129,14 +129,6 @@ class S3Exception extends ObjectStorageException {
     this.requestMethod = requestMethod;
   }
   
-  public void setRequestMethod(String requestMethod) {
-    this.requestMethod = requestMethod;
-  }
-
-  public String getRequestMethod() {
-    return requestMethod;
-  }
-
 }
 
 class AccessDeniedException extends S3Exception {
