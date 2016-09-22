@@ -20,10 +20,9 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.context.Context;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -46,17 +45,10 @@ public class CallerContext {
     if ( privileged ) {
       message.markPrivileged( );
     }
-    message.setCallerContext( new BaseCallerContext( Lists.newArrayList(
-      Iterables.transform( evaluatedKeys.entrySet( ), MapEntryToEvaluatedIamConditionKey.INSTANCE )
-    ) ) );
-  }
-
-  private enum MapEntryToEvaluatedIamConditionKey implements Function<Map.Entry<String,String>,EvaluatedIamConditionKey> {
-    INSTANCE;
-
-    @Override
-    public EvaluatedIamConditionKey apply( final Map.Entry<String, String> entry ) {
-      return new EvaluatedIamConditionKey( entry.getKey( ), entry.getValue() );
-    }
+    message.setCallerContext( new BaseCallerContext(
+        evaluatedKeys.entrySet( ).stream( )
+            .filter( entry -> entry.getValue( ) != null )
+            .map( entry -> new EvaluatedIamConditionKey( entry.getKey( ), entry.getValue() ) )
+            .collect( Collectors.toCollection( Lists::newArrayList ) ) ) );
   }
 }
