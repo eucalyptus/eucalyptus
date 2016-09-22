@@ -196,6 +196,7 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
   protected String requestId;
   protected String hostId;
   BucketLogData logData;
+  protected String method;
 
   def ObjectStorageErrorMessageType() {}
 
@@ -215,6 +216,26 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
     this.requestId = requestId;
     this.hostId = hostId;
     this.logData = logData;
+  }
+
+  def ObjectStorageErrorMessageType(String message,
+  String code,
+  HttpResponseStatus status,
+  String resourceType,
+  String resource,
+  String requestId,
+  String hostId,
+  BucketLogData logData,
+  String method) {
+    this.message = message;
+    this.code = code;
+    this.status = status;
+    this.resourceType = resourceType;
+    this.resource = resource;
+    this.requestId = requestId;
+    this.hostId = hostId;
+    this.logData = logData;
+    this.method = method;
   }
 
   protected void setCode(final String code) {

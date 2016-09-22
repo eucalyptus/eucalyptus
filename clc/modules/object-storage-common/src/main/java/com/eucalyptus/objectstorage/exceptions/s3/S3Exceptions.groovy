@@ -29,9 +29,11 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 class S3ErrorCodeStrings {
   public static final String AccessDenied = "AccessDenied"
+  public static final String AccessForbidden = "AccessForbidden"
   public static final String AccountProblem = "AccountProblem"
   public static final String AmbiguousGrantByEmailAddress = "AmbiguousGrantByEmailAddress"
   public static final String BadDigest = "BadDigest"
+  public static final String BadRequest = "BadRequest"
   public static final String BucketAlreadyExists = "BucketAlreadyExists"
   public static final String BucketAlreadyOwnedByYou = "BucketAlreadyOwnedByYou"
   public static final String BucketNotEmpty = "BucketNotEmpty"
@@ -81,6 +83,7 @@ class S3ErrorCodeStrings {
   public static final String MissingSecurityHeader = "MissingSecurityHeader"
   public static final String NoLoggingStatusForKey = "NoLoggingStatusForKey"
   public static final String NoSuchBucket = "NoSuchBucket"
+  public static final String NoSuchCORSConfiguration = "NoSuchCORSConfiguration"
   public static final String NoSuchKey = "NoSuchKey"
   public static final String NoSuchLifecycleConfiguration = "NoSuchLifecycleConfiguration"
   public static final String NoSuchUpload = "NoSuchUpload"
@@ -110,6 +113,8 @@ class S3ErrorCodeStrings {
 }
 
 class S3Exception extends ObjectStorageException {
+  String requestMethod;
+
   def S3Exception() {}
 
   def S3Exception(String errorCode, String description, HttpResponseStatus statusCode) {
@@ -118,6 +123,20 @@ class S3Exception extends ObjectStorageException {
     this.message = description;
     this.status = statusCode;
   }
+
+  def S3Exception(String errorCode, String description, HttpResponseStatus statusCode, String requestMethod) {
+    super();
+    this.requestMethod = requestMethod;
+  }
+  
+  public void setRequestMethod(String requestMethod) {
+    this.requestMethod = requestMethod;
+  }
+
+  public String getRequestMethod() {
+    return requestMethod;
+  }
+
 }
 
 class AccessDeniedException extends S3Exception {
@@ -194,6 +213,72 @@ class BucketNotEmptyException extends S3Exception {
   def BucketNotEmptyException(String resource) {
     this();
     this.resource = resource;
+  }
+}
+
+// On a CORS PUT of a new CORS configuration, if a bad HTTP verb (e.g. "YUCK")
+// or an unsupported HTTP verb (e.g. "OPTIONS") is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsConfigUnsupportedMethodException extends S3Exception {
+  def CorsConfigUnsupportedMethodException(String method) {
+    super(S3ErrorCodeStrings.InvalidRequest,
+    "Found unsupported HTTP method in CORS config. Unsupported method is " + method,
+    HttpResponseStatus.BAD_REQUEST);
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no HTTP verb (method) is provided,
+// or if a bad HTTP verb (e.g. "YUCK") or an unsupported HTTP verb
+// (e.g. "OPTIONS") is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsPreflightInvalidMethodException extends S3Exception {
+  def CorsPreflightInvalidMethodException(String method) {
+    super(S3ErrorCodeStrings.BadRequest,
+    "Invalid Access-Control-Request-Method: " + method,
+    HttpResponseStatus.BAD_REQUEST);
+  }
+}
+
+// On a CORS preflight OPTIONS request, when no CORS configuration exists,
+// to match AWS's response, return 403 Forbidden with this error code
+// and message.
+class CorsPreflightNoConfigException extends S3Exception {
+  def CorsPreflightNoConfigException(String requestMethod, String resourceType) {
+    super(S3ErrorCodeStrings.AccessForbidden,
+    "CORSResponse: CORS is not enabled for this bucket.",
+    HttpResponseStatus.FORBIDDEN,
+    requestMethod);
+    this.setResourceType(resourceType);
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no origin is provided,
+// to match AWS's response, return 400 Bad Request with this error code
+// and message.
+class CorsPreflightNoOriginException extends S3Exception {
+  def CorsPreflightNoOriginException() {
+    super(S3ErrorCodeStrings.BadRequest,
+    "Insufficient information. Origin request header needed.",
+    HttpResponseStatus.BAD_REQUEST);
+  }
+}
+
+// On a CORS preflight OPTIONS request, if no CORS rule matches the
+// requested origin and HTTP verb (method),
+// to match AWS's response, return 403 Forbidden with this error code
+// and message.
+class CorsPreflightNotAllowedException extends S3Exception {
+  def CorsPreflightNotAllowedException(String requestMethod, String resourceType) {
+    super(S3ErrorCodeStrings.AccessForbidden,
+    "CORSResponse: This CORS request is not allowed. " +
+    "This is usually because the evaluation of Origin, request method / " +
+    "Access-Control-Request-Method or Access-Control-Request-Headers are " +
+    "not whitelisted by the resource's CORS spec.",
+    HttpResponseStatus.FORBIDDEN,
+    requestMethod);
+    this.setResourceType(resourceType);
   }
 }
 
@@ -729,6 +814,19 @@ class NoSuchBucketException extends S3Exception {
   }
 
   def NoSuchBucketException(String resource) {
+    this();
+    this.resource = resource;
+  }
+}
+
+// When no CORS configuration exists, to match AWS's response, return 404 NotFound with
+// this error code and message.
+class NoSuchCorsConfigurationException extends S3Exception {
+  def NoSuchCorsConfigurationException() {
+    super(S3ErrorCodeStrings.NoSuchCORSConfiguration, "The CORS configuration does not exist.", HttpResponseStatus.NOT_FOUND);
+  }
+
+  def NoSuchCorsConfigurationException(String resource) {
     this();
     this.resource = resource;
   }
