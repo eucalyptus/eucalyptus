@@ -128,7 +128,6 @@ class S3Exception extends ObjectStorageException {
     super();
     this.requestMethod = requestMethod;
   }
-  
 }
 
 class AccessDeniedException extends S3Exception {
