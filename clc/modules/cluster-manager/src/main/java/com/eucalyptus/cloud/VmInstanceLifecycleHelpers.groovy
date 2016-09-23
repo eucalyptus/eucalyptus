@@ -1250,7 +1250,7 @@ class VmInstanceLifecycleHelpers {
     @Override
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
-        if ( networkInterface.associated ) {
+        if ( networkInterface.associated && VmInstance.VmStateSet.DONE.contains( state ) ) {
           PublicAddresses.markDirty( networkInterface.association.publicIp, instance.partition );
         }
         if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
