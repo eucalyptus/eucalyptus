@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -100,7 +54,6 @@
 #include "ebt_handler.h"
 #include "dev_handler.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
@@ -175,31 +128,29 @@ static int map_proto_to_names(int proto_number, char *out_proto_name, int out_pr
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Creates a unique IP table chain name for a given security group. This name, if successful
-//! will have the form of EU_[hash] where [hash] is the 64 bit encoding of the resulting
-//! "[account id]-[group name]" string from the given security group information.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] secgroup a pointer to the security group for which we compute the chain name
-//! @param[out] outchainname a pointer to the string that will contain the computed name
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!     The outchainname parameter Must not be NULL but it should point to a NULL value. If
-//!     this does not point to NULL, the memory will be lost when replaced with the out value.
-//!
-//! @post
-//!     On success, the outchainname will point to the resulting string. If a failure occur, any
-//!     value pointed by outchainname is non-deterministic.
-//!
-//! @note
-//!
-int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname)
-{
+/**
+ * Creates a unique IP table chain name for a given security group. This name, if successful
+ * will have the form of EU_[hash] where [hash] is the 64 bit encoding of the resulting
+ * "[account id]-[group name]" string from the given security group information.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param secgroup [in] a pointer to the security group for which we compute the chain name
+ * @param outchainname [out] a pointer to the string that will contain the computed name
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @pre
+ *     The outchainname parameter Must not be NULL but it should point to a NULL value. If
+ *     this does not point to NULL, the memory will be lost when replaced with the out value.
+ *
+ * @post
+ *     On success, the outchainname will point to the resulting string. If a failure occur, any
+ *     value pointed by outchainname is non-deterministic.
+ *
+ * @note
+ *     Chain name deprecated since Eucalyptus 4.4
+ */
+int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, char **outchainname) {
     char hashtok[16 + 128 + 1];
     char chainname[48];
     char *chainhash = NULL;
@@ -312,23 +263,17 @@ int gni_get_referenced_secgroups(globalNetworkInfo *gni, gni_secgroup **sgs,
     return (0);
 }
 
-//!
-//! Searches and returns a pointer to the route table data structure given its name in the argument..
-//!
-//! @param[in] vpc a pointer to the vpc gni data structure
-//! @param[in] tableName name of the route table of interest
-//!
-//! @return pointer to the gni route table of interest if found. NULL otherwise
-//!
-//! @see
-//!
-//! @pre
-//!     gni data structure is assumed to be populated.
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Searches and returns a pointer to the route table data structure given its name in the argument..
+ *
+ * @param vpc [in] a pointer to the vpc gni data structure
+ * @param tableName [in] name of the route table of interest
+ *
+ * @return pointer to the gni route table of interest if found. NULL otherwise
+ *
+ * @pre
+ *     gni data structure is assumed to be populated.
+ */
 gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName) {
     int i = 0;
     boolean found = FALSE;
@@ -342,23 +287,17 @@ gni_route_table *gni_vpc_get_routeTable(gni_vpc *vpc, const char *tableName) {
     return (result);
 }
 
-//!
-//! Searches and returns a pointer to the VPC subnet data structure given its name in the argument.
-//!
-//! @param[in] vpc a pointer to the vpc gni data structure
-//! @param[in] vpcsubnetName name of the subnet of interest
-//!
-//! @return pointer to the gni vpcsubnet of interest if found. NULL otherwise
-//!
-//! @see
-//!
-//! @pre
-//!     gni data structure is assumed to be populated.
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Searches and returns a pointer to the VPC subnet data structure given its name in the argument.
+ *
+ * @param vpc [in] a pointer to the vpc gni data structure
+ * @param vpcsubnetName [in] name of the subnet of interest
+ *
+ * @return pointer to the gni vpcsubnet of interest if found. NULL otherwise
+ *
+ * @pre
+ *     gni data structure is assumed to be populated.
+ */
 gni_vpcsubnet *gni_vpc_get_vpcsubnet(gni_vpc *vpc, const char *vpcsubnetName) {
     int i = 0;
     boolean found = FALSE;
@@ -372,30 +311,26 @@ gni_vpcsubnet *gni_vpc_get_vpcsubnet(gni_vpc *vpc, const char *vpcsubnetName) {
     return (result);
 }
 
-//!
-//! Searches and returns an array of pointers to gni_instance data structures (holding
-//! interface information) that are associated with the given VPC.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  vpc a pointer to the vpc gni data structure of interest
-//! @param[out] out_interfaces a list of pointers to interfaces of interest
-//! @param[out] max_out_interfaces number of interfaces found
-//!
-//! @return 0 if the search is successfully executed - 0 interfaces found is still
-//!         a successful search. 1 otherwise. 
-//!
-//! @see
-//!
-//! @pre
-//!     gni data structure is assumed to be populated.
-//!     out_interfaces should be free of memory allocations.
-//!
-//! @post
-//!     memory allocated to hold the resulting list of interfaces should be released
-//!     by the caller.
-//!
-//! @note
-//!
+/**
+ * Searches and returns an array of pointers to gni_instance data structures (holding
+ * interface information) that are associated with the given VPC.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param vpc [in] a pointer to the vpc gni data structure of interest
+ * @param out_interfaces [out] a list of pointers to interfaces of interest
+ * @param max_out_interfaces [out] number of interfaces found
+ *
+ * @return 0 if the search is successfully executed - 0 interfaces found is still
+ *         a successful search. 1 otherwise. 
+ *
+ * @pre
+ *     gni data structure is assumed to be populated.
+ *     out_interfaces should be free of memory allocations.
+ *
+ * @post
+ *     memory allocated to hold the resulting list of interfaces should be released
+ *     by the caller.
+ */
 int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance ***out_interfaces, int *max_out_interfaces) {
     gni_instance **result = NULL;
     int max_result = 0;
@@ -421,32 +356,28 @@ int gni_vpc_get_interfaces(globalNetworkInfo *gni, gni_vpc *vpc, gni_instance **
     return (0);
 }
 
-//!
-//! Searches and returns an array of pointers to gni_instance data structures (holding
-//! interface information) that are associated with the given VPC subnet.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  vpcsubnet a pointer to the vpcsubnet gni data structure of interest
-//! @param[in]  vpcinterfaces a list of pointers to interfaces to search
-//! @param[in]  max_vpcinterfaces number of interfaces found
-//! @param[out] out_interfaces a list of pointers to interfaces of interest
-//! @param[out] max_out_interfaces number of interfaces found
-//!
-//! @return 0 if the search is successfully executed - 0 interfaces found is still
-//!         a successful search. 1 otherwise. 
-//!
-//! @see
-//!
-//! @pre
-//!     gni data structure is assumed to be populated.
-//!     out_interfaces should be free of memory allocations.
-//!
-//! @post
-//!     memory allocated to hold the resulting list of interfaces should be released
-//!     by the caller.
-//!
-//! @note
-//!
+/**
+ * Searches and returns an array of pointers to gni_instance data structures (holding
+ * interface information) that are associated with the given VPC subnet.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param vpcsubnet [in] a pointer to the vpcsubnet gni data structure of interest
+ * @param vpcinterfaces [in] a list of pointers to interfaces to search
+ * @param max_vpcinterfaces [in] number of interfaces found
+ * @param out_interfaces [out] a list of pointers to interfaces of interest
+ * @param max_out_interfaces [out] number of interfaces found
+ *
+ * @return 0 if the search is successfully executed - 0 interfaces found is still
+ *         a successful search. 1 otherwise. 
+ *
+ * @pre
+ *     gni data structure is assumed to be populated.
+ *     out_interfaces should be free of memory allocations.
+ *
+ * @post
+ *     memory allocated to hold the resulting list of interfaces should be released
+ *     by the caller.
+ */
 int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubnet,
         gni_instance **vpcinterfaces, int max_vpcinterfaces, gni_instance ***out_interfaces, int *max_out_interfaces) {
     gni_instance **result = NULL;
@@ -477,27 +408,22 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
     return (0);
 }
 
-//!
-//! Looks up for the cluster for which we are assigned within a configured cluster list. We can
-//! be the cluster itself or one of its node.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[out] outclusterptr a pointer to the associated cluster structure pointer
-//!
-//! @return 0 if a matching cluster structure is found or 1 if not found or a failure occured
-//!
-//! @see gni_is_self()
-//!
-//! @pre
-//!
-//! @post
-//!     On success the value pointed by outclusterptr is valid. On failure, this value
-//!     is non-deterministic.
-//!
-//! @note
-//!
-int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr)
-{
+/**
+ * Looks up for the cluster for which we are assigned within a configured cluster list. We can
+ * be the cluster itself or one of its node.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param outclusterptr [out] a pointer to the associated cluster structure pointer
+ *
+ * @return 0 if a matching cluster structure is found or 1 if not found or a failure occured
+ *
+ * @see gni_is_self()
+ *
+ * @post
+ *     On success the value pointed by outclusterptr is valid. On failure, this value
+ *     is non-deterministic.
+ */
+int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr) {
     int i, j;
     char *strptra = NULL;
 
@@ -565,7 +491,7 @@ int gni_find_secgroup(globalNetworkInfo *gni, const char *psGroupId, gni_secgrou
  * @param pInstance [out] pointer to the gni_instance structure of interest.
  * @return 0 on success. Positive integer otherwise.
  */
-int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance) {
+int gni_find_instance(globalNetworkInfo *gni, const char *psInstanceId, gni_instance ** pInstance) {
     if (!gni || !psInstanceId || !pInstance) {
         LOGWARN("invalid argument: cannot find instance from NULL\n");
         return (1);
@@ -594,38 +520,21 @@ int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_ins
         return (0);
     }
 
-    // Go through our instance list and look for that instance
-/*
-    for (int i = 0; i < gni->max_instances; i++) {
-        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->instances[i]->name);
-        if (!strcmp(psInstanceId, gni->instances[i]->name)) {
-            (*pInstance) = gni->instances[i];
-            return (0);
-        }
-    }
-*/
-
     return (1);
 }
 
-//!
-//! Searches through the list of network interfaces in the gni  and returns all
-//! non-primary interfaces for a given instance
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] psInstanceId a pointer to instance ID identifier (i-XXXXXXX)
-//! @param[out] pAInstances an array of network interface pointers
-//! @param[out] size a pointer to the size of the array
-//!
-//! @return 0 if lookup is successful or 1 if a failure occurred
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int *size) {
+/**
+ * Searches through the list of network interfaces in the gni  and returns all
+ * non-primary interfaces for a given instance
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param psInstanceId [in] a pointer to instance ID identifier (i-XXXXXXX)
+ * @param pAInstances [out] an array of network interface pointers
+ * @param size [out] a pointer to the size of the array
+ *
+ * @return 0 if lookup is successful or 1 if a failure occurred
+ */
+int gni_find_secondary_interfaces(globalNetworkInfo *gni, const char *psInstanceId, gni_instance *pAInstances[], int *size) {
     if (!size || !gni || !psInstanceId || !sizeof (pAInstances)) {
         LOGERROR("invalid argument: cannot find secondary interfaces for NULL\n");
         return EUCA_ERROR;
@@ -646,41 +555,26 @@ int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanc
             }
         }
     }
-/*
-    for (int i = 0; i < gni->max_ifs; i++) {
-        LOGEXTREME("attempting match between %s and %s\n", psInstanceId, gni->ifs[i]->instance_name.name);
-        if (!strcmp(gni->ifs[i]->instance_name.name, psInstanceId) &&
-                strcmp(gni->ifs[i]->name, psInstanceId)) {
-            pAInstances[*size] = gni->ifs[i];
-            (*size)++;
-        }
-    }
-*/
 
     return EUCA_OK;
 }
 
-//!
-//! Looks up through a list of configured node for the one that is associated with
-//! this currently running instance.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[out] outnodeptr a pointer to the associated node structure pointer
-//!
-//! @return 0 if a matching node structure is found or 1 if not found or a failure occured
-//!
-//! @see gni_is_self()
-//!
-//! @pre
-//!
-//! @post
-//!     On success the value pointed by outnodeptr is valid. On failure, this value
-//!     is non-deterministic.
-//!
-//! @note
-//!
-int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
-{
+/**
+ * Looks up through a list of configured node for the one that is associated with
+ * this currently running instance.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param outnodeptr [out] a pointer to the associated node structure pointer
+ *
+ * @return 0 if a matching node structure is found or 1 if not found or a failure occured
+ *
+ * @see gni_is_self()
+ *
+ * @post
+ *     On success the value pointed by outnodeptr is valid. On failure, this value
+ *     is non-deterministic.
+ */
+int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
     int i, j;
 
     if (!gni || !outnodeptr) {
@@ -702,23 +596,14 @@ int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr)
     return (1);
 }
 
-//!
-//! Validates if the given test_ip is a local IP address on this system
-//!
-//! @param[in] test_ip a string containing the IP to validate
-//!
-//! @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_is_self(const char *test_ip)
-{
+/**
+ * Validates if the given test_ip is a local IP address on this system
+ *
+ * @param test_ip [in] a string containing the IP to validate
+ *
+ * @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
+ */
+int gni_is_self(const char *test_ip) {
     DIR *DH = NULL;
     struct dirent dent, *result = NULL;
     int max, rc, i;
@@ -763,21 +648,13 @@ int gni_is_self(const char *test_ip)
     return (1);
 }
 
-//!
-//! Validates if the given test_ip is a local IP address on this system. This function
-//! is based on getifaddrs() call.
-//! @param[in] test_ip a string containing the IP to validate
-//!
-//! @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Validates if the given test_ip is a local IP address on this system. This function
+ * is based on getifaddrs() call.
+ * @param test_ip [in] a string containing the IP to validate
+ *
+ * @return 0 if the test_ip is a local IP or 1 on failure or if not found locally
+ */
 int gni_is_self_getifaddrs(const char *test_ip) {
     struct ifaddrs *ifas = NULL;
     struct ifaddrs *elem = NULL;
@@ -813,28 +690,19 @@ int gni_is_self_getifaddrs(const char *test_ip) {
     return (1);
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  cluster_names
-//! @param[in]  max_cluster_names
-//! @param[out] out_cluster_names
-//! @param[out] out_max_cluster_names
-//! @param[out] out_clusters
-//! @param[out] out_max_clusters
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
+/**
+ * Return a copy of GNI clusters
+ * @param gni [in] a pointer to the global network information structure
+ * @param cluster_names [in] optional list of cluster names to look for
+ * @param max_cluster_names [in] number of cluster names in the optional list
+ * @param out_cluster_names [out] list of found cluster names
+ * @param out_max_cluster_names [out] number of entries in the found cluster name array
+ * @param out_clusters [out] array of gni_cluster data structures
+ * @param out_max_clusters [out] number oif entries in the array of gni_cluster data structures
+ * @return 0 on success. 1 on failure.
+ */
+int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max_cluster_names,
+        char ***out_cluster_names, int *out_max_cluster_names, gni_cluster **out_clusters,
         int *out_max_clusters) {
     int ret = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
     gni_cluster *ret_clusters = NULL;
@@ -913,28 +781,21 @@ int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int ma
     return (ret);
 }
 
-//!
-//! Retrives the list of security groups configured under a cloud
-//!
-//! @param[in]  pGni a pointer to our global network view structure
-//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
-//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
-//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
-//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
-//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
-//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre  TODO:
-//!
-//! @post TODO:
-//!
-//! @note
-//!
-int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+/**
+ * Retrives the list of security groups configured under a cloud
+ *
+ * @param pGni [in] a pointer to our global network view structure
+ * @param psSecGroupNames [in] a string pointer to the name of groups we're looking for
+ * @param nbSecGroupNames [in] the number of groups in the psSecGroupNames list
+ * @param psOutSecGroupNames [out] a string pointer that will contain the list of group names we found (if non NULL)
+ * @param pOutNbSecGroupNames [out] a pointer to the number of groups that matched in the psOutSecGroupNames list
+ * @param pOutSecGroups [out] a pointer to the list of security group structures that match what we're looking for
+ * @param pOutNbSecGroups [out] a pointer to the number of structures in the psOutSecGroups list
+ *
+ * @return 0 on success or 1 if any failure occured
+ */
+int gni_cloud_get_secgroups(globalNetworkInfo *pGni, char **psSecGroupNames,
+        int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
         gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups) {
     int ret = 0;
     int i = 0;
@@ -1024,30 +885,21 @@ int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, in
     return (ret);
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  cluster
-//! @param[in]  node_names
-//! @param[in]  max_node_names
-//! @param[out] out_node_names
-//! @param[out] out_max_node_names
-//! @param[out] out_nodes
-//! @param[out] out_max_nodes
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names,
-        gni_node ** out_nodes, int *out_max_nodes) {
+/**
+ * Returns a copy of nodes in the given cluster.
+ * @param gni [in] a pointer to our global network view structure
+ * @param cluster [in] gni_cluster data structure of interest
+ * @param node_names [in] optional list of node names to look for
+ * @param max_node_names [in] number of entries in the optional list of node names
+ * @param out_node_names [out] list of found node names
+ * @param out_max_node_names [out] number of entries in the list of found node names
+ * @param out_nodes [out] array of found gni_node data structures
+ * @param out_max_nodes [out] number of entries in the array of found gni_node data structures
+ * @return 0 on success. 1 on failure.
+ */
+int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster,
+        char **node_names, int max_node_names, char ***out_node_names,
+        int *out_max_node_names, gni_node ** out_nodes, int *out_max_nodes) {
     int ret = 0, rc = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0, out_max_clusters = 0;
     gni_node *ret_nodes = NULL;
     gni_cluster *out_clusters = NULL;
@@ -1143,29 +995,19 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     return (ret);
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  pGni a pointer to the global network information structure
-//! @param[in]  pCluster
-//! @param[in]  psInstanceNames
-//! @param[in]  nbInstanceNames
-//! @param[out] psOutInstanceNames
-//! @param[out] pOutNbInstanceNames
-//! @param[out] pOutInstances
-//! @param[out] pOutNbInstances
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psInstanceNames, int nbInstanceNames,
+/**
+ * Returns a copy of instances in the given cluster.
+ * @param pGni [in] a pointer to our global network view structure
+ * @param pCluster [in] gni_cluster data structure of interest
+ * @param psInstanceNames [in] optional list of instance names to look for
+ * @param nbInstanceNames [in] entries in the optional list of instance names
+ * @param psOutInstanceNames [out] list of found instance names
+ * @param pOutNbInstanceNames [out] entries in the list of found instance names
+ * @param pOutInstances [out] array of found gni_instance data structures
+ * @param pOutNbInstances [out] number of entries in the found gni_instance data structures
+ * @return  0 on success. 1 on failure.
+ */
+int gni_cluster_get_instances(globalNetworkInfo *pGni, gni_cluster *pCluster, char **psInstanceNames, int nbInstanceNames,
         char ***psOutInstanceNames, int *pOutNbInstanceNames, gni_instance ** pOutInstances, int *pOutNbInstances) {
     int ret = 0;
     int i = 0;
@@ -1281,30 +1123,23 @@ int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, 
     return (ret);
 }
 
-//!
-//! Retrives the list of security groups configured and active on a given cluster
-//!
-//! @param[in]  pGni a pointer to our global network view structure
-//! @param[in]  pCluster a pointer to the cluster we're building the security group list for
-//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
-//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
-//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
-//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
-//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
-//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre  TODO:
-//!
-//! @post TODO:
-//!
-//! @note
-//!
-int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
-        gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups) {
+/**
+ * Retrieves the list of security groups configured and active on a given cluster
+ *
+ * @param pGni [in] a pointer to our global network view structure
+ * @param pCluster [in] a pointer to the cluster we're building the security group list for
+ * @param psSecGroupNames [in] a string pointer to the name of groups we're looking for
+ * @param nbSecGroupNames [in] the number of groups in the psSecGroupNames list
+ * @param psOutSecGroupNames [out] a string pointer that will contain the list of group names we found (if non NULL)
+ * @param pOutNbSecGroupNames [out] a pointer to the number of groups that matched in the psOutSecGroupNames list
+ * @param pOutSecGroups [out] a pointer to the list of security group structures that match what we're looking for
+ * @param pOutNbSecGroups [out] a pointer to the number of structures in the psOutSecGroups list
+ *
+ * @return 0 on success or 1 if any failure occured
+ */
+int gni_cluster_get_secgroup(globalNetworkInfo *pGni, gni_cluster *pCluster,
+        char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames,
+        int *pOutNbSecGroupNames, gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups) {
     int ret = 0;
     int i = 0;
     int k = 0;
@@ -1448,8 +1283,9 @@ int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, c
  * @param out_max_instances [out] number of entries in out_instances
  * @return 0 on success, 1 otherwise.
  */
-int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
-        gni_instance ** out_instances, int *out_max_instances) {
+int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instance_names,
+        int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
+        gni_instance **out_instances, int *out_max_instances) {
     int ret = 0, getall = 0, i = 0, j = 0, k = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
     gni_instance *ret_instances = NULL;
     char **ret_instance_names = NULL;
@@ -1541,29 +1377,21 @@ int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **inst
     return (ret);
 }
 
-//!
-//! Retrives the list of security groups configured and active on a given cluster
-//!
-//! @param[in]  pGni a pointer to our global network view structure
-//! @param[in]  pNode a pointer to the node we're building the security group list for
-//! @param[in]  psSecGroupNames a string pointer to the name of groups we're looking for
-//! @param[in]  nbSecGroupNames the number of groups in the psSecGroupNames list
-//! @param[out] psOutSecGroupNames a string pointer that will contain the list of group names we found (if non NULL)
-//! @param[out] pOutNbSecGroupNames a pointer to the number of groups that matched in the psOutSecGroupNames list
-//! @param[out] pOutSecGroups a pointer to the list of security group structures that match what we're looking for
-//! @param[out] pOutNbSecGroups a pointer to the number of structures in the psOutSecGroups list
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre  TODO:
-//!
-//! @post TODO:
-//!
-//! @note
-//!
-int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+/**
+ * Retrieves the list of security groups configured and active on a given cluster
+ *
+ * @param pGni [in] a pointer to our global network view structure
+ * @param pNode [in] a pointer to the node we're building the security group list for
+ * @param psSecGroupNames [in] a string pointer to the name of groups we're looking for
+ * @param nbSecGroupNames [in] the number of groups in the psSecGroupNames list
+ * @param psOutSecGroupNames [out] a string pointer that will contain the list of group names we found (if non NULL)
+ * @param pOutNbSecGroupNames [out] a pointer to the number of groups that matched in the psOutSecGroupNames list
+ * @param pOutSecGroups [out] a pointer to the list of security group structures that match what we're looking for
+ * @param pOutNbSecGroups [out] a pointer to the number of structures in the psOutSecGroups list
+ *
+ * @return 0 on success or 1 if any failure occured
+ */
+int gni_node_get_secgroup(globalNetworkInfo *pGni, gni_node *pNode, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
         gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups) {
     int ret = 0;
     int i = 0;
@@ -1695,30 +1523,21 @@ int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psS
     return (ret);
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  instance
-//! @param[in]  secgroup_names
-//! @param[in]  max_secgroup_names
-//! @param[out] out_secgroup_names
-//! @param[out] out_max_secgroup_names
-//! @param[out] out_secgroups
-//! @param[out] out_max_secgroups
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names,
-        int *out_max_secgroup_names, gni_secgroup ** out_secgroups, int *out_max_secgroups) {
+/**
+ * Returns a copy of gni_secgroup data structures that the given instance is a member of.
+ * @param gni [in] a pointer to our global network view structure
+ * @param instance [in] gni_instance data structure of interest
+ * @param secgroup_names [in] optional list of security groups to look for
+ * @param max_secgroup_names [in] number of entries in the optional list of security groups
+ * @param out_secgroup_names [out] list of found security group names
+ * @param out_max_secgroup_names [out] number of entries in the list of found security groups
+ * @param out_secgroups [out] array of found gni_secgroup data structures 
+ * @param out_max_secgroups [out] number of entries in the found gni_secgroup data structures 
+ * @return 0 on success. 1 on failure.
+ */
+int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance,
+        char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names,
+        int *out_max_secgroup_names, gni_secgroup **out_secgroups, int *out_max_secgroups) {
     int ret = 0, getall = 0, i = 0, j = 0, k = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
     gni_secgroup *ret_secgroups = NULL;
     char **ret_secgroup_names = NULL;
@@ -1808,30 +1627,21 @@ int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance,
 
 }
 
-//!
-//! TODO: Function description.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  secgroup
-//! @param[in]  instance_names
-//! @param[in]  max_instance_names
-//! @param[out] out_instance_names
-//! @param[out] out_max_instance_names
-//! @param[out] out_instances
-//! @param[out] out_max_instances
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
-        int *out_max_instance_names, gni_instance ** out_instances, int *out_max_instances) {
+/**
+ * Returns a copy of gni_instance data structures that the given security group contains.
+ * @param gni [in] a pointer to our global network view structure
+ * @param secgroup [in] gni_secgroup data structure of interest
+ * @param instance_names [in] optional list of instance names to look for
+ * @param max_instance_names [in] number of entries in the optional list of instance names
+ * @param out_instance_names [out] list of found instance names
+ * @param out_max_instance_names [out] number of entries in the list of found instance names
+ * @param out_instances [out] array of found gni_instance data structures
+ * @param out_max_instances [out] number of entries in the array of found gni_instance data structures
+ * @return 0 on success. 1 on failure.
+ */
+int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup,
+        char **instance_names, int max_instance_names, char ***out_instance_names,
+        int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances) {
     int ret = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
     gni_instance *ret_instances = NULL;
     char **ret_instance_names = NULL;
@@ -1907,29 +1717,21 @@ int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup,
     return (ret);
 }
 
-//!
-//! Retrieve the interfaces that are members of the given security group.
-//!
-//! @param[in]  gni a pointer to the global network information structure
-//! @param[in]  secgroup a pointer to the gni_secgroup structure of the SG of interest
-//! @param[in]  interface_names restrict the search to this list of interface names
-//! @param[in]  max_interface_names number of interfaces specified
-//! @param[out] out_interface_names array of interface names that were found
-//! @param[out] out_max_interface_names number of interfaces found
-//! @param[out] out_interfaces array of found interface structure pointers
-//! @param[out] out_max_interfaces number of found interfaces
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup,
+/**
+ * Retrieve the interfaces that are members of the given security group.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param secgroup [in] a pointer to the gni_secgroup structure of the SG of interest
+ * @param interface_names [in] restrict the search to this list of interface names
+ * @param max_interface_names [in] number of interfaces specified
+ * @param out_interface_names [out] array of interface names that were found
+ * @param out_max_interface_names [out] number of interfaces found
+ * @param out_interfaces [out] array of found interface structure pointers
+ * @param out_max_interfaces [out] number of found interfaces
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int gni_secgroup_get_interfaces(globalNetworkInfo *gni, gni_secgroup *secgroup,
         char **interface_names, int max_interface_names, char ***out_interface_names,
         int *out_max_interface_names, gni_instance *** out_interfaces, int *out_max_interfaces) {
     int ret = 0, getall = 0, i = 0, j = 0, retcount = 0, do_outnames = 0, do_outstructs = 0;
@@ -2198,7 +2000,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
     xmlDocPtr docptr;
     xmlXPathContextPtr ctxptr;
     struct timeval tv, ttv;
-    xmlNode * gni_nodes[GNI_XPATH_INVALID] = {0};
+    xmlNode *gni_nodes[GNI_XPATH_INVALID] = {0};
 
     if (mode == GNI_POPULATE_NONE) {
         return (0);
@@ -3085,22 +2887,6 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
     }
     EUCA_FREE(results);
 
-    if (is_instance) {
-        // Populate interfaces.
-/*
-        snprintf(expression, 2048, "./networkInterfaces/networkInterface");
-        rc += evaluate_xpath_element(ctxptr, doc, xmlnode, expression, &results, &max_results);
-        instance->interface_names = EUCA_REALLOC_C(instance->interface_names, instance->max_interface_names + max_results, sizeof (gni_name));
-        bzero(&(instance->interface_names[instance->max_interface_names]), max_results * sizeof (gni_name));
-        for (i = 0; i < max_results; i++) {
-            LOGTRACE("\t\tafter function: %d: %s\n", i, results[i]);
-            snprintf(instance->interface_names[instance->max_interface_names + i].name, 1024, "%s", results[i]);
-            EUCA_FREE(results[i]);
-        }
-        instance->max_interface_names += max_results;
-        EUCA_FREE(results);
-*/
-    }
     if (!is_instance) {
         snprintf(expression, 2048, "./sourceDestCheck");
         rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
@@ -4195,26 +3981,16 @@ int gni_populate_dhcpos(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCont
     return (0);
 }
 
-//!
-//! TODO: Describe
-//!
-//! @param[in]  inlist
-//! @param[in]  inmax
-//! @param[out] outlist
-//! @param[out] outmax
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax)
-{
+/**
+ * Parses a list of IP address ranges (start - end) and converts into a linear
+ * array.
+ * @param inlist [in] list of IP address ranges of interest
+ * @param inmax [in] number of entries in the list
+ * @param outlist [out] list of IP addresses converted from the input list
+ * @param outmax [out] number of entries in the list of IP addresses
+ * @return  0 on success. 1 on failure.
+ */
+int gni_serialize_iprange_list(char **inlist, int inmax, u32 **outlist, int *outmax) {
     int i = 0;
     int ret = 0;
     int outidx = 0;
@@ -4295,24 +4071,16 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
     return (ret);
 }
 
-//!
-//! Iterates through a given globalNetworkInfo structure and execute the
-//! given operation mode.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//! @param[in] mode the iteration mode: GNI_ITERATE_PRINT or GNI_ITERATE_FREE
-//!
-//! @return Always return 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_iterate(globalNetworkInfo * gni, int mode)
+/**
+ * Iterates through a given globalNetworkInfo structure and execute the
+ * given operation mode.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ * @param mode [in] the iteration mode: GNI_ITERATE_PRINT or GNI_ITERATE_FREE
+ *
+ * @return Always return 0
+ */
+int gni_iterate(globalNetworkInfo *gni, int mode)
 {
     int i, j;
     char *strptra = NULL;
@@ -4465,21 +4233,6 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
         EUCA_FREE(gni->instances);
     }
 
-/*
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("interfaces: \n");
-    for (i = 0; i < gni->max_interfaces; i++) {
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tid: %s\n", gni->interfaces[i].name);
-        if (mode == GNI_ITERATE_FREE) {
-            gni_instance_clear(&(gni->interfaces[i]));
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->interfaces);
-    }
-*/
-
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("interfaces: \n");
     for (i = 0; i < gni->max_ifs; i++) {
@@ -4616,64 +4369,41 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
     return (0);
 }
 
-//!
-//! Clears a given globalNetworkInfo structure. This will free member's allocated memory and zero
-//! out the structure itself.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//!
-//! @return the result of the gni_iterate() call
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_clear(globalNetworkInfo * gni)
-{
+/**
+ * Clears a given globalNetworkInfo structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ *
+ * @return the result of the gni_iterate() call
+ */
+int gni_clear(globalNetworkInfo *gni) {
     return (gni_iterate(gni, GNI_ITERATE_FREE));
 }
 
-//!
-//! Logs the content of a given globalNetworkInfo structure
-//!
-//! @param[in] gni a pointer to the global network information structure
-//!
-//! @return the result of the gni_iterate() call
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_print(globalNetworkInfo * gni)
-{
+/**
+ * Logs the content of a given globalNetworkInfo structure
+ *
+ * @param gni [in] a pointer to the global network information structure
+ *
+ * @return the result of the gni_iterate() call
+ */
+int gni_print(globalNetworkInfo *gni) {
     return (gni_iterate(gni, GNI_ITERATE_PRINT));
 }
 
-//!
-//! Clears and free a given globalNetworkInfo structure.
-//!
-//! @param[in] gni a pointer to the global network information structure
-//!
-//! @return Always return 0
-//!
-//! @see gni_clear()
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note The caller should free the given pointer
-//!
-int gni_free(globalNetworkInfo * gni)
-{
+/**
+ * Clears and free a given globalNetworkInfo structure.
+ *
+ * @param gni [in] a pointer to the global network information structure
+ *
+ * @return Always return 0
+ *
+ * @see gni_clear()
+ *
+ * @note The caller should free the given pointer
+ */
+int gni_free(globalNetworkInfo *gni) {
     if (!gni) {
         return (0);
     }
@@ -4683,8 +4413,14 @@ int gni_free(globalNetworkInfo * gni)
 }
 
 //Maps the protocol number passed in, to the name 
-static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len)
-{
+/**
+ * Maps the protocol number passed in, to its corresponding name 
+ * @param proto_number [in] protocol number of interest
+ * @param out_proto_name [out] corresponding protocol name
+ * @param out_proto_len [in] capacity of the out_proto_name buffer
+ * @return 0 on success. 1 on failure.
+ */
+static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len) {
     struct protoent *proto = NULL;
     if (NULL == out_proto_name) {
         LOGERROR("Cannot map protocol number to name because arguments are null or not allocated enough buffers. Proto number=%d, out_proto_len=%d\n",
@@ -4716,26 +4452,21 @@ static int map_proto_to_names(int proto_number, char *out_proto_name, int out_pr
     return 0;
 }
 
-//!
-//! TODO: Define
-//!
-//! @param[in]  rulebuf a string containing the IP table rule to convert
-//! @param[out] outrule a string containing the converted rule
-//!
-//! @return 0 on success or 1 on failure.
-//!
-//! @see
-//!
-//! @pre Both rulebuf and outrule MUST not be NULL
-//!
-//! @post \li uppon success the outrule contains the converted value
-//!       \li uppon failure, outrule does not contain any valid data
-//!       \li regardless of success or failure case, rulebuf will be modified by a strtok_r() call
-//!
-//! @note
-//!
-int ruleconvert(char *rulebuf, char *outrule)
-{
+/**
+ * Converts a security group rule in GNI to iptables format.
+ *
+ * @param rulebuf [in] a string containing the iptables rule to convert
+ * @param outrule [out] a string containing the converted rule
+ *
+ * @return 0 on success or 1 on failure.
+ *
+ * @pre Both rulebuf and outrule MUST not be NULL
+ *
+ * @post \li uppon success the outrule contains the converted value
+ *       \li uppon failure, outrule does not contain any valid data
+ *       \li regardless of success or failure case, rulebuf will be modified by a strtok_r() call
+ */
+int ruleconvert(char *rulebuf, char *outrule) {
     int ret = 0;
     //char proto[4]; //Protocol is always a 3-digit number in global network xml.
     int protocol_number = -1;
@@ -4846,28 +4577,24 @@ int ruleconvert(char *rulebuf, char *outrule)
     return (ret);
 }
 
-//!
-//! Creates an iptables rule using the source CIDR specified in the argument, and
-//! based on the ingress rule entry in the argument.
-//!
-//! @param[in] scidr a string containing a CIDR to be used in the output iptables rule to match the source (can be a single IP address).
-//! If null, the source address within the ingress rule will be used.
-//! @param[in] ingress_rule gni_rule structure containing an ingress rule.
-//! @param[in] flags integer containing extra conditions that will be added to the output iptables rule.
-//! If 0, no condition is added. If 1 the output iptables rule will allow traffic between VMs on the same NC (see EUCA-11083).
-//! @param[out] outrule a string containing the converted rule. A buffer with at least 1024 chars is expected.
-//!
-//! @return 0 on success or 1 on failure.
-//!
-//! @see
-//!
-//! @pre ingress_rule and outrule pointers MUST not be NULL
-//!
-//! @post \li uppon success the outrule contains the converted iptables rule.
-//!       \li uppon failure, outrule does not contain any valid data
-//!
-//! @note
-//!
+/**
+ * Creates an iptables rule using the source CIDR specified in the argument, and
+ * based on the ingress rule entry in the argument.
+ *
+ * @param scidr [in] a string containing a CIDR to be used in the output iptables rule to match the source (can be a single IP address).
+ * If null, the source address within the ingress rule will be used.
+ * @param ingress_rule [in] gni_rule structure containing an ingress rule.
+ * @param flags [in] integer containing extra conditions that will be added to the output iptables rule.
+ * If 0, no condition is added. If 1 the output iptables rule will allow traffic between VMs on the same NC (see EUCA-11083).
+ * @param outrule [out] a string containing the converted rule. A buffer with at least 1024 chars is expected.
+ *
+ * @return 0 on success or 1 on failure.
+ *
+ * @pre ingress_rule and outrule pointers MUST not be NULL
+ *
+ * @post \li uppon success the outrule contains the converted iptables rule.
+ *       \li uppon failure, outrule does not contain any valid data
+ */
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outrule, int flags) {
 #define MAX_RULE_LEN     1024
 #define MAX_NEWRULE_LEN  2049
@@ -4969,23 +4696,15 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
     return 0;
 }
 
-//!
-//! Clears a gni_cluster structure. This will free member's allocated memory and zero
-//! out the structure itself.
-//!
-//! @param[in] cluster a pointer to the structure to clear
-//!
-//! @return This function always returns 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_cluster_clear(gni_cluster * cluster)
+/**
+ * Clears a gni_cluster structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ *
+ * @param cluster [in] a pointer to the structure to clear
+ *
+ * @return This function always returns 0
+ */
+int gni_cluster_clear(gni_cluster *cluster)
 {
     if (!cluster) {
         return (0);
@@ -4998,23 +4717,15 @@ int gni_cluster_clear(gni_cluster * cluster)
     return (0);
 }
 
-//!
-//! Clears a gni_node structure. This will free member's allocated memory and zero
-//! out the structure itself.
-//!
-//! @param[in] node a pointer to the structure to clear
-//!
-//! @return This function always returns 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_node_clear(gni_node * node)
+/**
+ * Clears a gni_node structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ *
+ * @param node [in] a pointer to the structure to clear
+ *
+ * @return This function always returns 0
+ */
+int gni_node_clear(gni_node *node)
 {
     if (!node) {
         return (0);
@@ -5027,23 +4738,15 @@ int gni_node_clear(gni_node * node)
     return (0);
 }
 
-//!
-//! Clears a gni_instance structure. This will free member's allocated memory and zero
-//! out the structure itself.
-//!
-//! @param[in] instance a pointer to the structure to clear
-//!
-//! @return This function always returns 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_instance_clear(gni_instance * instance)
+/**
+ * Clears a gni_instance structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ *
+ * @param instance [in] a pointer to the structure to clear
+ *
+ * @return This function always returns 0
+ */
+int gni_instance_clear(gni_instance *instance)
 {
     if (!instance) {
         return (0);
@@ -5059,24 +4762,15 @@ int gni_instance_clear(gni_instance * instance)
     return (0);
 }
 
-//!
-//! Clears a gni_secgroup structure. This will free member's allocated memory and zero
-//! out the structure itself.
-//!
-//! @param[in] secgroup a pointer to the structure to clear
-//!
-//! @return This function always returns 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_secgroup_clear(gni_secgroup * secgroup)
-{
+/**
+ * Clears a gni_secgroup structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ *
+ * @param secgroup [in] a pointer to the structure to clear
+ *
+ * @return This function always returns 0
+ */
+int gni_secgroup_clear(gni_secgroup *secgroup) {
     if (!secgroup) {
         return (0);
     }
@@ -5092,23 +4786,14 @@ int gni_secgroup_clear(gni_secgroup * secgroup)
     return (0);
 }
 
-//!
-//! Zero out a VPC structure
-//!
-//! @param[in] vpc a pointer to the GNI VPC structure to reset
-//!
-//! @return Always return 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_vpc_clear(gni_vpc * vpc)
-{
+/**
+ * Zero out a VPC structure
+ *
+ * @param vpc [in] a pointer to the GNI VPC structure to reset
+ *
+ * @return Always return 0
+ */
+int gni_vpc_clear(gni_vpc *vpc) {
     int i = 0;
     if (!vpc) {
         return (0);
@@ -5131,7 +4816,7 @@ int gni_vpc_clear(gni_vpc * vpc)
     EUCA_FREE(vpc->internetGatewayNames);
     EUCA_FREE(vpc->interfaces);
 
-    bzero(vpc, sizeof (gni_vpc));
+    memset(vpc, 0, sizeof (gni_vpc));
 
     return (0);
 }
@@ -5151,7 +4836,7 @@ int gni_dhcpos_clear(gni_dhcp_os *dhcpos) {
     EUCA_FREE(dhcpos->netbios_ns);
     EUCA_FREE(dhcpos->ntp);
 
-    bzero(dhcpos, sizeof (gni_dhcp_os));
+    memset(dhcpos, 0, sizeof (gni_dhcp_os));
 
     return (0);
 }
@@ -5413,7 +5098,7 @@ gni_dhcp_os *gni_get_dhcpos(globalNetworkInfo *gni, char *name, int *startidx) {
  *
  * @see gni_subnet_validate(), gni_cluster_validate(), gni_instance_validate(), gni_secgroup_validate()
  */
-int gni_validate(globalNetworkInfo * gni) {
+int gni_validate(globalNetworkInfo *gni) {
     int i = 0;
     int j = 0;
 
@@ -5591,24 +5276,15 @@ int gni_validate(globalNetworkInfo * gni) {
     return (0);
 }
 
-//!
-//! Validate a networking mode provided in the GNI message. The only supported networking
-//! mode strings are: EDGE, MANAGED and MANAGED-NOVLAN
-//!
-//! @param[in] psMode a string pointer to the network mode to validate
-//!
-//! @return 0 if the mode is valid or 1 if the mode isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_netmode_validate(const char *psMode)
-{
+/**
+ * Validate a networking mode provided in the GNI message. The only supported networking
+ * mode strings are: EDGE, MANAGED and MANAGED-NOVLAN
+ *
+ * @param psMode [in] a string pointer to the network mode to validate
+ *
+ * @return 0 if the mode is valid or 1 if the mode isn't
+ */
+int gni_netmode_validate(const char *psMode) {
     int i = 0;
 
     if (!psMode) {
@@ -5630,23 +5306,14 @@ int gni_netmode_validate(const char *psMode)
     return (1);
 }
 
-//!
-//! Validate a gni_subnet structure content
-//!
-//! @param[in] pSubnet a pointer to the subnet structure to validate
-//!
-//! @return 0 if the structure is valid or 1 if the structure isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_subnet_validate(gni_subnet * pSubnet)
-{
+/**
+ * Validate a gni_subnet structure content
+ *
+ * @param pSubnet [in] a pointer to the subnet structure to validate
+ *
+ * @return 0 if the structure is valid or 1 if the structure isn't
+ */
+int gni_subnet_validate(gni_subnet *pSubnet) {
     if (!pSubnet) {
         LOGERROR("invalid input\n");
         return (1);
@@ -5660,23 +5327,14 @@ int gni_subnet_validate(gni_subnet * pSubnet)
     return (0);
 }
 
-//!
-//! Validate a gni_subnet structure content
-//!
-//! @param[in] pSubnet a pointer to the subnet structure to validate
-//!
-//! @return 0 if the structure is valid or 1 if the structure isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_managed_subnet_validate(gni_managedsubnet * pSubnet)
-{
+/**
+ * Validate a gni_subnet structure content
+ *
+ * @param pSubnet [in] a pointer to the subnet structure to validate
+ *
+ * @return 0 if the structure is valid or 1 if the structure isn't
+ */
+int gni_managed_subnet_validate(gni_managedsubnet *pSubnet) {
     // Make sure we didn't get a NULL pointer
     if (!pSubnet) {
         LOGERROR("invalid input\n");
@@ -5720,7 +5378,7 @@ int gni_managed_subnet_validate(gni_managedsubnet * pSubnet)
  *
  * @see gni_node_validate()
  */
-int gni_cluster_validate(gni_cluster * cluster, euca_netmode nmode) {
+int gni_cluster_validate(gni_cluster *cluster, euca_netmode nmode) {
     int i = 0;
 
     // Make sure our pointer is valid
@@ -5783,23 +5441,14 @@ int gni_cluster_validate(gni_cluster * cluster, euca_netmode nmode) {
     return (0);
 }
 
-//!
-//! Validate a gni_node structure content
-//!
-//! @param[in] node a pointer to the node structure to validate
-//!
-//! @return 0 if the structure is valid or 1 if it isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_node_validate(gni_node * node)
-{
+/**
+ * Validate a gni_node structure content
+ *
+ * @param node [in] a pointer to the node structure to validate
+ *
+ * @return 0 if the structure is valid or 1 if it isn't
+ */
+int gni_node_validate(gni_node *node) {
     int i;
 
     if (!node) {
@@ -5825,24 +5474,15 @@ int gni_node_validate(gni_node * node)
     return (0);
 }
 
-//!
-//! Validates a given instance_interface structure content for a valid instance
-//! description
-//!
-//! @param[in] instance a pointer to the instance_interface structure to validate
-//!
-//! @return 0 if the structure is valid or 1 if it isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_instance_validate(gni_instance * instance)
-{
+/**
+ * Validates a given instance_interface structure content for a valid instance
+ * description
+ *
+ * @param instance [in] a pointer to the instance_interface structure to validate
+ *
+ * @return 0 if the structure is valid or 1 if it isn't
+ */
+int gni_instance_validate(gni_instance *instance) {
     int i;
 
     if (!instance) {
@@ -5889,24 +5529,15 @@ int gni_instance_validate(gni_instance * instance)
     return (0);
 }
 
-//!
-//! Validates a given gni_instance_interface structure content for a valid interface
-//! description.
-//!
-//! @param[in] interface a pointer to the instance_interface structure to validate
-//!
-//! @return 0 if the structure is valid or 1 if it isn't
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_interface_validate(gni_instance *interface)
-{
+/**
+ * Validates a given gni_instance_interface structure content for a valid interface
+ * description.
+ *
+ * @param interface [in] a pointer to the instance_interface structure to validate
+ *
+ * @return 0 if the structure is valid or 1 if it isn't
+ */
+int gni_interface_validate(gni_instance *interface) {
     int i;
 
     if (!interface) {
@@ -5955,23 +5586,16 @@ int gni_interface_validate(gni_instance *interface)
     return (0);
 }
 
-//!
-//! Validates a given gni_secgroup structure content
-//!
-//! @param[in] secgroup a pointer to the security group structure to validate
-//!
-//! @return 0 if the structure is valid and 1 if the structure isn't
-//!
-//! @see gni_secgroup
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int gni_secgroup_validate(gni_secgroup * secgroup)
-{
+/**
+ * Validates a given gni_secgroup structure content
+ *
+ * @param secgroup [in] a pointer to the security group structure to validate
+ *
+ * @return 0 if the structure is valid and 1 if the structure isn't
+ *
+ * @see gni_secgroup
+ */
+int gni_secgroup_validate(gni_secgroup *secgroup) {
     int i;
 
     if (!secgroup) {
@@ -6253,11 +5877,7 @@ void gni_instance_interface_print(gni_instance *inst, int loglevel) {
     EUCALOG(loglevel, "\tsrcdstcheck  = %s\n", inst->srcdstcheck ? "true" : "false");
     EUCALOG(loglevel, "\tdeviceidx    = %d\n", inst->deviceidx);
     EUCALOG(loglevel, "\tattachment   = %s\n", inst->attachmentId);
-/*
-    for (i = 0; i < inst->max_interface_names; i++) {
-        EUCALOG(loglevel, "\tinterface[%d] = %s\n", i, inst->interface_names[i].name);
-    }
-*/
+
     for (i = 0; i < inst->max_interfaces; i++) {
         EUCALOG(loglevel, "\tinterface[%d] = %s idx %d\n", i, inst->interfaces[i]->name, inst->interfaces[i]->deviceidx);
     }
@@ -6486,13 +6106,21 @@ void gni_dhcpos_print(gni_dhcp_os *dhcpos, int loglevel) {
     }
 }
 
-
+/**
+ * Allocates memory for gni_host_info data structure
+ * @return pointer to the allocated memory.
+ */
 gni_hostname_info *gni_init_hostname_info(void) {
     gni_hostname_info *hni = EUCA_ZALLOC_C(1, sizeof (gni_hostname_info));
     hni->max_hostnames = 0;
     return (hni);
 }
 
+/**
+ * Logs the contents of a gni_hostname_info data structure
+ * @param host_info [in] gni_hostname_info data structure of interest
+ * @return always 0.
+ */
 int gni_hostnames_print(gni_hostname_info *host_info) {
     int i;
 
@@ -6503,6 +6131,11 @@ int gni_hostnames_print(gni_hostname_info *host_info) {
     return (0);
 }
 
+/**
+ * Releases resources allocated for a gni_hostname_info data structure
+ * @param host_info [in] gni_hostname_info data structure
+ * @return always 0.
+ */
 int gni_hostnames_free(gni_hostname_info *host_info) {
     if (!host_info) {
         return (0);
@@ -6513,6 +6146,13 @@ int gni_hostnames_free(gni_hostname_info *host_info) {
     return (0);
 }
 
+/**
+ * Searches hostname cache for the given IP address.
+ * @param hostinfo [in] hostname cache in a gni_hostname_info data structure
+ * @param ip_address [in] IP address to look for
+ * @param hostname [out] corresponding hostname if found
+ * @return 0 on success. 1 on failure
+ */
 int gni_hostnames_get_hostname(gni_hostname_info *hostinfo, const char *ip_address, char **hostname) {
     struct in_addr addr;
     gni_hostname key;
@@ -6541,6 +6181,12 @@ int gni_hostnames_get_hostname(gni_hostname_info *hostinfo, const char *ip_addre
 // Used for qsort and bsearch methods against gni_hostname_info
 //
 
+/**
+ * Compares gni_hostname p1 and p2 (used in qsort() and bsearch())
+ * @param p1 [in] gni_hostname 1 to be compared
+ * @param p2 [in] gni_hostname 2 to be compared
+ * @return 0 if p1 and p2 match. -1 iff p1 < p2. 1 iff p1 > p2.
+ */
 int cmpipaddr(const void *p1, const void *p2) {
     gni_hostname *hp1 = (gni_hostname *) p1;
     gni_hostname *hp2 = (gni_hostname *) p2;
@@ -6602,21 +6248,13 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
     return (ret);
 }
 
-//!
-//! Compares two gni_vpc structures in the argument.
-//!
-//! @param[in] a gni_vpc structure of interest.
-//! @param[in] b gni_vpc structure of interest.
-//! @return 0 if name and number of entries match. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Compares two gni_vpc structures in the argument.
+ *
+ * @param a [in] gni_vpc structure of interest.
+ * @param b [in] gni_vpc structure of interest.
+ * @return 0 if name and number of entries match. Non-zero otherwise.
+ */
 int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
     if (a == b) {
         return (0);
@@ -6640,21 +6278,13 @@ int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
     return (1);
 }
 
-//!
-//! Compares two gni_vpcsubnet structures in the argument.
-//!
-//! @param[in] a gni_vpcsubnet structure of interest.
-//! @param[in] b gni_vpcsubnet structure of interest.
-//! @return 0 if name, routeTable_name and networkAcl_name match. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Compares two gni_vpcsubnet structures in the argument.
+ *
+ * @param a [in] gni_vpcsubnet structure of interest.
+ * @param b [in] gni_vpcsubnet structure of interest.
+ * @return 0 if name, routeTable_name and networkAcl_name match. Non-zero otherwise.
+ */
 int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
     if (a == b) {
         return (0);
@@ -6673,21 +6303,13 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
     return (1);
 }
 
-//!
-//! Compares two gni_nat_gateway structures in the argument.
-//!
-//! @param[in] a gni_nat_gateway structure of interest.
-//! @param[in] b gni_nat_gateway structure of interest.
-//! @return 0 if name matches. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Compares two gni_nat_gateway structures in the argument.
+ *
+ * @param a [in] gni_nat_gateway structure of interest.
+ * @param b [in] gni_nat_gateway structure of interest.
+ * @return 0 if name matches. Non-zero otherwise.
+ */
 int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
     if (a == b) {
         return (0);
@@ -6701,22 +6323,14 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
     return (1);
 }
 
-//!
-//! Compares two gni_route_table structures in the argument.
-//!
-//! @param[in] a gni_route_table structure of interest. Check for route entries
-//!            applied flags.
-//! @param[in] b gni_route_table structure of interest.
-//! @return 0 if name and route entries match. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Compares two gni_route_table structures in the argument.
+ *
+ * @param a [in] gni_route_table structure of interest. Check for route entries
+ *            applied flags.
+ * @param b [in] gni_route_table structure of interest.
+ * @return 0 if name and route entries match. Non-zero otherwise.
+ */
 int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
     if (a == b) {
         return (0);
@@ -6742,24 +6356,18 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
     return (0);
 }
 
-//!
-//! Compares two gni_secgroup structures in the argument.
-//!
-//! @param[in]  a gni_secgroup structure of interest.
-//! @param[in]  b gni_secgroup structure of interest.
-//! @param[out] ingress_diff set to 1 iff ingress rules of a and b differ.
-//! @param[out] egress_diff set to 1 iff egress rules of a and b differ.
-//! @param[out] interfaces_diff set to 1 iff member interfaces of a and b differ.
-//! @return 0 if name and rule entries match. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note order of rules are assumed to be the same for both a and b.
-//!
+/**
+ * Compares two gni_secgroup structures in the argument.
+ *
+ * @param a [in] gni_secgroup structure of interest.
+ * @param b [in] gni_secgroup structure of interest.
+ * @param ingress_diff [out] set to 1 iff ingress rules of a and b differ.
+ * @param egress_diff [out] set to 1 iff egress rules of a and b differ.
+ * @param interfaces_diff [out] set to 1 iff member interfaces of a and b differ.
+ * @return 0 if name and rule entries match. Non-zero otherwise.
+ *
+ * @note order of rules are assumed to be the same for both a and b.
+ */
 int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff) {
     int abmatch = 1;
     if (a == b) {
@@ -6846,25 +6454,17 @@ int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *e
     return (1);
 }
 
-//!
-//! Compares two gni_interface structures in the argument.
-//!
-//! @param[in]  a gni_interface structure of interest.
-//! @param[in]  b gni_interface structure of interest.
-//! @param[out] pubip_diff set to 1 iff public IP of a and b differ.
-//! @param[out] sdc_diff set to 1 iff src/dst check flag of a and b differ.
-//! @param[out] host_diff set to 1 iff host/node of a and b differ.
-//! @param[out] sg_diff set to 1 iff list of security group names of a and b differ.
-//! @return 0 if name and other properties of a and b match. Non-zero otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note order of rules are assumed to be the same for both a and b.
-//!
+/**
+ * Compares two gni_interface structures in the argument.
+ *
+ * @param a [in] gni_interface structure of interest.
+ * @param b [in] gni_interface structure of interest.
+ * @param pubip_diff [out] set to 1 iff public IP of a and b differ.
+ * @param sdc_diff [out] set to 1 iff src/dst check flag of a and b differ.
+ * @param host_diff [out] set to 1 iff host/node of a and b differ.
+ * @param sg_diff [out] set to 1 iff list of security group names of a and b differ.
+ * @return 0 if name and other properties of a and b match. Non-zero otherwise.
+ */
 int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff) {
     int abmatch = 1;
     int sgmatch = 1;

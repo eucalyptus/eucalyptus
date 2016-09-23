@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 #ifndef _INCLUDE_MIDONET_API_H_
@@ -73,7 +27,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
+#include "eucanetd.h"
 #include "eucanetd_util.h"
 
 //!
@@ -485,23 +439,23 @@ int iplist_arr_free(char **iparr, int max_iparr);
 
 int routername_split(char *routername, char **name, int *id);
 
-void mido_info_midonetapi();
-void mido_info_midocache();
+void mido_info_midonetapi(void);
+void mido_info_midocache(void);
 
-void mido_info_http_count();
-void mido_info_http_count_total();
+void mido_info_http_count(void);
+void mido_info_http_count_total(void);
 
 void mido_free_mido_parsed_route(mido_parsed_route *route);
 void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes);
 
 int mido_create_midoname(char *tenant, char *name, char *uuid, char *resource_type, char *media_type, char *uri, char *jsonbuf, midoname * outname);
 void mido_free_midoname(midoname *name);
-void mido_free_midoname_list(midoname * name, int max_name);
+void mido_free_midoname_list(midoname *name, int max_name);
 int mido_update_midoname(midoname *name);
 void mido_copy_midoname(midoname * dst, midoname * src);
-int mido_getel_midoname(midoname * name, char *key, char **val);
-int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_values);
-void mido_print_midoname(midoname * name);
+int mido_getel_midoname(midoname *name, char *key, char **val);
+int mido_getarr_midoname(midoname *name, char *key, char ***values, int *max_values);
+void mido_print_midoname(midoname *name);
 int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
@@ -512,16 +466,16 @@ int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
 int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnames_max);
 
 midonet_api_bridge *mido_create_bridge(char *tenant, char *name, midoname **outname);
-int mido_update_bridge(midoname * name, ...);
-int mido_print_bridge(midoname * name);
-int mido_delete_bridge(midoname * name);
+int mido_update_bridge(midoname *name, ...);
+int mido_print_bridge(midoname *name);
+int mido_delete_bridge(midoname *name);
 int mido_get_bridges(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_bridge *mido_get_bridge(char *name);
 
 midonet_api_router *mido_create_router(char *tenant, char *name, midoname **outname);
-int mido_update_router(midoname * name, ...);
-int mido_delete_router(midoname * name);
-int mido_print_router(midoname * name);
+int mido_update_router(midoname *name, ...);
+int mido_delete_router(midoname *name);
+int mido_print_router(midoname *name);
 int mido_get_routers(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_router *mido_get_router(char *name);
 
@@ -543,8 +497,8 @@ int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames
 int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char *slashnet,
         char *gw, u32 *dnsServers, int max_dnsServers, int *foundidx);
 int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname **outname);
-int mido_update_dhcp(midoname * name, ...);
-int mido_print_dhcp(midoname * name);
+int mido_update_dhcp(midoname *name, ...);
+int mido_print_dhcp(midoname *name);
 int mido_delete_dhcp(midonet_api_bridge *devname, midoname *name);
 int mido_get_dhcps(midoname *devname, midoname ***outnames, int *outnames_max);
 
@@ -556,9 +510,9 @@ int mido_get_dhcphosts(midoname *devname, midoname *dhcp, midoname ***outnames, 
 midoname *mido_get_dhcphost(midonet_api_dhcp *dhcp, char *dhcphostname);
 
 int mido_create_portgroup(char *tenant, char *name, midoname **outname);
-int mido_update_portgroup(midoname * name, ...);
+int mido_update_portgroup(midoname *name, ...);
 int mido_delete_portgroup(midoname *name);
-int mido_print_portgroup(midoname * name);
+int mido_print_portgroup(midoname *name);
 int mido_get_portgroups(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_portgroup *mido_get_portgroup(char *name);
 
@@ -570,8 +524,8 @@ int mido_create_port(midoname *devname, char *port_type, char *ip, char *nw, cha
 int mido_create_bridge_port(midonet_api_bridge *br, midoname *devname, midoname **outname);
 int mido_create_router_port(midonet_api_router *rt, midoname *devname, char *ip, char *nw, char *slashnet, char *mac, midoname **outname);
 int mido_find_port_from_list(midoname **ports, int max_ports, char *ip, char *nw, char *slashnet, char *mac, int *foundidx);
-int mido_update_port(midoname * name, ...);
-int mido_print_port(midoname * name);
+int mido_update_port(midoname *name, ...);
+int mido_print_port(midoname *name);
 int mido_delete_bridge_port(midonet_api_bridge *bridge, midoname *port);
 int mido_delete_router_port(midonet_api_router *router, midoname *port);
 int mido_get_ports(midoname *devname, midoname ***outnames, int *outnames_max);
@@ -592,8 +546,8 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
 int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
 
 midonet_api_chain *mido_create_chain(char *tenant, char *name, midoname **outname);
-int mido_update_chain(midoname * name, ...);
-int mido_print_chain(midoname * name);
+int mido_update_chain(midoname *name, ...);
+int mido_print_chain(midoname *name);
 int mido_delete_chain(midoname *name);
 int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_chain *mido_get_chain(char *name);
@@ -601,8 +555,7 @@ midonet_api_chain *mido_get_chain(char *name);
 int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname, int *next_position, ...);
 int mido_find_rule_from_list(midoname **rules, int max_rules, midoname **outrule, ...);
 int mido_find_rule_from_list_v(midoname **rules, int max_rules, midoname **outrule, va_list *al);
-int mido_update_rule(midoname * name, ...);
-int mido_print_rule(midoname * name);
+int mido_print_rule(midoname *name);
 int mido_delete_rule(midonet_api_chain *chain, midoname *rule);
 int mido_get_rules(midoname *chainname, midoname ***outnames, int *outnames_max);
 int mido_reload_rules(midonet_api_chain *chain);
@@ -611,9 +564,9 @@ int mido_get_jump_rules(midonet_api_chain *chain, midoname ***outnames, int *out
 int mido_clear_rules(midonet_api_chain *chain);
 
 midonet_api_ipaddrgroup *mido_create_ipaddrgroup(char *tenant, char *name, midoname **outname);
-int mido_update_ipaddrgroup(midoname * name, ...);
+int mido_update_ipaddrgroup(midoname *name, ...);
 int mido_delete_ipaddrgroup(midoname *name);
-int mido_print_ipaddrgroup(midoname * name);
+int mido_print_ipaddrgroup(midoname *name);
 int mido_get_ipaddrgroups(char *tenant, midoname ***outnames, int *outnames_max);
 midonet_api_ipaddrgroup *mido_get_ipaddrgroup(char *name);
 
@@ -626,8 +579,8 @@ midoname *mido_get_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipaddrgroup, int pos)
 int mido_create_resource(midoname *parents, int max_parents, midoname *newname, midoname **outname, ...);
 int mido_create_resource_v(midoname *parents, int max_parents, midoname *newname, midoname **outname, va_list * al);
 int mido_update_resource(midoname *name, va_list *al);
-int mido_print_resource(char *resource_type, midoname * name);
-int mido_delete_resource(midoname * parentname, midoname * name);
+int mido_print_resource(char *resource_type, midoname *name);
+int mido_delete_resource(midoname * parentname, midoname *name);
 int mido_get_resources(midoname * parents, int max_parents, char *tenant, char *resource_type, char *apistr, char *mtype, midoname ***outnames, int *outnames_max);
 int mido_refresh_resource(midoname *resc);
 

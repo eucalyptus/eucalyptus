@@ -149,6 +149,9 @@ extern bunchOfInstances *global_instances;
 extern int outgoing_migrations_in_progress;
 extern int incoming_migrations_in_progress;
 
+// Implemented in handlers_default.c
+extern int create_vol_xml(const char *instanceId, const char *volumeId, const char *xml_in, char **xml_out);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              GLOBAL VARIABLES                              |

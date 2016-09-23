@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -136,9 +90,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
 
@@ -206,26 +158,21 @@ static struct timeval gtv;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Restart or simply start the local DHCP server so it can pick up the new
-//! configuration.
-//!
-//! @return 0 on success or 1 if a failure occured
-//!
-//! @see
-//!
-//! @pre
-//!     The DHCP server daemon must be present on the system and the 'config->dhcpDaemon'
-//!     path must be properly set.
-//!
-//! @post
-//!     on success, the DHCP server has been restarted. If the configuration file does not
-//!     contain any data, the DHCP server is stopped.
-//!
-//! @note
-//!
-int eucanetd_kick_dhcpd_server(eucanetdConfig *config)
-{
+/**
+ * Restart or simply start the local DHCP server so it can pick up the new
+ * configuration.
+ *
+ * @return 0 on success or 1 if a failure occured
+ *
+ * @pre
+ *     The DHCP server daemon must be present on the system and the 'config->dhcpDaemon'
+ *     path must be properly set.
+ *
+ * @post
+ *     on success, the DHCP server has been restarted. If the configuration file does not
+ *     contain any data, the DHCP server is stopped.
+ */
+int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
     int ret = 0;
     int rc = 0;
     int pid = 0;
@@ -292,37 +239,32 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config)
     return (ret);
 }
 
-//!
-//! Run a daemonized program and maintain its state. If a PID file is given, it will check if the
-//! process is currently running and if the running process matches the given program. If not, the
-//! current process will be terminated and restarted with the new program. If the process is running
-//! and matche our program name, it will be left alone. If the process is not currently running,
-//! it will be started.
-//!
-//! @param[in] psPidFilePath a constant string pointer to the PID file path
-//! @param[in] psRootWrap a constant string pointer to the rootwrap program location
-//! @param[in] force set to TRUE if we want to kill the process regardless of its state and restart it. Otherwise set to FALSE.
-//! @param[in] psProgram a constant string pointer to the pathname of a program which is to be executed
-//! @param[in] ... the list of string arguments to pass to the program
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @pre
-//!     - psProgram should not be NULL
-//!     - There more be more than 1 variable argument provided
-//!
-//! @post
-//!     On success, the program is executed and its PID is recorded in the psPidFilePath location if provided. If
-//!     the process is already running, nothing will change. On failure, depending of where it occured, the system
-//!     is left into a non-deterministic state from the caller's perspective.
-//!
-//! @note
-//!
-//! @todo
-//!     We should move this to something more global under util/euca_system.[ch]
-//!
-int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, boolean force, const char *psProgram, ...)
-{
+/**
+ * Run a daemonized program and maintain its state. If a PID file is given, it will check if the
+ * process is currently running and if the running process matches the given program. If not, the
+ * current process will be terminated and restarted with the new program. If the process is running
+ * and matche our program name, it will be left alone. If the process is not currently running,
+ * it will be started.
+ *
+ * @param psPidFilePath [in] a constant string pointer to the PID file path
+ * @param psRootWrap [in] a constant string pointer to the rootwrap program location
+ * @param force [in] set to TRUE if we want to kill the process regardless of its state and restart it. Otherwise set to FALSE.
+ * @param psProgram [in] a constant string pointer to the pathname of a program which is to be executed
+ * @param ... [in] the list of string arguments to pass to the program
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @pre
+ *     - psProgram should not be NULL
+ *     - There more be more than 1 variable argument provided
+ *
+ * @post
+ *     On success, the program is executed and its PID is recorded in the psPidFilePath location if provided. If
+ *     the process is already running, nothing will change. On failure, depending of where it occured, the system
+ *     is left into a non-deterministic state from the caller's perspective.
+ *
+ */
+int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, boolean force, const char *psProgram, ...) {
 #define PID_STRING_LEN       32
 
     int i = 0;
@@ -432,29 +374,24 @@ int eucanetd_run_program(const char *psPidFilePath, const char *psRootWrap, bool
 #undef PID_STRING_LEN
 }
 
-//!
-//! Safely terminate a program executed by eucanetd_run_program().
-//!
-//! @param[in] pid the PID of the program to kill
-//! @param[in] psProgramName a constant string pointer to the program name matching the pid
-//! @param[in] psRootwrap a constant string pointer to the rootwrap program location
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @pre
-//!     - psProgramName should not be NULL
-//!     - The program should be running
-//!
-//! @post
-//!     On success, the program is terminated. On failure, we can't tell what happened for sure.
-//!
-//! @note
-//!
-//! @todo
-//!     We should move this to something more global under util/euca_system.[ch]
-//!
-int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRootwrap)
-{
+/**
+ * Safely terminate a program executed by eucanetd_run_program().
+ *
+ * @param pid [in] the PID of the program to kill
+ * @param psProgramName [in] a constant string pointer to the program name matching the pid
+ * @param psRootwrap [in] a constant string pointer to the rootwrap program location
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @pre
+ *     - psProgramName should not be NULL
+ *     - The program should be running
+ *
+ * @post
+ *     On success, the program is terminated. On failure, we can't tell what happened for sure.
+ *
+ */
+int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRootwrap) {
     int status = 0;
     FILE *FH = NULL;
     char sPid[16] = "";
@@ -519,25 +456,18 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
     return (0);
 }
 
-//!
-//! Removes a handler file on disk.
-//!
-//! @param[in] Filename of file to remove.
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!    - Filename should not be NULL, but function can handle it. 
-//!
-//! @post
-//!
-//! @note
-//!
-int unlink_handler_file(char *filename)
-{
-    if (filename == NULL) {
+/**
+ * Removes a handler file on disk.
+ *
+ * @param Filename [in] of file to remove.
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @pre
+ *    - Filename should not be NULL, but function can handle it. 
+ */
+int unlink_handler_file(char *filename) {
+    if (!filename || !strlen(filename)) {
         LOGTRACE("NULL filename passed\n");
         return (0);
     }
@@ -550,32 +480,28 @@ int unlink_handler_file(char *filename)
             LOGTRACE("File %s removed successfully\n",filename);
         }
     } else {
-        LOGWARN("File: %s doesn't exist or is not accessible by user. errno: %d\n",filename, errno);
+        return (errno);
     }
     return (0);
 }
 
-//!
-//! Truncates a file on disk to 0 bytes, or creates the file if it doesn't exist
-//!
-//! @param[in] Filename of file to truncate or create
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!    - filename should not be NULL
-//!
-//! @post
-//!    - Filedescriptor associated with file is closed and not returned to the caller.
-//!
-//! @note 
-//!
+/**
+ * Truncates a file on disk to 0 bytes, or creates the file if it doesn't exist
+ *
+ * @param Filename [in] of file to truncate or create
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @pre
+ *    - filename should not be NULL
+ *
+ * @post
+ *    - Filedescriptor associated with file is closed and not returned to the caller.
+ */
 int truncate_file(char *filename) {
     int fd = 0;
     
-    if (filename == NULL) {
+    if (!filename || !strlen(filename)) {
         LOGTRACE("NULL filename passed\n");
         return (0);
     }
@@ -589,27 +515,18 @@ int truncate_file(char *filename) {
     return (0);
 }
 
-//!
-//! Splits an input CIDR into network address and network mask (slashnet) parts.
-//! If netmask is not found, /32 is assumed. Input is not validated (whether it
-//! is a CIDR).
-//!
-//! @param[in]  ipname a CIDR string (assumed to be in network address/slashnet)
-//! @param[out] ippart Network address of the given CIDR.
-//! @param[out] nmpart Slashnet of the given CIDR
-//!
-//! @return 0 on success, 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int cidrsplit(char *ipname, char **ippart, int *nmpart)
-{
+/**
+ * Splits an input CIDR into network address and network mask (slashnet) parts.
+ * If netmask is not found, /32 is assumed. Input is not validated (whether it
+ * is a CIDR).
+ *
+ * @param ipname [in] a CIDR string (assumed to be in network address/slashnet)
+ * @param ippart [out] Network address of the given CIDR.
+ * @param nmpart [out] Slashnet of the given CIDR
+ *
+ * @return 0 on success, 1 otherwise.
+ */
+int cidrsplit(char *ipname, char **ippart, int *nmpart) {
     char *idx = NULL;
     char *ipname_dup = NULL;
     if (!ipname || !ippart || !nmpart) {
@@ -640,26 +557,26 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart)
     return (0);
 }
 
-//!
-//! Retrieves a given device information (assigned IPs and NMS).
-//!
-//! @param[in]  dev
-//! @param[out] outips
-//! @param[out] outnms
-//! @param[out] len
-//!
-//! @return EUCA_OK on success and the out fields will be set properly. On failure the
-//!         following error codes are returned:
-//!         - EUCA_ERROR: if we fail to retrieve the interfaces addresses.
-//!         - EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
-//!
-//! @pre dev, outips, outnms and len must not be NULL.
-//!
-//! @note
-//! @todo replace with a better version.
-//!
-int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
-{
+/**
+ * Retrieves a given device information (assigned IPs and NMS).
+ *
+ * @param dev [in] name of the device of interest
+ * @param outips [out] list of found IP addresses
+ * @param outnms [out] list of found subnet masks
+ * @param len [out] number of entries in both lists (both lists have the same
+ * number of entries).
+ *
+ * @return EUCA_OK on success and the out fields will be set properly. On failure the
+ *         following error codes are returned:
+ *         - EUCA_ERROR: if we fail to retrieve the interfaces addresses.
+ *         - EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+ *
+ * @pre dev, outips, outnms and len must not be NULL.
+ *
+ * @note
+ * @todo replace with a better version.
+ */
+int getdevinfo(char *dev, u32 **outips, u32 **outnms, int *len) {
     int rc = 0;
     int count = 0;
     char host[NI_MAXHOST] = "";
@@ -686,9 +603,8 @@ int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
                 if ((rc = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST)) == 0) {
                     count++;
 
-                    //! @todo handle graceful out of memory condition and report it
-                    *outips = EUCA_REALLOC(*outips, count, sizeof(u32));
-                    *outnms = EUCA_REALLOC(*outnms, count, sizeof(u32));
+                    *outips = EUCA_REALLOC_C(*outips, count, sizeof(u32));
+                    *outnms = EUCA_REALLOC_C(*outnms, count, sizeof(u32));
 
                     (*outips)[count - 1] = dot2hex(host);
 
@@ -707,76 +623,51 @@ int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
     return (EUCA_OK);
 }
 
-//!
-//! Computes the time difference between the time values in the argument (te - ts).
-//!
-//! @param[in] ts - start time.
-//! @param[in] te - end time.
-//!
-//! @return time difference in milliseconds. If input argument is invalid, return 0.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-long int timer_get_interval_millis(struct timeval *ts, struct timeval *te)
-{
+/**
+ * Computes the time difference between the time values in the argument (te - ts).
+ *
+ * @param ts [in] - start time.
+ * @param te [in] - end time.
+ *
+ * @return time difference in milliseconds. If input argument is invalid, return 0.
+ */
+long int timer_get_interval_millis(struct timeval *ts, struct timeval *te) {
     if ((!ts) || (!te)) {
         return 0;
     }
     return (((te->tv_sec - ts->tv_sec) * 1000) + ((te->tv_usec - ts->tv_usec) / 1000));
 }
 
-//!
-//! Computes the time difference between the time values in the argument (te - ts).
-//!
-//! @param[in] ts - start time.
-//! @param[in] te - end time.
-//!
-//! @return time difference in microseconds. If input argument is invalid, return 0.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-long int timer_get_interval_usec(struct timeval *ts, struct timeval *te)
-{
+/**
+ * Computes the time difference between the time values in the argument (te - ts).
+ *
+ * @param ts [in] - start time.
+ * @param te [in] - end time.
+ *
+ * @return time difference in microseconds. If input argument is invalid, return 0.
+ */
+long int timer_get_interval_usec(struct timeval *ts, struct timeval *te) {
     if ((!ts) || (!te)) {
         return 0;
     }
     return (((te->tv_sec - ts->tv_sec) * 1000000) + (te->tv_usec - ts->tv_usec));
 }
 
-//!
-//! Reads the time since Epoch, and compute the difference with the time in
-//! the argument. The timeval structure in the argument is updated for future
-//! or subsequent calls.
-//!
-//! @param[in] t - the time since Epoch (start time). If NULL, the value 
-//! stored in a static/global variable is used.
-//! Be careful when using this - can lead to wrong results.
-//! t will be updated with the current time.
-//!
-//! @return time difference in milliseconds.
-//!
-//! @see
-//!
-//! @pre start time must have been set with a call to start_timer().
-//!
-//! @post
-//!
-//! @note
-//!
-long int eucanetd_timer(struct timeval *t)
-{
+/**
+ * Reads the time since Epoch, and compute the difference with the time in
+ * the argument. The timeval structure in the argument is updated for future
+ * or subsequent calls.
+ *
+ * @param t [in] - the time since Epoch (start time). If NULL, the value 
+ * stored in a static/global variable is used.
+ * Be careful when using this - can lead to wrong results.
+ * t will be updated with the current time.
+ *
+ * @return time difference in milliseconds.
+ *
+ * @pre start time must have been set with a call to start_timer().
+ */
+long int eucanetd_timer(struct timeval *t) {
     struct timeval cur;
     gettimeofday(&cur, NULL);
     long int ret = 0;
@@ -792,28 +683,21 @@ long int eucanetd_timer(struct timeval *t)
     return ret;
 }
 
-//!
-//! Reads the time since Epoch, and compute the difference with the time in
-//! the argument. The timeval structure in the argument is updated for future
-//! or subsequent calls.
-//!
-//! @param[in] t - the time since Epoch (start time). If NULL, the value 
-//! stored in a static/global variable is used.
-//! Be careful when using this - can lead to wrong results.
-//! t will be updated with the current time.
-//!
-//! @return time difference in microseconds.
-//!
-//! @see
-//!
-//! @pre start time must have been set with a call to start_timer().
-//!
-//! @post
-//!
-//! @note
-//!
-long int eucanetd_timer_usec(struct timeval *t)
-{
+/**
+ * Reads the time since Epoch, and compute the difference with the time in
+ * the argument. The timeval structure in the argument is updated for future
+ * or subsequent calls.
+ *
+ * @param t [in] - the time since Epoch (start time). If NULL, the value 
+ * stored in a static/global variable is used.
+ * Be careful when using this - can lead to wrong results.
+ * t will be updated with the current time.
+ *
+ * @return time difference in microseconds.
+ *
+ * @pre start time must have been set with a call to start_timer().
+ */
+long int eucanetd_timer_usec(struct timeval *t) {
     struct timeval cur;
     gettimeofday(&cur, NULL);
     long int ret = 0;
@@ -842,7 +726,12 @@ long int eucanetd_get_timestamp() {
 }
 
 
-static char **strsplit_on_space(const char* str) {
+/**
+ * Splits a space separated list of words and turn into an array of strings
+ * @param str [in] list of space separated words
+ * @return array of single words. The caller is responsible to release the memory.
+ */
+static char **strsplit_on_space(const char *str) {
     const char* delim = " ";
     size_t tokens_alloc = 1;
     size_t tokens_used = 0;
@@ -866,27 +755,6 @@ static char **strsplit_on_space(const char* str) {
     }
 
     return tokens;
-}
-
-int euca_exec_no_wait(const char *file, ...)
-{
-    int result = 0;
-    char **argv = NULL;
-
-    {
-        va_list va;
-        va_start(va, file);
-        argv = build_argv(file, va);
-        va_end(va);
-        if (argv == NULL)
-            return EUCA_INVALID_ERROR;
-    }
-
-    pid_t pid;
-    result = euca_execvp_fd(&pid, NULL, NULL, NULL, argv);
-    free_char_list(argv);
-
-    return result;
 }
 
 /**
@@ -925,8 +793,7 @@ int euca_exec_wait(int timeout_sec, const char *file, ...) {
  * @param command that should be executed with parameters. Parameters must be separated by one space.
  * @return exit code from executed script
  */
-int euca_exec(const char *command)
-{
+int euca_exec(const char *command) {
     int result = 0;
     pid_t pid;
     int pStatus = -1;

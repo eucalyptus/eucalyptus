@@ -70,14 +70,14 @@ STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../u
 STDINC       +=
  
 # The Eucalyptus Network Library
-LIBNET       := euca_lni euca_gni ipt_handler ips_handler ebt_handler dev_handler eucanetd_util
+LIBNET       := euca_gni ipt_handler ips_handler ebt_handler dev_handler eucanetd_util
 LIBNETOBJS   := $(LIBNET:=.o)
 LIBNETDEPS   := $(LIBNETOBJS) $(STDDEPS)
 LIBNETNAME   := libeucanet.a
 
 # The EUCANETD Cloud Component
-EUCANETD     := eucanetd eucanetd_edge eucanetd_managed eucanetd_managednv 
-EUCANETD     += eucanetd_system eucanetd_static eucanetd_vpc midonet-api euca-to-mido
+EUCANETD     := eucanetd eucanetd_edge  
+EUCANETD     += eucanetd_vpc midonet-api euca-to-mido
 EUCANETDOBJS := $(EUCANETD:=.o)
 EUCANETDDEPS := $(EUCANETDOBJS) $(LIBNETNAME) $(STDDEPS)
 EUCANETDNAME := eucanetd

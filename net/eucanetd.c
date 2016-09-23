@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -104,9 +58,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "euca-to-mido.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
@@ -150,9 +102,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! Global EUCANETD configuration structure
-eucanetdConfig *config = NULL;
-
 //! Global Network Information structure pointer.
 //globalNetworkInfo *globalnetworkinfo = NULL;
 gni_hostname_info *host_info = NULL;
@@ -176,7 +125,7 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_DOMAINNAME", "eucalyptus.internal"}
     ,
-    {"VNET_MODE", NETMODE_MANAGED_NOVLAN}
+    {"VNET_MODE", NETMODE_EDGE}
     ,
     {"VNET_LOCALIP", NULL}
     ,
@@ -190,15 +139,11 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_PRIVATEIPS", NULL}
     ,
-    {"VNET_ROUTER", NULL}
-    ,
     {"VNET_SUBNET", NULL}
     ,
     {"VNET_MACPREFIX", "d0:0d"}
     ,
     {"VNET_ADDRSPERNET", "32"}
-    ,
-    {"DISABLE_TUNNELING", "Y"}
     ,
     {"EUCA_USER", "eucalyptus"}
     ,
@@ -260,11 +205,11 @@ const char *asPeerRoleName[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Global EUCANETD configuration structure
+static eucanetdConfig *config = NULL;
+
 //! Pointer to the proper Network Driver Interface (NDI)
 static driver_handler *pDriverHandler = NULL;
-
-//! Pointer to our Local Netowork Information (LNI) structure
-static lni_t *pLni = NULL;
 
 static globalNetworkInfo *pGni = NULL;
 static globalNetworkInfo *pGniApplied = NULL;
@@ -298,15 +243,16 @@ static void eucanetd_install_signal_handlers(void);
 static int eucanetd_daemonize(void);
 static int eucanetd_fetch_latest_local_config(void);
 static int eucanetd_initialize(void);
-static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig);
+static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig);
+static int eucanetd_cleanup(void);
 static int eucanetd_read_config_bootstrap(void);
 static int eucanetd_setlog_bootstrap(void);
 static int eucanetd_read_config(globalNetworkInfo *pGni);
 static int eucanetd_initialize_logs(void);
-static int eucanetd_fetch_latest_network(boolean * update_globalnet);
-static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet);
-static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean * update_globalnet);
-static int eucanetd_detect_peer(globalNetworkInfo * pGni);
+static int eucanetd_fetch_latest_network(boolean *update_globalnet);
+static int eucanetd_fetch_latest_euca_network(boolean *update_globalnet);
+static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet);
+static int eucanetd_detect_peer(globalNetworkInfo *pGni);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -321,23 +267,21 @@ static int eucanetd_detect_peer(globalNetworkInfo * pGni);
 \*----------------------------------------------------------------------------*/
 
 #ifndef EUCANETD_UNIT_TEST
-//!
-//! EUCANETD application main entry point
-//!
-//! @param[in] argc the number of arguments passed on the command line
-//! @param[in] argv the list of arguments passed on the command line
-//!
-//! @return 0 on success or 1 on failure
-//!
-int main(int argc, char **argv)
-{
+/**
+ * EUCANETD application main entry point
+ *
+ * @param argc [in] the number of arguments passed on the command line
+ * @param argv [in] the list of arguments passed on the command line
+ *
+ * @return 0 on success or 1 on failure
+ */
+int main(int argc, char **argv) {
     u32 scrubResult = EUCANETD_RUN_NO_API;
     int rc = 0;
     int opt = 0;
     int firstrun = 1;
     int counter = 0;
     int epoch_updates = 0;
-    int lni_rc = 0;
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
     time_t epoch_timer = 0;
@@ -347,22 +291,6 @@ int main(int argc, char **argv)
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
     boolean update_version_file = FALSE;
-
-    /*
-       {
-       char *corrid=NULL, meh[75];
-       int i;
-       for (i=0; i<10000; i++) {
-       //            corrid = create_corrid("89bd527c-9a72-4373-95b5-87cc1300c74b::6f585b45-9a75-4dcd-9e9e-c75664c63029");
-       snprintf(meh, 75, "89bd527c-9a72-4373-95b5-87cc1300c74b::6f585b45-9a75-4dcd-9e9e-c75664c63029");
-       corrid = create_corrid(meh);
-       //            corrid = create_corrid("::");
-       //            corrid = create_corrid(NULL);
-       printf("MEH: %s\n", SP(corrid));
-       }
-       exit(0);
-       }
-     */
 
     // initialize
     eucanetd_initialize();
@@ -581,14 +509,6 @@ int main(int argc, char **argv)
     }
     LOGINFO("eucanetd: pre-flight checks complete.\n");
 
-    // Set to setup our local network view structure
-    if ((!pLni) && (!IS_NETMODE_VPCMIDO(pGni))) {
-        if ((pLni = lni_init(config->cmdprefix, config->sIptPreload)) == NULL) {
-            LOGFATAL("Failed to initialize LNI\n");
-            gIsRunning = FALSE;
-        }
-    }
-
     // got all config, enter main loop
     while (gIsRunning) {
         eucanetd_timer(&ttv);
@@ -634,7 +554,7 @@ int main(int argc, char **argv)
 
         // Do we need to run the network upgrade stuff?
         if (pDriverHandler->upgrade) {
-            if (pDriverHandler->upgrade(pGni) == 0) {
+            if (pDriverHandler->upgrade(config, pGni) == 0) {
                 // We no longer need to run it
                 pDriverHandler->upgrade = NULL;
             } else {
@@ -658,7 +578,7 @@ int main(int argc, char **argv)
                     eucanetd_timer(&tv);
                     // Make sure we were given a flush API prior to calling it
                     if (pDriverHandler->system_flush) {
-                        if (pDriverHandler->system_flush(pGni)) {
+                        if (pDriverHandler->system_flush(config, pGni)) {
                             LOGERROR("flushing of euca networking artifacts failed\n");
                         }
                     }
@@ -675,70 +595,57 @@ int main(int argc, char **argv)
             update_version_file = FALSE;
             LOGINFO("new networking state: updating system\n");
 
-            // Are we able to load the LNI information - no need for lni in VPCMIDO
-            if (!IS_NETMODE_VPCMIDO(pGni)) {
-                lni_rc = lni_populate(pLni);
+            //
+            // If we don't have a scrub API, just call all APIs. Any driver design must have this
+            // API defined but for development purpose it make sense to sometimes bypass it.
+            //
+            if (!pDriverHandler->system_scrub) {
+                // Run ALL
+                scrubResult = EUCANETD_RUN_ALL_API;
+            } else {
+                // Scrub the system so see what needs to be done
+                scrubResult = pDriverHandler->system_scrub(config, pGni, pGniApplied);
+                LOGINFO("eucanetd system_scrub executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
             }
-            if (lni_rc == 0) {
-                //
-                // If we don't have a scrub API, just call all APIs. Any driver design must have this
-                // API defined but for development purpose it make sense to sometimes bypass it.
-                //
-                if (!pDriverHandler->system_scrub) {
-                    // Run ALL
-                    scrubResult = EUCANETD_RUN_ALL_API;
-                } else {
-                    // Scrub the system so see what needs to be done
-                    scrubResult = pDriverHandler->system_scrub(pGni, pGniApplied, pLni);
-                    LOGINFO("eucanetd system_scrub executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+            // Make sure the scrub did not fail
+            if ((scrubResult & EUCANETD_RUN_ERROR_API) == 0) {
+                // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
+                if (pDriverHandler->implement_network && (scrubResult & EUCANETD_RUN_NETWORK_API)) {
+                    rc = pDriverHandler->implement_network(config, pGni);
+                    if (rc) {
+                        if (epoch_failed_updates >= 60) {
+                            LOGERROR("could not complete VM network update after 60 retries: check above log errors for details\n");
+                        } else {
+                            LOGWARN("retry (%d): could not complete VM network update: retrying\n", epoch_failed_updates);
+                        }
+                        update_globalnet_failed = TRUE;
+                    } else {
+                        LOGINFO("eucanetd implement_network executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+                    }
                 }
-                
-                // Make sure the scrub did not fail
-                if ((scrubResult & EUCANETD_RUN_ERROR_API) == 0) {
-                    // update network artifacts (devices, tunnels, etc.) if the scrub indicate so
-                    if (pDriverHandler->implement_network && (scrubResult & EUCANETD_RUN_NETWORK_API)) {
-                        rc = pDriverHandler->implement_network(pGni, pLni);
-                        if (rc) {
-                            if (epoch_failed_updates >= 60) {
-                                LOGERROR("could not complete VM network update after 60 retries: check above log errors for details\n");
-                            } else {
-                                LOGWARN("retry (%d): could not complete VM network update: retrying\n", epoch_failed_updates);
-                            }
-                            update_globalnet_failed = TRUE;
-                        } else {
-                            LOGINFO("eucanetd implement_network executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-                        }
+                // update security groups, membership, etc. if the scrub indicate so
+                if (pDriverHandler->implement_sg && (scrubResult & EUCANETD_RUN_SECURITY_GROUP_API)) {
+                    rc = pDriverHandler->implement_sg(config, pGni);
+                    if (rc) {
+                        LOGERROR("could not complete update of security groups: check above log errors for details\n");
+                        update_globalnet_failed = TRUE;
+                    } else {
+                        LOGINFO("eucanetd implement_sg executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
                     }
-                    // update security groups, membership, etc. if the scrub indicate so
-                    if (pDriverHandler->implement_sg && (scrubResult & EUCANETD_RUN_SECURITY_GROUP_API)) {
-                        rc = pDriverHandler->implement_sg(pGni, pLni);
-                        if (rc) {
-                            LOGERROR("could not complete update of security groups: check above log errors for details\n");
-                            update_globalnet_failed = TRUE;
-                        } else {
-                            LOGINFO("eucanetd implement_sg executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-                        }
-                    }
-                    // update IP addressing, elastic IPs, etc. if the scrub indicate so
-                    if (pDriverHandler->implement_addressing && (scrubResult & EUCANETD_RUN_ADDRESSING_API)) {
-                        rc = pDriverHandler->implement_addressing(pGni, pLni);
-                        if (rc) {
-                            LOGERROR("could not complete VM addressing update: check above log errors for details\n");
-                            update_globalnet_failed = TRUE;
-                        } else {
-                            LOGINFO("eucanetd implement_addressing executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-                        }
-                    }
-                } else {
-                    LOGERROR("could not complete VM network update: check above log errors for details\n");
-                    update_globalnet_failed = TRUE;
                 }
-                // We're done with our local network view, reset it before the next populate
-                if (!IS_NETMODE_VPCMIDO(pGni)) {
-                    LNI_RESET(pLni);
+                // update IP addressing, elastic IPs, etc. if the scrub indicate so
+                if (pDriverHandler->implement_addressing && (scrubResult & EUCANETD_RUN_ADDRESSING_API)) {
+                    rc = pDriverHandler->implement_addressing(config, pGni);
+                    if (rc) {
+                        LOGERROR("could not complete VM addressing update: check above log errors for details\n");
+                        update_globalnet_failed = TRUE;
+                    } else {
+                        LOGINFO("eucanetd implement_addressing executed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+                    }
                 }
             } else {
-                LOGERROR("Failed to populate our local network view. Check above logs for details.\n");
+                LOGERROR("could not complete VM network update: check above log errors for details\n");
                 update_globalnet_failed = TRUE;
             }
         }
@@ -768,13 +675,13 @@ int main(int argc, char **argv)
         epoch_checks++;
         if (gUsr1Caught) {
             if (pDriverHandler->handle_signal) {
-                pDriverHandler->handle_signal(pGni, SIGUSR1);
+                pDriverHandler->handle_signal(config, pGni, SIGUSR1);
             }
             gUsr1Caught = FALSE;
         }
         if (gUsr2Caught) {
             if (pDriverHandler->handle_signal) {
-                pDriverHandler->handle_signal(pGni, SIGUSR2);
+                pDriverHandler->handle_signal(config, pGni, SIGUSR2);
             }
             gUsr2Caught = FALSE;
         }
@@ -787,7 +694,7 @@ int main(int argc, char **argv)
 
         if ((update_globalnet_failed == FALSE) && (update_globalnet == FALSE) && (gIsRunning == TRUE)) {
             if (pDriverHandler->system_maint) {
-                rc = pDriverHandler->system_maint(pGniApplied, pLni);
+                rc = pDriverHandler->system_maint(config, pGniApplied);
                 if (rc != 0) {
                     LOGWARN("Failed to execute maintenance for %s.\n", pDriverHandler->name);
                 }
@@ -820,53 +727,35 @@ int main(int argc, char **argv)
     LOGINFO("eucanetd going down.\n");
 
     if (pDriverHandler->cleanup) {
-        LOGINFO("Cleaning up '%s' network driver on termination.\n", pDriverHandler->name);
-        if (pDriverHandler->cleanup(pGni, config->flushmode) != 0) {
+        if (pDriverHandler->cleanup(config, pGni, FALSE) != 0) {
             LOGERROR("Failed to cleanup '%s' network driver.\n", pDriverHandler->name);
         }
     }
 
-    //gni_hostnames_free(host_info);
+    eucanetd_cleanup();
     GNI_FREE(gni_a);
     GNI_FREE(gni_b);
-    LNI_FREE(pLni);
 
     LOGINFO("=== eucanetd down ===\n");
     exit(0);
 }
 #endif /* ! EUCANETD_UNIT_TEST */
 
-//!
-//! Handles the SIGTERM signal
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static void eucanetd_sigterm_handler(int signal)
-{
+/**
+ * Handles the SIGTERM signal
+ * @param signal [in] received signal number (SIGTERM is expected)
+ */
+static void eucanetd_sigterm_handler(int signal) {
     LOGINFO("eucanetd caught SIGTERM signal.\n");
     gIsRunning = FALSE;
     gTermCaught = TRUE;
 }
 
-//!
-//! Handles the SIGHUP signal
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static void eucanetd_sighup_handler(int signal)
-{
+/**
+ * Handles the SIGHUP signal
+ * @param signal [in] received signal number (SIGHUP is expected)
+ */
+static void eucanetd_sighup_handler(int signal) {
     LOGINFO("eucanetd caught a SIGHUP signal.\n");
     config->flushmode = FLUSH_NONE;
     gHupCaught = TRUE;
@@ -874,7 +763,7 @@ static void eucanetd_sighup_handler(int signal)
 
 /**
  * Handles SIGUSR1 signal.
- * @param signal received signal number.
+ * @param signal [in] received signal number.
  */
 static void eucanetd_sigusr1_handler(int signal) {
     LOGDEBUG("eucanetd caught a SIGUSR1 (%d) signal.\n", signal);
@@ -883,24 +772,16 @@ static void eucanetd_sigusr1_handler(int signal) {
 
 /**
  * Handles SIGUSR1 signal.
- * @param signal received signal number.
+ * @param signal [in] received signal number.
  */
 static void eucanetd_sigusr2_handler(int signal) {
     LOGDEBUG("eucanetd caught a SIGUSR2 (%d) signal.\n", signal);
     gUsr2Caught = TRUE;
 }
 
-//!
-//! Installs signal handlers for this application
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Installs signal handlers for this application
+ */
 static void eucanetd_install_signal_handlers(void) {
     struct sigaction act = { {0} };
 
@@ -934,21 +815,15 @@ static void eucanetd_install_signal_handlers(void) {
     }
 }
 
-//!
-//! Function description.
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-static int eucanetd_fetch_latest_local_config(void)
-{
+/**
+ * Check eucanetd config files for changes
+ *
+ * @return always 0.
+ *
+ * @note
+ *     Currently only /etc/eucalyptus/eucalyptus.conf is checked
+ */
+static int eucanetd_fetch_latest_local_config(void) {
     if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {
         // config modification time has changed
         if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
@@ -962,23 +837,16 @@ static int eucanetd_fetch_latest_local_config(void)
     return (0);
 }
 
-//!
-//! Daemonize switches user (drop priv), closes FDs, and back-grounds
-//!
-//! @return 0 or exits
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post On success, the process has been daemonized; STDIN, STDOUT and STDERR
-//!       have been closed (non-debug); and the daemon has been setup properly.
-//!       On failure, the process will exit.
-//!
-//! @note
-//!
-static int eucanetd_daemonize(void)
-{
+/**
+ * Daemonize switches user (drop priv), closes FDs, and back-grounds
+ *
+ * @return 0 or exits
+ *
+ * @post On success, the process has been daemonized; STDIN, STDOUT and STDERR
+ *       have been closed (non-debug); and the daemon has been setup properly.
+ *       On failure, the process will exit.
+ */
+static int eucanetd_daemonize(void) {
     int pid, sid;
     struct passwd *pwent = NULL;
     char pidfile[EUCA_MAX_PATH];
@@ -1039,20 +907,14 @@ static int eucanetd_daemonize(void)
     return (0);
 }
 
-//!
-//! Initialize eucanetd service
-//!
-//! @return 0 on success or exits with a value of 1 on failure
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post On success, eucanetd service has been initialized. On
-//!       failure, the process will be terminated
-//!
-//! @note
-//!
+/**
+ * Initialize eucanetd service
+ *
+ * @return 0 on success or exits with a value of 1 on failure
+ *
+ * @post On success, eucanetd service has been initialized. On
+ *       failure, the process will be terminated
+ */
 static int eucanetd_initialize(void) {
     if (!config) {
         config = EUCA_ZALLOC_C(1, sizeof(eucanetdConfig));
@@ -1064,25 +926,14 @@ static int eucanetd_initialize(void) {
     return (0);
 }
 
-//!
-//! Initialize the network drivers. When implementing a new network driver, simply set
-//! the global 'pDriverHandler' variable to your new driver callback structure.
-//!
-//! @param[in] pConfig a pointer to the eucanetd configuration structure
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see
-//!
-//! @pre The pConfig parameter must not be NULL
-//!
-//! @post On success, the proper driver handler is selected and the driver initialization
-//!       routine has been called. On failure, the state of the driver is left undetermined.
-//!
-//! @note
-//!
-static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig)
-{
+/**
+ * Initialize the network drivers. When implementing a new network driver, simply set
+ * the global 'pDriverHandler' variable to your new driver callback structure.
+ * @param pConfig [in] a pointer to the eucanetd configuration structure
+ * @return On success, the proper driver handler is selected and the driver initialization
+ * routine has been called. On failure, the state of the driver is left undetermined.
+ */
+static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig) {
     // Make sure our given parameter is valid
     if (pConfig) {
         LOGINFO("Loading '%s' mode driver.\n", pConfig->netMode);
@@ -1090,10 +941,6 @@ static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig)
             pDriverHandler = &edgeDriverHandler;
         } else if (IS_NETMODE_VPCMIDO(pConfig)) {
             pDriverHandler = &midoVpcDriverHandler;
-        } else if (IS_NETMODE_MANAGED(pConfig)) {
-            pDriverHandler = &managedDriverHandler;
-        } else if (IS_NETMODE_MANAGED_NOVLAN(pConfig)) {
-            pDriverHandler = &managedNoVlanDriverHandler;
         } else {
             LOGERROR("Invalid network mode '%s' configured!\n", pConfig->netMode);
             return (1);
@@ -1109,6 +956,28 @@ static int eucanetd_initialize_network_drivers(eucanetdConfig * pConfig)
         return (0);
     }
     return (1);
+}
+
+/**
+ * Cleanup eucanetd service
+ *
+ * @return always 0.
+ *
+ * @post On success, resources initialized by eucanetd service is cleaned
+ */
+static int eucanetd_cleanup(void) {
+    if (config) {
+        EUCA_FREE(config->eucahome);
+        EUCA_FREE(config->eucauser);
+        ipt_handler_close(config->ipt);
+        ips_handler_close(config->ips);
+        ebt_handler_close(config->ebt);
+    }
+
+    config->polling_frequency = 5;
+    config->init = 1;
+    
+    return (0);
 }
 
 /**
@@ -1150,7 +1019,6 @@ static int eucanetd_read_config_bootstrap(void) {
 static int eucanetd_setlog_bootstrap(void) {
     int ret = 0;
     char logfile[EUCA_MAX_PATH] = "";
-    //struct passwd *pwent = NULL;
 
     ret = 0;
 
@@ -1159,20 +1027,6 @@ static int eucanetd_setlog_bootstrap(void) {
             snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
             log_file_set(logfile, NULL);
             log_params_set(EUCA_LOG_INFO, 0, 100000);
-
-/*
-            pwent = getpwnam(config->eucauser);
-            if (!pwent) {
-                fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
-                exit(1);
-            }
-
-            if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
-                perror("chown()");
-                fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
-                exit(1);
-            }
-*/
             break;
         case EUCANETD_DEBUG_TRACE:
             log_params_set(EUCA_LOG_TRACE, 0, 100000);
@@ -1190,24 +1044,15 @@ static int eucanetd_setlog_bootstrap(void) {
     return (ret);
 }
 
-//!
-//! Reads the eucalyptus.conf configuration file and pull the important fields. It
-//! also attempt to read the global network information XML and starts applying some
-//! of these configuration to the system.
-//!
-//! @return 0 on success or 1 on failure. If any FATAL error occurs, the
-//!         process fill exit with an exit code of 1.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static int eucanetd_read_config(globalNetworkInfo *pGni)
-{
+/**
+ * Reads the eucalyptus.conf configuration file and pull the important fields. It
+ * also attempt to read the global network information XML and starts applying some
+ * of these configuration to the system.
+ *
+ * @return 0 on success or 1 on failure. If any FATAL error occurs, the
+ *         process fill exit with an exit code of 1.
+ */
+static int eucanetd_read_config(globalNetworkInfo *pGni) {
     int i = 0;
     int rc = 0;
     int ret = 0;
@@ -1306,7 +1151,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
-    cvals[EUCANETD_CVAL_DISABLE_TUNNELING] = configFileValue("DISABLE_TUNNELING");
     cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
     cvals[EUCANETD_CVAL_NC_ROUTER] = configFileValue("NC_ROUTER");
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
@@ -1352,12 +1196,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         config->metadata_use_vm_private = 1;
     } else {
         config->metadata_use_vm_private = 0;
-    }
-
-    if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_TUNNELING], "Y")) {
-        config->disableTunnel = TRUE;
-    } else {
-        config->disableTunnel = FALSE;
     }
 
     config->localIp = 0;
@@ -1449,57 +1287,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
         ret = 1;
     }
 
-    if (!IS_NETMODE_VPCMIDO(pGni)) {
-        config->ipt = EUCA_ZALLOC_C(1, sizeof (ipt_handler));
-
-        rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-        if (rc) {
-            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
-            ret = 1;
-        }
-
-        config->ips = EUCA_ZALLOC_C(1, sizeof (ips_handler));
-
-        rc = ips_handler_init(config->ips, config->cmdprefix);
-        if (rc) {
-            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
-            ret = 1;
-        }
-
-        config->ebt = EUCA_ZALLOC_C(1, sizeof (ebt_handler));
-
-        rc = ebt_handler_init(config->ebt, config->cmdprefix);
-        if (rc) {
-            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
-            ret = 1;
-        }
-
-        //
-        // If an error has occurred we need to clean up temporary files
-        // that were created for the iptables, ebtables, ipset
-        //
-        if (ret) {
-            //
-            // These config handlers could be NULL, unlink_handler_file method call will handle NULL filenames
-            // We need to free the memory as read_config() will get called again until registered with the cloud.
-            //
-            if (config->ips) {
-                unlink_handler_file(config->ips->ips_file);
-                EUCA_FREE(config->ips);
-            }
-            if (config->ipt) {
-                unlink_handler_file(config->ipt->ipt_file);
-                EUCA_FREE(config->ipt);
-            }
-            if (config->ebt) {
-                unlink_handler_file(config->ebt->ebt_filter_file);
-                unlink_handler_file(config->ebt->ebt_nat_file);
-                unlink_handler_file(config->ebt->ebt_asc_file);
-                EUCA_FREE(config->ebt);
-            }
-        }
-    }
-
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
         EUCA_FREE(cvals[i]);
     }
@@ -1507,19 +1294,13 @@ static int eucanetd_read_config(globalNetworkInfo *pGni)
     return (ret);
 }
 
-//!
-//! Initialize the logging services
-//!
-//! @return Always returns 0
-//!
-//! @see log_file_set(), configReadLogParams(), log_params_set(), log_prefix_set()
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Initialize the logging services
+ *
+ * @return Always returns 0
+ *
+ * @see log_file_set(), configReadLogParams(), log_params_set(), log_prefix_set()
+ */
 static int eucanetd_initialize_logs(void)
 {
     int log_level = 0;
@@ -1565,23 +1346,14 @@ static int eucanetd_initialize_logs(void)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] update_globalnet
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-static int eucanetd_fetch_latest_network(boolean * update_globalnet)
-{
+/**
+ * Checks if the contents of the global network information has changed.
+ *
+ * @param update_globalnet [out] set to true if the network information changed
+ *
+ * @return 0 on success. 1 on failure.
+ */
+static int eucanetd_fetch_latest_network(boolean *update_globalnet) {
     int rc = 0, ret = 0;
 
     LOGTRACE("fetching latest network view\n");
@@ -1607,23 +1379,14 @@ static int eucanetd_fetch_latest_network(boolean * update_globalnet)
     return (ret);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] update_globalnet
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
-{
+/**
+ * Checks if the contents of the global network information has changed.
+ *
+ * @param update_globalnet [out] set to true if the network information changed
+ *
+ * @return 0 on success. 1 on failure.
+ */
+static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet) {
     int rc = 0, ret = 0;
 
     rc = atomic_file_get(&(config->global_network_info_file), update_globalnet);
@@ -1635,21 +1398,13 @@ static int eucanetd_fetch_latest_euca_network(boolean * update_globalnet)
     return (ret);
 }
 
-//!
-//! Function description.
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet)
-{
+/**
+ * Retrieves and parses the latest network information
+ * @param pGni [out] globalNetworkInfo data structure where parsed data will be stored
+ * @param update_globalnet [out] set to FALSE if no update is necessary
+ * @return 0  on success. 1 on failure.
+ */
+static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet) {
     int i = 0;
     int rc = 0;
     int ret = 0;
@@ -1675,7 +1430,6 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
         ret = 1;
     } else {
         gni_print(pGni);
-        //gni_hostnames_print(host_info);
 
         // regardless, if the last successfully applied version matches the current GNI version, skip the update
         if ((strlen(pGni->version) && strlen(config->lastAppliedVersion))) {
@@ -1759,21 +1513,13 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
     return (ret);
 }
 
-//!
-//! Checks whether we are running alongside a CC or NC service
-//!
-//! @param[in] pGni a pointer to our global network information structure
-//!
-//! @return Returns the proper role associated with this service
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Checks whether we are running alongside a CC or NC service
+ *
+ * @param pGni [in] a pointer to our global network information structure
+ *
+ * @return Returns the proper role associated with this service
+ */
 static int eucanetd_detect_peer(globalNetworkInfo * pGni)
 {
     gni_node *pNode = NULL;

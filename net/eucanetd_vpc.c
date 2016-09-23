@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -79,14 +33,18 @@
 //!     - a - indicates an array of objects (example: int aAnArrayOfInteger[10])
 //!     - g - indicates a variable with global scope to the file or application (example: static eucanetdConfig gConfig)
 //!
-//! The network driver APIs must implement the following function:
+//! The network driver APIs must implement the following functions:
 //!     - network_driver_init()
 //!     - network_driver_cleanup()
 //!     - network_driver_system_flush()
 //!     - network_driver_system_scrub()
+//!     Optional functions:
+//!     - network_driver_upgrade()
 //!     - network_driver_implement_network()
 //!     - network_driver_implement_sg()
 //!     - network_driver_implement_addressing()
+//!     - network_driver_system_maint()
+//!     - network_driver_handle_signal()
 //!
 //! Any other function implemented within the scope of this network driver must have its name
 //! start with the mode name followed by an underscore and the rest of the function name. For example,
@@ -134,9 +92,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
 #include "euca-to-mido.h"
@@ -209,12 +165,15 @@ mido_config *pMidoConfig = NULL;
 //! @{
 //! @name MIDONET VPC Mode Network Driver APIs
 static int network_driver_init(eucanetdConfig *pConfig);
-static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
-static int network_driver_system_flush(globalNetworkInfo *pGni);
-static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni,
-        globalNetworkInfo *pGniApplied, lni_t *pLni);
-static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal);
+//static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
+static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied);
+//static int network_driver_implement_network(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+//static int network_driver_implement_sg(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+//static int network_driver_implement_addressing(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_handle_signal(eucanetdConfig *pConfig, globalNetworkInfo *pGni, int signal);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -255,29 +214,16 @@ struct driver_handler_t midoVpcDriverHandler = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Initialize the network driver.
-//!
-//! @param[in] pConfig a pointer to our application configuration
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre
-//!     - The core application configuration must be completed prior calling
-//!     - The driver should not be already initialized (if its the case, a no-op will occur)
-//!     - The pConfig parameter must not be NULL
-//!
-//! @post
-//!     On success the driver is properly configured. On failure, the state of
-//!     the driver is non-deterministic. If the driver was previously initialized,
-//!     this will result into a no-op.
-//!
-//! @note
-//!
-static int network_driver_init(eucanetdConfig * pConfig)
-{
+/**
+ * Initialize this network driver.
+ * - The core application configuration must be completed prior calling
+ * - The driver should not be already initialized (if its the case, a no-op will occur)
+ * - The pConfig parameter must not be NULL
+ *
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_init(eucanetdConfig *pConfig) {
     int rc = 0;
 
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
@@ -310,33 +256,22 @@ static int network_driver_init(eucanetdConfig * pConfig)
     return (0);
 }
 
-//!
-//! Cleans up the network driver. This will work even if the initial initialization
-//! fail for any reasons. This will reset anything that could have been half-way or
-//! fully configured. If forceFlush is set, then a network flush will be performed.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] forceFlush set to TRUE if a network flush needs to be performed
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre
-//!     The driver should have been initialized already
-//!
-//! @post
-//|     On success, the network driver has been cleaned up and the system flushed
-//!     if forceFlush was set. On failure, the system state will be non-deterministic.
-//!
-//! @note
-//!
-static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
-{
+/**
+ * Cleans up the network driver. This will work even if the initial initialization
+ * fail for any reasons. This will reset anything that could have been half-way or
+ * fully configured. If forceFlush is set, then a network flush will be performed.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param forceFlush [in] set to TRUE if a network flush needs to be performed
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush) {
     int ret = 0;
 
+    LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
+
     if (forceFlush) {
-        if (network_driver_system_flush(pGni)) {
+        if (network_driver_system_flush(pConfig, pGni)) {
             LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
             ret = 1;
         }
@@ -346,26 +281,14 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
     return (ret);
 }
 
-//!
-//! Responsible for flushing any networking artifacts implemented by this
-//! network driver.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//!
-//! @return 0 on success or 1 if any failure occurred.
-//!
-//! @see
-//!
-//! @pre
-//!     The driver must be initialized already
-//!
-//! @post
-//!     On success, all networking mode artifacts will be flushed from the system. If any
-//!     failure occurred, the system is left in a non-deterministic state and a subsequent
-//!     call to this API may resolve the remaining issues.
-//!
-static int network_driver_system_flush(globalNetworkInfo *pGni)
-{
+/**
+ * Responsible for flushing any networking artifacts implemented by this
+ * network driver.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
 
@@ -455,26 +378,16 @@ static int network_driver_system_flush(globalNetworkInfo *pGni)
     return (ret);
 }
 
-//!
-//! Maintenance activities to be executed when eucanetd is idle between polls.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return 0 on success, 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!     - pGni must not be NULL. pLni is ignored.
-//!     - The driver must be initialized prior to calling this API.
-//!
-//! @post
-//!
-//! @note
-//!
-static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
-{
+/**
+ * This API is invoked when eucanetd will potentially be idle. For example, after
+ * populating the global network state, eucanetd detects that no action needs to
+ * be taken. Good for pre-populating cache, or flushing dirty cache - so these
+ * actions are not necessary in the regular iteration.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     struct timeval tv;
     
@@ -486,92 +399,27 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni)
         LOGERROR("Failed to run maintenance activities. Driver '%s' not initialized.\n", DRIVER_NAME());
         return (1);
     }
-    // Need a valid global network view
-    if (!pGni) {
-        return (0);
-    }
 
     // Make sure midoname buffer is available
     midonet_api_cache_midos_init();
 
+    pMidoConfig->config = pConfig;
     rc = do_midonet_maint(pMidoConfig);
     return (rc);
 }
 
-//!
-//! This API is invoked when eucanetd catches an USR1 or USR2 signal.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] signal received signal
-//!
-//! @return 0 on success, 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!     - pGni must not be NULL
-//!     - The driver must be initialized prior to calling this API.
-//!
-//! @post
-//!
-//! @note
-//!
-static int network_driver_handle_signal(globalNetworkInfo *pGni, int signal) {
-    LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
-
-    // Is the driver initialized?
-    if (!IS_INITIALIZED()) {
-        LOGERROR("Failed to handle signal. Driver '%s' not initialized.\n", DRIVER_NAME());
-        return (1);
-    }
-    // Is the global network view structure NULL?
-    if (!pGni) {
-        LOGERROR("Failed to handle signal for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
-        return (1);
-    }
-
-    switch (signal) {
-        case SIGUSR1:
-            mido_info_midonetapi();
-            mido_info_http_count_total();
-            mido_info_midocache();
-            char *bgprecovery = NULL;
-            bgprecovery = discover_mido_bgps(pMidoConfig);
-            if (bgprecovery && strlen(bgprecovery)) {
-                LOGINFO("\nmido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
-            }
-            EUCA_FREE(bgprecovery);
-            break;
-        case SIGUSR2:
-            LOGINFO("Going to invalidate midocache\n");
-            midocache_invalid = 1;
-            break;
-        default:
-            break;
-    }
-    return (0);
-}
-
-//!
-//! For MIDONET VPC mode, all is done in this driver API.
-//!
-//! @param[in] pGni a pointer to the Global Network Information structure
-//! @param[in] pLni a pointer to the Local Network Information structure
-//!
-//! @return EUCANETD_RUN_NO_API or EUCANETD_RUN_ERROR_API
-//!
-//! @see
-//!
-//! @pre
-//!     - Both pGni and pLni must not be NULL
-//!     - The driver must be initialized prior to calling this API.
-//!
-//! @post
-//!
-//! @note
-//!
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni)
-{
+/**
+ * This API checks the new GNI against the system view to decide what really
+ * needs to be done.
+ * For MIDONET VPC mode, all is done in this driver API.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param pGniApplied [in] a pointer to the previously successfully implemented GNI
+ * @return A bitmask indicating what needs to be done. The following bits are
+ *         the ones to look for: EUCANETD_RUN_NETWORK_API, EUCANETD_RUN_SECURITY_GROUP_API
+ *         and EUCANETD_RUN_ADDRESSING_API.
+ */
+static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied) {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
     char versionFile[EUCA_MAX_PATH];
@@ -604,7 +452,7 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
     bzero(versionFile, EUCA_MAX_PATH);
 
     // Need a valid global network view
-    if (!pGni) {
+    if (!pConfig || !pGni) {
         LOGERROR("Failed to scrub the system for '%s' network driver. Invalid parameters provided.\n", DRIVER_NAME());
         return (ret);
     }
@@ -612,16 +460,12 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
     if (!IS_INITIALIZED() || (pGni && pGniApplied && cmp_gni_vpcmido_config(pGni, pGniApplied))) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
-            eucanetdConfig *configbak = pMidoConfig->config;
             free_mido_config(pMidoConfig);
-            pMidoConfig->config = configbak;
+            pMidoConfig->config = pConfig;
         } else {
             LOGERROR("failed to (re)initialize config options: VPCMIDO driver not initialized\n");
             return (EUCANETD_RUN_ERROR_API);
         }
-        //rc = initialize_mido(pMidoConfig, config->eucahome, config->flushmode,
-        //        config->disable_l2_isolation, config->midoeucanetdhost, config->midogwhosts,
-        //        config->midopubnw, config->midopubgwip, "169.254.0.0", "17");
         rc = initialize_mido(pMidoConfig, pMidoConfig->config, "169.254.0.0", "17");
         if (rc) {
             LOGERROR("failed to (re)initialize config options\n");
@@ -646,3 +490,47 @@ static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInf
 
     return (ret);
 }
+
+/**
+ * This API is invoked when eucanetd catches an USR1 or USR2 signal.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param signal [in] received signal
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_handle_signal(eucanetdConfig *pConfig, globalNetworkInfo *pGni, int signal) {
+    LOGTRACE("Handling singal %d for '%s' network driver.\n", signal, DRIVER_NAME());
+
+    // Is the driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Failed to handle signal. Driver '%s' not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+
+    if (!pConfig) {
+        LOGERROR("Invalid argument: cannot handle signal with NULL config.\n");
+        return (1);
+    }
+    pMidoConfig->config = pConfig;
+    switch (signal) {
+        case SIGUSR1:
+            mido_info_midonetapi();
+            mido_info_http_count_total();
+            mido_info_midocache();
+            char *bgprecovery = NULL;
+            bgprecovery = discover_mido_bgps(pMidoConfig);
+            if (bgprecovery && strlen(bgprecovery)) {
+                LOGINFO("\nmido BGP configuration (for manual recovery):\n%s\n", bgprecovery);
+            }
+            EUCA_FREE(bgprecovery);
+            break;
+        case SIGUSR2:
+            LOGINFO("Going to invalidate midocache\n");
+            midocache_invalid = 1;
+            break;
+        default:
+            break;
+    }
+    return (0);
+}
+

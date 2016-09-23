@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -79,14 +33,18 @@
 //!     - a - indicates an array of objects (example: int aAnArrayOfInteger[10])
 //!     - g - indicates a variable with global scope to the file or application (example: static eucanetdConfig gConfig)
 //!
-//! The network driver APIs must implement the following function:
+//! The network driver APIs must implement the following functions:
 //!     - network_driver_init()
 //!     - network_driver_cleanup()
 //!     - network_driver_system_flush()
 //!     - network_driver_system_scrub()
+//!     Optional functions:
+//!     - network_driver_upgrade()
 //!     - network_driver_implement_network()
 //!     - network_driver_implement_sg()
 //!     - network_driver_implement_addressing()
+//!     - network_driver_system_maint()
+//!     - network_driver_handle_signal()
 //!
 //! Any other function implemented within the scope of this network driver must have its name
 //! start with the mode name followed by an underscore and the rest of the function name. For example,
@@ -126,9 +84,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
 #include "eucanetd_edge.h"
@@ -204,15 +160,16 @@ static int edgeMaintCount = 0;
 
  //! @{
  //! @name EDGE Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig *pEucanetdConfig);
-static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
-static int network_driver_upgrade(globalNetworkInfo *pGni);
-static int network_driver_system_flush(globalNetworkInfo *pGni);
-static u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni);
-//static int network_driver_implement_network(globalNetworkInfo *pGni, lni_t *pLni);
-//static int network_driver_implement_sg(globalNetworkInfo *pGni, lni_t *pLni);
-//static int network_driver_implement_addressing(globalNetworkInfo *pGni, lni_t *pLni);
-static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
+static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
+static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied);
+//static int network_driver_implement_network(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+//static int network_driver_implement_sg(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+//static int network_driver_implement_addressing(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+//static int network_driver_handle_signal(eucanetdConfig *pConfig, globalNetworkInfo *pGni, int signal);
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -267,7 +224,9 @@ struct driver_handler_t edgeDriverHandler = {
  *       the driver is non-deterministic. If the driver was previously initialized,
  *       this will result into a no-op.
  */
-static int network_driver_init(eucanetdConfig * pEucanetdConfig) {
+static int network_driver_init(eucanetdConfig *pEucanetdConfig) {
+    int rc = 0;
+    int ret = 0;
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
 
     // Make sure our given pointer is valid
@@ -280,7 +239,43 @@ static int network_driver_init(eucanetdConfig * pEucanetdConfig) {
         LOGERROR("Networking '%s' mode already initialized. Skipping!\n", DRIVER_NAME());
         return (0);
     }
-    
+
+    if (!pEucanetdConfig->ipt) {
+        pEucanetdConfig->ipt = EUCA_ZALLOC_C(1, sizeof (ipt_handler));
+        rc = ipt_handler_init(pEucanetdConfig->ipt, pEucanetdConfig->cmdprefix, NULL);
+        if (rc) {
+            LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
+            ret = 1;
+        } else {
+            ipt_handler_free(pEucanetdConfig->ipt);
+        }
+    }
+    if (!pEucanetdConfig->ips) {
+        pEucanetdConfig->ips = EUCA_ZALLOC_C(1, sizeof (ips_handler));
+        rc = ips_handler_init(pEucanetdConfig->ips, pEucanetdConfig->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ips_handler: check above log errors for details\n");
+            ret = 1;
+        } else {
+            ips_handler_free(pEucanetdConfig->ips);
+        }
+    }
+    if (!pEucanetdConfig->ebt) {
+        pEucanetdConfig->ebt = EUCA_ZALLOC_C(1, sizeof (ebt_handler));
+        rc = ebt_handler_init(pEucanetdConfig->ebt, pEucanetdConfig->cmdprefix);
+        if (rc) {
+            LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
+            ret = 1;
+        } else {
+            ebt_handler_free(pEucanetdConfig->ebt);
+        }
+    }
+    if (ret) {
+        EUCA_FREE(pEucanetdConfig->ipt);
+        EUCA_FREE(pEucanetdConfig->ips);
+        EUCA_FREE(pEucanetdConfig->ebt);
+        return (1);
+    }
     netmeter = EUCA_ZALLOC_C(1, sizeof (edge_netmeter));
     edgeConfig_a = EUCA_ZALLOC_C(1, sizeof (edge_config));
     edgeConfig_a->config = pEucanetdConfig;
@@ -296,27 +291,85 @@ static int network_driver_init(eucanetdConfig * pEucanetdConfig) {
 }
 
 /**
+ * Upgrades 4.3 EDGE constructs to 4.4 EDGE constructs.
+ * iptables chain names and ipset names are changed from EU_hash to sg-xxxxxxxx
+ * naming style. Pre 4.3 iptables chains and ipsets are cleared - necessary iptables
+ * chains and ipsets are created in the first successful eucanetd iteration.
+ * 
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * 
+ * @post
+ *     - On success all EU_hash iptables chains and ipsets are flushed
+ *     - On failure, the system is left in an undetermined state
+ *
+ * @TODO:
+ *     This will not be needed for 4.4+ (if upgrade path from 4.3 is not supported)
+ */
+static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
+    int rc = 0;
+    int ret = 0;
+
+    LOGINFO("Upgrade 4.3 '%s' network driver artifacts.\n", DRIVER_NAME());
+
+    if (!pConfig) {
+        LOGWARN("Invalid argument: cannot upgrade with NULL config\n");
+        return (1);
+    }
+    // this only applies to NC components
+    if (!PEER_IS_NC(eucanetdPeer)) {
+        // no-op
+        return (0);
+    }
+    // Is our driver initialized?
+    if (!IS_INITIALIZED()) {
+        LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
+        return (1);
+    }
+    // iptables
+    ipt_handler_repopulate(pConfig->ipt);
+    // delete legacy (pre 4.4) chains
+    ipt_table_deletechainmatch(pConfig->ipt, "filter", "EU_");
+    ipt_chain_flush(pConfig->ipt, "filter", "EUCA_FILTER_FWD");
+    ipt_table_add_chain(pConfig->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", "-", "[0:0]");
+    ipt_chain_add_rule(pConfig->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_FILTER_FWD_DROPPED");
+    ipt_handler_print(pConfig->ipt);
+    rc = ipt_handler_deploy(pConfig->ipt);
+    if (rc) {
+        LOGERROR("Failed to upgrade 4.3 %s IP Tables artifacts.\n", DRIVER_NAME());
+        ret = 1;
+    }
+    // ipsets
+    ips_handler_repopulate(pConfig->ips);
+    // delete legacy (pre 4.4) ipsets
+    ips_handler_deletesetmatch(pConfig->ips, "EU_");
+    ips_handler_print(pConfig->ips);
+    rc = ips_handler_deploy(pConfig->ips, 1);
+    if (rc) {
+        LOGERROR("Failed to upgrade 4.3 %s ipset artifacts.\n", DRIVER_NAME());
+        ret = 1;
+    }
+    // ebtables
+    // no upgrade operation required
+
+    return (ret);
+}
+
+/**
  * Cleans up the network driver. This will work even if the initial initialization
  * fail for any reasons. This will reset anything that could have been half-way or
  * fully configured. If forceFlush is set, then a network flush will be performed.
- *
- * 
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
  * @param pGni [in] a pointer to the Global Network Information structure
  * @param forceFlush [in] set to TRUE if a network flush needs to be performed
- * @return 0 on success or 1 if any failure occurred.
- * @pre
- *     The driver should have been initialized by now
- *
- * @post
- *     On success, the network driver has been cleaned up and the system flushed
- *     if forceFlush was set. On failure, the system state will be non-deterministic.
+ * @return 0 on success. Integer number on failure.
  */
-static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush) {
+static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush) {
     int ret = 0;
 
     LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
     if (forceFlush) {
-        if (network_driver_system_flush(pGni)) {
+        if (network_driver_system_flush(pConfig, pGni)) {
             LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
             ret = 1;
         }
@@ -332,96 +385,13 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush) {
 }
 
 /**
- * Upgrades 4.3 EDGE constructs to 4.4 EDGE constructs.
- * iptables chain names and ipset names are changed from EU_hash to sg-xxxxxxxx
- * naming style. Pre 4.3 iptables chains and ipsets are cleared - necessary iptables
- * chains and ipsets are created in the first successful eucanetd iteration.
- * 
- * @param pGni [in] a pointer to our global network information structure
- * @return 0 on success or 1 on any error
- * 
- * @pre
- *     - The driver must be initialized already
- *     - pGni must not be NULL
- *
- * @post
- *     - On success all EU_hash iptables chains and ipsets are flushed
- *     - On failure, the system is left in an undetermined state
- *
- * @note
- *
- * @TODO:
- *     This will not be needed for 4.4+ (if upgrade path from 4.3 is not supported)
- */
-static int network_driver_upgrade(globalNetworkInfo *pGni) {
-    int rc = 0;
-    int ret = 0;
-
-    LOGINFO("Upgrade 4.3 '%s' network driver artifacts.\n", DRIVER_NAME());
-
-    // this only applies to NC components
-    if (!PEER_IS_NC(eucanetdPeer)) {
-        // no-op
-        return (0);
-    }
-    // Is our driver initialized?
-    if (!IS_INITIALIZED()) {
-        LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
-        return (1);
-    }
-    // iptables
-    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    if (!rc) {
-        ipt_handler_repopulate(config->ipt);
-        // delete legacy (pre 4.4) chains
-        ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
-        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
-        ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", "-", "[0:0]");
-        ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_FILTER_FWD_DROPPED");
-        ipt_handler_print(config->ipt);
-        rc = ipt_handler_deploy(config->ipt);
-    }
-    if (rc) {
-        LOGERROR("Failed to upgrade 4.3 %s IP Tables artifacts.\n", DRIVER_NAME());
-        ret = 1;
-    }
-    // ipsets
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (!rc) {
-        ips_handler_repopulate(config->ips);
-        // delete legacy (pre 4.4) ipsets
-        ips_handler_deletesetmatch(config->ips, "EU_");
-        ips_handler_print(config->ips);
-        rc = ips_handler_deploy(config->ips, 1);
-    }
-    if (rc) {
-        LOGERROR("Failed to upgrade 4.3 %s ipset artifacts.\n", DRIVER_NAME());
-        ret = 1;
-    }
-    // ebtables
-    // no upgrade operation required
-
-    return (ret);
-}
-
-/**
  * Responsible for flushing any networking artifacts implemented by this
  * network driver.
- *
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
  * @param pGni [in] a pointer to the Global Network Information structure
- *
- * @return 0 on success or 1 if any failure occurred.
- *
- * @see
- *
- * @pre The driver must be initialized already
- *
- * @post On success, all networking mode artifacts will be flushed from the system. If any
- *       failure occurred. The system is left in a non-deterministic state and a subsequent
- *       call to this API may resolve the remaining issues.
- *
+ * @return 0 on success. Integer number on failure.
  */
-static int network_driver_system_flush(globalNetworkInfo *pGni) {
+static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
 
@@ -437,80 +407,75 @@ static int network_driver_system_flush(globalNetworkInfo *pGni) {
         LOGERROR("Failed to flush the networking artifacts for '%s' network driver. Driver not initialized.\n", DRIVER_NAME());
         return (1);
     }
-    // iptables
-    rc = ipt_handler_init(config->ipt, config->cmdprefix, NULL);
-    if (!rc) {
-        ipt_handler_repopulate(config->ipt);
-        ipt_chain_flush(config->ipt, "raw", "EUCA_COUNTERS_IN");
-        ipt_chain_flush(config->ipt, "raw", "EUCA_COUNTERS_OUT");
-        ipt_chain_flush(config->ipt, "raw", "EUCA_RAW_PRE");
-        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
-        ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD_DROPPED");
-        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
-        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
-        ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
-
-        ipt_table_deletechainmatch(config->ipt, "filter", "sg-");
-
-        // Flush core artifacts
-        if (config->flushmode == FLUSH_ALL) {
-            ipt_table_deletechainmatch(config->ipt, "raw", "EUCA_");
-            ipt_table_deletechainmatch(config->ipt, "filter", "EUCA_");
-            ipt_table_deletechainmatch(config->ipt, "nat", "EUCA_");
-            ipt_chain_flush_rule(config->ipt, "raw", "PREROUTING", "-A PREROUTING -j EUCA_RAW_PRE");
-            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
-            ipt_chain_flush_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
-            ipt_chain_flush_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
-            ipt_chain_flush_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
-            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
-            ipt_chain_flush_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
-        }
-        ipt_handler_print(config->ipt);
-        rc = ipt_handler_deploy(config->ipt);
+    if (!pConfig) {
+        LOGWARN("Invalid argument: cannot flush %s with NULL config\n", DRIVER_NAME());
+        return (1);
     }
+    // iptables
+    ipt_handler_repopulate(pConfig->ipt);
+    ipt_chain_flush(pConfig->ipt, "raw", "EUCA_COUNTERS_IN");
+    ipt_chain_flush(pConfig->ipt, "raw", "EUCA_COUNTERS_OUT");
+    ipt_chain_flush(pConfig->ipt, "raw", "EUCA_RAW_PRE");
+    ipt_chain_flush(pConfig->ipt, "filter", "EUCA_FILTER_FWD");
+    ipt_chain_flush(pConfig->ipt, "filter", "EUCA_FILTER_FWD_DROPPED");
+    ipt_chain_flush(pConfig->ipt, "nat", "EUCA_NAT_PRE");
+    ipt_chain_flush(pConfig->ipt, "nat", "EUCA_NAT_POST");
+    ipt_chain_flush(pConfig->ipt, "nat", "EUCA_NAT_OUT");
+
+    ipt_table_deletechainmatch(pConfig->ipt, "filter", "sg-");
+
+    // Flush core artifacts
+    if (pConfig->flushmode == FLUSH_ALL) {
+        ipt_table_deletechainmatch(pConfig->ipt, "raw", "EUCA_");
+        ipt_table_deletechainmatch(pConfig->ipt, "filter", "EUCA_");
+        ipt_table_deletechainmatch(pConfig->ipt, "nat", "EUCA_");
+        ipt_chain_flush_rule(pConfig->ipt, "raw", "PREROUTING", "-A PREROUTING -j EUCA_RAW_PRE");
+        ipt_chain_flush_rule(pConfig->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_PREUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
+        ipt_chain_flush_rule(pConfig->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD_POSTUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_PREUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE_POSTUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_PREUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST_POSTUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_PREUSERHOOK");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
+        ipt_chain_flush_rule(pConfig->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT_POSTUSERHOOK");
+    }
+    ipt_handler_print(pConfig->ipt);
+    rc = ipt_handler_deploy(pConfig->ipt);
     if (rc) {
         LOGERROR("Failed to flush the IP Tables artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
     }
 
     // ipsets
-    rc = ips_handler_init(config->ips, config->cmdprefix);
-    if (!rc) {
-        ips_handler_repopulate(config->ips);
+    ips_handler_repopulate(pConfig->ips);
 
-        ips_handler_deletesetmatch(config->ips, "sg-");
-        ips_handler_deletesetmatch(config->ips, "EUCA_");
-        ips_handler_print(config->ips);
-        rc = ips_handler_deploy(config->ips, 1);
-    }
+    ips_handler_deletesetmatch(pConfig->ips, "sg-");
+    ips_handler_deletesetmatch(pConfig->ips, "EUCA_");
+    ips_handler_print(pConfig->ips);
+    rc = ips_handler_deploy(pConfig->ips, 1);
     if (rc) {
         LOGERROR("Failed to flush the IP Sets artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
     }
 
     // ebtables
-    rc = ebt_handler_init(config->ebt, config->cmdprefix);
-    if (!rc) {
-        ebt_handler_repopulate(config->ebt);
-        ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
-        ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
-        ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_POST");
-        // Flush core artifacts
-        if (config->flushmode == FLUSH_ALL) {
-            ebt_table_deletechainmatch(config->ebt, "filter", "EUCA_");
-            ebt_table_deletechainmatch(config->ebt, "nat", "EUCA_");
-            ebt_chain_flush_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
-            ebt_chain_flush_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
-            ebt_chain_flush_rule(config->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
-        }
-        rc = ebt_handler_deploy(config->ebt);
+    ebt_handler_repopulate(pConfig->ebt);
+    ebt_chain_flush(pConfig->ebt, "filter", "EUCA_EBT_FWD");
+    ebt_chain_flush(pConfig->ebt, "nat", "EUCA_EBT_NAT_PRE");
+    ebt_chain_flush(pConfig->ebt, "nat", "EUCA_EBT_NAT_POST");
+    // Flush core artifacts
+    if (pConfig->flushmode == FLUSH_ALL) {
+        ebt_table_deletechainmatch(pConfig->ebt, "filter", "EUCA_");
+        ebt_table_deletechainmatch(pConfig->ebt, "nat", "EUCA_");
+        ebt_chain_flush_rule(pConfig->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
+        ebt_chain_flush_rule(pConfig->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
+        ebt_chain_flush_rule(pConfig->ebt, "nat", "POSTROUTING", "-j EUCA_EBT_NAT_POST");
     }
+    rc = ebt_handler_deploy(pConfig->ebt);
     if (rc) {
         LOGERROR("Failed to flush the EB Tables artifact in '%s' networking mode.\n", DRIVER_NAME());
         ret = 1;
@@ -525,7 +490,7 @@ static int network_driver_system_flush(globalNetworkInfo *pGni) {
     char cmd[EUCA_MAX_PATH] = "";
     char *strptra = NULL;
 
-    if (getdevinfo(config->pubInterface, &ips, &nms, &max_nets)) {
+    if (getdevinfo(pConfig->pubInterface, &ips, &nms, &max_nets)) {
         // could not get interface info - skip public IP flush
         max_nets = 0;
         ips = NULL;
@@ -540,10 +505,10 @@ static int network_driver_system_flush(globalNetworkInfo *pGni) {
                     strptra = hex2dot(pGni->public_ips[i]);
                     snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                     EUCA_FREE(strptra);
-                    euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, config->cmdprefix, "ip", "addr", "del", cmd,  "dev", config->pubInterface, NULL);
+                    euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, pConfig->cmdprefix, "ip", "addr", "del", cmd,  "dev", pConfig->pubInterface, NULL);
                     rc = rc >> 8;
                     if(!(rc == 0 || rc == 2)){
-                        LOGERROR("Failed to run ip addr del %s/32 dev %s", strptra, config->pubInterface);
+                        LOGERROR("Failed to run ip addr del %s/32 dev %s", strptra, pConfig->pubInterface);
                         ret = 1;
                     }
                 }
@@ -556,12 +521,15 @@ static int network_driver_system_flush(globalNetworkInfo *pGni) {
 }
 
 /**
- * Maintenance activities to be executed when eucanetd is idle between polls.
+ * This API is invoked when eucanetd will potentially be idle. For example, after
+ * populating the global network state, eucanetd detects that no action needs to
+ * be taken. Good for pre-populating cache, or flushing dirty cache - so these
+ * actions are not necessary in the regular iteration.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
  * @param pGni [in] a pointer to the Global Network Information structure
- * @param pLni [in] a pointer to the Local Network Information structure
- * @return 0 on success, 1 otherwise.
+ * @return 0 on success. Integer number on failure.
  */
-static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni) {
+static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     struct timeval tv;
     
@@ -573,16 +541,14 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni) {
         LOGERROR("Failed to run maintenance activities. Driver '%s' not initialized.\n", DRIVER_NAME());
         return (1);
     }
-    // Need a valid global network view
-    if (!pGni) {
-        return (0);
-    }
 
     if ((edgeMaintCount % 10) == 0) {
         if (pGni == edgeConfig_a->gni) {
+            edgeConfig_a->config = pConfig;
             do_edge_update_netmeter(edgeConfig_a);
         }
         if (pGni == edgeConfig_b->gni) {
+            edgeConfig_b->config = pConfig;
             do_edge_update_netmeter(edgeConfig_b);
         }
     }
@@ -591,16 +557,18 @@ static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni) {
 }
 
 /**
+ * This API checks the new GNI against the system view to decide what really
+ * needs to be done.
  * EDGE system scrub. Detect instances and security groups relevant to local NC.
  * Then, process security groups, elastic/public IPs, and DHCP.
- * @param pGni a pointer to the current Global Network Information structure
- * @param pGniApplied a pointer to the last applied Global Network Information structure
- * @param pLni a pointer to the Local Network Information structure
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param pGniApplied [in] a pointer to the previously successfully implemented GNI
  * @return A bitmask indicating what needs to be done. The following bits are
  * the ones to look for: EUCANETD_RUN_NO_API (GNI successfully applied), or
  * EUCANETD_RUN_ERROR_API (failed to apply GNI).
  */
-u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied, lni_t *pLni) {
+static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied) {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
 
@@ -620,7 +588,7 @@ u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGni
         return (EUCANETD_RUN_ERROR_API);
     }
     // Are the global and local network view structures NULL?
-    if (!pGni || !pLni) {
+    if (!pGni || !pConfig) {
         LOGERROR("Unable to execute system scrub. Invalid parameters provided.\n");
         return (EUCANETD_RUN_ERROR_API);
     }
@@ -636,6 +604,7 @@ u32 network_driver_system_scrub(globalNetworkInfo *pGni, globalNetworkInfo *pGni
     free_edge_config(edgeConfigApplied);
     
     edgeConfig->gni = pGni;
+    edgeConfig->config = pConfig;
     
     rc = gni_find_self_cluster(pGni, &(edgeConfig->my_cluster));
     if (rc) {
@@ -1067,11 +1036,11 @@ int do_edge_update_eips(edge_config *edge) {
     if (edge->config->metadata_use_vm_private) {
         // set a mark so that VM to metadata service requests are not SNATed
         snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -d 169.254.169.254/32 -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+        ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_PRE", rule);
     }
 
     snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EUCA_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+    ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
     ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_RAW_PRE", "-A EUCA_RAW_PRE -j EUCA_COUNTERS_IN");
     ipt_chain_add_rule(edge->config->ipt, "raw", "EUCA_RAW_PRE", "-A EUCA_RAW_PRE -j EUCA_COUNTERS_OUT");
@@ -1614,7 +1583,7 @@ int generate_dhcpd_config(edge_config *edge) {
     max_instances = edge->max_my_instances;
 
     // Open the DHCP configuration file
-    snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
+    snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", edge->config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
         LOGERROR("cannot open dhcpd server config file for write '%s': check permissions\n", dhcpd_config_path);
@@ -1626,7 +1595,7 @@ int generate_dhcpd_config(edge_config *edge) {
         network = hex2dot(nw);
         netmask = hex2dot(nm);
         broadcast = hex2dot(nw | ~nm);
-        router = hex2dot(config->vmGatewayIP);  // this is set by configuration
+        router = hex2dot(edge->config->vmGatewayIP);  // this is set by configuration
 
         fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n", network, netmask, netmask, broadcast);
         if (strlen(edge->gni->instanceDNSDomain)) {
@@ -1711,10 +1680,10 @@ int update_host_arp(edge_config *edge) {
                         psPrivateIp = hex2dot(instances[i].privateIp);
                         if (edge->config->nc_proxy) {
                             snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
-                                if (ebt_chain_find_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
-                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, config->bridgeDev);
-                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", config->bridgeDev, psPrivateIp, psBridgeMac);
-                                    euca_execlp(&rc, config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
+                                if (ebt_chain_find_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
+                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, edge->config->bridgeDev);
+                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", edge->config->bridgeDev, psPrivateIp, psBridgeMac);
+                                    euca_execlp(&rc, edge->config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", edge->config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
                                     rc = rc >> 8;
                                     if(!(rc == 0 || rc == 2)){
                                         LOGWARN("Failed to run %s", sCommand);

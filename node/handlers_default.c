@@ -1677,7 +1677,7 @@ static int update_network_interface(char *instanceId, netConfig * netCfg, const 
     return ret;
 }
 
-int attach_network_interface_instance(const ncInstance *pInstance, const char *interfaceId, const char *libvirt_xml)
+int attach_network_interface_instance(ncInstance *pInstance, const char *interfaceId, const char *libvirt_xml)
 {
     int ret = EUCA_OK;
 
@@ -2180,20 +2180,20 @@ int update_bundle_progress(char *instanceId, int readPercent)
     return 0;
 }
 
-int euca_run_bundle_parser(const char *line, char *instance_id)
+int euca_run_bundle_parser(const char *line, void *instance_id)
 {
     int read_percent;
     char *s;
 
     LOGTRACE("%s\n", line);            // log all output at TRACE level
     if (instance_id == NULL) {
-        instance_id = "?";
+        instance_id = (char *) "?";
     }
     // parse progress from lines like: 'Source file read: 12%'
     if ((s = strstr(line, "Source file read: "))
                && sscanf(s, "Source file read: %d", &read_percent) == 1) {
-        if (update_bundle_progress(instance_id, read_percent)) {
-            LOGERROR("[%s] can't update bundling progress\n", instance_id);
+        if (update_bundle_progress((char *) instance_id, read_percent)) {
+            LOGERROR("[%s] can't update bundling progress\n", (char *) instance_id);
         }
     } else if (strcasestr(line, "error")) { // any line with 'error'
         LOGERROR("%s\n", line);

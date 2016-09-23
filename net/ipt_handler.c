@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,52 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 //!
@@ -87,8 +41,6 @@
 #include <euca_string.h>
 
 #include "ipt_handler.h"
-#include "ips_handler.h"
-#include "ebt_handler.h"
 #include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
@@ -153,36 +105,35 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Initialize an IP table handler structure
-//!
-//! @param[in] pIpt pointer to the IP table handler structure
-//! @param[in] psCmdPrefix a constant pointer to a string containing the prefix for EUCA commands
-//! @param[in] psPreloadPath a constant pointer to a string containing the path to the IP table preload file
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see ipt_handler_free()
-//!
-//! @pre
-//!     - The pIpt pointer should not be NULL
-//!     - We should be able to create temporary files on the system
-//!     - We should be able to execute the iptables commands
-//!
-//! @post
-//!     On success, the IP table structure will be initialized with the following:
-//!     - The ipt_file will point to a temporary file under /tmp/ipt_file-XXXXXX
-//!     - If psCmdPrefix was provided, the table's cmdprefix field will be set with it
-//!     - If psPreloadPath was provided, the structure's preloadPath will be set with it
-//!     -
-//!
-//! @note
-//!     - Once temporary file is initialized the filename will be reused throughout the process
-//!       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
-//!       method. 
-//!
-int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *psPreloadPath)
-{
+/**
+ * Initialize an IP table handler structure
+ *
+ * @param pIpt [in] pointer to the IP table handler structure
+ * @param psCmdPrefix [in] a constant pointer to a string containing the prefix for EUCA commands
+ * @param psPreloadPath [in] a constant pointer to a string containing the path to the IP table preload file
+ *
+ * @return 0 on success or 1 if any failure occurred
+ *
+ * @see ipt_handler_free()
+ *
+ * @pre
+ *     - The pIpt pointer should not be NULL
+ *     - We should be able to create temporary files on the system
+ *     - We should be able to execute the iptables commands
+ *
+ * @post
+ *     On success, the IP table structure will be initialized with the following:
+ *     - The ipt_file will point to a temporary file under /tmp/ipt_file-XXXXXX
+ *     - If psCmdPrefix was provided, the table's cmdprefix field will be set with it
+ *     - If psPreloadPath was provided, the structure's preloadPath will be set with it
+ *     -
+ *
+ * @note
+ *     - Once temporary file is initialized the filename will be reused throughout the process
+ *       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
+ *       method. 
+ */
+int ipt_handler_init(ipt_handler *pIpt, const char *psCmdPrefix, const char *psPreloadPath) {
     int fd = 0;
     char sTempFileName[EUCA_MAX_PATH] = "";  // Used to temporarily hold name while we zero out the struct
 
@@ -253,27 +204,26 @@ int ipt_handler_init(ipt_handler * pIpt, const char *psCmdPrefix, const char *ps
     return (0);
 }
 
-//!
-//! Runs iptables-save and store the content in our configured IP table file
-//!
-//! @param[in] pIpt pointer to the IP table handler structure
-//!
-//! @return 0 on success or any other values if any failure occured
-//!
-//! @see ipt_system_restore()
-//!
-//! @pre
-//!     - pIpt MUST not be NULL
-//!     - We should be able to write to the configured IP table structure temporary file
-//!
-//! @post
-//!     On success, the content from iptables-save is stored in ipth->ipt_file. On failure,
-//!     the destination file should remain unchanged.
-//!
-//! @note
-//!
-int ipt_system_save(ipt_handler * pIpt)
-{
+/**
+ * Runs iptables-save and store the content in our configured IP table file
+ *
+ * @param pIpt [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or any other values if any failure occurred
+ *
+ * @see ipt_system_restore()
+ *
+ * @pre
+ *     - pIpt MUST not be NULL
+ *     - We should be able to write to the configured IP table structure temporary file
+ *
+ * @post
+ *     On success, the content from iptables-save is stored in ipth->ipt_file. On failure,
+ *     the destination file should remain unchanged.
+ *
+ * @note
+ */
+int ipt_system_save(ipt_handler *pIpt) {
     if (euca_execlp_redirect(NULL, NULL, pIpt->ipt_file, FALSE, NULL, FALSE, pIpt->cmdprefix, "iptables-save", "-c", NULL) != EUCA_OK) {
         LOGERROR("iptables-save failed\n");
         return EUCA_ERROR;
@@ -281,62 +231,60 @@ int ipt_system_save(ipt_handler * pIpt)
     return EUCA_OK;
 }
 
-//!
-//! Runs the iptables-restore program provided with our IP table configured file.
-//!
-//! @param[in] pIpt pointer to the IP table handler structure
-//!
-//! @return 0 on success or any other value if any failure occured
-//!
-//! @see ipt_system_save()
-//!
-//! @pre
-//!     - pIpt MUST not be NULL
-//!     - The IP table structure temporary file must exists on the system
-//!
-//! @post
-//!     On success, the system IP tables have been restored with the content from our
-//!     configured file. On failure, the system IP tables should remain unchanged and
-//!     the content of the file saved in /tmp/euca_ipt_file_failed.
-//!
-//! @note
-//!
-int ipt_system_restore(ipt_handler * pIpt)
-{
+/**
+ * Runs the iptables-restore program provided with our IP table configured file.
+ *
+ * @param pIpt [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or any other value if any failure occurred
+ *
+ * @see ipt_system_save()
+ *
+ * @pre
+ *     - pIpt MUST not be NULL
+ *     - The IP table structure temporary file must exists on the system
+ *
+ * @post
+ *     On success, the system IP tables have been restored with the content from our
+ *     configured file. On failure, the system IP tables should remain unchanged and
+ *     the content of the file saved in /tmp/euca_ipt_file_failed.
+ *
+ * @note
+ */
+int ipt_system_restore(ipt_handler *pIpt) {
     int rc = EUCA_OK;
     if (euca_execlp_redirect(NULL, pIpt->ipt_file, NULL, FALSE, NULL, FALSE, pIpt->cmdprefix, "iptables-restore", "-c", NULL) != EUCA_OK) {
         copy_file(pIpt->ipt_file, "/tmp/euca_ipt_file_failed");
         LOGERROR("iptables-restore failed. copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n");
         rc = EUCA_ERROR;
     }
-    unlink(pIpt->ipt_file);
+    unlink_handler_file(pIpt->ipt_file);
     return (rc);
 }
 
-//!
-//! Takes our latest IP table virtual content and puts it into a file in IP tables format that
-//! will be passed to ip_system_restore(). Once completed, the system IP tables should contain
-//! the latest changes we made.
-//!
-//! @param[in] pIpt pointer to the IP table handler structure
-//!
-//! @return 0 on success or any other value if any failure occured
-//!
-//! @see ipt_system_restore()
-//!
-//! @pre
-//!     - Our given pointers must not be NULL
-//!     - The IP table structure must have been intialized
-//!     - The system must allow us to write to the file configured in the IP table structure
-//!
-//! @post
-//!     On success, the system IP tables will contain what we put in our structure. On failure, the
-//!     system IP tables should remain unchanged.
-//!
-//! @note
-//!
-int ipt_handler_deploy(ipt_handler * pIpt)
-{
+/**
+ * Takes our latest IP table virtual content and puts it into a file in IP tables format that
+ * will be passed to ip_system_restore(). Once completed, the system IP tables should contain
+ * the latest changes we made.
+ *
+ * @param pIpt [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or any other value if any failure occurred
+ *
+ * @see ipt_system_restore()
+ *
+ * @pre
+ *     - Our given pointers must not be NULL
+ *     - The IP table structure must have been intialized
+ *     - The system must allow us to write to the file configured in the IP table structure
+ *
+ * @post
+ *     On success, the system IP tables will contain what we put in our structure. On failure, the
+ *     system IP tables should remain unchanged.
+ *
+ * @note
+ */
+int ipt_handler_deploy(ipt_handler * pIpt) {
     int i = 0;
     int j = 0;
     int k = 0;
@@ -387,24 +335,15 @@ int ipt_handler_deploy(ipt_handler * pIpt)
     return (ipt_system_restore(pIpt));
 }
 
-//!
-//! Compares to given rules to see which comes first
-//!
-//! @param[in] p1 a pointer to the left hand side IP table rule
-//! @param[in] p2 a pointer to the right hand side IP table rule
-//!
-//! @return 0 if p1 an p2 are of the same order, -1 if p1 comes before p2 and 1 if p2 comes before p1.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_ruleordercmp(const void *p1, const void *p2)
-{
+/**
+ * Compares two given rules to see which comes first
+ *
+ * @param p1 [in] a pointer to the left hand side IP table rule
+ * @param p2 [in] a pointer to the right hand side IP table rule
+ *
+ * @return 0 if p1 an p2 are of the same order, -1 if p1 comes before p2 and 1 if p2 comes before p1.
+ */
+int ipt_ruleordercmp(const void *p1, const void *p2) {
     ipt_rule *a = NULL, *b = NULL;
     a = (ipt_rule *) p1;
     b = (ipt_rule *) p2;
@@ -418,23 +357,14 @@ int ipt_ruleordercmp(const void *p1, const void *p2)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_handler_repopulate(ipt_handler * ipth)
-{
+/**
+ * Retrieves the current iptables system state.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_handler_repopulate(ipt_handler *ipth) {
     int rc = 0;
     FILE *FH = NULL;
     char buf[1024] = "";
@@ -512,28 +442,21 @@ int ipt_handler_repopulate(ipt_handler * ipth)
     }
     fclose(FH);
 
+    unlink_handler_file(ipth->ipt_file);
     LOGDEBUG("ipt populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_handler_add_table(ipt_handler * ipth, char *tablename)
-{
+/**
+ * Adds table tablename. No-op if tablename is already present.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ *
+ * @return 0 on success or 1 if any failure occurred
+ *
+ */
+int ipt_handler_add_table(ipt_handler *ipth, char *tablename) {
     ipt_table *table = NULL;
     if (!ipth || !tablename || !ipth->init) {
         return (1);
@@ -554,27 +477,18 @@ int ipt_handler_add_table(ipt_handler * ipth, char *tablename)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] policyname a string pointer to the policy to apply
-//! @param[in] counters a string pointer to the counters
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, char *policyname, char *counters)
-{
+/**
+ * Add chain chainname to table tablename with policy policyname and counters.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param policyname [in] a string pointer to the policy to apply
+ * @param counters [in] a string pointer to the counters
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters) {
     ipt_table *table = NULL;
     ipt_chain *chain = NULL;
     if (!ipth || !tablename || !chainname || !counters || !ipth->init) {
@@ -612,75 +526,49 @@ int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, ch
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] newrule a string pointer to the rule to add
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_chain_add_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule)
-{
+/**
+ * Add rule newrule to chain chainname in table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param newrule [in] a string pointer to the rule to add
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule) {
     return (ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, NULL));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] newrule a string pointer to the rule to add
-//! @param[in] counterstr a string pointer to the counters
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_chain_add_rule_with_counters(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr)
-{
+/**
+ * Add rule newrule with counter counterstr to chain chainname in table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param newrule [in] a string pointer to the rule to add
+ * @param counterstr [in] a string pointer to the counters
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr) {
     return (ipt_chain_insert_rule(ipth, tablename, chainname, newrule, counterstr, IPT_ORDER));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] newrule a string pointer to the new rule
-//! @param[in] counterstr a string pointer to the counters
-//! @param[in] order the order in which to insert this rule
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order)
-{
+/**
+ * Inserts rule newrule to chain chainname in table tablename with counter counterstr
+ * in the position dictated by order.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param newrule [in] a string pointer to the new rule
+ * @param counterstr [in] a string pointer to the counters
+ * @param order [in] the order in which to insert this rule
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order) {
     int ret = 0;
     ipt_table *table = NULL;
     ipt_chain *chain = NULL;
@@ -729,23 +617,14 @@ int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, 
     return (ret);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//!
-//! @return Always returns 0
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_handler_update_refcounts(ipt_handler * ipth)
-{
+/**
+ * Update reference conts.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ *
+ * @return Always returns 0
+ */
+int ipt_handler_update_refcounts(ipt_handler *ipth) {
     char *jumpptr = NULL, jumpchain[64], tmp[64];
     int i, j, k;
     ipt_table *table = NULL;
@@ -780,23 +659,15 @@ int ipt_handler_update_refcounts(ipt_handler * ipth)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] findtable a string pointer to the name of the table we're looking for
-//!
-//! @return a pointer to the IP table structure if found. Otherwise, NULL is returned
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ipt_table *ipt_handler_find_table(ipt_handler * ipth, const char *findtable)
+/**
+ * Searches for table named findtable.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param findtable [in] a string pointer to the name of the table we're looking for
+ *
+ * @return a pointer to the IP table structure if found. Otherwise, NULL is returned
+ */
+ipt_table *ipt_handler_find_table(ipt_handler *ipth, const char *findtable)
 {
     int i, tableidx = 0, found = 0;
     if (!ipth || !findtable || !ipth->init) {
@@ -815,25 +686,16 @@ ipt_table *ipt_handler_find_table(ipt_handler * ipth, const char *findtable)
     return (&(ipth->tables[tableidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] findchain a string pointer to the chain name we're looking for
-//!
-//! @return a pointer to the IP table chain structure if found. Otherwise, NULL is returned
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ipt_chain *ipt_table_find_chain(ipt_handler * ipth, const char *tablename, const char *findchain)
-{
+/**
+ * Searches for chain named findchain in table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param findchain [in] a string pointer to the chain name we're looking for
+ *
+ * @return a pointer to the IP table chain structure if found. Otherwise, NULL is returned
+ */
+ipt_chain *ipt_table_find_chain(ipt_handler *ipth, const char *tablename, const char *findchain) {
     int i, found = 0, chainidx = 0;
     ipt_table *table = NULL;
 
@@ -860,26 +722,22 @@ ipt_chain *ipt_table_find_chain(ipt_handler * ipth, const char *tablename, const
     return (&(table->chains[chainidx]));
 }
 
-//!
-//! Finds a given IPT chain in a given IPT and set its default policy.
-//!
-//! @param[in] pIpth pointer to the IP table handler structure
-//! @param[in] tablename a constant string pointer to the name of the table (e.g. 'filter', 'nat', 'mangle', etc.)
-//! @param[in] chainname a constant string pointer to the name of the chain (e.g. 'INPUT', 'FORWARD', etc.)
-//! @param[in] policyname a constant string pointer to the policy name (e.g. 'ACCEPT', 'DROP')
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre \li All pointers and strings must not be NULL
-//!      \li The referred table and chain must exists
-//!
-//! @post On success the chain default policy has been changed. On failure, the original policy
-//!       will remain.
-//!
-//! @note
-//!
+/**
+ * Finds a given IPT chain in a given IPT and set its default policy.
+ *
+ * @param pIpth [in] pointer to the IP table handler structure
+ * @param tablename [in] a constant string pointer to the name of the table (e.g. 'filter', 'nat', 'mangle', etc.)
+ * @param chainname [in] a constant string pointer to the name of the chain (e.g. 'INPUT', 'FORWARD', etc.)
+ * @param policyname [in] a constant string pointer to the policy name (e.g. 'ACCEPT', 'DROP')
+ *
+ * @return 0 on success or 1 if any failure occurred
+ *
+ * @pre \li All pointers and strings must not be NULL
+ *      \li The referred table and chain must exists
+ *
+ * @post On success the chain default policy has been changed. On failure, the original policy
+ *       will remain.
+ */
 int ipt_table_set_chain_policy(ipt_handler * pIpth, const char *tablename, const char *chainname, const char *policyname)
 {
     ipt_table *pTable = NULL;
@@ -900,26 +758,17 @@ int ipt_table_set_chain_policy(ipt_handler * pIpth, const char *tablename, const
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] findrule a string pointer to the rule we're looking for
-//!
-//! @return a pointer to the IP table rule structure if found. Otherwise, NULL is returned
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule)
-{
+/**
+ * Searches for rule findrule in chain chainname in table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param findrule [in] a string pointer to the rule we're looking for
+ *
+ * @return a pointer to the IP table rule structure if found. Otherwise, NULL is returned
+ */
+ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule) {
     int i, found = 0, ruleidx = 0;
     ipt_chain *chain;
 
@@ -943,24 +792,23 @@ ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainna
     return (&(chain->rules[ruleidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename)
-{
+/**
+ * Remove all empty chains from table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ *
+ * @return 0 on success or 1 if any failure occurred
+ *
+ * @see
+ *
+ * @pre
+ *
+ * @post
+ *
+ * @note
+ */
+int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename) {
     int i, found = 0;
     ipt_table *table = NULL;
 
@@ -986,25 +834,16 @@ int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainmatch a string pointer to the list of characters to match
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainmatch)
-{
+/**
+ * Remove all chains that partially match chainmatch from table tablename.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainmatch [in] a string pointer to the list of characters to match
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch) {
     int i = 0;
     ipt_table *table = NULL;
     ipt_chain *chain = NULL;
@@ -1029,25 +868,16 @@ int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainm
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
-{
+/**
+ * Mark all rules in the chain chain name of table tablename as flushed.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
     int i;
     ipt_table *table = NULL;
     ipt_chain *chain = NULL;
@@ -1074,25 +904,17 @@ int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
     return (0);
 }
 
-//!
-//! Flushes/removes the rule of interest from a chain.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] findrule a string pointer to the rule we're looking for
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule) {
+/**
+ * Flushes/removes the rule of interest from a chain.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param findrule [in] a string pointer to the rule we're looking for
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_chain_flush_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule) {
     int i, found = 0;
     ipt_chain *chain;
 
@@ -1118,23 +940,14 @@ int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, c
     return (EUCA_OK);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_handler_free(ipt_handler * ipth)
-{
+/**
+ * Releases resources allocated for ipth and re-initializes ipth.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_handler_free(ipt_handler *ipth) {
     int i = 0;
     int j = 0;
     char saved_cmdprefix[EUCA_MAX_PATH] = "";
@@ -1153,28 +966,18 @@ int ipt_handler_free(ipt_handler * ipth)
         EUCA_FREE(ipth->tables[i].chains);
     }
     EUCA_FREE(ipth->tables);
-    unlink(ipth->ipt_file);
 
     return (ipt_handler_init(ipth, saved_cmdprefix, saved_preloadPath));
 }
 
-//!
-//! Release all resources associated with the given ipt_handler.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//!
-//! @return 0 on success or 1 if any failure occurred
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ipt_handler_close(ipt_handler *ipth)
-{
+/**
+ * Release all resources associated with the given ipt_handler.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ipt_handler_close(ipt_handler *ipth) {
     int i = 0;
     int j = 0;
 
@@ -1190,27 +993,19 @@ int ipt_handler_close(ipt_handler *ipth)
         EUCA_FREE(ipth->tables[i].chains);
     }
     EUCA_FREE(ipth->tables);
-    unlink(ipth->ipt_file);
+    unlink_handler_file(ipth->ipt_file);
+    ipth->init = 0;
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipth pointer to the IP table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre List of pre-conditions
-//!
-//! @post List of post conditions
-//!
-//! @note
-//!
-int ipt_handler_print(ipt_handler * ipth)
-{
+/**
+ * Logs the contents of ipth.
+ *
+ * @param ipth [in] pointer to the IP table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ipt_handler_print(ipt_handler *ipth) {
     int i = 0, j = 0, k = 0, count = 0;
     if (!ipth || !ipth->init) {
         return (1);
