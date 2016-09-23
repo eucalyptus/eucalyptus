@@ -17,10 +17,12 @@ admin-tools/MANIFEST
 admin-tools/build
 admin-tools/dist
 admin-tools/venv
+admin-tools/eucalyptus_admin/__init__.py
 console/jstests/node_modules/*
 console/eucaconsole/version.py
 autom4te.cache
 clc/.nogit
+clc/.settings/org.eclipse.jdt.core.prefs
 clc/bin
 clc/build
 clc/.classpath.bak
@@ -86,8 +88,6 @@ util/test_fault
 util/test_wc
 util/test_auth
 util/euca-generate-fault
-clc/.settings/org.eclipse.jdt.core.prefs
-clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs
 storage/test_blobstore
 storage/test_vbr
