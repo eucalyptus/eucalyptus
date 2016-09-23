@@ -74,6 +74,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -655,7 +656,9 @@ public class PolicyEngineImpl implements PolicyEngine {
                                @Nullable final String principalName ) {
       this.resourceType = resourceType;
       this.action = action.toLowerCase();
-      this.evaluatedKeys = ImmutableMap.copyOf( evaluatedKeys );
+      this.evaluatedKeys = ImmutableMap.copyOf( evaluatedKeys.entrySet( ).stream( )
+          .filter( entry -> entry.getValue( ) != null )
+          .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) ) );
       this.policies = ImmutableList.copyOf( policies );
       this.requestUser = requestUser;
       this.principalType = principalType;

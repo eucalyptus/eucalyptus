@@ -71,7 +71,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 
 @PolicyKey( value = Keys.AWS_SOURCEIP, evaluationConstraints = ReceivingHost )
-public class SourceIp implements Key {
+public class SourceIp implements AwsKey {
   
   private static final String KEY = Keys.AWS_SOURCEIP;
   

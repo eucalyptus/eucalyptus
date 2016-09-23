@@ -69,7 +69,7 @@ import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.DateConditionOp;
 
 @PolicyKey( Keys.AWS_CURRENTTIME )
-public class CurrentTime implements Key {
+public class CurrentTime implements AwsKey {
   
   private static final String KEY = Keys.AWS_CURRENTTIME;
 
