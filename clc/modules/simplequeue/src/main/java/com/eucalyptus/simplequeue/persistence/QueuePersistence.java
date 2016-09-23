@@ -1,7 +1,7 @@
 package com.eucalyptus.simplequeue.persistence;
 
-import com.eucalyptus.simplequeue.QueueAlreadyExistsException;
-import com.eucalyptus.simplequeue.QueueDoesNotExistException;
+import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
+import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 
 import java.util.Collection;
 import java.util.Map;

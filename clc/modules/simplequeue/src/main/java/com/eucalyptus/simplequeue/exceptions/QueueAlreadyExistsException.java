@@ -17,21 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simplequeue;
+package com.eucalyptus.simplequeue.exceptions;
 
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 400 )
-public class QueueDoesNotExistException extends SimpleQueueException {
+public class QueueAlreadyExistsException extends SimpleQueueException {
 
   /**
    *
    */
   private static final long serialVersionUID = 1L;
 
-  public QueueDoesNotExistException(final String message) {
-    super("QueueDoesNotExist", Role.Sender, message);
+  public QueueAlreadyExistsException(final String message) {
+    super("QueueAlreadyExists", Role.Sender, message);
   }
 
 }

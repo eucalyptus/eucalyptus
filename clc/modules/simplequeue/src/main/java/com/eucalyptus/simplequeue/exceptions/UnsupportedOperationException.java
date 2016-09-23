@@ -17,22 +17,22 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simplequeue;
+package com.eucalyptus.simplequeue.exceptions;
 
-import com.eucalyptus.simplequeue.SimpleQueueException;
+import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 400 )
-public class InvalidParameterValueException extends SimpleQueueException {
+public class UnsupportedOperationException extends SimpleQueueException {
 
   /**
    *
    */
   private static final long serialVersionUID = 1L;
 
-  public InvalidParameterValueException(final String message) {
-    super("InvalidParameterValue", Role.Sender, message);
+  public UnsupportedOperationException(final String message) {
+    super("UnsupportedOperation", Role.Sender, message);
   }
 
 }
