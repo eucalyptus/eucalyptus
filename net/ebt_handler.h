@@ -144,33 +144,33 @@ typedef struct ebt_handler_t {
 
 //! @{
 //! @name EB Tables API
-int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix);
-int ebt_handler_free(ebt_handler * ebth);
-int ebt_handler_close(ebt_handler * ebth);
+int ebt_handler_init(ebt_handler *ebth, const char *cmdprefix);
+int ebt_handler_free(ebt_handler *ebth);
+int ebt_handler_close(ebt_handler *ebth);
 
-int ebt_system_save(ebt_handler * ebth);
-int ebt_system_restore(ebt_handler * ebth);
+int ebt_system_save(ebt_handler *ebth);
+int ebt_system_restore(ebt_handler *ebth);
 
-int ebt_handler_repopulate(ebt_handler * ebth);
-int ebt_handler_deploy(ebt_handler * ebth);
-int ebt_handler_update_refcounts(ebt_handler * ebth);
+int ebt_handler_repopulate(ebt_handler *ebth);
+int ebt_handler_deploy(ebt_handler *ebth);
+int ebt_handler_update_refcounts(ebt_handler *ebth);
 
-int ebt_handler_add_table(ebt_handler * ebth, char *tablename);
-ebt_table *ebt_handler_find_table(ebt_handler * ebth, char *findtable);
+int ebt_handler_add_table(ebt_handler *ebth, char *tablename);
+ebt_table *ebt_handler_find_table(ebt_handler *ebth, char *findtable);
 
-int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, char *policyname, char *counters);
-ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findchain);
+int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, char *policyname, char *counters);
+ebt_chain *ebt_table_find_chain(ebt_handler *ebth, char *tablename, char *findchain);
 
-int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, char *newrule);
-ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule);
+int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char *newrule);
+ebt_rule *ebt_chain_find_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule);
 
-int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname);
-int ebt_chain_flush_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule);
+int ebt_chain_flush(ebt_handler *ebth, char *tablename, char *chainname);
+int ebt_chain_flush_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule);
 
-int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainmatch);
-int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename);
+int ebt_table_deletechainmatch(ebt_handler *ebth, char *tablename, char *chainmatch);
+int ebt_table_deletechainempty(ebt_handler *ebth, char *tablename);
 
-int ebt_handler_print(ebt_handler * ebth);
+int ebt_handler_print(ebt_handler *ebth);
 //! @}
 
 /*----------------------------------------------------------------------------*\

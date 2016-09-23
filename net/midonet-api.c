@@ -302,22 +302,11 @@ int routername_split(char *routername, char **name, int *id) {
     return (0);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-void mido_print_midoname(midoname * name) {
+/**
+ * Logs the information in the given midoname data structure.
+ * @param name [in] midoname data structure of interest.
+ */
+void mido_print_midoname(midoname *name) {
     if (name == NULL) {
         LOGWARN("Invalid argument: NULL midoname\n");
     } else {
@@ -330,7 +319,7 @@ void mido_print_midoname(midoname * name) {
 /**
  * Logs MidoNet-API information
  */
-void mido_info_midonetapi() {
+void mido_info_midonetapi(void) {
     if (strlen(midonet_api_version) && strlen(midonet_api_uribase)) {
         LOGINFO("\nmido API %s at %s\n", midonet_api_version, midonet_api_uribase);
     }
@@ -339,7 +328,7 @@ void mido_info_midonetapi() {
 /**
  * Logs MIDOCACHE information.
  */
-void mido_info_midocache() {
+void mido_info_midocache(void) {
     int routers = 0;
     int rtports = 0;
     int rtroutes = 0;
@@ -454,13 +443,12 @@ void mido_info_midocache() {
     LOGINFO("\t%d tunnelzones (%d hosts)\n", tunnelzones, tzhosts);
 }
 
-//!
-//! Logs the API HTTP request counts (diff from a previous call)
-//!
-//! @see mido_info_http_count_total() for cumulative count.
-//!
-void mido_info_http_count()
-{
+/**
+ * Logs the API HTTP request counts (diff from a previous call)
+ *
+ * @see mido_info_http_count_total() for cumulative count.
+ */
+void mido_info_http_count(void) {
     LOGINFO("MidoNet API requests: %d gets, %d puts, %d posts, %d deletes\n", 
             http_gets - http_gets_prev, http_puts - http_puts_prev,
             http_posts - http_posts_prev, http_deletes - http_deletes_prev);
@@ -470,12 +458,12 @@ void mido_info_http_count()
     http_deletes_prev = http_deletes;
 }
 
-//!
-//! Logs the API HTTP request counts (cumulative count)
-//!
-//! @see mido_info_http_count() for counts between calls.
-//!
-void mido_info_http_count_total()
+/**
+ * Logs the API HTTP request counts (cumulative count)
+ *
+ * @see mido_info_http_count() for counts between calls.
+ */
+void mido_info_http_count_total(void)
 {
     LOGINFO("Total mido requests: %d gets, %d puts, %d posts, %d deletes\n", 
             http_gets, http_puts, http_posts, http_deletes);
@@ -488,11 +476,11 @@ void mido_info_http_count_total()
             http_posts_time / postdiv / 1000.0, http_deletes_time / deldiv / 1000.0);
 }
 
-//!
-//! Clears the mido_parsed_route structure in the argument. Allocated memory is released.
-//!
-//! @param[in] route parsed route entry of interest
-//!
+/**
+ * Clears the mido_parsed_route structure in the argument. Allocated memory is released.
+ *
+ * @param route [in] parsed route entry of interest
+ */
 void mido_free_mido_parsed_route(mido_parsed_route *route) {
     if (!route) {
         return;
@@ -508,12 +496,12 @@ void mido_free_mido_parsed_route(mido_parsed_route *route) {
     bzero(route, sizeof(mido_parsed_route));
 }
 
-//!
-//! Clears the list of mido_parsed_route structures in the argument.
-//!
-//! @param[in] routes array of mido_parsed_route structures
-//! @param[in] max_routes number of array elements
-//!
+/**
+ * Clears the list of mido_parsed_route structures in the argument.
+ *
+ * @param routes [in] array of mido_parsed_route structures
+ * @param max_routes [in] number of array elements
+ */
 void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes) {
     int i = 0;
     if (!routes) return;
@@ -522,27 +510,14 @@ void mido_free_mido_parsed_route_list(mido_parsed_route *routes, int max_routes)
     }
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] max_name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-void mido_free_midoname_list(midoname * name, int max_name)
-{
-    int i = 0;
-    //    return;
-    for (i = 0; i < max_name; i++) {
+/**
+ * Releases memory allocated for the given array of midoname data structures
+ *
+ * @param name [in] array of midoname data structures of interest
+ * @param max_name [in] entries in the array
+ */
+void mido_free_midoname_list(midoname *name, int max_name) {
+    for (int i = 0; i < max_name; i++) {
         mido_free_midoname(&(name[i]));
     }
 }
@@ -551,7 +526,7 @@ void mido_free_midoname_list(midoname * name, int max_name)
  * Releases memory allocated for the given midoname data structure.
  * @param name [in] pointer to the midoname data structure of interest.
  */
-void mido_free_midoname(midoname * name) {
+void mido_free_midoname(midoname *name) {
     if (!name) {
         return;
     }
@@ -596,25 +571,16 @@ void mido_free_midoname(midoname * name) {
     bzero(name, sizeof(midoname));
 }
 
-//!
-//!
-//!
-//! @param[in]  name
-//! @param[in]  key
-//! @param[out] val
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_getel_midoname(midoname * name, char *key, char **val)
-{
+/**
+ * Retrieves an element that corresponds to the given key from name.
+ *
+ * @param name [in] midoname data structure from where the information will be extracted
+ * @param key [in] key of interest
+ * @param val [out] value of interest
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int mido_getel_midoname(midoname *name, char *key, char **val) {
     int ret = 0;
     json_object *jobj = NULL;
 
@@ -642,27 +608,20 @@ int mido_getel_midoname(midoname * name, char *key, char **val)
     return (ret);
 }
 
-//!
-//! Parses an json array that is a value of the given key, and returns as an array
-//! of strings.
-//!
-//! @param[in]  name midoname containing the jsonbuf of interest.
-//! @param[in]  key json key of interest.
-//! @param[out] values array of parsed strings.
-//! @param[out] max_values number of elements in the returning array.
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note caller is responsible for releasing memory allocated for results.
-//!
-int mido_getarr_midoname(midoname * name, char *key, char ***values, int *max_values)
-{
+/**
+ * Parses an json array that is a value of the given key, and returns as an array
+ * of strings.
+ *
+ * @param name [in] midoname containing the jsonbuf of interest.
+ * @param key [in] json key of interest.
+ * @param values [out] array of parsed strings.
+ * @param max_values [out] number of elements in the returning array.
+ *
+ * @return 0 on success. 1 on failure.
+ *
+ * @note caller is responsible for releasing memory allocated for results.
+ */
+int mido_getarr_midoname(midoname *name, char *key, char ***values, int *max_values) {
     int ret = 0;
     json_object *jobj = NULL;
     json_object *jarr = NULL;
@@ -818,28 +777,6 @@ midonet_api_router *mido_create_router(char *tenant, char *name, midoname **outn
     return (rt);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_router(midoname * name)
-{
-    return (mido_read_resource("routers", name, NULL));
-}
-*/
-
 /**
  * Updates information about a router with the parameters in the variable argument section.
  * @param [in] name midoname structure of the router of interest (checks are not performed)
@@ -857,23 +794,12 @@ int mido_update_router(midoname *name, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_router(midoname * name)
-{
+/**
+ * Logs the information about a router represented by name.
+ * @param name [in] MN router of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_router(midoname *name) {
     return (mido_print_resource("routers", name));
 }
 
@@ -951,28 +877,6 @@ midonet_api_bridge *mido_create_bridge(char *tenant, char *name, midoname **outn
     return (br);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_bridge(midoname * name)
-{
-    return (mido_read_resource("bridges", name, NULL));
-}
-*/
-
 /**
  * Updates information about a bridge with the parameters in the variable argument section.
  * @param [in] name midoname structure of the bridge of interest (checks are not performed)
@@ -990,23 +894,12 @@ int mido_update_bridge(midoname *name, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_bridge(midoname * name)
-{
+/**
+ * Logs the information about a bridge represented by name.
+ * @param name [in] MN bridge of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_bridge(midoname *name) {
     return (mido_print_resource("bridges", name));
 }
 
@@ -1116,9 +1009,13 @@ int mido_delete_portgroup(midoname *name) {
     return (rc);
 }
 
-int mido_print_portgroup(midoname * name) {
-    int ret = 0;
-    return (ret);
+/**
+ * Logs the information about a port-group represented by name.
+ * @param name [in] MN port-group of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_portgroup(midoname *name) {
+    return (mido_print_resource("port_groups", name));
 }
 
 /**
@@ -1389,25 +1286,13 @@ int mido_delete_ipaddrgroup(midoname *name) {
     return (rc);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_ipaddrgroup(midoname * name)
-{
-    int ret = 0;
-    return (ret);
+/**
+ * Logs the information about an ip-address-group represented by name.
+ * @param name [in] MN port-group of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_ipaddrgroup(midoname *name) {
+    return (mido_print_resource("ip_addr_groups", name));
 }
 
 /**
@@ -1468,16 +1353,6 @@ midonet_api_ipaddrgroup *mido_get_ipaddrgroup(char *name) {
             return (*res);
         }
     }
-/*
-    if (midocache != NULL) {
-        midoname tmp;
-        midonet_api_ipaddrgroup *res = NULL;
-        tmp.name = strdup(name);
-        res = midonet_api_cache_lookup_ipaddrgroup(&tmp, NULL);
-        EUCA_FREE(tmp.name);
-        return (res);
-    }
-*/
     return (NULL);
 }
 
@@ -1657,28 +1532,6 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
     return (ret);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_dhcp(midoname * name)
-{
-    return (mido_read_resource("dhcp", name, NULL));
-}
-*/
-
 /**
  * Updates information about a dhcp with the parameters in the variable argument section.
  * @param [in] name midoname structure of the dhcp of interest (checks are not performed)
@@ -1696,23 +1549,12 @@ int mido_update_dhcp(midoname *name, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_dhcp(midoname * name)
-{
+/**
+ * Logs the information about a dhcp represented by name.
+ * @param name [in] MN port-group of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_dhcp(midoname *name) {
     return (mido_print_resource("dhcp", name));
 }
 
@@ -2092,28 +1934,6 @@ midonet_api_chain *mido_create_chain(char *tenant, char *name, midoname **outnam
     return (ch);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_chain(midoname * name)
-{
-    return (mido_read_resource("chains", name, NULL));
-}
-*/
-
 /**
  * Updates information about a chain with the parameters in the variable argument section.
  * @param [in] name midoname structure of the chain of interest (checks are not performed)
@@ -2131,23 +1951,12 @@ int mido_update_chain(midoname *name, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_chain(midoname * name)
-{
+/**
+ * Logs the information about a chain represented by name.
+ * @param name [in] MN chain of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_chain(midoname *name) {
     return (mido_print_resource("chains", name));
 }
 
@@ -2280,13 +2089,6 @@ int mido_find_ipaddrgroup_ip_from_list(midoname **ips, int max_ips, char *ip, mi
         if ((ips[i] == NULL) || (ips[i]->init == 0)) {
             continue;
         }
-/*
-        int rc = mido_cmp_midoname_to_input(ips[i], "addr", ip, NULL);
-        if (!rc) {
-            *outip = ips[i];
-            found = 1;
-        }
-*/
         if (ips[i]->ipagip && ips[i]->ipagip->ip && !strcmp(ips[i]->ipagip->ip, ip)) {
             *outip = ips[i];
             found = 1;
@@ -2380,67 +2182,6 @@ midoname *mido_get_ipaddrgroup_ip(midonet_api_ipaddrgroup *ipaddrgroup, int pos)
     }
     return (NULL);
 }
-
-/*
-//!
-//!
-//!
-//! @param[in]  position
-//! @param[in]  type
-//! @param[in]  action
-//! @param[in]  protocol
-//! @param[in]  srcIAGuuid
-//! @param[in]  src_port_min
-//! @param[in]  src_port_max
-//! @param[in]  dstIAGuuid
-//! @param[in]  dst_port_min
-//! @param[in]  dst_port_max
-//! @param[in]  matchForwardFlow
-//! @param[in]  matchReturnFlow
-//! @param[in]  nat_target
-//! @param[in]  nat_port_min
-//! @param[in]  nat_port_max
-//! @param[out] outrule
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_allocate_midorule(char *position, char *type, char *action, char *protocol, char *srcIAGuuid, char *src_port_min,  char *src_port_max, char *dstIAGuuid,
-                           char *dst_port_min, char *dst_port_max, char *matchForwardFlow, char *matchReturnFlow, char *nat_target, char *nat_port_min, char *nat_port_max,
-                           midorule *outrule) {
-    int ret=0;
-    if (!outrule) {
-        return(1);
-    }
-
-    bzero(outrule, sizeof(midorule));
-
-    if (position) snprintf(outrule->position, sizeof(outrule->position), "%s", position);
-    if (type) snprintf(outrule->type, sizeof(outrule->type), "%s", type);
-    if (action) snprintf(outrule->action, sizeof(outrule->action), "%s", action);
-    if (protocol) snprintf(outrule->protocol, sizeof(outrule->protocol), "%s", protocol);
-    if (srcIAGuuid) snprintf(outrule->srcIAGuuid, sizeof(outrule->srcIAGuuid), "%s", srcIAGuuid);
-    if (src_port_min) snprintf(outrule->src_port_min, sizeof(outrule->src_port_min), "%s", src_port_min);
-    if (src_port_max) snprintf(outrule->src_port_max, sizeof(outrule->src_port_max), "%s", src_port_max);
-    if (dstIAGuuid) snprintf(outrule->dstIAGuuid, sizeof(outrule->dstIAGuuid), "%s", dstIAGuuid);
-    if (dst_port_min) snprintf(outrule->dst_port_min, sizeof(outrule->dst_port_min), "%s", dst_port_min);
-    if (dst_port_max) snprintf(outrule->dst_port_max, sizeof(outrule->dst_port_max), "%s", dst_port_max);
-    if (matchForwardFlow) snprintf(outrule->matchForwardFlow, sizeof(outrule->matchForwardFlow), "%s", matchForwardFlow);
-    if (matchReturnFlow) snprintf(outrule->matchReturnFlow, sizeof(outrule->matchReturnFlow), "%s", matchReturnFlow);
-    if (nat_target) snprintf(outrule->nat_target, sizeof(outrule->nat_target), "%s", nat_target);
-    if (nat_port_min) snprintf(outrule->nat_port_min, sizeof(outrule->nat_port_min), "%s", nat_port_min);
-    if (nat_port_max) snprintf(outrule->nat_port_max, sizeof(outrule->nat_port_max), "%s", nat_port_max);
-
-    return(ret);
-}
-*/
 
 /**
  * Searches a list of chain rules in the argument for a rule matching the fields
@@ -2593,44 +2334,12 @@ int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname,
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//! @param[in] ... variable argument section
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note TODO: implement!
-//!
-int mido_update_rule(midoname * name, ...)
-{
-    return (0);
-}
-
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_rule(midoname * name)
-{
+/**
+ * Logs the information about a port represented by name.
+ * @param name [in] MN port of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_rule(midoname *name) {
     return (mido_print_resource("ports", name));
 }
 
@@ -2903,10 +2612,6 @@ int mido_find_port_from_list(midoname **ports, int max_ports, char *ip, char *nw
                 rc = 0;
             }
         }
-/*
-        rc = mido_cmp_midoname_to_input(ports[i], "portAddress", sip, "networkAddress", snw,
-                "networkLength", ssn, "portMac", mac, NULL);
-*/
         if (rc == 0) {
             found = 1;
             if (foundidx) {
@@ -2943,23 +2648,12 @@ int mido_update_port(midoname *name, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_port(midoname * name)
-{
+/**
+ * Logs the information about a port represented by name.
+ * @param name [in] MN port of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_port(midoname *name) {
     return (mido_print_resource("ports", name));
 }
 
@@ -3417,17 +3111,6 @@ int mido_link_ports(midoname *a, midoname *b) {
     myname.media_type = strdup(midonet_api_mtypes[APPLICATION_PORT_LINK]);
 
     // check to see if link already exists before making new link
-/*
-    if (!mido_getel_midoname(a, "peer", &asideval) && !mido_getel_midoname(b, "peer", &bsideval)) {
-        if (strstr(asideval, b->uuid) && strstr(bsideval, a->uuid)) {
-            LOGTRACE("ALREADY EXISTS: link from port %s to port %s\n", SP(a->uuid), SP(b->uuid));
-            found = 1;
-        }
-    }
-    EUCA_FREE(asideval);
-    EUCA_FREE(bsideval);
-*/
-    
     if (a->port && b->port && a->port->peerid && b->port->peerid) {
         if (!strcmp(a->port->peerid, b->uuid) && !strcmp(b->port->peerid, a->uuid)) {
             LOGTRACE("ALREADY EXISTS: link from port %s to port %s\n", SP(a->uuid), SP(b->uuid));
@@ -3501,61 +3184,13 @@ int mido_update_resource(midoname *name, va_list *al) {
     return(ret);
 }
 
-/*
-//!
-//!
-//!
-//! @param[in] resource_type
-//! @param[in] name
-//! @param[in] apistr
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_read_resource(char *resource_type, midoname * name, char *apistr)
-{
-    char url[EUCA_MAX_PATH], *outhttp = NULL;
-    int rc = 0, ret = 0;
-
-    snprintf(url, EUCA_MAX_PATH, "%s/%s/%s", midonet_api_uribase, resource_type, name->uuid);
-    rc = midonet_http_get(url, apistr, &outhttp);
-    if (rc) {
-        ret = 1;
-    } else {
-        EUCA_FREE(name->jsonbuf);
-        name->jsonbuf = strdup(outhttp);
-        ret = mido_update_midoname(name);
-    }
-    EUCA_FREE(outhttp);
-    return (ret);
-}
-*/
-
-//!
-//!
-//!
-//! @param[in] resource_type
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_print_resource(char *resource_type, midoname * name)
-{
+/**
+ * Logs the information about a resource_type represented by name.
+ * @param resource_type [in] resource type as described in MN
+ * @param name [in] MN bridge of interest
+ * @return 0 on success. 1 on failure.
+ */
+int mido_print_resource(char *resource_type, midoname *name) {
     int ret = 0;
     struct json_object *jobj = NULL;
 
@@ -3592,24 +3227,13 @@ char *mido_get_json(char *tenant, ...) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] tenant
-//! @param[in] al
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-char *mido_jsonize(char *tenant, va_list * al)
-{
+/**
+ * Converts a null terminated variable list of key-value pairs to a valid JSON string
+ * @param tenant [in] optional tenant ID to be included in the generated JSON string
+ * @param al [in] variable argument section
+ * @return the input key-value pairs JSONized into a string
+ */
+char *mido_jsonize(char *tenant, va_list *al) {
     char *payload = NULL;
     struct json_object *jobj = NULL, *jobj_sublist = NULL, *jarr_sublist = NULL;
     char *key = NULL, *val = NULL, *listobjtag = NULL, *listarrtag = NULL, *listjsontag = NULL;
@@ -3946,27 +3570,6 @@ void mido_copy_midoname(midoname *dst, midoname *src) {
     dst->init = src->init;
 }
 
-//!
-//!
-//!
-//! @param[in]  tenant
-//! @param[in]  name
-//! @param[in]  uuid
-//! @param[in]  resource_type
-//! @param[in]  content_type
-//! @param[in]  jsonbuf
-//! @param[out] outname
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
 /**
  * Create a midoname datastructure with the parameters in the argument.
  * @param [in] tenant MN tenant ID.
@@ -4215,24 +3818,13 @@ int mido_update_midoname(midoname *name) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] parentname
-//! @param[in] name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int mido_delete_resource(midoname * parentname, midoname * name)
-{
+/**
+ * Deletes a MN construct
+ * @param parentname [in] optional parent MN construct
+ * @param name [in] MN construct to be removed
+ * @return 0 on success. 1 on failure.
+ */
+int mido_delete_resource(midoname *parentname, midoname *name) {
     int rc = 0, ret = 0;
     char url[EUCA_MAX_PATH];
 
@@ -4267,26 +3859,15 @@ int mido_delete_resource(midoname * parentname, midoname * name)
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] contents
-//! @param[in] size
-//! @param[in] nmemb
-//! @param[in] in_params
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_params)
-{
+/**
+ * Memory writer call back function to be used with libcurl
+ * @param contents [in] contents to be copied
+ * @param size [in] size of each unit in contents
+ * @param nmemb [in] number of units in contents
+ * @param in_params [in/out] midonet-api parameters 
+ * @return the number of bytes written.
+ */
+static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_params) {
     struct mem_params_t *params = (struct mem_params_t *)in_params;
 
     if (!params->mem) {
@@ -4303,26 +3884,15 @@ static size_t mem_writer(void *contents, size_t size, size_t nmemb, void *in_par
     return (size * nmemb);
 }
 
-//!
-//!
-//!
-//! @param[in] contents
-//! @param[in] size
-//! @param[in] nmemb
-//! @param[in] in_params
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_params)
-{
+/**
+ * Memory reader call back to be used with libcurl
+ * @param contents [out] destination of the data to be read
+ * @param size [in] size of each unit in contents
+ * @param nmemb [in] number of units in contents
+ * @param in_params [in/out] midonet-api parameters 
+ * @return number of bytes read.
+ */
+static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_params) {
     struct mem_params_t *params = (struct mem_params_t *)in_params;
     size_t bytes_to_copy = 0;
 
@@ -4745,26 +4315,15 @@ int midonet_http_put(char *url, char *apistr, char *payload) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] content
-//! @param[in] size
-//! @param[in] nmemb
-//! @param[in] params
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static size_t header_find_location(char *content, size_t size, size_t nmemb, void *params)
-{
+/**
+ * Callback function to read header data used with libcurl.
+ * @param content [in] header data from libcurl
+ * @param size [in] size of elements in content
+ * @param nmemb [in] number of elements in content
+ * @param params [out] midonet-api parameters
+ * @return number of bytes read.
+ */
+static size_t header_find_location(char *content, size_t size, size_t nmemb, void *params) {
     char *buf = NULL;
     char **loc = (char **)params;
 
@@ -4938,10 +4497,6 @@ int mido_find_route_from_list(midoname **routes, int max_routes, midoname *rport
             continue;
         }
         if (!next_hop_ip || strcmp(next_hop_ip, "UNSET")) {
-/*
-            rc = mido_cmp_midoname_to_input(routes[i], "srcNetworkAddr", src, "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength", dst_slashnet,
-                    "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, "nextHopGateway", next_hop_ip, NULL);
-*/
             rc = 1;
             if (routes[i]->route) {
                 if ((src && routes[i]->route->srcnet && !strcmp(src, routes[i]->route->srcnet)) &&
@@ -5549,16 +5104,6 @@ midonet_api_router *mido_get_router(char *name) {
             return (*res);
         }
     }
-/*
-    midoname tmp;
-    midonet_api_router *res = NULL;
-    if (midocache != NULL) {
-        tmp.name = strdup(name);
-        res = midonet_api_cache_lookup_router(&tmp, NULL);
-        EUCA_FREE(tmp.name);
-        return (res);
-    }
-*/
     return (NULL);
 }
 
@@ -5621,16 +5166,6 @@ midonet_api_bridge *mido_get_bridge(char *name) {
         }
     }
 
-/*
-    midoname tmp;
-    midonet_api_bridge *res = NULL;
-    if (midocache != NULL) {
-        tmp.name = strdup(name);
-        res = midonet_api_cache_lookup_bridge(&tmp, NULL);
-        EUCA_FREE(tmp.name);
-        return (res);
-    }
-*/
     return (NULL);
 }
 
@@ -5692,16 +5227,6 @@ midonet_api_chain *mido_get_chain(char *name) {
             return (*res);
         }
     }
-/*
-    if (midocache != NULL) {
-        midoname tmp;
-        midonet_api_chain *res = NULL;
-        tmp.name = strdup(name);
-        res = midonet_api_cache_lookup_chain(&tmp, NULL);
-        EUCA_FREE(tmp.name);
-        return (res);
-    }
-*/
     return (NULL);
 }
 
@@ -5970,28 +5495,21 @@ midonet_api_host *mido_get_host_byip(char *ip) {
     return (NULL);
 }
 
-//!
-//! Retrieves interfaces of the specified host as detected by midolman.
-//!
-//! @param[in]  host host of interest.
-//! @param[in]  iftype interface type to search and return.
-//! @param[out] outnames array of interfaces of the host.
-//! @param[out] outnames_max number of interfaces.
-//!
-//! @return 0 on success. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note memory allocated for outnames must be released by the caller. The caller
-//!       is also required to release prior memory allocations to outnames before
-//!       calling this function.
-//!
-int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max)
-{
+/**
+ * Retrieves interfaces of the specified host as detected by midolman.
+ *
+ * @param host [in] host of interest.
+ * @param iftype [in] interface type to search and return.
+ * @param outnames [out] array of interfaces of the host.
+ * @param outnames_max [out] number of interfaces.
+ *
+ * @return 0 on success. 1 otherwise.
+ *
+ * @note memory allocated for outnames must be released by the caller. The caller
+ *       is also required to release prior memory allocations to outnames before
+ *       calling this function.
+ */
+int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max) {
     int rc = 0, ret = 0, i = 0, getif = 0;
     char *payload = NULL, url[EUCA_MAX_PATH];
     midoname *names = NULL;
@@ -6091,7 +5609,7 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
 
     if (names && (names_max > 0)) {
         *outnames = EUCA_ZALLOC_C(names_max, sizeof(midoname));
-        memcpy(*outnames, names, sizeof(midoname) * names_max);
+        memcpy(*outnames, names, sizeof(midoname) *names_max);
         *outnames_max = names_max;
     }
     EUCA_FREE(names);
@@ -6231,19 +5749,11 @@ int mido_initialize_apiuribase(void) {
     return (rc);
 }
 
-//!
-//! Creates an empty midoname_list structure.
-//!
-//! @return pointer to the newly created midoname_list structure or NULL in case of failure.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
+/**
+ * Creates an empty midoname_list structure.
+ *
+ * @return pointer to the newly created midoname_list structure or NULL in case of failure.
+ */
 midoname_list *midoname_list_new(void) {
     midoname_list *res = NULL;
 
@@ -6252,20 +5762,14 @@ midoname_list *midoname_list_new(void) {
     return (res);
 }
 
-//!
-//! Releases resources used by the midoname_list structure in the argument.
-//!
-//! @param[in]  midoname_list structure of interest.
-//! @return 0 on success. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note The list is assumed to be created using midoname_list_new()
-//!
+/**
+ * Releases resources used by the midoname_list structure in the argument.
+ *
+ * @param midoname_list [in] structure of interest.
+ * @return 0 on success. 1 otherwise.
+ * 
+ * @note The list is assumed to be created using midoname_list_new()
+ */
 int midoname_list_free(midoname_list *list) {
     int j = 0;
     LOGTRACE("Releasing midoname_list at %p\n", list);
@@ -6285,20 +5789,14 @@ int midoname_list_free(midoname_list *list) {
     return (0);
 }
 
-//!
-//! Returns a free midoname element from the midoname_list in the argument.
-//!
-//! @param[in]  midoname_list structure of interest.
-//! @return pointer to an unused midoname structure. NULL on any failure.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note The list is assumed to be created using midoname_list_new()
-//!
+/**
+ * Returns a free midoname element from the midoname_list in the argument.
+ *
+ * @param midoname_list [in] structure of interest.
+ * @return pointer to an unused midoname structure. NULL on any failure.
+ *
+ * @note The list is assumed to be created using midoname_list_new()
+ */
 midoname *midoname_list_get_midoname(midoname_list *list) {
     midoname *res = NULL;
     midoname *mnarr = NULL;
@@ -6529,19 +6027,6 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
     }
 
     eucanetd_timer_usec(&tv);
-    // get all ports
-/*
-    names = &(cache->ports);
-    max_names = &(cache->max_ports);
-    rc = mido_get_ports(NULL, names, max_names);
-    if (!rc && *max_names) {
-        midoname **ports = *names;
-        for (i = 0; i < *max_names; i++) {
-            LOGEXTREME("Cached port %s\n", ports[i]->name);
-        }
-    }
-    LOGTRACE("\t%d ports in %.2f\n", cache->max_ports, eucanetd_timer_usec(&tv) / 1000.0);
-*/
 
     // get all routers
     l1names = NULL;
@@ -6555,13 +6040,6 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             cache->routers[i] = router;
             router->obj = l1names[i];
             LOGEXTREME("Cached router %s\n", router->obj->name);
-/*
-            rc = mido_get_device_ports(cache->ports, cache->max_ports, router->obj,
-                    &(router->ports), &(router->max_ports));
-            for (j = 0; j < router->max_ports && !rc; j++) {
-                LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
-            }
-*/
             rc = mido_get_ports(router->obj, &(router->ports), &(router->max_ports));
             if (!rc) {
                 cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + router->max_ports, sizeof (midoname *));
@@ -6600,13 +6078,6 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
             cache->bridges[i] = bridge;
             bridge->obj = l1names[i];
             LOGEXTREME("Cached bridge %s\n", bridge->obj->name);
-/*
-            rc = mido_get_device_ports(cache->ports, cache->max_ports, bridge->obj,
-                    &(bridge->ports), &(bridge->max_ports));
-            for (j = 0; j < bridge->max_ports && !rc; j++) {
-                LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
-            }
-*/
             rc = mido_get_ports(bridge->obj, &(bridge->ports), &(bridge->max_ports));
             if (!rc) {
                 cache->ports = EUCA_REALLOC_C(cache->ports, cache->max_ports + bridge->max_ports, sizeof (midoname *));
@@ -6799,21 +6270,6 @@ int midonet_api_cache_refresh_routerroutes(midonet_api_cache *cache, int start, 
             continue;
         }
 
-/*
-                if (router->ports_cached == 0) {
-                    rc = mido_get_device_ports(cache->ports, cache->max_ports, router->obj,
-                            &(router->ports), &(router->max_ports));
-                    if (!rc) {
-                        router->ports_cached = 1;
-                        for (int j = 0; j < router->max_ports && !rc; j++) {
-                            LOGEXTREME("\tCached port %s\n", router->ports[j]->jsonbuf);
-                        }
-                    } else {
-                        LOGWARN("\tFailed to retrieve %s ports\n", router->obj->name);
-                    }
-                }
-         */
-
         rc = mido_get_ports(router->obj, &(router->ports), &(router->max_ports));
         if (!rc) {
             pthread_mutex_lock(&mido_cache_ports_mutex);
@@ -6862,21 +6318,6 @@ int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, i
         if (bridge == NULL) {
             continue;
         }
-
-/*
-        if (bridge->ports_cached == 0) {
-            rc = mido_get_device_ports(cache->ports, cache->max_ports, bridge->obj,
-                    &(bridge->ports), &(bridge->max_ports));
-            if (!rc) {
-                bridge->ports_cached = 1;
-                for (int j = 0; j < bridge->max_ports && !rc; j++) {
-                    LOGEXTREME("\tCached port %s\n", bridge->ports[j]->jsonbuf);
-                }
-            } else {
-                LOGWARN("\tFailed to retrieve %s ports\n", bridge->obj->name);
-            }
-        }
-*/
 
         rc = mido_get_ports(bridge->obj, &(bridge->ports), &(bridge->max_ports));
         if (!rc) {
@@ -7109,15 +6550,6 @@ int midonet_api_cache_refresh_hosts(midonet_api_cache *cache) {
             cache->hosts[i] = host;
             host->obj = l1names[i];
             LOGEXTREME("Cached host %s\n", host->obj->name);
-/*
-            rc = mido_get_host_ports(cache->ports, cache->max_ports, host->obj,
-                    &(host->ports), &(host->max_ports));
-            if (!rc) {
-                for (int j = 0; j < host->max_ports && !rc; j++) {
-                    LOGEXTREME("\tCached port %s\n", host->ports[j]->uuid);
-                }
-            }
-*/
             rc = mido_get_addresses(host->obj, &(host->addresses), &(host->max_addresses));
             if (!rc) {
                 for (int j = 0; j < host->max_addresses && !rc; j++) {
@@ -9240,20 +8672,18 @@ int compare_midonet_api_chain(const void *p1, const void *p2) {
     return (strcmp(name1, name2));
 }
 
-
 #ifdef MIDONET_API_TEST
-//!
-//!
-//!
-//! @param[in] argc
-//! @param[in] argv
-//!
-//! @return
-//!
-//! @note
-//!
-int main(int argc, char **argv)
-{
+/**
+ *
+ *
+ * @param argc [in]
+ * @param argv [in]
+ *
+ * @return
+ *
+ * @note
+ */
+int main(int argc, char **argv) {
     exit(0);
 }
 #endif

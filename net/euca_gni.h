@@ -197,8 +197,6 @@ struct gni_instance_t {
     gni_name instance_name;            //!< Instance name associated
     gni_name *secgroup_names;          //!< List of associated security group names
     int max_secgroup_names;            //!< Number of security group names in the list
-    //gni_name *interface_names;         //!< List of associated interface names (only for instances)
-    //int max_interface_names;           //!< Number of interface names in the list
     gni_instance **interfaces;
     int max_interfaces;
     gni_secgroup **gnisgs;
@@ -218,10 +216,6 @@ struct gni_secgroup_t {
     int max_ingress_rules;
     gni_rule *egress_rules;
     int max_egress_rules;
-    //gni_name *instance_names;          //!< List of instance names
-    //int max_instance_names;            //!< Number of instance names in the list
-    //gni_name *interface_names;         //!< List of interface names
-    //int max_interface_names;           //!< Number of interface names in the list
     gni_instance **instances;
     int max_instances;
     gni_instance **interfaces;
@@ -417,10 +411,10 @@ typedef struct globalNetworkInfo_t {
 \*----------------------------------------------------------------------------*/
 
 globalNetworkInfo *gni_init(void);
-int gni_free(globalNetworkInfo * gni);
-int gni_clear(globalNetworkInfo * gni);
-int gni_print(globalNetworkInfo * gni);
-int gni_iterate(globalNetworkInfo * gni, int mode);
+int gni_free(globalNetworkInfo *gni);
+int gni_clear(globalNetworkInfo *gni);
+int gni_print(globalNetworkInfo *gni);
+int gni_iterate(globalNetworkInfo *gni, int mode);
 int gni_populate(globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
 int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
 int gni_populate_xpathnodes(xmlDocPtr doc, xmlNode **gni_nodes);
@@ -453,34 +447,34 @@ int gni_secgroup_clear(gni_secgroup *secgroup);
 int gni_vpc_clear(gni_vpc *vpc);
 int gni_dhcpos_clear(gni_dhcp_os *dhcpos);
 
-int gni_find_self_node(globalNetworkInfo * gni, gni_node ** outnodeptr);
-int gni_find_self_cluster(globalNetworkInfo * gni, gni_cluster ** outclusterptr);
-int gni_find_secgroup(globalNetworkInfo * gni, const char *psGroupId, gni_secgroup ** pSecGroup);
-int gni_find_instance(globalNetworkInfo * gni, const char *psInstanceId, gni_instance ** pInstance);
-int gni_find_secondary_interfaces(globalNetworkInfo * gni, const char *psInstanceId, gni_instance * pAInstances[], int * size);
+int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
+int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);
+int gni_find_secgroup(globalNetworkInfo *gni, const char *psGroupId, gni_secgroup **pSecGroup);
+int gni_find_instance(globalNetworkInfo *gni, const char *psInstanceId, gni_instance **pInstance);
+int gni_find_secondary_interfaces(globalNetworkInfo *gni, const char *psInstanceId, gni_instance *pAInstances[], int *size);
 
-int gni_cloud_get_clusters(globalNetworkInfo * gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster ** out_clusters,
+int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster **out_clusters,
                            int *out_max_clusters);
-int gni_cloud_get_secgroups(globalNetworkInfo * pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
-                           gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups);
-int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names,
-                          gni_node ** out_nodes, int *out_max_nodes);
-int gni_cluster_get_instances(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psInstanceNames, int maxInstanceNames, char ***psOutInstanceNames, int *pOutNbInstanceNames,
-                              gni_instance ** pOutInstances, int *pOutNbInstances);
-int gni_cluster_get_secgroup(globalNetworkInfo * pGni, gni_cluster * pCluster, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
-                             gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups);
-int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
-                           gni_instance ** out_instances, int *out_max_instances);
-int gni_node_get_secgroup(globalNetworkInfo * pGni, gni_node * pNode, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
-                          gni_secgroup ** pOutSecGroups, int *pOutNbSecGroups);
-int gni_instance_get_secgroups(globalNetworkInfo * gni, gni_instance * instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names,
-                               int *out_max_secgroup_names, gni_secgroup ** out_secgroups, int *out_max_secgroups);
-int gni_secgroup_get_instances(globalNetworkInfo * gni, gni_secgroup * secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
-                               int *out_max_instance_names, gni_instance ** out_instances, int *out_max_instances);
-int gni_secgroup_get_interfaces(globalNetworkInfo * gni, gni_secgroup * secgroup,
+int gni_cloud_get_secgroups(globalNetworkInfo *pGni, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                           gni_secgroup **pOutSecGroups, int *pOutNbSecGroups);
+int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names,
+                          gni_node **out_nodes, int *out_max_nodes);
+int gni_cluster_get_instances(globalNetworkInfo *pGni, gni_cluster *pCluster, char **psInstanceNames, int maxInstanceNames, char ***psOutInstanceNames, int *pOutNbInstanceNames,
+                              gni_instance **pOutInstances, int *pOutNbInstances);
+int gni_cluster_get_secgroup(globalNetworkInfo *pGni, gni_cluster *pCluster, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                             gni_secgroup **pOutSecGroups, int *pOutNbSecGroups);
+int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
+                           gni_instance **out_instances, int *out_max_instances);
+int gni_node_get_secgroup(globalNetworkInfo *pGni, gni_node *pNode, char **psSecGroupNames, int nbSecGroupNames, char ***psOutSecGroupNames, int *pOutNbSecGroupNames,
+                          gni_secgroup **pOutSecGroups, int *pOutNbSecGroups);
+int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names,
+                               int *out_max_secgroup_names, gni_secgroup **out_secgroups, int *out_max_secgroups);
+int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, char **instance_names, int max_instance_names, char ***out_instance_names,
+                               int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances);
+int gni_secgroup_get_interfaces(globalNetworkInfo *gni, gni_secgroup *secgroup,
         char **interface_names, int max_interface_names, char ***out_interface_names,
-        int *out_max_interface_names, gni_instance *** out_interfaces, int *out_max_interfaces);
-int gni_secgroup_get_chainname(globalNetworkInfo * gni, gni_secgroup * secgroup, char **outchainname);
+        int *out_max_interface_names, gni_instance ***out_interfaces, int *out_max_interfaces);
+int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, char **outchainname);
 
 int gni_get_secgroups_from_instances(globalNetworkInfo *gni, gni_instance *instances,
         int max_instances, gni_secgroup ***out_secgroups, int *max_out_secgroups);
@@ -502,22 +496,22 @@ gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx
 gni_network_acl *gni_get_networkacl(gni_vpc *vpc, char *name, int *startidx);
 gni_dhcp_os *gni_get_dhcpos(globalNetworkInfo *gni, char *name, int *startidx);
 
-int gni_validate(globalNetworkInfo * gni);
+int gni_validate(globalNetworkInfo *gni);
 int gni_netmode_validate(const char *psMode);
-int gni_subnet_validate(gni_subnet * subnet);
-int gni_managed_subnet_validate(gni_managedsubnet * pSubnet);
-int gni_cluster_validate(gni_cluster * cluster, euca_netmode nmode);
-int gni_node_validate(gni_node * node);
-int gni_instance_validate(gni_instance * instance);
-int gni_interface_validate(gni_instance * interface);
-int gni_secgroup_validate(gni_secgroup * secgroup);
+int gni_subnet_validate(gni_subnet *subnet);
+int gni_managed_subnet_validate(gni_managedsubnet *pSubnet);
+int gni_cluster_validate(gni_cluster *cluster, euca_netmode nmode);
+int gni_node_validate(gni_node *node);
+int gni_instance_validate(gni_instance *instance);
+int gni_interface_validate(gni_instance *interface);
+int gni_secgroup_validate(gni_secgroup *secgroup);
 int gni_vpc_validate(gni_vpc *vpc);
 int gni_vpcsubnet_validate(gni_vpcsubnet *vpcsubnet);
 int gni_nat_gateway_validate(gni_nat_gateway *natg);
 int gni_route_table_validate(gni_route_table *rtable);
 int gni_networkacl_validate(gni_network_acl *acl);
 
-int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
+int gni_serialize_iprange_list(char **inlist, int inmax, u32 **outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr startnode, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr startnode, char *expression, char ***results, int *max_results);
 int evaluate_xpath_nodeset(xmlXPathContextPtr ctxptr, xmlDocPtr doc, xmlNodePtr startnode, char *expression, xmlNodeSetPtr nodeset);

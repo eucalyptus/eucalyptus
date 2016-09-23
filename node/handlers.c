@@ -111,7 +111,6 @@
 #include <euca_axis.h>
 #include <euca_network.h>
 #include <euca_gni.h>
-#include <eucanetd_config.h>
 
 #include <vbr.h>
 #include <iscsi.h>

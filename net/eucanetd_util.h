@@ -96,7 +96,7 @@
 
 #include <netinet/in.h>
 #include <euca_network.h>
-#include <eucanetd_config.h>
+#include "eucanetd.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -158,7 +158,6 @@ long int eucanetd_timer_usec(struct timeval *t);
 long int eucanetd_get_timestamp();
 
 int euca_exec(const char *command);
-int euca_exec_no_wait(const char *file, ...);
 int euca_exec_wait(int timeout_sec, const char *file, ...);
 
 int euca_string_set_insert(char ***set, int *max_set, char *value);

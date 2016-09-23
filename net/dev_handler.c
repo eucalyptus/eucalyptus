@@ -119,13 +119,8 @@
 #include <log.h>
 #include <atomic_file.h>
 
-#include "ipt_handler.h"
-#include "ips_handler.h"
-#include "ebt_handler.h"
 #include "dev_handler.h"
-#include "eucanetd_config.h"
 #include "euca_gni.h"
-#include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
 
@@ -195,7 +190,7 @@ const char *asDevTypeNames[] = {
 static inline boolean dev_is_vlan_valid(u16 vlan);
 
 //! API to force remove a bridge device
-static int dev_remove_bridge_forced(const char *psBridgeName);
+static int dev_remove_bridge_forced(dev_handler *devh, const char *psBridgeName);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -212,36 +207,143 @@ static int dev_remove_bridge_forced(const char *psBridgeName);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Retrieves a list of devices that support IP traffic. The caller can filter using the
-//! cpsSearch parameter. If cpsSearch is set to NULL or "*", the list isn't filtered. If
-//! cpsSearch is terminated with a "*" character, than any device name that starts with
-//! the string prepending the "*" will be in the final list and if there are no "*", then
-//! the list will only contain the interface with the given name.
-//!
-//! @param[in]     cpsSearch a constant string pointer to the filter. (see description)
-//! @param[in,out] pDevices a pointer to a list of string that will contain the device names
-//! @param[in,out] pNbDevices a pointer to the integer indicating how many devices we found
-//! @param[in]     deviceType the device type to filter on. The values are define in the dev_type_t enum.
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see dev_free_list()
-//!
-//! @pre
-//!     Both ppsDevNames and pNumberOfDevices MUST not be NULL.
-//!
-//! @post
-//!     On successful completion, ppsDevNames contains the list of device names found on the system for
-//!     the given search criterias and pNumberOfDevices contains the number of elements in the list. On
-//!     failure, both pNumberOfDevices and ppsDevNames are non-deterministic.
-//!
-//! @note
-//!     Caller is responsible to free the dynamically allocated list of device name entries
-//!     using the dev_free_list() API.
-//!
-int dev_get(const char *cpsSearch, dev_entry ** pDevices, int *pNbDevices, dev_type deviceType)
-{
+/**
+ * Initialize the IP Set handler structure
+ *
+ * @param devh [in] pointer to the device handler structure
+ * @param cmdprefix [in] a string pointer to the prefix to use to run commands
+ *
+ * @return 0 on success. 1 on any failure.
+ *
+ * @pre
+ *    - The devh pointer should not be NULL
+ *     - We should be able to create temporary files on the system
+ *
+ * @post
+ *     - If cmdprefix was provided, the table's cmdprefix field will be set with it
+ *
+ */
+int dev_handler_init(dev_handler *devh, const char *cmdprefix) {
+    if (!devh) {
+        LOGERROR("invalid argument: cannot initialize NULL dev_handler\n");
+        return (1);
+    }
+
+    memset(devh, 0, sizeof(dev_handler));
+
+    if (cmdprefix) {
+        snprintf(devh->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
+    } else {
+        devh->cmdprefix[0] = '\0';
+    }
+    
+    devh->init = 1;
+    return (0);
+}
+
+/**
+ * Release resources of the given device handler and reinitializes the handler.
+ * @param devh [in] pointer to the device handler
+ * @return 0 on success. 1 on failure.
+ */
+int dev_handler_free(dev_handler *devh) {
+    char saved_cmdprefix[EUCA_MAX_PATH] = "";
+
+    if (!devh || !devh->init) {
+        return (1);
+    }
+    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", devh->cmdprefix);
+
+    devh->numberOfDevices = 0;
+    devh->numberOfNetworks = 0;
+    EUCA_FREE(devh->pDevices);
+    EUCA_FREE(devh->pNetworks);
+
+    return (dev_handler_init(devh, saved_cmdprefix));
+}
+
+/**
+ * Releases all resources of the given dev_handler.
+ * @param devh [in] pointer to the device handler
+ * @return 0 on success. 1 on failure.
+ */
+int dev_handler_close(dev_handler *devh) {
+    if (!devh || !devh->init) {
+        LOGDEBUG("Invalid argument. NULL or uninitialized dev_handler.\n");
+        return (1);
+    }
+    EUCA_FREE(devh->pDevices);
+    EUCA_FREE(devh->pNetworks);
+    memset(devh, 0, sizeof (dev_handler));
+    return (0);
+}
+
+/**
+ * Retrieves the current device state from the system.
+ * @param devh [in] pointer to device handler
+ * @return 0 on success. 1 on failure.
+ */
+int dev_handler_repopulate(dev_handler *devh) {
+    int rc = 0;
+    struct timeval tv = { 0 };
+
+    eucanetd_timer_usec(&tv);
+    if (!devh || !devh->init) {
+        return (1);
+    }
+
+    rc = dev_handler_free(devh);
+    if (rc) {
+        LOGERROR("could not reinitialize dev handler.\n");
+        return (1);
+    }
+    // Retrieve our system network device information
+    if ((rc = dev_get_list(devh, NULL, &devh->pDevices, &devh->numberOfDevices)) != 0) {
+        LOGERROR("Cannot retrieve system network device information.\n");
+        dev_handler_free(devh);
+        return (1);
+    }
+    // Retrieve our system network device information
+    if ((rc = dev_get_ips(NULL, &devh->pNetworks, &devh->numberOfNetworks)) != 0) {
+        LOGERROR("Cannot retrieve system network information.\n");
+        dev_handler_free(devh);
+        return (1);
+    }
+
+    LOGDEBUG("devices populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (0);
+}
+
+/**
+ * Retrieves a list of devices that support IP traffic. The caller can filter using the
+ * cpsSearch parameter. If cpsSearch is set to NULL or "*", the list isn't filtered. If
+ * cpsSearch is terminated with a "*" character, than any device name that starts with
+ * the string prepending the "*" will be in the final list and if there are no "*", then
+ * the list will only contain the interface with the given name.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param cpsSearch [in] a constant string pointer to the filter. (see description)
+ * @param pDevices [in,out] a pointer to a list of string that will contain the device names
+ * @param pNbDevices [in,out] a pointer to the integer indicating how many devices we found
+ * @param deviceType [in] the device type to filter on. The values are define in the dev_type_t enum.
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @see dev_free_list()
+ *
+ * @pre
+ *     Both ppsDevNames and pNumberOfDevices MUST not be NULL.
+ *
+ * @post
+ *     On successful completion, ppsDevNames contains the list of device names found on the system for
+ *     the given search criterias and pNumberOfDevices contains the number of elements in the list. On
+ *     failure, both pNumberOfDevices and ppsDevNames are non-deterministic.
+ *
+ * @note
+ *     Caller is responsible to free the dynamically allocated list of device name entries
+ *     using the dev_free_list() API.
+ */
+int dev_get(dev_handler *devh, const char *cpsSearch, dev_entry **pDevices, int *pNbDevices, dev_type deviceType) {
     int i = 0;
     dev_entry *pPtr = NULL;
     boolean found = FALSE;
@@ -335,24 +437,17 @@ int dev_get(const char *cpsSearch, dev_entry ** pDevices, int *pNbDevices, dev_t
     return (0);
 }
 
-//!
-//! Checks wether or not a device exists.
-//!
-//! @param[in] psDeviceName a string pointer to the device name we are checking
-//!
-//! @return TRUE if the device exists otherwise FALSE is returned
-//!
-//! @see
-//!
-//! @pre
-//!     psDeviceName MUST not be NULL and not empty
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_exist(const char *psDeviceName)
-{
+/**
+ * Checks whether or not a device exists.
+ *
+ * @param psDeviceName [in] a string pointer to the device name we are checking
+ *
+ * @return TRUE if the device exists otherwise FALSE is returned
+ *
+ * @pre
+ *     psDeviceName MUST not be NULL and not empty
+ */
+boolean dev_exist(const char *psDeviceName) {
 #define MAX_PATH_LEN              64
 
     char sPath[MAX_PATH_LEN] = "";
@@ -372,25 +467,20 @@ boolean dev_exist(const char *psDeviceName)
 #undef MAX_PATH_LEN
 }
 
-//!
-//! Checks wether or not a given device is currently UP
-//!
-//! @param[in] psDeviceName a string pointer to the device name we are checking
-//!
-//! @return the return value description
-//!
-//! @see euca_strncpy(), euca_strdupcat()
-//!
-//! @pre
-//!     - psDeviceName MUST not be NULL
-//!     - psDeviceName must be a valid device
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_is_up(const char *psDeviceName)
-{
+/**
+ * Checks wether or not a given device is currently UP
+ *
+ * @param psDeviceName [in] a string pointer to the device name we are checking
+ *
+ * @return the return value description
+ *
+ * @see euca_strncpy(), euca_strdupcat()
+ *
+ * @pre
+ *     - psDeviceName MUST not be NULL
+ *     - psDeviceName must be a valid device
+ */
+boolean dev_is_up(const char *psDeviceName) {
 #define MAX_PATH_LEN                 64
 #define OPERATING_STATE_LEN          32
 
@@ -431,109 +521,117 @@ boolean dev_is_up(const char *psDeviceName)
 #undef OPERATING_STATE_LEN
 }
 
-//!
-//! Enables a network device.
-//!
-//! @param[in] psDeviceName a string pointer to the device name to enable
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_down(), dev_is_up()
-//!
-//! @pre
-//!     The newtork device name must be valid and the network device must exists on this system
-//!
-//! @post
-//!     On success, the device is enabled. If any failure occured, the device state will
-//!     remain unchanged.
-//!
-//! @note
-//!
-int dev_up(const char *psDeviceName)
-{
+/**
+ * Enables a network device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name to enable
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_down(), dev_is_up()
+ *
+ * @pre
+ *     The newtork device name must be valid and the network device must exists on this system
+ *
+ * @post
+ *     On success, the device is enabled. If any failure occured, the device state will
+ *     remain unchanged.
+ */
+int dev_up(dev_handler *devh, const char *psDeviceName) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure we have a valid device
     if (!dev_exist(psDeviceName)) {
         return (1);
     }
     // enable the device
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "up", NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "up", NULL) != EUCA_OK) {
         LOGERROR("Fail to enable device '%s'. error=%d\n", psDeviceName, rc);
         return (1);
     }
     return (0);
 }
 
-//!
-//! Disables a network device.
-//!
-//! @param[in] psDeviceName a string pointer to the device name to disable
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_up(), dev_is_up()
-//!
-//! @pre
-//!     The newtork device name must be valid and the network device must exists on this system
-//!
-//! @post
-//!     On success, the device is disabled. If any failure occured, the device state will
-//!     remain unchanged.
-//!
-//! @note
-//!
-int dev_down(const char *psDeviceName)
-{
+/**
+ * Disables a network device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name to disable
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_up(), dev_is_up()
+ *
+ * @pre
+ *     The newtork device name must be valid and the network device must exists on this system
+ *
+ * @post
+ *     On success, the device is disabled. If any failure occured, the device state will
+ *     remain unchanged.
+ */
+int dev_down(dev_handler *devh, const char *psDeviceName) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure we have a valid device
     if (!dev_exist(psDeviceName)) {
         return (1);
     }
     // disable the device
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "down", NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "down", NULL) != EUCA_OK) {
         LOGERROR("Fail to enable device '%s'. error=%d\n", psDeviceName, rc);
         return (1);
     }
     return (0);
 }
 
-//!
-//! Renames a device on the system. This will achieve the following tasks:
-//!     - Check if the device is a valid device
-//!     - Check to make sure the new name is valid
-//!     - Make sure the new device name isn't already in use
-//!     - ip link set dev [psDeviceName] down
-//!     - ip link set dev [psDeviceName] name [psNewDevName]
-//!     - ip link set dev [psNewDevName] up
-//!
-//! @param[in] psDeviceName a constant string pointer to the device name we need to rename
-//! @param[in] psNewDevName a constant string pointer to the new device name
-//!
-//! @return TRUE if the VLAN is valid otherwise FALSE is returned
-//!
-//! @see dev_up(), dev_down(), dev_exist()
-//!
-//! @pre
-//!     - Both string pointer must not be null
-//!     - The psDeviceName must be the device name of an existing device on this system
-//!     - The psDeviceName must be the device name of a non-existing device on this system
-//!     - The psNewDevName must have at least one character
-//!
-//! @post
-//!     - On success the device has been renamed
-//!     - On failure the system state is left undetermined. Either the device has been renamed
-//!       or not or the state of the device is up or down.
-//!
-//! @note
-//!
-int dev_rename(const char *psDeviceName, const char *psNewDevName)
-{
+/**
+ * Renames a device on the system. This will achieve the following tasks:
+ *     - Check if the device is a valid device
+ *     - Check to make sure the new name is valid
+ *     - Make sure the new device name isn't already in use
+ *     - ip link set dev [psDeviceName] down
+ *     - ip link set dev [psDeviceName] name [psNewDevName]
+ *     - ip link set dev [psNewDevName] up
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a constant string pointer to the device name we need to rename
+ * @param psNewDevName [in] a constant string pointer to the new device name
+ *
+ * @return TRUE if the VLAN is valid otherwise FALSE is returned
+ *
+ * @see dev_up(), dev_down(), dev_exist()
+ *
+ * @pre
+ *     - Both string pointer must not be null
+ *     - The psDeviceName must be the device name of an existing device on this system
+ *     - The psDeviceName must be the device name of a non-existing device on this system
+ *     - The psNewDevName must have at least one character
+ *
+ * @post
+ *     - On success the device has been renamed
+ *     - On failure the system state is left undetermined. Either the device has been renamed
+ *       or not or the state of the device is up or down.
+ *
+ * @note
+ */
+int dev_rename(dev_handler *devh, const char *psDeviceName, const char *psNewDevName) {
     int rc = 0;
 
     // Make sure both pointers are valid and that the new name is of at least 1 character
     if (!psDeviceName || !psNewDevName || (strlen(psNewDevName) == 0)) {
+        return (1);
+    }
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
         return (1);
     }
     // Make sure the old device name exists on this system
@@ -547,71 +645,54 @@ int dev_rename(const char *psDeviceName, const char *psNewDevName)
         return (1);
     }
     // Disable the device
-    if (dev_down(psDeviceName) != 0) {
+    if (dev_down(devh, psDeviceName) != 0) {
         LOGERROR("Fail to rename network device '%s' to '%s'. Fail to disable '%s'!\n", psDeviceName, psNewDevName, psDeviceName);
         return (1);
     }
     // disable the device
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "name", psNewDevName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "link", "set", "dev", psDeviceName, "name", psNewDevName, NULL) != EUCA_OK) {
         LOGERROR("Fail to rename network device '%s' to '%s'. error=%d\n", psDeviceName, psNewDevName, rc);
         return (1);
     }
     // Enable the device using the new name and just WARN on error
-    if (dev_up(psNewDevName) != 0) {
+    if (dev_up(devh, psNewDevName) != 0) {
         LOGWARN("Fail to rename network device '%s' to '%s'. Fail to enable '%s'!\n", psDeviceName, psNewDevName, psNewDevName);
     }
 
     return (0);
 }
 
-//!
-//! Checks wether or not a given VLAN identifier is valid. It should be between 0 and 4095.
-//!
-//! @param[in] vlan the VLAN identifier to validate
-//!
-//! @return TRUE if the VLAN is valid otherwise FALSE is returned
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static inline boolean dev_is_vlan_valid(u16 vlan)
-{
+/**
+ * Checks wether or not a given VLAN identifier is valid. It should be between 0 and 4095.
+ *
+ * @param vlan [in] the VLAN identifier to validate
+ *
+ * @return TRUE if the VLAN is valid otherwise FALSE is returned
+ */
+static inline boolean dev_is_vlan_valid(u16 vlan) {
     if ((vlan >= MIN_VLAN_802_1Q) && (vlan <= MAX_VLAN_802_1Q))
         return (TRUE);
     return (FALSE);
 }
 
-//!
-//! This function retrieves the name of a VLAN device based on its given base name
-//! and VLAN number. The return value is a pointer into a statically-allocated buffer.
-//! Subsequent calls will overwrite the same buffer, so you should copy the string if
-//! you need to save it.
-//!
-//! In multi-threaded programs each thread has its own 8 statically-allocated buffer. But
-//! still more than 8 subsequent calls of euca_ntoa in the same thread will overwrite
-//! the result of the previous calls. if the result isn't saved.
-//!
-//! @param[in] psDeviceName a string pointer to the base device name to which we will add the VLAN
-//! @param[in] vlan the VLAN identifier
-//!
-//! @return A pointer to the statically-allocated buffer containing the dot representation
-//!         of the address.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-const char *dev_get_vlan_name(const char *psDeviceName, u16 vlan)
-{
+/**
+ * This function retrieves the name of a VLAN device based on its given base name
+ * and VLAN number. The return value is a pointer into a statically-allocated buffer.
+ * Subsequent calls will overwrite the same buffer, so you should copy the string if
+ * you need to save it.
+ *
+ * In multi-threaded programs each thread has its own 8 statically-allocated buffer. But
+ * still more than 8 subsequent calls of euca_ntoa in the same thread will overwrite
+ * the result of the previous calls. if the result isn't saved.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the base device name to which we will add the VLAN
+ * @param vlan [in] the VLAN identifier
+ *
+ * @return A pointer to the statically-allocated buffer containing the dot representation
+ *         of the address.
+ */
+const char *dev_get_vlan_name(const char *psDeviceName, u16 vlan) {
 #define NB_BUFFERS                 8
 #define MAX_VDEV_LEN              32
 
@@ -632,24 +713,15 @@ const char *dev_get_vlan_name(const char *psDeviceName, u16 vlan)
 #undef MAX_VDEV_LEN
 }
 
-//!
-//! This function retrieves the VLAN identifier portion of a VLAN device name. A
-//! VLAN device name is of the "[base_name].[vlanId]" format.
-//!
-//! @param[in] psDeviceName a string pointer to the VLAN device name
-//!
-//! @return The associated VLAN identifier if this is a valid VLAN device name or -1 on failure.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int dev_get_vlan_id(const char *psDeviceName)
-{
+/**
+ * This function retrieves the VLAN identifier portion of a VLAN device name. A
+ * VLAN device name is of the "[base_name].[vlanId]" format.
+ *
+ * @param psDeviceName [in] a string pointer to the VLAN device name
+ *
+ * @return The associated VLAN identifier if this is a valid VLAN device name or -1 on failure.
+ */
+int dev_get_vlan_id(const char *psDeviceName) {
     char *psVlanId = NULL;
 
     // Make sure the given device name isn't NULL
@@ -664,28 +736,21 @@ int dev_get_vlan_id(const char *psDeviceName)
     return (atoi(psVlanId + 1));
 }
 
-//!
-//! Checks wether or not a given VLAN is configured on a given device. Under Linux,
-//! when adding a VLAN to a network device, this results in creating a new device
-//! with the name set as [device_name].[vlan].
-//!
-//! @param[in] psDeviceName a constant string pointer to the base device name
-//! @param[in] vlan the VLAN identifier to check
-//!
-//! @return TRUE if the given VLAN is configured on the given device otherwise FALSE
-//!         is returned.
-//!
-//! @see
-//!
-//! @pre
-//!     The psDeviceName parameter must not be NULL and the vlan parameter should be valid
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_has_vlan(const char *psDeviceName, u16 vlan)
-{
+/**
+ * Checks wether or not a given VLAN is configured on a given device. Under Linux,
+ * when adding a VLAN to a network device, this results in creating a new device
+ * with the name set as [device_name].[vlan].
+ *
+ * @param psDeviceName [in] a constant string pointer to the base device name
+ * @param vlan [in] the VLAN identifier to check
+ *
+ * @return TRUE if the given VLAN is configured on the given device otherwise FALSE
+ *         is returned.
+ *
+ * @pre
+ *     The psDeviceName parameter must not be NULL and the vlan parameter should be valid
+ */
+boolean dev_has_vlan(const char *psDeviceName, u16 vlan) {
     // Make sure the given string isn't NULL
     if (!psDeviceName)
         return (FALSE);
@@ -694,34 +759,38 @@ boolean dev_has_vlan(const char *psDeviceName, u16 vlan)
     return (dev_exist(dev_get_vlan_name(psDeviceName, vlan)));
 }
 
-//!
-//! Configures a VLAN on a given device.
-//!
-//! @param[in] psDeviceName a constant string pointer to the device name on which we are adding the VLAN
-//! @param[in] vlan the VLAN identifier to add on the device
-//!
-//! @return A pointer to the newly created VLAN device or NULL on failure.
-//!
-//! @see dev_has_vlan(), dev_remove_vlan()
-//!
-//! @pre
-//!     - The psDeviceName must not be null and the device should exist
-//!     - The VLAN identifier must be valid
-//!
-//! @post
-//!     On success the VLAN has been configured on the device. On failure, the VLAN is not
-//!     configured on the network device.
-//!
-//! @note
-//!     Since the return value is dynamically allocated, caller is responsible for freeing the memory
-//!
-dev_entry *dev_create_vlan(const char *psDeviceName, u16 vlan)
-{
+/**
+ * Configures a VLAN on a given device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a constant string pointer to the device name on which we are adding the VLAN
+ * @param vlan [in] the VLAN identifier to add on the device
+ *
+ * @return A pointer to the newly created VLAN device or NULL on failure.
+ *
+ * @see dev_has_vlan(), dev_remove_vlan()
+ *
+ * @pre
+ *     - The psDeviceName must not be null and the device should exist
+ *     - The VLAN identifier must be valid
+ *
+ * @post
+ *     On success the VLAN has been configured on the device. On failure, the VLAN is not
+ *     configured on the network device.
+ *
+ * @note
+ *     Since the return value is dynamically allocated, caller is responsible for freeing the memory
+ */
+dev_entry *dev_create_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan) {
     int rc = 0;
     int nbDevices = 0;
     char sVlan[8] = "";
     dev_entry *pDevice = NULL;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (NULL);
+    }
     // Make sure the given string isn't NULL
     if (!psDeviceName)
         return (NULL);
@@ -733,12 +802,12 @@ dev_entry *dev_create_vlan(const char *psDeviceName, u16 vlan)
     // Check if we already have the VLAN configured
     if (dev_has_vlan(psDeviceName, vlan)) {
         // This must work since we know the vlan exists
-        dev_get_list(dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
+        dev_get_list(devh, dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
         return (pDevice);
     }
     // Execute the request
     snprintf(sVlan, 8, "%u", vlan);
-    if (euca_execlp(&rc, config->cmdprefix, VCONFIG_PATH, "add", psDeviceName, sVlan, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, VCONFIG_PATH, "add", psDeviceName, sVlan, NULL) != EUCA_OK) {
         LOGERROR("Fail to add VLAN '%s' to device '%s'. error=%d\n", sVlan, psDeviceName, rc);
         return (NULL);
     }
@@ -747,63 +816,63 @@ dev_entry *dev_create_vlan(const char *psDeviceName, u16 vlan)
         return (NULL);
 
     // This must work since we know the device exists
-    dev_get_list(dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
+    dev_get_list(devh, dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
     return (pDevice);
 }
 
-//!
-//! Unconfigures a given VLAN from a given network device.
-//!
-//! @param[in] psDeviceName a constant string pointer to the device name on which we are removing the VLAN
-//! @param[in] vlan the VLAN identifier to add on the device
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_has_vlan(), dev_create_vlan(), dev_remove_vlan_interface()
-//!
-//! @pre
-//!     - The psDeviceName must not be null and the device should exist
-//!     - The VLAN identifier should be valid
-//!
-//! @post
-//!     On success the VLAN has been removed from the device. On failure, the VLAN is not
-//!     removed From the network device.
-//!
-//! @note
-//!
-int dev_remove_vlan(const char *psDeviceName, u16 vlan)
-{
+/**
+ * Unconfigures a given VLAN from a given network device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a constant string pointer to the device name on which we are removing the VLAN
+ * @param vlan [in] the VLAN identifier to add on the device
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_has_vlan(), dev_create_vlan(), dev_remove_vlan_interface()
+ *
+ * @pre
+ *     - The psDeviceName must not be null and the device should exist
+ *     - The VLAN identifier should be valid
+ *
+ * @post
+ *     On success the VLAN has been removed from the device. On failure, the VLAN is not
+ *     removed From the network device.
+ */
+int dev_remove_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan) {
     // Make sure the given string isn't NULL
     if (!psDeviceName)
         return (1);
 
     // Check if the device exists
-    return (dev_remove_vlan_interface(dev_get_vlan_name(psDeviceName, vlan)));
+    return (dev_remove_vlan_interface(devh, dev_get_vlan_name(psDeviceName, vlan)));
 }
 
-//!
-//! Removes a given VLAN interface
-//!
-//! @param[in] psVlanInterfaceName a constant string pointer to the VLAN device name of the "[devname].[VLAN]" format
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_has_vlan(), dev_remove_vlan()
-//!
-//! @pre
-//!     - The psVlanInterfaceName must not be null and the device should exist
-//!     - The name should be of the "devname.VLAN" format.
-//!
-//! @post
-//!     On success the VLAN has been removed from the device. On failure, the VLAN is not
-//!     removed From the network device.
-//!
-//! @note
-//!
-int dev_remove_vlan_interface(const char *psVlanInterfaceName)
-{
+/**
+ * Removes a given VLAN interface
+ *
+ * @param devh [in] pointer to the device handler
+ * @param " [in] psVlanInterfaceName a constant string pointer to the VLAN device name of the "[devname].[VLAN] format
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_has_vlan(), dev_remove_vlan()
+ *
+ * @pre
+ *     - The psVlanInterfaceName must not be null and the device should exist
+ *     - The name should be of the "devname.VLAN" format.
+ *
+ * @post
+ *     On success the VLAN has been removed from the device. On failure, the VLAN is not
+ *     removed From the network device.
+ */
+int dev_remove_vlan_interface(dev_handler *devh, const char *psVlanInterfaceName) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure the given string isn't NULL
     if (!psVlanInterfaceName)
         return (1);
@@ -817,7 +886,7 @@ int dev_remove_vlan_interface(const char *psVlanInterfaceName)
         return (0);
 
     // Execute the request
-    if (euca_execlp(&rc, config->cmdprefix, VCONFIG_PATH, "rem", psVlanInterfaceName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, VCONFIG_PATH, "rem", psVlanInterfaceName, NULL) != EUCA_OK) {
         LOGERROR("Fail to remove vlan interface '%s'. error=%d\n", psVlanInterfaceName, rc);
         return (1);
     }
@@ -827,25 +896,20 @@ int dev_remove_vlan_interface(const char *psVlanInterfaceName)
     return (0);
 }
 
-//!
-//! Checks wether or not a given device is a bridge device
-//!
-//! @param[in] psDeviceName a string pointer to the device name we are checking
-//!
-//! @return TRUE if the device is a bridge device otherwise FALSE is returned
-//!
-//! @see
-//!
-//! @pre
-//!     - psDeviceName MUST not be NULL
-//!     - psDeviceName must be a valid device
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_is_bridge(const char *psDeviceName)
-{
+/**
+ * Checks whether or not a given device is a bridge device
+ *
+ * @param psDeviceName [in] a string pointer to the device name we are checking
+ *
+ * @return TRUE if the device is a bridge device otherwise FALSE is returned
+ *
+ * @see
+ *
+ * @pre
+ *     - psDeviceName MUST not be NULL
+ *     - psDeviceName must be a valid device
+ */
+boolean dev_is_bridge(const char *psDeviceName) {
 #define MAX_PATH_LEN             64
 
     char sPath[MAX_PATH_LEN] = "";
@@ -865,29 +929,21 @@ boolean dev_is_bridge(const char *psDeviceName)
 #undef MAX_PATH_LEN
 }
 
-//!
-//! Checks wether or not a given device is a bridged interface. If the bridge
-//! device name is provided, it will also check if the device is a member of
-//! the given bridge device.
-//!
-//! @param[in] psDeviceName a string pointer to the device name we are checking
-//! @param[in] psBridgeName an optional string pointer to the bridge device name
-//!
-//! @return TRUE if this is a bridge interface and, if the bridge name is provided,
-//!         that the device is a member of the bridge. Otherwise FALSE is returned.
-//!
-//! @see
-//!
-//! @pre
-//!     - psDeviceName MUST not be NULL
-//!     - Both psDeviceName and psBridgeName must be valid devices
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_is_bridge_interface(const char *psDeviceName, const char *psBridgeName)
-{
+/**
+ * Checks wether or not a given device is a bridged interface. If the bridge
+ * device name is provided, it will also check if the device is a member of
+ * the given bridge device.
+ *
+ * @param psDeviceName [in] a string pointer to the device name we are checking
+ * @param psBridgeName [in] an optional string pointer to the bridge device name
+ *
+ * @return TRUE if this is a bridge interface and, if the bridge name is provided,
+ *         that the device is a member of the bridge. Otherwise FALSE is returned.
+ * @pre
+ *     - psDeviceName MUST not be NULL
+ *     - Both psDeviceName and psBridgeName must be valid devices
+ */
+boolean dev_is_bridge_interface(const char *psDeviceName, const char *psBridgeName) {
 #define MAX_PATH_LEN             128
 
     char sPath[MAX_PATH_LEN] = "";
@@ -918,25 +974,21 @@ boolean dev_is_bridge_interface(const char *psDeviceName, const char *psBridgeNa
 #undef MAX_PATH_LEN
 }
 
-//!
-//! Checks wether or not a given bridge device has associated interfaces.
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name to validate
-//!
-//! @return TRUE if this bridge device has associated interface. Otherwise FALSE is returned.
-//!
-//! @see dev_is_bridge(), dev_get_bridge_interfaces()
-//!
-//! @pre
-//!     - psBridgeName MUST not be NULL
-//!     - psBridgeName must be a valid bridge device on this system
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_has_bridge_interfaces(const char *psBridgeName)
-{
+/**
+ * Checks wether or not a given bridge device has associated interfaces.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name to validate
+ *
+ * @return TRUE if this bridge device has associated interface. Otherwise FALSE is returned.
+ *
+ * @see dev_is_bridge(), dev_get_bridge_interfaces()
+ *
+ * @pre
+ *     - psBridgeName MUST not be NULL
+ *     - psBridgeName must be a valid bridge device on this system
+ */
+boolean dev_has_bridge_interfaces(dev_handler *devh, const char *psBridgeName) {
     int nbInterfaces = 0;
     dev_entry *pInterfaces = NULL;
 
@@ -948,7 +1000,7 @@ boolean dev_has_bridge_interfaces(const char *psBridgeName)
     // See if we have any associated interfaces. This will also validate
     // psBridgeName to be a valid bridge device on this system
     //
-    if (dev_get_bridge_interfaces(psBridgeName, &pInterfaces, &nbInterfaces) != 0)
+    if (dev_get_bridge_interfaces(devh, psBridgeName, &pInterfaces, &nbInterfaces) != 0)
         return (FALSE);
 
     // Done with the interface list
@@ -956,28 +1008,28 @@ boolean dev_has_bridge_interfaces(const char *psBridgeName)
     return ((nbInterfaces > 0) ? TRUE : FALSE);
 }
 
-//!
-//! Retrieves the bridge device name for which the given psDeviceName is a member of
-//!
-//! @param[in] psDeviceName a string pointer to the device name we are checking
-//!
-//! @return a pointer to the dynamically allocated string or NULL on failure.
-//!
-//! @see dev_is_bridge_interface()
-//!
-//! @pre
-//!     - Both psDeviceName and psOutBridgeName MUST not be NULL
-//!     - psDeviceName must be a valid device
-//!
-//! @post
-//!     On success, the psOutBridgeName is set appropriately. On Failure, psOutBridgeName
-//!     is set to NULL.
-//!
-//! @note
-//!     Since the result is a dynamic string, the caller is responsible for freeing it.
-//!
-char *dev_get_interface_bridge(const char *psDeviceName)
-{
+/**
+ * Retrieves the bridge device name for which the given psDeviceName is a member of
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name we are checking
+ *
+ * @return a pointer to the dynamically allocated string or NULL on failure.
+ *
+ * @see dev_is_bridge_interface()
+ *
+ * @pre
+ *     - Both psDeviceName and psOutBridgeName MUST not be NULL
+ *     - psDeviceName must be a valid device
+ *
+ * @post
+ *     On success, the psOutBridgeName is set appropriately. On Failure, psOutBridgeName
+ *     is set to NULL.
+ *
+ * @note
+ *     Since the result is a dynamic string, the caller is responsible for freeing it.
+ */
+char *dev_get_interface_bridge(dev_handler *devh, const char *psDeviceName) {
 #define INTFC_LINE_STRING             "INTERFACE="
 #define MAX_LINE_LEN                  64
 #define MAX_PATH_LEN                  64
@@ -1026,28 +1078,26 @@ char *dev_get_interface_bridge(const char *psDeviceName)
 #undef MAX_PATH_LEN
 }
 
-//!
-//! Retrieves the list of assigned interfaces to a bridge device.
-//!
-//! @param[in]     psBridgeName a constant string pointer to the bridge device name
-//! @param[in,out] pOutDevices a pointer to our outgoing device structure
-//! @param[in,out] pOutNbDevices a pointer to the counter that will contain the number of devices found
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!     All of our pointers must not be NULL. The Bridge device must be a valid device and a bridge device.
-//!
-//! @post
-//!     On success, the list is filled with the interfaces found. On failure, the list is empty.
-//!
-//! @note
-//!     Since this list is dynamically allocated, the caller is responsible to free the list
-//!
-int dev_get_bridge_interfaces(const char *psBridgeName, dev_entry ** pOutDevices, int *pOutNbDevices)
-{
+/**
+ * Retrieves the list of assigned interfaces to a bridge device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param pOutDevices [in,out] a pointer to our outgoing device structure
+ * @param pOutNbDevices [in,out] a pointer to the counter that will contain the number of devices found
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @pre
+ *     All of our pointers must not be NULL. The Bridge device must be a valid device and a bridge device.
+ *
+ * @post
+ *     On success, the list is filled with the interfaces found. On failure, the list is empty.
+ *
+ * @note
+ *     Since this list is dynamically allocated, the caller is responsible to free the list
+ */
+int dev_get_bridge_interfaces(dev_handler *devh, const char *psBridgeName, dev_entry **pOutDevices, int *pOutNbDevices) {
 #define MAX_PATH_LEN           128
 
     DIR *pDh = NULL;
@@ -1108,31 +1158,35 @@ int dev_get_bridge_interfaces(const char *psBridgeName, dev_entry ** pOutDevices
 #undef MAX_PATH_LEN
 }
 
-//!
-//! Sets the STP state on a given bridge device
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//! @param[in] psStpState a constant string pointer to the STP state. Must be either "on" or "off"
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see dev_create_bridge()
-//!
-//! @pre
-//!     - The psBridgeName parameter must not be NULL and if the device exists, it should be a valid bridge device
-//!     - The psStpState must not be NULL and must be either "on" or "off"
-//!
-//! @post
-//!     On success, the bridge device STP state has been updated. On failure, nothing has changed
-//!     on the system.
-//!
-//! @note
-//!     Since the return value is dynamically allocated, caller is responsible for freeing the memory
-//!
-int dev_set_bridge_stp(const char *psBridgeName, const char *psStpState)
-{
+/**
+ * Sets the STP state on a given bridge device
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param psStpState [in] a constant string pointer to the STP state. Must be either "on" or "off"
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @see dev_create_bridge()
+ *
+ * @pre
+ *     - The psBridgeName parameter must not be NULL and if the device exists, it should be a valid bridge device
+ *     - The psStpState must not be NULL and must be either "on" or "off"
+ *
+ * @post
+ *     On success, the bridge device STP state has been updated. On failure, nothing has changed
+ *     on the system.
+ *
+ * @note
+ *     Since the return value is dynamically allocated, caller is responsible for freeing the memory
+ */
+int dev_set_bridge_stp(dev_handler *devh, const char *psBridgeName, const char *psStpState) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure the pointer isn't NULL
     if (!psBridgeName || !psStpState)
         return (1);
@@ -1150,7 +1204,7 @@ int dev_set_bridge_stp(const char *psBridgeName, const char *psStpState)
         return (1);
 
     // Set the STP state
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "stp", psBridgeName, psStpState, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "stp", psBridgeName, psStpState, NULL) != EUCA_OK) {
         LOGERROR("Fail to set STP to '%s' on bridge device '%s'. error=%d\n", psStpState, psBridgeName, rc);
         return (1);
     }
@@ -1158,33 +1212,37 @@ int dev_set_bridge_stp(const char *psBridgeName, const char *psStpState)
     return (0);
 }
 
-//!
-//! Creates a bridge device. If the device already exists and is a bridge, this is
-//! basically a no-op.
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//! @param[in] psStpState a constant string pointer to the STP state. Must be either "on" or "off"
-//!
-//! @return A pointer to the newly created bridge device or NULL on failure.
-//!
-//! @see dev_remove_bridge()
-//!
-//! @pre
-//!     - The psBridgeName parameter must not be NULL and if the device exists, it should be a valid bridge device
-//!     - The psStpState must not be NULL and must be either "on" or "off"
-//!
-//! @post
-//!     On success, the bridge device is created. On failure, nothing changed on the rc = system
-//!
-//! @note
-//!     Since the return value is dynamically allocated, caller is responsible for freeing the memory
-//!
-dev_entry *dev_create_bridge(const char *psBridgeName, const char *psStpState)
-{
+/**
+ * Creates a bridge device. If the device already exists and is a bridge, this is
+ * basically a no-op.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param psStpState [in] a constant string pointer to the STP state. Must be either "on" or "off"
+ *
+ * @return A pointer to the newly created bridge device or NULL on failure.
+ *
+ * @see dev_remove_bridge()
+ *
+ * @pre
+ *     - The psBridgeName parameter must not be NULL and if the device exists, it should be a valid bridge device
+ *     - The psStpState must not be NULL and must be either "on" or "off"
+ *
+ * @post
+ *     On success, the bridge device is created. On failure, nothing changed on the rc = system
+ *
+ * @note
+ *     Since the return value is dynamically allocated, caller is responsible for freeing the memory
+ */
+dev_entry *dev_create_bridge(dev_handler *devh, const char *psBridgeName, const char *psStpState) {
     int rc = 0;
     int nbBridges = 0;
     dev_entry *pBridge = NULL;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (NULL);
+    }
     // Make sure the pointer isn't NULL
     if (!psBridgeName || !psStpState)
         return (NULL);
@@ -1200,11 +1258,11 @@ dev_entry *dev_create_bridge(const char *psBridgeName, const char *psStpState)
             return (NULL);
 
         // Retrieve the device it should succeed because we know its a bridge
-        dev_get_bridges(psBridgeName, &pBridge, &nbBridges);
+        dev_get_bridges(devh, psBridgeName, &pBridge, &nbBridges);
         return (pBridge);
     }
     // Create the bridge device
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "addbr", psBridgeName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "addbr", psBridgeName, NULL) != EUCA_OK) {
         LOGERROR("Fail to create bridge device '%s'. error=%d\n", psBridgeName, rc);
     }
     // Did it work?
@@ -1212,61 +1270,61 @@ dev_entry *dev_create_bridge(const char *psBridgeName, const char *psStpState)
         return (NULL);
 
     // Set the STP state
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "stp", psBridgeName, psStpState, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "stp", psBridgeName, psStpState, NULL) != EUCA_OK) {
         LOGERROR("Fail to set STP state '%s' on bridge device '%s'. error=%d\n", psStpState, psBridgeName, rc);
     }
     // Set the forwarding delay
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "setfd", psBridgeName, "2", NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "setfd", psBridgeName, "2", NULL) != EUCA_OK) {
         LOGERROR("Fail to set forwarding delay on bridge device '%s'. error=%d\n", psBridgeName, rc);
     }
     // Set the hello time
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "sethello", psBridgeName, "2", NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "sethello", psBridgeName, "2", NULL) != EUCA_OK) {
         LOGERROR("Fail to set hello time on bridge device '%s'. error=%d\n", psBridgeName, rc);
     }
     // RHEL7/CentOS7 - set bridge interface in promiscuous mode
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "link", "set", "dev", psBridgeName, "promisc", "on", NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "link", "set", "dev", psBridgeName, "promisc", "on", NULL) != EUCA_OK) {
         LOGERROR("Fail to set bridge device '%s' in promisc. error=%d\n", psBridgeName, rc);
     }
     // This must work since we know the device exists
-    dev_get_bridges(psBridgeName, &pBridge, &nbBridges);
+    dev_get_bridges(devh, psBridgeName, &pBridge, &nbBridges);
     return (pBridge);
 }
 
-//!
-//! Force remove a bridge device from the system. This will ensure that all assigned
-//! network devices are unassigned first.
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//!
-//! @return 0 on success or 1 if any failure occured.
-//!
-//! @see dev_remove_bridge(), dev_create_bridge(), dev_bridge_delete_interface()
-//!
-//! @pre
-//!     At this point, psBridgeName should have been validated not to be NULL, to
-//!     be a valid bridge device.
-//!
-//! @post
-//!     On success, the bridge associated interfaces are unassigned and the bridge
-//!     device removed from the system. On failure, the state of the bridge device
-//!     and its associated network device is non-deterministic.
-//!
-//! @note
-//!
-static int dev_remove_bridge_forced(const char *psBridgeName)
-{
+/**
+ * Force remove a bridge device from the system. This will ensure that all assigned
+ * network devices are unassigned first.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ *
+ * @return 0 on success or 1 if any failure occured.
+ *
+ * @see dev_remove_bridge(), dev_create_bridge(), dev_bridge_delete_interface()
+ *
+ * @pre
+ *     At this point, psBridgeName should have been validated not to be NULL, to
+ *     be a valid bridge device.
+ *
+ * @post
+ *     On success, the bridge associated interfaces are unassigned and the bridge
+ *     device removed from the system. On failure, the state of the bridge device
+ *     and its associated network device is non-deterministic.
+ *
+ * @note
+ */
+static int dev_remove_bridge_forced(dev_handler *devh, const char *psBridgeName) {
     int i = 0;
     int rc = 0;
     int nbDevices = 0;
     dev_entry *pDevices = NULL;
 
     // Retrieved our assigned interfaces
-    if (dev_get_bridge_interfaces(psBridgeName, &pDevices, &nbDevices) != 0)
+    if (dev_get_bridge_interfaces(devh, psBridgeName, &pDevices, &nbDevices) != 0)
         return (1);
 
     // Remove our assigned interfaces
     for (i = 0; i < nbDevices; i++) {
-        rc |= dev_bridge_delete_interface(psBridgeName, pDevices[i].sDevName);
+        rc |= dev_bridge_delete_interface(devh, psBridgeName, pDevices[i].sDevName);
     }
 
     // ok, free the device list
@@ -1278,33 +1336,37 @@ static int dev_remove_bridge_forced(const char *psBridgeName)
         return (1);
     }
     // DO NOT CALL WITH TRUE HERE TO AVOID RECURSIVE LOOP
-    return (dev_remove_bridge(psBridgeName, FALSE));
+    return (dev_remove_bridge(devh, psBridgeName, FALSE));
 }
 
-//!
-//! Creates a bridge device. If the device already exists and is a bridge, this is
-//! basically a no-op.
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//! @param[in] forced set to TRUE to force remove any assigned interface. Otherwise, set to FALSE.
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_add_bridge(), dev_remove_bridge_forced()
-//!
-//! @pre
-//!     The psBridgeName parameter must not be NULL and should be a valid bridge device
-//!
-//! @post
-//!     On success, the bridge device is removed. On failure, nothing should have changed
-//!     on the system.
-//!
-//! @note
-//!
-int dev_remove_bridge(const char *psBridgeName, boolean forced)
-{
+/**
+ * Creates a bridge device. If the device already exists and is a bridge, this is
+ * basically a no-op.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param forced [in] set to TRUE to force remove any assigned interface. Otherwise, set to FALSE.
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_add_bridge(), dev_remove_bridge_forced()
+ *
+ * @pre
+ *     The psBridgeName parameter must not be NULL and should be a valid bridge device
+ *
+ * @post
+ *     On success, the bridge device is removed. On failure, nothing should have changed
+ *     on the system.
+ *
+ * @note
+ */
+int dev_remove_bridge(dev_handler *devh, const char *psBridgeName, boolean forced) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure the pointer isn't NULL
     if (!psBridgeName)
         return (1);
@@ -1318,7 +1380,7 @@ int dev_remove_bridge(const char *psBridgeName, boolean forced)
         return (1);
 
     // Remove the bridge device
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "delbr", psBridgeName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "delbr", psBridgeName, NULL) != EUCA_OK) {
         // Lets follow through in case we can do something else
         LOGERROR("Fail to delete bridge device '%s'. error=%d\n", psBridgeName, rc);
     }
@@ -1326,7 +1388,7 @@ int dev_remove_bridge(const char *psBridgeName, boolean forced)
     if (dev_exist(psBridgeName)) {
         // Do we absolutely need to remove it?
         if (forced) {
-            return (dev_remove_bridge_forced(psBridgeName));
+            return (dev_remove_bridge_forced(devh, psBridgeName));
         }
         return (1);
     }
@@ -1334,32 +1396,36 @@ int dev_remove_bridge(const char *psBridgeName, boolean forced)
     return (0);
 }
 
-//!
-//! Adds a network devices to a given bridge device
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//! @param[in] psDeviceName a constant string pointer to the network device name
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_bridge_delete_interface()
-//!
-//! @pre
-//!     - Both psBridgeName and psDeviceName must not be NULL
-//!     - The bridge device must exists and be a bridge type device
-//!     - The network device must exists and unassociated from any bridge device
-//!
-//! @post
-//!     On success, the network device is unassign from the bridge device. On failure,
-//!     nothing has changed on the system.
-//!
-//! @note
-//!
-int dev_bridge_assign_interface(const char *psBridgeName, const char *psDeviceName)
-{
+/**
+ * Adds a network devices to a given bridge device
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param psDeviceName [in] a constant string pointer to the network device name
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_bridge_delete_interface()
+ *
+ * @pre
+ *     - Both psBridgeName and psDeviceName must not be NULL
+ *     - The bridge device must exists and be a bridge type device
+ *     - The network device must exists and unassociated from any bridge device
+ *
+ * @post
+ *     On success, the network device is unassign from the bridge device. On failure,
+ *     nothing has changed on the system.
+ *
+ * @note
+ */
+int dev_bridge_assign_interface(dev_handler *devh, const char *psBridgeName, const char *psDeviceName) {
     int rc = 0;
     char *pStr = NULL;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure the pointer isn't NULL
     if (!psBridgeName || !psDeviceName)
         return (1);
@@ -1369,7 +1435,7 @@ int dev_bridge_assign_interface(const char *psBridgeName, const char *psDeviceNa
         return (1);
 
     // The network device should not be assigned to a bridge. If it is, is should be to this bridge
-    if ((pStr = dev_get_interface_bridge(psDeviceName)) != NULL) {
+    if ((pStr = dev_get_interface_bridge(devh, psDeviceName)) != NULL) {
         if (!strcmp(psBridgeName, pStr)) {
             EUCA_FREE(pStr);
             return (0);
@@ -1379,7 +1445,7 @@ int dev_bridge_assign_interface(const char *psBridgeName, const char *psDeviceNa
         }
     }
     // Add the network device to the bridge
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "addif", psBridgeName, psDeviceName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "addif", psBridgeName, psDeviceName, NULL) != EUCA_OK) {
         LOGERROR("Fail to add interface '%s' to bridge device '%s'. error=%d\n", psDeviceName, psBridgeName, rc);
     }
     // Did it work?
@@ -1388,32 +1454,36 @@ int dev_bridge_assign_interface(const char *psBridgeName, const char *psDeviceNa
     return (0);
 }
 
-//!
-//! Removes a network device from a bridge device
-//!
-//! @param[in] psBridgeName a constant string pointer to the bridge device name
-//! @param[in] psDeviceName a constant string pointer to the network device name
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see dev_bridge_assign_interface()
-//!
-//! @pre
-//!     - Both psBridgeName and psDeviceName must not be NULL
-//!     - The bridge device must exists and be a bridge type device
-//!     - The network device must exists and associated with this bridge
-//!
-//! @post
-//!     On success, the network device is unassign from the bridge device. On failure,
-//!     nothing has changed on the system.
-//!
-//! @note
-//!
-int dev_bridge_delete_interface(const char *psBridgeName, const char *psDeviceName)
-{
+/**
+ * Removes a network device from a bridge device
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psBridgeName [in] a constant string pointer to the bridge device name
+ * @param psDeviceName [in] a constant string pointer to the network device name
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @see dev_bridge_assign_interface()
+ *
+ * @pre
+ *     - Both psBridgeName and psDeviceName must not be NULL
+ *     - The bridge device must exists and be a bridge type device
+ *     - The network device must exists and associated with this bridge
+ *
+ * @post
+ *     On success, the network device is unassign from the bridge device. On failure,
+ *     nothing has changed on the system.
+ *
+ * @note
+ */
+int dev_bridge_delete_interface(dev_handler *devh, const char *psBridgeName, const char *psDeviceName) {
     int rc = 0;
     char *pStr = NULL;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure the pointer isn't NULL
     if (!psBridgeName || !psDeviceName)
         return (1);
@@ -1423,7 +1493,7 @@ int dev_bridge_delete_interface(const char *psBridgeName, const char *psDeviceNa
         return (1);
 
     // The network device should be assigned to this bridge
-    if ((pStr = dev_get_interface_bridge(psDeviceName)) != NULL) {
+    if ((pStr = dev_get_interface_bridge(devh, psDeviceName)) != NULL) {
         if (strcmp(psBridgeName, pStr)) {
             // Assigned to another bridge device
             EUCA_FREE(pStr);
@@ -1437,7 +1507,7 @@ int dev_bridge_delete_interface(const char *psBridgeName, const char *psDeviceNa
     }
 
     // Remove the network device from the bridge
-    if (euca_execlp(&rc, config->cmdprefix, BRCTL_PATH, "delif", psBridgeName, psDeviceName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, BRCTL_PATH, "delif", psBridgeName, psDeviceName, NULL) != EUCA_OK) {
         LOGERROR("Fail to remove interface '%s' from bridge device '%s'. error=%d\n", psDeviceName, psBridgeName, rc);
     }
     // Did it work?
@@ -1446,26 +1516,25 @@ int dev_bridge_delete_interface(const char *psBridgeName, const char *psDeviceNa
     return (0);
 }
 
-//!
-//! This checks wether or not a given device is a tunnel device. For our current
-//! purpose, any tunnel device has its nane starting with "tap-".
-//!
-//! @param[in] psDeviceName a constant string pointer to the device name we are assessing
-//!
-//! @return TRUE if this is a tunnel device or FALSE if it is not or if we were given
-//!         a NULL string parameter.
-//!
-//! @see
-//!
-//! @pre
-//!     The psDeviceName parameter MUST not be NULL
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_is_tunnel(const char *psDeviceName)
-{
+/**
+ * This checks wether or not a given device is a tunnel device. For our current
+ * purpose, any tunnel device has its nane starting with "tap-".
+ *
+ * @param psDeviceName [in] a constant string pointer to the device name we are assessing
+ *
+ * @return TRUE if this is a tunnel device or FALSE if it is not or if we were given
+ *         a NULL string parameter.
+ *
+ * @see
+ *
+ * @pre
+ *     The psDeviceName parameter MUST not be NULL
+ *
+ * @post
+ *
+ * @note
+ */
+boolean dev_is_tunnel(const char *psDeviceName) {
     // Check if our parameter is NULL
     if (!psDeviceName)
         return (FALSE);
@@ -1476,31 +1545,30 @@ boolean dev_is_tunnel(const char *psDeviceName)
     return (FALSE);
 }
 
-//!
-//! This function retrieves the MAC address of a given device. This is done by reading the
-//! value contained within the /sys/class/net/[device]/address system file.
-//!
-//! In multi-threaded programs each thread has its own 8 statically-allocated buffer. But
-//! still more than 8 subsequent calls of euca_ntoa in the same thread will overwrite
-//! the result of the previous calls. if the result isn't saved.
-//!
-//! @param[in] psDeviceName a string pointer to the device name for which we are looking for a MAC address
-//!
-//! @return a pointer to the static buffer containg the MAC address or NULL if a failure occured
-//!
-//! @see dev_exist()
-//!
-//! @pre
-//!     - The psDeviceName must not be NULL
-//!     - The device must be present on the system
-//!
-//! @post
-//!     A static buffer is allocated for this MAC address and returned with the value
-//!
-//! @note
-//!
-char *dev_get_mac(const char *psDeviceName)
-{
+/**
+ * This function retrieves the MAC address of a given device. This is done by reading the
+ * value contained within the /sys/class/net/[device]/address system file.
+ *
+ * In multi-threaded programs each thread has its own 8 statically-allocated buffer. But
+ * still more than 8 subsequent calls of euca_ntoa in the same thread will overwrite
+ * the result of the previous calls. if the result isn't saved.
+ *
+ * @param psDeviceName [in] a string pointer to the device name for which we are looking for a MAC address
+ *
+ * @return a pointer to the static buffer containg the MAC address or NULL if a failure occured
+ *
+ * @see dev_exist()
+ *
+ * @pre
+ *     - The psDeviceName must not be NULL
+ *     - The device must be present on the system
+ *
+ * @post
+ *     A static buffer is allocated for this MAC address and returned with the value
+ *
+ * @note
+ */
+char *dev_get_mac(const char *psDeviceName) {
 #define MAX_LINE_LEN                  32
 #define MAX_PATH_LEN                  64
 #define MAX_STRING_BUFFER              8
@@ -1547,32 +1615,31 @@ char *dev_get_mac(const char *psDeviceName)
 #undef MAX_STRING_BUFFER
 }
 
-//!
-//! Retrieve a list of IP information for a given device. If the device is not provided
-//! (i.e. NULL is passed for psDeviceName), then we retrieve the list of all IPs on the
-//! system.
-//!
-//! @param[in]     psDeviceName an optional string pointer to the device name we want to filter on.
-//! @param[in,out] pOutIps a pointer to the returned IP list.
-//! @param[in,out] pNumberOfIps a pointer to the field that will return the number of IPs in the list
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see dev_free_ips()
-//!
-//! @pre
-//!     Both pOutIps and pNumberOfIps MUST not be NULL.
-//!
-//! @post
-//!     On successful completion, pOutIps contains the list of IPs found on the system for
-//!     the given device (or entire system) and pNumberIps contains the number of elements
-//!     in the list. On failure, both pNumberOfIps and pOutIps are non-deterministic.
-//!
-//! @note
-//!     Caller is responsible to free the dynamically allocated list of IP entries.
-//!
-int dev_get_ips(const char *psDeviceName, in_addr_entry ** pOutIps, int *pNumberOfIps)
-{
+/**
+ * Retrieve a list of IP information for a given device. If the device is not provided
+ * (i.e. NULL is passed for psDeviceName), then we retrieve the list of all IPs on the
+ * system.
+ *
+ * @param psDeviceName [in] an optional string pointer to the device name we want to filter on.
+ * @param pOutIps [in,out] a pointer to the returned IP list.
+ * @param pNumberOfIps [in,out] a pointer to the field that will return the number of IPs in the list
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @see dev_free_ips()
+ *
+ * @pre
+ *     Both pOutIps and pNumberOfIps MUST not be NULL.
+ *
+ * @post
+ *     On successful completion, pOutIps contains the list of IPs found on the system for
+ *     the given device (or entire system) and pNumberIps contains the number of elements
+ *     in the list. On failure, both pNumberOfIps and pOutIps are non-deterministic.
+ *
+ * @note
+ *     Caller is responsible to free the dynamically allocated list of IP entries.
+ */
+int dev_get_ips(const char *psDeviceName, in_addr_entry **pOutIps, int *pNumberOfIps) {
     int rc = 0;
     char sAddress[NI_MAXHOST] = "";
     char sMask[NI_MAXHOST] = "";
@@ -1647,26 +1714,19 @@ int dev_get_ips(const char *psDeviceName, in_addr_entry ** pOutIps, int *pNumber
     return (0);
 }
 
-//!
-//! Checks wether or not an IP is installed on the given device. If NULL, this act as
-//! looking for the IP address on the entire system
-//!
-//! @param[in] psDeviceName an optional string pointer to the device name to lookup
-//! @param[in] ip the IP address to lookup on the device
-//!
-//! @return TRUE if the IP is found on the device otherwise FALSE is returned
-//!
-//! @see
-//!
-//! @pre
-//!     The psDeviceName should be a valid device if provided
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_has_ip(const char *psDeviceName, in_addr_t ip)
-{
+/**
+ * Checks whether or not an IP is installed on the given device. If NULL, this act as
+ * looking for the IP address on the entire system
+ *
+ * @param psDeviceName [in] an optional string pointer to the device name to lookup
+ * @param ip [in] the IP address to lookup on the device
+ *
+ * @return TRUE if the IP is found on the device otherwise FALSE is returned
+ *
+ * @pre
+ *     The psDeviceName should be a valid device if provided
+ */
+boolean dev_has_ip(const char *psDeviceName, in_addr_t ip) {
     int i = 0;
     int nbIps = 0;
     boolean found = FALSE;
@@ -1693,28 +1753,21 @@ boolean dev_has_ip(const char *psDeviceName, in_addr_t ip)
     return (found);
 }
 
-//!
-//! Checks wether or not an IP host is installed on the given device. If NULL, this act as
-//! looking for the IP address on the entire system
-//!
-//! @param[in] psDeviceName an optional string pointer to the device name to lookup
-//! @param[in] ip the IP address to lookup on the device
-//! @param[in] netmask the netmask address to lookup on the device
-//!
-//! @return TRUE if the IP/netmask association is found on the device or system
-//!         otherwise FALSE is returned
-//!
-//! @see
-//!
-//! @pre
-//!     The psDeviceName should be a valid device if provided
-//!
-//! @post
-//!
-//! @note
-//!
-boolean dev_has_host(const char *psDeviceName, in_addr_t ip, in_addr_t netmask)
-{
+/**
+ * Checks wether or not an IP host is installed on the given device. If NULL, this act as
+ * looking for the IP address on the entire system
+ *
+ * @param psDeviceName [in] an optional string pointer to the device name to lookup
+ * @param ip [in] the IP address to lookup on the device
+ * @param netmask [in] the netmask address to lookup on the device
+ *
+ * @return TRUE if the IP/netmask association is found on the device or system
+ *         otherwise FALSE is returned
+ *
+ * @pre
+ *     The psDeviceName should be a valid device if provided
+ */
+boolean dev_has_host(const char *psDeviceName, in_addr_t ip, in_addr_t netmask) {
     int i = 0;
     int nbIps = 0;
     boolean found = FALSE;
@@ -1741,33 +1794,33 @@ boolean dev_has_host(const char *psDeviceName, in_addr_t ip, in_addr_t netmask)
     return (found);
 }
 
-//!
-//! Flushes all IP addresses installed on a given network device
-//!
-//! @param[in] psDeviceName a string pointer to the device name for which we are installing the address
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!     The psDeviceName must be a valid device on the system.
-//!
-//! @post
-//!     The device is stripped of all its IP configuration
-//!
-//! @note
-//!
-int dev_flush_ips(const char *psDeviceName)
-{
+/**
+ * Flushes all IP addresses installed on a given network device
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name for which we are installing the address
+ *
+ * @return 0 on success or 1 if any failure occured
+ *
+ * @pre
+ *     The psDeviceName must be a valid device on the system.
+ *
+ * @post
+ *     The device is stripped of all its IP configuration
+ */
+int dev_flush_ips(dev_handler *devh, const char *psDeviceName) {
     int rc = 0;
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure out device exists
     if (!dev_exist(psDeviceName)) {
         return (1);
     }
     // Ok, we're good. Now lets flush the IP addresses
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "addr", "flush", psDeviceName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "addr", "flush", psDeviceName, NULL) != EUCA_OK) {
         LOGERROR("Fail to flush ip addresses on network device '%s'. error=%d\n", psDeviceName, rc);
         return (1);
     }
@@ -1775,33 +1828,37 @@ int dev_flush_ips(const char *psDeviceName)
     return (0);
 }
 
-//!
-//! Install an IP/netmask address on a given device.
-//!
-//! @param[in] psDeviceName a string pointer to the device name for which we are installing the address
-//! @param[in] address the address to install
-//! @param[in] netmask the network mask associated with this address
-//! @param[in] broadcast the network broadcast address
-//! @param[in] psScope a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
-//!
-//! @return 0 on success or 1 on failure.
-//!
-//! @see dev_move_ip(), dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
-//!
-//! @pre
-//!     The psDeviceName must be a valid device on the system.
-//!
-//! @post
-//!     The IP is installed on their respective devices
-//!
-//! @note
-//!
-int dev_install_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask, in_addr_t broadcast, const char *psScope)
-{
+/**
+ * Install an IP/netmask address on a given device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name for which we are installing the address
+ * @param address [in] the address to install
+ * @param netmask [in] the network mask associated with this address
+ * @param broadcast [in] the network broadcast address
+ * @param psScope [in] a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
+ *
+ * @return 0 on success or 1 on failure.
+ *
+ * @see dev_move_ip(), dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
+ *
+ * @pre
+ *     The psDeviceName must be a valid device on the system.
+ *
+ * @post
+ *     The IP is installed on their respective devices
+ *
+ * @note
+ */
+int dev_install_ip(dev_handler *devh, const char *psDeviceName, in_addr_t address, in_addr_t netmask, in_addr_t broadcast, const char *psScope) {
     int rc = 0;
     u32 slashnet = NETMASK_TO_SLASHNET(netmask);
     char sHost[NETWORK_ADDR_LEN] = "";
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure out device exists
     if (!dev_exist(psDeviceName)) {
         return (1);
@@ -1815,12 +1872,12 @@ int dev_install_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmas
     // optration.
     //
     if (broadcast) {
-        if (euca_execlp(&rc, config->cmdprefix, "ip", "addr", "add", sHost, "broadcast", euca_ntoa(broadcast), "scope", psScope, "dev", psDeviceName, NULL) != EUCA_OK) {
+        if (euca_execlp(&rc, devh->cmdprefix, "ip", "addr", "add", sHost, "broadcast", euca_ntoa(broadcast), "scope", psScope, "dev", psDeviceName, NULL) != EUCA_OK) {
             LOGERROR("Failed to install host '%s' Broadcast '%s' with scope '%s' on network device '%s'. error=%d\n", sHost, euca_ntoa(broadcast), psScope, psDeviceName, rc);
             return (1);
         }
     } else {
-        if (euca_execlp(&rc, config->cmdprefix, "ip", "addr", "add", sHost, "scope", psScope, "dev", psDeviceName, NULL) != EUCA_OK) {
+        if (euca_execlp(&rc, devh->cmdprefix, "ip", "addr", "add", sHost, "scope", psScope, "dev", psDeviceName, NULL) != EUCA_OK) {
             LOGERROR("Failed to install host '%s' with scope '%s' on network device '%s'. error=%d\n", sHost, psScope, psDeviceName, rc);
             return (1);
         }
@@ -1828,27 +1885,25 @@ int dev_install_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmas
     return (0);
 }
 
-//!
-//! Install a set of IP addresses.
-//!
-//! @param[in] pIps a pointer to the set of IP address entry to install
-//! @param[in] nbIps the number of IP entry in the set
-//! @param[in] psScope a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
-//!
-//! @return the number of IP address installed successfully from the set
-//!
-//! @see dev_move_ip(), dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
-//!
-//! @pre
-//!     The pIps parameter should not be NULL
-//!
-//! @post
-//!     The IPs are installed on their respective devices
-//!
-//! @note
-//!
-int dev_install_ips(in_addr_entry * pIps, int nbIps, const char *psScope)
-{
+/**
+ * Install a set of IP addresses.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param pIps [in] a pointer to the set of IP address entry to install
+ * @param nbIps [in] the number of IP entry in the set
+ * @param psScope [in] a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
+ *
+ * @return the number of IP address installed successfully from the set
+ *
+ * @see dev_move_ip(), dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
+ *
+ * @pre
+ *     The pIps parameter should not be NULL
+ *
+ * @post
+ *     The IPs are installed on their respective devices
+ */
+int dev_install_ips(dev_handler *devh, in_addr_entry *pIps, int nbIps, const char *psScope) {
     int i = 0;
     int installed = 0;
 
@@ -1857,39 +1912,39 @@ int dev_install_ips(in_addr_entry * pIps, int nbIps, const char *psScope)
         return (0);
 
     for (i = 0; i < nbIps; i++) {
-        if (dev_install_ip(pIps[i].sDevName, pIps[i].address, pIps[i].netmask, pIps[i].broascast, psScope) == 0)
+        if (dev_install_ip(devh, pIps[i].sDevName, pIps[i].address, pIps[i].netmask, pIps[i].broascast, psScope) == 0)
             installed++;
     }
 
     return (installed);
 }
 
-//!
-//! Moves an IP/netmask address from a device onto another given device. If the IP address is assigned
-//! to another network device, this API will remove the IP address prior installing it on the given
-//! network device.
-//!
-//! @param[in] psDeviceName a string pointer to the device name for which we are moving the address
-//! @param[in] address the address to move
-//! @param[in] netmask the network mask associated with this address
-//! @param[in] broadcast the network broadcast address
-//! @param[in] psScope a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
-//!
-//! @return 0 on success or 1 on failure.
-//!
-//! @see dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
-//!
-//! @pre
-//!     The psDeviceName must be a valid device on the system and the scope must be a valid scope
-//!
-//! @post
-//!     The IP is installed/updated on its respective devices and removed from any other interface
-//!     it may have been assigned too.
-//!
-//! @note
-//!
-int dev_move_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask, in_addr_t broadcast, const char *psScope)
-{
+/**
+ * Moves an IP/netmask address from a device onto another given device. If the IP address is assigned
+ * to another network device, this API will remove the IP address prior installing it on the given
+ * network device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name for which we are moving the address
+ * @param address [in] the address to move
+ * @param netmask [in] the network mask associated with this address
+ * @param broadcast [in] the network broadcast address
+ * @param psScope [in] a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
+ *
+ * @return 0 on success or 1 on failure.
+ *
+ * @see dev_move_ips(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
+ *
+ * @pre
+ *     The psDeviceName must be a valid device on the system and the scope must be a valid scope
+ *
+ * @post
+ *     The IP is installed/updated on its respective devices and removed from any other interface
+ *     it may have been assigned too.
+ *
+ * @note
+ */
+int dev_move_ip(dev_handler *devh, const char *psDeviceName, in_addr_t address, in_addr_t netmask, in_addr_t broadcast, const char *psScope) {
     int i = 0;
     int nbOfIps = 0;
     boolean found = FALSE;
@@ -1910,7 +1965,7 @@ int dev_move_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask, 
         if (pIps[i].address == address) {
             if (strcmp(pIps[i].sDevName, psDeviceName)) {
                 // remove the IP. We will readd it shortly
-                dev_remove_ip(pIps[i].sDevName, pIps[i].address, pIps[i].netmask);
+                dev_remove_ip(devh, pIps[i].sDevName, pIps[i].address, pIps[i].netmask);
                 found = TRUE;
             } else {
                 needInstall = FALSE;
@@ -1921,35 +1976,35 @@ int dev_move_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask, 
     // Free our IP list
     dev_free_ips(&pIps);
     if (needInstall) {
-        return (dev_install_ip(psDeviceName, address, netmask, broadcast, psScope));
+        return (dev_install_ip(devh, psDeviceName, address, netmask, broadcast, psScope));
     }
     return (0);
 }
 
-//!
-//! Moves a set of IP/netmask address from a device onto another given device. If any IP address is assigned
-//! to another network device, this API will remove the IP address prior installing it on the given
-//! network device.
-//!
-//! @param[in] pIps a pointer to the set of IP address entry to install
-//! @param[in] nbIps the number of IP entry in the set
-//! @param[in] psScope a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
-//!
-//! @return the number of IP address installed successfully from the set
-//!
-//! @see dev_move_ip(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
-//!
-//! @pre
-//!     The pIps parameter should not be NULL and the scope should be valid
-//!
-//! @post
-//!     The IP are installed/updated on their respective devices and removed from any other interface
-//!     they may have been assigned too.
-//!
-//! @note
-//!
-int dev_move_ips(in_addr_entry * pIps, int nbIps, const char *psScope)
-{
+/**
+ * Moves a set of IP/netmask address from a device onto another given device. If any IP address is assigned
+ * to another network device, this API will remove the IP address prior installing it on the given
+ * network device.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param pIps [in] a pointer to the set of IP address entry to install
+ * @param nbIps [in] the number of IP entry in the set
+ * @param psScope [in] a constant string pointer to the scope of the address (SCOPE_GLOBAL, SCOPE_SITE, SCOPE_LINK, SCOPE_HOST)
+ *
+ * @return the number of IP address installed successfully from the set
+ *
+ * @see dev_move_ip(), dev_install_ip(), dev_remove_ip(), dev_remove_ips()
+ *
+ * @pre
+ *     The pIps parameter should not be NULL and the scope should be valid
+ *
+ * @post
+ *     The IP are installed/updated on their respective devices and removed from any other interface
+ *     they may have been assigned too.
+ *
+ * @note
+ */
+int dev_move_ips(dev_handler *devh, in_addr_entry *pIps, int nbIps, const char *psScope) {
     int i = 0;
     int moved = 0;
 
@@ -1958,7 +2013,7 @@ int dev_move_ips(in_addr_entry * pIps, int nbIps, const char *psScope)
         return (0);
 
     for (i = 0; i < nbIps; i++) {
-        if (dev_move_ip(pIps[i].sDevName, pIps[i].address, pIps[i].netmask, pIps[i].broascast, psScope) == 0) {
+        if (dev_move_ip(devh, pIps[i].sDevName, pIps[i].address, pIps[i].netmask, pIps[i].broascast, psScope) == 0) {
             moved++;
         }
     }
@@ -1966,31 +2021,35 @@ int dev_move_ips(in_addr_entry * pIps, int nbIps, const char *psScope)
     return (moved);
 }
 
-//!
-//! Remove a given ip/netmask association from a given device
-//!
-//! @param[in] psDeviceName a string pointer to the device name for which we are removing the address
-//! @param[in] address the address to remove
-//! @param[in] netmask the network mask associated with the address to remove
-//!
-//! @return 0 on success or 1 on failure
-//!
-//! @see dev_install_ip(), dev_install_ips(), dev_remove_ip()
-//!
-//! @pre
-//!     The device must be a valid device on this system
-//!
-//! @post
-//!     The IP is removed from their respective devices
-//!
-//! @note
-//!
-int dev_remove_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask)
-{
+/**
+ * Remove a given ip/netmask association from a given device
+ *
+ * @param devh [in] pointer to the device handler
+ * @param psDeviceName [in] a string pointer to the device name for which we are removing the address
+ * @param address [in] the address to remove
+ * @param netmask [in] the network mask associated with the address to remove
+ *
+ * @return 0 on success or 1 on failure
+ *
+ * @see dev_install_ip(), dev_install_ips(), dev_remove_ip()
+ *
+ * @pre
+ *     The device must be a valid device on this system
+ *
+ * @post
+ *     The IP is removed from their respective devices
+ *
+ * @note
+ */
+int dev_remove_ip(dev_handler *devh, const char *psDeviceName, in_addr_t address, in_addr_t netmask) {
     int rc = 0;
     u32 slashnet = NETMASK_TO_SLASHNET(netmask);
     char sHost[NETWORK_ADDR_LEN] = "";
 
+    if (!devh) {
+        LOGWARN("Invalid argument: null device handler\n");
+        return (1);
+    }
     // Make sure we have a valid device
     if (!dev_exist(psDeviceName)) {
         return (1);
@@ -2001,7 +2060,7 @@ int dev_remove_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask
     }
 
     snprintf(sHost, NETWORK_ADDR_LEN, "%s/%u", euca_ntoa(address), slashnet);
-    if (euca_execlp(&rc, config->cmdprefix, "ip", "addr", "del", sHost, "dev", psDeviceName, NULL) != EUCA_OK) {
+    if (euca_execlp(&rc, devh->cmdprefix, "ip", "addr", "del", sHost, "dev", psDeviceName, NULL) != EUCA_OK) {
         LOGERROR("Fail to remove host '%s' from network device '%s'. error=%d\n", sHost, psDeviceName, rc);
         return (1);
     }
@@ -2009,26 +2068,24 @@ int dev_remove_ip(const char *psDeviceName, in_addr_t address, in_addr_t netmask
     return (0);
 }
 
-//!
-//! Remove a set of IP addresses.
-//!
-//! @param[in] pIps a pointer to the set of IP address entry to remove
-//! @param[in] nbIps the number of IP entry in the set
-//!
-//! @return the number of IP address removed successfully from the set
-//!
-//! @see dev_install_ip(), dev_install_ips(), dev_remove_ip()
-//!
-//! @pre
-//!     The pIps parameter should not be NULL
-//!
-//! @post
-//!     The IPs are removed from their respective devices
-//!
-//! @note
-//!
-int dev_remove_ips(in_addr_entry * pIps, int nbIps)
-{
+/**
+ * Remove a set of IP addresses.
+ *
+ * @param devh [in] pointer to the device handler
+ * @param pIps [in] a pointer to the set of IP address entry to remove
+ * @param nbIps [in] the number of IP entry in the set
+ *
+ * @return the number of IP address removed successfully from the set
+ *
+ * @see dev_install_ip(), dev_install_ips(), dev_remove_ip()
+ *
+ * @pre
+ *     The pIps parameter should not be NULL
+ *
+ * @post
+ *     The IPs are removed from their respective devices
+ */
+int dev_remove_ips(dev_handler *devh, in_addr_entry *pIps, int nbIps) {
     int i = 0;
     int removed = 0;
 
@@ -2037,7 +2094,7 @@ int dev_remove_ips(in_addr_entry * pIps, int nbIps)
         return (0);
 
     for (i = 0; i < nbIps; i++) {
-        if (dev_remove_ip(pIps[i].sDevName, pIps[i].address, pIps[i].netmask) == 0)
+        if (dev_remove_ip(devh, pIps[i].sDevName, pIps[i].address, pIps[i].netmask) == 0)
             removed++;
     }
 

@@ -86,8 +86,6 @@
 #include <log.h>
 #include <euca_string.h>
 
-#include "ipt_handler.h"
-#include "ips_handler.h"
 #include "ebt_handler.h"
 #include "eucanetd_util.h"
 /*----------------------------------------------------------------------------*\
@@ -152,33 +150,32 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Initialize the Ebtables handler structure.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] cmdprefix a string pointer to the prefix to use for each system commands
-//!
-//! @return
-//!
-//! @see ipt_handler_init() 
-//!
-//! @pre
-//!     - The ebth pointer should not be NULL
-//!     - We should be able to create temporary files on the system
-//!     - We should be able to execute ebtables commands.
-//!
-//! @post
-//!     - Temporary files on disk: /tmp/ebt_filter_file-XXXXXX, /tmp/ebt_nat_file-XXXXXX
-//!       and /tmp/ebt_asc_file-XXXXXX.
-//!     - If cmdprefix was provided, the table's cmdprefix field will be set with it
-//!
-//! @note
-//!     - Once temporary files are initialized the filename will be reused throughout the process
-//!       lifetime. The files will be truncated/created on each successive calls to the *_handler_init()
-//!       method. 
-//!
-int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
-{
+/**
+ * Initialize the Ebtables handler structure.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param cmdprefix [in] a string pointer to the prefix to use for each system commands
+ *
+ * @return 0 on success. 1 on failure.
+ *
+ * @see ipt_handler_init() 
+ *
+ * @pre
+ *     - The ebth pointer should not be NULL
+ *     - We should be able to create temporary files on the system
+ *     - We should be able to execute ebtables commands.
+ *
+ * @post
+ *     - Temporary files on disk: /tmp/ebt_filter_file-XXXXXX, /tmp/ebt_nat_file-XXXXXX
+ *       and /tmp/ebt_asc_file-XXXXXX.
+ *     - If cmdprefix was provided, the table's cmdprefix field will be set with it
+ *
+ * @note
+ *     - Once temporary files are initialized the filename will be reused throughout the process
+ *       lifetime. The files will be truncated/created on each successive calls to the *_handler_init()
+ *       method. 
+ */
+int ebt_handler_init(ebt_handler *ebth, const char *cmdprefix) {
     int fd;
     char sTempFilterFile[EUCA_MAX_PATH] = "";
     char sTempNatFile[EUCA_MAX_PATH] = "";
@@ -268,23 +265,14 @@ int ebt_handler_init(ebt_handler * ebth, const char *cmdprefix)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_system_save(ebt_handler * ebth)
-{
+/**
+ * Saves the current ebtables state to files.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_system_save(ebt_handler *ebth) {
     int ret = 0;
 
     if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-save", NULL) != EUCA_OK) {
@@ -306,60 +294,42 @@ int ebt_system_save(ebt_handler * ebth)
     return (ret);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_system_restore(ebt_handler * ebth)
-{
+/**
+ * Restores ebtables state from files.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_system_restore(ebt_handler *ebth) {
     int ret = EUCA_OK;
     if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-commit", NULL) != EUCA_OK) {
         copy_file(ebth->ebt_filter_file, "/tmp/euca_ebt_filter_file_failed");
         LOGERROR("ebtables-restore failed. copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n");
         ret = 1;
     }
-    unlink(ebth->ebt_filter_file);
 
     if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_nat_file, "-t", "nat", "--atomic-commit", NULL) != EUCA_OK) {
         copy_file(ebth->ebt_nat_file, "/tmp/euca_ebt_nat_file_failed");
         LOGERROR("ebtables-restore failed. copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n");
         ret = 1;
     }
-    unlink(ebth->ebt_nat_file);
 
-    unlink(ebth->ebt_asc_file);
+    unlink_handler_file(ebth->ebt_filter_file);
+    unlink_handler_file(ebth->ebt_nat_file);
+    unlink_handler_file(ebth->ebt_asc_file);
 
     return (ret);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_deploy(ebt_handler * ebth)
-{
+/**
+ * Dumps ebtables hander state to files and restore this ebtables state into system.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_handler_deploy(ebt_handler *ebth) {
     int i = 0;
     int j = 0;
     int k = 0;
@@ -369,6 +339,9 @@ int ebt_handler_deploy(ebt_handler * ebth)
         return (1);
     }
 
+    char *strptr = strdup(ebth->cmdprefix);
+    ebt_handler_init(ebth, strptr);
+    EUCA_FREE(strptr);
     ebt_handler_update_refcounts(ebth);
 
     if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-init", NULL) != EUCA_OK) {
@@ -425,23 +398,14 @@ int ebt_handler_deploy(ebt_handler * ebth)
     return (ebt_system_restore(ebth));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_repopulate(ebt_handler * ebth)
-{
+/**
+ * Retrieve ebtables system state to this handler data structure.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_handler_repopulate(ebt_handler *ebth) {
     int rc = 0;
     FILE *FH = NULL;
     char buf[1024] = "";
@@ -506,27 +470,22 @@ int ebt_handler_repopulate(ebt_handler * ebth)
     }
     fclose(FH);
 
+    unlink_handler_file(ebth->ebt_filter_file);
+    unlink_handler_file(ebth->ebt_nat_file);
+    unlink_handler_file(ebth->ebt_asc_file);
+
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_add_table(ebt_handler * ebth, char *tablename)
-{
+/**
+ * Adds tablename table to this handler. No-op if the table is already present.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_handler_add_table(ebt_handler *ebth, char *tablename) {
     ebt_table *table = NULL;
     if (!ebth || !tablename || !ebth->init) {
         return (1);
@@ -548,27 +507,19 @@ int ebt_handler_add_table(ebt_handler * ebth, char *tablename)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] policyname a string pointer to the default policy name to use (e.g. "DROP", "ACCEPT")
-//! @param[in] counters a string pointer to the counter
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, char *policyname, char *counters)
-{
+/**
+ * Adds chain chainname to table tablename with policy policyname and counter counters.
+ * No-op if chainname is already present.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param policyname [in] a string pointer to the default policy name to use (e.g. "DROP", "ACCEPT")
+ * @param counters [in] a string pointer to the counter
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, char *policyname, char *counters) {
     ebt_table *table = NULL;
     ebt_chain *chain = NULL;
     if (!ebth || !tablename || !chainname || !counters || !ebth->init) {
@@ -605,26 +556,17 @@ int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, ch
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] newrule a string pointer to the new rule
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, char *newrule)
-{
+/**
+ * Adds newrule to chain chainname in table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param newrule [in] a string pointer to the new rule
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char *newrule) {
     ebt_table *table = NULL;
     ebt_chain *chain = NULL;
     ebt_rule *rule = NULL;
@@ -658,23 +600,14 @@ int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, cha
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_update_refcounts(ebt_handler * ebth)
-{
+/**
+ * Update the chain reference counters.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return always 0.
+ */
+int ebt_handler_update_refcounts(ebt_handler *ebth) {
     char *jumpptr = NULL, jumpchain[64], tmp[64];
     int i, j, k;
     ebt_table *table = NULL;
@@ -707,24 +640,15 @@ int ebt_handler_update_refcounts(ebt_handler * ebth)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] findtable a string pointer to the table name we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ebt_table *ebt_handler_find_table(ebt_handler * ebth, char *findtable)
-{
+/**
+ * Searches for table findtable.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param findtable [in] a string pointer to the table name we're looking for
+ *
+ * @return pointer to ebt_table structure of interest if found. NULL otherwise.
+ */
+ebt_table *ebt_handler_find_table(ebt_handler *ebth, char *findtable) {
     int i, tableidx = 0, found = 0;
     if (!ebth || !findtable || !ebth->init) {
         return (NULL);
@@ -742,25 +666,16 @@ ebt_table *ebt_handler_find_table(ebt_handler * ebth, char *findtable)
     return (&(ebth->tables[tableidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] findchain a string pointer to the chain name we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findchain)
-{
+/**
+ * Searches for chain findchain in table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param findchain [in] a string pointer to the chain name we're looking for
+ *
+ * @return pointer to ebt_chain structure of interest if found. NULL otherwise.
+ */
+ebt_chain *ebt_table_find_chain(ebt_handler *ebth, char *tablename, char *findchain) {
     int i, found = 0, chainidx = 0;
     ebt_table *table = NULL;
 
@@ -787,26 +702,17 @@ ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findc
     return (&(table->chains[chainidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] findrule a string pointer to the name of the rule we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule)
-{
+/**
+ * Searches for rule findrule in chain chainname of table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param findrule [in] a string pointer to the name of the rule we're looking for
+ *
+ * @return pointer to ebt_rule structure if found. NULL otherwise.
+ */
+ebt_rule *ebt_chain_find_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule) {
     int i, found = 0;
     ebt_chain *chain;
 
@@ -829,24 +735,15 @@ ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainna
     return (&(chain->rules[i]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename)
-{
+/**
+ * Remove all empty chains from table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_table_deletechainempty(ebt_handler *ebth, char *tablename) {
     int i, found = 0;
     ebt_table *table = NULL;
 
@@ -872,25 +769,16 @@ int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainmatch a string pointer to the list of characters to match
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainmatch)
-{
+/**
+ * Delete chains with partially matches chainmatch from table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainmatch [in] a string pointer to the list of characters to match
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_table_deletechainmatch(ebt_handler *ebth, char *tablename, char *chainmatch) {
     int i, found = 0;
     ebt_table *table = NULL;
 
@@ -915,25 +803,16 @@ int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainm
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname)
-{
+/**
+ * Remove all rules from chain chainname in table tablename.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_chain_flush(ebt_handler *ebth, char *tablename, char *chainname) {
     ebt_table *table = NULL;
     ebt_chain *chain = NULL;
 
@@ -957,25 +836,17 @@ int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname)
     return (0);
 }
 
-//!
-//! Deletes a ebtables rule specified in the argument.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//! @param[in] tablename a string pointer to the table name
-//! @param[in] chainname a string pointer to the chain name
-//! @param[in] findrule a string pointer to the rule to be deleted
-//!
-//! @return 0 if the rule given in the argument is successfully deleted. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_chain_flush_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule) {
+/**
+ * Deletes a ebtables rule specified in the argument.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ * @param tablename [in] a string pointer to the table name
+ * @param chainname [in] a string pointer to the chain name
+ * @param findrule [in] a string pointer to the rule to be deleted
+ *
+ * @return 0 if the rule given in the argument is successfully deleted. 1 otherwise.
+ */
+int ebt_chain_flush_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule) {
     ebt_table *table = NULL;
     ebt_chain *chain = NULL;
     ebt_rule *rule = NULL;
@@ -1029,23 +900,14 @@ int ebt_chain_flush_rule(ebt_handler * ebth, char *tablename, char *chainname, c
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_free(ebt_handler * ebth)
-{
+/**
+ * Releases resources allocated to this handler and re-initializes this handler.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 on failure.
+ */
+int ebt_handler_free(ebt_handler *ebth) {
     int i = 0;
     int j = 0;
     char saved_cmdprefix[EUCA_MAX_PATH] = "";
@@ -1062,30 +924,17 @@ int ebt_handler_free(ebt_handler * ebth)
     }
     EUCA_FREE(ebth->tables);
 
-    unlink(ebth->ebt_filter_file);
-    unlink(ebth->ebt_nat_file);
-    unlink(ebth->ebt_asc_file);
-
     return (ebt_handler_init(ebth, saved_cmdprefix));
 }
 
-//!
-//! Releases all resources of the given ebt_handler.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return 0 on success. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_close(ebt_handler * ebth)
-{
+/**
+ * Releases all resources of the given ebt_handler.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success. 1 otherwise.
+ */
+int ebt_handler_close(ebt_handler *ebth) {
     int i = 0;
     int j = 0;
     if (!ebth || !ebth->init) {
@@ -1101,29 +950,22 @@ int ebt_handler_close(ebt_handler * ebth)
     }
     EUCA_FREE(ebth->tables);
 
-    unlink(ebth->ebt_filter_file);
-    unlink(ebth->ebt_nat_file);
-    unlink(ebth->ebt_asc_file);
+    unlink_handler_file(ebth->ebt_filter_file);
+    unlink_handler_file(ebth->ebt_nat_file);
+    unlink_handler_file(ebth->ebt_asc_file);
+    ebth->init = 0;
 
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ebth pointer to the EB table handler structure
-//!
-//! @return 0 on success or 1 if any failure occured
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ebt_handler_print(ebt_handler * ebth)
+/**
+ * Logs the current ebtables state in this handler.
+ *
+ * @param ebth [in] pointer to the EB table handler structure
+ *
+ * @return 0 on success or 1 if any failure occurred
+ */
+int ebt_handler_print(ebt_handler *ebth)
 {
     int i, j, k;
     if (!ebth || !ebth->init) {

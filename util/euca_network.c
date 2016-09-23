@@ -853,35 +853,18 @@ char *euca_intfc2mac(const char *psDevName)
     return (psMac);
 }
 
-//!
-//! Converts a string description of network mode to euca_netmode code.
-//! EDGE, VPCMIDO, MANAGED, and MANAGED_NOVLAN are recognized.
-//!
-//! @param[in] psNetMode a string representation of a network mode.
-//!
-//! @return Returns the euca_netmode code of the given network mode string.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-euca_netmode euca_netmode_atoi(const char *psNetMode)
-{
+/**
+ * Converts a string description of network mode to euca_netmode code.
+ * EDGE, VPCMIDO, MANAGED, and MANAGED_NOVLAN are recognized.
+ * @param psNetMode [in] a string representation of a network mode.
+ * @return the euca_netmode code of the given network mode string
+ */
+euca_netmode euca_netmode_atoi(const char *psNetMode) {
     if (!strcmp(psNetMode, NETMODE_EDGE)) {
         return NM_EDGE;
     }
     if (!strcmp(psNetMode, NETMODE_VPCMIDO)) {
         return NM_VPCMIDO;
-    }
-    if (!strcmp(psNetMode, NETMODE_MANAGED)) {
-        return NM_MANAGED;
-    }
-    if (!strcmp(psNetMode, NETMODE_MANAGED_NOVLAN)) {
-        return NM_MANAGED_NOVLAN;
     }
 
     return (NM_INVALID);

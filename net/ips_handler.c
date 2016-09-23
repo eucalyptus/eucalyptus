@@ -86,9 +86,7 @@
 #include <log.h>
 #include <euca_string.h>
 
-#include "ipt_handler.h"
 #include "ips_handler.h"
-#include "ebt_handler.h"
 #include "eucanetd_util.h"
 
 /*----------------------------------------------------------------------------*\
@@ -153,32 +151,29 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//!
-//! Initialize the IP Set handler structure
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] cmdprefix a string pointer to the prefix to use to run commands
-//!
-//! @return
-//!
-//! @see ipt_handler_init()
-//!
-//! @pre
-//!    - The ipsh pointer should not be NULL
-//!     - We should be able to create temporary files on the system
-//!     - We should be able to execute ebtables commands.
-//!
-//! @post
-//!     - Temporary files on disk: /tmp/ips_file-XXXXXX
-//!     - If cmdprefix was provided, the table's cmdprefix field will be set with it
-//!
-//! @note
-//!     - Once temporary file is initialized the filename will be reused throughout the process
-//!       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
-//!       method.
-//!
-int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
-{
+/**
+ * Initialize the IP Set handler structure
+ *
+ * @param ipsh [in] pointer to the IP set handler structure
+ * @param cmdprefix [in] a string pointer to the prefix to use to run commands
+ *
+ * @return 0 on success. 1 on any failure.
+ *
+ * @pre
+ *    - The ipsh pointer should not be NULL
+ *     - We should be able to create temporary files on the system
+ *     - We should be able to execute ebtables commands.
+ *
+ * @post
+ *     - Temporary files on disk: /tmp/ips_file-XXXXXX
+ *     - If cmdprefix was provided, the table's cmdprefix field will be set with it
+ *
+ * @note
+ *     - Once temporary file is initialized the filename will be reused throughout the process
+ *       lifetime. The file will be truncated/created on each successive calls to the *_handler_init()
+ *       method.
+ */
+int ips_handler_init(ips_handler *ipsh, const char *cmdprefix) {
     int fd;
     char sTempFileName[EUCA_MAX_PATH] = "";
 
@@ -228,23 +223,12 @@ int ips_handler_init(ips_handler * ipsh, const char *cmdprefix)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_system_save(ips_handler * ipsh)
-{
+/**
+ * Shell-out and execute ipset save
+ * @param ipsh [in] pointer to ipset handler
+ * @return EUCA_OK on success. EUCA_ERROR on failure
+ */
+int ips_system_save(ips_handler *ipsh) {
     int rc = EUCA_OK;
     if (euca_execlp_redirect(NULL, NULL, ipsh->ips_file, FALSE, NULL, FALSE, ipsh->cmdprefix, "ipset", "save", NULL) != EUCA_OK) {
         LOGERROR("ipset save failed\n");
@@ -253,50 +237,28 @@ int ips_system_save(ips_handler * ipsh)
     return (rc);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_system_restore(ips_handler * ipsh)
-{
+/**
+ * Shell-out and execute ipset restore
+ * @param ipsh [in] pointer to ipset handler
+ * @return EUCA_OK on success. EUCA_ERROR on failure
+ */
+int ips_system_restore(ips_handler *ipsh) {
     int rc = EUCA_OK;
     if (euca_execlp_redirect(NULL, ipsh->ips_file, NULL, FALSE, NULL, FALSE, ipsh->cmdprefix, "ipset", "-!", "restore", NULL) != EUCA_OK) {
         copy_file(ipsh->ips_file, "/tmp/euca_ips_file_failed");
         LOGERROR("ipset restore failed. copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n");
         rc = EUCA_ERROR;
     }
-    unlink(ipsh->ips_file);
+    unlink_handler_file(ipsh->ips_file);
     return (rc);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_repopulate(ips_handler * ipsh)
-{
+/**
+ * Retrieves the current ipset state from the system.
+ * @param ipsh [in] pointer to ipset handler
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_repopulate(ips_handler *ipsh) {
     int rc = 0, nm = 0;
     FILE *FH = NULL;
     char buf[1024] = "";
@@ -364,28 +326,18 @@ int ips_handler_repopulate(ips_handler * ipsh)
     }
     fclose(FH);
 
+    unlink_handler_file(ipsh->ips_file);
     LOGDEBUG("ips populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] dodelete set to 1 if we need to flush an empty set or 0 if we ignore
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_deploy(ips_handler * ipsh, int dodelete)
-{
+/**
+ * Applies the ipset configuration in the handler to the system.
+ * @param ipsh [in] pointer to the ipset handler
+ * @param dodelete [in] set to 1 if we need to flush an empty set or 0 if we ignore
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_deploy(ips_handler *ipsh, int dodelete) {
     int i = 0;
     int j = 0;
     FILE *FH = NULL;
@@ -421,24 +373,13 @@ int ips_handler_deploy(ips_handler * ipsh, int dodelete)
     return (ips_system_restore(ipsh));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_add_set(ips_handler * ipsh, char *setname)
-{
+/**
+ * Adds a new set to the ipset handler
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the set to be added
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_add_set(ips_handler *ipsh, char *setname) {
     ips_set *set = NULL;
 
     if (!ipsh || !setname || !ipsh->init) {
@@ -460,24 +401,13 @@ int ips_handler_add_set(ips_handler * ipsh, char *setname)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] findset a string pointer to the ipset name we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset)
-{
+/**
+ * Searches for the ipset in the argument.
+ * @param ipsh [in] pointer to the ipset handler
+ * @param findset [in] the ipset name we're looking for
+ * @return pointer to the ip_set if found. NULL otherwise.
+ */
+ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset) {
     int i, setidx = 0, found = 0;
     if (!ipsh || !findset || !ipsh->init) {
         return (NULL);
@@ -495,48 +425,26 @@ ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset)
     return (&(ipsh->sets[setidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//! @param[in] ipname a string pointer to the ip address
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ipname)
-{
+/**
+ * Adds an IP address to an ipset
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the ipset of interest
+ * @param ipname [in] IP address to be added to the ipset of interest
+ * @return 0 on success. 1 on failure.
+ */
+int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ipname) {
     return (ips_set_add_net(ipsh, setname, ipname, 32));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//! @param[in] ipname a string pointer to the ip address
-//! @param[in] nmname the netmask address
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_set_add_net(ips_handler * ipsh, char *setname, char *ipname, int nmname)
-{
+/**
+ * Adds a CIDR block to an ipset
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the ipset of interest
+ * @param ipname [in] network address
+ * @param nmname [in] network mask
+ * @return 0 on success. 1 on failure.
+ */
+int ips_set_add_net(ips_handler *ipsh, char *setname, char *ipname, int nmname) {
     ips_set *set = NULL;
     u32 *ip = NULL;
     if (!ipsh || !setname || !ipname || !ipsh->init) {
@@ -571,48 +479,26 @@ int ips_set_add_net(ips_handler * ipsh, char *setname, char *ipname, int nmname)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//! @param[in] findipstr a string pointer to the IP address we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findipstr)
-{
+/**
+ * Searches for an IP address in an ipset
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the ipset of interest
+ * @param findipstr [in] IP address to look for
+ * @return pointer to an integer representing the IP address if found. NULL otherwise.
+ */
+u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findipstr) {
     return (ips_set_find_net(ipsh, setname, findipstr, 32));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//! @param[in] findipstr a string pointer to the IP address we're looking for
-//! @param[in] findnm the IP netmask address we're looking for
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findipstr, int findnm)
-{
+/**
+ * Searches for a CIDR block IP in an ipset.
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the ipset of interest
+ * @param findipstr [in] IP address to look for
+ * @param findnm [in] network mask to look for
+ * @return pointer to an integer representing the IP address if found. NULL otherwise.
+ */
+u32 *ips_set_find_net(ips_handler *ipsh, char *setname, char *findipstr, int findnm) {
     int i, found = 0, ipidx = 0;
     ips_set *set = NULL;
     u32 findip;
@@ -641,24 +527,13 @@ u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findipstr, int fi
     return (&(set->member_ips[ipidx]));
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setname a string pointer to the ipset name
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_set_flush(ips_handler * ipsh, char *setname)
-{
+/**
+ * Flushes all entries in the given ipset
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setname [in] name of the ipset of interest
+ * @return 0 on success. 1 on failure.
+ */
+int ips_set_flush(ips_handler *ipsh, char *setname) {
     ips_set *set = NULL;
 
     if (!ipsh || !setname || !ipsh->init) {
@@ -677,24 +552,13 @@ int ips_set_flush(ips_handler * ipsh, char *setname)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//! @param[in] setmatch a string pointer to the list of characters to match
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
-{
+/**
+ * Removes ipsets that matches (partial matches accepted) the string in the argument
+ * @param ipsh [in] pointer to the ipset handler
+ * @param setmatch [in] name of ipset to look for (partial matches are accepted)
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_deletesetmatch(ips_handler *ipsh, char *setmatch) {
     int i = 0;
     int found = 0;
 
@@ -715,23 +579,12 @@ int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_free(ips_handler * ipsh)
-{
+/**
+ * Release resources of the given ipset handler and reinitializes the handler.
+ * @param ipsh [in] pointer to the ipset handler
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_free(ips_handler *ipsh) {
     int i = 0;
     char saved_cmdprefix[EUCA_MAX_PATH] = "";
 
@@ -746,28 +599,15 @@ int ips_handler_free(ips_handler * ipsh)
     }
     EUCA_FREE(ipsh->sets);
 
-    unlink(ipsh->ips_file);
-
     return (ips_handler_init(ipsh, saved_cmdprefix));
 }
 
-//!
-//! Release all resources of the given ips_handler.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return 0 on success. 1 otherwise.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_close(ips_handler * ipsh)
-{
+/**
+ * Releases all resources of the given ips_handler.
+ * @param ipsh [in] pointer to the ipset handler
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_close(ips_handler *ipsh) {
     int i = 0;
     if (!ipsh || !ipsh->init) {
         LOGDEBUG("Invalid argument. NULL or uninitialized ips_handler.\n");
@@ -779,27 +619,17 @@ int ips_handler_close(ips_handler * ipsh)
     }
     EUCA_FREE(ipsh->sets);
 
-    unlink(ipsh->ips_file);
+    unlink_handler_file(ipsh->ips_file);
+    ipsh->init = 0;
     return (0);
 }
 
-//!
-//! Function description.
-//!
-//! @param[in] ipsh pointer to the IP set handler structure
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int ips_handler_print(ips_handler * ipsh)
-{
+/**
+ * Logs (TRACE level) the information about the given ipset handler.
+ * @param ipsh [in] pointer to the ipset handler
+ * @return 0 on success. 1 on failure.
+ */
+int ips_handler_print(ips_handler *ipsh) {
     int i, j;
     char *strptra = NULL;
 

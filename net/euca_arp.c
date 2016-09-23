@@ -249,40 +249,20 @@ static int send_gratuitous_arp(const char *psDevice, const char *psIp, const cha
     return (1);
 }
 
-//!
-//! Prints the test application usage string
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-static void usage(void)
-{
+/**
+ * Prints the test application usage string
+ */
+static void usage(void) {
     fprintf(stderr, "usage: send_arp <if> <ip> <mac> [vlan]\n\n");
 }
 
-//!
-//! Main entry point of the application
-//!
-//! @param[in] argc the number of parameter passed on the command line
-//! @param[in] argv the list of arguments
-//!
-//! @return EUCA_OK on success or EUCA_ERROR on failure.
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
-int main(int argc, char *argv[])
-{
+/**
+ * Main entry point of the application
+ * @param argc [in] the number of parameter passed on the command line
+ * @param argv [in] the list of arguments
+ * @return always 0.
+ */
+int main(int argc, char *argv[]) {
 #define NB_ARG_MIN       4
 #define APP_ARG_INDEX    0
 #define IF_ARG_INDEX     1

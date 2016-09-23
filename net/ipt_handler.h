@@ -184,38 +184,38 @@ typedef struct ipt_handler_t {
 
 //! @{
 //! @name IP tables API
-int ipt_handler_init(ipt_handler * ipth, const char *cmdprefix, const char *preload);
-int ipt_handler_free(ipt_handler * ipth);
-int ipt_handler_close(ipt_handler * ipth);
+int ipt_handler_init(ipt_handler *ipth, const char *cmdprefix, const char *preload);
+int ipt_handler_free(ipt_handler *ipth);
+int ipt_handler_close(ipt_handler *ipth);
 
-int ipt_system_save(ipt_handler * ipth);
-int ipt_system_restore(ipt_handler * ipth);
+int ipt_system_save(ipt_handler *ipth);
+int ipt_system_restore(ipt_handler *ipth);
 
-int ipt_handler_repopulate(ipt_handler * ipth);
-int ipt_handler_deploy(ipt_handler * ipth);
-int ipt_handler_update_refcounts(ipt_handler * ipth);
+int ipt_handler_repopulate(ipt_handler *ipth);
+int ipt_handler_deploy(ipt_handler *ipth);
+int ipt_handler_update_refcounts(ipt_handler *ipth);
 
-int ipt_handler_add_table(ipt_handler * ipth, char *tablename);
-ipt_table *ipt_handler_find_table(ipt_handler * ipth, const char *findtable);
+int ipt_handler_add_table(ipt_handler *ipth, char *tablename);
+ipt_table *ipt_handler_find_table(ipt_handler *ipth, const char *findtable);
 
-int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, char *policyname, char *counters);
-ipt_chain *ipt_table_find_chain(ipt_handler * ipth, const char *tablename, const char *findchain);
-int ipt_table_set_chain_policy(ipt_handler * ipth, const char *tablename, const char *chainname, const char *policyname);
+int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters);
+ipt_chain *ipt_table_find_chain(ipt_handler *ipth, const char *tablename, const char *findchain);
+int ipt_table_set_chain_policy(ipt_handler *ipth, const char *tablename, const char *chainname, const char *policyname);
 
-int ipt_chain_add_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule);
+int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
 //int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
-int ipt_chain_add_rule_with_counters(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr);
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr);
 //int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
-int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order);
-ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule);
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order);
+ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
 
-int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname);
-int ipt_chain_flush_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule);
+int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
+int ipt_chain_flush_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
 
-int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainmatch);
-int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename);
+int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch);
+int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename);
 
-int ipt_handler_print(ipt_handler * ipth);
+int ipt_handler_print(ipt_handler *ipth);
 
 int ipt_ruleordercmp(const void *p1, const void *p2);
 //! @}

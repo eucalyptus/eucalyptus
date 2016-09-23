@@ -131,30 +131,30 @@ typedef struct ips_handler_t {
 
 //! @{
 //! @name IP set APIs
-int ips_handler_init(ips_handler * ipsh, const char *cmdprefix);
+int ips_handler_init(ips_handler *ipsh, const char *cmdprefix);
 
-int ips_system_save(ips_handler * ipsh);
-int ips_system_restore(ips_handler * ipsh);
+int ips_system_save(ips_handler *ipsh);
+int ips_system_restore(ips_handler *ipsh);
 
-int ips_handler_repopulate(ips_handler * ipsh);
-int ips_handler_deploy(ips_handler * ipsh, int dodelete);
+int ips_handler_repopulate(ips_handler *ipsh);
+int ips_handler_deploy(ips_handler *ipsh, int dodelete);
 
-int ips_handler_add_set(ips_handler * ipsh, char *setname);
-ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset);
+int ips_handler_add_set(ips_handler *ipsh, char *setname);
+ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset);
 
-int ips_set_add_net(ips_handler * ipsh, char *setname, char *ip, int nm);
-u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findip, int findnm);
+int ips_set_add_net(ips_handler *ipsh, char *setname, char *ip, int nm);
+u32 *ips_set_find_net(ips_handler *ipsh, char *setname, char *findip, int findnm);
 
-int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ip);
-u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findip);
+int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ip);
+u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findip);
 
-int ips_set_flush(ips_handler * ipsh, char *setname);
-int ips_handler_deletesetmatch(ips_handler * ipsh, char *match);
+int ips_set_flush(ips_handler *ipsh, char *setname);
+int ips_handler_deletesetmatch(ips_handler *ipsh, char *match);
 
-int ips_handler_free(ips_handler * ipsh);
-int ips_handler_close(ips_handler * ipsh);
+int ips_handler_free(ips_handler *ipsh);
+int ips_handler_close(ips_handler *ipsh);
 
-int ips_handler_print(ips_handler * ipsh);
+int ips_handler_print(ips_handler *ipsh);
 //! @}
 
 /*----------------------------------------------------------------------------*\
