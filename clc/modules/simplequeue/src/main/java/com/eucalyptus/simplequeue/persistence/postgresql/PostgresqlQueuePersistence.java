@@ -1,14 +1,11 @@
 package com.eucalyptus.simplequeue.persistence.postgresql;
 
-import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.simplequeue.InvalidParameterValueException;
-import com.eucalyptus.simplequeue.QueueAlreadyExistsException;
-import com.eucalyptus.simplequeue.QueueDoesNotExistException;
+import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
+import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.simplequeue.persistence.QueuePersistence;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;

@@ -49,22 +49,30 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.simplequeue.exceptions.*;
+import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import net.sf.json.JSONException;
 import org.apache.log4j.Logger;
+import org.apache.xml.security.exceptions.Base64DecodingException;
 import org.apache.xml.security.utils.Base64;
 
 import java.io.IOException;
@@ -77,6 +85,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,7 +99,6 @@ import java.util.stream.Collectors;
 @ComponentNamed
 public class SimpleQueueService {
 
-  // TODO: move
   public enum AttributeName {
     All,
     Policy,
@@ -106,6 +114,20 @@ public class SimpleQueueService {
     DelaySeconds,
     ReceiveMessageWaitTimeSeconds,
     RedrivePolicy
+  }
+
+  public enum MessageAttributeName {
+    All,
+    ApproximateFirstReceiveTimestamp,
+    ApproximateReceiveCount,
+    SenderId,
+    SentTimestamp
+  };
+
+  public enum EucaInternalMessageAttributeName {
+    EucaLocalReceiveCount,
+    EucaDelaySeconds,
+    EucaMessageRetentionPeriod
   }
 
   @ConfigurableField( description = "Maximum number of characters in a queue name.",
@@ -133,8 +155,16 @@ public class SimpleQueueService {
   public volatile static int MAX_VISIBILITY_TIMEOUT = 43200;
 
   @ConfigurableField( description = "Maximum value for maxReceiveCount (dead letter queue).",
-    initial = "43200", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static int MAX_MAX_RECEIVE_COUNT = 1000;
+
+  @ConfigurableField( description = "Maximum length of message attribute name. (chars)",
+    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH = 256;
+
+  @ConfigurableField( description = "Maximum number of bytes in message attribute type. (bytes)",
+    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH = 256;
 
   public abstract static class CheckMinIntPropertyChangeListener implements PropertyChangeListener {
     protected int minValue = 0;
@@ -371,7 +401,7 @@ public class SimpleQueueService {
             throw new QueueAlreadyExistsException(request.getQueueName() + " already exists.");
           }
         }
-        String queueUrl = getQueueUrlFromAccountIdAndQueueName(accountId, request.getQueueName());
+        String queueUrl = getQueueUrlFromQueueUrlParts(new QueueUrlParts(accountId, request.getQueueName()));
         reply.getCreateQueueResult().setQueueUrl(queueUrl);
       }
     } catch (Exception ex) {
@@ -380,25 +410,113 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private String getQueueUrlFromAccountIdAndQueueName(String accountId, String queueName) {
-    return ServiceUris.remotePublicify(Topology.lookup(SimpleQueue.class)).toString() + accountId + "/" + queueName;
+  private String getQueueUrlFromQueueUrlParts(QueueUrlParts queueUrlParts) {
+    return ServiceUris.remotePublicify(Topology.lookup(SimpleQueue.class)).toString() + queueUrlParts.getAccountId() + "/" + queueUrlParts.getQueueName();
   }
 
-  private Pair<String, String> getAccountIdAndQueueNameFromQueueUrl(String queueUrl) throws InvalidAddressException {
-    String accountId = null;
-    String queueName = null;
-    try {
-      URL url = new URL(queueUrl);
-      List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(url.getPath());
-      if (pathParts.size() == 2) {
-        accountId = Accounts.lookupAccountById(pathParts.get(0)).getAccountNumber();
-        queueName = pathParts.get(1);
-      }
-    } catch (MalformedURLException | NullPointerException | AuthException ignore) {}
-    if (accountId == null || queueName == null) {
-      throw new InvalidAddressException("The address " + queueUrl + " is not valid for this endpoint.");
+  private static class QueueUrlParts {
+    private String accountId;
+    private String queueName;
+
+    private QueueUrlParts() {
     }
-    return new Pair<>(accountId, queueName);
+
+    private QueueUrlParts(String accountId, String queueName) {
+      this.accountId = accountId;
+      this.queueName = queueName;
+    }
+
+    public String getAccountId() {
+
+      return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+      this.accountId = accountId;
+    }
+
+    public String getQueueName() {
+      return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+      this.queueName = queueName;
+    }
+  }
+
+  interface QueueUrlPartsParser {
+    boolean matches(URL queueUrl);
+    QueueUrlParts getQueueUrlParts(URL queueUrl);
+  }
+
+  private static Collection<QueueUrlPartsParser> queueUrlPartsParsers = Lists.newArrayList(
+    new AccountIdAndQueueNamePartsParser(),
+    new ServicePathAccountIdAndQueueNamePartsParser()
+  );
+
+  private static class AccountIdAndQueueNamePartsParser implements QueueUrlPartsParser {
+    @Override
+    public boolean matches(URL queueUrl) {
+      if (queueUrl != null && queueUrl.getPath() != null) {
+        return (Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath()).size() == 2);
+      } else {
+        return false;
+      }
+    }
+
+    @Override
+    public QueueUrlParts getQueueUrlParts(URL queueUrl) {
+      // TODO: we are duplicating Splitter code here.  consider refactoring if too slow.
+      List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath());
+      QueueUrlParts queueUrlParts = new QueueUrlParts();
+      queueUrlParts.setAccountId(pathParts.get(0));
+      queueUrlParts.setQueueName(pathParts.get(1));
+      return queueUrlParts;
+    }
+  }
+
+  private static class ServicePathAccountIdAndQueueNamePartsParser implements QueueUrlPartsParser {
+    @Override
+    public boolean matches(URL queueUrl) {
+      if (queueUrl != null && queueUrl.getPath() != null) {
+        List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath());
+        return (pathParts != null && "services".equals(pathParts.get(0))
+          && "simplequeue".equals(pathParts.get(1)) && pathParts.size() == 4);
+      } else {
+        return false;
+      }
+    }
+
+    @Override
+    public QueueUrlParts getQueueUrlParts(URL queueUrl) {
+      // TODO: we are duplicating Splitter code here.  consider refactoring if too slow.
+      List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath());
+      QueueUrlParts queueUrlParts = new QueueUrlParts();
+      queueUrlParts.setAccountId(pathParts.get(2));
+      queueUrlParts.setQueueName(pathParts.get(3));
+      return queueUrlParts;
+    }
+  }
+
+  private QueueUrlParts getQueueUrlParts(String queueUrlStr) throws InvalidAddressException {
+    QueueUrlParts queueUrlParts = null;
+    try {
+      URL queueUrl = new URL(queueUrlStr);
+      for (QueueUrlPartsParser queueUrlPartsParser: queueUrlPartsParsers) {
+        if (queueUrlPartsParser.matches(queueUrl)) {
+          queueUrlParts = queueUrlPartsParser.getQueueUrlParts(queueUrl);
+          break;
+        }
+      }
+      // validate account id
+      Accounts.lookupAccountById(queueUrlParts.getAccountId()).getAccountNumber();
+    } catch (MalformedURLException | NullPointerException | AuthException e) {
+      queueUrlParts = null;
+    }
+    if (queueUrlParts == null) {
+      throw new InvalidAddressException("The address " + queueUrlStr + " is not valid for this endpoint.");
+    }
+    return queueUrlParts;
   }
 
 
@@ -415,7 +533,7 @@ public class SimpleQueueService {
       Collection<Queue> queues = PersistenceFactory.getQueuePersistence().listQueuesByPrefix(accountId, request.getQueueNamePrefix());
       if (queues != null) {
         for (Queue queue: queues) {
-          reply.getListQueuesResult().getQueueUrl().add(getQueueUrlFromAccountIdAndQueueName(queue.getAccountId(), queue.getQueueName()));
+          reply.getListQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(queue.getAccountId(), queue.getQueueName())));
         }
       }
     } catch (Exception ex) {
@@ -436,6 +554,27 @@ public class SimpleQueueService {
 
   public DeleteMessageResponseType deleteMessage(DeleteMessageType request) throws EucalyptusCloudException {
     DeleteMessageResponseType reply = request.getReply();
+
+    // TODO: IAM rather than own account for now
+    try {
+      Message message = new Message();
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      PersistenceFactory.getMessagePersistence().deleteMessage(accountId, queueName, request.getReceiptHandle());
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -445,22 +584,34 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
-      Pair<String, String> accountIdAndQueueName = getAccountIdAndQueueNameFromQueueUrl(request.getQueueUrl());
-      if (!accountIdAndQueueName.getLeft().equals(accountId)) {
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
         throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
       }
-      String queueName = accountIdAndQueueName.getRight();
+      String queueName = queueUrlParts.getQueueName();
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
       PersistenceFactory.getQueuePersistence().deleteQueue(accountId, queueName);
-      // TODO: delete messages
     } catch (Exception ex) {
       handleException(ex);
     }
-
     return reply;
   }
 
   public PurgeQueueResponseType purgeQueue(PurgeQueueType request) throws EucalyptusCloudException {
     PurgeQueueResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -476,19 +627,270 @@ public class SimpleQueueService {
 
   public ReceiveMessageResponseType receiveMessage(ReceiveMessageType request) throws EucalyptusCloudException {
     ReceiveMessageResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(accountId, queueName);
+      if (messages != null) {
+        // remove euca internal attributes for external use
+        Set<String> reservedEucaAttributes = Sets.newHashSet();
+        for (EucaInternalMessageAttributeName eucaInternalMessageAttributeName: EucaInternalMessageAttributeName.values()) {
+          reservedEucaAttributes.add(eucaInternalMessageAttributeName.toString());
+        }
+        for (Message message: messages) {
+          if (message.getAttribute() != null) {
+            Iterator<Attribute> iter = message.getAttribute().iterator();
+            while (iter.hasNext()) {
+              Attribute attribute = iter.next();
+              if (reservedEucaAttributes.contains(attribute.getName())) {
+                iter.remove();
+              }
+            }
+          }
+        }
+        reply.getReceiveMessageResult().getMessage().addAll(messages);
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
+  }
+
+  private int validateMessageAttributeNameAndCalculateLength(String name, Collection<String> previousNames) throws InvalidParameterValueException {
+    if (Strings.isNullOrEmpty(name)) {
+      throw new InvalidParameterValueException("Message attribute name can not be null or empty");
+    }
+    if (name.length() > MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH) {
+      throw new InvalidParameterValueException("Message attribute name can not be longer than " + MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH + " characters");
+    }
+    if (name.toLowerCase().startsWith("amazon") || name.toLowerCase().startsWith("aws")) {
+      throw new InvalidParameterValueException("Message attribute names starting with 'AWS.' or 'Amazon.' are reserved for use by Amazon.");
+    }
+    if (name.contains("..")) {
+      throw new InvalidParameterValueException("Message attribute name can not have successive '.' characters. ");
+    }
+    for (int codePoint : name.codePoints().toArray()) {
+      if (!validMessageNameCodePoints.contains(codePoint)) {
+        throw new InvalidParameterValueException("Invalid non-alphanumeric character '#x" + Integer.toHexString(codePoint) + "' was found in the message attribute name. Can only include alphanumeric characters, hyphens, underscores, or dots.");
+      }
+    }
+    if (previousNames.contains(name)) {
+      throw new InvalidParameterValueException("Message attribute name '" + name + "' already exists.");
+    }
+    previousNames.add(name);
+    return name.getBytes(UTF8).length;
+  }
+
+  private int validateMessageAttributeValueAndCalculateLength(MessageAttributeValue value, String name) throws com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException, InvalidParameterValueException {
+    int attributeValueLength = 0;
+
+    if (value == null) {
+      throw new InvalidParameterValueException("The message attribute '" + name + "' must contain non-empty message attribute value.");
+    }
+    String type = value.getDataType();
+    if (Strings.isNullOrEmpty(type)) {
+      throw new InvalidParameterValueException("The message attribute '" + name + "' must contain non-empty message attribute type.");
+    }
+
+    boolean isStringType = type.equals("String") || type.startsWith("String.");
+    boolean isBinaryType = type.equals("Binary") || type.startsWith("Binary.");
+    boolean isNumberType = type.equals("Number") || type.startsWith("Number.");
+
+    if (!isStringType && !isBinaryType && !isNumberType) {
+      throw new InvalidParameterValueException("The message attribute '" + name +"' has an invalid message attribute type, the set of supported type prefixes is Binary, Number, and String.");
+    }
+
+    // this is done in .getBytes(UTF8).length vs just .getLength() because the AWS documentation limits type by bytes.
+    int typeLengthBytes = type.getBytes(UTF8).length;
+
+    if (typeLengthBytes > MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH) {
+      throw new InvalidParameterValueException("Message attribute type can not be longer than " + MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH + " bytes");
+    }
+
+    attributeValueLength += typeLengthBytes;
+
+    if (value.getBinaryListValue() != null && !value.getBinaryListValue().isEmpty()) {
+      throw new UnsupportedOperationException("Message attribute list values are not supported.");
+    }
+
+    if (value.getStringListValue() != null && !value.getStringListValue().isEmpty()) {
+      throw new UnsupportedOperationException("Message attribute list values are not supported.");
+    }
+
+    int numberOfNonNullAndNonEmptyFields = 0;
+
+    byte[] binaryValueByteArray = null;
+
+    if (value.getBinaryValue() != null) {
+      try {
+        binaryValueByteArray = Base64.decode(value.getBinaryValue());
+      } catch (Base64DecodingException e) {
+        throw new InvalidParameterValueException("The message attribute '" + name + "' contains an invalid Base64 Encoded String as a binary value");
+      }
+
+      if ((binaryValueByteArray != null || binaryValueByteArray.length > 0)) {
+        numberOfNonNullAndNonEmptyFields++;
+      }
+
+    }
+
+    if (!Strings.isNullOrEmpty(value.getStringValue())) {
+        numberOfNonNullAndNonEmptyFields++;
+    }
+
+    // we should also probably check the string list and binary list fields, but they are currently unsupported anyway
+    if (numberOfNonNullAndNonEmptyFields == 0) {
+      throw new InvalidParameterValueException("The message attribute '" + name + "' must contain non-empty message attribute value for message attribute type '" + type + "'.");
+    }
+
+    if (numberOfNonNullAndNonEmptyFields > 1) {
+      throw new InvalidParameterValueException("Message attribute '" + name + "' has multiple values.");
+    }
+
+    if (isNumberType || isStringType) {
+
+      if (Strings.isNullOrEmpty(value.getStringValue())) {
+        throw new InvalidParameterValueException("The message attribute '" + name + "' with type '" + (isNumberType ? "Number" : "String") + "' must use field 'String'.");
+      }
+
+      // verify ok characters
+      for (int codePoint : value.getStringValue().codePoints().toArray()) {
+        if (!validMessageBodyCodePoints.contains(codePoint)) {
+          throw new InvalidParameterValueException("Invalid binary character '#x" + Integer.toHexString(codePoint) + "' was found in the message attribute '" + name + "' value, the set of allowed characters is #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]");
+        }
+      }
+
+      // verify number if number
+      if (isNumberType) {
+        try {
+          Double.parseDouble(value.getStringValue());
+        } catch (NumberFormatException e) {
+          throw new InvalidParameterValueException("Could not cast message attribute '" + name + "' value to number.");
+        }
+      }
+
+      // we have a (successful) string or number, add to length
+      attributeValueLength += value.getStringValue().getBytes(UTF8).length;
+
+    } else {
+
+      // binary
+      if (binaryValueByteArray == null || binaryValueByteArray.length == 0) {
+        throw new InvalidParameterValueException("The message attribute '" + name + "' with type 'Binary' must use field 'Binary'.");
+      }
+
+      // we have a (successful) binary, add to length
+      attributeValueLength += binaryValueByteArray.length;
+    }
+
+    return attributeValueLength;
   }
 
   public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
     SendMessageResponseType reply = request.getReply();
-    // message id is required
-    reply.getSendMessageResult().setMessageId(UUID.randomUUID().toString());
-    if (request.getMessageBody() != null) {
-      reply.getSendMessageResult().setmD5OfMessageBody(calculateMessageBodyMd5(request.getMessageBody()));
-    }
-    if (request.getMessageAttribute() != null) {
-      reply.getSendMessageResult().setmD5OfMessageAttributes(
-        calculateMessageAttributesMd5(convertMessageAttributesToMap(request.getMessageAttribute())));
+
+    // TODO: IAM rather than own account for now
+    try {
+      Message message = new Message();
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      int delaySeconds;
+      if (request.getDelaySeconds() != null) {
+        if (request.getDelaySeconds() < 0 || request.getDelaySeconds() > MAX_DELAY_SECONDS) {
+          throw new InvalidParameterValueException("DelaySeconds must be a number between 0 and " + MAX_DELAY_SECONDS);
+        }
+        delaySeconds = request.getDelaySeconds();
+      } else {
+        delaySeconds = queue.getDelaySeconds();
+      }
+
+      String md5OfMessageAttributes = null;
+      String md5OfMessageBody;
+
+      int messageLength = 0;
+      // check message attributes
+      if (request.getMessageAttribute() != null) {
+        Set<String> usedAttributeNames = Sets.newHashSet();
+        for (MessageAttribute messageAttribute : request.getMessageAttribute()) {
+          if (messageAttribute == null) {
+            throw new InvalidParameterValueException("Message attribute can not be null");
+          }
+          messageLength += validateMessageAttributeNameAndCalculateLength(messageAttribute.getName(), usedAttributeNames);
+          messageLength += validateMessageAttributeValueAndCalculateLength(messageAttribute.getValue(), messageAttribute.getName());
+        }
+        md5OfMessageAttributes = calculateMessageAttributesMd5(convertMessageAttributesToMap(request.getMessageAttribute()));
+      }
+
+      if (Strings.isNullOrEmpty(request.getMessageBody())) {
+        throw new MissingParameterException("The request must contain the parameter MessageBody.");
+      }
+
+      // verify ok characters
+      for (int codePoint : request.getMessageBody().codePoints().toArray()) {
+        if (!validMessageBodyCodePoints.contains(codePoint)) {
+          throw new InvalidParameterValueException("Invalid binary character '#x" + Integer.toHexString(codePoint) + "' was " +
+            "found in the message body, the set of allowed characters is #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]");
+        }
+      }
+
+      messageLength += request.getMessageBody().getBytes(UTF8).length;
+      if (messageLength > queue.getMaximumMessageSize()) {
+        throw new InvalidParameterValueException("The message exceeds the maximum message length of the queue, which is " + queue.getMaximumMessageSize() + " bytes");
+      }
+
+      md5OfMessageBody = calculateMessageBodyMd5(request.getMessageBody());
+
+      message.setBody(request.getMessageBody());
+      if (request.getMessageAttribute() != null) {
+        message.getMessageAttribute().addAll(request.getMessageAttribute());
+      }
+      message.setmD5OfMessageAttributes(md5OfMessageAttributes);
+      message.setmD5OfBody(md5OfMessageBody);
+
+      // set some attributes (for now)
+      message.getAttribute().add(new Attribute(MessageAttributeName.ApproximateReceiveCount.toString(), "0"));
+      message.getAttribute().add(new Attribute(MessageAttributeName.SenderId.toString(), accountId));
+      message.getAttribute().add(new Attribute(MessageAttributeName.SentTimestamp.toString(),
+        "" + System.currentTimeMillis()));
+
+      // some additional attributes (internal) so we don't have to look up the values from the queue again.
+      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaLocalReceiveCount.toString(), "0"));
+      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaDelaySeconds.toString(), "" + delaySeconds));
+      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaMessageRetentionPeriod.toString(), "" + queue.getMessageRetentionPeriod()));
+
+      String messageId = UUID.randomUUID().toString();
+
+      message.setMessageId(messageId);
+      PersistenceFactory.getMessagePersistence().sendMessage(accountId, queueName, message);
+
+      reply.getSendMessageResult().setmD5OfMessageAttributes(md5OfMessageAttributes);
+      reply.getSendMessageResult().setMessageId(messageId);
+      reply.getSendMessageResult().setmD5OfMessageBody(md5OfMessageBody);
+    } catch (Exception ex) {
+      handleException(ex);
     }
     return reply;
   }
@@ -557,6 +959,27 @@ public class SimpleQueueService {
     }
     throw exception;
   }
+
+  // #x9 | #xA | #xD | [#x20 to #xD7FF] | [#xE000 to #xFFFD] | [#x10000 to #x10FFFF]
+  private static RangeSet<Integer> validMessageBodyCodePoints = ImmutableRangeSet.<Integer>builder()
+    .add(Range.singleton(0x9))
+    .add(Range.singleton(0xA))
+    .add(Range.singleton(0XD))
+    .add(Range.closed(0x20, 0xD7FF))
+    .add(Range.closed(0xE000, 0xFFFD))
+    .add(Range.closed(0x10000, 0x10FFFF))
+    .build();
+
+  // dash, dot, alphanumeric, underscore
+  private static RangeSet<Integer> validMessageNameCodePoints = ImmutableRangeSet.<Integer>builder()
+    .add(Range.singleton((int) '-'))
+    .add(Range.singleton((int) '.'))
+    .add(Range.closed((int) '0', (int) '9'))
+    .add(Range.closed((int) 'A', (int) 'Z'))
+    .add(Range.singleton((int) '_'))
+    .add(Range.closed((int) 'a', (int) 'z'))
+    .build();
+
 
   // BEGIN CODE FROM Amazon AWS SDK 1.11.28-SNAPSHOT, file: com.amazonaws.services.sqs.MessageMD5ChecksumHandler
 

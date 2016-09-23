@@ -332,6 +332,11 @@ public class Attribute extends EucalyptusData {
   String name;
   String value;
   public Attribute() {  }
+
+  public Attribute(String name, String value) {
+    this.name = name
+    this.value = value
+  }
 }
 public class SimpleQueueErrorResponse extends SimpleQueueMessage {
   String requestId;

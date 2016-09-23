@@ -1,6 +1,8 @@
 package com.eucalyptus.simplequeue.persistence;
 
 import com.eucalyptus.simplequeue.SimpleQueueService;
+import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
+import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
@@ -57,14 +59,14 @@ public class Queue {
     return attributes.get(SimpleQueueService.AttributeName.Policy.toString());
   }
 
-  public JsonNode getRedrivePolicy() {
+  public JsonNode getRedrivePolicy() throws SimpleQueueException {
     if (!attributes.containsKey(SimpleQueueService.AttributeName.RedrivePolicy.toString())) {
       return null;
     } else {
       try {
         return new ObjectMapper().readTree(attributes.get(SimpleQueueService.AttributeName.RedrivePolicy.toString()));
       } catch (IOException e) {
-        return null;
+        throw new InternalFailureException("Invalid json for redrive policy " + attributes.get(SimpleQueueService.AttributeName.RedrivePolicy.toString()));
       }
     }
   }
