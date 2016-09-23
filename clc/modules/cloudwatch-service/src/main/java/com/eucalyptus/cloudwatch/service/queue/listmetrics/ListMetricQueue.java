@@ -22,6 +22,7 @@ package com.eucalyptus.cloudwatch.service.queue.listmetrics;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetricManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.SimpleMetricEntity;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.collect.Lists;
@@ -71,7 +72,7 @@ public class ListMetricQueue {
   final static NoDupQueue<ListMetricQueueItem> dataQueue = new NoDupQueue<ListMetricQueueItem>();
 
   private static final ScheduledExecutorService dataFlushTimer = Executors
-    .newSingleThreadScheduledExecutor();
+    .newSingleThreadScheduledExecutor( Threads.threadFactory( "cloudwatch-list-metrics-flush-%d" ) );
 
   private static ListMetricQueue singleton = getInstance();
 

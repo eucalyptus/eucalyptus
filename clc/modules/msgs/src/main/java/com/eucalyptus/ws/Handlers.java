@@ -135,8 +135,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
   private static Logger                                      LOG                      = Logger.getLogger( Handlers.class );
-  private static final ExecutionHandler                      pipelineExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
-  private static final ExecutionHandler                      serviceExecutionHandler  = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0 ) );
+  private static final ExecutionHandler                      pipelineExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0, 30L, TimeUnit.SECONDS, Threads.threadFactory( "web-services-pipeline-%d" ) ) );
+  private static final ExecutionHandler                      serviceExecutionHandler  = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0, 30L, TimeUnit.SECONDS, Threads.threadFactory( "web-services-exec-%d" ) ) );
   private static final ChannelHandler                        queryTimestampHandler    = new QueryTimestampHandler( );
   private static final ChannelHandler                        soapMarshallingHandler   = new SoapMarshallingHandler( );
   private static final ChannelHandler                        httpRequestEncoder       = new NioHttpRequestEncoder( );

@@ -128,7 +128,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
             }
           }
           
-        } ).start( ); 
+        }, Threads.threadUniqueName( "euare-user-info-normalizer" ) ).start( );
       }
     } catch ( Exception e ) {
       LOG.error( e, e );

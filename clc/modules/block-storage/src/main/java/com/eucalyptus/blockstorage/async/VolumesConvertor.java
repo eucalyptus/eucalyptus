@@ -72,6 +72,7 @@ import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -83,6 +84,7 @@ public class VolumesConvertor extends Thread {
   private LogicalStorageManager toBlockManager;
 
   public VolumesConvertor(LogicalStorageManager fromBlockManager, LogicalStorageManager toBlockManager) {
+    super( Threads.threadUniqueName( "storage-volumes-convertor" ) );
     this.fromBlockManager = fromBlockManager;
     this.toBlockManager = toBlockManager;
   }

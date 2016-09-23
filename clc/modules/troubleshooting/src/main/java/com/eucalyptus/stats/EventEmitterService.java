@@ -22,6 +22,7 @@ package com.eucalyptus.stats;
 
 import com.eucalyptus.stats.configuration.StatsConfiguration;
 import com.eucalyptus.stats.emitters.EventEmitter;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import org.apache.log4j.Logger;
 
@@ -44,7 +45,8 @@ public class EventEmitterService {
 
     public EventEmitterService() {
         this.eventQueue = new LinkedBlockingQueue<>();
-        this.writerThreadPool = Executors.newSingleThreadScheduledExecutor();
+        this.writerThreadPool =
+            Executors.newSingleThreadScheduledExecutor( Threads.threadFactory( "ts-event-emitter-pool-%d" ) );
         this.acceptNewEvents = false;
     }
 

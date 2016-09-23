@@ -76,7 +76,6 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.context.Contexts;
@@ -445,7 +444,7 @@ public class ServiceConfigurations {
   
   public static ServiceConfiguration createBogus( final Class<? extends ComponentId> compIdClass, final Class<?> ownerType ) {
     ComponentId compId = ComponentIds.lookup( compIdClass ); 
-    return new EphemeralConfiguration( compId, compId.getPartition( ), ownerType.getCanonicalName( ), ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
+    return new EphemeralConfiguration( compId, compId.getPartition( ), ownerType.getSimpleName( ), ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
   }
 
   public static ServiceConfiguration createBogus( final ServiceConfiguration serviceConfiguration, final Class<?> ownerType ) {
@@ -453,7 +452,10 @@ public class ServiceConfigurations {
     return new EphemeralConfiguration(
         compId,
         compId.getPartition( ),
-        ownerType.getCanonicalName( ) + "-" + serviceConfiguration.getHostName( ) + "-" + serviceConfiguration.getName( ),
+        ownerType.getSimpleName( ) + "-" + serviceConfiguration.getHostName( ) +
+            ( serviceConfiguration.getHostName( ).equals( serviceConfiguration.getName( ) ) ?
+                "" :
+                "-" + serviceConfiguration.getName( ) ),
         ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
   }
 

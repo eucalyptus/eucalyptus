@@ -63,6 +63,7 @@ import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -87,13 +88,15 @@ public class CloudWatchBackendService {
 
   static {
     // TODO: make this configurable
-    ExecutorService fixedThreadPool = Executors.newFixedThreadPool(5);
+    ExecutorService fixedThreadPool = Executors.newFixedThreadPool(
+        5,
+        Threads.threadFactory( "cloudwatch-alarm-work-pool-%d" ));
     ScheduledExecutorService alarmWorkerService = Executors
-        .newSingleThreadScheduledExecutor();
+        .newSingleThreadScheduledExecutor( Threads.threadFactory( "cloudwatch-alarm-eval-pool-%d" ) );
     alarmWorkerService.scheduleAtFixedRate(new AlarmStateEvaluationDispatcher(
         fixedThreadPool), 0, 1, TimeUnit.MINUTES);
     ScheduledExecutorService dbCleanupService = Executors
-        .newSingleThreadScheduledExecutor();
+        .newSingleThreadScheduledExecutor( Threads.threadFactory( "cloudwatch-db-cleanup-pool-%d" ) );
     dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 1, 24,
         TimeUnit.HOURS);
   }

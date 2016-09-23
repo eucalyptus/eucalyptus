@@ -36,6 +36,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.system.Threads;
 
 /**
  * <p>
@@ -54,7 +55,8 @@ import com.eucalyptus.component.id.Eucalyptus;
 public class DiskResourceCheck {
 	private final static Logger LOG = Logger.getLogger(DiskResourceCheck.class);
 
-	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+	private static final ScheduledExecutorService pool =
+			Executors.newSingleThreadScheduledExecutor( Threads.threadFactory( "ts-disk-check-pool-%d" ) );
 	private static final int OUT_OF_DISK_SPACE_FAULT_ID = 1003;
 	private final static long DEFAULT_POLL_INTERVAL = 5 * 1000;
 	private static final Class <? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;

@@ -115,7 +115,7 @@ public class ServiceContextManager {
         } catch ( final Exception ex ) {
           LOG.error( ex, ex );
         }
-      }).start( );
+      }, "bootstrap-service-context" ).start( );
       return true;
     }
   }
