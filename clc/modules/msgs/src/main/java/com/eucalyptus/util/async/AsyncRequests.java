@@ -74,7 +74,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CallerContext;
 
 public class AsyncRequests {
-  
   public static <A extends BaseMessage, B extends BaseMessage> CheckedListenableFuture<B> dispatch( final ServiceConfiguration config, final A msg ) throws Exception {
     if ( config.isVmLocal( ) ) {
       final CheckedListenableFuture<B> future = Futures.newGenericeFuture( );

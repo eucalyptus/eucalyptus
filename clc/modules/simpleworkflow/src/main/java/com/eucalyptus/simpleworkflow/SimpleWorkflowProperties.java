@@ -39,8 +39,8 @@ public class SimpleWorkflowProperties {
 
   private static final Logger logger = Logger.getLogger( SimpleWorkflowProperties.class );
 
-  @ConfigurableField( initial = "true", description = "Service available for internal/administrator use only." )
-  public static volatile boolean systemOnly = true;
+  @ConfigurableField( initial = "false", description = "Service available for internal/administrator use only." )
+  public static volatile boolean systemOnly = false;
 
   @ConfigurableField( initial = "10000", description = "Maximum number of activity types for each domain." )
   public static volatile int activityTypesPerDomain = 10000;

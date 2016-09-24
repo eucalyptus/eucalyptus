@@ -39,34 +39,6 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import static com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessageValidation.*
 import static com.eucalyptus.util.MessageValidation.validateRecursively
 
-class LoadBalancingServoMessage extends LoadBalancingMessage {
-	String sourceIp
-}
-
-class DescribeLoadBalancersByServoType extends LoadBalancingServoMessage {
-	String instanceId;
-	DescribeLoadBalancersByServoType() {  }
-}
-
-class ServoResponseMetadata extends EucalyptusData {
-  Integer getLBInterval;
-  Integer putMetricInterval;
-  Integer putInstanceHealthInterval;
-  ServoResponseMetadata() { }
-}
-
-class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoMessage {
-	DescribeLoadBalancersByServoResponseType() {  }
-  DescribeLoadBalancersByServoResult describeLoadBalancersResult = new DescribeLoadBalancersByServoResult();
-  ResponseMetadata responseMetadata = new ResponseMetadata();
-  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
-}
-
-class DescribeLoadBalancersByServoResult extends EucalyptusData {
-	LoadBalancerServoDescriptions loadBalancerDescriptions
-	String nextMarker;
-}
-
 class LoadBalancerServoDescriptions extends EucalyptusData {
 	ArrayList<LoadBalancerServoDescription> member = new ArrayList<LoadBalancerServoDescription>()
 }
@@ -122,26 +94,6 @@ class BackendInstance extends EucalyptusData {
   static Function<String,BackendInstance> instance( ) {
     return { String instanceId -> new BackendInstance( instanceId: instanceId ) } as Function<String,BackendInstance>
   }
-}
-
-class PutServoStatesType extends LoadBalancingServoMessage {
-	String instanceId;
-	
-	Instances instances;
-	
-	MetricData metricData;
-	PutServoStatesType(){}
-}
-
-class PutServoStatesResponseType extends LoadBalancingServoMessage {
-	PutServoStatesResponseType() { }
-	PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
-	ResponseMetadata responseMetadata = new ResponseMetadata();
-  ServoResponseMetadata servoResponseMetadata = new ServoResponseMetadata();
-}
-
-class PutServoStatesResult extends EucalyptusData {
-	PutServoStatesResult() { }
 }
 
 class CreateLoadBalancerType extends LoadBalancingMessage {

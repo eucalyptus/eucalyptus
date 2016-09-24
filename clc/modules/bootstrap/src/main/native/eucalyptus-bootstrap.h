@@ -198,6 +198,7 @@ static char *jvm_default_opts[] = {
     "-XX:+UseG1GC",
     "-XX:MaxGCPauseMillis=200",
     "-XX:+DisableExplicitGC",
+    "-javaagent:" EUCALYPTUS_JAVA_LIB_DIR "/aspectjweaver-1.8.8.jar",
     "-Djava.net.preferIPv4Stack=true",
     "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
     "-Djava.awt.headless=true",

@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
+import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.apache.http.NoHttpResponseException;
@@ -45,7 +46,6 @@ import com.amazonaws.services.simpleworkflow.flow.ActivityWorker;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.amazonaws.services.simpleworkflow.flow.WorkerBase;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowWorker;
-import com.amazonaws.util.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
@@ -66,6 +66,7 @@ import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import com.google.common.reflect.AbstractInvocationHandler;
 
 /**
@@ -92,6 +93,30 @@ public class Config {
     }
   }
 
+  public static AmazonSimpleWorkflow buildClient( final AWSCredentialsProvider credentialsProvider, final String endpoint, final String text ) {
+    final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
+        credentialsProvider,
+        buildConfiguration( text )
+    );
+    client.setEndpoint(endpoint);
+    client.addRequestHandler( new RequestHandler2( ) {
+      @Override
+      public void beforeRequest( final Request<?> request ) {
+        // Add nonce to ensure unique request signature
+        request.addHeader( "Euca-Nonce", UUID.randomUUID( ).toString( ) );
+      }
+
+      @Override
+      public void afterError(Request<?> arg0, Response<?> arg1,
+          Exception arg2) {          }
+
+      @Override
+      public void afterResponse(Request<?> arg0, Response<?> arg1) {
+      }} );
+    
+    return client;
+  }
+  
   public static AmazonSimpleWorkflow buildClient( final Supplier<User> user, final String text ) throws AuthException {
     final AWSCredentialsProvider credentialsProvider = new SecurityTokenAWSCredentialsProvider( user );
     final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
@@ -113,8 +138,7 @@ public class Config {
       public void afterError( final Request<?> request, final Response<?> response, final Exception e ) {
         final String errorMessage = Strings.nullToEmpty( e.getMessage( ) );
         boolean resetEndpoint = false;
-        if ( Exceptions.isCausedBy( e, JSONException.class ) &&
-            ( errorMessage.contains( "Response Code: 404" ) || errorMessage.contains( "Response Code: 503" ) ) ) {
+        if (  errorMessage.contains( "Response Code: 404" ) || errorMessage.contains( "Response Code: 503" ) ) {
           resetEndpoint = true;
         } else if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
           resetEndpoint = true;
@@ -146,13 +170,25 @@ public class Config {
       final String domain,
       final String taskList,
       final String text ) {
+    
+    final List<Class<?>> workflowImpl =  Lists.newArrayList(WorkflowRegistry.lookupWorkflows( componentIdClass ));
+    return buildWorkflowWorker(workflowImpl.toArray(new Class<?>[workflowImpl.size()]),
+        client, domain, taskList, text);
+  }
+  
+  public static WorkflowWorker buildWorkflowWorker(
+      final Class<?>[] workflowImpl,
+      final AmazonSimpleWorkflow client,
+      final String domain,
+      final String taskList,
+      final String text ) {
     final WorkflowWorker workflowWorker = new WorkflowWorker( client, domain, taskList);
     workflowWorker.setRegisterDomain( true );
     workflowWorker.setDefaultConverter( new JsonDataConverter( workerObjectMapper ) );
     configure( workflowWorker, text );
 
     Package workerPackage = null;
-    for ( final Class<?> workflowImplementation : WorkflowRegistry.lookupWorkflows( componentIdClass ) ) {
+    for ( final Class<?> workflowImplementation : workflowImpl ) {
       try {
         if ( workerPackage == null ) {
           workerPackage = workflowImplementation.getPackage( );
@@ -174,11 +210,25 @@ public class Config {
       final String domain,
       final String taskList,
       final String text ) {
+    
+    final List<Class<?>> activitiesImpl =  
+        Lists.newArrayList(WorkflowRegistry.lookupActivities( componentIdClass ));
+    return buildActivityWorker(activitiesImpl.toArray(new Class<?>[activitiesImpl.size()]), 
+        client,  domain, taskList, text);
+  }
+  
+  public static ActivityWorker buildActivityWorker(
+      final Class<?>[] activitiesImpl,
+      final AmazonSimpleWorkflow client,
+      final String domain,
+      final String taskList,
+      final String text 
+      ) {
     final ActivityWorker activityWorker = configure( new ActivityWorker( client, domain, taskList), text );
     activityWorker.setDataConverter( new JsonDataConverter( workerObjectMapper ) );
 
     Package workerPackage = null;
-    for ( final Class<?> activitiesImplementation : WorkflowRegistry.lookupActivities( componentIdClass ) ) {
+    for ( final Class<?> activitiesImplementation : activitiesImpl ) {
       try {
         if ( workerPackage == null ) {
           workerPackage = activitiesImplementation.getPackage();

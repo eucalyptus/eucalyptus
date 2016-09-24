@@ -322,6 +322,8 @@ public class WebServices {
         LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
         LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
 
+        LOG.info( String.format( "Creating client worker thread pool (%d). (log level EXTREME for details)",
+                StackConfiguration.CLIENT_POOL_MAX_THREADS ));
         return clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS,
                                                                                   StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
                                                                                   StackConfiguration.CLIENT_POOL_TOTAL_MEM,
@@ -585,7 +587,8 @@ public class WebServices {
   
   private static Executor workerPool( ) {
     if ( !Logs.isExtrrreeeme( ) ) {
-      LOG.info( "Creating server worker thread pool. (log level EXTREME for details)" );
+      LOG.info( String.format( "Creating server worker thread pool (%d). (log level EXTREME for details)",
+              StackConfiguration.SERVER_POOL_MAX_THREADS ));
     } else {
       LOG.trace( LogUtil.subheader( "Creating server worker thread pool." ) );
       LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.SERVER_POOL_MAX_THREADS ) );

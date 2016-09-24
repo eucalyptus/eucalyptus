@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import com.ctc.wstx.exc.WstxEOFException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.ws.WebServicesException;

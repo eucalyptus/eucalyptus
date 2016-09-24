@@ -25,6 +25,8 @@ import static com.eucalyptus.simpleworkflow.WorkflowExecution.WorkflowHistorySiz
 import static com.eucalyptus.simpleworkflow.WorkflowExecutions.WorkflowHistoryEventStringFunctions.EVENT_TYPE;
 import static com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskFailedCause.*;
 import java.lang.System;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Date;
@@ -888,6 +890,7 @@ public class SimpleWorkflowService {
                           );
                           activityTask.setState( ActivityTask.State.Active );
                           activityTask.setStartedEventId( startedId );
+
                           return new com.eucalyptus.simpleworkflow.common.model.ActivityTask( )
                               .withStartedEventId( startedId )
                               .withInput( activityTask.getInput() )
@@ -1047,7 +1050,6 @@ public class SimpleWorkflowService {
     }
 
     return request.reply( new SimpleWorkflowMessage( ) );
-
   }
 
   public SimpleWorkflowMessage respondActivityTaskCompleted( final RespondActivityTaskCompletedRequest request ) throws SimpleWorkflowException {

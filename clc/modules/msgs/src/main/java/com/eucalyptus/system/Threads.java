@@ -138,7 +138,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
   private final static String                            PREFIX            = "Eucalyptus.";
-  private final static Integer                           NUM_QUEUE_WORKERS = 32;                                          //TODO:GRZE: discover on per-service basis.;
+  private final static Integer                           NUM_QUEUE_WORKERS = 64;                                          //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
   private final static Map<Long, String> correlationIdMap = new ConcurrentHashMap<Long, String>();

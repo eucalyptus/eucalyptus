@@ -38,8 +38,8 @@ public class WorkflowClient {
 
   private final boolean shutdownClient;
   private final AmazonSimpleWorkflow simpleWorkflow;
-  private final WorkflowWorker workflowWorker;
-  private final ActivityWorker activityWorker;
+  private WorkflowWorker workflowWorker;
+  private ActivityWorker activityWorker;
 
   public WorkflowClient( final Class<? extends ComponentId> componentIdClass,
                          final Supplier<User> user,
@@ -115,17 +115,60 @@ public class WorkflowClient {
     }
   }
 
+  public WorkflowClient(final Class<?>[] workflowImpl, final Class<?>[] activitiesImpl,
+      final boolean shutdownClient,
+      final AmazonSimpleWorkflow simpleWorkflow,
+      final String domain,
+      final String taskList,
+      final String workflowWorkerConfig,
+      final String activityWorkerConfig
+      ) {
+    this.shutdownClient = shutdownClient;
+    this.simpleWorkflow = simpleWorkflow;
+    try {
+      if (workflowImpl != null && workflowImpl.length>0) {
+        this.workflowWorker = Config.buildWorkflowWorker(
+            workflowImpl,
+            this.simpleWorkflow,
+            domain,
+            taskList,
+            workflowWorkerConfig
+            );
+        this.workflowWorker.setDisableServiceShutdownOnStop( !shutdownClient );
+      }
+      if (activitiesImpl != null && activitiesImpl.length>0) {
+        this.activityWorker = Config.buildActivityWorker(
+            activitiesImpl,
+            this.simpleWorkflow,
+            domain,
+            taskList,
+            activityWorkerConfig
+            );
+        this.activityWorker.setDisableServiceShutdownOnStop( !shutdownClient );
+      }
+    } catch( Throwable e ) {
+      try {
+        stop( );
+      } catch ( InterruptedException e2 ) {
+        logger.warn( "Interrupted during stop" );
+      }
+      throw e;
+    }
+  }
+
   public AmazonSimpleWorkflow getAmazonSimpleWorkflow( ) {
     return simpleWorkflow;
   }
 
-
-  public void start( ) {
-    workflowWorker.start( );
-    activityWorker.start( );
+  public synchronized void start( ) {
+    if(workflowWorker!=null )
+      workflowWorker.start( );
+    if(activityWorker!=null) {
+      activityWorker.start();
+    }
   }
 
-  public void stop( ) throws InterruptedException {
+  public synchronized void stop( ) throws InterruptedException {
     boolean waitForWorkflowWorker = false;
     if ( workflowWorker != null && workflowWorker.isRunning( ) ) {
       waitForWorkflowWorker = true;
@@ -144,6 +187,18 @@ public class WorkflowClient {
     }
     if ( simpleWorkflow != null && shutdownClient ) {
       simpleWorkflow.shutdown( );
+    }
+  }
+
+  public synchronized boolean isRunning( ) {
+    if(activityWorker==null && workflowWorker==null) {
+      return false;
+    } else if (activityWorker!=null && !activityWorker.isRunning()) {
+      return false;
+    } else if (workflowWorker!=null && !workflowWorker.isRunning()) {
+      return false;
+    } else {
+      return true;
     }
   }
 }

@@ -4,11 +4,6 @@
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping> 
-  <mapping class="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata" abstract="true">
-    <value name="GetLBInterval" field="getLBInterval" usage="optional"/>
-    <value name="PutMetricInterval" field="putMetricInterval" usage="optional"/>
-    <value name="PutInstanceHealthInterval" field="putInstanceHealthInterval" usage="optional"/>
-  </mapping> 
   <mapping class="com.eucalyptus.loadbalancing.common.msgs.Error" abstract="true">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
@@ -23,21 +18,7 @@
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping name="DescribeLoadBalancersByServo" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
-    <value name="InstanceId" field="instanceId" usage="required"/>
-  </mapping>
-  <mapping name="DescribeLoadBalancersByServoResponse" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
-    <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
-    <structure name="ServoResponseMetadata" field="servoResponseMetadata" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata"/>
-  </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancersByServoResult" abstract="true">
-    <structure name="LoadBalancerDescriptions" field="loadBalancerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions"/>
-    <value name="NextMarker" field="nextMarker" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions" abstract="true">
+  <mapping name="LoadBalancerDescriptions" class="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription">
         <!-- BEGIN - Duplicated binding from LoadBalancerDescription -->
@@ -57,24 +38,10 @@
         <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.SecurityGroups"/>
         <value name="CreatedTime" field="createdTime" usage="optional"/>
         <value name="Scheme" field="scheme" usage="optional"/>
-        <!-- END Duplicated binding from LoadBalancerDescription -->
         <structure name="LoadBalancerAttributes" field="loadBalancerAttributes" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes"/>
+        <!-- END - Duplicated binding from LoadBalancerDescription -->
       </structure>
     </collection>
-  </mapping>
-  <mapping name="PutServoStates" class="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
-    <value name="InstanceId" field="instanceId" usage="required"/>
-    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.Instances"/>
-  <!--  <structure name="MetricData" field="metricData" usage="optional" type="com.eucalyptus.cloudwatch.MetricData"/> -->
-  </mapping>
-  <mapping name="PutServoStatesResponse" class="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResponseType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>
-    <structure name="PutServoStatesResult" field="putServoStatesResult" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.common.msgs.ResponseMetadata"/>
-    <structure name="ServoResponseMetadata" field="servoResponseMetadata" usage="optional" type="com.eucalyptus.loadbalancing.common.msgs.ServoResponseMetadata"/>
-  </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.common.msgs.PutServoStatesResult" abstract="true">
   </mapping>
   <mapping name="DescribeLoadBalancerPolicyTypes" class="com.eucalyptus.loadbalancing.common.msgs.DescribeLoadBalancerPolicyTypesType" extends="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage"/>

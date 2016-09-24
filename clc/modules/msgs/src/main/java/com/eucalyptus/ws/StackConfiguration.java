@@ -113,7 +113,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( description = "Server worker thread pool max.",
                       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
-  public static Integer       SERVER_POOL_MAX_THREADS           = 128;
+  public static Integer       SERVER_POOL_MAX_THREADS           = 32;
   @ConfigurableField( description = "Server max worker memory per connection.",
                       changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
   public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
@@ -182,7 +182,7 @@ public class StackConfiguration extends AbstractPersistent {
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
   
   @ConfigurableField( description = "Server worker thread pool max." )
-  public static Integer       CLIENT_POOL_MAX_THREADS           = 40;
+  public static Integer       CLIENT_POOL_MAX_THREADS           = 32;
   
   @ConfigurableField( description = "Server worker thread pool max." )
   public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0L;
