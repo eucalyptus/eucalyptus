@@ -59,8 +59,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -157,6 +155,10 @@ public class SimpleQueueService {
   @ConfigurableField( description = "Maximum value for maxReceiveCount (dead letter queue).",
     initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static int MAX_MAX_RECEIVE_COUNT = 1000;
+
+  @ConfigurableField( description = "Maximum value for maxNumberOfMessages (ReceiveMessages).",
+    initial = "10", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = 10;
 
   @ConfigurableField( description = "Maximum length of message attribute name. (chars)",
     initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
@@ -557,7 +559,6 @@ public class SimpleQueueService {
 
     // TODO: IAM rather than own account for now
     try {
-      Message message = new Message();
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
       QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
@@ -589,6 +590,12 @@ public class SimpleQueueService {
         throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
       }
       String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
       PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
       PersistenceFactory.getQueuePersistence().deleteQueue(accountId, queueName);
     } catch (Exception ex) {
@@ -608,6 +615,12 @@ public class SimpleQueueService {
         throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
       }
       String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
       PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
     } catch (Exception ex) {
       handleException(ex);
@@ -642,23 +655,42 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(accountId, queueName);
+      int visibilityTimeout = queue.getVisibilityTimeout();
+      if (request.getVisibilityTimeout() != null) {
+        if (request.getVisibilityTimeout() < 0 || request.getVisibilityTimeout() > MAX_VISIBILITY_TIMEOUT) {
+          throw new InvalidParameterValueException("VisibilityTimeout must be between 0 and " + MAX_VISIBILITY_TIMEOUT);
+        }
+        visibilityTimeout = request.getVisibilityTimeout();
+      }
+
+      int waitTimeSeconds = queue.getReceiveMessageWaitTimeSeconds();
+      if (request.getWaitTimeSeconds() != null) {
+        if (request.getWaitTimeSeconds() < 0 || request.getWaitTimeSeconds() > MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS) {
+          throw new InvalidParameterValueException("WaitTimeSeconds must be between 0 and " + MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS);
+        }
+        waitTimeSeconds = request.getWaitTimeSeconds();
+      }
+
+      int maxNumberOfMessages = 1;
+      if (request.getMaxNumberOfMessages() != null) {
+        if (request.getMaxNumberOfMessages() < 1 || request.getMaxNumberOfMessages() > MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES) {
+          throw new InvalidParameterValueException("WaitTimeSeconds must be between 1 and " + MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES);
+        }
+        maxNumberOfMessages = request.getMaxNumberOfMessages();
+      }
+
+
+      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(accountId, queueName, visibilityTimeout, maxNumberOfMessages);
       if (messages != null) {
+
         // remove euca internal attributes for external use
         Set<String> reservedEucaAttributes = Sets.newHashSet();
         for (EucaInternalMessageAttributeName eucaInternalMessageAttributeName: EucaInternalMessageAttributeName.values()) {
           reservedEucaAttributes.add(eucaInternalMessageAttributeName.toString());
         }
         for (Message message: messages) {
-          if (message.getAttribute() != null) {
-            Iterator<Attribute> iter = message.getAttribute().iterator();
-            while (iter.hasNext()) {
-              Attribute attribute = iter.next();
-              if (reservedEucaAttributes.contains(attribute.getName())) {
-                iter.remove();
-              }
-            }
-          }
+          filterReceiveAttributes(message, request.getAttributeName(), reservedEucaAttributes);
+          filterReceiveMessageAttributes(message, request.getMessageAttributeName());
         }
         reply.getReceiveMessageResult().getMessage().addAll(messages);
       }
@@ -666,6 +698,58 @@ public class SimpleQueueService {
       handleException(ex);
     }
     return reply;
+  }
+
+  private void filterReceiveMessageAttributes(Message message, ArrayList<String> matchingMessageAttributeNames) throws EucalyptusCloudException {
+    if (message.getMessageAttribute() != null) {
+      boolean changed = true;
+      Iterator<MessageAttribute> iter = message.getMessageAttribute().iterator();
+      while (iter.hasNext()) {
+        MessageAttribute messageAttribute = iter.next();
+        boolean keepMessageAttribute = false;
+        if (matchingMessageAttributeNames != null) {
+          for (String matchingMessageAttributeName: matchingMessageAttributeNames) {
+            // specific matches are exact, All, literal .*, or Prefix.*
+            if (matchingMessageAttributeName.equals(messageAttribute.getName()) ||
+              matchingMessageAttributeName.equals("All") || matchingMessageAttributeName.equals(".*")) {
+              keepMessageAttribute = true;
+              break;
+            }
+            // check prefix match
+            if (matchingMessageAttributeName.endsWith(".*")) {
+              String prefix = matchingMessageAttributeName.substring(0, matchingMessageAttributeName.length() - 2);
+              if (messageAttribute.getName().startsWith(prefix)) {
+                keepMessageAttribute = true;
+                break;
+              }
+            }
+          }
+        }
+        if (!keepMessageAttribute) {
+          changed = true;
+          iter.remove();
+        }
+      }
+      if (changed) {
+        message.setmD5OfMessageAttributes(calculateMessageAttributesMd5(convertMessageAttributesToMap(message.getMessageAttribute())));
+      }
+    }
+  }
+
+  private void filterReceiveAttributes(Message message, ArrayList<String> matchingAttributeNames, Set<String> reservedEucaAttributes) {
+    if (message.getAttribute() != null) {
+      Iterator<Attribute> iter = message.getAttribute().iterator();
+      while (iter.hasNext()) {
+        Attribute attribute = iter.next();
+        boolean removeAttribute = false;
+        // we only keep attributes that match the attribute name set (exact match or "All".  We also remove all internal
+        // 'euca' attributes
+        if (reservedEucaAttributes.contains(attribute.getName()) ||
+          (matchingAttributeNames == null || !(matchingAttributeNames.contains("All") || matchingAttributeNames.contains(attribute.getName())))) {
+          iter.remove();
+        }
+      }
+    }
   }
 
   private int validateMessageAttributeNameAndCalculateLength(String name, Collection<String> previousNames) throws InvalidParameterValueException {
