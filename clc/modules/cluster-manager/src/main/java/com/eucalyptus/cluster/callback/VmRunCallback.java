@@ -156,7 +156,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           LOG.error( VmRunCallback.this.token + ": " + ex );
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
-        NetworkGroups.flushRules( );
         return true;
       }
     };
@@ -164,6 +163,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       if ( this.token.getInstanceId( ).equals( vmInfo.getInstanceId( ) ) ) {
         try {
           Entities.asTransaction( VmInstance.class, updateInstance, 10 ).apply( vmInfo );
+          NetworkGroups.flushRules( );
           break;
         } catch ( RuntimeException ex ) {
           LOG.error( "Failed: " + this.token + " because of " + ex.getMessage( ), ex );
