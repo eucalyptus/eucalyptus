@@ -517,7 +517,10 @@ class VmInstanceLifecycleHelpers {
       if ( address ) {
         builder.onBuild({ VmInstance instance ->
           if ( !instance.vpcId ) { // Network interface handles public IP for VPC
-            Addresses.getInstance( ).assign( address, instance )
+            Addresses.getInstance( ).batch{
+              Addresses.getInstance( ).assign( address, instance )
+              Addresses.AddressingBatch.reset( ); // Flush after running
+            }
             VmInstances.updatePublicAddress( instance, address.address )
           }
         })
@@ -1167,13 +1170,16 @@ class VmInstanceLifecycleHelpers {
           ) )
           resource.attachmentId = networkInterface.attachment.attachmentId;
           Address address = getAddress( resourceToken )
-          if ( address != null ) {
-            NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
-          } else {
-            if ( networkInterface.associated ) {
-              VmInstances.updatePublicAddress( instance, networkInterface.association.publicIp )
+          Addresses.getInstance( ).batch{
+            if ( address != null ) {
+              NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
+            } else {
+              if ( networkInterface.associated ) {
+                VmInstances.updatePublicAddress( instance, networkInterface.association.publicIp )
+              }
+              NetworkInterfaceHelper.start( networkInterface, instance )
             }
-            NetworkInterfaceHelper.start( networkInterface, instance )
+            Addresses.AddressingBatch.reset( ) // Flush after running
           }
           // Add so eni information is available from instance, not for
           // persistence
@@ -1224,7 +1230,10 @@ class VmInstanceLifecycleHelpers {
                 secondaryResource.deleteOnTerminate
             ) )
             secondaryResource.attachmentId = secondaryNetworkInterface.attachment.attachmentId
-            NetworkInterfaceHelper.start( secondaryNetworkInterface, instance )
+            Addresses.getInstance( ).batch {
+              NetworkInterfaceHelper.start(secondaryNetworkInterface, instance)
+              Addresses.AddressingBatch.reset( ) // Flush after running
+            }
             // Add so eni information is available from instance, not for
             // persistence
             instance.addNetworkInterface( secondaryNetworkInterface );
