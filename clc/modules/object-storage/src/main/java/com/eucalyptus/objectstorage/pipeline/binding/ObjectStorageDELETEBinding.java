@@ -80,7 +80,7 @@ public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
     SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
 
-    // Cross-Origin Resource Sharing (cors)
+    // Cross-Origin Resource Sharing (CORS)
     SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
 
     // Object operations

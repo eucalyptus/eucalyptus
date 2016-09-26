@@ -66,7 +66,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 
@@ -88,13 +92,18 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
+import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -129,21 +138,152 @@ public class OSGUtil {
   }
 
   private static BaseMessage convertException(String correlationId, Throwable ex) {
-    BaseMessage errMsg;
-    if (ex instanceof ObjectStorageException) {
-      ObjectStorageException e = (ObjectStorageException) ex;
-      errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
-          Internets.localHostAddress(), e.getLogData());
+      BaseMessage errMsg;
+      if (ex instanceof S3Exception){
+        S3Exception e = (S3Exception) ex;
+        errMsg =
+            new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+                Internets.localHostAddress(), e.getLogData(), e.getRequestMethod());
+      } else if (ex instanceof ObjectStorageException) {
+        ObjectStorageException e = (ObjectStorageException) ex;
+        errMsg =
+            new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId,
+                Internets.localHostAddress(), e.getLogData());
+      } else {
+        return null;
+      }
       errMsg.setCorrelationId(correlationId);
       return errMsg;
-    } else {
-      return null;
     }
-  }
 
   public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
     return URLDecoder.decode(objectKey, "UTF-8");
   }
+
+  public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
+      String requestMethod, List<String> requestHeaders) {
+    CorsMatchResult corsMatchResult = new CorsMatchResult();
+    boolean found = false;
+    boolean anyOrigin = false;
+    CorsRule corsRuleMatch = null;
+    
+    // Predicate for matching origin
+    Predicate<String> originMatch = new Predicate<String>() {
+      @Override
+      public boolean apply(String allowedOrigin) {
+        String allowedOriginRegex = "\\Q" + allowedOrigin.replace("*", "\\E.*?\\Q") + "\\E";
+        return Pattern.matches(allowedOriginRegex, requestOrigin);
+      }
+    };
+
+    // Predicate for matching method
+    Predicate<String> methodMatch = new Predicate<String>() {
+      @Override
+      public boolean apply(String allowedMethod) {
+        return requestMethod.equals(allowedMethod);
+      }
+    };
+
+    // Function for generating a pattern from an allowed header
+    Function<String, Pattern> generatePattern = new Function<String, Pattern>() {
+      @Override
+      public Pattern apply(String allowedHeader) {
+        String allowedHeaderRegex = "\\Q" + allowedHeader.replace("*", "\\E.*?\\Q") + "\\E";
+        return Pattern.compile(allowedHeaderRegex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+      }
+    };
+
+    for (CorsRule corsRule : corsRules ) {
+
+      if (corsRule == null) {
+        continue;
+      }
+      
+      corsRuleMatch = corsRule; // will only be used if we find a match
+      
+      // Does the origin match any origin's regular expression in the rule?
+      // Note: AWS matches origins case-sensitively! Even though URL domains
+      // are typically case-insensitive. Follow AWS's behavior.
+      List<String> allowedOrigins = corsRule.getAllowedOrigins();
+      
+      if (allowedOrigins == null || allowedOrigins.isEmpty()) {
+        continue;
+      }
+
+      String matchingOrigin = Iterables.tryFind(corsRule.getAllowedOrigins(), originMatch).orNull();
+      
+      // If no matching origin, skip to the next CORS rule
+      if (matchingOrigin == null) {
+        continue;
+      }
+      
+      // We did find a matching origin. If it's "*", then any origin can access our resources.
+      // This is a special case we want to flag for easy access.
+      anyOrigin = (matchingOrigin.equals("*"));
+
+      // Does the HTTP verb match any verb in the rule?
+      // If not, skip to the next CORS rule
+      List<String> allowedMethods = corsRule.getAllowedMethods();
+
+      if (allowedMethods == null || allowedMethods.isEmpty() || 
+          !Iterables.any(corsRule.getAllowedMethods(), methodMatch)) {
+        continue;
+      }
+
+      // Yes, the HTTP verb matches a verb in this rule.
+      
+      // If there are no Access-Control-Request-Headers, or if there are
+      // no AllowedHeaders in the CORS rule, then skip this check.
+      // We have matched the current CORS rule. Stop looking through them.
+      if (requestHeaders == null || requestHeaders.isEmpty() ||
+          corsRule.getAllowedHeaders() == null || corsRule.getAllowedHeaders().isEmpty()) {
+        found = true;
+        break;
+      }
+
+      // Does every request header in the comma-delimited list in 
+      // Access-Control-Request-Headers have a matching entry in the 
+      // allowed headers in the rule?
+      // Headers are matched case-insensitively.
+
+      List<String> allowedHeaders = corsRule.getAllowedHeaders();
+      List<Pattern> allowedHeaderPatternList = new ArrayList<Pattern>(corsRule.getAllowedHeaders().size());
+      
+      // Predicate for matching request header with allowed headers
+      Predicate<String> headerMatch = new Predicate<String>() {
+        @Override
+        public boolean apply(String requestHeader) {
+          for (int idx = 0; idx < allowedHeaders.size(); idx++) {
+            Pattern allowedHeaderPattern;
+            if ((allowedHeaderPattern = allowedHeaderPatternList.get(idx)) == null) {
+              allowedHeaderPattern = generatePattern.apply(allowedHeaders.get(idx));
+              allowedHeaderPatternList.add(allowedHeaderPattern);
+            }
+            Matcher matcher = allowedHeaderPattern.matcher(requestHeader);
+            if (matcher.matches()) {
+              return true; // stop looking through the allowed headers for this request header
+            } else {
+              continue; // try matching request header with allowed header until a match is found
+            }
+          }
+          return false; // No allowed header matches this request header, so this rule fails to match
+        }
+      };
+
+      // If request headers match allowed headers, we have matched the current CORS rule. 
+      // Stop looking through them.
+      if (Iterables.all(requestHeaders, headerMatch)) {
+        found = true;
+        break;
+      }
+    }  // end for each CORS rule
+
+    if (found) {
+      corsMatchResult.setCorsRuleMatch(corsRuleMatch);
+      corsMatchResult.setAnyOrigin(anyOrigin);
+    }
+    return corsMatchResult;
+  }  
 
   public static String[] getTarget(String operationPath) {
     operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"
