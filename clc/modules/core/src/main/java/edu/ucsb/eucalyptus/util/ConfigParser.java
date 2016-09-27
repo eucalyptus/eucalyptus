@@ -69,6 +69,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
+import com.eucalyptus.system.Threads;
 
 public class ConfigParser extends Thread {
 	private InputStream is;
@@ -76,6 +77,7 @@ public class ConfigParser extends Thread {
 	private Map<String, String> values;
 
 	public ConfigParser(InputStream is) {
+		super( Threads.threadUniqueName( "eucalyptus-config-parser" ) );
 		this.is = is;
 		values = new HashMap<String, String>();
 	}

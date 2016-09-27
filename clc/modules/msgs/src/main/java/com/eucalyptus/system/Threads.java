@@ -129,6 +129,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -137,7 +138,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class Threads {
   private static Logger                                  LOG               = Logger.getLogger( Threads.class );
-  private final static String                            PREFIX            = "Eucalyptus.";
+  private final static String                            PREFIX            = "eucalyptus-";
   private final static Integer                           NUM_QUEUE_WORKERS = 64;                                          //TODO:GRZE: discover on per-service basis.;
   private final static AtomicInteger                     threadIndex       = new AtomicInteger( 0 );
   private final static ConcurrentMap<String, ThreadPool> execServices      = new ConcurrentHashMap<String, ThreadPool>( );
@@ -171,18 +172,25 @@ public class Threads {
   }
 
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + ":"
+    return lookup( ComponentIds.lookup( group ).name( ) + "-"
                    + owningClass.getSimpleName( ) );
   }
   
   public static ThreadPool lookup( final ServiceConfiguration config ) {
-    return lookup( config.getComponentId( ).getClass( ), config.getClass( ), config.getFullName( ).toString( ) );
+    return lookup( config.getComponentId( ).getClass( ), (String)null, threadName( config ) );
   }
   
   public static ThreadPool lookup( final Class<? extends ComponentId> group, final Class owningClass, final String name ) {
-    return lookup( ComponentIds.lookup( group ).name( ) + ":"
-                   + owningClass.getSimpleName( )
-                   + ":"
+    return lookup( group, owningClass.getSimpleName( ), name );
+  }
+
+  public static ThreadPool lookup( final Class<? extends ComponentId> group, final String owner, final String name ) {
+    return lookup( ComponentIds.lookup( group ).name( )
+                   + ( owner == null ?
+                         "" :
+                         "-" + owner
+                     )
+                   + "-"
                    + name );
   }
   
@@ -191,7 +199,7 @@ public class Threads {
   }
   
   private static ThreadPool lookup( final String threadGroupName ) {
-    final String groupName = PREFIX + threadGroupName;
+    final String groupName = PREFIX + threadGroupName.toLowerCase( );
     if ( execServices.containsKey( groupName ) ) {
       return execServices.get( groupName );
     } else {
@@ -214,12 +222,7 @@ public class Threads {
                + r.getClass( ) );
     return new Thread( SYSTEM.getGroup( ), r, name );
   }
-  
-  public static Thread newThread( final Runnable r ) {
-    LOG.debug( "CREATE new thread using: " + r.getClass( ) );
-    return new Thread( SYSTEM.getGroup( ), r );
-  }
-  
+
   /// Callable interface with associated correlation Id 
   public static interface EucaCallable <C> extends Callable<C> {
     public String getCorrelationId();
@@ -337,9 +340,9 @@ public class Threads {
     
     @Override
     public Thread newThread( final Runnable r ) {
-      return new Thread( this.group, r, this.group.getName( ) + "."
-                                        + r.getClass( )
-                                        + "#"
+      return new Thread( this.group, r, this.group.getName( ) + "-"
+                                        + r.getClass( ).getSimpleName( ).toLowerCase( )
+                                        + "-"
                                         + Threads.threadIndex.incrementAndGet( ) );
     }
     
@@ -565,7 +568,32 @@ public class Threads {
       }
     };
   }
-  
+
+  private static String threadName( final ServiceConfiguration config ) {
+    return
+        config.getComponentId( ).name( ) +
+        ( config.getPartition( ) == null ||
+          config.getComponentId().name( ).equals( config.getPartition( ) ) ||
+          config.getName( ).equals( config.getPartition( ) ) ?
+            "" :
+            "-" + config.getPartition( )
+        ) +
+        "-" +
+        config.getName( );
+  }
+
+  public static String threadUniqueName( final String name ) {
+    return name.toLowerCase( ) + "-" + threadIndex.incrementAndGet( );
+  }
+
+  public static java.util.concurrent.ThreadFactory threadFactory( String nameFormat ) {
+    return threadFactoryBuilder( ).setNameFormat( nameFormat.toLowerCase( ) ).build( );
+  }
+
+  public static ThreadFactoryBuilder threadFactoryBuilder( ) {
+    return new ThreadFactoryBuilder( );
+  }
+
   enum StackTraceElementTransform implements Function<StackTraceElement, CharSequence> {
     FQNAME {
       @Override
@@ -633,7 +661,7 @@ public class Threads {
   private static final ConcurrentMap<String, Queue<?>> workers = Maps.newConcurrentMap( );
   private static final AtomicLong                      currId  = new AtomicLong( 0 );
   
-  static class Queue<T extends HasFullName<T>> implements Runnable {
+  static class Queue<T extends ServiceConfiguration> implements Runnable {
     private final AtomicBoolean                running  = new AtomicBoolean( true );
     private final BlockingQueue<FutureTask<?>> msgQueue = new LinkedTransferQueue<FutureTask<?>>( );
     private final T                            owner;
@@ -648,7 +676,7 @@ public class Threads {
       this.componentId = componentId;
       this.owner = owner;
       this.ownerType = owner.getClass( );
-      this.name = owner.getFullName( ).toString( );
+      this.name = threadName( owner );
       this.numWorkers = numWorkers;
       this.creationStack = Threads.currentStackRange( 0, 32 );
     }
@@ -670,7 +698,7 @@ public class Threads {
       return this.componentId.getSimpleName( ) + ":"
              + this.ownerType.getSimpleName( )
              + ":"
-             + this.owner.getFullName( )
+             + this.name
              + "[workers]";
     }
     
@@ -823,7 +851,7 @@ public class Threads {
         : o.toString( ) ) );
   }
   
-  private static <T extends HasFullName<T>> Queue<T> queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
+  private static <T extends ServiceConfiguration> Queue<T> queue( final Class<? extends ComponentId> componentId, final T owner, final int numWorkers ) {
     final Queue<T> worker = new Queue<T>( componentId, owner, numWorkers );
     final Queue<T> existingWorker = ( Queue<T> ) workers.get( worker.key( ) );
     if ( existingWorker != null ) {

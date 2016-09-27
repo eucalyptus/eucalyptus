@@ -40,6 +40,7 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.system.Threads;
 
 /**
  * <p>
@@ -55,9 +56,10 @@ import com.eucalyptus.component.id.Eucalyptus;
  * logged until the state is reset for that dbPool. A state reset occurs when the number of db connections returns to below the fault threshold.
  * </p>
  */
-public class DBResourceCheck extends Thread {
+public class DBResourceCheck {
 	private final static Logger LOG = Logger.getLogger(DBResourceCheck.class);
-	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+	private static final ScheduledExecutorService pool =
+			Executors.newSingleThreadScheduledExecutor( Threads.threadFactory( "ts-db-check-pool-%d" ) );
 	private static final Runnable shutdownHook = new Runnable( ) {
 
     @Override

@@ -81,6 +81,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.entities.DirectStorageInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Faults;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -198,7 +199,7 @@ public class TGTWrapper {
     serviceLock.writeLock().lock();
     try {
       if (service == null) {
-        service = Executors.newFixedThreadPool(10);
+        service = Executors.newFixedThreadPool(10, Threads.threadFactory( "storage-tgt-pool-%d" ));
       }
     } finally {
       serviceLock.writeLock().unlock();

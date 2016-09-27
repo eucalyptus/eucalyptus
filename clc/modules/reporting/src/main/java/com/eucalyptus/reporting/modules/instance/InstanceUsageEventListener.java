@@ -41,6 +41,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
+import com.eucalyptus.system.Threads;
 
 @ConfigurableClass(root = "reporting", description = "Parameters controlling reporting")
 public class InstanceUsageEventListener implements
@@ -52,7 +53,7 @@ public class InstanceUsageEventListener implements
     public static long DEFAULT_WRITE_INTERVAL_MINS = 15;
 
     private static final ScheduledExecutorService eventFlushTimer = Executors
-	    .newSingleThreadScheduledExecutor();
+	    .newSingleThreadScheduledExecutor( Threads.threadFactory( "reporting-flush-pool-%d" ) );
 
     private static AtomicBoolean busy = new AtomicBoolean(false);
 

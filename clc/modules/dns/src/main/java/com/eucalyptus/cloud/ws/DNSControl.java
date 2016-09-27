@@ -105,6 +105,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 
 import org.xbill.DNS.ResolverConfig;
 
+import com.eucalyptus.system.Threads;
 import com.google.common.base.Strings;
 
 import com.eucalyptus.configurable.*;
@@ -229,10 +230,10 @@ public class DNSControl {
   private static DatagramChannelFactory udpChannelFactory = null;
   private static ServerSocketChannelFactory tcpChannelFactory = null;
   private static ExecutionHandler udpExecHandler = null;
-  private static Executor createWorkerPool() {
-     final Executor executor =
-         Executors.newFixedThreadPool(SERVER_POOL_MAX_THREADS);
-     return executor;
+  private static Executor createWorkerPool( String name ) {
+     return Executors.newFixedThreadPool(
+         SERVER_POOL_MAX_THREADS,
+         Threads.threadFactory( "dns-" + name + "-worker-pool-%d" ) );
   }
 
   public static class TimedDns {
@@ -284,10 +285,11 @@ public class DNSControl {
 	private static void initializeUDP( ) throws Exception{
 	  if(udpChannelFactory == null){
 	    try{
-	      udpChannelFactory = new NioDatagramChannelFactory(Executors.newCachedThreadPool());
+	      udpChannelFactory = new NioDatagramChannelFactory(
+	              Executors.newCachedThreadPool( Threads.threadFactory( "dns-server-udp-pool-%d" ) ) );
         final ConnectionlessBootstrap b = new ConnectionlessBootstrap(udpChannelFactory);
 	      udpExecHandler = 
-	          new ExecutionHandler(createWorkerPool());
+	          new ExecutionHandler(createWorkerPool( "udp" ));
 	      b.setPipelineFactory(new UdpChannelPipelineFactory(udpExecHandler));
 	      b.setOption("receiveBufferSize", 4194304);
 	      b.setOption("broadcast", "false");
@@ -362,8 +364,9 @@ public class DNSControl {
 	  if(tcpChannelFactory == null){
 	    try{
 	      tcpChannelFactory = 
-	          new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), 
-	              createWorkerPool());
+	          new NioServerSocketChannelFactory(
+	              Executors.newCachedThreadPool( Threads.threadFactory( "dns-server-tcp-pool-%d" ) ),
+	              createWorkerPool("tcp"));
 	      final ServerBootstrap b = new ServerBootstrap(tcpChannelFactory);
 	      b.setPipelineFactory(new ChannelPipelineFactory() {
 	        public ChannelPipeline getPipeline() throws Exception {

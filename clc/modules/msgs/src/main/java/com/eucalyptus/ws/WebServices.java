@@ -105,6 +105,8 @@ import org.jboss.netty.logging.InternalLoggerFactory;
 import org.jboss.netty.logging.Log4JLoggerFactory;
 import org.jboss.netty.util.ExternalResourceReleasable;
 import org.jboss.netty.util.ExternalResourceUtil;
+import org.jboss.netty.util.ThreadNameDeterminer;
+import org.jboss.netty.util.ThreadRenamingRunnable;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -138,7 +140,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class WebServices {
-  
+
+  static {
+    // Allow thread factories to determine thread naming
+    ThreadRenamingRunnable.setThreadNameDeterminer( ThreadNameDeterminer.CURRENT );
+  }
+
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteServicesInit )
   public static class WebServicesBootstrapper extends Bootstrapper.Simple {
@@ -328,7 +335,8 @@ public class WebServices {
                                                                                   StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
                                                                                   StackConfiguration.CLIENT_POOL_TOTAL_MEM,
                                                                                   StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS,
-                                                                                  TimeUnit.MILLISECONDS );
+                                                                                  TimeUnit.MILLISECONDS,
+                                                                                  Threads.threadFactory( "web-services-client-pool-%d" ) );
       }
     }
   }
@@ -529,7 +537,7 @@ public class WebServices {
         }
         if (different) {
           LOG.info("One or more bootstrap.webservices properties have changed, restarting web services listeners [May change ports]");
-          new Thread() {
+          new Thread( Threads.threadUniqueName( "web-services-restarter" ) ) {
             public void run() {
               try {
                 restart();
@@ -580,7 +588,7 @@ public class WebServices {
   }
   
   private static NioServerSocketChannelFactory channelFactory( final Executor workerPool ) {
-    return new NioServerSocketChannelFactory( Executors.newCachedThreadPool( ),
+    return new NioServerSocketChannelFactory( Executors.newCachedThreadPool( Threads.threadFactory( "web-services-boss-pool-%d" ) ),
                                               workerPool,
                                               StackConfiguration.SERVER_POOL_MAX_THREADS );
   }
@@ -600,7 +608,8 @@ public class WebServices {
                                                                           StackConfiguration.SERVER_POOL_MAX_MEM_PER_CONN,
                                                                           StackConfiguration.SERVER_POOL_TOTAL_MEM,
                                                                           StackConfiguration.SERVER_POOL_TIMEOUT_MILLIS,
-                                                                          TimeUnit.MILLISECONDS );
+                                                                          TimeUnit.MILLISECONDS,
+                                                                          Threads.threadFactory( "web-services-worker-pool-%d" ) );
     return workerPool;
   }
 

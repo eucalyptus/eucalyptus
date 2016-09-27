@@ -31,6 +31,7 @@ import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
@@ -72,7 +73,7 @@ public class AbsoluteMetricQueue {
 
   static {
     ScheduledExecutorService dbCleanupService = Executors
-      .newSingleThreadScheduledExecutor();
+      .newSingleThreadScheduledExecutor( Threads.threadFactory( "compute-metrics-cleanup-%d" ) );
     dbCleanupService.scheduleAtFixedRate(new DBCleanupService(), 1, 30,
       TimeUnit.MINUTES);
   }
@@ -82,7 +83,7 @@ public class AbsoluteMetricQueue {
   private static final LinkedBlockingQueue<AbsoluteMetricQueueItem> dataQueue = new LinkedBlockingQueue<>( );
 
   private static final ScheduledExecutorService dataFlushTimer = Executors
-    .newSingleThreadScheduledExecutor();
+    .newSingleThreadScheduledExecutor( Threads.threadFactory( "compute-metrics-flush-%d" ) );
 
   private static AbsoluteMetricQueue singleton = getInstance();
 

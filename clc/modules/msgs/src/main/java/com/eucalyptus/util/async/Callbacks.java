@@ -174,7 +174,7 @@ public class Callbacks {
   public static Runnable addListenerHandler( final CheckedListenableFuture<?> future, final Callback<?> listener ) {
     Runnable r;
     future.addListener( r = new Callbacks.BasicCallbackProcessor( future, listener ),
-                        Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.toString( ) ) );
+                        Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.getSimpleName( ) ) );
     return r;
   }
   

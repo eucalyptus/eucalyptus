@@ -22,6 +22,7 @@ package com.eucalyptus.stats;
 
 import com.eucalyptus.stats.configuration.StatsConfiguration;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -43,7 +44,9 @@ import java.util.concurrent.TimeUnit;
 @Singleton
 public class SensorManagerImpl implements SensorManager {
     private static final Logger LOG = Logger.getLogger(SensorManagerImpl.class);
-    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(StatsConfiguration.getMonitoringThreadPoolSize());
+    private final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(
+        StatsConfiguration.getMonitoringThreadPoolSize( ),
+        Threads.threadFactory( "ts-sensor-monitoring-pool-%d" ) );
     private final List<SensorEntry> sensorList = new ArrayList<>(50);
     private final static long initialDelaySeconds = 0l; //Wait 10 sec before starting monitoring sensors
     private EventEmitterService emitterService;

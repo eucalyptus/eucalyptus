@@ -76,6 +76,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.storage.msgs.BucketLogData;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
 /**
@@ -96,7 +97,7 @@ public class ObjectStorageBucketLogger {
   public ObjectStorageBucketLogger() {
     logData = new LinkedBlockingQueue<BucketLogData>();
     logFileMap = new ConcurrentHashMap<String, LogFileEntry>();
-    logger = Executors.newSingleThreadScheduledExecutor();
+    logger = Executors.newSingleThreadScheduledExecutor( Threads.threadFactory( "osg-log-pool-%d" ) );
     logger.scheduleAtFixedRate(new Runnable() {
       @Override
       public void run() {

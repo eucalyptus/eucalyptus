@@ -124,6 +124,7 @@ import org.xbill.DNS.TSIGRecord;
 import org.xbill.DNS.Type;
 
 import com.eucalyptus.dns.Cache;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.google.common.base.Function;
@@ -137,6 +138,10 @@ public class ConnectionHandler extends Thread {
 	static final int FLAG_SIGONLY = 2;
 
 	Map caches = new ConcurrentHashMap();
+
+	public ConnectionHandler() {
+		super( Threads.threadUniqueName( "dns-connection-handler" ) );
+	}
 
 	byte []
 	      generateReply(Message query, byte [] in, int length, Socket s)

@@ -42,11 +42,13 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.system.Threads;
 
 public class MemoryCheck {
 	private final static Logger LOG = Logger.getLogger(MemoryCheck.class);
 
-	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
+	private static final ScheduledExecutorService pool =
+			Executors.newSingleThreadScheduledExecutor( Threads.threadFactory( "ts-memory-check-pool-%d" ) );
 	private static final int OUT_OF_MEMORY_FAULT_ID = 1004;
 	private final static long DEFAULT_POLL_INTERVAL = 1 * 1000;
 	private static final Class <? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;

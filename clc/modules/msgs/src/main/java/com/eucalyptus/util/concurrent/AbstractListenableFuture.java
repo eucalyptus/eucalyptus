@@ -123,22 +123,12 @@ import static org.hamcrest.Matchers.notNullValue;
 @ConfigurableClass( root = "bootstrap.async",
                     description = "Parameters controlling the asynchronous futures and executors." )
 public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> implements ListenableFuture<V> {
-  private static Logger                             LOG                              = Logger.getLogger( AbstractListenableFuture.class );
-  protected final ConcurrentLinkedQueue<Runnable>   listeners                        = new ConcurrentLinkedQueue<Runnable>( );
-  private final AtomicBoolean                       finished                         = new AtomicBoolean( false );
-  private static final Runnable                     DONE                             = new Runnable( ) {
-                                                                                       @Override
-                                                                                       public void run( ) {}
-                                                                                     };
-  private static final ExecutorService              executor                         = Executors.newCachedThreadPool( new ThreadFactory( ) {
-                                                                                       @Override
-                                                                                       public Thread newThread( Runnable r ) {
-                                                                                         Thread s = Executors.defaultThreadFactory( )
-                                                                                                             .newThread( r );
-                                                                                         s.setName( "AbstractListenableFuture: " + r );
-                                                                                         return s;
-                                                                                       }
-                                                                                     } );
+  private static final Logger                        LOG      = Logger.getLogger( AbstractListenableFuture.class );
+  private static final Runnable                      DONE     = () -> { };
+  private static final ExecutorService               executor = Executors.newCachedThreadPool(
+                                                                  Threads.threadFactory( "listenable-future-pool-%d" ) );
+  private static final Predicate<StackTraceElement>  filter   = Threads.filterStackByQualifiedName( "com.eucalyptus.*" );
+
   @ConfigurableField( description = "Number of seconds a future listener can execute before a debug message is logged.",
                       type = ConfigurableFieldType.PRIVATE )
   public static Long                                FUTURE_LISTENER_DEBUG_LIMIT_SECS = 30L;
@@ -154,8 +144,11 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   @ConfigurableField( description = "Total number of seconds a future listener's executor waits to get().",
                       type = ConfigurableFieldType.PRIVATE )
   public static Integer                             FUTURE_LISTENER_GET_RETRIES      = 8;
-  private static final Predicate<StackTraceElement> filter                           = Threads.filterStackByQualifiedName( "com.eucalyptus.*" );
-  private final String                              startingStack;
+
+
+  private final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>( );
+  private final AtomicBoolean                   finished  = new AtomicBoolean( false );
+  private final String                          startingStack;
 
   protected AbstractListenableFuture() {
     this.startingStack = Threads.currentStackRange( 0, 32 );
