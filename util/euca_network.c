@@ -143,8 +143,6 @@
 //! List of supported network mode string
 const char *asNetModes[] = {
     NETMODE_EDGE,
-    NETMODE_MANAGED,
-    NETMODE_MANAGED_NOVLAN,
     NETMODE_VPCMIDO,
     NULL
 };
@@ -855,7 +853,7 @@ char *euca_intfc2mac(const char *psDevName)
 
 /**
  * Converts a string description of network mode to euca_netmode code.
- * EDGE, VPCMIDO, MANAGED, and MANAGED_NOVLAN are recognized.
+ * EDGE and VPCMIDO are recognized.
  * @param psNetMode [in] a string representation of a network mode.
  * @return the euca_netmode code of the given network mode string
  */

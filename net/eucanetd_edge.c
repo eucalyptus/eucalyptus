@@ -912,7 +912,7 @@ int do_edge_update_sgs(edge_config *edge) {
                                 if (((edge->my_instances[k].publicIp & cidrnm) == (secgroup->ingress_rules[j].cidrNetaddr & cidrnm)) &&
                                         ((edge->my_instances[k].privateIp & cidrnm) != (secgroup->ingress_rules[j].cidrNetaddr & cidrnm))) {
                                     strptra = hex2dot(edge->my_instances[k].privateIp);
-                                    LOGDEBUG("Found instance private IP (%s) local to this NC affected by rule (%s).\n", strptra, secgroup->grouprules[j].name);
+                                    LOGDEBUG("Found instance private IP (%s) local to this NC affected by another rule.\n", strptra);
                                     ingress_gni_to_iptables_rule(strptra, &(secgroup->ingress_rules[j]), rule, 1);
                                     LOGDEBUG("Created new iptables rule: %s\n", rule);
                                     EUCA_FREE(strptra);

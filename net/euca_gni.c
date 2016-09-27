@@ -113,8 +113,6 @@ static boolean xml_initialized = FALSE;    //!< To determine if the XML library 
 #ifndef XML_INIT                    // if compiling as a stand-alone binary (for unit testing)
 #define XML_INIT() if (!xml_initialized) { xmlInitParser(); xml_initialized = TRUE; }
 #endif
-//! Static prototypes
-static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -2435,67 +2433,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
     }
     EUCA_FREE(results);
 
-    // Do we have any managed subnets?
-    snprintf(expression, 2048, "./property[@name='managedSubnet']/managedSubnet");
-    rc += evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
-    if (nodeset.nodeNr > 0) {
-        LOGTRACE("Found %d managed subnets\n", nodeset.nodeNr);
-        gni->managedSubnet = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_managedsubnet));
-        gni->max_managedSubnets = nodeset.nodeNr;
-
-        for (j = 0; j < gni->max_managedSubnets; j++) {
-            startnode = nodeset.nodeTab[j];
-            if (startnode && startnode->properties && startnode->properties->children &&
-                    startnode->properties->children->content) {
-                LOGTRACE("after function: %d: %s\n", j, startnode->properties->children->content);
-                gni->managedSubnet[j].subnet = dot2hex((char *) startnode->properties->children->content);
-
-                // Get the netmask
-                snprintf(expression, 2048, "./property[@name='netmask']/value");
-                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
-                for (i = 0; i < max_results; i++) {
-                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    gni->managedSubnet[j].netmask = dot2hex(results[i]);
-                    EUCA_FREE(results[i]);
-                }
-                EUCA_FREE(results);
-
-                // Now get the minimum VLAN index
-                snprintf(expression, 2048, "./property[@name='minVlan']/value");
-                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
-                for (i = 0; i < max_results; i++) {
-                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    gni->managedSubnet[j].minVlan = atoi(results[i]);
-                    EUCA_FREE(results[i]);
-                }
-                EUCA_FREE(results);
-
-                // Now get the maximum VLAN index
-                snprintf(expression, 2048, "./property[@name='maxVlan']/value");
-                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
-                for (i = 0; i < max_results; i++) {
-                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    gni->managedSubnet[j].maxVlan = atoi(results[i]);
-                    EUCA_FREE(results[i]);
-                }
-                EUCA_FREE(results);
-
-                // Now get the segment size
-                snprintf(expression, 2048, "./property[@name='segmentSize']/value");
-                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
-                for (i = 0; i < max_results; i++) {
-                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    gni->managedSubnet[j].segmentSize = atoi(results[i]);
-                    EUCA_FREE(results[i]);
-                }
-                EUCA_FREE(results);
-            } else {
-                LOGWARN("invalid managed subnet at idx %d\n", j);
-            }
-        }
-    }
-    EUCA_FREE(nodeset.nodeTab);
-
     // Do we have any global subnets?
     snprintf(expression, 2048, "./property[@name='subnets']/subnet");
     rc += evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
@@ -2999,21 +2936,6 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
                 snprintf(gni->secgroups[j].accountId, 128, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
-            EUCA_FREE(results);
-
-            snprintf(expression, 2048, "./rules/value");
-            rc = evaluate_xpath_property(ctxptr, doc, sgnode, expression, &results, &max_results);
-            gni->secgroups[j].grouprules = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
-            for (i = 0; i < max_results; i++) {
-                char newrule[2048];
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                rc = ruleconvert(results[i], newrule);
-                if (!rc) {
-                    snprintf(gni->secgroups[j].grouprules[i].name, 1024, "%s", newrule);
-                }
-                EUCA_FREE(results[i]);
-            }
-            gni->secgroups[j].max_grouprules = max_results;
             EUCA_FREE(results);
 
             // ingress rules
@@ -4142,30 +4064,6 @@ int gni_iterate(globalNetworkInfo *gni, int mode)
     }
 
     if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("managed_subnets: \n");
-    for (i = 0; i < gni->max_subnets; i++) {
-        strptra = hex2dot(gni->managedSubnet[i].subnet);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tmanaged_subnet %d: %s\n", i, SP(strptra));
-        EUCA_FREE(strptra);
-
-        strptra = hex2dot(gni->managedSubnet[i].netmask);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tnetmask: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tminVlan: %d\n", gni->managedSubnet[i].minVlan);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tmaxVlan: %d\n", gni->managedSubnet[i].minVlan);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tsegmentSize: %d\n", gni->managedSubnet[i].segmentSize);
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->managedSubnet);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("clusters: \n");
     for (i = 0; i < gni->max_clusters; i++) {
         if (mode == GNI_ITERATE_PRINT)
@@ -4412,171 +4310,6 @@ int gni_free(globalNetworkInfo *gni) {
     return (0);
 }
 
-//Maps the protocol number passed in, to the name 
-/**
- * Maps the protocol number passed in, to its corresponding name 
- * @param proto_number [in] protocol number of interest
- * @param out_proto_name [out] corresponding protocol name
- * @param out_proto_len [in] capacity of the out_proto_name buffer
- * @return 0 on success. 1 on failure.
- */
-static int map_proto_to_names(int proto_number, char *out_proto_name, int out_proto_len) {
-    struct protoent *proto = NULL;
-    if (NULL == out_proto_name) {
-        LOGERROR("Cannot map protocol number to name because arguments are null or not allocated enough buffers. Proto number=%d, out_proto_len=%d\n",
-                proto_number, out_proto_len);
-        return 1;
-    }
-
-    if (proto_number < 0 || proto_number > 255) {
-        LOGERROR("Cannot map invalid protocol number: %d. Must be between 0 and 255 inclusive\n", proto_number);
-        return 1;
-    }
-
-    //Explicitly map only tcp/udp/icmp
-    if (TCP_PROTOCOL_NUMBER == proto_number ||
-            UDP_PROTOCOL_NUMBER == proto_number ||
-            ICMP_PROTOCOL_NUMBER == proto_number) {
-        //Use libc to map number to name
-        proto = getprotobynumber(proto_number);
-    }
-    if (NULL != proto) {
-        //There is a name, use it
-        if (NULL != proto->p_name && strlen(proto->p_name) > 0) {
-            euca_strncpy(out_proto_name, proto->p_name, out_proto_len);
-        }
-    } else {
-        //There is no name, just use the raw number
-        snprintf(out_proto_name, out_proto_len, "%d", proto_number);
-    }
-    return 0;
-}
-
-/**
- * Converts a security group rule in GNI to iptables format.
- *
- * @param rulebuf [in] a string containing the iptables rule to convert
- * @param outrule [out] a string containing the converted rule
- *
- * @return 0 on success or 1 on failure.
- *
- * @pre Both rulebuf and outrule MUST not be NULL
- *
- * @post \li uppon success the outrule contains the converted value
- *       \li uppon failure, outrule does not contain any valid data
- *       \li regardless of success or failure case, rulebuf will be modified by a strtok_r() call
- */
-int ruleconvert(char *rulebuf, char *outrule) {
-    int ret = 0;
-    //char proto[4]; //Protocol is always a 3-digit number in global network xml.
-    int protocol_number = -1;
-    int rc = EUCA_ERROR;
-    char portrange[64], sourcecidr[64], icmptyperange[64], sourceowner[64], sourcegroup[64], newrule[4097], buf[2048];
-    char proto[64]; //protocol name mapped for IPTABLES usage
-    char *ptra = NULL, *toka = NULL, *idx = NULL;
-
-    proto[0] = portrange[0] = sourcecidr[0] = icmptyperange[0] = newrule[0] = sourceowner[0] = sourcegroup[0] = '\0';
-
-    if ((idx = strchr(rulebuf, '\n'))) {
-        *idx = '\0';
-    }
-
-    toka = strtok_r(rulebuf, " ", &ptra);
-    while (toka) {
-        if (!strcmp(toka, "-P")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka) {
-                protocol_number = atoi(toka);
-            }
-        } else if (!strcmp(toka, "-p")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka)
-                snprintf(portrange, 64, "%s", toka);
-            if ((idx = strchr(portrange, '-'))) {
-                char minport[64], maxport[64];
-                sscanf(portrange, "%[0-9]-%[0-9]", minport, maxport);
-                if (!strcmp(minport, maxport)) {
-                    snprintf(portrange, 64, "%s", minport);
-                } else {
-                    *idx = ':';
-                }
-            }
-        } else if (!strcmp(toka, "-s")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka)
-                snprintf(sourcecidr, 64, "%s", toka);
-            if (!strcmp(sourcecidr, "0.0.0.0/0")) {
-                sourcecidr[0] = '\0';
-            }
-        } else if (!strcmp(toka, "-t")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka)
-                snprintf(icmptyperange, 64, "any");
-        } else if (!strcmp(toka, "-o")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka)
-                snprintf(sourcegroup, 64, toka);
-        } else if (!strcmp(toka, "-u")) {
-            toka = strtok_r(NULL, " ", &ptra);
-            if (toka)
-                snprintf(sourceowner, 64, toka);
-        }
-        toka = strtok_r(NULL, " ", &ptra);
-    }
-
-    LOGTRACE("TOKENIZED RULE: PROTO: %d PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", protocol_number, portrange, sourcecidr, icmptyperange,
-            sourceowner, sourcegroup);
-
-    // check if enough info is present to construct rule
-    // Fix for EUCA-10031, no port range required. Ports should be limited and enforced at front-end
-    // per AWS policy, not in the backend since IPTABLES doesn't care
-    if (protocol_number >= 0) {
-        //Handle protocol mapping first
-        rc = map_proto_to_names(protocol_number, proto, 64);
-        if (!rc && strlen(proto) > 0) {
-            if (TCP_PROTOCOL_NUMBER == protocol_number || UDP_PROTOCOL_NUMBER == protocol_number) {
-                //For tcp and udp add a module for port handling
-                snprintf(buf, 2048, "-p %s -m %s ", proto, proto);
-            } else {
-                snprintf(buf, 2048, "-p %s ", proto);
-            }
-            strncat(newrule, buf, 2048);
-        } else {
-            LOGERROR("Error mapping protocol number %d to string for iptables rules\n", protocol_number);
-            return 1;
-        }
-
-        if (strlen(sourcecidr)) {
-            snprintf(buf, 2048, "-s %s ", sourcecidr);
-            strncat(newrule, buf, 2048);
-        }
-
-        //Only allow port ranges for tcp and udp
-        if ((TCP_PROTOCOL_NUMBER == protocol_number || UDP_PROTOCOL_NUMBER == protocol_number) && strlen(portrange)) {
-            snprintf(buf, 2048, "--dport %s ", portrange);
-            strncat(newrule, buf, 2048);
-        }
-
-        //Only allow icmp for proper icmp
-        if (protocol_number == 1 && strlen(icmptyperange)) {
-            snprintf(buf, 2048, "--icmp-type %s ", icmptyperange);
-            strncat(newrule, buf, 2048);
-        }
-
-        while (newrule[strlen(newrule) - 1] == ' ') {
-            newrule[strlen(newrule) - 1] = '\0';
-        }
-
-        snprintf(outrule, 2048, "%s", newrule);
-        LOGTRACE("CONVERTED RULE: %s\n", outrule);
-    } else {
-        LOGWARN("not enough information in source rule to construct iptables rule: skipping\n");
-        ret = 1;
-    }
-
-    return (ret);
-}
-
 /**
  * Creates an iptables rule using the source CIDR specified in the argument, and
  * based on the ingress rule entry in the argument.
@@ -4592,8 +4325,8 @@ int ruleconvert(char *rulebuf, char *outrule) {
  *
  * @pre ingress_rule and outrule pointers MUST not be NULL
  *
- * @post \li uppon success the outrule contains the converted iptables rule.
- *       \li uppon failure, outrule does not contain any valid data
+ * @post \li upon success the outrule contains the converted iptables rule.
+ *       \li upon failure, outrule does not contain any valid data
  */
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outrule, int flags) {
 #define MAX_RULE_LEN     1024
@@ -4661,7 +4394,6 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
             break;
         default:
             // Protocols accepted by EC2 non-VPC are ICMP/TCP/UDP. Other protocols will default to numeric values on euca.
-            // snprintf(buf, MAX_RULE_LEN, "-p %s ", proto_info->p_name);
             snprintf(buf, MAX_RULE_LEN, "-p %d ", proto_info->p_proto);
             strncat(newrule, buf, MAX_RULE_LEN);
             break;
@@ -4672,14 +4404,6 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
             break;
         case 1: // Add condition to the rule to accept the packet if it would be SNATed (EDGE).
             snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x2a ");
-            strncat(newrule, buf, MAX_RULE_LEN);
-            break;
-        case 2: // Add condition to the rule to accept the packet if it would be SNATed (MANAGED).
-            snprintf(buf, MAX_RULE_LEN, "-m mark --mark 0x15 ");
-            strncat(newrule, buf, MAX_RULE_LEN);
-            break;
-        case 4: // Add condition to the rule to accept the packet if it would NOT be SNATed (MANAGED).
-            snprintf(buf, MAX_RULE_LEN, "-m mark ! --mark 0x15 ");
             strncat(newrule, buf, MAX_RULE_LEN);
             break;
         default:
@@ -4777,7 +4501,6 @@ int gni_secgroup_clear(gni_secgroup *secgroup) {
 
     EUCA_FREE(secgroup->ingress_rules);
     EUCA_FREE(secgroup->egress_rules);
-    EUCA_FREE(secgroup->grouprules);
     EUCA_FREE(secgroup->instances);
     EUCA_FREE(secgroup->interfaces);
 
@@ -5157,19 +4880,6 @@ int gni_validate(globalNetworkInfo *gni) {
         }
     }
 
-    // Now we have different behavior between managed and managed-novlan
-    if (IS_NETMODE_MANAGED(gni) || IS_NETMODE_MANAGED_NOVLAN(gni)) {
-        // We must have 1 managed subnet declaration
-        if ((gni->max_managedSubnets != 1) || !gni->managedSubnet) {
-            LOGWARN("invalid number of managed subnets set '%d'.\n", gni->max_managedSubnets);
-            return (1);
-        }
-        // Validate our managed subnet
-        if (gni_managed_subnet_validate(gni->managedSubnet)) {
-            LOGWARN("invalid managed subnet: cannot validate XML\n");
-            return (1);
-        }
-    }
     if (IS_NETMODE_EDGE(gni)) {
         //
         // This is for the EDGE case. We should have a valid list of subnets and our clusters
@@ -5278,7 +4988,7 @@ int gni_validate(globalNetworkInfo *gni) {
 
 /**
  * Validate a networking mode provided in the GNI message. The only supported networking
- * mode strings are: EDGE, MANAGED and MANAGED-NOVLAN
+ * mode strings are: EDGE and VPCMIDO.
  *
  * @param psMode [in] a string pointer to the network mode to validate
  *
@@ -5328,47 +5038,6 @@ int gni_subnet_validate(gni_subnet *pSubnet) {
 }
 
 /**
- * Validate a gni_subnet structure content
- *
- * @param pSubnet [in] a pointer to the subnet structure to validate
- *
- * @return 0 if the structure is valid or 1 if the structure isn't
- */
-int gni_managed_subnet_validate(gni_managedsubnet *pSubnet) {
-    // Make sure we didn't get a NULL pointer
-    if (!pSubnet) {
-        LOGERROR("invalid input\n");
-        return (1);
-    }
-    // If any of the subnet or netmask is 0.0.0.0, this is invalid
-    if ((pSubnet->subnet == 0) || (pSubnet->netmask == 0)) {
-        LOGWARN("invalid managed subnet: subnet=%d netmask=%d\n", pSubnet->subnet, pSubnet->netmask);
-        return (1);
-    }
-    // If the segment size is less than 16 or not a power of 2 than we have a problem
-    if ((pSubnet->segmentSize < 16) || ((pSubnet->segmentSize & (pSubnet->segmentSize - 1)) != 0)) {
-        LOGWARN("invalid managed subnet: segmentSize=%d\n", pSubnet->segmentSize);
-        return (1);
-    }
-    // If minVlan is less than MIN_VLAN_EUCA or greater than MAX_VLAN_EUCA, we have a problem
-    if ((pSubnet->minVlan < MIN_VLAN_EUCA) || (pSubnet->minVlan > MAX_VLAN_EUCA)) {
-        LOGWARN("invalid managed subnet: minVlan=%d\n", pSubnet->minVlan);
-        return (1);
-    }
-    // If maxVlan is less than MIN_VLAN_EUCA or greater than MAX_VLAN_EUCA, we have a problem
-    if ((pSubnet->maxVlan < MIN_VLAN_EUCA) || (pSubnet->maxVlan > MAX_VLAN_EUCA)) {
-        LOGWARN("invalid managed subnet: maxVlan=%d\n", pSubnet->maxVlan);
-        return (1);
-    }
-    // If minVlan is greater than maxVlan, we have a problem too!!
-    if (pSubnet->minVlan > pSubnet->maxVlan) {
-        LOGWARN("invalid managed subnet: minVlan=%d, maxVlan=%d\n", pSubnet->minVlan, pSubnet->maxVlan);
-        return (1);
-    }
-    return (0);
-}
-
-/**
  * Validate a gni_cluster structure content
  *
  * @param cluster [in] a pointer to the cluster structure to validate
@@ -5402,8 +5071,7 @@ int gni_cluster_validate(gni_cluster *cluster, euca_netmode nmode) {
         return (1);
     }
     //
-    // For EDGE, we need to validate the subnet and the private IPs which
-    // aren't provided in MANAGED mode
+    // For EDGE, we need to validate the subnet and the private IPs
     //
     if (nmode == NM_EDGE) {
         // Validate the given private subnet
@@ -5613,15 +5281,8 @@ int gni_secgroup_validate(gni_secgroup *secgroup) {
         return (1);
     }
 
-    if (!secgroup->max_grouprules || !secgroup->grouprules) {
+    if (!secgroup->max_ingress_rules || !secgroup->ingress_rules) {
         LOGTRACE("secgroup %s: no secgroup rules\n", secgroup->name);
-    } else {
-        for (i = 0; i < secgroup->max_grouprules; i++) {
-            if (!strlen(secgroup->grouprules[i].name)) {
-                LOGWARN("secgroup %s: empty grouprules set at idx %d\n", secgroup->name, i);
-                return (1);
-            }
-        }
     }
 
     if (!secgroup->max_instances || !secgroup->instances) {
@@ -5903,10 +5564,6 @@ void gni_sg_print(gni_secgroup *sg, int loglevel) {
     }
     EUCALOG(loglevel, "------ name = %s -----\n", sg->name);
     EUCALOG(loglevel, "\taccountId    = %s\n", sg->accountId);
-    EUCALOG(loglevel, "\tgrouprules   = %d rules\n", sg->max_grouprules);
-    for (i = 0; i < sg->max_grouprules; i++) {
-        EUCALOG(loglevel, "\t\t%s\n", sg->grouprules[i].name);
-    }
     EUCALOG(loglevel, "\tingress      = %d rules\n", sg->max_ingress_rules);
     for (i = 0; i < sg->max_ingress_rules; i++) {
         EUCALOG(loglevel, "\t\t%s %d %d %d %d %d %s\n", sg->ingress_rules[i].cidr,
