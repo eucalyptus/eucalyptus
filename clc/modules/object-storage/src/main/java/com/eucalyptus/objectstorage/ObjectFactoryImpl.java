@@ -79,6 +79,7 @@ import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -94,7 +95,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
   private static final int MAX_POOL_SIZE = 100;
   private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
   private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS,
-      new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE));
+      new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE), Threads.threadFactory( "osg-object-factory-pool-%d" ));
 
   public static long getPutTimeoutInMillis() {
     return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getFailed_put_timeout_hrs() * 60l * 60l * 1000l;

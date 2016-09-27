@@ -87,13 +87,13 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Provides( Empyrean.class )
@@ -117,10 +117,9 @@ public class ServiceBootstrapper extends Bootstrapper.Simple {
     private static final AtomicBoolean                                          running  = new AtomicBoolean( true );
     private static final BlockingQueue<Runnable>                                msgQueue = new LinkedBlockingQueue<>( );
     private static final ExecutorService                                        executor = Executors.newCachedThreadPool(
-                                                                                           new ThreadFactoryBuilder( )
-                                                                                           .setNameFormat(
-                                                                                           "service-bootstrap-%d"
-                                                                                           ).build( ) );
+                                                                                           Threads.threadFactory(
+                                                                                             "web-services-bootstrap-%d"
+                                                                                           ) );
     private static final ServiceBootstrapWorker                                 worker   = new ServiceBootstrapWorker( );
 
     private ServiceBootstrapWorker( ) {

@@ -1009,7 +1009,7 @@ public class VpcManager {
                     RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
 
             if ( !defaultRoute.isPresent( ) ) {
-              routeTable.getRoutes( ).add( Route.create( routeTable, Route.RouteOrigin.CreateRouteTable, "0.0.0.0/0", internetGateway ) );
+              routeTable.getRoutes( ).add( Route.create( routeTable, Route.RouteOrigin.CreateRoute, "0.0.0.0/0", internetGateway ) );
               routeTable.updateTimeStamps( ); // ensure version of table increments also
             }
 

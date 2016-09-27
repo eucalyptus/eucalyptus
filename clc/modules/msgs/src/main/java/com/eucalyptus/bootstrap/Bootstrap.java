@@ -544,7 +544,7 @@ public class Bootstrap {
    */
   public static void init( ) throws Exception {
     
-    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+    Runtime.getRuntime( ).addShutdownHook( new Thread( "bootstrap-shutdown-hook" ) {
       
       @Override
       public void run( ) {

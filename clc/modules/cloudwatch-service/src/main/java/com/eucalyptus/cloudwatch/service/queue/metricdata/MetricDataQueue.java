@@ -28,6 +28,7 @@ import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.eucalyptus.cloudwatch.common.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.service.queue.listmetrics.ListMetricQueue;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Supplier;
@@ -52,7 +53,7 @@ public class MetricDataQueue {
   final static LinkedBlockingQueue<MetricQueueItem> dataQueue = new LinkedBlockingQueue<MetricQueueItem>();
 
   private static final ScheduledExecutorService dataFlushTimer = Executors
-      .newSingleThreadScheduledExecutor();
+      .newSingleThreadScheduledExecutor( Threads.threadFactory( "cloudwatch-metric-data-flush-%d" ) );
 
   private static MetricDataQueue singleton = getInstance();
 

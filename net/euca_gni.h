@@ -489,6 +489,7 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b);
 int cmp_gni_route_table(gni_route_table *a, gni_route_table *b);
 int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff);
 int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff);
+int cmp_gni_instance(gni_instance *a, gni_instance *b);
 
 int ruleconvert(char *rulebuf, char *outrule);
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);

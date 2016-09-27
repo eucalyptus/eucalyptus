@@ -101,7 +101,7 @@ public class OrderedShutdown {
   }
   
   public static void initialize() {
-	  Runtime.getRuntime().addShutdownHook(new Thread() {
+	  Runtime.getRuntime().addShutdownHook(new Thread( "bootstrap-ordered-shutdown-hook" ) {
 		@Override
 		public void run() {
 			LOG.info("Executing Pre-Shutdown Hooks...");

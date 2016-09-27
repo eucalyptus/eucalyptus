@@ -68,6 +68,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import com.eucalyptus.system.Threads;
 
 public class StreamConsumer extends Thread {
     private InputStream is;
@@ -76,12 +77,14 @@ public class StreamConsumer extends Thread {
     private int chunkSize;
     
     public StreamConsumer(InputStream is) {
+        super( Threads.threadUniqueName( "eucalyptus-stream-consumer" ) );
         this.is = is;
         returnValue = "";
         this.chunkSize = SystemUtil.IO_CHUNK_SIZE;
     }
     
     public StreamConsumer(InputStream is, int ioChunkSize) {
+        super( Threads.threadUniqueName( "eucalyptus-stream-consumer" ) );
         this.is = is;
         returnValue = "";
         this.chunkSize = ioChunkSize;

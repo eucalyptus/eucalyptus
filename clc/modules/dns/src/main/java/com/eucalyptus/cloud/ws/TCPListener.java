@@ -69,6 +69,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import com.eucalyptus.system.Threads;
 
 public class TCPListener extends Thread implements Closeable {
 	private static Logger LOG = Logger.getLogger( TCPListener.class );
@@ -77,6 +78,7 @@ public class TCPListener extends Thread implements Closeable {
 	ServerSocket socket;
 
 	public TCPListener(InetAddress address, int port) throws IOException {
+		super( Threads.threadUniqueName( "dns-tcp-listener" ) );
 		this.address = address;
 		this.port = port;
 		try {

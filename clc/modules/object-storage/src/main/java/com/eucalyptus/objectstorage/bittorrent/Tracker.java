@@ -68,6 +68,7 @@ import java.util.Collection;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -79,12 +80,16 @@ public class Tracker extends Thread {
 
   private Process proc;
 
+  public Tracker( ) {
+    super( Threads.threadUniqueName( "osg-torrent-tracker" ) );
+  }
+
   public static void initialize() {
     tracker = new Tracker();
     if (tracker.exists()) {
       ObjectStorageProperties.enableTorrents = true;
       tracker.start();
-      Runtime.getRuntime().addShutdownHook(new Thread() {
+      Runtime.getRuntime().addShutdownHook(new Thread( "osg-torrent-shutdown-hook" ) {
         public void run() {
           tracker.bye();
           Collection<TorrentClient> torrentClients = Torrents.getClients();

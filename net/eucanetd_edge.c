@@ -606,48 +606,114 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
     edgeConfig->gni = pGni;
     edgeConfig->config = pConfig;
     
-    rc = gni_find_self_cluster(pGni, &(edgeConfig->my_cluster));
+    rc = extract_edge_config_from_gni(edgeConfig);
     if (rc) {
-        LOGERROR("unable to find cluster in global network view: check network config\n");
-        return (EUCANETD_RUN_ERROR_API);
-    }
-    rc = gni_find_self_node(pGni, &(edgeConfig->my_node));
-    if (rc) {
-        LOGERROR("unable to find node in global network view: check network config\n");
+        LOGDEBUG("failed to populate edgeConfig\n");
         return (EUCANETD_RUN_ERROR_API);
     }
 
-    rc = gni_node_get_instances(pGni, edgeConfig->my_node, NULL, 0, NULL, 0,
-            &(edgeConfig->my_instances), &(edgeConfig->max_my_instances));
-    if (rc) {
-        LOGWARN("unable to find instances hosted by this NC.\n");
-        return (EUCANETD_RUN_ERROR_API);
-    }
-    
-    rc = gni_get_secgroups_from_instances(pGni, edgeConfig->my_instances, edgeConfig->max_my_instances,
-            &(edgeConfig->my_sgs), &(edgeConfig->max_my_sgs));
-    if (rc) {
-        LOGWARN("unable to find security groups of instances hosted by this NC.\n");
-        return (EUCANETD_RUN_ERROR_API);
+    boolean do_edge_update = TRUE;
+    int do_instances = 1;
+    int do_sgs = 1;
+    int do_allprivate = 1;
+    if (pGniApplied && (pGni != pGniApplied)) {
+        edgeConfigApplied->gni = pGniApplied;
+        edgeConfigApplied->config = pConfig;
+
+        rc = extract_edge_config_from_gni(edgeConfigApplied);
+        if (!rc) {
+            if (!cmp_edge_config(edgeConfig, edgeConfigApplied, &do_instances,
+                    &do_sgs, &do_allprivate)) {
+                do_edge_update = FALSE;
+                LOGINFO("\tSystem is already up-to-date\n");
+            }
+        }
     }
 
-    rc = gni_get_referenced_secgroups(pGni, edgeConfig->my_sgs, edgeConfig->max_my_sgs,
-            &(edgeConfig->ref_sgs), &(edgeConfig->max_ref_sgs));
-    if (rc) {
-        LOGWARN("unable to find referenced security groups.\n");
-        return (EUCANETD_RUN_ERROR_API);
+    if (do_edge_update) {
+        if (do_allprivate) {
+            rc += do_edge_update_allprivate(edgeConfig);
+        }
+        if (do_sgs) {
+            rc += do_edge_update_sgs(edgeConfig);
+        }
+        if (do_instances) {
+            rc += do_edge_update_eips(edgeConfig);
+            rc += do_edge_update_l2(edgeConfig);
+            rc += do_edge_update_ips(edgeConfig);
+        }
     }
-    
-    rc += do_edge_update_sgs(edgeConfig);
-    rc += do_edge_update_eips(edgeConfig);
-    rc += do_edge_update_l2(edgeConfig);
-    rc += do_edge_update_ips(edgeConfig);
     rc += do_edge_update_netmeter(edgeConfig);
 
     if (rc) {
         ret = EUCANETD_RUN_ERROR_API;
     }
     return (ret);
+}
+
+/**
+ * Updates the list of IP addresses in EUCA_ALLPRIVATE ipset.
+ * @param edge [in] pointer to EDGE configuration structure
+ * @return 0 on success. Positive integer on any error during processing.
+ */
+int do_edge_update_allprivate(edge_config *edge) {
+    int rc = 0;
+    int slashnet = 0;
+    char *strptra = NULL;
+    char *vmgwip = NULL;
+    struct timeval tv = { 0 };
+
+    eucanetd_timer(&tv);
+    LOGTRACE("Updating EUCA_ALLPRIVATE ipset.\n");
+
+    // Is EDGE configuration NULL?
+    if (!edge || !edge->config || !edge->gni) {
+        LOGERROR("Invalid argument: cannot update core ipset with NULL configuration.\n");
+        return (1);
+    }
+
+    // pull in latest IPS state
+    rc |= ips_handler_repopulate(edge->config->ips);
+
+    if (rc) {
+        LOGERROR("Failed to load ipset state\n");
+        return (1);
+    }
+
+    // reset and create ipset for allprivate
+    ips_handler_add_set(edge->config->ips, "EUCA_ALLPRIVATE");
+    ips_set_flush(edge->config->ips, "EUCA_ALLPRIVATE");
+
+    // Populate ipset with all private IPs
+    for (int i = 0; i < edge->gni->max_instances; i++) {
+        gni_instance *inst = edge->gni->instances[i];
+        if (inst->privateIp) {
+            strptra = hex2dot(inst->privateIp);
+            ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", strptra);
+            EUCA_FREE(strptra);
+        }
+    }
+    // add additional private non-euca subnets to EUCA_ALLPRIVATE
+    for (int i = 0; i < edge->gni->max_subnets; i++) {
+        strptra = hex2dot(edge->gni->subnets[i].subnet);
+        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - edge->gni->subnets[i].netmask) + 1))));
+        ips_set_add_net(edge->config->ips, "EUCA_ALLPRIVATE", strptra, slashnet);
+        EUCA_FREE(strptra);
+    }
+
+    // VM gateway IP
+    vmgwip = hex2dot(edge->config->vmGatewayIP);
+    ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", vmgwip);
+    EUCA_FREE(vmgwip);
+
+    // Deploy our IP sets
+    rc = ips_handler_deploy(edge->config->ips, 0);
+    if (rc) {
+        LOGERROR("could not apply ipsets: check above log errors for details\n");
+        return (1);
+    }
+    LOGINFO("\tcore ipsets processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+    return (0);
 }
 
 /**
@@ -666,7 +732,6 @@ int do_edge_update_sgs(edge_config *edge) {
     int rc = 0;
     int ret = 0;
     int ipcount = 0;
-    int slashnet = 0;
     char *strptra = NULL;
     char *vmgwip = NULL;
     char *chainname = NULL;
@@ -735,26 +800,6 @@ int do_edge_update_sgs(edge_config *edge) {
         ips_set_add_net(edge->config->ips, "EUCA_NCPRIVATE", "127.0.0.1", 32);
     }
 
-    ips_handler_add_set(edge->config->ips, "EUCA_ALLPRIVATE");
-    ips_set_flush(edge->config->ips, "EUCA_ALLPRIVATE");
-
-    // Populate ipset with all private IPs
-    for (i = 0; i < edge->gni->max_instances; i++) {
-        gni_instance *inst = edge->gni->instances[i];
-        if (inst->privateIp) {
-            strptra = hex2dot(inst->privateIp);
-            ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", strptra);
-            EUCA_FREE(strptra);
-        }
-    }
-    // add additional private non-euca subnets to EUCA_ALLPRIVATE
-    for (i = 0; i < edge->gni->max_subnets; i++) {
-        strptra = hex2dot(edge->gni->subnets[i].subnet);
-        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - edge->gni->subnets[i].netmask) + 1))));
-        ips_set_add_net(edge->config->ips, "EUCA_ALLPRIVATE", strptra, slashnet);
-        EUCA_FREE(strptra);
-    }
-
     // Forward packets generated by instances hosted by this NC and not destined
     // to instances hosted by this NC (this should go to out of this NC). Packets
     // destined to instances hosted by this NC are subject to SG chains
@@ -762,10 +807,6 @@ int do_edge_update_sgs(edge_config *edge) {
             "-m set ! --match-set EUCA_NCPRIVATE dst -j ACCEPT");
     ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", rule);
     
-    // VM gateway IP
-    vmgwip = hex2dot(edge->config->vmGatewayIP);
-    ips_set_add_ip(edge->config->ips, "EUCA_ALLPRIVATE", vmgwip);
-
     // add referenced SG ipsets
     for (i = 0; i < edge->max_ref_sgs; i++) {
         secgroup = edge->ref_sgs[i];
@@ -1786,6 +1827,54 @@ int free_edge_netmeter(edge_netmeter *nm) {
 }
 
 /**
+ * Extracts state relevant to this NC from gni and stores in edge. edge datastructure
+ * is assumed to have the pointer to its GNI pre-populated.
+ * @param edge [out] edge_config data structure to store the extracted information
+ * @return 0 on success. 1 on any error.
+ */
+int extract_edge_config_from_gni(edge_config *edge) {
+    int rc = 0;
+    if (!edge || !edge->gni || !edge->config) {
+        LOGWARN("Invalid argument: cannot extract gni information to/from NULL\n");
+        return (1);
+    }
+
+    rc = gni_find_self_cluster(edge->gni, &(edge->my_cluster));
+    if (rc) {
+        LOGERROR("unable to find cluster in global network view: check network config\n");
+        return (1);
+    }
+
+    rc = gni_find_self_node(edge->gni, &(edge->my_node));
+    if (rc) {
+        LOGERROR("unable to find node in global network view: check network config\n");
+        return (1);
+    }
+
+    rc = gni_node_get_instances(edge->gni, edge->my_node, NULL, 0, NULL, 0,
+            &(edge->my_instances), &(edge->max_my_instances));
+    if (rc) {
+        LOGWARN("unable to find instances hosted by this NC.\n");
+        return (1);
+    }
+    
+    rc = gni_get_secgroups_from_instances(edge->gni, edge->my_instances, edge->max_my_instances,
+            &(edge->my_sgs), &(edge->max_my_sgs));
+    if (rc) {
+        LOGWARN("unable to find security groups of instances hosted by this NC.\n");
+        return (1);
+    }
+
+    rc = gni_get_referenced_secgroups(edge->gni, edge->my_sgs, edge->max_my_sgs,
+            &(edge->ref_sgs), &(edge->max_ref_sgs));
+    if (rc) {
+        LOGWARN("unable to find referenced security groups.\n");
+        return (1);
+    }
+    return (0);
+}
+
+/**
  * Searches an array of edge_netmeter_instance pointers for the entry specified in the
  * argument.
  * @param nms [i/o] pointer to an array of edge_netmeter_instance pointers
@@ -1962,9 +2051,9 @@ int edge_dump_netmeter(edge_config *edge) {
             if (nm->updated) {
                 fprintf(NMFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
                         nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
-                fprintf(SRFH, "%s\t%ld\tNetworkInExternal\tsummation\tdefault\t%ld\n",
+                fprintf(SRFH, "%s\t%ld\tNetworkInExternal\tsummation\ttotal\t%ld\n",
                         nm->instance_id, timestamp, nm->bytes_in);
-                fprintf(SRFH, "%s\t%ld\tNetworkOutExternal\tsummation\tdefault\t%ld\n",
+                fprintf(SRFH, "%s\t%ld\tNetworkOutExternal\tsummation\ttotal\t%ld\n",
                         nm->instance_id, timestamp, nm->bytes_out);
             } else {
                 fprintf(DFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
@@ -2006,4 +2095,113 @@ boolean is_my_ip(edge_config *edge, u32 ip) {
         if (ip == edge->my_instances[i].publicIp) return (TRUE);
     }
     return (FALSE);
+}
+
+/**
+ * Compares edge_config data structures a and b.
+ * @param a [in] edge_config data structure of interest
+ * @param b [in] edge_config data structure of interest
+ * @param instances_diff [out] optionally set to 1 iff instances local to NC in a and b differ
+ * @param sgs_diff [out] optionally set to 1 iff security groups in a an b differ
+ * @param instances_diff [out] optionally set to 1 iff instances in a and b differ
+ * @return 0 if properties of a and b matches. Properties gni and config are
+ * not taken into account. Non-zero if properties that differ are found.
+ */
+int cmp_edge_config(edge_config *a, edge_config *b, int *my_instances_diff,
+        int *sgs_diff, int *instances_diff) {
+    int abmatch = 1;
+
+    if (my_instances_diff) {
+        *my_instances_diff = 0;
+    }
+    if (sgs_diff) {
+        *sgs_diff = 0;
+    }
+    if (instances_diff) {
+        *instances_diff = 0;
+    }
+
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        abmatch = 0;
+    }
+    
+    // Only compare the name of cluster (should not differ in normal use)
+    if (abmatch && a->my_cluster && b->my_cluster) {
+        if (strcmp(a->my_cluster->name, b->my_cluster->name)) {
+            abmatch = 0;
+        }
+    } else {
+        abmatch = 0;
+    }
+    
+    // Only compare the name of node (should not differ in normal use)
+    if (abmatch && a->my_node && b->my_node) {
+        if (strcmp(a->my_node->name, b->my_node->name)) {
+            abmatch = 0;
+        }
+    } else {
+        abmatch = 0;
+    }
+    
+    // Compare instances
+    if (abmatch && a->my_instances && b->my_instances) {
+        if (a->max_my_instances != b->max_my_instances) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_my_instances && abmatch; i++) {
+                if (cmp_gni_instance(&(a->my_instances[i]), &(b->my_instances[i]))) {
+                    abmatch = 0;
+                }
+            }
+        }
+    } else {
+        abmatch = 0;
+    }
+    if (!abmatch && my_instances_diff) {
+        *my_instances_diff = 1;
+    }
+    
+    // Compare security groups
+    if (abmatch && a->my_sgs && b->my_sgs) {
+        if (a->max_my_sgs != b->max_my_sgs) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_my_sgs && abmatch; i++) {
+                if (cmp_gni_secgroup(a->my_sgs[i], b->my_sgs[i], NULL, NULL, NULL)) {
+                    abmatch = 0;
+                }
+            }
+        }
+    } else {
+        abmatch = 0;
+    }
+    if (!abmatch && sgs_diff) {
+        *sgs_diff = 1;
+    }
+
+    // Compare all instances
+    if (abmatch && a->gni && b->gni) {
+        if (a->gni->max_instances != b->gni->max_instances) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->gni->max_instances && abmatch; i++) {
+                if (cmp_gni_instance(a->gni->instances[i], b->gni->instances[i])) {
+                    abmatch = 0;
+                }
+            }
+        }
+    } else {
+        abmatch = 0;
+    }
+    if (!abmatch && instances_diff) {
+        *instances_diff = 1;
+    }
+
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
 }

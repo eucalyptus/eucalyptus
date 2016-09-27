@@ -287,7 +287,9 @@ public class Hosts {
     },
     ;
     private final long                            interval;
-    private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
+    private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool(
+                                                                     32,
+                                                                     Threads.threadFactory( "host-cleanup-pool-%d" ) );
     private static final Lock                     canHasChecks = new ReentrantLock( );
 
     private PeriodicMembershipChecks( long interval ) {
@@ -402,7 +404,8 @@ public class Hosts {
 
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
     INSTANCE;
-    private static final ExecutorService dbActivation = Executors.newFixedThreadPool( 32 );
+    private static final ExecutorService dbActivation =
+        Executors.newFixedThreadPool( 32, Threads.threadFactory( "host-db-activation-pool-%d" ) );
 
     private String printMap( String prefix ) {
       String currentView = HostManager.getMembershipChannel( ).getViewAsString( );
@@ -551,7 +554,7 @@ public class Hosts {
           }
         }
       };
-      Threads.newThread( mergeViews ).start( );
+      Threads.newThread( mergeViews, Threads.threadUniqueName( "host-merge-view" ) ).start( );
     }
 
   }

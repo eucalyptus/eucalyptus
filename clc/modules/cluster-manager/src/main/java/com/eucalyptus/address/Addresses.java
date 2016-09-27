@@ -134,6 +134,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+import groovy.lang.Closure;
 
 public class Addresses {
 
@@ -441,6 +442,13 @@ public class Addresses {
         }
       }
       return release;
+    }
+  }
+
+  public static <R> R withBatch( final Closure<R> closure ) {
+    //noinspection unused
+    try ( final AddressingBatch batch = Addresses.getInstance( ).batch( ) ) {
+      return closure.call( );
     }
   }
 
@@ -790,6 +798,10 @@ public class Addresses {
       if ( flushRequested ) {
         flushNow( );
       }
+      reset( );
+    }
+
+    public static void reset( ) {
       batchThreadLocal.set( null );
     }
 

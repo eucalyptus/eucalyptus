@@ -1855,8 +1855,11 @@ char **build_argv(const char *first, va_list va)
     return (argv);
 }
 
-void log_argv(char **argv)
-{
+/**
+ * Expands and logs an array of strings (terminated by a NULL string pointer)
+ * @param argv [in] pointer to an array of strings of interest
+ */
+void log_argv(char **argv) {
     int args = 0;
     char cmd[10240] = "";
 
@@ -1875,7 +1878,7 @@ void log_argv(char **argv)
         }
         euca_strncat(cmd, formatted, sizeof(cmd));
     }
-    fprintf(stderr, "child process %d executing: %s\n", getpid(), cmd);
+    LOGDEBUG("child process %d executing: %s\n", getpid(), cmd);
 }
 
 //!

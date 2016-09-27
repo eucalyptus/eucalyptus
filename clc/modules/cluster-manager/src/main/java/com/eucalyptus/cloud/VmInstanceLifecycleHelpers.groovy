@@ -111,7 +111,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-
 import org.apache.log4j.Logger
 import org.springframework.core.OrderComparator
 
@@ -291,6 +290,15 @@ class VmInstanceLifecycleHelpers {
       return publicIPResource!=null && publicIPResource.getValue()!=null ?
           Addresses.getInstance().lookupActiveAddress( publicIPResource.value ) :
           null
+    }
+
+    static void withBatch( final Closure<?> closure ) {
+      final Addresses.AddressingBatch batch = Addresses.getInstance( ).batch( )
+      try {
+        closure.call( )
+      } finally {
+        batch.close( )
+      }
     }
 
     @Nullable
@@ -517,7 +525,10 @@ class VmInstanceLifecycleHelpers {
       if ( address ) {
         builder.onBuild({ VmInstance instance ->
           if ( !instance.vpcId ) { // Network interface handles public IP for VPC
-            Addresses.getInstance( ).assign( address, instance )
+            withBatch {
+              Addresses.getInstance( ).assign( address, instance )
+              Addresses.AddressingBatch.reset( ); // Flush after running
+            }
             VmInstances.updatePublicAddress( instance, address.address )
           }
         })
@@ -1167,13 +1178,16 @@ class VmInstanceLifecycleHelpers {
           ) )
           resource.attachmentId = networkInterface.attachment.attachmentId;
           Address address = getAddress( resourceToken )
-          if ( address != null ) {
-            NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
-          } else {
-            if ( networkInterface.associated ) {
-              VmInstances.updatePublicAddress( instance, networkInterface.association.publicIp )
+          withBatch {
+            if ( address != null ) {
+              NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
+            } else {
+              if ( networkInterface.associated ) {
+                VmInstances.updatePublicAddress( instance, networkInterface.association.publicIp )
+              }
+              NetworkInterfaceHelper.start( networkInterface, instance )
             }
-            NetworkInterfaceHelper.start( networkInterface, instance )
+            Addresses.AddressingBatch.reset( ) // Flush after running
           }
           // Add so eni information is available from instance, not for
           // persistence
@@ -1224,7 +1238,10 @@ class VmInstanceLifecycleHelpers {
                 secondaryResource.deleteOnTerminate
             ) )
             secondaryResource.attachmentId = secondaryNetworkInterface.attachment.attachmentId
-            NetworkInterfaceHelper.start( secondaryNetworkInterface, instance )
+            withBatch {
+              NetworkInterfaceHelper.start(secondaryNetworkInterface, instance)
+              Addresses.AddressingBatch.reset( ) // Flush after running
+            }
             // Add so eni information is available from instance, not for
             // persistence
             instance.addNetworkInterface( secondaryNetworkInterface );
@@ -1250,7 +1267,7 @@ class VmInstanceLifecycleHelpers {
     @Override
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
-        if ( networkInterface.associated ) {
+        if ( networkInterface.associated && VmInstance.VmStateSet.DONE.contains( state ) ) {
           PublicAddresses.markDirty( networkInterface.association.publicIp, instance.partition );
         }
         if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {

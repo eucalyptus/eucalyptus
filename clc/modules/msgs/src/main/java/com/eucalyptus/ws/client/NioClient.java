@@ -92,6 +92,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusClusterException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.Client;
@@ -254,8 +255,8 @@ public class NioClient implements Client {
 
   private static synchronized ChannelFactory getClientChannelFactory( ) {
     if ( clientSocketFactory == null ) {
-      clientBossPool = new OrderedMemoryAwareThreadPoolExecutor( 4, 10485760l, 200 * 1024 * 1024l, 500l, TimeUnit.MILLISECONDS );
-      clientWorkerPool = new OrderedMemoryAwareThreadPoolExecutor( 16, 10485760l, 200 * 1024 * 1024l, 500l, TimeUnit.MILLISECONDS );
+      clientBossPool = new OrderedMemoryAwareThreadPoolExecutor( 4, 10485760l, 200 * 1024 * 1024l, 500l, TimeUnit.MILLISECONDS, Threads.threadFactory( "web-services-client-boss-pool-%d" ) );
+      clientWorkerPool = new OrderedMemoryAwareThreadPoolExecutor( 16, 10485760l, 200 * 1024 * 1024l, 500l, TimeUnit.MILLISECONDS, Threads.threadFactory( "web-services-client-work-pool-%d" ) );
       clientSocketFactory = new NioClientSocketChannelFactory( clientBossPool, clientWorkerPool, 16 );
     }
     return clientSocketFactory;

@@ -456,9 +456,9 @@ int main(int argc, char **argv) {
             }
             if (!IS_NETMODE_VPCMIDO(pGni)) {
                 eucanetdPeer = eucanetd_detect_peer(pGni);
-                if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_VALID(eucanetdPeer))) {
+                if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_NC(eucanetdPeer))) {
                     if (i % 100 == 0) {
-                        LOGWARN("eucanetd in mode %s requires a CC or NC service peer\n", config->netMode);
+                        LOGWARN("eucanetd in mode %s requires a NC service peer\n", config->netMode);
                     }
                     rc = 1;
                 } else {

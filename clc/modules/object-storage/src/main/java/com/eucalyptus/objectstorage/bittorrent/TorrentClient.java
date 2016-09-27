@@ -67,6 +67,7 @@ import java.io.File;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.system.Threads;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 
@@ -76,6 +77,7 @@ public class TorrentClient extends Thread {
   private Process proc;
 
   public TorrentClient(String torrentPath, String absoluteObjectPath) {
+    super( Threads.threadUniqueName( "osg-torrent-client" ) );
     this.torrentPath = torrentPath;
     this.absoluteObjectPath = absoluteObjectPath;
   }
