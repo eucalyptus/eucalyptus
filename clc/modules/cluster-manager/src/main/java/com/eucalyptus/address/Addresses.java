@@ -445,9 +445,9 @@ public class Addresses {
     }
   }
 
-  public <R> R batch( final Closure<R> closure ) {
+  public static <R> R withBatch( final Closure<R> closure ) {
     //noinspection unused
-    try ( final AddressingBatch batch = batch( ) ) {
+    try ( final AddressingBatch batch = Addresses.getInstance( ).batch( ) ) {
       return closure.call( );
     }
   }

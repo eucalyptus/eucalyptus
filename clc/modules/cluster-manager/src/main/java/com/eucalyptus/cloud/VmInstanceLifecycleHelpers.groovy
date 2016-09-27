@@ -111,7 +111,6 @@ import edu.ucsb.eucalyptus.cloud.VmInfo
 import edu.ucsb.eucalyptus.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-
 import org.apache.log4j.Logger
 import org.springframework.core.OrderComparator
 
@@ -291,6 +290,15 @@ class VmInstanceLifecycleHelpers {
       return publicIPResource!=null && publicIPResource.getValue()!=null ?
           Addresses.getInstance().lookupActiveAddress( publicIPResource.value ) :
           null
+    }
+
+    static void withBatch( final Closure<?> closure ) {
+      final Addresses.AddressingBatch batch = Addresses.getInstance( ).batch( )
+      try {
+        closure.call( )
+      } finally {
+        batch.close( )
+      }
     }
 
     @Nullable
@@ -517,7 +525,7 @@ class VmInstanceLifecycleHelpers {
       if ( address ) {
         builder.onBuild({ VmInstance instance ->
           if ( !instance.vpcId ) { // Network interface handles public IP for VPC
-            Addresses.getInstance( ).batch{
+            withBatch {
               Addresses.getInstance( ).assign( address, instance )
               Addresses.AddressingBatch.reset( ); // Flush after running
             }
@@ -1170,7 +1178,7 @@ class VmInstanceLifecycleHelpers {
           ) )
           resource.attachmentId = networkInterface.attachment.attachmentId;
           Address address = getAddress( resourceToken )
-          Addresses.getInstance( ).batch{
+          withBatch {
             if ( address != null ) {
               NetworkInterfaceHelper.associate( address, networkInterface, Optional.of( instance ) )
             } else {
@@ -1230,7 +1238,7 @@ class VmInstanceLifecycleHelpers {
                 secondaryResource.deleteOnTerminate
             ) )
             secondaryResource.attachmentId = secondaryNetworkInterface.attachment.attachmentId
-            Addresses.getInstance( ).batch {
+            withBatch {
               NetworkInterfaceHelper.start(secondaryNetworkInterface, instance)
               Addresses.AddressingBatch.reset( ) // Flush after running
             }
