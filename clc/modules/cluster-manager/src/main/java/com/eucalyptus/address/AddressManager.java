@@ -300,6 +300,9 @@ public class AddressManager {
             final NetworkInterface oldNetworkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
             try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
               final NetworkInterface eni = Entities.merge( oldNetworkInterface );
+              if ( eni.isAssociated( ) ) {
+                PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getPartition( ) );
+              }
               addresses.unassign( address, null );
               eni.disassociate( );
               if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
@@ -317,7 +320,7 @@ public class AddressManager {
                 CloudMetadatas.toDisplayName( ) );
 
             if ( eni.isAssociated( ) ) {
-              PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getAvailabilityZone( ) );
+              PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getPartition( ) );
               NetworkInterfaceHelper.releasePublic( eni );
               eni.disassociate( );
               if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
