@@ -293,9 +293,15 @@ int ebt_handler_deploy(ebt_handler *ebth) {
         return (1);
     }
 
+    // Create tmp files as non-root
     char *strptr = strdup(ebth->cmdprefix);
+    ebt_table *tablesbak = ebth->tables;
+    int maxtablesbak = ebth->max_tables;
     ebt_handler_init(ebth, strptr);
+    ebth->tables = tablesbak;
+    ebth->max_tables = maxtablesbak;
     EUCA_FREE(strptr);
+
     ebt_handler_update_refcounts(ebth);
 
     if (euca_execlp(NULL, ebth->cmdprefix, "ebtables", "--atomic-file", ebth->ebt_filter_file, "-t", "filter", "--atomic-init", NULL) != EUCA_OK) {

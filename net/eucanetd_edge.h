@@ -111,6 +111,7 @@ typedef struct edge_config_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int do_edge_update_allprivate(edge_config *edge);
 int do_edge_update_sgs(edge_config *edge);
 int do_edge_update_eips(edge_config *edge);
 int do_edge_update_l2(edge_config *edge);
@@ -124,6 +125,8 @@ int free_edge_netmeter_instance(edge_netmeter_instance *nm);
 int free_edge_netmeter_instances(edge_netmeter_instance **nms, int max_nms);
 int free_edge_netmeter(edge_netmeter *nm);
 
+int extract_edge_config_from_gni(edge_config *edge);
+
 edge_netmeter_instance *find_edge_netmeter_instance(edge_netmeter_instance ***nms,
         int *max_nms, char *instance_id, char *ipaddr, boolean force);
 int clean_edge_netmeter_instances(edge_netmeter_instance ***nms, int *max_nms);
@@ -132,6 +135,9 @@ int clear_edge_netmeter_tag(edge_netmeter *nm);
 int edge_dump_netmeter(edge_config *edge);
 
 boolean is_my_ip(edge_config *edge, u32 ip);
+
+int cmp_edge_config(edge_config *a, edge_config *b, int *my_instances_diff,
+        int *sgs_diff, int *instances_diff);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

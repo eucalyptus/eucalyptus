@@ -6455,10 +6455,11 @@ int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *e
 }
 
 /**
- * Compares two gni_interface structures in the argument.
+ * Compares two gni_instance structures a and b. a and b are assumed to represent
+ * VPC mode interfaces.
  *
- * @param a [in] gni_interface structure of interest.
- * @param b [in] gni_interface structure of interest.
+ * @param a [in] gni_instance structure of interest.
+ * @param b [in] gni_instance structure of interest.
  * @param pubip_diff [out] set to 1 iff public IP of a and b differ.
  * @param sdc_diff [out] set to 1 iff src/dst check flag of a and b differ.
  * @param host_diff [out] set to 1 iff host/node of a and b differ.
@@ -6519,6 +6520,48 @@ int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sd
     if (sg_diff && (sgmatch == 1)) {
         *sg_diff = 0;
     }
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Compares gni_instance structures and b.
+ *
+ * @param a [in] gni_instance structure of interest.
+ * @param b [in] gni_instance structure of interest.
+ * @return 0 if name and other properties of a and b match. Non-zero otherwise.
+ */
+int cmp_gni_instance(gni_instance *a, gni_instance *b) {
+    int abmatch = 1;
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        abmatch = 0;
+    } else {
+        if (a->publicIp != b->publicIp) {
+            abmatch = 0;
+        }
+        if (strcmp(a->node, b->node)) {
+            abmatch = 0;
+        }
+        if (a->max_secgroup_names != b->max_secgroup_names) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_secgroup_names; i++) {
+                if (strcmp(a->secgroup_names[i].name, b->secgroup_names[i].name)) {
+                    abmatch = 0;
+                    break;
+                }
+            }
+        }
+    }
+
     if (abmatch) {
         return (0);
     }
