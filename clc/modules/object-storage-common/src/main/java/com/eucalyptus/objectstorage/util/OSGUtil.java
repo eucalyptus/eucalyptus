@@ -247,7 +247,7 @@ public class OSGUtil {
       // Headers are matched case-insensitively.
 
       List<String> allowedHeaders = corsRule.getAllowedHeaders();
-      List<Pattern> allowedHeaderPatternList = new ArrayList<Pattern>(corsRule.getAllowedHeaders().size());
+      List<Pattern> allowedHeaderPatternList = new ArrayList<Pattern>(allowedHeaders.size());
       
       // Predicate for matching request header with allowed headers
       Predicate<String> headerMatch = new Predicate<String>() {
@@ -255,9 +255,12 @@ public class OSGUtil {
         public boolean apply(String requestHeader) {
           for (int idx = 0; idx < allowedHeaders.size(); idx++) {
             Pattern allowedHeaderPattern;
-            if ((allowedHeaderPattern = allowedHeaderPatternList.get(idx)) == null) {
+            // Only generate the pattern if we haven't already
+            if (idx >= allowedHeaderPatternList.size()) {
               allowedHeaderPattern = generatePattern.apply(allowedHeaders.get(idx));
               allowedHeaderPatternList.add(allowedHeaderPattern);
+            } else {
+              allowedHeaderPattern = allowedHeaderPatternList.get(idx);
             }
             Matcher matcher = allowedHeaderPattern.matcher(requestHeader);
             if (matcher.matches()) {
