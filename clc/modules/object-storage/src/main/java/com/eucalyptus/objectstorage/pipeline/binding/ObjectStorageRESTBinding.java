@@ -93,6 +93,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.w3c.dom.Node;
 
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
@@ -106,6 +107,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsConfigUnsupportedMethodException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidTagErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
@@ -130,6 +132,7 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -146,6 +149,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
@@ -446,6 +450,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
           } else if (params.containsKey(ObjectStorageProperties.BucketParameter.versioning.toString())) {
             getVersioningStatus(operationParams, httpRequest);
           }
+        } else if (ObjectStorageProperties.HTTPVerb.OPTIONS.toString().equals(verb)) {
+            operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
         }
       } else {
         operationKey = SERVICE + verb;
@@ -602,6 +608,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.cors.toString())) {
       operationParams.put("corsConfiguration", getCors(httpRequest));
     }
+
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
+        operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
+      }
 
     ArrayList paramsToRemove = new ArrayList();
 
@@ -1498,6 +1508,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
         for (int idx = 0; idx < rules.getLength(); idx++) {
           CorsRule extractedCorsRule = extractCorsRule(xmlParser, rules.item(idx));
+          extractedCorsRule.setSequence(idx);
           corsConfigurationType.getRules().add(extractedCorsRule);
         }
       } catch (S3Exception e) {
@@ -1513,8 +1524,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   private CorsRule extractCorsRule(XMLParser parser, Node node) throws S3Exception {
     CorsRule corsRule = new CorsRule();
-
-    LOG.debug("In extractCorsRule"); // LPT
 
     try {
 
@@ -1537,19 +1546,22 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
 
-      String[] corsElementArray = null;
+      List<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
+      if (corsAllowedMethods != null) {
+        for (String corsAllowedMethod : corsAllowedMethods) {
+          if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethod))) {
+            CorsConfigUnsupportedMethodException s3e = new CorsConfigUnsupportedMethodException(corsAllowedMethod);
+            throw s3e;
+          }
+        }
+      }
+      corsRule.setAllowedMethods(corsAllowedMethods);
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedMethod");
-      corsRule.setAllowedMethods(corsElementArray);
+      corsRule.setAllowedOrigins(extractCorsElementList(parser, node, "AllowedOrigin"));
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedOrigin");
-      corsRule.setAllowedOrigins(corsElementArray);
+      corsRule.setAllowedHeaders(extractCorsElementList(parser, node, "AllowedHeader"));
 
-      corsElementArray = extractCorsElementArray(parser, node, "AllowedHeader");
-      corsRule.setAllowedHeaders(corsElementArray);
-
-      corsElementArray = extractCorsElementArray(parser, node, "ExposeHeader");
-      corsRule.setExposeHeaders(corsElementArray);
+      corsRule.setExposeHeaders(extractCorsElementList(parser, node, "ExposeHeader"));
 
     } catch (S3Exception e) {
       throw e;
@@ -1562,37 +1574,50 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return corsRule;
   }
 
-  private String[] extractCorsElementArray(XMLParser parser, Node node, String element) throws S3Exception {
-    String[] elementArray = null;
-    try {
+  private List<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
+      List<String> elementList = new ArrayList<String>();
+      try {
 
-      DTMNodeList elementNodes = parser.getNodes(node, element);
-      if (elementNodes == null) {
-        throw new MalformedXMLException("/CORSConfiguration/CORSRule/" + element);
-      }
-      int elementNodesSize = elementNodes.getLength();
-      LOG.debug("elementNodes list size is " + elementNodesSize); // LPT
-
-      if (elementNodesSize > 0) {
-        elementArray = new String[elementNodesSize];
-        for (int idx = 0; idx < elementNodes.getLength(); idx++) {
-          Node elementNode = elementNodes.item(idx);
-          LOG.debug("Node value is <" + elementNode.getNodeValue() + ">"); // LPT
-          elementArray[idx] = elementNode.getFirstChild().getNodeValue();
-          LOG.debug("Node first child value is <" + elementArray[idx] + ">"); // LPT
+        DTMNodeList elementNodes = parser.getNodes(node, element);
+        if (elementNodes == null) {
+          throw new MalformedXMLException("/CORSConfiguration/CORSRule/" + element);
         }
+        int elementNodesSize = elementNodes.getLength();
+
+        if (elementNodesSize > 0) {
+          for (int idx = 0; idx < elementNodes.getLength(); idx++) {
+            Node elementNode = elementNodes.item(idx);
+            elementList.add(elementNode.getFirstChild().getNodeValue());
+          }
+        }
+      } catch (S3Exception e) {
+        throw e;
+      } catch (Exception ex) {
+        MalformedXMLException e = new MalformedXMLException("/CORSConfiguration/CORSRule");
+        e.initCause(ex);
+        throw e;
       }
-    } catch (S3Exception e) {
-      throw e;
-    } catch (Exception ex) {
-      MalformedXMLException e = new MalformedXMLException("/CORSConfiguration/CORSRule");
-      e.initCause(ex);
-      throw e;
+
+      return elementList;
     }
 
-    return elementArray;
-  }
+    private PreflightRequest processPreflightRequest(MappingHttpRequest httpRequest) throws S3Exception {
+      PreflightRequest preflightRequest = new PreflightRequest();
 
+      preflightRequest.setOrigin(httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+      preflightRequest.setMethod(httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_METHOD));
+      String requestHeadersFromRequest = httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
+      if (requestHeadersFromRequest != null) {
+        String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
+        List<String> requestHeaders = new ArrayList<String>();
+        for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
+          requestHeaders.add(requestHeadersArrayFromRequest[idx]);
+        }
+        preflightRequest.setRequestHeaders(requestHeaders);
+      }
+      return preflightRequest;
+    }
+    
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
     DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
     String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);

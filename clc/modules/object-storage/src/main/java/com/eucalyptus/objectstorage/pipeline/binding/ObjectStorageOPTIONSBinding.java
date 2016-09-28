@@ -74,12 +74,14 @@ public class ObjectStorageOPTIONSBinding extends ObjectStorageRESTBinding {
 
   private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
   static {
+      // Cross-Origin Resource Sharing (CORS) pre-flight OPTIONS request
+      // can be sent against either a bucket or object, same behavior.
+      SUPPORTED_OPS.put(OBJECT + HttpMethod.OPTIONS.toString(), "PreflightCheckCors");
+      SUPPORTED_OPS.put(BUCKET + HttpMethod.OPTIONS.toString(), "PreflightCheckCors");
   }
 
   private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
   static {
-    // Cross-Origin Resource Sharing (cors)
-    UNSUPPORTED_OPS.put(OBJECT + HttpMethod.OPTIONS.toString(), "OPTIONS request on object");
   }
 
   @Override

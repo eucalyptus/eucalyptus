@@ -51,9 +51,12 @@ import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
+import com.eucalyptus.storage.msgs.s3.PreflightRequest
+import com.eucalyptus.storage.msgs.s3.PreflightResponse
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration
 import com.eucalyptus.storage.msgs.s3.Upload
 import com.eucalyptus.util.ChannelBufferStreamingInputStream
+
 import com.google.common.collect.Maps
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -486,7 +489,7 @@ public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
 }
 
-/* PUT /bucket/object with x-amz-copy-src header */
+/* PUT /bucket/object with x-amz-copy-source header */
 
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_GETOBJECT])
@@ -864,6 +867,20 @@ public class DeleteBucketCorsType extends ObjectStorageRequestType {}
 
 public class DeleteBucketCorsResponseType extends ObjectStorageResponseType {}
 
+/* OPTIONS /bucket/object */
+@AdminOverrideAllowed
+// Does not require any specified permissions
+//@RequiresPermission()
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+// Does not require any specified ACL permissions
+//@RequiresACLPermission()
+public class PreflightCheckCorsType extends ObjectStorageRequestType {
+  PreflightRequest preflightRequest;
+}
+
+public class PreflightCheckCorsResponseType extends ObjectStorageResponseType {
+  PreflightResponse preflightResponse;
+}
 
 // AddObject not used yet
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}

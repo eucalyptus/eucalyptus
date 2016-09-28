@@ -93,7 +93,7 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
         "GetBucketVersioningStatus");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GetBucketTagging");
-    // Cross-Origin Resource Sharing (cors)
+    // Cross-Origin Resource Sharing (CORS)
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GetBucketCors");
 
     // Multipart uploads

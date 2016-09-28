@@ -126,6 +126,9 @@ class S3Exception extends ObjectStorageException {
 
   def S3Exception(String errorCode, String description, HttpResponseStatus statusCode, String requestMethod) {
     super();
+    this.code = errorCode;
+    this.message = description;
+    this.status = statusCode;
     this.requestMethod = requestMethod;
   }
 }

@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -38,6 +39,7 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.DateTimeFieldType;
@@ -73,6 +75,10 @@ import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightInvalidMethodException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoConfigException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNoOriginException;
+import com.eucalyptus.objectstorage.exceptions.s3.CorsPreflightNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.IllegalVersioningConfigurationException;
 import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
@@ -85,6 +91,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedXMLException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchCorsConfigurationException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
@@ -160,6 +167,8 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
+import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType;
@@ -181,6 +190,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.objectstorage.util.AclUtils;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
@@ -190,6 +200,7 @@ import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
@@ -197,6 +208,7 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
+import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
@@ -211,6 +223,8 @@ import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.PreflightRequest;
+import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -2012,110 +2026,225 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception {
-    Bucket bucket = getBucketAndCheckAuthorization(request);
-
-    // Get the CORS configuration from the back-end and copy results in.
-    GetBucketCorsResponseType reply = (GetBucketCorsResponseType) request.getReply();
-
     Boolean isEmpty = false;
+    String bucketName = "nullBucket";
+    GetBucketCorsResponseType response = null;
 
+    // Let most NullPointerExceptions be handled by the catch block.
     try {
+      Bucket bucket = getBucketAndCheckAuthorization(request);
+      bucketName = request.getBucket();
+      response = (GetBucketCorsResponseType) request.getReply();
+
       CorsConfiguration corsConfiguration = new CorsConfiguration();
       List<CorsRule> responseRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
       isEmpty = responseRules.isEmpty();
       if (!isEmpty) {
         corsConfiguration.setRules(responseRules);
-        reply.setCorsConfiguration(corsConfiguration);
+        response.setCorsConfiguration(corsConfiguration);
       }
+    } catch (S3Exception s3e) {
+      LOG.warn("Caught S3Exception while getting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with: ", s3e);
+      throw s3e;
     } catch (Exception ex) {
-      LOG.error("Caught exception while getting the CORS configuration for bucket <" + request.getBucket() + ">, error: " + ex.getMessage());
-      throw new InternalErrorException(request.getBucket());
+      LOG.warn("Caught general exception while getting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with 500 InternalError because of: ", ex);
+      throw new InternalErrorException(bucketName, ex);
     }
 
     if (isEmpty) {
-      // No CORS configuration exists. To match AWS, return 404 NotFound with 
-      // error code "NoSuchCORSConfiguration" and the following message.
-      S3Exception s3ex = new S3Exception("NoSuchCORSConfiguration", 
-          "The CORS configuration does not exist",
-          HttpResponseStatus.NOT_FOUND);
-      throw s3ex;    	
+      NoSuchCorsConfigurationException nscc = new NoSuchCorsConfigurationException(bucketName);
+      throw nscc;       
     }
-
-    return reply;
-
-  }
-
-  @Override
-  public SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception {
-    Bucket bucket = getBucketAndCheckAuthorization(request);
-
-    LOG.debug("In setBucketCors");
-    SetBucketCorsResponseType response = request.getReply();
-    String bucketName = request.getBucket();
-
-    List<CorsRule> goodRules = new ArrayList<>();
-
-    // Per AWS docs, max 100 CORS config rules.
-    // TODO: Validate by testing against AWS, gets checked prior to CORS config checking?
-    final int MAX_CORS_RULES = 100;
-    if (request.getCorsConfiguration() != null && 
-        request.getCorsConfiguration().getRules() != null &&
-        request.getCorsConfiguration().getRules().size() > MAX_CORS_RULES) {
-
-      MalformedXMLException ex = new MalformedXMLException(bucketName);
-      ex.setMessage("More than " + MAX_CORS_RULES + " rules in CORS configuration not allowed");
-      throw ex;
-    }
-
-    // Make sure names are unique and <= 255 chars.
-    List<String> savedRuleIds = new ArrayList<>();
-    String ruleId = null;
-    InvalidArgumentException invArgEx = null;
-    for (CorsRule rule : request.getCorsConfiguration().getRules()) {
-      if (rule == null) {
-        break;
-      }
-      ruleId = rule.getId();
-      if (ruleId != null && ruleId.length() > 0) {
-        for (String savedRuleId : savedRuleIds) {
-          if (ruleId.equals(savedRuleId)) {
-            invArgEx = new InvalidArgumentException(ruleId);
-            invArgEx.setMessage("RuleId must be unique. Found same ID for more than one rule");
-            throw invArgEx;
-          }
-          if (ruleId.length() > 255) {
-            invArgEx = new InvalidArgumentException(ruleId);
-            invArgEx.setMessage("RuleId > 255 characters");
-            throw invArgEx;
-          }
-        }
-        savedRuleIds.add(ruleId);
-      }
-      goodRules.add(rule);
-    }
-
-    try {
-      BucketCorsManagers.getInstance().addCorsRules(goodRules, bucket.getBucketUuid());
-    } catch (Exception ex) {
-      LOG.error("Caught exception while setting the CORS configuration for bucket <" + bucketName + ">, error: " + ex.getMessage());
-      throw new InternalErrorException(bucketName);
-    }
-
     return response;
 
   }
 
   @Override
-  public DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception {
-    Bucket bucket = getBucketAndCheckAuthorization(request);
-    DeleteBucketCorsResponseType response = request.getReply();
+  public SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception {
+    String bucketName = "nullBucket";
+    SetBucketCorsResponseType response = null;
+
+    // Let most NullPointerExceptions be handled by the catch block.
     try {
-      BucketCorsManagers.getInstance().deleteCorsRules(bucket.getBucketUuid());
-    } catch (Exception e) {
-      InternalErrorException ex = new InternalErrorException(bucket.getBucketName() + "?cors");
-      ex.setMessage("An exception was caught while deleting the CORS configuration for bucket <" + bucket.getBucketName()+ ">, error: " + ex.getMessage());
-      throw ex;
+      Bucket bucket = getBucketAndCheckAuthorization(request);
+      bucketName = request.getBucket();
+      response = (SetBucketCorsResponseType) request.getReply();
+      CorsConfiguration corsConfig = request.getCorsConfiguration();
+      // Per AWS docs, max 100 CORS config rules.
+      // TODO: Validate by testing against AWS, gets checked prior to CORS config checking?
+      final int MAX_CORS_RULES = 100;
+      if (corsConfig != null && 
+          corsConfig.getRules() != null &&
+          corsConfig.getRules().size() > MAX_CORS_RULES) {
+        MalformedXMLException ex = new MalformedXMLException(bucketName);
+        ex.setMessage("More than " + MAX_CORS_RULES + " rules in CORS configuration not allowed");
+        throw ex;
+      }
+
+      // Make sure names are unique and <= 255 chars.
+      HashSet<String> uniqueRuleIds = new HashSet<String>();
+      String ruleId = null;
+      InvalidArgumentException invArgEx = null;
+      
+      for (CorsRule rule : corsConfig.getRules()) {
+        if (rule == null) {
+          break;
+        }
+        ruleId = rule.getId();
+        if (ruleId != null && ruleId.length() > 0) {
+          if (ruleId.length() > 255) {
+            invArgEx = new InvalidArgumentException(ruleId);
+            invArgEx.setMessage("CORS RuleId > 255 characters");
+            throw invArgEx;
+          }
+          boolean unique = uniqueRuleIds.add(ruleId);
+          if (!unique) {
+            invArgEx = new InvalidArgumentException(ruleId);
+            invArgEx.setMessage("RuleId must be unique. Saw this rule more than once: " + ruleId);
+            throw invArgEx;
+            
+          }
+        }
+      }
+
+      BucketCorsManagers.getInstance().addCorsRules(corsConfig.getRules(), bucket.getBucketUuid());
+
+    } catch (S3Exception s3e) {
+      LOG.warn("Caught S3Exception while setting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with: ", s3e);
+      throw s3e;
+    } catch (Exception ex) {
+      LOG.warn("Caught general exception while setting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with 500 InternalError because of: ", ex);
+      throw new InternalErrorException(bucketName, ex);
     }
+
+    return response;
+  }
+
+  @Override
+  public DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception {
+    String bucketName = "nullBucket";
+    DeleteBucketCorsResponseType response = null;
+
+    // Let most NullPointerExceptions be handled by the catch block.
+    try {
+      Bucket bucket = getBucketAndCheckAuthorization(request);
+      bucketName = request.getBucket();
+      response = (DeleteBucketCorsResponseType) request.getReply();
+      
+      BucketCorsManagers.getInstance().deleteCorsRules(bucket.getBucketUuid());
+    } catch (S3Exception s3e) {
+      LOG.warn("Caught S3Exception while deleting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with: ", s3e);
+      throw s3e;
+    } catch (Exception ex) {
+      LOG.warn("Caught general exception while deleting the CORS configuration for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with 500 InternalError because of: ", ex);
+      throw new InternalErrorException(bucketName, ex);
+    }
+    return response;
+  }
+
+  @Override
+  public PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception {
+    String bucketName = "nullBucket";
+    PreflightCheckCorsResponseType response = null;
+
+    try {
+      // For a preflight request, we don't need to authenticate the client's 
+      // access to the bucket nor object in the request. We send back the 
+      // response headers regardless. This matches AWS behavior.
+      // We're not exposing any data from the bucket, just whether or
+      // not the client's proposed CORS request would be allowed or not,
+      // based on the CORS config. The actual CORS request can still fail
+      // based on authentication, independent of CORS.
+      // So, normally added to a method like this but not here:
+      // (left here commented out as an explainer)
+      // Bucket bucket = getBucketAndCheckAuthorization(request);
+      
+      bucketName = request.getBucket();
+      Bucket bucket = ensureBucketExists(bucketName);
+      String key = request.getKey();
+
+      PreflightRequest preflightRequest = request.getPreflightRequest();
+      response = request.getReply();
+
+      String requestOrigin = preflightRequest.getOrigin();
+      if (requestOrigin == null || requestOrigin.isEmpty()) {
+        CorsPreflightNoOriginException s3e = new CorsPreflightNoOriginException();
+        throw s3e;
+      }
+
+      String requestMethod = preflightRequest.getMethod();
+      if (requestMethod == null ||
+          !AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(requestMethod))) {
+        CorsPreflightInvalidMethodException s3e = new CorsPreflightInvalidMethodException(requestMethod);
+        throw s3e;
+      }
+
+      List<CorsRule> corsRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
+
+      if (corsRules == null || corsRules.isEmpty()) {
+        CorsPreflightNoConfigException s3e = new CorsPreflightNoConfigException(requestMethod,
+            key == null ? "BUCKET" : "OBJECT");
+        throw s3e;     
+      }
+
+      List<String> requestHeaders = preflightRequest.getRequestHeaders();
+      CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
+      
+      CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
+      if (corsRuleMatch == null) {
+        // No rule matched the request
+        CorsPreflightNotAllowedException s3e = new CorsPreflightNotAllowedException(requestMethod,
+            key == null ? "BUCKET" : "OBJECT");
+        throw s3e;     
+      }
+      
+      // We found a match, fill in the response fields
+      PreflightResponse responseFields = new PreflightResponse();
+      response.setPreflightResponse(responseFields);
+      
+      // If the origin we matched against is "*" (any origin allowed), then
+      // set the response's origin to "*" instead of the origin in the 
+      // request. Matches AWS behavior and W3 spec: (strange but true)
+      // https://www.w3.org/TR/cors/#resource-preflight-requests
+      responseFields.setOrigin(corsMatchResult.getAnyOrigin() ? "*" : requestOrigin);
+
+      // Return all the CORS rule's allowed methods in the response
+      responseFields.setMethods(corsRuleMatch.getAllowedMethods());
+      
+      // Return all of the request's Access-Control-Request-Headers ni the response
+      responseFields.setAllowedHeaders(preflightRequest.getRequestHeaders());
+
+      // Return all of the CORS rule's expose headers in the response
+      responseFields.setExposeHeaders(corsRuleMatch.getExposeHeaders());
+      
+      responseFields.setMaxAgeSeconds(corsRuleMatch.getMaxAgeSeconds());
+
+      response.setStatus(HttpResponseStatus.OK);
+
+    } catch (S3Exception s3e) {
+      LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with: ", s3e);
+      throw s3e;
+    } catch (Exception ex) {
+      LOG.warn("Caught general exception while processing the preflight CORS request for bucket <" + 
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+          ", responding to client with 500 InternalError because of: ", ex);
+      throw new InternalErrorException(bucketName, ex);
+    }
+    
     return response;
   }
 

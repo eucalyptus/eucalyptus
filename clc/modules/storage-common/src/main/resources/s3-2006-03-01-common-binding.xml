@@ -254,21 +254,36 @@
         </collection>
     </mapping>
 
+    <!-- Java field names for arrays are plural, but XML values must be singular --> 
     <mapping class="com.eucalyptus.storage.msgs.s3.CorsRule" abstract="true">
         <value name="ID" field="id" usage="optional"/>
-        <collection field="allowedOrigins" usage="optional">
-        	<value name="AllowedOrigin"/>
-        </collection>
-        <collection field="allowedMethods" usage="optional">
-        	<value name="AllowedMethod"/>
-        </collection>
-        <collection field="allowedHeaders" usage="optional">
-        	<value name="AllowedHeader"/>
-        </collection>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedOrigins" usage="optional">
+            <value name="AllowedOrigin" type="java.lang.String" />
+            </collection>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedMethods" usage="optional">
+            <value name="AllowedMethod" type="java.lang.String"/>
+            </collection>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedHeaders" usage="optional">
+            <value name="AllowedHeader" type="java.lang.String"/>
+            </collection>
         <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
-        <collection field="exposeHeaders" usage="optional">
-        	<value name="ExposeHeader"/>
-        </collection>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="exposeHeaders" usage="optional">
+            <value name="ExposeHeader" type="java.lang.String"/>
+            </collection>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.PreflightRequest" abstract="true">
+        <value name="Origin" field="origin" usage="optional"/>
+        <value name="Method" field="method" usage="optional"/>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="requestHeaders" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.PreflightResponse" abstract="true">
+        <value name="Origin" field="origin" usage="optional"/>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="methods" />
+        <value name="MaxAgeSeconds" field="maxAgeSeconds" usage="optional"/>
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedHeaders" />
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="exposeHeaders" />
     </mapping>
 
     <mapping name="Delete" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage">

@@ -73,9 +73,6 @@ import com.eucalyptus.storage.msgs.s3.CorsRule;
  */
 public interface BucketCorsManager {
 
-  public static final String RULE_STATUS_ENABLED = "Enabled";
-  public static final long MAX_WAIT_TIME_FOR_PROCESSING = 60l * 1000l; // 60 seconds (for now)
-
   public void start() throws Exception;
 
   public void stop() throws Exception;
