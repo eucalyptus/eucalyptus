@@ -164,8 +164,6 @@ struct gni_secgroup_t {
     char accountId[128];               //!< Security Group Account ID string
     char name[SECURITY_GROUP_ID_LEN];  //!< Security Group Name string (i.e. sg-xxxxxxxx)
     char chainname[32];                //!< Associated chain name TODO: Really needed?
-    gni_name *grouprules;              //!< List of associated rules with the group
-    int max_grouprules;                //!< Number of rules in the list
     gni_rule *ingress_rules;
     int max_ingress_rules;
     gni_rule *egress_rules;
@@ -183,15 +181,6 @@ typedef struct gni_subnet_t {
     u32 netmask;                       //!< Netmask address
     u32 gateway;                       //!< Gateway address
 } gni_subnet;
-
-//! GNI Managed Subnet Information Structure
-typedef struct gni_managedsubnet_t {
-    u32 subnet;                        //!< Subnet address
-    u32 netmask;                       //!< Netmask address
-    u16 minVlan;                       //!< Minimum usable VLAN
-    u16 maxVlan;                       //!< Maximum usable VLAN
-    u32 segmentSize;                   //!< How big should we make each segment?
-} gni_managedsubnet;
 
 //! GNI Node Information Structure
 typedef struct gni_node_t {
@@ -333,8 +322,6 @@ typedef struct globalNetworkInfo_t {
     int max_public_ips;                     //!< Number of associated public IPs in the list
     gni_subnet *subnets;                    //!< List of global subnet information
     int max_subnets;                        //!< Number of global subnets in the list
-    gni_managedsubnet *managedSubnet;       //!< List of managed subnet entry for MANAGED modes
-    int max_managedSubnets;                 //!< Number of global managed subnets in the list
     gni_cluster *clusters;                  //!< List of clusters information
     int max_clusters;                       //!< Number of clusters in the list
     gni_instance **instances;               //!< List of instances information
@@ -453,7 +440,6 @@ gni_dhcp_os *gni_get_dhcpos(globalNetworkInfo *gni, char *name, int *startidx);
 int gni_validate(globalNetworkInfo *gni);
 int gni_netmode_validate(const char *psMode);
 int gni_subnet_validate(gni_subnet *subnet);
-int gni_managed_subnet_validate(gni_managedsubnet *pSubnet);
 int gni_cluster_validate(gni_cluster *cluster, euca_netmode nmode);
 int gni_node_validate(gni_node *node);
 int gni_instance_validate(gni_instance *instance);
