@@ -17,6 +17,7 @@ package com.eucalyptus.auth.euare.policy;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyEvaluationWriteContextKey;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes.RoleWithWebIdSecurityTokenAttributes;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypedKey;
 
@@ -37,6 +38,6 @@ public class OpenIDConnectAudKey extends OpenIDConnectProviderKeySupport {
 
   @Override
   public String value( ) throws AuthException {
-    return getValue( OIDC_AUD_KEY );
+    return getValue( OIDC_AUD_KEY, RoleWithWebIdSecurityTokenAttributes::getAud );
   }
 }

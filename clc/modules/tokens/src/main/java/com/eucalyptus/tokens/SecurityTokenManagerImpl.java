@@ -30,7 +30,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.concurrent.Callable;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
@@ -55,6 +55,7 @@ import com.eucalyptus.auth.principal.SecurityTokenContentImpl;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
@@ -67,36 +68,33 @@ import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 /**
  * Security token manager for temporary credentials.
  */
+@SuppressWarnings( { "Guava", "StaticPseudoFunctionalStyleMethod" } )
 public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTokenProvider {
 
   private static final Logger log = Logger.getLogger( SecurityTokenManagerImpl.class );
   private static final Supplier<SecureRandom> randomSupplier = Crypto.getSecureRandomSupplier();
   private static final Supplier<String> securityTokenPasswordSupplier = Suppliers.memoize(
-      new Supplier<String>( ) {
-        @Override
-        public String get() {
-          return SystemIds.securityTokenPassword( );
-        }
-      } );
-  private static final SecurityTokenManagerImpl instance = new SecurityTokenManagerImpl( );
-  private static final long creationSkewMillis = Objects.firstNonNull(
+      SystemIds::securityTokenPassword );
+  private static final long creationSkewMillis = MoreObjects.firstNonNull(
       Longs.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.creationSkewMillis", "5000" ) ),
-      5000l );
-  private static final int tokenCacheSize = Objects.firstNonNull(
+      5000L );
+  private static final int tokenCacheSize = MoreObjects.firstNonNull(
       Ints.tryParse( System.getProperty( "com.eucalyptus.auth.tokens.cache.maximumSize", "500" ) ),
       500 );
   private static final Cache<Pair<String,String>,SecurityTokenContent> tokenCache =
@@ -116,7 +114,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     final AccessKey key = accessKey != null ?
         accessKey :
         Iterables.find(
-            Objects.firstNonNull( user.getKeys(), Collections.<AccessKey>emptyList() ),
+            MoreObjects.firstNonNull( user.getKeys(), Collections.emptyList() ),
             AccessKeys.isActive(),
             null );
 
@@ -175,6 +173,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
 
   @Nonnull
   public SecurityToken doIssueSecurityToken( @Nonnull final BaseRole role,
+                                             @Nonnull final RoleSecurityTokenAttributes attributes,
                                                       final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( role, "Role is required" );
 
@@ -188,7 +187,8 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
         role,
         getCurrentTimeMillis(),
-        restrictedDurationMillis );
+        restrictedDurationMillis,
+        attributes.asMap( ) );
     return  new SecurityToken(
         encryptedToken.getAccessKeyId(),
         encryptedToken.getSecretKey( role.getSecret() ),
@@ -206,12 +206,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     final SecurityTokenContent securityTokenContent;
     try {
       final Pair<String,String> tokenKey = Pair.pair( accessKeyId, token );
-      securityTokenContent = tokenCache.get( tokenKey, new Callable<SecurityTokenContent>( ) {
-        @Override
-        public SecurityTokenContent call() throws Exception {
-           return doDispatchingDecode( accessKeyId, token );
-        }
-      } );
+      securityTokenContent = tokenCache.get( tokenKey, () -> doDispatchingDecode( accessKeyId, token ) );
     } catch ( ExecutionException e ) {
       log.debug( e, e );
       throw new InvalidAccessKeyAuthException("Invalid security token");
@@ -232,7 +227,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
       type = TemporaryKeyType.Role;
     }
 
-    return new TemporaryAccessKey() {
+    return new TemporaryAccessKey( ) {
       private static final long serialVersionUID = 1L;
       private UserPrincipal principal = new UserPrincipalImpl( user, Collections.<AccessKey>singleton( this ) );
 
@@ -254,6 +249,10 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
 
       @Override public TemporaryKeyType getType() {
         return type;
+      }
+
+      @Override public Map<String, String> getAttributes() {
+        return securityTokenContent.getAttributes( );
       }
 
       @Override public Date getCreateDate() {
@@ -300,7 +299,8 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
         Optional.fromNullable( encryptedSecurityToken.getRoleId() ),
         encryptedSecurityToken.getNonce( ),
         encryptedSecurityToken.getCreated( ),
-        encryptedSecurityToken.getExpires( )
+        encryptedSecurityToken.getExpires( ),
+        encryptedSecurityToken.getAttributes( )
     );
   }
 
@@ -361,6 +361,8 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
 
   /**
    * Immutable token representation
+   *
+   * Format v3 adds a map for arbitrary attributes.
    */
   private static final class EncryptedSecurityToken {
     private static final byte[] TOKEN_PREFIX = new byte[]{ 'e', 'u', 'c', 'a', 0, 1 };
@@ -370,6 +372,7 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     private final String nonce;
     private final long created;
     private final long expires;
+    private final ImmutableMap<String,String> attributes;
 
     /**
      * Generate a new token
@@ -382,7 +385,8 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
              "$a$" + originatingAccessKeyId :
              "$u$" + userId,
           created,
-          durationMillis );
+          durationMillis,
+          null );
     }
 
     /**
@@ -390,8 +394,9 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
      */
     private EncryptedSecurityToken( final BaseRole role,
                                     final long created,
-                                    final long durationMillis ) {
-      this( "$r$" + role.getRoleId(), created, durationMillis );
+                                    final long durationMillis,
+                                    final Map<String,String> attributes ) {
+      this( "$r$" + role.getRoleId( ), created, durationMillis, attributes );
     }
 
       /**
@@ -399,12 +404,14 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
       */
     private EncryptedSecurityToken( final String originatingId,
                                     final long created,
-                                    final long durationMillis ) {
+                                    final long durationMillis,
+                                    final Map<String,String> attributes ) {
       this.accessKeyId = Identifiers.generateAccessKeyIdentifier( );
       this.originatingId = originatingId;
       this.nonce = Crypto.generateSessionToken();
       this.created = created;
       this.expires = created + durationMillis;
+      this.attributes = attributes == null ? ImmutableMap.of( ) : ImmutableMap.copyOf( attributes );
     }
 
     /**
@@ -414,12 +421,14 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
                                     final String originatingId,
                                     final String nonce,
                                     final long created,
-                                    final long expires ) {
+                                    final long expires,
+                                    final Map<String,String> attributes ) {
       this.accessKeyId = accessKeyId;
       this.originatingId = originatingId;
       this.nonce = nonce;
       this.created = created;
       this.expires = expires;
+      this.attributes = ImmutableMap.copyOf( attributes );
     }
 
     private String getAccessKeyId() {
@@ -457,6 +466,10 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
       return expires;
     }
 
+    public Map<String, String> getAttributes( ) {
+      return attributes;
+    }
+
     /**
      * Is the token within its validity period.
      */
@@ -485,11 +498,16 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     private byte[] toBytes() {
       try {
         final SecurityTokenOutput out = new SecurityTokenOutput();
-        out.writeInt(2); // format identifier
+        out.writeInt(3); // format identifier
         out.writeString(originatingId);
         out.writeString(nonce);
         out.writeLong(created);
         out.writeLong(expires);
+        out.writeInt(attributes.size());
+        for ( final Map.Entry<String,String> entry : attributes.entrySet( ) ) {
+          out.writeString( entry.getKey( ) );
+          out.writeString( entry.getValue( ) );
+        }
         return out.toByteArray( );
       } catch (IOException e) {
         throw Exceptions.toUndeclared( e );
@@ -532,17 +550,26 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
         final int offset = TOKEN_PREFIX.length + 32;
         final SecurityTokenInput in = new SecurityTokenInput(
             cipher.doFinal( securityTokenBytes, offset, securityTokenBytes.length-offset ) );
-        if ( in.readInt() != 2 ) throw new GeneralSecurityException("Invalid token format");
+        final int version = in.readInt();
+        if ( version != 2 && version != 3 ) throw new GeneralSecurityException("Invalid token format");
         final String originatingAccessKeyIdOrUserId = in.readString();
         final String nonce = in.readString();
         final long created = in.readLong();
         final long expires = in.readLong();
+        final Map<String,String> attributes = Maps.newHashMap( );
+        if ( version >= 3 ) {
+          final int entries = in.readInt( );
+          for ( int i=0; i<entries; i++ ) {
+            attributes.put( in.readString( ), in.readString( ) );
+          }
+        }
         return new EncryptedSecurityToken(
             accessKeyId,
             originatingAccessKeyIdOrUserId,
             nonce,
             created,
-            expires );
+            expires,
+            attributes );
       } catch (IOException e) {
         throw Exceptions.toUndeclared( e );
       }

@@ -668,7 +668,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     }
 
     try {
-      eucaS3Client = EucaS3ClientFactory.getEucaS3ClientByRole(role, (int) TimeUnit.HOURS.toSeconds(1));
+      eucaS3Client = EucaS3ClientFactory.getEucaS3ClientByRole(role, "snapshot-transfer", (int) TimeUnit.HOURS.toSeconds(1));
     } catch (Exception e) {
       LOG.error("Failed to initialize S3 client for snapshot transfers due to " + e);
       throw new SnapshotTransferException("Failed to initialize S3 client for snapshot transfers", e);

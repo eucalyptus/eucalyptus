@@ -27,10 +27,10 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.model.PutObjectResult
-import com.amazonaws.services.s3.model.S3ObjectInputStream
 import com.amazonaws.util.Md5Utils
 import com.eucalyptus.auth.principal.BaseRole
 import com.eucalyptus.auth.principal.User
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes
 import com.eucalyptus.auth.tokens.SecurityToken
 import com.eucalyptus.auth.tokens.SecurityTokenManager
 import com.eucalyptus.util.EucalyptusCloudException
@@ -73,11 +73,10 @@ class EucaS3ClientFactory {
     return new EucaS3Client(credentials, https);
   }
 
-  public static EucaS3Client getEucaS3ClientByRole(BaseRole role, int durationInSec) {
-
+  public static EucaS3Client getEucaS3ClientByRole(final BaseRole role, final String sessionName, int durationInSec) {
     EucaS3Client eucaS3Client;
     try {
-      SecurityToken token = SecurityTokenManager.issueSecurityToken(role, durationInSec);
+      SecurityToken token = SecurityTokenManager.issueSecurityToken(role, RoleSecurityTokenAttributes.basic( sessionName ), durationInSec);
       eucaS3Client = EucaS3ClientFactory.getEucaS3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()));
     } catch (Exception e) {
       LOG.error("Failed to initialize eucalyptus object storage client due to " + e);

@@ -19,18 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import java.util.Arrays;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import com.eucalyptus.util.Parameters;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
 /**
  *
  */
+@SuppressWarnings( { "OptionalUsedAsFieldOrParameterType", "Guava" } )
 public class SecurityTokenContentImpl implements SecurityTokenContent {
   private final Optional<String> originatingAccessKeyId;
   private final Optional<String> originatingUserId;
@@ -38,6 +38,7 @@ public class SecurityTokenContentImpl implements SecurityTokenContent {
   private final String nonce;
   private final long created;
   private final long expires;
+  private final Map<String,String> attributes;
 
   public SecurityTokenContentImpl(
       final Optional<String> originatingAccessKeyId,
@@ -45,12 +46,14 @@ public class SecurityTokenContentImpl implements SecurityTokenContent {
       final Optional<String> originatingRoleId,
       final String nonce,
       final long created,
-      final long expires
+      final long expires,
+      final Map<String,String> attributes
   ) {
-    Parameters.checkParam( "originatingAccessKeyId", originatingAccessKeyId, notNullValue( ) );
-    Parameters.checkParam( "originatingUserId", originatingUserId, notNullValue( ) );
-    Parameters.checkParam( "originatingRoleId", originatingRoleId, notNullValue( ) );
-    Parameters.checkParam( "nonce", nonce, not( isEmptyOrNullString( ) ) );
+    Parameters.checkParamNotNull( "originatingAccessKeyId", originatingAccessKeyId );
+    Parameters.checkParamNotNull( "originatingUserId", originatingUserId );
+    Parameters.checkParamNotNull( "originatingRoleId", originatingRoleId );
+    Parameters.checkParamNotNullOrEmpty( "nonce", nonce );
+    Parameters.checkParamNotNull( "attributes", attributes );
     if ( Iterables.size( Optional.presentInstances( Arrays.asList( originatingAccessKeyId, originatingUserId, originatingRoleId ) ) ) != 1 ) {
       throw new IllegalArgumentException( "One originating identifier expected" );
     }
@@ -60,6 +63,7 @@ public class SecurityTokenContentImpl implements SecurityTokenContent {
     this.nonce = nonce;
     this.created = created;
     this.expires = expires;
+    this.attributes = ImmutableMap.copyOf( attributes );
   }
 
   @Nonnull
@@ -94,5 +98,11 @@ public class SecurityTokenContentImpl implements SecurityTokenContent {
   @Override
   public long getExpires( ) {
     return expires;
+  }
+
+  @Nonnull
+  @Override
+  public Map<String, String> getAttributes( ) {
+    return attributes;
   }
 }

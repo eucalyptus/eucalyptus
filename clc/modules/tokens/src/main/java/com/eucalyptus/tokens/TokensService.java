@@ -63,6 +63,7 @@ import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
@@ -186,6 +187,7 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
+          RoleSecurityTokenAttributes.basic( request.getRoleSessionName( ) ),
           MoreObjects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
       reply.getAssumeRoleResult().setCredentials( new CredentialsType(
           token.getAccessKeyId(),
@@ -316,6 +318,12 @@ public class TokensService {
       // issue credentials
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
+          RoleSecurityTokenAttributes.webIdentity(
+              request.getRoleSessionName( ),
+              provider.getUrl( ),
+              aud,
+              sub
+          ),
           MoreObjects.firstNonNull( request.getDurationSeconds( ), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
 
       // populate result

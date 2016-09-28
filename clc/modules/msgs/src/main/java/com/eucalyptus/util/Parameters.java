@@ -19,6 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.StringDescription;
@@ -50,4 +53,13 @@ public class Parameters {
     return value;
   }
 
+  public static <T> T checkParamNotNull( final String reason,
+                                         final T value ) {
+    return checkParam( reason, value, notNullValue( ) );
+  }
+
+  public static String checkParamNotNullOrEmpty( final String reason,
+                                                 final String value ) {
+    return checkParam( reason, value, not( isEmptyOrNullString( ) ) );
+  }
 }

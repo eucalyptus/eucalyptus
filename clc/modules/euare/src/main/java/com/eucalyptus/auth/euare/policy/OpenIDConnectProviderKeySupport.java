@@ -15,18 +15,30 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.policy;
 
+import java.util.List;
+import java.util.function.Function;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyEvaluationContext;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.StringConditionOp;
 import com.eucalyptus.auth.policy.key.Key;
+import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes.RoleWithWebIdSecurityTokenAttributes;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypedKey;
+import com.google.common.base.Optional;
 import net.sf.json.JSONException;
 
 /**
  *
  */
+@SuppressWarnings( "Guava" )
 abstract class OpenIDConnectProviderKeySupport implements Key {
 
   private final String provider;
@@ -43,10 +55,21 @@ abstract class OpenIDConnectProviderKeySupport implements Key {
     return name;
   }
 
-  final String getValue( final TypedKey<Pair<String,String>> key ) throws AuthException {
+  final String getValue(
+      final TypedKey<Pair<String,String>> key,
+      final Function<RoleWithWebIdSecurityTokenAttributes,String> attributeExtractor
+      ) throws AuthException {
+    // first lookup explicitly set context value
     final Pair<String,String> providerValuePair = PolicyEvaluationContext.get( ).getAttribute( key );
     if ( providerValuePair != null && providerValuePair.getLeft( ).equals( provider ) ) {
       return providerValuePair.getRight( );
+    }
+    // second check role attributes of contextual principal
+    final Optional<RoleWithWebIdSecurityTokenAttributes> attributes = getRoleAttributes( );
+    if ( attributes.isPresent( ) ) {
+      if ( attributes.get( ).getProviderUrl( ).equals( provider ) ) {
+        return attributeExtractor.apply( attributes.get( ) );
+      }
     }
     return null;
   }
@@ -65,5 +88,21 @@ abstract class OpenIDConnectProviderKeySupport implements Key {
   @Override
   public boolean canApply( final String action ) {
     return true;
+  }
+
+  static Optional<RoleWithWebIdSecurityTokenAttributes> getRoleAttributes( ) {
+    try {
+      final Context context = Contexts.lookup( );
+      final UserPrincipal principal = context.getUser( );
+      if ( principal != null  ) {
+        final Optional<RoleSecurityTokenAttributes> attributes = RoleSecurityTokenAttributes.forUser( principal );
+        if ( attributes.isPresent( ) && attributes.get( ) instanceof RoleWithWebIdSecurityTokenAttributes ) {
+          return Optional.of( (RoleWithWebIdSecurityTokenAttributes) attributes.get( ) );
+        }
+      }
+    } catch ( final IllegalContextAccessException e ) {
+      // absent
+    }
+    return Optional.absent( );
   }
 }

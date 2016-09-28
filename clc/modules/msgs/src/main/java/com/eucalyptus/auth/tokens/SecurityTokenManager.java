@@ -107,6 +107,7 @@ public class SecurityTokenManager {
    * TemporaryAccessKey#Role.</p>
    *
    * @param role The role to to assume
+   * @param attributes The role token attributes
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
@@ -114,8 +115,9 @@ public class SecurityTokenManager {
    */
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull final BaseRole role,
+                                                  @Nonnull final RoleSecurityTokenAttributes attributes,
                                                   final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( role, durationSeconds );
+    return instance.doIssueSecurityToken( role, attributes, durationSeconds );
   }
 
   /**
@@ -172,6 +174,7 @@ public class SecurityTokenManager {
                                         final int durationSeconds ) throws AuthException;
 
     SecurityToken doIssueSecurityToken( @Nonnull final BaseRole role,
+                                        @Nonnull final RoleSecurityTokenAttributes attributes,
                                         final int durationSeconds ) throws AuthException;
 
     TemporaryAccessKey doLookupAccessKey( @Nonnull final String accessKeyId,

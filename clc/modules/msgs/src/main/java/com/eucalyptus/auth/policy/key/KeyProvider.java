@@ -15,6 +15,9 @@
  ************************************************************************/
 package com.eucalyptus.auth.policy.key;
 
+import java.util.Map;
+import com.eucalyptus.auth.policy.key.Key.EvaluationConstraint;
+
 /**
  * KeyProvider is implemented by providers of dynamic condition keys.
  *
@@ -53,4 +56,14 @@ public interface KeyProvider {
    * @return The key implementation
    */
   Key getKey( String name );
+
+  /**
+   * Get instances for keys implementing the given constraint.
+   *
+   * This will be called within the context of a request.
+   *
+   * @param constraint The key constraint.
+   * @return The key instances, may be empty, never null
+   */
+  Map<String,Key> getKeyInstances( final EvaluationConstraint constraint );
 }

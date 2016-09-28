@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.util.Date;
+import java.util.Map;
 
 /**
  *
@@ -46,4 +47,5 @@ public interface TemporaryAccessKey extends AccessKey {
   String getSecurityToken( );
   Date getExpiryDate( );
   TemporaryKeyType getType( );
+  Map<String,String> getAttributes( );
 }
