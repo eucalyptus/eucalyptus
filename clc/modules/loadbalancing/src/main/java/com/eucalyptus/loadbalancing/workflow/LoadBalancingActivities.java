@@ -142,8 +142,16 @@ public interface LoadBalancingActivities {
   List<String> lookupServoInstances(String accountNumber, String lbName) throws LoadBalancingActivityException;
   Map<String, LoadBalancerServoDescription> lookupLoadBalancerDescription(String accountNumber, String lbName)
       throws LoadBalancingActivityException;
+
   /// backend instance status update
-  void updateInstanceStatus(String accountNumber, String lbName, List<String> status)
+  /// Because servo VM is not aware of avaiability zones of the registered instances (in cross-zone lb),
+  /// it monitors and reports the status info. about all registered instances.
+  /// This activity is to filter out reports for which the servo VM is not responsible for reporting the status
+  /// In other words, servo VM in AZ A should only report the status about instances in AZ A.
+  Map<String, String> filterInstanceStatus(final String accountNumber, final String lbName,
+                            final String servoInstanceId, final String status)
+          throws LoadBalancingActivityException;
+  void updateInstanceStatus(String accountNumber, String lbName, List<Map<String,String>> statusList)
       throws LoadBalancingActivityException;
   /// cloudwatch put metrics
   void putCloudWatchInstanceHealth(String accountNumber, String lbName)

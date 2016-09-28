@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 
 import org.apache.log4j.Logger;
@@ -120,20 +121,24 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   @Asynchronous
   private void doPollStatus(final int count, final Promise<List<String>> servoInstances) {
     final List<String> instances = servoInstances.get();
-    final List<Promise<String>> activities = Lists.newArrayList();
+    final List<Promise<Map<String, String>>> activities = Lists.newArrayList();
     for(final String instanceId : instances) {
       final ActivitySchedulingOptions scheduler =
           new ActivitySchedulingOptions();
       scheduler.setTaskList(instanceId);
       scheduler.setScheduleToCloseTimeoutSeconds(10L); /// should timeout quickly
-      activities.add(vmClient.getInstanceStatus(scheduler));
+      activities.add(client.filterInstanceStatus(
+              Promise.asPromise(accountId),
+              Promise.asPromise(loadbalancer),
+              Promise.asPromise(instanceId),
+              vmClient.getInstanceStatus(scheduler)));
     }
 
     final WorkflowClock clock = contextProvider.getDecisionContext().getWorkflowClock();
     final Promise<Void> timer = clock.createTimer(POLLING_PERIOD_SEC);
 
     /// TODO: what if only one servo VM dies?
-    final Promise<List<String>> allActivities = Promises.listOfPromisesToPromise(activities);
+    final Promise<List<Map<String, String>>> allActivities = Promises.listOfPromisesToPromise(activities);
 
     final Promise<Void> merge = client.updateInstanceStatus(
         Promise.asPromise(accountId), 
