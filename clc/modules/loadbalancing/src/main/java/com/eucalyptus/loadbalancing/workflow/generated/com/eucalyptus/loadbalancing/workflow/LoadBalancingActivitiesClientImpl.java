@@ -2004,38 +2004,85 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.lang.String> status) {
-        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(status), (ActivitySchedulingOptions)null);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(String accountNumber, String lbName, String servoInstanceId, String status) {
+        return filterInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(servoInstanceId), Promise.asPromise(status), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.lang.String> status, Promise<?>... waitFor) {
-        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(status), (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(String accountNumber, String lbName, String servoInstanceId, String status, Promise<?>... waitFor) {
+        return filterInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(servoInstanceId), Promise.asPromise(status), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.lang.String> status, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(status), optionsOverride, waitFor);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(String accountNumber, String lbName, String servoInstanceId, String status, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return filterInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(servoInstanceId), Promise.asPromise(status), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.lang.String>> status) {
-        return updateInstanceStatusImpl(accountNumber, lbName, status, (ActivitySchedulingOptions)null);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<String> servoInstanceId, Promise<String> status) {
+        return filterInstanceStatusImpl(accountNumber, lbName, servoInstanceId, status, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.lang.String>> status, Promise<?>... waitFor) {
-        return updateInstanceStatusImpl(accountNumber, lbName, status, (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<String> servoInstanceId, Promise<String> status, Promise<?>... waitFor) {
+        return filterInstanceStatusImpl(accountNumber, lbName, servoInstanceId, status, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.lang.String>> status, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return updateInstanceStatusImpl(accountNumber, lbName, status, optionsOverride, waitFor);
+    public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<String> servoInstanceId, Promise<String> status, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return filterInstanceStatusImpl(accountNumber, lbName, servoInstanceId, status, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<Void> updateInstanceStatusImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<java.util.List<java.lang.String>> status, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatusImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<String> servoInstanceId, final Promise<String> status, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.filterInstanceStatus");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[4];
+        _input_[0] = accountNumber;
+        _input_[1] = lbName;
+        _input_[2] = servoInstanceId;
+        _input_[3] = status;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, java.util.Map.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList) {
+        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, Promise<?>... waitFor) {
+        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList) {
+        return updateInstanceStatusImpl(accountNumber, lbName, statusList, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, Promise<?>... waitFor) {
+        return updateInstanceStatusImpl(accountNumber, lbName, statusList, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return updateInstanceStatusImpl(accountNumber, lbName, statusList, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> updateInstanceStatusImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
 		_activityType.setName("LoadBalancingActivities.updateInstanceStatus");
@@ -2044,7 +2091,7 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
         Promise[] _input_ = new Promise[3];
         _input_[0] = accountNumber;
         _input_[1] = lbName;
-        _input_[2] = status;
+        _input_[2] = statusList;
 
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }

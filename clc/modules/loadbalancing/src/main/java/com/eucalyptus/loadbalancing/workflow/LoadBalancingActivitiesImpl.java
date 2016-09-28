@@ -1288,35 +1288,75 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
   }
 
-  //TODO: SCALE
   @Override
-  public void updateInstanceStatus(final String accountNumber, final String lbName, final List<String> statusList) 
-      throws LoadBalancingActivityException {
-    // for each status, deserialize to Instance type
-    // merge the results for each instance
-    // update database
-    final Map<String,String> instanceToStatus = Maps.newHashMap();
+  public Map<String, String> filterInstanceStatus(final String accountNumber, final String lbName,
+                                    final String servoInstanceId, final String encodedStatus)
+          throws LoadBalancingActivityException {
+    String monitoringZone = null;
+    try {
+      final LoadBalancerServoInstance servo =
+              LoadBalancers.lookupServoInstance(servoInstanceId);
+      monitoringZone = servo.getAvailabilityZone().getName();
+    } catch (final Exception ex) {
+      throw new LoadBalancingActivityException("Failed to lookup the servo instance with id="+servoInstanceId);
+    }
+
+    final Map<String, String> instanceToZone = Maps.newHashMap();
+    try{
+      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb.getBackendInstances().stream().forEach ( instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
+    }catch(final Exception ex) {
+      throw new LoadBalancingActivityException("Failed to lookup the loadbalancer with name="+lbName);
+    }
+
     final Set<String> validStates = Sets.newHashSet(
-        LoadBalancerBackendInstance.STATE.InService.name(),
-        LoadBalancerBackendInstance.STATE.OutOfService.name());
-    
-    for(final String encodedStatus : statusList) {
+            LoadBalancerBackendInstance.STATE.InService.name(),
+            LoadBalancerBackendInstance.STATE.OutOfService.name());
+    final Map<String, String> instanceToStatus = Maps.newHashMap();
       try{
         final Map<String,String> statusMap = VmWorkflowMarshaller.unmarshalInstances(encodedStatus);
         for(final String instanceId : statusMap.keySet()) {
           final String instanceStatus = statusMap.get(instanceId);
           if (!validStates.contains(instanceStatus))
             continue;
-          if(!instanceToStatus.containsKey(instanceId))
-            instanceToStatus.put(instanceId, instanceStatus);
-          else {
-            // OutOfService should override InService
-            if(!LoadBalancerBackendInstance.STATE.InService.name().equals(instanceStatus))
-              instanceToStatus.put(instanceId, instanceStatus);
-          }
+          if (!(instanceToZone.containsKey(instanceId) &&
+                  instanceToZone.get(instanceId).equals(monitoringZone)))
+            continue;
+          instanceToStatus.put(instanceId, instanceStatus);
         }
       }catch(final Exception ex) {
         throw new LoadBalancingActivityException("Failed unmarshalling instance status message", ex);
+      }
+
+    return instanceToStatus;
+  }
+
+
+  //TODO: SCALE
+  @Override
+  public void updateInstanceStatus(final String accountNumber, final String lbName,
+                                   final List<Map<String,String>> statusList)
+      throws LoadBalancingActivityException {
+    // for each status, deserialize to Instance type
+    // merge the results for each instance
+    // update database
+    final Map<String, String> instanceToStatus = Maps.newHashMap();
+    final Set<String> validStates = Sets.newHashSet(
+        LoadBalancerBackendInstance.STATE.InService.name(),
+        LoadBalancerBackendInstance.STATE.OutOfService.name());
+    
+    for(final Map<String, String> statusMap : statusList) {
+      for (final String instanceId : statusMap.keySet()) {
+        final String instanceStatus = statusMap.get(instanceId);
+        if (!validStates.contains(instanceStatus))
+          continue;
+        if (!instanceToStatus.containsKey(instanceId))
+          instanceToStatus.put(instanceId, instanceStatus);
+        else {
+          // OutOfService should override InService
+          if (!LoadBalancerBackendInstance.STATE.InService.name().equals(instanceStatus))
+            instanceToStatus.put(instanceId, instanceStatus);
+        }
       }
     }
     
