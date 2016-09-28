@@ -1457,7 +1457,6 @@ int do_edge_update_l2(edge_config *edge) {
  * @return 0 on success. Positive integer on any error during processing.
  */
 int do_edge_update_ips(edge_config *edge) {
-    int rc = 0;
     struct timeval tv = { 0 };
 
     eucanetd_timer_usec(&tv);
@@ -1469,15 +1468,20 @@ int do_edge_update_ips(edge_config *edge) {
         return (1);
     }
 
-    // Generate the DHCP configuration so instances can get their network config
-    if ((rc = generate_dhcpd_config(edge)) != 0) {
-        LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
-        return (1);
-    }
-    // Restart the DHCP server so it can pick up the new configuration
-    if ((rc = eucanetd_kick_dhcpd_server(edge->config)) != 0) {
-        LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
-        return (1);
+    if (edge->max_my_instances == 0) {
+        LOGDEBUG("\tstopping dhcpd\n");
+        eucanetd_stop_dhcpd_server(edge->config);
+    } else {
+        // Generate the DHCP configuration so instances can get their network config
+        if ((generate_dhcpd_config(edge)) != 0) {
+            LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
+            return (1);
+        }
+        // Restart the DHCP server so it can pick up the new configuration
+        if ((eucanetd_kick_dhcpd_server(edge->config)) != 0) {
+            LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
+            return (1);
+        }
     }
     LOGINFO("\tdhcp config processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
     return (0);

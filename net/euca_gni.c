@@ -2885,7 +2885,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
 
     xmlNodeSet nodeset = {0};
     snprintf(expression, 2048, "./securityGroup");
-    rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
+    rc += evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
     if (nodeset.nodeNr > 0) {
         gni->secgroups = EUCA_ZALLOC_C(nodeset.nodeNr, sizeof (gni_secgroup));
         gni->max_secgroups = nodeset.nodeNr;
@@ -2930,7 +2930,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             }
 
             snprintf(expression, 2048, "./ownerId");
-            rc = evaluate_xpath_property(ctxptr, doc, sgnode, expression, &results, &max_results);
+            rc += evaluate_xpath_property(ctxptr, doc, sgnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
                 snprintf(gni->secgroups[j].accountId, 128, "%s", results[i]);
@@ -2941,7 +2941,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             // ingress rules
             xmlNodeSet ingressNodeset = {0};
             snprintf(expression, 2048, "./ingressRules/rule");
-            rc = evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &ingressNodeset);
+            rc += evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &ingressNodeset);
             if (ingressNodeset.nodeNr > 0) {
                 gni->secgroups[j].ingress_rules = EUCA_ZALLOC_C(ingressNodeset.nodeNr, sizeof (gni_rule));
                 gni->secgroups[j].max_ingress_rules = ingressNodeset.nodeNr;
@@ -2958,7 +2958,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             // egress rules
             xmlNodeSet egressNodeset = {0};
             snprintf(expression, 2048, "./egressRules/rule");
-            rc = evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &egressNodeset);
+            rc += evaluate_xpath_nodeset(ctxptr, doc, sgnode, expression, &egressNodeset);
             if (egressNodeset.nodeNr > 0) {
                 gni->secgroups[j].egress_rules = EUCA_ZALLOC_C(egressNodeset.nodeNr, sizeof (gni_rule));
                 gni->secgroups[j].max_egress_rules = egressNodeset.nodeNr;

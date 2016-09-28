@@ -159,10 +159,58 @@ static struct timeval gtv;
 \*----------------------------------------------------------------------------*/
 
 /**
+ * Stop the local DHCP server. It is assumed that dhcpd was started by eucanetd
+ * and that it pid file reflects the real dhcpd system state.
+ *
+ * @return 0 on success or 1 if a failure occurred
+ *
+ * @pre
+ *     The DHCP server daemon must be present on the system and the 'config->dhcpDaemon'
+ *     path must be properly set.
+ *
+ * @post
+ *     on success, the DHCP server has been stopped.
+ */
+int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
+    int ret = 0;
+    int rc = 0;
+    int pid = 0;
+    char *psPid = NULL;
+    char sPidFileName[EUCA_MAX_PATH] = "";
+    struct stat mystat = { 0 };
+
+    // Do we have a valid path?
+    if (stat(config->dhcpDaemon, &mystat) != 0) {
+        LOGERROR("Unable to stop dhcpd without valid binary: '%s'\n", config->dhcpDaemon);
+        return (1);
+    }
+    // Setup the path to the various files involved
+    snprintf(sPidFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
+
+    // Retrieve the PID of the current DHCP server process if running
+    if (stat(sPidFileName, &mystat) == 0) {
+        psPid = file2str(sPidFileName);
+        pid = atoi(psPid);
+        EUCA_FREE(psPid);
+
+        // If the PID value is valid, kill the server
+        if (pid > 1) {
+            LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
+            if ((rc = safekill(pid, config->dhcpDaemon, 9, config->cmdprefix)) != 0) {
+                LOGWARN("failed to kill previous dhcp daemon\n");
+                ret = 1;
+            }
+        }
+    }
+
+    return (ret);
+}
+
+/**
  * Restart or simply start the local DHCP server so it can pick up the new
  * configuration.
  *
- * @return 0 on success or 1 if a failure occured
+ * @return 0 on success or 1 if a failure occurred
  *
  * @pre
  *     The DHCP server daemon must be present on the system and the 'config->dhcpDaemon'
@@ -175,9 +223,7 @@ static struct timeval gtv;
 int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
     int ret = 0;
     int rc = 0;
-    int pid = 0;
     int status = 0;
-    char *psPid = NULL;
     char *psConfig = NULL;
     char sPidFileName[EUCA_MAX_PATH] = "";
     char sConfigFileName[EUCA_MAX_PATH] = "";
@@ -190,26 +236,15 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
         LOGERROR("Unable to find DHCP daemon binaries: '%s'\n", config->dhcpDaemon);
         return (1);
     }
+
     // Setup the path to the various files involved
     snprintf(sPidFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
     snprintf(sLeaseFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
     snprintf(sTraceFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
     snprintf(sConfigFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
 
-    // Retrieve the PID of the current DHCP server process if running
-    if (stat(sPidFileName, &mystat) == 0) {
-        psPid = file2str(sPidFileName);
-        pid = atoi(psPid);
-        EUCA_FREE(psPid);
+    eucanetd_stop_dhcpd_server(config);
 
-        // If the PID value is valid, kill the server
-        if (pid > 1) {
-            LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
-            if ((rc = safekillfile(sPidFileName, config->dhcpDaemon, 9, config->cmdprefix)) != 0) {
-                LOGWARN("failed to kill previous dhcp daemon\n");
-            }
-        }
-    }
     // Check to make sure the lease file is present
     if (stat(sLeaseFileName, &mystat) != 0) {
         // nope, just create an empty one
@@ -260,7 +295,7 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
  *
  * @post
  *     On success, the program is executed and its PID is recorded in the psPidFilePath location if provided. If
- *     the process is already running, nothing will change. On failure, depending of where it occured, the system
+ *     the process is already running, nothing will change. On failure, depending of where it occurred, the system
  *     is left into a non-deterministic state from the caller's perspective.
  *
  */
@@ -461,7 +496,7 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
  *
  * @param Filename [in] of file to remove.
  *
- * @return 0 on success or 1 if any failure occured
+ * @return 0 on success or 1 if any failure occurred
  *
  * @pre
  *    - Filename should not be NULL, but function can handle it. 
@@ -490,7 +525,7 @@ int unlink_handler_file(char *filename) {
  *
  * @param Filename [in] of file to truncate or create
  *
- * @return 0 on success or 1 if any failure occured
+ * @return 0 on success or 1 if any failure occurred
  *
  * @pre
  *    - filename should not be NULL

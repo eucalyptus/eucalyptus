@@ -89,6 +89,7 @@
 \*----------------------------------------------------------------------------*/
 
 //! common API to restart the DHCP server
+int eucanetd_stop_dhcpd_server(eucanetdConfig *config);
 int eucanetd_kick_dhcpd_server(eucanetdConfig *config);
 
 //! API to run a program and make sure only one copy of the program is running
