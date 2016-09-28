@@ -1337,6 +1337,16 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                     ret += delete_mido_vpc_instance(mido, vpc, vpcsubnet, vpcinstance);
                 } else {
                     LOGTRACE("pass2: mido VPC INSTANCE %s in global: Y\n", vpcinstance->name);
+                    if (vpcinstance->gniInst && vpcinstance->pubip &&
+                            (vpcinstance->gniInst->publicIp != vpcinstance->pubip)) {
+                        rc = disconnect_mido_vpc_instance_elip(mido, vpc, vpcinstance);
+                        if (rc) {
+                            LOGERROR("failed to disconnect %s elip\n", vpcinstance->gniInst->name);
+                        } else {
+                            vpcinstance->pubip = 0;
+                            vpcinstance->pubip_changed = 1;
+                        }
+                    }
                 }
             }
             if (!vpc->gnipresent || !vpcsubnet->gnipresent) {
