@@ -428,7 +428,18 @@ public class LoadBalancingWorkflows {
   private static String getInstanceStatusWorkflowId(final String accountId, final String loadbalancer) {
     return String.format("instance-status-%s-%s", accountId, loadbalancer);
   }
-  
+
+  public static void pollInstanceStatus(final String accountId, final String loadbalancer) {
+    final String workflowId = getInstanceStatusWorkflowId(accountId, loadbalancer);
+    try{
+      final InstanceStatusWorkflowClientExternal workflow =
+              WorkflowClients.getinstanceStatusWorkflowClient(accountId, loadbalancer, workflowId);
+      workflow.pollImmediately();
+    }catch(final Exception ex) {
+      LOG.error("Failed to signal PollInstanceStatus workflow", ex);
+    }
+  }
+
   public static void runInstanceStatusPolling(final String accountId, final String loadbalancer) {
     final String workflowId = getInstanceStatusWorkflowId(accountId, loadbalancer);
     try{

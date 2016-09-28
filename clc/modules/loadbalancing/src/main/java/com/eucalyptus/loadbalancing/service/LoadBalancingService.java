@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,6 +42,8 @@ import javax.persistence.OptimisticLockException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerVersionException;
+import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -1055,38 +1058,53 @@ public class LoadBalancingService {
       }
     }
     /*********** END Verify requests ************/
-
-    final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
-          @Override
-          public boolean apply( LoadBalancer lb ) {
-            for(Instance vm : instances){
-              if(lb.hasBackendInstance(vm.getInstanceId()))
-                continue; // the vm instance is already registered
-              try{
-                final LoadBalancerBackendInstance beInstance =
-                    LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
-                beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
-                Entities.persist(beInstance);
-              }catch(final LoadBalancingException ex){
-                throw Exceptions.toUndeclared(ex);
-              }
+    // when there's any new instance in the request
+    if (instances.stream().anyMatch( vm -> !backends.contains(vm.getInstanceId()))) {
+      final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>() {
+        @Override
+        public boolean apply(LoadBalancer lb) {
+          for (Instance vm : instances) {
+            if (lb.hasBackendInstance(vm.getInstanceId()))
+              continue; // the vm instance is already registered
+            try {
+              final LoadBalancerBackendInstance beInstance =
+                      LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
+              beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+              Entities.persist(beInstance);
+            } catch (final LoadBalancingException ex) {
+              throw Exceptions.toUndeclared(ex);
             }
-            return true;
           }
-    };
+          return true;
+        }
+      };
 
-    try{
-      Entities.asTransaction( LoadBalancerBackendInstance.class, creator ).apply( lb );
-      Iterables.addAll( backends, Iterables.transform( instances, Instance.instanceId( ) ) );
-    } catch(Exception ex) {
-      throw handleException( ex );
-    } finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
+      try {
+        Entities.asTransaction(LoadBalancerBackendInstance.class, creator).apply(lb);
+        Iterables.addAll(backends, Iterables.transform(instances, Instance.instanceId()));
+      } catch (Exception ex) {
+        throw handleException(ex);
+      } finally {
+        if (lb != null)
+          LoadBalancingServoCache.getInstance().invalidate(lb);
+      }
+      final String accountNumber = ctx.getAccountNumber();
+      LoadBalancingWorkflows.updateLoadBalancer(accountNumber, lbName);
+      Threads.enqueue(LoadBalancing.class, LoadBalancingService.class,
+              new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                  try {
+                    Thread.sleep(2000);
+                    // delay polling signal by a few sec. Best-effort approach to poll InService instance after registration
+                  } catch (final Exception ex) {
+                    ;
+                  }
+                  LoadBalancingWorkflows.pollInstanceStatus(accountNumber, lbName);
+                  return true;
+                }
+              });
     }
-
-    LoadBalancingWorkflows.updateLoadBalancer(ctx.getAccountNumber(), lbName);
-
     final Instances returnInstances = new Instances();
     Iterables.addAll( returnInstances.getMember( ), Iterables.transform( backends, Instance.instance( ) ) );
     reply.getRegisterInstancesWithLoadBalancerResult( ).setInstances( returnInstances );

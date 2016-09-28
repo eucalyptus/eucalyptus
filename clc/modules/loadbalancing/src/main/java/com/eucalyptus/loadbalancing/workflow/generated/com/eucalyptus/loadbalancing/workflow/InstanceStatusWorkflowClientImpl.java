@@ -60,4 +60,9 @@ class InstanceStatusWorkflowClientImpl extends WorkflowClientBase implements Ins
     }
     	
 
+    @Override
+    public void pollImmediately() { 
+        Object[] _input_ = new Object[0];
+        signalWorkflowExecution("pollImmediately", _input_);
+    }
 }

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
+import com.amazonaws.services.simpleworkflow.flow.core.OrPromise;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.flow.ActivitySchedulingOptions;
@@ -61,7 +62,10 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   TryCatchFinally task = null;
   private DecisionContextProvider contextProvider
        = new DecisionContextProviderImpl();
-  
+  private Settable<Boolean> signalReceived = new Settable<Boolean>();
+  final WorkflowClock clock =
+          contextProvider.getDecisionContext().getWorkflowClock();
+
   // continuous workflow generates enormous amount of history
   // ideally we should use continueAsNewWorkflow, but the current EUCA SWF lacks it
   // TODO: implement SWF:continueAsNewWorkflow 
@@ -110,7 +114,7 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   
   @Asynchronous 
   private void pollInstanceStatusPeriodic(final int count, Promise<?>... waitFor) {
-   if (count >= MAX_POLL_PER_WORKFLOW) {
+   if (signalReceived.isReady()  || count >= MAX_POLL_PER_WORKFLOW) {
       return;
    }
    
@@ -134,17 +138,27 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
               vmClient.getInstanceStatus(scheduler)));
     }
 
-    final WorkflowClock clock = contextProvider.getDecisionContext().getWorkflowClock();
-    final Promise<Void> timer = clock.createTimer(POLLING_PERIOD_SEC);
-
     /// TODO: what if only one servo VM dies?
     final Promise<List<Map<String, String>>> allActivities = Promises.listOfPromisesToPromise(activities);
 
+    final Promise<Void> timer = startDaemonTimer(POLLING_PERIOD_SEC);
     final Promise<Void> merge = client.updateInstanceStatus(
         Promise.asPromise(accountId), 
         Promise.asPromise(loadbalancer), 
         allActivities);
+    final OrPromise waitOrSignal = new OrPromise(timer, signalReceived);
+    pollInstanceStatusPeriodic(count+1, new AndPromise(merge, waitOrSignal));
+  }
 
-    pollInstanceStatusPeriodic(count+1, new AndPromise(merge, timer)); 
+  @Asynchronous(daemon = true)
+  private Promise<Void> startDaemonTimer(int seconds) {
+    Promise<Void> timer = clock.createTimer(seconds);
+    return timer;
+  }
+
+  @Override
+  public void pollImmediately() {
+    if(!signalReceived.isReady())
+      signalReceived.set(true);
   }
 }

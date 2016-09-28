@@ -29,4 +29,9 @@ public interface InstanceStatusWorkflowClientExternal extends WorkflowClientExte
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflow#pollInstanceStatus}
      */
     void pollInstanceStatus(String accountId, String loadbalancer, StartWorkflowOptions optionsOverride);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflow#pollImmediately}
+     */
+    void pollImmediately();
 }

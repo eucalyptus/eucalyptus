@@ -35,5 +35,10 @@ class InstanceStatusWorkflowClientExternalImpl extends WorkflowClientExternalBas
         dynamicWorkflowClient.startWorkflowExecution(_arguments_, startOptionsOverride);
     }
 
+    @Override
+    public void pollImmediately() {
+        Object[] _arguments_ = new Object[0];
+        dynamicWorkflowClient.signalWorkflowExecution("pollImmediately", _arguments_);
+    }
 
 }

@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Signal;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
 import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
 
@@ -33,4 +34,8 @@ defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface InstanceStatusWorkflow {
   @Execute(name = "PollInstanceStatus", version = "1.0")
   void pollInstanceStatus(final String accountId, final String loadbalancer);
+
+
+  @Signal
+  void pollImmediately();
 }

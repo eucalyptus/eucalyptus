@@ -51,4 +51,9 @@ public interface InstanceStatusWorkflowClient extends WorkflowClient
      */
     Promise<Void> pollInstanceStatus(Promise<String> accountId, Promise<String> loadbalancer, StartWorkflowOptions optionsOverride, Promise<?>... waitFor);
 
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflow#pollImmediately}
+     */
+    void pollImmediately();
+
 }
