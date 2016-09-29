@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
+import java.util.Map;
 import javax.annotation.Nonnull;
 import com.google.common.base.Optional;
 
@@ -27,6 +28,7 @@ import com.google.common.base.Optional;
  *
  * <p>The token will have one originating identifier.</p>
  */
+@SuppressWarnings( "Guava" )
 public interface SecurityTokenContent {
 
   @Nonnull Optional<String> getOriginatingAccessKeyId( );
@@ -37,4 +39,6 @@ public interface SecurityTokenContent {
 
   long getCreated( );
   long getExpires( );
+
+  @Nonnull Map<String,String> getAttributes( );
 }

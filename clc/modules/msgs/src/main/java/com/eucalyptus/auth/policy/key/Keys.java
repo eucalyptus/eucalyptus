@@ -87,6 +87,7 @@ public class Keys {
   public static final String AWS_SOURCEIP = "aws:sourceip";
   public static final String AWS_SECURE_TRANSPORT = "aws:securetransport";
   public static final String AWS_TOKEN_ISSUETIME = "aws:tokenissuetime";
+  public static final String AWS_FEDERATED_PROVIDER = "aws:federatedprovider";
 
   public static final String S3_MAX_KEYS = "s3:max-keys";
   
@@ -153,6 +154,16 @@ public class Keys {
   }
 
   public static Map<String,Key> getKeyInstances( final EvaluationConstraint constraint ) {
+    final Map<String, Key> keyInstances = Maps.newHashMap( );
+    final List<KeyProvider> providers = Lists.newArrayList( KEY_PROVIDER_MAP.values( ) );
+    Collections.sort( providers, Ordered.comparator( ) );
+    for ( final KeyProvider provider : providers ) {
+      keyInstances.putAll( provider.getKeyInstances( constraint ) );
+    }
+    return keyInstances;
+  }
+
+  static Map<String,Key> getRegisteredKeyInstances( final EvaluationConstraint constraint ) {
     return Maps.transformValues(
         Maps.filterValues(
             KEY_MAP,

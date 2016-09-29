@@ -31,6 +31,7 @@ import com.eucalyptus.auth.principal.HasRole;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
@@ -45,13 +46,17 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
 
   private final AtomicReference<Supplier<AWSCredentials>> credentialsSupplier = new AtomicReference<>( );
   private final Supplier<User> user;
-  private final Supplier<Role> role;
+  private final Supplier<Pair<Role,RoleSecurityTokenAttributes>> role;
   private final int expirationSecs;
   private final int preExpirySecs;
 
   public static SecurityTokenAWSCredentialsProvider forUserOrRole( final User user ) {
     if ( user instanceof HasRole && ((HasRole) user).getRole( ) != null ) {
-      return new SecurityTokenAWSCredentialsProvider( ((HasRole) user).getRole( ) );
+      final Role role = ((HasRole) user).getRole( );
+      final RoleSecurityTokenAttributes attributes =
+          RoleSecurityTokenAttributes.forUser( user )
+              .or( RoleSecurityTokenAttributes.basic( "eucalyptus" ) );
+      return new SecurityTokenAWSCredentialsProvider( role, attributes );
     } else {
       return new SecurityTokenAWSCredentialsProvider( user );
     }
@@ -87,13 +92,13 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
     this( user, null, expirationSecs, preExpirySecs );
   }
 
-  public SecurityTokenAWSCredentialsProvider( final Role role ) {
-    this( null, Suppliers.ofInstance( role ), DEFAULT_EXPIRATION_SECS, DEFAULT_PRE_EXPIRY_SECS );
+  public SecurityTokenAWSCredentialsProvider( final Role role, final RoleSecurityTokenAttributes attributes ) {
+    this( null, Suppliers.ofInstance( Pair.pair( role, attributes ) ), DEFAULT_EXPIRATION_SECS, DEFAULT_PRE_EXPIRY_SECS );
   }
 
   private SecurityTokenAWSCredentialsProvider(
       final Supplier<User> user,
-      final Supplier<Role> role,
+      final Supplier<Pair<Role,RoleSecurityTokenAttributes>> role,
       final int expirationSecs,
       final int preExpirySecs
   ) {
@@ -119,7 +124,7 @@ public class SecurityTokenAWSCredentialsProvider implements AWSCredentialsProvid
       try {
         final SecurityToken securityToken = user != null ?
             SecurityTokenManager.issueSecurityToken( user.get( ), expirationSecs ) :
-            SecurityTokenManager.issueSecurityToken( role.get( ), expirationSecs );
+            SecurityTokenManager.issueSecurityToken( role.get( ).getLeft( ), role.get( ).getRight( ), expirationSecs );
         return new BasicSessionCredentials(
             securityToken.getAccessKeyId( ),
             securityToken.getSecretKey( ),

@@ -92,6 +92,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -644,7 +645,8 @@ public class RemotePrincipalProvider implements PrincipalProvider {
           Optional.fromNullable( securityToken.getOriginatingRoleId( ) ),
           securityToken.getNonce( ),
           securityToken.getCreated( ),
-          securityToken.getExpires( )
+          securityToken.getExpires( ),
+          ImmutableMap.of( ) //TODO:STEVE:attributes for remote tokens
       );
     }
   }

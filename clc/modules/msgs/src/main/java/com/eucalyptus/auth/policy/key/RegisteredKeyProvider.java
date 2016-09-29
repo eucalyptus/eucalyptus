@@ -15,6 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.policy.key;
 
+import java.util.Map;
 import com.eucalyptus.util.Ordered;
 
 /**
@@ -35,6 +36,11 @@ public class RegisteredKeyProvider implements KeyProvider, Ordered {
   @Override
   public Key getKey( final String name ) {
     return Keys.getKeyInstance( Keys.getKeyClass( name ) );
+  }
+
+  @Override
+  public Map<String, Key> getKeyInstances( final Key.EvaluationConstraint constraint ) {
+    return Keys.getRegisteredKeyInstances( constraint );
   }
 
   @Override

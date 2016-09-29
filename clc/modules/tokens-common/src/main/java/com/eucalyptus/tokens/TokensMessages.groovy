@@ -36,6 +36,15 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 class TokenMessage extends BaseMessage {
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETCALLERIDENTITY )
+class GetCallerIdentityType extends TokenMessage {
+}
+
+class GetCallerIdentityResponseType extends TokenMessage {
+  GetCallerIdentityResultType result
+  TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
+}
+
 @PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETSESSIONTOKEN )
 class GetSessionTokenType extends TokenMessage {
   int durationSeconds
@@ -120,6 +129,21 @@ class TokensErrorResponseType extends TokenMessage implements WebServiceError {
     errors?.getAt(0)?.message
   }
 }
+
+class GetCallerIdentityResultType extends EucalyptusData {
+  String arn
+  String userId
+  String account
+
+  GetCallerIdentityResultType( ) { }
+
+  GetCallerIdentityResultType( final String arn, final String userId, final String account ) {
+    this.arn = arn
+    this.userId = userId
+    this.account = account
+  }
+}
+
 
 class GetSessionTokenResultType extends EucalyptusData {
   CredentialsType credentials

@@ -45,6 +45,19 @@
         </collection>
         <value name="RequestId" field="requestId" usage="required"/>
     </mapping>
+    <mapping class="com.eucalyptus.tokens.GetCallerIdentityResultType" abstract="true">
+        <value name="Arn" field="arn" usage="optional"/>
+        <value name="Account" field="account" usage="optional"/>
+        <value name="UserId" field="userId" usage="optional"/>
+    </mapping>
+    <mapping name="GetCallerIdentity" class="com.eucalyptus.tokens.GetCallerIdentityType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    </mapping>
+    <mapping name="GetCallerIdentityResponse" class="com.eucalyptus.tokens.GetCallerIdentityResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <structure name="GetCallerIdentityResult" field="result" type="com.eucalyptus.tokens.GetCallerIdentityResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    </mapping>
     <mapping class="com.eucalyptus.tokens.CredentialsType" abstract="true">
         <value name="AccessKeyId" field="accessKeyId"/>
         <value name="SecretAccessKey" field="secretAccessKey"/>

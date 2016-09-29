@@ -65,8 +65,6 @@ package com.eucalyptus.auth.policy;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.key.Key;
-import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.system.Ats;
 import com.google.common.collect.Maps;
 
 public class CachedKeyEvaluator {
@@ -81,8 +79,7 @@ public class CachedKeyEvaluator {
   public String getValue( final Key key ) throws AuthException {
     String value = cache.get( key.name( ) );
     if ( value == null ) {
-      final PolicyKey policyKey = Ats.from( key.getClass( ) ).get( PolicyKey.class );
-      value = policyKey==null ? null : evaluatedKeys.get( policyKey.value() );
+      value = evaluatedKeys.get( key.name( ) );
       if ( value == null ) {
         value = key.value( );
       }

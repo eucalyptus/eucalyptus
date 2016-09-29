@@ -17,13 +17,19 @@ package com.eucalyptus.auth.euare.policy;
 
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.eucalyptus.auth.policy.key.Key;
+import com.eucalyptus.auth.policy.key.Key.EvaluationConstraint;
 import com.eucalyptus.auth.policy.key.KeyProvider;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes.RoleWithWebIdSecurityTokenAttributes;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 /**
  *
  */
+@SuppressWarnings( "Guava" )
 public class OpenIDConnectKeyProvider implements KeyProvider {
 
   private static final Map<String,Function<String,Key>> SUFFIX_TO_BUILDER_MAP =
@@ -45,6 +51,22 @@ public class OpenIDConnectKeyProvider implements KeyProvider {
   @Override
   public Key getKey( final String name ) {
     return SUFFIX_TO_BUILDER_MAP.get( suffix( name ) ).apply( name );
+  }
+
+  @Override
+  public Map<String, Key> getKeyInstances( final EvaluationConstraint constraint ) {
+    final Map<String,Key> keyInstances = Maps.newHashMap( );
+    if ( constraint == EvaluationConstraint.ReceivingHost ) {
+      final Optional<RoleWithWebIdSecurityTokenAttributes> attributes =
+          OpenIDConnectProviderKeySupport.getRoleAttributes( );
+      if ( attributes.isPresent( ) ) {
+        final String providerUrl = attributes.get( ).getProviderUrl( );
+        keyInstances.putAll( SUFFIX_TO_BUILDER_MAP.entrySet( ).stream( )
+            .map( entry -> entry.getValue( ).apply( providerUrl + ":" + entry.getKey( ) ) )
+            .collect( Collectors.toMap( Key::name, key -> key ) ) );
+      }
+    }
+    return keyInstances;
   }
 
   private String suffix( String name ) {
