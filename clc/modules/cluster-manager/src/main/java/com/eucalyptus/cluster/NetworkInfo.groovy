@@ -296,7 +296,6 @@ class NINatGateway {
 class NISecurityGroup {
   @XmlAttribute String name
   @XmlElement String ownerId
-  @XmlElementWrapper @XmlElement(name="value") List<String> rules = Lists.newArrayList()
   @XmlElementWrapper @XmlElement(name="rule") List<NISecurityGroupIpPermission> ingressRules = Lists.newArrayList()
   @XmlElementWrapper @XmlElement(name="rule") List<NISecurityGroupIpPermission> egressRules = Lists.newArrayList()
 }
