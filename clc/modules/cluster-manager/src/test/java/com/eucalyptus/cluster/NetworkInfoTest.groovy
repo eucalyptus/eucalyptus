@@ -93,12 +93,7 @@ class NetworkInfoTest {
         securityGroups: [
           new NISecurityGroup(
               name: 'c4d8e62e-ea5d-49fb-b1e9-b908e9becf8',
-              ownerId: '856501978207',
-              rules: [
-                  '-P icmp -t -1:-1  -s 0.0.0.0/0',
-                  '-P tcp -p 22-22  -s 0.0.0.0/0',
-                  '-P tcp -p 55-55  -s 0.0.0.0/0',
-              ]
+              ownerId: '856501978207'
           )
         ],
         instances: [
@@ -232,11 +227,6 @@ class NetworkInfoTest {
           <securityGroups>
               <securityGroup name="c4d8e62e-ea5d-49fb-b1e9-b908e9becf8">
                   <ownerId>856501978207</ownerId>
-                  <rules>
-                      <value>-P icmp -t -1:-1  -s 0.0.0.0/0</value>
-                      <value>-P tcp -p 22-22  -s 0.0.0.0/0</value>
-                      <value>-P tcp -p 55-55  -s 0.0.0.0/0</value>
-                  </rules>
                   <ingressRules/>
                   <egressRules/>
               </securityGroup>
