@@ -195,7 +195,12 @@ public class PolicyParser {
       final PolicyParseContext context,
       final JSONObject policy 
   ) throws JSONException {
-    List<JSONObject> objs = JsonUtils.getRequiredArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
+    List<JSONObject> objs;
+    if ( policy.get( PolicySpec.STATEMENT ) instanceof JSONObject ) {
+      objs = Lists.newArrayList( JsonUtils.getRequiredByType( JSONObject.class, policy, PolicySpec.STATEMENT ) );
+    } else {
+      objs = JsonUtils.getRequiredArrayByType( JSONObject.class, policy, PolicySpec.STATEMENT );
+    }
     List<PolicyAuthorization> authorizations = Lists.newArrayList( );
     for ( JSONObject o : objs ) {
       authorizations.addAll( parseStatement( context, o ) );

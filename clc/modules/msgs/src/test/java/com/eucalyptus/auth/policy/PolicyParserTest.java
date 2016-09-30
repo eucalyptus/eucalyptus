@@ -137,6 +137,33 @@ public class PolicyParserTest {
     assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );  
   }
 
+  @Test
+  public void testParseSingleStatementPolicy( ) throws Exception {
+    String policyJson =
+        "{\n" +
+        "  \"Statement\": {\n" +
+        "    \"Effect\": \"Allow\",\n" +
+        "    \"Action\": \"*\",\n" +
+        "    \"Resource\": \"*\"\n" +
+        "  }\n" +
+        "}";
+
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
+    assertEquals( "Authorization actions", Sets.newHashSet( "*" ), authorization.getActions() );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect() );
+    assertNotNull( "Authorization resources", authorization.getResources() );
+    assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
+    assertEquals( "Authorization resources", Sets.newHashSet("*"), authorization.getResources() );
+    assertNotNull( "Authorization conditions", authorization.getConditions() );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
+  }
+
   @Test(expected = PolicyParseException.class )
   public void testParseUserPolicyMissingResource() throws Exception {
     String policyJson =
