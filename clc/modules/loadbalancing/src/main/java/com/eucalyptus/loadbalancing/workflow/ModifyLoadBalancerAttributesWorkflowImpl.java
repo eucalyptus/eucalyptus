@@ -60,18 +60,27 @@ private static Logger    LOG     = Logger.getLogger(  ModifyLoadBalancerAttribut
           return;
         
         if(attributes.getAccessLog().getEnabled()) {
-          policyCreator = 
+          policyCreator =
               client.modifyLoadBalancerAttributesCreateAccessLogPolicy(accountNumber, 
-                  loadbalancer, attributes.getAccessLog());
+                  loadbalancer, attributes.getAccessLog().getEnabled(),
+                      attributes.getAccessLog().getS3BucketName(),
+                      attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
+                      attributes.getAccessLog().getEmitInterval());
         } else {
           final Promise<Void> policyRemover =
               client.modifyLoadBalancerAttributesDeleteAccessLogPolicy(accountNumber, 
-                  loadbalancer, attributes.getAccessLog());
+                  loadbalancer, attributes.getAccessLog().getEnabled(),
+                      attributes.getAccessLog().getS3BucketName(),
+                      attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
+                      attributes.getAccessLog().getEmitInterval());
         }
         
         final Promise<Void> persistence =
             client.modifyLoadBalancerAttributesPersistAttributes(accountNumber, 
-                loadbalancer, attributes.getAccessLog());
+                loadbalancer, attributes.getAccessLog().getEnabled(),
+                    attributes.getAccessLog().getS3BucketName(),
+                    attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
+                    attributes.getAccessLog().getEmitInterval());
       }
 
       @Override

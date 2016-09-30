@@ -1011,32 +1011,32 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, Promise<?>... waitFor);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, Promise<?>... waitFor);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicy}
      */
-    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<com.eucalyptus.loadbalancing.workflow.AccessLogPolicyActivityResult> modifyLoadBalancerAttributesCreateAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesCreateAccessLogPolicyRollback}
@@ -1071,62 +1071,62 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesDeleteAccessLogPolicy}
      */
-    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesDeleteAccessLogPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, com.eucalyptus.loadbalancing.common.msgs.AccessLog accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, Boolean accessLogEnabled, String s3BucketName, String s3BucketPrefix, Integer emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#modifyLoadBalancerAttributesPersistAttributes}
      */
-    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<com.eucalyptus.loadbalancing.common.msgs.AccessLog> accessLog, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}

@@ -25,11 +25,8 @@ import java.util.Map;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
 import com.amazonaws.services.simpleworkflow.flow.common.FlowConstants;
-import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
-import com.eucalyptus.loadbalancing.workflow.SecurityGroupSetupActivityResult;
-import com.eucalyptus.loadbalancing.workflow.CreateTagActivityResult;
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
  *
@@ -115,12 +112,17 @@ public interface LoadBalancingActivities {
   /***** END of DeleteLoadBalancer activities *****/
   
   /***** ModifyAttributes activities *****/
-  AccessLogPolicyActivityResult modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName, AccessLog accessLog)
-      throws LoadBalancingActivityException;
+  AccessLogPolicyActivityResult modifyLoadBalancerAttributesCreateAccessLogPolicy(String accountNumber, String lbName,
+                                                                                  Boolean accessLogEnabled, String s3BucketName,
+                                                                                  String s3BucketPrefix, Integer emitInterval) throws LoadBalancingActivityException;
   void modifyLoadBalancerAttributesCreateAccessLogPolicyRollback(String accountNumber, String lbName, AccessLogPolicyActivityResult result);
-  void modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName, AccessLog accessLog)
+  void modifyLoadBalancerAttributesDeleteAccessLogPolicy(String accountNumber, String lbName,
+                                                         Boolean accessLogEnabled, String s3BucketName,
+                                                         String s3BucketPrefix, Integer emitInterval)
       throws LoadBalancingActivityException;
-  void modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName, AccessLog accessLog)
+  void modifyLoadBalancerAttributesPersistAttributes(String accountNumber, String lbName,
+                                                     Boolean accessLogEnabled, String s3BucketName,
+                                                     String s3BucketPrefix, Integer emitInterval)
       throws LoadBalancingActivityException;
   /***** END ModifyAttributes activities *****/
   

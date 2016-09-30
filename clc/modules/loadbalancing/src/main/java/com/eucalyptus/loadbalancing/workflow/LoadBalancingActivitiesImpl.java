@@ -77,7 +77,6 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.Load
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
-import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
@@ -2052,7 +2051,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   final String ACCESSLOG_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy-accesslog";
   @Override
   public AccessLogPolicyActivityResult modifyLoadBalancerAttributesCreateAccessLogPolicy(
-      final String accountNumber, final String lbName, final AccessLog accessLog)
+      final String accountNumber, final String lbName, final Boolean accessLogEnabled, final String s3BucketName,
+      final String s3BucketPrefix, final Integer emitInterval)
           throws LoadBalancingActivityException {
     final String ACCESSLOG_ROLE_POLICY_DOCUMENT=
         "{\"Statement\":"
@@ -2068,12 +2068,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     
     AccessLogPolicyActivityResult result = new AccessLogPolicyActivityResult();
     result.setShouldRollback(false);
-    if (accessLog == null || !accessLog.getEnabled())
+    if (!accessLogEnabled)
       return result;
 
-    final String bucketName = accessLog.getS3BucketName();
+    final String bucketName = s3BucketName;
     final String bucketPrefix = 
-          com.google.common.base.Objects.firstNonNull(accessLog.getS3BucketPrefix(), "");
+          com.google.common.base.Objects.firstNonNull(s3BucketPrefix, "");
    
     final String roleName = getRoleName(accountNumber, lbName);
     final String policyName = ACCESSLOG_ROLE_POLICY_NAME;
@@ -2121,9 +2121,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
   @Override
   public void modifyLoadBalancerAttributesDeleteAccessLogPolicy(
-      String accountNumber, String lbName, AccessLog accessLog)
+      final String accountNumber, final String lbName, final Boolean accessLogEnabled, final String s3BucketName,
+      final String s3BucketPrefix, final Integer emitInterval)
           throws LoadBalancingActivityException {
-    if (accessLog == null || accessLog.getEnabled())
+    if (accessLogEnabled)
       return;
 
     final String roleName = getRoleName(accountNumber, lbName);
@@ -2137,21 +2138,17 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
   @Override
   public void modifyLoadBalancerAttributesPersistAttributes(
-      String accountNumber, String lbName, AccessLog accessLog)
+      final String accountNumber, final String lbName, final Boolean accessLogEnabled, final String s3BucketName,
+      final String s3BucketPrefix, Integer emitInterval)
           throws LoadBalancingActivityException {
-    if(accessLog == null)
-      return;
-    
-    final boolean accessLogEnabled = accessLog.getEnabled();
     String bucketName = null;
     String bucketPrefix = null;
-    Integer emitInterval = null;
     if(accessLogEnabled) {
-      bucketName = accessLog.getS3BucketName();
+      bucketName = s3BucketName;
       bucketPrefix = 
-          com.google.common.base.Objects.firstNonNull(accessLog.getS3BucketPrefix(), "");
-      emitInterval = 
-          com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
+          com.google.common.base.Objects.firstNonNull(s3BucketPrefix, "");
+      emitInterval =
+         com.google.common.base.Objects.firstNonNull(emitInterval, 60);
     } else {
       bucketName = "";
       bucketPrefix = "";

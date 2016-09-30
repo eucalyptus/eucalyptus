@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Set;
 import com.eucalyptus.loadbalancing.common.msgs.Listener
 import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.google.common.collect.Lists;;
 
 @JsonAutoDetect(isGetterVisibility = JsonAutoDetect.Visibility.NONE, 
   getterVisibility = JsonAutoDetect.Visibility.ANY)
@@ -59,6 +58,8 @@ public class AutoscalingGroupSetupActivityResult {
   Integer numVMsPerZone = null;
 }
 
+@JsonAutoDetect(isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.ANY)
 public class AccessLogPolicyActivityResult {
   String roleName = null;
   String policyName = null;
