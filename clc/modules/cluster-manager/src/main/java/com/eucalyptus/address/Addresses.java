@@ -802,7 +802,11 @@ public class Addresses {
     }
 
     public static void reset( ) {
-      batchThreadLocal.set( null );
+      final AddressingBatch batch = batchThreadLocal.get( );
+      if ( batch != null ) {
+        batchThreadLocal.set( null );
+        batch.flushRequested = false;
+      }
     }
 
     static void flush( ) {
