@@ -199,6 +199,9 @@ do_upgrade() {
                 OLD_EUCA_PATH=$b
         done < $EUCALYPTUS/etc/eucalyptus/.upgrade
 
+        # strip version digits beyond the third one as those should not be relevant for upgrade
+        OLD_EUCA_VERSION=`echo $OLD_EUCA_VERSION | sed 's/\(\([0-9]\+\.\)\{1,2\}[0-9]\+\).*/\1/g'`
+
         if [ "$OLD_EUCA_VERSION" = "@EUCA_VERSION@" ]; then
             # No need to upgrade to the same version
             return

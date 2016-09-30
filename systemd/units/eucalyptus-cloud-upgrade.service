@@ -1,6 +1,6 @@
 [Unit]
 Description=Eucalyptus cloud java service upgrade
-ConditionPathExists=|!/etc/eucalyptus/.upgrade
+ConditionPathExists=/etc/eucalyptus/.upgrade
 PartOf=eucalyptus-cloud.service
 
 [Service]

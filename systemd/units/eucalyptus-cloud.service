@@ -1,6 +1,7 @@
 [Unit]
 Description=Eucalyptus cloud web services
-After=network.target
+After=eucalyptus-cloud-upgrade.service network.target
+Requires=eucalyptus-cloud-upgrade.service
 Wants=chronyd.service
 
 [Service]
