@@ -408,7 +408,6 @@ class NetworkInfoBroadcasts {
       new NISecurityGroup(
           name: group.id,
           ownerId: group.ownerAccountNumber,
-          rules: group.rules,
           ingressRules: group.ingressPermissions
           .findAll{ IPPermissionNetworkView ipPermission ->
                       !ipPermission.groupId || activeSecurityGroups.contains( ipPermission.groupId ) }
@@ -486,34 +485,6 @@ class NetworkInfoBroadcasts {
       }
       active
     } as Predicate<RouteNetworkView>
-  }
-
-  private static Set<String> explodeRules( NetworkRule networkRule ) {
-    Set<String> rules = Sets.newLinkedHashSet( )
-    // Only EC2-Classic rules supported by this format
-    if ( !networkRule.isVpcOnly( ) ) {
-      String rule = "";
-      if (networkRule.protocol == null) {
-        //Special case where ports are not present, but
-        // we support that as an exception to EC2-Classic spec
-        rule = String.format("-P %d", networkRule.getProtocolNumber());
-      } else {
-        rule = String.format(
-            "-P %d -%s %d%s%d ",
-            networkRule.protocol.getNumber(),
-            NetworkRule.Protocol.icmp == networkRule.protocol ? "t" : "p",
-            networkRule.lowPort,
-            NetworkRule.Protocol.icmp == networkRule.protocol ? ":" : "-",
-            networkRule.highPort);
-      }
-      rules.addAll(networkRule.networkPeers.collect { NetworkPeer peer ->
-        String.format("%s -o %s -u %s", rule, peer.groupId, peer.userQueryKey)
-      })
-      rules.addAll(networkRule.ipRanges.collect { String cidr ->
-        String.format("%s -s %s", rule, cidr)
-      })
-    }
-    rules
   }
 
   private static Set<IPPermissionNetworkView> explodePermissions( NetworkRule networkRule ) {
@@ -780,7 +751,6 @@ class NetworkInfoBroadcasts {
     int version
     String ownerAccountNumber
     String vpcId
-    List<String> rules
     List<IPPermissionNetworkView> ingressPermissions
     List<IPPermissionNetworkView> egressPermissions
 
@@ -801,7 +771,6 @@ class NetworkInfoBroadcasts {
           group.version,
           group.ownerAccountNumber,
           group.vpcId,
-          group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodeRules( networkRule ) }.flatten( ) as List<String>,
           group.ingressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>,
           group.egressNetworkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcasts.explodePermissions( networkRule ) }.flatten( ) as List<IPPermissionNetworkView>
       )
