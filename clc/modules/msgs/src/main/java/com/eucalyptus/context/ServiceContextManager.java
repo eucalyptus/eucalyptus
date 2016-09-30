@@ -91,6 +91,7 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Templates;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
@@ -153,9 +154,8 @@ public class ServiceContextManager {
   
   private void update( ) {
     if (context == null) {
-      canHasWrite.lock();
-      if (context == null) {
-        try {
+      try ( final LockResource lock = LockResource.lock( canHasWrite ) ){
+        if (context == null) {
           context = createContext();
           checkParam(context, notNullValue());
           try {
@@ -164,8 +164,6 @@ public class ServiceContextManager {
             LOG.error(e, e);
             throw Exceptions.toUndeclared(new ServiceInitializationException("Failed to start service this.context.", e));
           }
-        } finally {
-          this.canHasWrite.unlock();
         }
       }
     }
@@ -243,8 +241,7 @@ public class ServiceContextManager {
   }
   
   private void stop( ) {
-    this.canHasWrite.lock( );
-    try {
+    try ( final LockResource lock = LockResource.lock( this.canHasWrite ) ) {
       if ( this.context != null ) {
         try {
           this.context.stop( );
@@ -257,8 +254,6 @@ public class ServiceContextManager {
           LOG.error( ex, ex );
         }
       }
-    } finally {
-      this.canHasWrite.unlock( );
     }
   }
   

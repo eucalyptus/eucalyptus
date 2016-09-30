@@ -200,7 +200,7 @@ public class NetworkInfoBroadcaster {
           } catch( Exception e ) {
             logger.error( "Error broadcasting network information", e );
           }
-        } else if ( shouldRetryWithDelay ) {
+        } else if ( shouldRetryWithDelay && !Bootstrap.isShuttingDown( ) ) {
           Thread.sleep( 100 ); // pause and re-evaluate to allow for min time between broadcasts
           broadcastTask( this );
         }
