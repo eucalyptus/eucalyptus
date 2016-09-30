@@ -21,6 +21,7 @@ package com.eucalyptus.network.applicator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
@@ -32,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -46,6 +49,7 @@ import com.google.common.base.Suppliers;
 /**
  *
  */
+@SuppressWarnings( { "Guava", "WeakerAccess" } )
 public class AppliedVersionApplicator extends ModeSpecificApplicator {
 
   private static final String APPLIED_VERSION_FILE = "global_network_info.version";
@@ -56,6 +60,10 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
   private static final Supplier<String> faultSupplier = Suppliers.memoizeWithExpiration(
       () -> Faults.forComponent( Eucalyptus.class ).havingId( 1016 ).log( ),
       15, TimeUnit.MINUTES );
+
+  static {
+    OrderedShutdown.registerPreShutdownHook( AppliedVersionApplicator::shutdown );
+  }
 
   public AppliedVersionApplicator( ) {
     super( EnumSet.of( NetworkMode.VPCMIDO ) );
@@ -86,9 +94,9 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
     final long until = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( NetworkGroups.MAX_BROADCAST_APPLY );
     long now;
     waitloop:
-    while( !alreadyApplied && ( now = System.currentTimeMillis( ) ) < until ) try {
+    while( !Bootstrap.isShuttingDown( ) && !alreadyApplied && ( now = System.currentTimeMillis( ) ) < until ) try {
       final WatchKey key = getWatchService( ).poll( until - now, TimeUnit.MILLISECONDS );
-      if ( key != null ) try {
+      if ( key != null && key.isValid( ) ) try {
         for ( final WatchEvent<?> event: key.pollEvents( ) ) {
           if ( path.getFileName( ).equals( event.context( ) ) ) {
             try {
@@ -109,7 +117,7 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
       } finally {
         key.reset( );
       }
-    } catch ( InterruptedException e ) {
+    } catch ( ClosedWatchServiceException | InterruptedException e ) {
       break;
     }
 
@@ -159,5 +167,17 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
       throw new ApplicatorException( "Error setting up file watch", e );
     }
     return watchPair.getLeft( );
+  }
+
+  private static void shutdown( ) {
+    final Pair<WatchService,WatchKey> watchPair = watchContext.get( );
+    if ( watchPair != null ) {
+      watchPair.getRight( ).cancel( );
+      try {
+        watchPair.getLeft( ).close( );
+      } catch ( IOException e ) {
+        logger.error( "Error closing watch service", e );
+      }
+    }
   }
 }
