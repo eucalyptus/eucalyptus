@@ -57,7 +57,6 @@ import com.eucalyptus.util.async.Futures;
 import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
-import org.apache.tools.ant.taskdefs.Exec;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Order;
