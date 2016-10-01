@@ -368,6 +368,7 @@ public class CloudFormationService {
             StackEntityHelper.populateStackEntityWithTemplate(stackEntity, template);
             stackEntity.setStackName(stackName);
             stackEntity.setStackId(stackId);
+            stackEntity.setNaturalId(stackIdLocal);
             stackEntity.setAccountId(accountId);
             stackEntity.setTemplateBody(templateText);
             stackEntity.setStackPolicy(stackPolicyText);
