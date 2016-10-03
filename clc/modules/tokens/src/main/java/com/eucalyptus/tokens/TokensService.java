@@ -49,6 +49,7 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyEvaluationContext;
 import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
 import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.policy.OpenIDConnectAudKey;
 import com.eucalyptus.auth.euare.policy.OpenIDConnectSubKey;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -60,7 +61,8 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
-import com.eucalyptus.auth.principal.Principal;
+import com.eucalyptus.auth.principal.Principal.PrincipalType;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -200,9 +202,30 @@ public class TokensService {
     final BaseRole role = lookupRole( request.getRoleArn( ) );
 
     try {
+      // check for ec2 principal (instance profile)
+      final PrincipalType principalType;
+      final String principalName;
+      final RoleSecurityTokenAttributes tokenAttributes;
+      if ( request.getRoleSessionName( ).matches( "i-[0-9a-fA-F]{8,32}" ) &&
+          Principals.isSameUser( Contexts.lookup( ).getUser( ), Principals.systemUser( ) ) ) {
+        principalType = PrincipalType.Service;
+        principalName = "ec2.amazon.com";
+        tokenAttributes = RoleSecurityTokenAttributes.instance(
+            request.getRoleSessionName( ),
+            "arn:aws:ec2:" + RegionConfigurations.getRegionName( ).or( "" ) + ":" +
+                role.getAccountNumber( ) + ":instance/" + request.getRoleSessionName( )
+        );
+      } else {
+        principalType = null;
+        principalName = null;
+        tokenAttributes = RoleSecurityTokenAttributes.basic( request.getRoleSessionName( ) );
+      }
+
       try {
         PolicyEvaluationContext.builder( )
             .attrIfNotNull( ExternalIdKey.CONTEXT_KEY, request.getExternalId( ) )
+            .attrIfNotNull( RestrictedTypes.principalTypeContextKey, principalType )
+            .attrIfNotNull( RestrictedTypes.principalNameContextKey, principalName )
             .build( ).doWithContext( () ->
             RestrictedTypes.doPrivilegedWithoutOwner(
                 Accounts.getRoleFullName( role ),
@@ -213,7 +236,7 @@ public class TokensService {
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           role,
-          RoleSecurityTokenAttributes.basic( request.getRoleSessionName( ) ),
+          tokenAttributes,
           MoreObjects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 1 ) ) );
       reply.getAssumeRoleResult().setCredentials( new CredentialsType(
           token.getAccessKeyId(),
@@ -329,7 +352,7 @@ public class TokensService {
       // verify assume role policy
       try {
         PolicyEvaluationContext.builder( )
-            .attr( RestrictedTypes.principalTypeContextKey, Principal.PrincipalType.Federated )
+            .attr( RestrictedTypes.principalTypeContextKey, PrincipalType.Federated )
             .attr( RestrictedTypes.principalNameContextKey, providerArn )
             .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), aud ) )
             .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), sub ) )

@@ -91,18 +91,6 @@ abstract class OpenIDConnectProviderKeySupport implements Key {
   }
 
   static Optional<RoleWithWebIdSecurityTokenAttributes> getRoleAttributes( ) {
-    try {
-      final Context context = Contexts.lookup( );
-      final UserPrincipal principal = context.getUser( );
-      if ( principal != null  ) {
-        final Optional<RoleSecurityTokenAttributes> attributes = RoleSecurityTokenAttributes.forUser( principal );
-        if ( attributes.isPresent( ) && attributes.get( ) instanceof RoleWithWebIdSecurityTokenAttributes ) {
-          return Optional.of( (RoleWithWebIdSecurityTokenAttributes) attributes.get( ) );
-        }
-      }
-    } catch ( final IllegalContextAccessException e ) {
-      // absent
-    }
-    return Optional.absent( );
+    return RoleSecurityTokenAttributes.fromContext( RoleWithWebIdSecurityTokenAttributes.class );
   }
 }
