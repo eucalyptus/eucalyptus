@@ -1003,3 +1003,38 @@ void get_stack_trace (void) {
     }
     EUCA_FREE(traces_str);
 }
+
+/**
+ * Converts Eucalyptus version in the form of Major.Minor.Patch.Hotfix (e.g., 4.3.0.1)
+ * to binary 32-bit format. Missing optional numbers are filled with 0 (e.g, 4 becomes
+ * 4.0.0.0). After 4th digit, additional digits are discarded (e.g., 4.3.0.1.0 is
+ * considered 4.3.0.1). Each digit must be positive and less than 256.
+ * @param ver [in] Eucalyptus version in String format.
+ * @return binary representation of an Eucalyptus version. NULL input returns 0.
+ */
+u32 euca_version_dot2hex(const char *ver) {
+    int a = 0;
+    int b = 0;
+    int c = 0;
+    int d = 0;
+    int rc = 0;
+
+    if (ver == NULL) {
+        return (0);
+    }
+
+    rc = sscanf(ver, "%d.%d.%d.%d", &a, &b, &c, &d);
+    if ((rc == EOF) || (rc == 0) || ((a < 0) || (a > 255)) || ((b < 0) || (b > 255)) ||
+            ((c < 0) || (c > 255)) || ((d < 0) || (d > 255))) {
+        a = 0;
+        b = 0;
+        c = 0;
+        d = 0;
+    }
+
+    a = a << 24;
+    b = b << 16;
+    c = c << 8;
+
+    return (a | b | c | d);
+}
