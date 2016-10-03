@@ -54,6 +54,29 @@ public class OIDCUtils {
     }
   }
 
+  /**
+   * Parse a provider url and use the given port.
+   *
+   * @param url The provider URL (i.e host/path)
+   * @param port The optional port
+   * @return A tuple of the host, port and path for the provider
+   * @throws IllegalArgumentException If the url is invalid
+   */
+  public static OIDCIssuerIdentifier issuerIdentifierFromProviderUrl(
+      final String url,
+      final Integer port
+  ) throws IllegalArgumentException {
+    if ( url == null ) {
+      throw new IllegalArgumentException( "Null url" );
+    }
+    final int pathStartIndex = url.indexOf( '/' );
+    if ( pathStartIndex == 0 ) throw new IllegalArgumentException( "Invalid host in url: " + url );
+    final String host = pathStartIndex > 0 ? url.substring( 0, pathStartIndex ) : url;
+    final String path = pathStartIndex > 0 ? url.substring( pathStartIndex ) :  "";
+    return new OIDCIssuerIdentifier( host, port == null || port < 1 ? -1 : port, path );
+  }
+
+
   public static String buildIssuerIdentifier( final OpenIdConnectProvider issuerIdentifier ) {
     return buildIssuerIdentifier( new OIDCIssuerIdentifier( issuerIdentifier ) );
   }

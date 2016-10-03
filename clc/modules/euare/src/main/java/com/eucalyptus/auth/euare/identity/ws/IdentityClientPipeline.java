@@ -144,7 +144,7 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
     pipeline.addLast( "wssec", Handlers.internalWsSecHandler() );
     pipeline.addLast( "addressing", Handlers.addressingHandler() );
     pipeline.addLast( "soap", Handlers.soapHandler() );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "www_eucalyptus_com_ns_identity_2015_03_01" ) );
+    pipeline.addLast( "binding", Handlers.bindingHandler( "www_eucalyptus_com_ns_identity_2016_10_01" ) );
     pipeline.addLast( "ssl-detection-handler", new Handlers.ClientSslHandler( "ssl-handler" ) {
       @Override
       protected SSLEngine createSSLEngine( final String peerHost, final int peerPort ) {

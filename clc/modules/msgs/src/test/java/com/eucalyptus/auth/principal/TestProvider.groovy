@@ -181,6 +181,11 @@ class TestProvider implements PrincipalProvider {
   }
 
   @Override
+  OpenIdConnectProvider lookupOidcProviderByUrl(final String accountNumber, final String url) throws AuthException {
+    throw new AuthException( "Not implemented in test provider" )
+  }
+
+  @Override
   SecurityTokenContent decodeSecurityToken(
       final String accessKeyIdentifier, final String securityToken) throws AuthException {
     throw new AuthException( "Not implemented in test provider" )

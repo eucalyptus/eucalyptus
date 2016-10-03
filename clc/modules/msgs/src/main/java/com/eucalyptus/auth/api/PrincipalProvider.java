@@ -25,6 +25,7 @@ import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -71,6 +72,11 @@ public interface PrincipalProvider {
    *
    */
   Role lookupRoleByName( String accountNumber, String name ) throws AuthException;
+
+  /**
+   *
+   */
+  OpenIdConnectProvider lookupOidcProviderByUrl( String accountNumber, String url ) throws AuthException;
 
   /**
    *

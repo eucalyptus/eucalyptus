@@ -71,8 +71,6 @@ import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.auth.euare.principal.EuareAccount;
-import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.records.Logs;
@@ -304,7 +302,7 @@ public class TokensService {
       final OIDCIssuerIdentifier issuerIdentifier = OIDCUtils.parseIssuerIdentifier( issuerUrl );
       final OpenIdConnectProvider provider =
           lookupOpenIdConnectProvider( accountId, issuerIdentifier.getHost( ) + issuerIdentifier.getPath( ) );
-      final String providerArn = Accounts.getOpenIdConnectProviderArn( provider );
+      final String providerArn = provider.getArn( );
       final String trustedProviderUrl = OIDCUtils.buildIssuerIdentifier( provider );
 
       // verify aud from token
@@ -567,13 +565,11 @@ public class TokensService {
     }
   }
 
-  private static EuareOpenIdConnectProvider lookupOpenIdConnectProvider( String accountName, final String url ) throws TokensException {
+  private static OpenIdConnectProvider lookupOpenIdConnectProvider( String accountId, final String url ) throws TokensException {
     try {
-      EuareAccount account = com.eucalyptus.auth.euare.Accounts.lookupAccountByName( accountName );
-      return account.lookupOpenIdConnectProvider( url );
+      return Accounts.lookupOidcProviderByUrl( accountId, url );
     } catch ( Exception e ) {
-      e.printStackTrace();
-      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid openid connect provider: " + url + ", account: " + accountName);
+      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid openid connect provider: " + url + ", account: " + accountId );
     }
   }
 }

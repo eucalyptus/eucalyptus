@@ -2410,7 +2410,7 @@ public class EuareService {
     try {
       final EuareOpenIdConnectProvider newOpenIDConnectProvider =
           Privileged.createOpenIdConnectProvider( requestUser, account, request.getUrl(), request.getClientIDList(), request.getThumbprintList() );
-      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( Accounts.getOpenIdConnectProviderArn( newOpenIDConnectProvider ) );
+      reply.getCreateOpenIdConnectProviderResult( ).setOpenIDConnectProviderArn( newOpenIDConnectProvider.getArn( ) );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
@@ -2469,7 +2469,7 @@ public class EuareService {
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
       for ( final EuareOpenIdConnectProvider provider : account.listOpenIdConnectProviders() ) {
         if ( Privileged.allowListOpenIdConnectProviders( requestUser, account, provider.getUrl( ) ) ) {
-          providers.add( new ArnType( Accounts.getOpenIdConnectProviderArn( provider ) ) );
+          providers.add( new ArnType( provider.getArn( ) ) );
         }
       }
     } catch ( Exception e ) {

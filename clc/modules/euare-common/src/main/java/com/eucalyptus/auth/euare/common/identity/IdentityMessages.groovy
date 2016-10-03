@@ -21,6 +21,7 @@
 package com.eucalyptus.auth.euare.common.identity
 
 import com.eucalyptus.component.annotation.ComponentMessage
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -122,6 +123,26 @@ class DescribeRoleResult extends EucalyptusData {
   Role role
 }
 
+class OidcProvider extends EucalyptusData {
+  String providerArn
+  Integer port
+  ArrayList<String> clientIds = Lists.newArrayList( )
+  ArrayList<String> thumbprints = Lists.newArrayList( )
+}
+
+class DescribeOidcProviderType extends IdentityMessage {
+  String accountId
+  String providerUrl
+}
+
+class DescribeOidcProviderResponseType extends IdentityMessage {
+  DescribeOidcProviderResult describeOidcProviderResult
+}
+
+class DescribeOidcProviderResult extends EucalyptusData {
+  OidcProvider oidcProvider
+}
+
 class DescribeAccountsType extends IdentityMessage {
   String alias
   String aliasLike
@@ -163,6 +184,19 @@ class SecurityToken extends EucalyptusData {
   String nonce
   Long created
   Long expires
+  ArrayList<SecurityTokenAttribute> attributes = Lists.newArrayList( )
+}
+
+class SecurityTokenAttribute extends EucalyptusData {
+  String key
+  String value
+
+  SecurityTokenAttribute( ) { }
+
+  SecurityTokenAttribute( final String key, final String value ) {
+    this.key = key
+    this.value = value
+  }
 }
 
 class ReserveNameType extends IdentityMessage {

@@ -21,12 +21,12 @@ package com.eucalyptus.auth.euare.principal;
 
 import java.util.Date;
 import java.util.regex.Pattern;
-import com.eucalyptus.auth.principal.OpenIdConnectProvider;
+import com.eucalyptus.auth.principal.BaseOpenIdConnectProvider;
 
 /**
  *
  */
-public interface EuareOpenIdConnectProvider extends OpenIdConnectProvider {
+public interface EuareOpenIdConnectProvider extends BaseOpenIdConnectProvider {
 
   Pattern CLIENT_ID_PATTERN = Pattern.compile( "^.{1,255}$" );
   Pattern THUMPRINT_PATTERN = Pattern.compile( "^(?:[0-9a-fA-F]{2}){20,127}$" );

@@ -29,6 +29,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -57,18 +58,23 @@ import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult;
 import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
+import com.eucalyptus.auth.euare.common.identity.OidcProvider;
 import com.eucalyptus.auth.euare.common.identity.Policy;
 import com.eucalyptus.auth.euare.common.identity.Principal;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameResult;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
 import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateType;
@@ -79,6 +85,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
@@ -108,7 +115,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 /**
  *
  */
-@SuppressWarnings( "UnusedDeclaration" )
+@SuppressWarnings( { "UnusedDeclaration", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed
 public class IdentityService {
 
@@ -282,6 +289,25 @@ public class IdentityService {
     }
 
     response.setDescribeRoleResult( result );
+    return response;
+  }
+
+  public DescribeOidcProviderResponseType describeOidcProvider(
+      final DescribeOidcProviderType request
+  ) throws IdentityServiceException {
+    final DescribeOidcProviderResponseType response = request.getReply( );
+    final DescribeOidcProviderResult result = new DescribeOidcProviderResult( );
+
+    try {
+      final OpenIdConnectProvider oidcProvider =
+          principalProvider.lookupOidcProviderByUrl( request.getAccountId(), request.getProviderUrl() );
+      result.setOidcProvider(
+          TypeMappers.transform( oidcProvider, OidcProvider.class ) );
+    } catch ( AuthException e ) {
+      throw handleException( e );
+    }
+
+    response.setDescribeOidcProviderResult( result );
     return response;
   }
 
@@ -502,6 +528,22 @@ public class IdentityService {
   }
 
   @TypeMapper
+  public enum OpenIdConnectProviderToOidcProviderTransform implements Function<OpenIdConnectProvider,OidcProvider> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public OidcProvider apply( final OpenIdConnectProvider authProvider ) {
+      final OidcProvider provider = new OidcProvider( );
+      provider.setProviderArn( authProvider.getArn( ) );
+      provider.setPort( authProvider.getPort( ) );
+      provider.setClientIds( Lists.newArrayList( authProvider.getClientIds( ) ) );
+      provider.setThumbprints( Lists.newArrayList( authProvider.getThumbprints( ) ) );
+      return provider;
+    }
+  }
+
+  @TypeMapper
   public enum SecurityTokenContentToSecurityTokenTransform implements Function<SecurityTokenContent,SecurityToken> {
     INSTANCE;
 
@@ -515,7 +557,12 @@ public class IdentityService {
       securityToken.setNonce( securityTokenContent.getNonce( ) );
       securityToken.setCreated( securityTokenContent.getCreated( ) );
       securityToken.setExpires( securityTokenContent.getExpires( ) );
-
+      securityToken.setAttributes( Lists.newArrayList(
+          securityTokenContent.getAttributes( ).entrySet( )
+              .stream( )
+              .map( entry -> new SecurityTokenAttribute( entry.getKey( ), entry.getValue( ) ) )
+              .collect( Collectors.toList( ) )
+      ) );
       return securityToken;
     }
   }

@@ -35,6 +35,7 @@ import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -357,6 +358,21 @@ public class RegionDelegatingPrincipalProvider implements PrincipalProvider {
       public Role apply( final PrincipalProvider principalProvider ) {
         try {
           return principalProvider.lookupRoleByName( accountNumber, name );
+        } catch ( AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  @Override
+  public OpenIdConnectProvider lookupOidcProviderByUrl( final String accountNumber, final String url ) throws AuthException {
+    return regionDispatchByAccountNumber( accountNumber, new NonNullFunction<PrincipalProvider, OpenIdConnectProvider>() {
+      @Nonnull
+      @Override
+      public OpenIdConnectProvider apply( final PrincipalProvider principalProvider ) {
+        try {
+          return principalProvider.lookupOidcProviderByUrl( accountNumber, url );
         } catch ( AuthException e ) {
           throw Exceptions.toUndeclared( e );
         }
