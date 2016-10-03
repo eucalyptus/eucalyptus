@@ -920,6 +920,9 @@ static int eucanetd_initialize(void) {
         config = EUCA_ZALLOC_C(1, sizeof(eucanetdConfig));
     }
 
+    config->euca_version = euca_version_dot2hex(EUCA_VERSION);
+    config->euca_version_str = hex2dot(config->euca_version);
+
     config->polling_frequency = 5;
     config->init = 1;
     
@@ -969,6 +972,7 @@ static int eucanetd_cleanup(void) {
     if (config) {
         EUCA_FREE(config->eucahome);
         EUCA_FREE(config->eucauser);
+        EUCA_FREE(config->euca_version_str);
         ipt_handler_close(config->ipt);
         ips_handler_close(config->ips);
         ebt_handler_close(config->ebt);

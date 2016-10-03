@@ -165,7 +165,7 @@ mido_config *pMidoConfig = NULL;
 //! @{
 //! @name MIDONET VPC Mode Network Driver APIs
 static int network_driver_init(eucanetdConfig *pConfig);
-//static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
+static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
@@ -198,6 +198,7 @@ static int network_driver_handle_signal(eucanetdConfig *pConfig, globalNetworkIn
 struct driver_handler_t midoVpcDriverHandler = {
     .name = NETMODE_VPCMIDO,
     .init = network_driver_init,
+    .upgrade = network_driver_upgrade,
     .cleanup = network_driver_cleanup,
     .system_flush = network_driver_system_flush,
     .system_maint = network_driver_system_maint,
@@ -254,6 +255,49 @@ static int network_driver_init(eucanetdConfig *pConfig) {
     gInitialized = TRUE;
 
     return (0);
+}
+
+/**
+ * Perform network driver upgrade. This function should be invoked once when eucanetd
+ * starts.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
+    int ret = 0;
+
+    LOGINFO("Upgrade '%s' network driver.\n", DRIVER_NAME());
+    if (!pConfig || !pGni) {
+        LOGERROR("Invalid argument: cannot process upgrade with NULL config.\n");
+        return (1);
+    }
+
+    // Make sure midoname buffer is available
+    midonet_api_cache_midos_init();
+
+    u32 mido_euca_version = 0;
+    char *mido_euca_version_str = NULL;
+    midoname **ipgs = NULL;
+    int max_ipgs = 0;
+    midoname **ips = NULL;
+    int max_ips = 0;
+    int rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &ipgs, &max_ipgs);
+    if (!rc && max_ipgs) {
+        for (int i = 0; i < max_ipgs; i++) {
+            if (!strcmp(ipgs[i]->name, "euca_version")) {
+                rc = mido_get_ipaddrgroup_ips(ipgs[i], &ips, &max_ips);
+                if (!rc && ips && max_ips) {
+                    mido_euca_version = euca_version_dot2hex(ips[0]->ipagip->ip);
+                    mido_euca_version_str = hex2dot(mido_euca_version);
+                    LOGTRACE("\tFound %s artifacts\n", mido_euca_version_str);
+                }
+            }
+        }
+    }
+
+    EUCA_FREE(mido_euca_version_str);
+    return (ret);
 }
 
 /**

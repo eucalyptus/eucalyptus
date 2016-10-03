@@ -5265,12 +5265,13 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
         if (rtports[j] == NULL) {
             continue;
         }
-        //char *url = NULL;
-        //rc = mido_getel_midoname(rtports[j], "portAddress", &url);
         if (rtports[j]->port && rtports[j]->port->portaddr) {
             for (k = 0; k < mido->ext_rthostarrmax; k++) {
                 if (!strcmp(rtports[j]->port->portaddr, mido->ext_rthostaddrarr[k])) {
-                    LOGTRACE("Found gw port for %s.\n", mido->ext_rthostaddrarr[k])
+                    LOGTRACE("Found gw port for %s.\n", mido->ext_rthostaddrarr[k]);
+                    if (!rtports[j]->port->ifname) {
+                        midocore->population_failed = 1;
+                    }
                     midocore->gwports[k] = rtports[j];
                     if (midocore->max_gws < k) {
                         midocore->max_gws = k;
@@ -5278,7 +5279,6 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
                 }
             }
         }
-        //EUCA_FREE(url);
     }
 
     midoname **hosts = NULL;
@@ -5315,6 +5315,21 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
         midocore->midos[CORE_GWPORTGROUP] = eucapg->obj;
     } else {
         LOGINFO("\t\tGateway port-group not found\n");
+    }
+
+    midonet_api_ipaddrgroup *veripag = NULL;
+    veripag = mido_get_ipaddrgroup("euca_version");
+    if (veripag) {
+        LOGTRACE("Found euca_version ip-address-group %s\n", veripag->obj->name);
+        midocore->eucaver_iag = veripag;
+        midocore->midos[CORE_EUCAVER_IPADDRGROUP] = veripag->obj;
+        if ((veripag->max_ips == 1) && (veripag->ips[0] && veripag->ips[0]->ipagip))  {
+            mido->euca_version = euca_version_dot2hex(veripag->ips[0]->ipagip->ip);
+        } else {
+            mido_delete_ipaddrgroup(midocore->midos[CORE_EUCAVER_IPADDRGROUP]);
+            midocore->midos[CORE_EUCAVER_IPADDRGROUP] = NULL;
+            mido->euca_version = 0;
+        }
     }
 
     LOGTRACE("midocore: AFTER POPULATE\n");
@@ -6073,6 +6088,10 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 int delete_mido_core(mido_config *mido, mido_core *midocore) {
     int rc = 0, i = 0;
 
+    // delete the euca_verf ipaddrgroup
+    rc += mido_delete_ipaddrgroup(midocore->midos[CORE_EUCAVER_IPADDRGROUP]);
+    midocore->midos[CORE_EUCAVER_IPADDRGROUP] = NULL;
+
     // delete the metadata_ip ipaddrgroup
     rc += mido_delete_ipaddrgroup(midocore->midos[CORE_METADATA_IPADDRGROUP]);
     midocore->midos[CORE_METADATA_IPADDRGROUP] = NULL;
@@ -6132,6 +6151,21 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         LOGTRACE("\tmidocore fully implemented\n");
     }
     LOGTRACE("creating mido core\n");
+
+    midonet_api_ipaddrgroup *ig = NULL;
+    ig = mido_create_ipaddrgroup(VPCMIDO_TENANT, "euca_version", &(midocore->midos[CORE_EUCAVER_IPADDRGROUP]));
+    if (!ig) {
+        LOGWARN("Failed to create ip adress group euca_version.\n");
+        ret++;
+    } else {
+        midocore->eucaver_iag = ig;
+    }
+    rc = mido_create_ipaddrgroup_ip(ig, midocore->midos[CORE_EUCAVER_IPADDRGROUP],
+            mido->config->euca_version_str, NULL);
+    if (rc) {
+        LOGERROR("cannot add entry to euca_version ipaddrgroup.\n");
+        ret++;
+    }
 
     midocore->eucart = mido_create_router(VPCMIDO_TENANT, VPCMIDO_CORERT, &(midocore->midos[CORE_EUCART]));
     if (midocore->eucart == NULL) {
@@ -6223,7 +6257,7 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         ret++;
     }
 
-    midonet_api_ipaddrgroup *ig = NULL;
+    ig = NULL;
     ig = mido_create_ipaddrgroup(VPCMIDO_TENANT, "metadata_ip", &(midocore->midos[CORE_METADATA_IPADDRGROUP]));
     if (!ig) {
         LOGWARN("Failed to create ip adress group metadata_ip.\n");
