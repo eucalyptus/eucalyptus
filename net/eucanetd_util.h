@@ -165,6 +165,7 @@ void *realloc_check(void *ptr, size_t nmemb, size_t size);
 void *append_ptrarr(void *arr, int *max_arr, void *ptr);
 void get_stack_trace ();
 
+u32 euca_version_dot2hex(const char *ver);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

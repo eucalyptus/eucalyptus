@@ -111,6 +111,7 @@
 #include "euca-to-mido.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
+#include "eucalyptus-config.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1057,6 +1058,8 @@ static int eucanetd_initialize(void) {
         config = EUCA_ZALLOC_C(1, sizeof(eucanetdConfig));
     }
 
+    config->euca_version = euca_version_dot2hex(EUCA_VERSION);
+    config->euca_version_str = hex2dot(config->euca_version);
     config->polling_frequency = 5;
     config->init = 1;
     
