@@ -211,6 +211,8 @@ typedef struct eucanetdConfig_t {
     boolean multieucanetd_safe;
     int udpsock;
     boolean init;
+    u32 euca_version;
+    char *euca_version_str;
 } eucanetdConfig;
 
 //! Network Driver API

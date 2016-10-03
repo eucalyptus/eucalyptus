@@ -123,6 +123,7 @@ enum mido_core_midos_t {
     CORE_EUCABR_INFILTER,
     CORE_METADATA_IPADDRGROUP,
     CORE_GWPORTGROUP,
+    CORE_EUCAVER_IPADDRGROUP,
     CORE_END
 };
 
@@ -244,6 +245,7 @@ struct mido_vpc_t {
 
 typedef struct mido_core_t {
     midoname *midos[CORE_END];
+    midonet_api_ipaddrgroup *eucaver_iag;
     midonet_api_router *eucart;
     midonet_api_bridge *eucabr;
     midonet_api_chain *eucabr_infilter;
@@ -259,6 +261,7 @@ typedef struct mido_core_t {
 typedef struct mido_config_t {
     eucanetdConfig *config;
     char *ext_eucanetdhostname;
+    u32 euca_version;
 
     char *ext_rthostnamearr[32];
     char *ext_rthostaddrarr[32];
