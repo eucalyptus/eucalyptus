@@ -2057,11 +2057,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final String ACCESSLOG_ROLE_POLICY_DOCUMENT=
         "{\"Statement\":"
         + "[ {"
-        + "\"Effect\":\"Allow\","
-        + "\"Action\":[\"s3:ListBucket\"],"
-        + "\"Resource\":\"arn:aws:s3:::BUCKETNAME_PLACEHOLDER\""
-        + " },{"
-        + "\"Action\": [\"s3:GetObject\", \"s3:PutObject\", \"s3:GetObjectAcl\", \"s3:PutObjectAcl\"],"
+        + "\"Action\": [\"s3:PutObject\"],"
         + "\"Effect\": \"Allow\","
         + "\"Resource\": [\"arn:aws:s3:::BUCKETNAME_PLACEHOLDER/BUCKETPREFIX_PLACEHOLDER\"]"
         + "}]}";
