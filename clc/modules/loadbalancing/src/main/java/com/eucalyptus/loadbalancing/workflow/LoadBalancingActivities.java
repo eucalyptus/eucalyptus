@@ -153,7 +153,7 @@ public interface LoadBalancingActivities {
   Map<String, String> filterInstanceStatus(final String accountNumber, final String lbName,
                             final String servoInstanceId, final String status)
           throws LoadBalancingActivityException;
-  void updateInstanceStatus(String accountNumber, String lbName, List<Map<String,String>> statusList)
+  void updateInstanceStatus(String accountNumber, String lbName, Map<String,String> statusList)
       throws LoadBalancingActivityException;
   /// cloudwatch put metrics
   void putCloudWatchInstanceHealth(String accountNumber, String lbName)

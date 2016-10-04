@@ -29,6 +29,7 @@ import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -1334,40 +1335,27 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   //TODO: SCALE
   @Override
   public void updateInstanceStatus(final String accountNumber, final String lbName,
-                                   final List<Map<String,String>> statusList)
+                                   final Map<String,String> statusMap)
       throws LoadBalancingActivityException {
     // for each status, deserialize to Instance type
     // merge the results for each instance
     // update database
-    final Map<String, String> instanceToStatus = Maps.newHashMap();
-    final Set<String> validStates = Sets.newHashSet(
+    final Set<String> validStatus = Sets.newHashSet(
         LoadBalancerBackendInstance.STATE.InService.name(),
         LoadBalancerBackendInstance.STATE.OutOfService.name());
-    
-    for(final Map<String, String> statusMap : statusList) {
-      for (final String instanceId : statusMap.keySet()) {
-        final String instanceStatus = statusMap.get(instanceId);
-        if (!validStates.contains(instanceStatus))
-          continue;
-        if (!instanceToStatus.containsKey(instanceId))
-          instanceToStatus.put(instanceId, instanceStatus);
-        else {
-          // OutOfService should override InService
-          if (!LoadBalancerBackendInstance.STATE.InService.name().equals(instanceStatus))
-            instanceToStatus.put(instanceId, instanceStatus);
-        }
-      }
-    }
-    
-    if(instanceToStatus.isEmpty())
+    final Map<String,String> verifiedStatusMap = statusMap.entrySet().stream()
+            .filter( entry -> validStatus.contains(entry.getValue()))
+            .collect(Collectors.toMap(p -> p.getKey(), p->p.getValue() ));
+
+    if(verifiedStatusMap.isEmpty())
       return;
     boolean updated = false;
     final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-      for(final String instanceId : instanceToStatus.keySet()) {
+      for(final String instanceId : verifiedStatusMap.keySet()) {
        final LoadBalancerBackendInstance sample =  LoadBalancerBackendInstance.named(lb, instanceId);
        final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-       final String newStatus = instanceToStatus.get(instanceId);
+       final String newStatus = verifiedStatusMap.get(instanceId);
        final LoadBalancerBackendInstance.STATE oldState = 
            update.getBackendState();
        final LoadBalancerBackendInstance.STATE newState =

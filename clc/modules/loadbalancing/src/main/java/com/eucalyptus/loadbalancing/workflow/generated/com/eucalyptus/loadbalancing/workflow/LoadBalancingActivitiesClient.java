@@ -1341,32 +1341,32 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList);
+    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, Promise<?>... waitFor);
+    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList);
+    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, Promise<?>... waitFor);
+    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#updateInstanceStatus}
      */
-    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#putCloudWatchInstanceHealth}

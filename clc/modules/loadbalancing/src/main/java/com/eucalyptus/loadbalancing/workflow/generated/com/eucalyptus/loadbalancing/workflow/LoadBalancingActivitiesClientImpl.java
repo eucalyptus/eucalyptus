@@ -2060,38 +2060,38 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList) {
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList) {
         return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, Promise<?>... waitFor) {
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList, Promise<?>... waitFor) {
         return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.List<java.util.Map<java.lang.String,java.lang.String>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    public final Promise<Void> updateInstanceStatus(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
         return updateInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(statusList), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList) {
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList) {
         return updateInstanceStatusImpl(accountNumber, lbName, statusList, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, Promise<?>... waitFor) {
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList, Promise<?>... waitFor) {
         return updateInstanceStatusImpl(accountNumber, lbName, statusList, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    public final Promise<Void> updateInstanceStatus(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> statusList, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
         return updateInstanceStatusImpl(accountNumber, lbName, statusList, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<Void> updateInstanceStatusImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<java.util.List<java.util.Map<java.lang.String,java.lang.String>>> statusList, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<Void> updateInstanceStatusImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<java.util.Map<java.lang.String,java.lang.String>> statusList, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
 		_activityType.setName("LoadBalancingActivities.updateInstanceStatus");

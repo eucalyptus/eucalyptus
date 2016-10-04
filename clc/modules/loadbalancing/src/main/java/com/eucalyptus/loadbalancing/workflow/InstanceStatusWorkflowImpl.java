@@ -125,29 +125,34 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   @Asynchronous
   private void doPollStatus(final int count, final Promise<List<String>> servoInstances) {
     final List<String> instances = servoInstances.get();
-    final List<Promise<Map<String, String>>> activities = Lists.newArrayList();
+    final List<Promise<Void>> activities = Lists.newArrayList();
     for(final String instanceId : instances) {
       final ActivitySchedulingOptions scheduler =
           new ActivitySchedulingOptions();
       scheduler.setTaskList(instanceId);
       scheduler.setScheduleToCloseTimeoutSeconds(10L); /// should timeout quickly
-      activities.add(client.filterInstanceStatus(
-              Promise.asPromise(accountId),
-              Promise.asPromise(loadbalancer),
-              Promise.asPromise(instanceId),
-              vmClient.getInstanceStatus(scheduler)));
+      activities.add(
+              client.updateInstanceStatus(
+                      Promise.asPromise(accountId),
+                      Promise.asPromise(loadbalancer),
+                      client.filterInstanceStatus(
+                              Promise.asPromise(accountId),
+                              Promise.asPromise(loadbalancer),
+                              Promise.asPromise(instanceId),
+                              vmClient.getInstanceStatus(scheduler)
+                      )
+              )
+      );
     }
 
-    /// TODO: what if only one servo VM dies?
-    final Promise<List<Map<String, String>>> allActivities = Promises.listOfPromisesToPromise(activities);
-
     final Promise<Void> timer = startDaemonTimer(POLLING_PERIOD_SEC);
-    final Promise<Void> merge = client.updateInstanceStatus(
-        Promise.asPromise(accountId), 
-        Promise.asPromise(loadbalancer), 
-        allActivities);
     final OrPromise waitOrSignal = new OrPromise(timer, signalReceived);
-    pollInstanceStatusPeriodic(count+1, new AndPromise(merge, waitOrSignal));
+    pollInstanceStatusPeriodic(count+1,
+            new AndPromise(
+                    Promises.listOfPromisesToPromise(activities),
+                    waitOrSignal
+            )
+    );
   }
 
   @Asynchronous(daemon = true)
