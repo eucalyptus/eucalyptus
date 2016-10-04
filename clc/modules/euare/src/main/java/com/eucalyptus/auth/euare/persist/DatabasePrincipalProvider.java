@@ -42,10 +42,12 @@ import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
+import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.ReservedNameEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
+import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
@@ -54,6 +56,7 @@ import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.euare.principal.EuareInstanceProfile;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
@@ -69,11 +72,13 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 /**
  *
  */
+@SuppressWarnings( { "unused", "Guava", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed( "localPrincipalProvider" )
 public class DatabasePrincipalProvider implements PrincipalProvider {
 
@@ -266,6 +271,27 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
         @Override public PolicyVersion getPolicy( ) { return assumeRolePolicy; }
         @Override public String getDisplayName( ) { return Accounts.getRoleFullName( this ); }
         @Override public OwnerFullName getOwner( ) { return euareRole.getOwner(); }
+      };
+    }
+  }
+
+  @Override
+  public OpenIdConnectProvider lookupOidcProviderByUrl( final String accountNumber, final String url ) throws AuthException {
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( OpenIdProviderEntity.class ) ) {
+      final EuareOpenIdConnectProvider euareProvider = Accounts.lookupAccountById( accountNumber ).lookupOpenIdConnectProvider( url );
+      final String providerArn = Accounts.getOpenIdConnectProviderArn( euareProvider );
+      final String providerAccountNumber = euareProvider.getAccountNumber( );
+      final List<String> providerClientIds = ImmutableList.copyOf( euareProvider.getClientIds( ) );
+      final List<String> providerThumbprints = ImmutableList.copyOf( euareProvider.getThumbprints( ) );
+      return new OpenIdConnectProvider( ) {
+        @Override public String getAccountNumber( ) { return providerAccountNumber; }
+        @Override public String getArn( ) { return providerArn; }
+        @Override public String getUrl( ) { return euareProvider.getUrl( ); }
+        @Override public String getHost( ) { return euareProvider.getHost( ); }
+        @Override public Integer getPort( ) { return euareProvider.getPort( ); }
+        @Override public String getPath( ) { return euareProvider.getPath( ); }
+        @Override public List<String> getClientIds( ) { return providerClientIds; }
+        @Override public List<String> getThumbprints( ) { return providerThumbprints; }
       };
     }
   }

@@ -62,7 +62,6 @@
 
 package com.eucalyptus.auth;
 
-import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.List;
@@ -76,6 +75,7 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
+import com.eucalyptus.auth.principal.BaseOpenIdConnectProvider;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
@@ -317,6 +317,11 @@ public class Accounts {
   }
 
   @Nonnull
+  public static OpenIdConnectProvider lookupOidcProviderByUrl( String accountNumber, String url ) throws AuthException {
+    return getIdentityProvider( ).lookupOidcProviderByUrl( accountNumber, url );
+  }
+
+  @Nonnull
   public static SecurityTokenContent decodeSecurityToken( String accessKeyIdentifier, String securityToken ) throws AuthException {
     return getIdentityProvider().decodeSecurityToken( accessKeyIdentifier, securityToken );
   }
@@ -390,7 +395,7 @@ public class Accounts {
     return buildArn( instanceProfile.getAccountNumber( ), PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, instanceProfile.getPath( ), instanceProfile.getName( ) );
   }
 
-  public static String getOpenIdConnectProviderArn( final OpenIdConnectProvider provider ) throws AuthException {
+  public static String getOpenIdConnectProviderArn( final BaseOpenIdConnectProvider provider ) throws AuthException {
     return buildArn(
         provider.getAccountNumber( ),
         PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER,

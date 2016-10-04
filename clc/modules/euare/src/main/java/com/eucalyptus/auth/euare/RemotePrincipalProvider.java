@@ -27,6 +27,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -36,10 +37,17 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult;
 import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResponseType;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult;
+import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderType;
+import com.eucalyptus.auth.euare.common.identity.OidcProvider;
 import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
+import com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
 import com.eucalyptus.auth.euare.common.identity.SignCertificateType;
+import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
+import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -69,6 +77,7 @@ import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.AccountIdentifiersImpl;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Role;
@@ -83,6 +92,7 @@ import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncExceptions;
@@ -274,6 +284,22 @@ public class RemotePrincipalProvider implements PrincipalProvider {
       final DescribeRoleResponseType response = send( request );
       final DescribeRoleResult result = response.getDescribeRoleResult();
       return TypeMappers.transform( result.getRole( ), Role.class );
+    } catch ( AuthException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      throw new AuthException( e );
+    }
+  }
+
+  @Override
+  public OpenIdConnectProvider lookupOidcProviderByUrl( final String accountNumber, final String url ) throws AuthException {
+    final DescribeOidcProviderType request = new DescribeOidcProviderType( );
+    request.setAccountId( accountNumber );
+    request.setProviderUrl( url );
+    try {
+      final DescribeOidcProviderResponseType response = send( request );
+      final DescribeOidcProviderResult result = response.getDescribeOidcProviderResult( );
+      return TypeMappers.transform( result.getOidcProvider( ), OpenIdConnectProvider.class );
     } catch ( AuthException e ) {
       throw e;
     } catch ( Exception e ) {
@@ -633,6 +659,34 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   @TypeMapper
+  public enum OidcProviderToOpenIdConnectProviderTransform implements Function<OidcProvider,OpenIdConnectProvider> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public OpenIdConnectProvider apply( final OidcProvider provider ) {
+      final EuareResourceName providerErn = (EuareResourceName) Ern.parse( provider.getProviderArn( ) );
+      final String providerUrl = Strings.trimPrefix( "/", providerErn.getResourceName( ) );
+      final OIDCIssuerIdentifier issuerIdentifier =
+          OIDCUtils.issuerIdentifierFromProviderUrl( providerUrl, provider.getPort( ) );
+      final String providerHost = issuerIdentifier.getHost( );
+      final String providerPath = issuerIdentifier.getPath( );
+      final List<String> providerClientIds = ImmutableList.copyOf( provider.getClientIds( ) );
+      final List<String> providerThumbprints = ImmutableList.copyOf( provider.getThumbprints( ) );
+      return new OpenIdConnectProvider( ) {
+        @Override public String getAccountNumber( ) { return providerErn.getAccount( ); }
+        @Override public String getArn( ) { return provider.getProviderArn( ); }
+        @Override public String getUrl( ) { return providerUrl; }
+        @Override public String getHost( ) { return providerHost; }
+        @Override public Integer getPort( ) { return provider.getPort( ); }
+        @Override public String getPath( ) { return providerPath; }
+        @Override public List<String> getClientIds( ) { return providerClientIds; }
+        @Override public List<String> getThumbprints( ) { return providerThumbprints; }
+      };
+    }
+  }
+
+  @TypeMapper
   public enum SecurityTokenToSecurityTokenContentTransform implements Function<SecurityToken,SecurityTokenContent> {
     INSTANCE;
 
@@ -646,7 +700,11 @@ public class RemotePrincipalProvider implements PrincipalProvider {
           securityToken.getNonce( ),
           securityToken.getCreated( ),
           securityToken.getExpires( ),
-          ImmutableMap.of( ) //TODO:STEVE:attributes for remote tokens
+          securityToken.getAttributes( ) == null ?
+              ImmutableMap.of( ) :
+              securityToken.getAttributes( )
+                  .stream( )
+                  .collect( Collectors.toMap( SecurityTokenAttribute::getKey, SecurityTokenAttribute::getValue ) )
       );
     }
   }

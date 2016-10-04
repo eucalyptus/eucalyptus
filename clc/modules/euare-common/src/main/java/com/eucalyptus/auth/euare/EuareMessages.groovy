@@ -1451,6 +1451,7 @@ public class OpenIdConnectProviderListType extends EucalyptusData {
 
 public class ArnType extends EucalyptusData {
   String arn;
+  public ArnType() {  }
   public ArnType(String arn) {
     this.arn = arn;
   }

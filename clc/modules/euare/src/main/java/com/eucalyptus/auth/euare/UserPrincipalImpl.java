@@ -265,7 +265,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.ptag = null;
   }
 
-  public UserPrincipalImpl( final EuareRole role ) throws AuthException { //TODO:STEVE: how to get back to role from here?????
+  public UserPrincipalImpl( final EuareRole role ) throws AuthException {
     final EuareAccount account = role.getAccount( );
     final EuareUser user = account.lookupAdmin();
     final List<PolicyVersion> policies = Lists.newArrayList( );

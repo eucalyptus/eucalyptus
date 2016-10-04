@@ -554,9 +554,6 @@ public class RestrictedTypes {
           policyEvaluationContext.hasAttribute( principalNameKey ) ) {
         principalType = policyEvaluationContext.getAttribute( principalTypeKey );
         principalName = policyEvaluationContext.getAttribute( principalNameKey );
-      } else if ( Principals.isSameUser( requestUser, Principals.systemUser() ) ) {
-        principalType = PrincipalType.Service;
-        principalName = "ec2.amazon.com";
       } else {
         principalType = PrincipalType.AWS;
         principalName = Accounts.getUserArn( requestUser );

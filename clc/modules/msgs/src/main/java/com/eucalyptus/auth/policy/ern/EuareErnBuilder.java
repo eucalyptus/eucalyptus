@@ -32,7 +32,7 @@ import net.sf.json.JSONException;
 public class EuareErnBuilder extends ServiceErnBuilder {
 
   public static final Pattern ARN_PATTERN =
-      Pattern.compile( "arn:aws:iam::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile|server-certificate)((?:/[^/\\s]+)+)|\\*)" );
+      Pattern.compile( "arn:aws:iam::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile|oidc-provider|server-certificate)((?:/[^/\\s]+)+)|\\*)" );
 
   public static final int ARN_PATTERNGROUP_IAM_NAMESPACE = 1;
   public static final int ARN_PATTERNGROUP_IAM_TYPE = 2;

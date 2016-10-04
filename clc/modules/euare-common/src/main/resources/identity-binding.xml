@@ -18,8 +18,8 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<binding name="www_eucalyptus_com_ns_identity_2015_03_01">
-  <namespace uri="http://www.eucalyptus.com/ns/identity/2015-03-01/" default="elements"/>
+<binding name="www_eucalyptus_com_ns_identity_2016_10_01">
+  <namespace uri="http://www.eucalyptus.com/ns/identity/2016-10-01/" default="elements"/>
   <mapping class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
   </mapping>
   <mapping type-name="IdentityResponseMessage" class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
@@ -81,6 +81,19 @@
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeOidcProviderResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <structure name="DescribeOidcProviderResult" field="describeOidcProviderResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult"/>
+    <structure map-as="IdentityResponseMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult" abstract="true">
+    <structure name="OidcProvider" field="oidcProvider" usage="optional" type="com.eucalyptus.auth.euare.common.identity.OidcProvider"/>
+  </mapping>
+  <mapping name="DescribeOidcProvider" class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+    <value name="AccountId" field="accountId" usage="optional"/>
+    <value name="ProviderUrl" field="providerUrl" usage="optional"/>
   </mapping>
   <mapping name="DescribePrincipalResponse" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType">
     <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
@@ -164,6 +177,16 @@
     <value name="InstanceProfileId" field="instanceProfileId" usage="optional"/>
     <value name="InstanceProfileArn" field="instanceProfileArn" usage="optional"/>
   </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.OidcProvider" abstract="true">
+    <value name="ProviderArn" field="providerArn" usage="optional"/>
+    <value name="Port" field="port" usage="optional"/>
+    <collection name="ClientIds" field="clientIds" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <collection name="Thumbprints" field="thumbprints" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.Principal" abstract="true">
     <value name="Enabled" field="enabled" usage="optional"/>
     <value name="Arn" field="arn" usage="optional"/>
@@ -198,6 +221,9 @@
     <value name="Nonce" field="nonce" usage="optional"/>
     <value name="Created" field="created" usage="optional"/>
     <value name="Expires" field="expires" usage="optional"/>
+    <collection name="Attributes" field="attributes" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute"/>
+    </collection>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.common.identity.AccessKey" abstract="true">
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
@@ -213,5 +239,9 @@
     <value name="Scope" field="scope" usage="optional"/>
     <value name="Policy" field="policy" usage="optional"/>
     <value name="Hash" field="hash" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute" abstract="true">
+    <value name="Key" field="key" usage="optional"/>
+    <value name="Value" field="value" usage="optional"/>
   </mapping>
 </binding>

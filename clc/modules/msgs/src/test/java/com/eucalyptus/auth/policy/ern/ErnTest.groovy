@@ -44,6 +44,14 @@ class ErnTest {
   }
 
   @Test
+  void testOidcProviderArn( ) {
+    final Ern ern = Ern.parse( 'arn:aws:iam::123456789012:oidc-provider/auth.globus.org/path/goes/here' )
+    assertEquals( "Namespace", "123456789012", ern.getAccount() );
+    assertEquals( "Resource type", qualifiedName( VENDOR_IAM, IAM_RESOURCE_OPENID_CONNECT_PROVIDER ), ern.getResourceType() );
+    assertEquals( "Resource name", "/auth.globus.org/path/goes/here", ern.getResourceName( ) );
+  }
+
+  @Test
   void testParseValid( ) {
     List<String> arns = [
       'arn:aws:iam::123456789012:user/Bob',
@@ -53,6 +61,8 @@ class ErnTest {
       'arn:aws:iam::123456789012:role/S3Access',
       'arn:aws:iam::123456789012:role/application_abc/component_xyz/S3Access',
       'arn:aws:iam::123456789012:instance-profile/Webserver',
+      'arn:aws:iam::123456789012:oidc-provider/auth.globus.org',
+      'arn:aws:iam::123456789012:oidc-provider/auth.globus.org/path/goes/here',
       'arn:aws:iam::123456789012:server-certificate/ProdServerCert',
       'arn:aws:iam::123456789012:server-certificate/division_abc/subdivision_xyz/ProdServerCert',
     ]

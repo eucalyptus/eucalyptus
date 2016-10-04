@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,10 +12,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist;
 
@@ -23,26 +19,23 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
 
 /**
  * OpenIdConnectProvider implementation backed by OpenIdProviderEntity
  */
+@SuppressWarnings( "WeakerAccess" )
 public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
-
-  private static final long serialVersionUID = 1L;
 
   private static Logger LOG = Logger.getLogger( DatabaseOpenIdProviderProxy.class );
 
@@ -62,6 +55,11 @@ public class DatabaseOpenIdProviderProxy implements EuareOpenIdConnectProvider {
       Debugging.logError( LOG, e, "Failed to toString for " + this.delegate );
     }
     return sb.toString();
+  }
+
+  @Override
+  public String getArn() throws AuthException {
+    return Accounts.getOpenIdConnectProviderArn( this );
   }
 
   @Override

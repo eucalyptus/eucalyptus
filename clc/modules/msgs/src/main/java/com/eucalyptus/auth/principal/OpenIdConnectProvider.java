@@ -62,45 +62,21 @@
 
 package com.eucalyptus.auth.principal;
 
-import java.io.Serializable;
 import java.util.List;
-import com.eucalyptus.auth.AuthException;
 
 /**
  * The interface for a user in Eucalyptus.
  * 
  * @author dkavanagh
  */
-public interface OpenIdConnectProvider extends Serializable {
+public interface OpenIdConnectProvider extends BaseOpenIdConnectProvider {
 
-  String getAccountNumber( ) throws AuthException;
+  String getAccountNumber( );
 
-  /**
-   * The provider URL as used in the ARN
-   *
-   * This value does not start with the scheme or include any port.
-   *
-   * @return The account unique url for the provider.
-   */
-  String getUrl( );
+  String getArn( );
 
-  /**
-   * The host from the url.
-   */
-  String getHost( );
+  List<String> getClientIds( );
 
-  /**
-   * The port for the provider.
-   */
-  Integer getPort( );
-
-  /**
-   * The path from the url.
-   */
-  String getPath( );
-
-  List<String> getClientIds( ) throws AuthException;
-
-  List<String> getThumbprints( ) throws AuthException;
+  List<String> getThumbprints( );
 
 }

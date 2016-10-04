@@ -415,7 +415,7 @@ public class VmInstanceMetadata {
       if ( roleArn != null ) {
         final AssumeRoleType assumeRoleType = new AssumeRoleType( );
         assumeRoleType.setRoleArn(roleArn);
-        assumeRoleType.setRoleSessionName( Crypto.generateId( vm.getOwner().getUserId() ));
+        assumeRoleType.setRoleSessionName(vm.getInstanceId());
 
         ServiceConfiguration serviceConfiguration = Topology.lookup( Tokens.class );
         try {

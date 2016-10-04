@@ -23,6 +23,9 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.util.Parameters;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +43,23 @@ public class RoleSecurityTokenAttributes {
   ) {
     Parameters.checkParamNotNullOrEmpty( "sessionName", sessionName );
     this.sessionName = sessionName;
+  }
+
+  public static <T extends RoleSecurityTokenAttributes> Optional<T> fromContext( Class<T> type  ) {
+    try {
+      final Context context = Contexts.lookup( );
+      final UserPrincipal principal = context.getUser( );
+      if ( principal != null  ) {
+        final Optional<RoleSecurityTokenAttributes> attributes = RoleSecurityTokenAttributes.forUser( principal );
+        if ( attributes.isPresent( ) && type.isInstance( attributes.get( ) ) ) {
+          return Optional.of( type.cast( attributes.get( ) ) );
+        }
+      }
+    } catch ( final IllegalContextAccessException e ) {
+      // absent
+    }
+    return Optional.absent( );
+
   }
 
   public static Optional<RoleSecurityTokenAttributes> forUser( final User user ) {
@@ -67,11 +87,14 @@ public class RoleSecurityTokenAttributes {
 
   public static Optional<RoleSecurityTokenAttributes> forMap( final Map<String,String> attributes ) {
     final String sessionName = attributes.get( "ses" );
+    final String instanceArn = attributes.get( "ins" );
     final String providerUrl = attributes.get( "url" );
     final String aud = attributes.get( "aud" );
     final String sub = attributes.get( "sub" );
     try {
-      if ( providerUrl != null ) {
+      if ( instanceArn != null ) {
+        return Optional.of( instance( sessionName, instanceArn ) );
+      } else if ( providerUrl != null ) {
         return Optional.of( webIdentity( sessionName, providerUrl, aud, sub ) );
       } else if ( sessionName != null ) {
         return Optional.of( basic( sessionName ) );
@@ -86,6 +109,13 @@ public class RoleSecurityTokenAttributes {
       @Nonnull final String sessionName
   ) {
     return new RoleSecurityTokenAttributes( sessionName );
+  }
+
+  public static RoleSecurityTokenAttributes instance(
+      @Nonnull final String sessionName,
+      @Nonnull final String instanceArn
+  ) {
+    return new RoleInstanceProfileSecurityTokenAttributes( sessionName, instanceArn );
   }
 
   public static RoleSecurityTokenAttributes webIdentity(
@@ -107,6 +137,29 @@ public class RoleSecurityTokenAttributes {
 
   protected ImmutableMap.Builder<String, String> populate( final ImmutableMap.Builder<String, String> builder ) {
     return builder.put( "ses", sessionName );
+  }
+
+  public static class RoleInstanceProfileSecurityTokenAttributes extends RoleSecurityTokenAttributes {
+    private final String instanceArn;
+
+    public RoleInstanceProfileSecurityTokenAttributes(
+        final String sessionName,
+        final String instanceArn
+    ) {
+      super( sessionName );
+      Parameters.checkParamNotNullOrEmpty( "instanceArn", instanceArn );
+      this.instanceArn = instanceArn;
+    }
+
+    @Override
+    protected ImmutableMap.Builder<String, String> populate( final ImmutableMap.Builder<String, String> builder ) {
+      return super.populate( builder )
+          .put( "ins", instanceArn );
+    }
+
+    public String getInstanceArn( ) {
+      return instanceArn;
+    }
   }
 
   public static class RoleWithWebIdSecurityTokenAttributes extends RoleSecurityTokenAttributes {
