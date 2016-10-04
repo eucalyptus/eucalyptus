@@ -131,6 +131,7 @@
 #include "euca_lni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
+#include "eucalyptus-config.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -402,6 +403,14 @@ static int network_driver_system_flush(globalNetworkInfo * pGni)
     rc |= ips_handler_repopulate(config->ips);
     rc |= ips_handler_deletesetmatch(config->ips, "EU_");
     rc |= ips_handler_deletesetmatch(config->ips, "EUCA_");
+    if (config->flushmode != FLUSH_ALL) {
+        u32 euca_version = euca_version_dot2hex(EUCA_VERSION);
+        char *strptra = hex2dot(euca_version);
+        ips_handler_add_set(config->ips, "EUCA_VERSION");
+        ips_set_flush(config->ips, "EUCA_VERSION");
+        ips_set_add_ip(config->ips, "EUCA_VERSION", strptra);
+        EUCA_FREE(strptra);
+    }
     rc |= ips_handler_print(config->ips);
     rc |= ips_handler_deploy(config->ips, 1);
     if (rc) {
@@ -644,6 +653,14 @@ static int network_driver_implement_sg(globalNetworkInfo * pGni, lni_t * pLni)
     rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_IN");
     rc = ipt_chain_flush(config->ipt, "filter", "EUCA_COUNTERS_OUT");
 
+    // create EUCA_VERSION ipset
+    u32 euca_version = euca_version_dot2hex(EUCA_VERSION);
+    strptra = hex2dot(euca_version);
+    ips_handler_add_set(config->ips, "EUCA_VERSION");
+    ips_set_flush(config->ips, "EUCA_VERSION");
+    ips_set_add_ip(config->ips, "EUCA_VERSION", strptra);
+    EUCA_FREE(strptra);
+    
     // reset and create ipsets for allprivate and noneuca subnet sets
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
