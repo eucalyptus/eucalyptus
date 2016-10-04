@@ -84,6 +84,7 @@
 #include "ips_handler.h"
 #include "ebt_handler.h"
 #include "dev_handler.h"
+#include "eucalyptus-config.h"
 #include "euca_gni.h"
 #include "eucanetd.h"
 #include "eucanetd_util.h"
@@ -455,6 +456,14 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
 
     ips_handler_deletesetmatch(pConfig->ips, "sg-");
     ips_handler_deletesetmatch(pConfig->ips, "EUCA_");
+    if (pConfig->flushmode != FLUSH_ALL) {
+        u32 euca_version = euca_version_dot2hex(EUCA_VERSION);
+        char *strptra = hex2dot(euca_version);
+        ips_handler_add_set(pConfig->ips, "EUCA_VERSION");
+        ips_set_flush(pConfig->ips, "EUCA_VERSION");
+        ips_set_add_ip(pConfig->ips, "EUCA_VERSION", strptra);
+        EUCA_FREE(strptra);
+    }
     ips_handler_print(pConfig->ips);
     rc = ips_handler_deploy(pConfig->ips, 1);
     if (rc) {
@@ -679,6 +688,13 @@ int do_edge_update_allprivate(edge_config *edge) {
         LOGERROR("Failed to load ipset state\n");
         return (1);
     }
+
+    u32 euca_version = euca_version_dot2hex(EUCA_VERSION);
+    strptra = hex2dot(euca_version);
+    ips_handler_add_set(edge->config->ips, "EUCA_VERSION");
+    ips_set_flush(edge->config->ips, "EUCA_VERSION");
+    ips_set_add_ip(edge->config->ips, "EUCA_VERSION", strptra);
+    EUCA_FREE(strptra);
 
     // reset and create ipset for allprivate
     ips_handler_add_set(edge->config->ips, "EUCA_ALLPRIVATE");
