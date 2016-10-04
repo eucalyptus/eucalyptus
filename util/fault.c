@@ -205,6 +205,7 @@ static xmlDoc *ef_doc = NULL;
 
  //! Fault log filehandle.
 static FILE *faultlog = NULL;
+static int faultlogfd = 0;
 
  //! @todo Thread safety is only half-baked at this point.
 static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -638,7 +639,10 @@ static boolean initialize_faultlog(const char *fileprefix)
     }
     LOGTRACE("Initializing faultlog using %s\n", faultlogpath);
     faultlog = fopen(faultlogpath, "a+");
-    fcntl(faultlog, F_SETFD, FD_CLOEXEC);
+    faultlogfd = fileno(faultlog);
+    if (faultlogfd != -1) {
+        fcntl(faultlogfd, F_SETFD, FD_CLOEXEC);
+    }
 
     if (faultlog == NULL) {
         LOGERROR("Cannot open fault log file %s: %s\n", faultlogpath, strerror(errno));
