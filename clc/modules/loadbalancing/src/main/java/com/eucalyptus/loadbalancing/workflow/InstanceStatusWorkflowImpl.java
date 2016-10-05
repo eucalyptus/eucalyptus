@@ -143,7 +143,8 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
       final ActivitySchedulingOptions scheduler =
           new ActivitySchedulingOptions();
       scheduler.setTaskList(instanceId);
-      scheduler.setScheduleToCloseTimeoutSeconds(10L); /// should timeout quickly
+      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+      scheduler.setStartToCloseTimeoutSeconds(10L);
       activities.add(
               client.updateInstanceStatus(
                       Promise.asPromise(accountId),

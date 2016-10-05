@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
+import com.amazonaws.services.simpleworkflow.flow.core.AndPromise;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.flow.ActivitySchedulingOptions;
@@ -66,6 +67,8 @@ public class CloudWatchPutMetricWorkflowImpl implements CloudWatchPutMetricWorkf
   // TODO: implement SWF:continueAsNewWorkflow 
   private int MAX_PUT_PER_WORKFLOW = 10;
   private final int PUT_PERIOD_SEC = 30;
+  final WorkflowClock clock =
+          contextProvider.getDecisionContext().getWorkflowClock();
   @Override
   public void putCloudWatchMetric(final String accountId, final String loadbalancer) {
     this.accountId = accountId;
@@ -126,16 +129,30 @@ public class CloudWatchPutMetricWorkflowImpl implements CloudWatchPutMetricWorkf
       final ActivitySchedulingOptions scheduler =
           new ActivitySchedulingOptions();
       scheduler.setTaskList(instanceId);
-      scheduler.setScheduleToCloseTimeoutSeconds(10L); /// should timeout quickly
+      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+      scheduler.setStartToCloseTimeoutSeconds(10L);
       metrics.put(instanceId, vmClient.getCloudWatchMetrics(scheduler));
     }
 
     final Promise<Map<String, String>> metricMap = Promises.mapOfPromisesToPromise(metrics);
-    client.putCloudWatchMetrics(Promise.asPromise(this.accountId), Promise.asPromise(this.loadbalancer), metricMap);
-    client.putCloudWatchInstanceHealth(this.accountId, this.loadbalancer);
+    final List<Promise<Void>> activities = Lists.newArrayList();
+    activities.add(
+            client.putCloudWatchMetrics(
+                    Promise.asPromise(this.accountId), Promise.asPromise(this.loadbalancer), metricMap)
+    );
+    activities.add(
+            client.putCloudWatchInstanceHealth(this.accountId, this.loadbalancer)
+    );
 
-    final WorkflowClock clock = contextProvider.getDecisionContext().getWorkflowClock();
-    final Promise<Void> timer = clock.createTimer(PUT_PERIOD_SEC);
-    putCloudWatchMetricPeriodic(count+1, timer);
+    final Promise<Void> timer = startDaemonTimer(PUT_PERIOD_SEC);
+    putCloudWatchMetricPeriodic(count+1,
+            new AndPromise(timer, Promises.listOfPromisesToPromise(activities)));
+  }
+
+
+  @Asynchronous(daemon = true)
+  private Promise<Void> startDaemonTimer(int seconds) {
+    Promise<Void> timer = clock.createTimer(seconds);
+    return timer;
   }
 }
