@@ -20,7 +20,11 @@
 package com.eucalyptus.ws.protocol;
 
 import java.util.Collection;
+import com.eucalyptus.util.FUtils;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+import javaslang.collection.List;
 
 /**
  *
@@ -30,4 +34,12 @@ public interface RequestLoggingFilter extends Function<Collection<String>,Collec
   String REDACTED = "********";
 
   Collection<String> apply( Collection<String> parametersOrBody );
+
+  static Iterable<String> actionPairs( final String... actions ) {
+    return ImmutableList.copyOf(
+        List.of( OperationParameter.values( ) )
+            .map( Object::toString )
+            .flatMap( FUtils.applyAll( List.of( actions ).map( Strings.prepend( "=" ) ).map( Strings::append ) ) )
+    );
+  }
 }

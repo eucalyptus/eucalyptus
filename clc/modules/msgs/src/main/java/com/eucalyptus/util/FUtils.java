@@ -25,11 +25,24 @@ import javax.annotation.Nullable;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import javaslang.collection.Stream;
 
 /**
  * Functional utility methods
  */
 public class FUtils {
+
+  /**
+   * A function that applies all of the given functions to the input.
+   *
+   * @param mappers The mapping functions to be applied.
+   * @param <R> The result item type.
+   * @param <T> The input type
+   * @return The function
+   */
+  public static <R,T> CompatFunction<T,Iterable<R>> applyAll( final Iterable<Function<? super T,? extends  R>> mappers ) {
+    return t -> Stream.ofAll( mappers ).map( mapper -> mapper.apply( t ) );
+  }
 
   /**
    * Chain functions, useful for method reference composition.
@@ -77,8 +90,8 @@ public class FUtils {
    * @param <T>
    * @return
    */
-  public static <T extends Enum<T>> Function<String,T> valueOfFunction( final Class<T> enumClass ) {
-    return new Function<String,T>( ){
+  public static <T extends Enum<T>> CompatFunction<String,T> valueOfFunction( final Class<T> enumClass ) {
+    return new CompatFunction<String,T>( ){
       @Nullable
       @Override
       public T apply( @Nullable final String value ) {
@@ -94,8 +107,8 @@ public class FUtils {
    * @param <T> The Callback type
    * @return A function wrapping the callback
    */
-  public static <T> Function<T,T> function( @Nonnull final Callback<T> callback ) {
-    return new Function<T,T>( ) {
+  public static <T> CompatFunction<T,T> function( @Nonnull final Callback<T> callback ) {
+    return new CompatFunction<T,T>( ) {
       @Nullable
       @Override
       public T apply( @Nullable final T t ) {

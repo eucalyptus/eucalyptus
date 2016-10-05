@@ -197,7 +197,7 @@ public class Pair<L,R> {
   }
 
   public static <L,R,V> NonNullFunction<Pair<L,R>,V> transformer(
-      final Function<L,Function<R,V>> pairTransform
+      final Function<L,? extends Function<R,V>> pairTransform
   ) {
     return new NonNullFunction<Pair<L, R>, V>( ) {
       @SuppressWarnings( "ConstantConditions" )
