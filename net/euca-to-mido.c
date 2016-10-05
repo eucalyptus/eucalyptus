@@ -627,18 +627,6 @@ int do_midonet_populate(mido_config *mido) {
     }
     LOGINFO("\tmido_core populated in %.2f ms.\n",  eucanetd_timer_usec(&tv) / 1000.0);
 
-    // make sure that all core objects are in place
-    rc = create_mido_core(mido, mido->midocore);
-    if (rc) {
-        LOGERROR("failed to setup midonet core: check midonet health\n");
-        return (1);
-    }
-    if (midonet_api_system_changed == 1) {
-        LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    } else {
-        LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    }
-    
     return (do_midonet_populate_vpcs(mido));
 }
 
@@ -879,7 +867,8 @@ int do_midonet_teardown(mido_config *mido) {
     }
 
     do_midonet_delete_all(mido);
-    free_mido_config(mido);
+    midonet_api_cache_flush();
+    reinitialize_mido(mido);
 
     return (ret);
 }
@@ -2433,8 +2422,9 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         midocache_invalid = 1;
     }
 
-    mido->enabledCLCIp = gni->enabledCLCIp;
     eucanetd_timer_usec(&tv);
+    mido->enabledCLCIp = gni->enabledCLCIp;
+
     if (!midocache_invalid) {
         clear_mido_gnitags(mido);
         LOGTRACE("\tgni/mido tags cleared in %ld us.\n", eucanetd_timer_usec(&tv));
@@ -2454,6 +2444,19 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             LOGWARN("failed to populate euca VPC models.\n");
         }
         LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+        // make sure that all core objects are in place
+        rc = create_mido_core(mido, mido->midocore);
+        if (rc) {
+            LOGERROR("failed to setup midonet core: check midonet health\n");
+            return (1);
+        }
+        if (midonet_api_system_changed == 1) {
+            LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        } else {
+            LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        }
+        
         mido_info_http_count();
         midonet_api_system_changed = 0;
     }
@@ -4193,19 +4196,26 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     boolean found2 = FALSE;
 
     LOGTRACE("populating %s\n", natgateway->name);
-    natgateway->midos[NATG_EUCABR] = mido->midocore->eucabr->obj;
-    natgateway->midos[NATG_EUCART] = mido->midocore->eucart->obj;
-    natgateway->midos[NATG_SUBNBR] = vpcsubnet->subnetbr->obj;
+    if (!mido || !vpc || !vpcsubnet || !natgateway) {
+        LOGDEBUG("Invalid argument: cannot populate with NULL information.\n");
+        return (1);
+    }
+    if (mido->midocore && mido->midocore->eucabr) {
+        natgateway->midos[NATG_EUCABR] = mido->midocore->eucabr->obj;
+    }
+    if (mido->midocore && mido->midocore->eucart) {
+        natgateway->midos[NATG_EUCART] = mido->midocore->eucart->obj;
+    }
+    if (vpcsubnet && vpcsubnet->subnetbr) {
+        natgateway->midos[NATG_SUBNBR] = vpcsubnet->subnetbr->obj;
+    }
     // Search NAT Gateway Router in MidoNet
     snprintf(tmp_name, 64, "natr_%s", natgateway->name);
-    //midonet_api_router *router =  mido_get_router(tmp_name);
     midonet_api_router *router =  natgateway->natgrt;
     if (router != NULL) {
         LOGTRACE("Found router %s\n", router->obj->name);
-        //natgateway->midos[NATG_RT] = router->obj;
-        //natgateway->natgrt = router;
         // Search for NATG_RT_UPLINK
-        if (mido->midocore->midos[CORE_EUCABR]->init) {
+        if (mido->midocore && mido->midocore->midos[CORE_EUCABR] && mido->midocore->midos[CORE_EUCABR]->init) {
             midoname **rtports = router->ports;
             int max_rtports = router->max_ports;
             midoname **eucabrports = mido->midocore->eucabr->ports;
@@ -4318,8 +4328,8 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     }
     if (ret == 1) {
         // Cleanup partial NAT Gateway
-        //LOGINFO("\tdeleting %s\n", natgateway->name);
-        //rc = delete_mido_vpc_natgateway(mido, vpcsubnet, natgateway);
+        LOGINFO("\tdeleting %s\n", natgateway->name);
+        delete_mido_vpc_natgateway(mido, vpcsubnet, natgateway);
     }
     return (ret);
 }
@@ -4679,6 +4689,7 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
             SP(int_rtslashnet));
 
     midonet_api_init();
+    mido_info_midonetapi();
 
     return (ret);
 }

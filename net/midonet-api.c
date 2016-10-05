@@ -5699,7 +5699,6 @@ int mido_initialize_apiuribase(void) {
         snprintf(midonet_api_version, 16, "unknown");
     }
     EUCA_FREE(outbuf);
-    mido_info_midonetapi();
     return (rc);
 }
 
