@@ -21,8 +21,11 @@ package com.eucalyptus.tokens;
 
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -38,25 +41,39 @@ import com.google.common.collect.Iterables;
 /**
  *
  */
+@SuppressWarnings( { "WeakerAccess", "unused" } )
 @ConfigurableClass(root = "tokens", description = "Parameters controlling tokens service")
 public class TokensServiceConfiguration {
 
   private static final Logger logger = Logger.getLogger( TokensServiceConfiguration.class );
+  private static final Pattern NONE = Pattern.compile( "-" ); // invalid alias
+
+  private static final String DEFAULT_ROLE_ARN_ALIAS = "eucalyptus";
 
   @ConfigurableField(
-      initial = "",
       description = "Actions to enable (ignored if empty)",
       changeListener = TokensServicePropertyChangeListener.class )
   public static volatile String enabledActions = "";
 
   @ConfigurableField(
-      initial = "",
       description = "Actions to disable",
       changeListener = TokensServicePropertyChangeListener.class )
   public static volatile String disabledActions = "";
 
-  private static final AtomicReference<Set<String>> enabledActionsSet = new AtomicReference<>( Collections.<String>emptySet() );
-  private static final AtomicReference<Set<String>> disabledActionsSet = new AtomicReference<>( Collections.<String>emptySet() );
+  @ConfigurableField(
+      initial = DEFAULT_ROLE_ARN_ALIAS,
+      description = "List of account aliases to allow in role ARNs",
+      changeListener = TokensServiceRoleArnPropertyChangeListener.class )
+  public static volatile String roleArnAliasWhitelist = DEFAULT_ROLE_ARN_ALIAS;
+
+  private static final AtomicReference<Set<String>> enabledActionsSet =
+      new AtomicReference<>( Collections.emptySet() );
+
+  private static final AtomicReference<Set<String>> disabledActionsSet =
+      new AtomicReference<>( Collections.emptySet() );
+
+  private static final AtomicReference<Pattern> roleArnAliasPattern =
+      new AtomicReference<>( Pattern.compile( DEFAULT_ROLE_ARN_ALIAS ) );
 
   public static Set<String> getEnabledActions( ) {
     return enabledActionsSet.get( );
@@ -66,6 +83,11 @@ public class TokensServiceConfiguration {
     return disabledActionsSet.get( );
   }
 
+  public static Pattern getRoleArnAliasPattern( ) {
+    return roleArnAliasPattern.get( );
+  }
+
+  @SuppressWarnings( "StaticPseudoFunctionalStyleMethod" )
   public static final class TokensServicePropertyChangeListener implements PropertyChangeListener {
     @SuppressWarnings( "unchecked" )
     @Override
@@ -84,6 +106,41 @@ public class TokensServiceConfiguration {
       } catch ( NoSuchFieldException | IllegalAccessException  e ) {
         logger.error( "Error updating token service configuration for " + configurableProperty.getDisplayName( ), e );
       }
+    }
+  }
+
+  @SuppressWarnings( "StaticPseudoFunctionalStyleMethod" )
+  public static final class TokensServiceRoleArnPropertyChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( final ConfigurableProperty configurableProperty,
+                            final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        final String strValue = com.google.common.base.Strings.emptyToNull( Objects.toString( newValue, "" ) );
+        if ( strValue != null ) {
+          final Splitter splitter =
+              Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+          final StringBuilder builder = new StringBuilder( );
+          builder.append( "(-|" );
+          for ( final String aliasWildcard : splitter.split( strValue ) ) {
+            builder.append( toPattern( aliasWildcard ) );
+            builder.append( '|' );
+          }
+          builder.append( "-)" );
+          roleArnAliasPattern.set( Pattern.compile( builder.toString( ) ) );
+        } else {
+          roleArnAliasPattern.set( NONE );
+        }
+      } catch ( final PatternSyntaxException e ) {
+        logger.error( "Error updating token service configuration for " + configurableProperty.getDisplayName( ), e );
+        roleArnAliasPattern.set( NONE );
+      }
+    }
+
+    private static String toPattern( final String aliasWildcard ) throws ConfigurablePropertyException {
+      if ( !aliasWildcard.matches( "[0-9\\p{javaLowerCase}*-]+" ) ) {
+        throw new ConfigurablePropertyException( "Invalid alias : " + aliasWildcard );
+      }
+      return aliasWildcard.replace( "*", ".*" );
     }
   }
 }

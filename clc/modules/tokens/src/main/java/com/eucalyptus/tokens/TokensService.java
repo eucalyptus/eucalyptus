@@ -41,6 +41,8 @@ import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.Subject;
@@ -58,7 +60,6 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principal.PrincipalType;
@@ -99,6 +100,8 @@ import org.apache.log4j.Logger;
 @ComponentNamed
 public class TokensService {
   private static final Logger LOG = Logger.getLogger( TokensService.class );
+  private static final Pattern ROLE_ARN_PATTERN = Pattern.compile( "arn:aws:iam::([0-9\\p{javaLowerCase}-]{1,63}):role/.+" );
+  private static final int ROLE_ARN_PATTERN_ACCOUNT_GROUP = 1;
 
   public GetCallerIdentityResponseType getCallerIdentity(
       final GetCallerIdentityType request
@@ -552,26 +555,32 @@ public class TokensService {
     return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
   }
 
-  private static BaseRole lookupRole( final String roleArnString ) throws TokensException {
+  private static BaseRole lookupRole( final String roleArnStringWithAlias ) throws TokensException {
     try {
+      final Matcher matcher = ROLE_ARN_PATTERN.matcher( roleArnStringWithAlias );
+      if ( !matcher.matches( ) ) {
+        throw new IllegalArgumentException();
+      }
+      final String accountNumberOrAlias = matcher.group( ROLE_ARN_PATTERN_ACCOUNT_GROUP );
+      final String roleArnString = Accounts.isAccountNumber( accountNumberOrAlias ) ||
+          !TokensServiceConfiguration.getRoleArnAliasPattern( ).matcher( accountNumberOrAlias ).matches( ) ?
+          roleArnStringWithAlias :
+          roleArnStringWithAlias.substring( 0, matcher.start( ROLE_ARN_PATTERN_ACCOUNT_GROUP ) ) +
+              Accounts.lookupAccountIdentifiersByAlias( accountNumberOrAlias ).getAccountNumber( ) +
+              roleArnStringWithAlias.substring( matcher.end( ROLE_ARN_PATTERN_ACCOUNT_GROUP ) );
       final Ern roleArn = Ern.parse( roleArnString );
       if ( !( roleArn instanceof EuareResourceName ) ||
           !PolicySpec.IAM_RESOURCE_ROLE.equals( ( (EuareResourceName) roleArn ).getType( ) ) ||
-          roleArn.getAccount( ) == null )
+          roleArn.getAccount( ) == null ) {
         throw new IllegalArgumentException( );
+      }
       final String roleAccountId = roleArn.getAccount( );
       final String roleName = ( (EuareResourceName) roleArn ).getName( );
-
-      if ( AccountIdentifiers.SYSTEM_ACCOUNT.equals( roleAccountId ) ) {
-        final AccountIdentifiers account = Accounts.lookupAccountIdentifiersByAlias( AccountIdentifiers.SYSTEM_ACCOUNT );
-        return Accounts.lookupRoleByName( account.getAccountNumber( ), roleName );
-      } else {
-        return Accounts.lookupRoleByName( roleAccountId, roleName );
-      }
+      return Accounts.lookupRoleByName( roleAccountId, roleName );
     } catch ( IllegalArgumentException | JSONException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, "Invalid role ARN: " + roleArnString );
+      throw new TokensException( TokensException.Code.ValidationError, "Invalid role ARN: " + roleArnStringWithAlias );
     } catch ( Exception e ) {
-      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid role: " + roleArnString );
+      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid role: " + roleArnStringWithAlias );
     }
   }
 
