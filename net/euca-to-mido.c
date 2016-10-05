@@ -755,18 +755,6 @@ int do_midonet_populate(mido_config *mido) {
     }
     LOGINFO("\tmido_core populated in %.2f ms.\n",  eucanetd_timer_usec(&tv) / 1000.0);
 
-    // make sure that all core objects are in place
-    rc = create_mido_core(mido, mido->midocore);
-    if (rc) {
-        LOGERROR("failed to setup midonet core: check midonet health\n");
-        return (1);
-    }
-    if (midonet_api_system_changed == 1) {
-        LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    } else {
-        LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
-    }
-    
     return (do_midonet_populate_vpcs(mido));
 }
 
@@ -1007,6 +995,7 @@ int do_midonet_teardown(mido_config * mido) {
     }
 
     do_midonet_delete_all(mido);
+    midonet_api_cache_flush();
     free_mido_config(mido);
 
     return (ret);
@@ -2663,8 +2652,9 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         midocache_invalid = 1;
     }
 
-    mido->enabledCLCIp = gni->enabledCLCIp;
     eucanetd_timer_usec(&tv);
+    mido->enabledCLCIp = gni->enabledCLCIp;
+
     if (!midocache_invalid) {
         clear_mido_gnitags(mido);
         LOGTRACE("\tgni/mido tags cleared in %ld us.\n", eucanetd_timer_usec(&tv));
@@ -2684,6 +2674,20 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             LOGWARN("failed to populate euca VPC models.\n");
         }
         LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+        // make sure that all core objects are in place
+        midonet_api_system_changed = 0;
+        rc = create_mido_core(mido, mido->midocore);
+        if (rc) {
+            LOGERROR("failed to setup midonet core: check midonet health\n");
+            return (1);
+        }
+        if (midonet_api_system_changed == 1) {
+            LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        } else {
+            LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        }
+        
         mido_info_http_count();
         midonet_api_system_changed = 0;
     }
