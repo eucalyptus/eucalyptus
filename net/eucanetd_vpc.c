@@ -210,6 +210,7 @@ mido_config *pMidoConfig = NULL;
 //! @name MIDONET VPC Mode Network Driver APIs
 static int network_driver_init(eucanetdConfig *pConfig);
 static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush);
+static int network_driver_upgrade(globalNetworkInfo * pGni);
 static int network_driver_system_flush(globalNetworkInfo *pGni);
 static int network_driver_system_maint(globalNetworkInfo *pGni, lni_t *pLni);
 static u32 network_driver_system_scrub(globalNetworkInfo *pGni,
@@ -240,6 +241,7 @@ struct driver_handler_t midoVpcDriverHandler = {
     .name = NETMODE_VPCMIDO,
     .init = network_driver_init,
     .cleanup = network_driver_cleanup,
+    .upgrade = network_driver_upgrade,
     .system_flush = network_driver_system_flush,
     .system_maint = network_driver_system_maint,
     .system_scrub = network_driver_system_scrub,
@@ -343,6 +345,71 @@ static int network_driver_cleanup(globalNetworkInfo *pGni, boolean forceFlush)
     }
     midonet_api_cleanup();
     gInitialized = FALSE;
+    return (ret);
+}
+
+/**
+ * Perform network driver upgrade. This function should be invoked once when eucanetd
+ * starts.
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_upgrade(globalNetworkInfo *pGni) {
+    int ret = 0;
+
+    // Skip upgrade in flush mode
+    if (pMidoConfig && pMidoConfig->config && (pMidoConfig->config->flushmode != FLUSH_NONE)) {
+        LOGTRACE("\tflush mode selected. Skipping upgrade\n");
+        return (0);
+    }
+
+    LOGINFO("Upgrade '%s' network driver.\n", DRIVER_NAME());
+    if (!pGni) {
+        LOGERROR("Invalid argument: cannot process upgrade with NULL config.\n");
+        return (1);
+    }
+
+    // Make sure midoname buffer is available
+    midonet_api_cache_midos_init();
+
+    int rc = 0;
+    midoname **bridges = NULL;
+    int max_bridges = 0;
+    boolean found_eucabr = FALSE;
+    rc = mido_get_bridges(VPCMIDO_TENANT, &bridges, &max_bridges);
+    if (!rc && max_bridges) {
+        for (int i = 0; !found_eucabr && i < max_bridges; i++) {
+            if (!strcmp(bridges[i]->name, "eucabr")) {
+                found_eucabr = TRUE;
+            }
+        }
+    }
+
+    midoname **chains = NULL;
+    int max_chains = 0;
+    boolean found_infilter = FALSE;
+    rc = mido_get_chains(VPCMIDO_TENANT, &chains, &max_chains);
+    if (!rc && max_chains) {
+        for (int i = 0; found_eucabr && !found_infilter && i < max_chains; i++) {
+            if (!strcmp(chains[i]->name, "eucabr_infilter")) {
+                LOGINFO("\teucanetd 4.3 constructs found - skipping upgrade\n");
+                found_infilter = TRUE;
+            }
+        }
+    }
+
+    if (found_eucabr && !found_infilter) {
+        LOGINFO("\teucanetd 4.3 constructs not found. Cleaning up MN\n");
+        if (pMidoConfig) {
+            eucanetdConfig *configbak = pMidoConfig->config;
+            int flushmodebak = pMidoConfig->config->flushmode;
+            pMidoConfig->config->flushmode = FLUSH_MIDO_DYNAMIC;
+            do_midonet_teardown(pMidoConfig);
+            pMidoConfig->config = configbak;
+            pMidoConfig->config->flushmode = flushmodebak;
+            initialize_mido(pMidoConfig, pMidoConfig->config, "169.254.0.0", "17");
+        }
+    }
     return (ret);
 }
 
