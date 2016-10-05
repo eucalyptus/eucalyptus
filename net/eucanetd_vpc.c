@@ -198,8 +198,8 @@ static int network_driver_handle_signal(eucanetdConfig *pConfig, globalNetworkIn
 struct driver_handler_t midoVpcDriverHandler = {
     .name = NETMODE_VPCMIDO,
     .init = network_driver_init,
-    .upgrade = network_driver_upgrade,
     .cleanup = network_driver_cleanup,
+    .upgrade = network_driver_upgrade,
     .system_flush = network_driver_system_flush,
     .system_maint = network_driver_system_maint,
     .system_scrub = network_driver_system_scrub,
@@ -240,10 +240,10 @@ static int network_driver_init(eucanetdConfig *pConfig) {
         return (0);
     }
 
-    pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
+    if (!pMidoConfig) {
+        pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
+    }
     pMidoConfig->config = pConfig;
-    //rc = initialize_mido(pMidoConfig, pConfig->eucahome, pConfig->flushmode, pConfig->disable_l2_isolation, pConfig->midoeucanetdhost, pConfig->midogwhosts,
-    //        pConfig->midopubnw, pConfig->midopubgwip, "169.254.0.0", "17");
     rc = initialize_mido(pMidoConfig, pConfig, "169.254.0.0", "17");
     if (rc) {
         LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
@@ -258,6 +258,31 @@ static int network_driver_init(eucanetdConfig *pConfig) {
 }
 
 /**
+ * Cleans up the network driver. This will work even if the initial initialization
+ * fail for any reasons. This will reset anything that could have been half-way or
+ * fully configured. If forceFlush is set, then a network flush will be performed.
+ * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
+ * @param forceFlush [in] set to TRUE if a network flush needs to be performed
+ * @return 0 on success. Integer number on failure.
+ */
+static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush) {
+    int ret = 0;
+
+    LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
+
+    if (forceFlush) {
+        if (network_driver_system_flush(pConfig, pGni)) {
+            LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
+            ret = 1;
+        }
+    }
+    midonet_api_cleanup();
+    gInitialized = FALSE;
+    return (ret);
+}
+
+/**
  * Perform network driver upgrade. This function should be invoked once when eucanetd
  * starts.
  * @param pConfig [in] a pointer to eucanetd system-wide configuration
@@ -266,6 +291,12 @@ static int network_driver_init(eucanetdConfig *pConfig) {
  */
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int ret = 0;
+
+    // Skip upgrade in flush mode
+    if (pMidoConfig && pMidoConfig->config && (pMidoConfig->config->flushmode != FLUSH_NONE)) {
+        LOGTRACE("\tflush mode selected. Skipping upgrade\n");
+        return (0);
+    }
 
     LOGINFO("Upgrade '%s' network driver.\n", DRIVER_NAME());
     if (!pConfig || !pGni) {
@@ -292,36 +323,13 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
                     mido_euca_version_str = hex2dot(mido_euca_version);
                     LOGTRACE("\tFound %s artifacts\n", mido_euca_version_str);
                 }
+                EUCA_FREE(ips);
             }
         }
     }
+    EUCA_FREE(ipgs);
 
     EUCA_FREE(mido_euca_version_str);
-    return (ret);
-}
-
-/**
- * Cleans up the network driver. This will work even if the initial initialization
- * fail for any reasons. This will reset anything that could have been half-way or
- * fully configured. If forceFlush is set, then a network flush will be performed.
- * @param pConfig [in] a pointer to eucanetd system-wide configuration
- * @param pGni [in] a pointer to the Global Network Information structure
- * @param forceFlush [in] set to TRUE if a network flush needs to be performed
- * @return 0 on success. Integer number on failure.
- */
-static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush) {
-    int ret = 0;
-
-    LOGINFO("Cleaning up '%s' network driver.\n", DRIVER_NAME());
-
-    if (forceFlush) {
-        if (network_driver_system_flush(pConfig, pGni)) {
-            LOGERROR("Fail to flush network artifacts during network driver cleanup. See above log errors for details.\n");
-            ret = 1;
-        }
-    }
-    midonet_api_cleanup();
-    gInitialized = FALSE;
     return (ret);
 }
 
@@ -505,12 +513,11 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
             free_mido_config(pMidoConfig);
-            pMidoConfig->config = pConfig;
         } else {
             LOGERROR("failed to (re)initialize config options: VPCMIDO driver not initialized\n");
             return (EUCANETD_RUN_ERROR_API);
         }
-        rc = initialize_mido(pMidoConfig, pMidoConfig->config, "169.254.0.0", "17");
+        rc = network_driver_init(pConfig);
         if (rc) {
             LOGERROR("failed to (re)initialize config options\n");
             return (EUCANETD_RUN_ERROR_API);
