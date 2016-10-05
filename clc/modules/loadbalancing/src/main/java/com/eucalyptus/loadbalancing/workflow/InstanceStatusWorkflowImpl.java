@@ -20,10 +20,10 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CancellationException;
 
 import com.amazonaws.services.simpleworkflow.flow.core.OrPromise;
+import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.flow.ActivitySchedulingOptions;
@@ -70,7 +70,8 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   // ideally we should use continueAsNewWorkflow, but the current EUCA SWF lacks it
   // TODO: implement SWF:continueAsNewWorkflow 
   private int MAX_POLL_PER_WORKFLOW = 10;
-  private final int POLLING_PERIOD_SEC = 30;
+  static public final int MIN_POLLING_PERIOD_SEC = 10;
+  private int pollingPeriodSec = MIN_POLLING_PERIOD_SEC;
   
   @Override
   public void pollInstanceStatus(final String accountId, final String loadbalancer) {
@@ -80,7 +81,10 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-       pollInstanceStatusPeriodic(0);
+       final Promise<HealthCheck> healthCheck =
+               client.lookupLoadBalancerHealthCheck(Promise.asPromise(accountId),
+                       Promise.asPromise(loadbalancer));
+       pollInstanceStatus(healthCheck);
       }
       
       @Override
@@ -111,13 +115,22 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
       }
     };
   }
+
+  @Asynchronous
+  private void pollInstanceStatus(final Promise<HealthCheck> healthCheck) {
+    final HealthCheck hc = healthCheck.get();
+    if ( hc != null && hc.getInterval() != null ) {
+      this.pollingPeriodSec = Math.max(MIN_POLLING_PERIOD_SEC, hc.getInterval().intValue());
+    }
+    pollInstanceStatusPeriodic(0);
+  }
   
   @Asynchronous 
-  private void pollInstanceStatusPeriodic(final int count, Promise<?>... waitFor) {
+  private void pollInstanceStatusPeriodic(final int count,
+                                          Promise<?>... waitFor) {
    if (signalReceived.isReady()  || count >= MAX_POLL_PER_WORKFLOW) {
       return;
    }
-   
    final Promise<List<String>> servoInstances = client.lookupServoInstances(this.accountId, this.loadbalancer);
    doPollStatus(count, servoInstances);   
   }
@@ -145,7 +158,7 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
       );
     }
 
-    final Promise<Void> timer = startDaemonTimer(POLLING_PERIOD_SEC);
+    final Promise<Void> timer = startDaemonTimer(this.pollingPeriodSec);
     final OrPromise waitOrSignal = new OrPromise(timer, signalReceived);
     pollInstanceStatusPeriodic(count+1,
             new AndPromise(

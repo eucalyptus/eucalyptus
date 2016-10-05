@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 
@@ -81,7 +82,6 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBal
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
-import com.eucalyptus.loadbalancing.service.LoadBalancingServoCache;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
@@ -1285,6 +1285,25 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
     }catch(final Exception ex) {
       LOG.warn("Failed to set default security policy to https/ssl listeners", ex);
+    }
+  }
+
+  @Override
+  public HealthCheck lookupLoadBalancerHealthCheck(final String accountNumber, final String lbName)
+          throws LoadBalancingActivityException {
+    try {
+      final LoadBalancer lb =
+              LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final HealthCheck hc = new HealthCheck();
+      hc.setHealthyThreshold(lb.getHealthyThreshold());
+      hc.setInterval(lb.getHealthCheckInterval());
+      hc.setTarget(lb.getHealthCheckTarget());
+      hc.setTimeout(lb.getHealthCheckTimeout());
+      hc.setUnhealthyThreshold(lb.getHealthCheckUnhealthyThreshold());
+      return hc;
+    }catch(final Exception ex) {
+      throw new LoadBalancingActivityException(String.format("Failed to lookup loadbalancer (%s:%s",
+              accountNumber, lbName));
     }
   }
 
@@ -2651,7 +2670,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           update.setState(LoadBalancerServoInstance.STATE.Error);
           Entities.persist(update);
           db.commit();
-          LoadBalancingServoCache.getInstance().invalidate(update);
         }catch(Exception ex){
           LOG.error(String.format("Failed to mark the servo instance's state to ERROR (%s)",
                   instance.getInstanceId()));
@@ -2697,7 +2715,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
             update.setState(newState);
             Entities.persist(update);
             db.commit();
-            LoadBalancingServoCache.getInstance().invalidate(update);
           }catch(Exception ex){
             LOG.error(String.format("Failed to commit the servo instance's state change (%s)",
                     instance.getInstanceId()));
@@ -2776,7 +2793,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
             if (!(ipAddr == null && privateIpAddr == null) )
               update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
             db.commit();
-            LoadBalancingServoCache.getInstance().invalidate(update);
           }catch(NoSuchElementException ex){
             LOG.warn("Failed to find the servo instance named "+instance.getInstanceId(), ex);
           }catch(Exception ex){
@@ -2790,7 +2806,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
             final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
             update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
             db.commit();
-            LoadBalancingServoCache.getInstance().invalidate(update);
           }catch(NoSuchElementException ex){
             LOG.warn("Failed to find the servo instance named "+instance.getInstanceId(), ex);
           }catch(Exception ex){
@@ -2881,8 +2896,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           db.commit();
         }catch(final Exception ex) {
           ;
-        }finally{
-          LoadBalancingServoCache.getInstance().invalidate(be);
         }
       }else if (instanceMap.containsKey(be.getInstanceId())) {
         String instanceIpAddress = null;
@@ -2902,8 +2915,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
             db.commit();
           }catch(final Exception ex) {
             ;
-          }finally{
-            LoadBalancingServoCache.getInstance().invalidate(be);
           }
         }
       }
@@ -2917,8 +2928,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         db.commit();
       }catch(final Exception ex) {
         ;
-      }finally{
-        LoadBalancingServoCache.getInstance().invalidate(be);
       }
     }
   }

@@ -43,6 +43,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerVersionException;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflowImpl;
 import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
 
@@ -221,33 +222,6 @@ public class LoadBalancingService {
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
 
-  // TODO: should validate the source in SWF
-  private void isValidServoRequest(final LoadBalancerServoInstance instance, String remoteHost) throws LoadBalancingException{
-	  try{
-        if(LoadBalancingSystemVpcs.isCloudVpc().isPresent() &&
-                LoadBalancingSystemVpcs.isCloudVpc().get()) {
-          final Set<String> validAddresses =
-                  LoadBalancingSystemVpcs.getControlInterfaceAddresses(instance);
-          if(validAddresses == null) {
-            return;
-            // why no fail? Failing to lookup the NAT gateway address is the system's fault, not user's
-            // so we shouldn't make users the victim of system's bug.
-          }else {
-            if(! validAddresses.contains(remoteHost))
-              throw new LoadBalancingException(String.format("IP address (%s) doesn't match with ELB's control interface address (%s)",
-                      remoteHost, validAddresses.stream().reduce((result, addr) -> result+ "," +addr)));
-          }
-        }else {
-          if (!(remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
-            throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)", remoteHost, instance.getAddress(), instance.getPrivateIp()));
-        }
-      }catch(final LoadBalancingException ex){
-        throw ex;
-      }catch(Exception ex){
-        throw new LoadBalancingException("unknown error", ex);
-	  }
-  }
-   
   public CreateLoadBalancerResponseType createLoadBalancer(
       final CreateLoadBalancerType request
   ) throws EucalyptusCloudException {
@@ -813,9 +787,6 @@ public class LoadBalancingService {
         final String reason = "internal error";
         throw new InternalFailure400Exception( String.format("Failed to delete the loadbalancer: %s", reason), e );
       }
-    } finally {      
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     
     DeleteLoadBalancerResult result = new DeleteLoadBalancerResult();
@@ -889,9 +860,6 @@ public class LoadBalancingService {
 	    }
 	    final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";   		
 	    throw new InternalFailure400Exception(String.format("Failed to create listener: %s", reason), e );
-	  } finally{
-	    if(lb!=null)
-	      LoadBalancingServoCache.getInstance().invalidate(lb);
 	  }
 	  
 	  LoadBalancingWorkflows.updateLoadBalancer(ctx.getAccountNumber(), lbName);
@@ -977,9 +945,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
     	final String reason = ex.getCause()!=null && ex.getCause().getMessage()!=null ? ex.getCause().getMessage() : "internal error";
         throw new InternalFailure400Exception(String.format("Failed to delete listener: %s",reason), ex );
-    }finally{
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     LoadBalancingWorkflows.updateLoadBalancer(ctx.getAccountNumber(), lbName);
     reply.set_return(true);
@@ -1084,10 +1049,8 @@ public class LoadBalancingService {
         Iterables.addAll(backends, Iterables.transform(instances, Instance.instanceId()));
       } catch (Exception ex) {
         throw handleException(ex);
-      } finally {
-        if (lb != null)
-          LoadBalancingServoCache.getInstance().invalidate(lb);
       }
+
       final String accountNumber = ctx.getAccountNumber();
       LoadBalancingWorkflows.updateLoadBalancer(accountNumber, lbName);
       Threads.enqueue(LoadBalancing.class, LoadBalancingService.class,
@@ -1201,9 +1164,6 @@ public class LoadBalancingService {
 	  }catch(final Exception ex){
 	    final String reason = ex.getCause()!=null && ex.getCause().getMessage()!=null ? ex.getCause().getMessage() : "internal error";
 	    throw new InternalFailure400Exception(String.format("Failed to deregister instances: %s", reason), ex );
-	  }finally{
-	    if(lb!=null)
-	      LoadBalancingServoCache.getInstance().invalidate(lb);
 	  }
 
 	  LoadBalancingWorkflows.updateLoadBalancer(ctx.getAccountNumber(), lbName);
@@ -1292,7 +1252,7 @@ public class LoadBalancingService {
       }
     }
 
-    if( !requestedZones.isEmpty( ) ){
+    if( !requestedZones.isEmpty( ) ) {
       try{
         if(! LoadBalancingWorkflows.enableZonesSync(ctx.getAccountNumber(), lbName, 
             Lists.newArrayList(requestedZones), zoneToSubnetIdMap))
@@ -1300,9 +1260,6 @@ public class LoadBalancingService {
       }catch(final Exception e){
         final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
         throw new InternalFailure400Exception(String.format("Failed to enable zones: %s", reason),e );
-      }finally{
-        if(lb!=null)
-          LoadBalancingServoCache.getInstance().invalidate(lb);
       }
     }
 
@@ -1378,20 +1335,17 @@ public class LoadBalancingService {
     zones.removeAll(unavailableZoneNames);
 
 	  if(zones != null && zones.size()>0){
-		 try{
-	    	if(! LoadBalancingWorkflows.disableZonesSync(ctx.getAccountNumber(),
-	    	    lbName, Lists.newArrayList(zones)))
-	    	  throw new Exception("Workflow for disabling availability zone has failed");
-	     }catch(final Exception e){
-	    	final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
-	    	throw new InternalFailure400Exception(String.format("Failed to disable zones: %s", reason), e );
-	    } finally {
-	      if(lb!=null)
-	        LoadBalancingServoCache.getInstance().invalidate(lb);
-	    }
-	  }
-	  
-	  availableZoneNames = Lists.newArrayList();
+      try{
+        if(! LoadBalancingWorkflows.disableZonesSync(ctx.getAccountNumber(),
+                lbName, Lists.newArrayList(zones)))
+          throw new Exception("Workflow for disabling availability zone has failed");
+      }catch(final Exception e){
+        final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
+        throw new InternalFailure400Exception(String.format("Failed to disable zones: %s", reason), e );
+      }
+    }
+
+    availableZoneNames = Lists.newArrayList();
 	  try{
 		  final LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
 		  availableZoneNames = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZoneCoreView, String>(){
@@ -1470,10 +1424,8 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("failed to persist health check config", ex);
       throw new InternalFailure400Exception("Failed to persist the health check config", ex);
-    }finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
+
     LoadBalancingWorkflows.updateLoadBalancer(ctx.getAccountNumber(), lbName);
     ConfigureHealthCheckResult result = new ConfigureHealthCheckResult();
     result.setHealthCheck(hc);
@@ -1499,12 +1451,11 @@ public class LoadBalancingService {
 	List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
 	List<LoadBalancerBackendInstanceCoreView> instancesFound;
 	List<LoadBalancerBackendInstanceCoreView> stateOutdated= Lists.newArrayList();
-	
-	int healthyTimeoutSec = lb.getHealthCheckInterval() * lb.getHealthyThreshold();
-	final int UPDATE_INTERVAL =Integer.parseInt(LoadBalancingServoCache.BACKEND_INSTANCE_UPDATE_INTERVAL); 
-	healthyTimeoutSec = Math.max(3*healthyTimeoutSec, 3*UPDATE_INTERVAL);
+
+	final int healthUpdateTimeoutSec =
+          5 * Math.max(lb.getHealthCheckInterval(), InstanceStatusWorkflowImpl.MIN_POLLING_PERIOD_SEC);
+
 	final long currentTime = System.currentTimeMillis();
-	
  	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
  		instancesFound = Lists.newArrayList();
  		for(Instance inst : instances.getMember()){
@@ -1528,7 +1479,7 @@ public class LoadBalancingService {
 		  lastUpdated = instance.instanceCreationTimestamp();
 		
 		final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
-		if( diffSec > healthyTimeoutSec ){
+		if( diffSec > healthUpdateTimeoutSec ) {
 			stateOutdated.add(instance);
 			outdated = true;
 		}
@@ -1562,9 +1513,7 @@ public class LoadBalancingService {
 	 		}
 	 		db.commit();
  		} catch(final Exception ex){
- 		} finally {
- 	    if(lb!=null)
- 	      LoadBalancingServoCache.getInstance().invalidate(lb);
+      ;
  		}
  	}
  	
@@ -1608,9 +1557,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to set loadbalancer listener SSL certificate", ex);
       throw new InternalFailure400Exception("Failed to set loadbalancer listener SSL certificate", ex);
-    }finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     reply.setSetLoadBalancerListenerSSLCertificateResult(new SetLoadBalancerListenerSSLCertificateResult());
     reply.set_return(true);
@@ -1732,9 +1678,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to add the policy", ex);
       throw new InternalFailure400Exception("Failed to add the policy", ex);
-    }finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     reply.set_return(true);
     return reply;
@@ -1772,10 +1715,8 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to delete policy", ex);
       throw new InternalFailure400Exception("Failed to delete policy", ex);
-    }finally{
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
+
     reply.set_return(true);
     return reply;
   }
@@ -1820,10 +1761,8 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to create policy", ex);
       throw new InternalFailure400Exception("Failed to create policy", ex);
-    }finally{
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
+
     reply.set_return(true);
     return reply;
   }
@@ -1868,9 +1807,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to create policy", ex);
       throw new InternalFailure400Exception("Failed to create policy", ex);
-    }finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     reply.set_return(true);
     return reply;
@@ -1948,9 +1884,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to set policies to listener", ex);
       throw new InternalFailure400Exception("Failed to set policies to listener", ex);
-    }finally {
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     
     return reply;
@@ -2036,9 +1969,6 @@ public class LoadBalancingService {
     }catch(final Exception ex){
       LOG.error("Failed to set policies to backend server description", ex);
       throw new InternalFailure400Exception("Failed to set policies to backend server description", ex);
-    }finally{
-      if(lb!=null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
     }
     return reply;
   }
@@ -2517,15 +2447,6 @@ public class LoadBalancingService {
     
     final LoadBalancerAttributes attributes =
         Entities.asTransaction( LoadBalancer.class, modifyAttributes ).apply( request.getLoadBalancerName( ) );
-
-    LoadBalancer lb = null;
-    try{
-      lb = LoadBalancers.getLoadbalancer( ctx, request.getLoadBalancerName() );
-      if(lb != null)
-        LoadBalancingServoCache.getInstance().invalidate(lb);
-    }catch(final Exception ex){
-      ;
-    }
 
     reply.getModifyLoadBalancerAttributesResult().setLoadBalancerAttributes( attributes );
     return reply;

@@ -1309,6 +1309,36 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     Promise<java.util.Map<java.lang.String,com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription>> lookupLoadBalancerDescription(Promise<String> accountNumber, Promise<String> lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#lookupLoadBalancerHealthCheck}
+     */
+    Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#filterInstanceStatus}
      */
     Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(String accountNumber, String lbName, String servoInstanceId, String status);

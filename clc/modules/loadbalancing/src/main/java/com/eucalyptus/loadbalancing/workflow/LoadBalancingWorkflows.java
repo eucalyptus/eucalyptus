@@ -403,27 +403,6 @@ public class LoadBalancingWorkflows {
       LOG.error("Failed to signal update-loadbalancer workflow", ex);
     }
   }
-
-  /// instanceId: ID of ELB VM
-  public static void updateLoadBalancer(final String instanceId) {
-    String accountId = null;
-    String loadbalancer = null;
-    try ( final TransactionResource db = 
-        Entities.transactionFor( LoadBalancerServoInstance.class )) {
-      final LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
-      final LoadBalancerServoInstance entity = Entities.uniqueResult(sample);
-      final LoadBalancerZoneCoreView zoneView = entity.getAvailabilityZone();
-      final LoadBalancerZone zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-      final LoadBalancerCoreView lbView = zone.getLoadbalancer();
-      accountId = lbView.getOwnerAccountNumber();
-      loadbalancer = lbView.getDisplayName();
-    }catch (final NoSuchElementException ex) {
-      throw Exceptions.toUndeclared(ex);
-    }catch (final Exception ex) {
-      throw Exceptions.toUndeclared(ex);
-    }
-    updateLoadBalancer(accountId, loadbalancer);
-  }
   
   private static String getInstanceStatusWorkflowId(final String accountId, final String loadbalancer) {
     return String.format("instance-status-%s-%s", accountId, loadbalancer);

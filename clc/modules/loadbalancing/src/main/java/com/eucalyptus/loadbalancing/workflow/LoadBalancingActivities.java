@@ -25,6 +25,7 @@ import java.util.Map;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
 import com.amazonaws.services.simpleworkflow.flow.common.FlowConstants;
+import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 /**
@@ -150,6 +151,8 @@ public interface LoadBalancingActivities {
   /// it monitors and reports the status info. about all registered instances.
   /// This activity is to filter out reports for which the servo VM is not responsible for reporting the status
   /// In other words, servo VM in AZ A should only report the status about instances in AZ A.
+  HealthCheck lookupLoadBalancerHealthCheck(String accountNumber, String lbName)
+          throws LoadBalancingActivityException;
   Map<String, String> filterInstanceStatus(final String accountNumber, final String lbName,
                             final String servoInstanceId, final String status)
           throws LoadBalancingActivityException;

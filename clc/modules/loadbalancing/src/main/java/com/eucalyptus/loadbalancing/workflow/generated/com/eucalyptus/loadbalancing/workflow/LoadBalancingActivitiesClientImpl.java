@@ -2013,6 +2013,51 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName) {
+        return lookupLoadBalancerHealthCheckImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName, Promise<?>... waitFor) {
+        return lookupLoadBalancerHealthCheckImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(String accountNumber, String lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return lookupLoadBalancerHealthCheckImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName) {
+        return lookupLoadBalancerHealthCheckImpl(accountNumber, lbName, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName, Promise<?>... waitFor) {
+        return lookupLoadBalancerHealthCheckImpl(accountNumber, lbName, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheck(Promise<String> accountNumber, Promise<String> lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return lookupLoadBalancerHealthCheckImpl(accountNumber, lbName, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<com.eucalyptus.loadbalancing.common.msgs.HealthCheck> lookupLoadBalancerHealthCheckImpl(final Promise<String> accountNumber, final Promise<String> lbName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.lookupLoadBalancerHealthCheck");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[2];
+        _input_[0] = accountNumber;
+        _input_[1] = lbName;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, com.eucalyptus.loadbalancing.common.msgs.HealthCheck.class, waitFor);
+    }
+
+    @Override
     public final Promise<java.util.Map<java.lang.String,java.lang.String>> filterInstanceStatus(String accountNumber, String lbName, String servoInstanceId, String status) {
         return filterInstanceStatusImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(servoInstanceId), Promise.asPromise(status), (ActivitySchedulingOptions)null);
     }
