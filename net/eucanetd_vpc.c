@@ -384,6 +384,7 @@ static int network_driver_upgrade(globalNetworkInfo *pGni) {
             }
         }
     }
+    EUCA_FREE(bridges);
 
     midoname **chains = NULL;
     int max_chains = 0;
@@ -397,6 +398,7 @@ static int network_driver_upgrade(globalNetworkInfo *pGni) {
             }
         }
     }
+    EUCA_FREE(chains);
 
     if (found_eucabr && !found_infilter) {
         LOGINFO("\teucanetd 4.3 constructs not found. Cleaning up MN\n");
