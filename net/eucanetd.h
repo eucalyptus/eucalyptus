@@ -110,7 +110,6 @@ enum {
     EUCANETD_CVAL_LOGLEVEL,
     EUCANETD_CVAL_LOGROLLNUMBER,
     EUCANETD_CVAL_LOGMAXSIZE,
-    EUCANETD_CVAL_MIDOEUCANETDHOST,
     EUCANETD_CVAL_MIDOGWHOSTS,
     EUCANETD_CVAL_MIDOPUBNW,
     EUCANETD_CVAL_MIDOPUBGWIP,
@@ -202,6 +201,8 @@ typedef struct eucanetdConfig_t {
     int metadata_ip;
 
     in_addr_t localIp;                 //!< Local address to use for this system
+    u32 *my_ips;
+    int max_my_ips;
 
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
 

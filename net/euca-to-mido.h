@@ -260,7 +260,6 @@ typedef struct mido_core_t {
 
 typedef struct mido_config_t {
     eucanetdConfig *config;
-    char *ext_eucanetdhostname;
     u32 euca_version;
 
     char *ext_rthostnamearr[32];

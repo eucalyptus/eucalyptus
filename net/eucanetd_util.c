@@ -659,6 +659,56 @@ int getdevinfo(char *dev, u32 **outips, u32 **outnms, int *len) {
 }
 
 /**
+ * Retrieves all local IP addresses. This function is based on getifaddrs() call.
+ * @param if_ips [i/o] pointer to an array of integers (each of which represents
+ * an IP address
+ * @param max_if_ips [i/o] number of entries in the array
+ * @return 0 on success. 1 on failure. Upon success, an array of integers (each
+ * integer represents an IPv4 address) is created in if_ips, and max_if_ips reflects
+ * the number of entries in the created array.
+ */
+int euca_getifaddrs(u32 **if_ips, int *max_if_ips) {
+    struct ifaddrs *ifas = NULL;
+    struct ifaddrs *elem = NULL;
+    u32 *res = NULL;
+    int rc = 0;
+
+    if (!if_ips || !max_if_ips) {
+        LOGWARN("invalid argument: cannot fill NULL with if_ips\n");
+        return (1);
+    }
+    if (*if_ips) {
+        EUCA_FREE(*if_ips);
+    }
+    *max_if_ips = 0;
+
+    rc = getifaddrs(&ifas);
+    if (rc) {
+        LOGERROR("unable to retrieve system IPv4 addresses.\n");
+        freeifaddrs(ifas);
+        return (1);
+    }
+
+    elem = ifas;
+    while (elem) {
+        if (elem->ifa_addr && elem->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *saddr = (struct sockaddr_in *) elem->ifa_addr;
+            u32 addr = ntohl(saddr->sin_addr.s_addr);
+            // Skip link local addresses 169.254.0.0/16 and localhost addresses 127.0.0.0/8
+            if (!((addr & 0xa9fe0000) == 0xa9fe0000) && !((addr & 0x7f000000) == 0x7f000000)) {
+                res = EUCA_REALLOC_C(res, *max_if_ips + 1, sizeof (u32));
+                res[*max_if_ips] = ntohl(saddr->sin_addr.s_addr);
+                (*max_if_ips)++;
+            }
+        }
+        elem = elem->ifa_next;
+    }
+    freeifaddrs(ifas);
+    *if_ips = res;
+    return (0);
+}
+
+/**
  * Computes the time difference between the time values in the argument (te - ts).
  *
  * @param ts [in] - start time.
@@ -841,6 +891,33 @@ int euca_exec(const char *command) {
     }
     free_char_list(args);
     return result;
+}
+
+/**
+ * Inserts the given integer (value) to the integer array (set) in the argument.
+ * @param set [i/o] pointer to an array of pointers to integers. This array should
+ * not contain duplicates (i.e., a set data structure).
+ * @param max_set [i/o] pointer to integer representing the number of entries in the set
+ * @param value [in] integer to be inserted
+ * @return 0 if the integer is inserted. -1 if the integer is already in the set. 1 on failure.
+ */
+int euca_u32_set_insert(u32 **set, int *max_set, u32 value) {
+    u32 *result = NULL;
+    if (!set || !max_set) {
+        LOGWARN("Invalid argument: cannot process NULL set.\n");
+        return (1);
+    }
+    result = *set;
+    for (int i = 0; i < (*max_set); i++) {
+        if (result[i] == value) {
+            return (-1);
+        }
+    }
+    result = EUCA_REALLOC_C(result, *max_set + 1, sizeof(u32));
+    result[*max_set] = value;
+    (*max_set)++;
+    *set = result;
+    return (0);
 }
 
 /**
