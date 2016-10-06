@@ -31,21 +31,26 @@
 package com.eucalyptus.simplequeue.persistence;
 
 import com.eucalyptus.simplequeue.Message;
-import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
+import com.eucalyptus.simplequeue.exceptions.InvalidParameterValueException;
+import com.eucalyptus.simplequeue.exceptions.ReceiptHandleIsInvalidException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * Created by ethomas on 9/16/16.
  */
 public interface MessagePersistence {
-  Collection<Message> receiveMessages(String accountId, String queueName, int visibilityTimeout, int maxNumberOfMessages) throws SimpleQueueException;
+  Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException;
 
-  void sendMessage(String accountId, String queueName, Message message) throws SimpleQueueException;
+  void sendMessage(Queue queue, Message message, Map<String, String> sendAttributes) throws SimpleQueueException;
 
-  void deleteMessage(String accountId, String queueName, String receiptHandle) throws SimpleQueueException;
+  void deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException;
 
-  void deleteAllMessages(String accountId, String queueName);
+  void deleteAllMessages(Queue queue);
 
+  Map<String, String> getApproximateMessageCounts(Queue queue);
+
+  void changeMessageVisibility(Queue queue, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException;
 }

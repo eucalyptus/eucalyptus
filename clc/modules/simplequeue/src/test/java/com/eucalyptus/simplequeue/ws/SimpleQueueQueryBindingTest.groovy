@@ -13,8 +13,9 @@ import com.amazonaws.services.sqs.model.GetQueueAttributesRequest
 import com.amazonaws.services.sqs.model.GetQueueUrlRequest
 import com.amazonaws.services.sqs.model.ListDeadLetterSourceQueuesRequest
 import com.amazonaws.services.sqs.model.ListQueuesRequest
-//TODO: AWS SDK update import com.amazonaws.services.sqs.model.PurgeQueueRequest
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest
+
+//TODO: AWS SDK update import com.amazonaws.services.sqs.model.PurgeQueueRequest
 import com.amazonaws.services.sqs.model.RemovePermissionRequest
 import com.amazonaws.services.sqs.model.SendMessageBatchRequest
 import com.amazonaws.services.sqs.model.SendMessageRequest
@@ -123,7 +124,6 @@ import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
-import static org.junit.Assert.assertTrue
 
 /**
  * Created by ethomas on 8/23/16.

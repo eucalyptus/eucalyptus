@@ -15,15 +15,14 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.ws;
 
-import java.util.EnumSet;
-
 import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.simplequeue.SimpleQueue;
 import com.eucalyptus.simplequeue.config.SimpleQueueConfiguration;
-import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
+import org.jboss.netty.channel.ChannelPipeline;
+
+import java.util.EnumSet;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>

@@ -1926,6 +1926,17 @@ public class Entities {
     }
 
     /**
+     * @see CriteriaBuilder#gt(Expression, Number)
+     */
+    public <V extends Number> EntityRestrictionBuilder<E> ge(
+      @Nonnull final SingularAttribute<? super E, V> attribute,
+      @Nonnull final V value
+    ) {
+      restrictions.add( new EntityRestriction.GreaterThanOrEqualToPropertyEntityValueRestriction<>( entityClass, attribute, value ) );
+      return this;
+    }
+
+    /**
      * @see CriteriaBuilder#lt(Expression, Number)
      */
     public <V extends Number> EntityRestrictionBuilder<E> lt(
@@ -1933,6 +1944,17 @@ public class Entities {
         @Nonnull final V value
     ) {
       restrictions.add( new EntityRestriction.LessThanPropertyEntityValueRestriction<>( entityClass, attribute, value ) );
+      return this;
+    }
+
+    /**
+     * @see CriteriaBuilder#lt(Expression, Number)
+     */
+    public <V extends Number> EntityRestrictionBuilder<E> le(
+      @Nonnull final SingularAttribute<? super E, V> attribute,
+      @Nonnull final V value
+    ) {
+      restrictions.add( new EntityRestriction.LessThanOrEqualToPropertyEntityValueRestriction<>( entityClass, attribute, value ) );
       return this;
     }
 

@@ -30,7 +30,7 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
-import com.eucalyptus.simplequeue.SimpleQueueService;
+import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -66,54 +66,56 @@ public class Queue {
 
   // some getter wrappers
   public int getDelaySeconds() {
-    return Integer.parseInt(attributes.get(SimpleQueueService.AttributeName.DelaySeconds.toString()));
+    return Integer.parseInt(attributes.get(Constants.DELAY_SECONDS));
   }
 
   public int getMaximumMessageSize() {
-    return Integer.parseInt(attributes.get(SimpleQueueService.AttributeName.MaximumMessageSize.toString()));
+    return Integer.parseInt(attributes.get(Constants.MAXIMUM_MESSAGE_SIZE));
   }
 
   public int getMessageRetentionPeriod() {
-    return Integer.parseInt(attributes.get(SimpleQueueService.AttributeName.MessageRetentionPeriod.toString()));
+    return Integer.parseInt(attributes.get(Constants.MESSAGE_RETENTION_PERIOD));
   }
 
   public int getReceiveMessageWaitTimeSeconds() {
-    return Integer.parseInt(attributes.get(SimpleQueueService.AttributeName.ReceiveMessageWaitTimeSeconds.toString()));
+    return Integer.parseInt(attributes.get(Constants.RECEIVE_MESSAGE_WAIT_TIME_SECONDS));
   }
 
   public int getVisibilityTimeout() {
-    return Integer.parseInt(attributes.get(SimpleQueueService.AttributeName.VisibilityTimeout.toString()));
+    return Integer.parseInt(attributes.get(Constants.VISIBILITY_TIMEOUT));
   }
 
   public String getPolicy() {
-    return attributes.get(SimpleQueueService.AttributeName.Policy.toString());
+    return attributes.get(Constants.POLICY);
   }
 
   public JsonNode getRedrivePolicy() throws SimpleQueueException {
-    if (!attributes.containsKey(SimpleQueueService.AttributeName.RedrivePolicy.toString())) {
+    if (!attributes.containsKey(Constants.REDRIVE_POLICY)) {
       return null;
     } else {
       try {
-        return new ObjectMapper().readTree(attributes.get(SimpleQueueService.AttributeName.RedrivePolicy.toString()));
+        return new ObjectMapper().readTree(attributes.get(Constants.REDRIVE_POLICY));
       } catch (IOException e) {
-        throw new InternalFailureException("Invalid json for redrive policy " + attributes.get(SimpleQueueService.AttributeName.RedrivePolicy.toString()));
+        throw new InternalFailureException("Invalid json for redrive policy " + attributes.get(Constants.REDRIVE_POLICY));
       }
     }
   }
 
   public Date getCreatedTimestamp() {
-    if (!attributes.containsKey(SimpleQueueService.AttributeName.CreatedTimestamp.toString())) {
+    if (!attributes.containsKey(Constants.CREATED_TIMESTAMP)) {
       return null;
     } else {
-      return new Date(Long.parseLong(attributes.get(SimpleQueueService.AttributeName.CreatedTimestamp.toString())));
+      // timestamp is in seconds
+      return new Date(1000L * Long.parseLong(attributes.get(Constants.CREATED_TIMESTAMP)));
     }
   }
 
   public Date getLastModifiedTimestamp() {
-    if (!attributes.containsKey(SimpleQueueService.AttributeName.LastModifiedTimestamp.toString())) {
+    if (!attributes.containsKey(Constants.LAST_MODIFIED_TIMESTAMP)) {
       return null;
     } else {
-      return new Date(Long.parseLong(attributes.get(SimpleQueueService.AttributeName.LastModifiedTimestamp.toString())));
+      // timestamp is in seconds
+      return new Date(1000L * Long.parseLong(attributes.get(Constants.LAST_MODIFIED_TIMESTAMP)));
     }
   }
 

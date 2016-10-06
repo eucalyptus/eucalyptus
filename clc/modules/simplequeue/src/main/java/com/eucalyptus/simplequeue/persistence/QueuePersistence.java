@@ -43,5 +43,6 @@ public interface QueuePersistence {
   Queue lookupQueue(String accountId, String queueName);
   Queue createQueue(String accountId, String queueName, Map<String, String> attributes) throws QueueAlreadyExistsException;
   Collection<Queue> listQueuesByPrefix(String accountId, String queueNamePrefix);
+  Queue updateQueueAttributes(String accountId, String queueName, Map<String, String> attributes) throws QueueDoesNotExistException;
   void deleteQueue(String accountId, String queueName) throws QueueDoesNotExistException;
 }

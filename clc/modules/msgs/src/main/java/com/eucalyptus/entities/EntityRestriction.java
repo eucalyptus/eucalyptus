@@ -223,6 +223,20 @@ public abstract class EntityRestriction<E> {
     }
   }
 
+  static final class GreaterThanOrEqualToPropertyEntityValueRestriction<E,V extends Number> extends PropertyEntityValueRestrictionSupport<E,V> {
+    GreaterThanOrEqualToPropertyEntityValueRestriction(
+      final Class<E> entityClass,
+      final SingularAttribute<? super E, V> attribute,
+      final V value
+    ) {
+      super( entityClass, attribute, value );
+    }
+
+    public Expression<Boolean> build( CriteriaBuilder builder, Path<E> root ) {
+      return builder.ge( root.get( getAttribute( ) ), getValue( ) );
+    }
+  }
+
   static final class LessThanPropertyEntityValueRestriction<E,V extends Number> extends PropertyEntityValueRestrictionSupport<E,V> {
     LessThanPropertyEntityValueRestriction(
         final Class<E> entityClass,
@@ -234,6 +248,20 @@ public abstract class EntityRestriction<E> {
 
     public Expression<Boolean> build( CriteriaBuilder builder, Path<E> root ) {
       return builder.lt( root.get( getAttribute( ) ), getValue( ) );
+    }
+  }
+
+  static final class LessThanOrEqualToPropertyEntityValueRestriction<E,V extends Number> extends PropertyEntityValueRestrictionSupport<E,V> {
+    LessThanOrEqualToPropertyEntityValueRestriction(
+      final Class<E> entityClass,
+      final SingularAttribute<? super E, V> attribute,
+      final V value
+    ) {
+      super( entityClass, attribute, value );
+    }
+
+    public Expression<Boolean> build( CriteriaBuilder builder, Path<E> root ) {
+      return builder.le( root.get( getAttribute( ) ), getValue( ) );
     }
   }
 

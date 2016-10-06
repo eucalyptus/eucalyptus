@@ -57,12 +57,12 @@ public class MessageEntity extends AbstractPersistent {
   String queueName;
   @Column(name = "message_id", nullable = false)
   String messageId;
-  @Column(name = "sent_timestamp", nullable = false)
-  Long sentTimestamp = 0L;
-  @Column(name = "visible_timestamp", nullable = false)
-  Long visibleTimestamp = 0L; // when the message will be visible
-  @Column(name = "expired_timestamp", nullable = false)
-  Long expiredTimestamp = 0L; // when the message will expire
+  @Column(name = "sent_timestamp_secs", nullable = false)
+  Long sentTimestampSecs = 0L;
+  @Column(name = "visible_timestamp_secs", nullable = false)
+  Long visibleTimestampSecs = 0L; // when the message will be visible
+  @Column(name = "expired_timestamp_secs", nullable = false)
+  Long expiredTimestampSecs = 0L; // when the message will expire
   @Column(name = "receive_count", nullable = false)
   Integer receiveCount = 0;
   @Column(name = "local_receive_count", nullable = false)
@@ -111,28 +111,28 @@ public class MessageEntity extends AbstractPersistent {
   }
 
 
-  public Long getSentTimestamp() {
-    return sentTimestamp;
+  public Long getSentTimestampSecs() {
+    return sentTimestampSecs;
   }
 
-  public void setSentTimestamp(Long sentTimestamp) {
-    this.sentTimestamp = sentTimestamp;
+  public void setSentTimestampSecs(Long sentTimestampSecs) {
+    this.sentTimestampSecs = sentTimestampSecs;
   }
 
-  public Long getVisibleTimestamp() {
-    return visibleTimestamp;
+  public Long getVisibleTimestampSecs() {
+    return visibleTimestampSecs;
   }
 
-  public void setVisibleTimestamp(Long visibleTimestamp) {
-    this.visibleTimestamp = visibleTimestamp;
+  public void setVisibleTimestampSecs(Long visibleTimestampSecs) {
+    this.visibleTimestampSecs = visibleTimestampSecs;
   }
 
-  public Long getExpiredTimestamp() {
-    return expiredTimestamp;
+  public Long getExpiredTimestampSecs() {
+    return expiredTimestampSecs;
   }
 
-  public void setExpiredTimestamp(Long expiredTimestamp) {
-    this.expiredTimestamp = expiredTimestamp;
+  public void setExpiredTimestampSecs(Long expiredTimestampSecs) {
+    this.expiredTimestampSecs = expiredTimestampSecs;
   }
 
   public Integer getReceiveCount() {

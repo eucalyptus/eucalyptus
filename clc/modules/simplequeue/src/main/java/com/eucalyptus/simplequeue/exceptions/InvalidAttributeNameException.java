@@ -23,15 +23,15 @@ import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 400 )
-public class UnsupportedOperationException extends SimpleQueueException {
+public class InvalidAttributeNameException extends SimpleQueueException {
 
   /**
    *
    */
   private static final long serialVersionUID = 1L;
 
-  public UnsupportedOperationException(final String message) {
-    super("UnsupportedOperation", Role.Sender, message);
+  public InvalidAttributeNameException(final String message) {
+    super("InvalidAttributeName", Role.Sender, message);
   }
 
 }

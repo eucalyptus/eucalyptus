@@ -39,10 +39,9 @@ import com.eucalyptus.simplequeue.persistence.QueuePersistence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Restrictions;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -57,14 +56,14 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   public Queue lookupQueue(String accountId, String queueName) {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
-      Criteria criteria = Entities.createCriteria(QueueEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq("queueName", queueName));
-      QueueEntity queueEntity = (QueueEntity) criteria.uniqueResult();
-      if (queueEntity == null) {
-        return null;
+      Optional<QueueEntity> queueEntityOptional = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId)
+        .whereEqual(QueueEntity_.queueName, queueName)
+        .uniqueResultOption();
+      if (queueEntityOptional.isPresent()) {
+        return queueFromQueueEntity(queueEntityOptional.get());
       } else {
-        return queueFromQueueEntity(queueEntity);
+        return null;
       }
     }
   }
@@ -73,20 +72,20 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   public Queue createQueue(String accountId, String queueName, Map<String, String> attributes) throws QueueAlreadyExistsException {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
-      Criteria criteria = Entities.createCriteria(QueueEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq("queueName", queueName));
-      QueueEntity queueEntity = (QueueEntity) criteria.uniqueResult();
-      if (queueEntity == null) {
-        queueEntity = new QueueEntity();
+      Optional<QueueEntity> queueEntityOptional = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId)
+        .whereEqual(QueueEntity_.queueName, queueName)
+        .uniqueResultOption();
+      if (queueEntityOptional.isPresent()) {
+        throw new QueueAlreadyExistsException("Queue " + queueName + " already exists");
+      } else {
+        QueueEntity queueEntity = new QueueEntity();
         queueEntity.setAccountId(accountId);
         queueEntity.setQueueName(queueName);
         queueEntity.setAttributes(convertAttributeMapToJson(attributes));
         Entities.persist(queueEntity);
         db.commit( );
         return queueFromQueueEntity(queueEntity);
-      } else {
-        throw new QueueAlreadyExistsException("Queue " + queueName + " already exists");
       }
     }
   }
@@ -125,12 +124,14 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   public Collection<Queue> listQueuesByPrefix(String accountId, String queueNamePrefix) {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
-      Criteria criteria = Entities.createCriteria(QueueEntity.class)
-        .add(Restrictions.eq("accountId", accountId));
+      Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId);
       if (queueNamePrefix != null) {
-        criteria = criteria.add(Restrictions.like("queueName", queueNamePrefix + "%"));
+        queryCriteria = queryCriteria.where(
+          Entities.restriction(QueueEntity.class).like(QueueEntity_.queueName, queueNamePrefix + "%")
+        );
       }
-      List<QueueEntity> queueEntities = (List<QueueEntity>) criteria.list();
+      List<QueueEntity> queueEntities = queryCriteria.list();
       List<Queue> queues = Lists.newArrayList();
       if (queueEntities != null) {
         for (QueueEntity queueEntity: queueEntities) {
@@ -142,20 +143,38 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   }
 
   @Override
+  public Queue updateQueueAttributes(String accountId, String queueName, Map<String, String> attributes) throws QueueDoesNotExistException {
+    try ( TransactionResource db =
+            Entities.transactionFor(QueueEntity.class) ) {
+      Optional<QueueEntity> queueEntityOptional = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId)
+        .whereEqual(QueueEntity_.queueName, queueName)
+        .uniqueResultOption();
+      if (queueEntityOptional.isPresent()) {
+        QueueEntity queueEntity = queueEntityOptional.get();
+        queueEntity.setAttributes(convertAttributeMapToJson(attributes));
+        db.commit( );
+        return queueFromQueueEntity(queueEntity);
+      } else {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+    }
+  }
+
+  @Override
   public void deleteQueue(String accountId, String queueName) throws QueueDoesNotExistException {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
-      Criteria criteria = Entities.createCriteria(QueueEntity.class)
-        .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq("queueName", queueName));
-      QueueEntity queueEntity = (QueueEntity) criteria.uniqueResult();
-      if (queueEntity == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      Optional<QueueEntity> queueEntityOptional = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId)
+        .whereEqual(QueueEntity_.queueName, queueName)
+        .uniqueResultOption();
+      if (queueEntityOptional.isPresent()) {
+        Entities.delete(queueEntityOptional.get());
       } else {
-        Entities.delete(queueEntity);
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
       db.commit();
     }
-
   }
 }

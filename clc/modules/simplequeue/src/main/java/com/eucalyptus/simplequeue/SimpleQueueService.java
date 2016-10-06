@@ -41,6 +41,7 @@ import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -49,11 +50,18 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.simplequeue.exceptions.*;
+import com.eucalyptus.simplequeue.exceptions.AccessDeniedException;
+import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
+import com.eucalyptus.simplequeue.exceptions.InvalidAddressException;
+import com.eucalyptus.simplequeue.exceptions.InvalidAttributeNameException;
+import com.eucalyptus.simplequeue.exceptions.InvalidParameterValueException;
+import com.eucalyptus.simplequeue.exceptions.MissingParameterException;
+import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
+import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
+import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
-import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServices;
@@ -63,6 +71,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
@@ -96,37 +105,6 @@ import java.util.stream.Collectors;
 
 @ComponentNamed
 public class SimpleQueueService {
-
-  public enum AttributeName {
-    All,
-    Policy,
-    VisibilityTimeout,
-    MaximumMessageSize,
-    MessageRetentionPeriod,
-    ApproximateNumberOfMessages,
-    ApproximateNumberOfMessagesNotVisible,
-    CreatedTimestamp,
-    LastModifiedTimestamp,
-    QueueArn,
-    ApproximateNumberOfMessagesDelayed,
-    DelaySeconds,
-    ReceiveMessageWaitTimeSeconds,
-    RedrivePolicy
-  }
-
-  public enum MessageAttributeName {
-    All,
-    ApproximateFirstReceiveTimestamp,
-    ApproximateReceiveCount,
-    SenderId,
-    SentTimestamp
-  };
-
-  public enum EucaInternalMessageAttributeName {
-    EucaLocalReceiveCount,
-    EucaDelaySeconds,
-    EucaMessageRetentionPeriod
-  }
 
   @ConfigurableField( description = "Maximum number of characters in a queue name.",
     initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
@@ -242,139 +220,17 @@ public class SimpleQueueService {
       Map<String, String> attributeMap = Maps.newTreeMap();
 
       // set some defaults (TODO: constants)
-      attributeMap.put(AttributeName.DelaySeconds.toString(), "0");
-      attributeMap.put(AttributeName.MaximumMessageSize.toString(), "262144");
-      attributeMap.put(AttributeName.MessageRetentionPeriod.toString(), "345600");
-      attributeMap.put(AttributeName.ReceiveMessageWaitTimeSeconds.toString(), "0");
-      attributeMap.put(AttributeName.VisibilityTimeout.toString(), "30");
+      attributeMap.put(Constants.DELAY_SECONDS, "0");
+      attributeMap.put(Constants.MAXIMUM_MESSAGE_SIZE, "262144");
+      attributeMap.put(Constants.MESSAGE_RETENTION_PERIOD, "345600");
+      attributeMap.put(Constants.RECEIVE_MESSAGE_WAIT_TIME_SECONDS, "0");
+      attributeMap.put(Constants.VISIBILITY_TIMEOUT, "30");
 
       if (request.getAttribute() != null) {
-        for (Attribute attribute : request.getAttribute()) {
-          AttributeName attributeName;
-          try {
-            attributeName = AttributeName.valueOf(attribute.getName());
-          } catch (NullPointerException | IllegalArgumentException e) {
-            throw new InvalidParameterValueException("Attribute.Name must be one of " + Joiner.on(" | ").join(AttributeName.values()));
-          }
-          switch (attributeName) {
-
-            case DelaySeconds:
-              checkAttributeIntMinMax(attribute, 0, MAX_DELAY_SECONDS);
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case MaximumMessageSize:
-              checkAttributeIntMinMax(attribute, 1024, MAX_MAXIMUM_MESSAGE_SIZE);
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case MessageRetentionPeriod:
-              checkAttributeIntMinMax(attribute, 60, MAX_MESSAGE_RETENTION_PERIOD);
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case ReceiveMessageWaitTimeSeconds:
-              checkAttributeIntMinMax(attribute, 0, MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS);
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case VisibilityTimeout:
-              checkAttributeIntMinMax(attribute, 0, MAX_VISIBILITY_TIMEOUT);
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case Policy:
-
-              if (Strings.isNullOrEmpty(attribute.getValue())) continue;
-
-              // TODO: we don't support wildcard Principal
-              try {
-                PolicyParser.getResourceInstance().parse(attribute.getValue());
-              } catch (PolicyParseException e) {
-                throw new InvalidParameterValueException("Invalid value for the parameter Policy. ");
-              }
-
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            case RedrivePolicy:
-
-              if (Strings.isNullOrEmpty(attribute.getValue())) continue;
-
-              // TODO: maybe put this json stuff in its own class/method
-              JsonNode redrivePolicyJsonNode;
-              try {
-                redrivePolicyJsonNode = new ObjectMapper().readTree(attribute.getValue());
-              } catch (IOException e) {
-                throw new InvalidParameterValueException("Invalid value for the parameter RedrivePolicy. Reason: Redrive policy is not a valid JSON map.");
-              }
-
-              if (redrivePolicyJsonNode == null || !redrivePolicyJsonNode.isObject()) {
-                throw new InvalidParameterValueException("Invalid value for the parameter RedrivePolicy. Reason: Redrive policy is not a valid JSON map.");
-              }
-
-              if (!redrivePolicyJsonNode.has("maxReceiveCount")) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: maxReceiveCount.");
-              }
-
-              if (!redrivePolicyJsonNode.has("deadLetterTargetArn")) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: deadLetterTargetArn.");
-              }
-
-              if (redrivePolicyJsonNode.size() > 2) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Only following attributes are supported: [deadLetterTargetArn, maxReceiveCount].");
-              }
-
-              JsonNode maxReceiveCountJsonNode = redrivePolicyJsonNode.get("maxReceiveCount");
-              // note, if node is non-textual or has non-integer value, .asInt() will return 0, which is ok here.
-              if (maxReceiveCountJsonNode == null || (maxReceiveCountJsonNode.asInt() < 1) ||
-                (maxReceiveCountJsonNode.asInt() > MAX_MAX_RECEIVE_COUNT)) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Invalid value for maxReceiveCount: " +
-                  maxReceiveCountJsonNode + ", valid values are from 1 to" + MAX_MAX_RECEIVE_COUNT + " both " +
-                  "inclusive.");
-              }
-
-              JsonNode deadLetterTargetArnJsonNode = redrivePolicyJsonNode.get("deadLetterTargetArn");
-              if (deadLetterTargetArnJsonNode == null || !(deadLetterTargetArnJsonNode.isTextual())) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
-              }
-
-              Ern simpleQueueArn;
-              try {
-                simpleQueueArn = Ern.parse(deadLetterTargetArnJsonNode.textValue());
-              } catch (JSONException e) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
-              }
-
-              if (!simpleQueueArn.getRegion().equals(RegionConfigurations.getRegionNameOrDefault())) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Dead-letter target must be in same region as the source.");
-              }
-
-              if (!simpleQueueArn.getAccount().equals(accountId)) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Dead-letter target owner should be same as the source.");
-              }
-
-              if (PersistenceFactory.getQueuePersistence().lookupQueue(simpleQueueArn.getAccount(), simpleQueueArn.getResourceName()) == null) {
-                throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-                  "RedrivePolicy is invalid. Reason: Dead letter target does not exist.");
-              }
-
-              attributeMap.put(attribute.getName(), attribute.getValue());
-              break;
-
-            default:
-              continue; // ignore other attributes
-          }
-        }
-
+        setAndValidateAttributes(accountId, request.getAttribute(), attributeMap);
+        String nowSecs = "" + currentTimeSeconds();
+        attributeMap.put(Constants.CREATED_TIMESTAMP, nowSecs);
+        attributeMap.put(Constants.LAST_MODIFIED_TIMESTAMP, nowSecs);
         // see if the queue already exists...
         // TODO: maybe record arn or queue url
         Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, request.getQueueName());
@@ -383,13 +239,13 @@ public class SimpleQueueService {
         } else {
           // make sure fields match
           Set<String> keysWeCareAbout = Sets.newHashSet(
-            AttributeName.DelaySeconds.toString(),
-            AttributeName.MaximumMessageSize.toString(),
-            AttributeName.MessageRetentionPeriod.toString(),
-            AttributeName.ReceiveMessageWaitTimeSeconds.toString(),
-            AttributeName.VisibilityTimeout.toString(),
-            AttributeName.Policy.toString(),
-            AttributeName.RedrivePolicy.toString());
+            Constants.DELAY_SECONDS,
+            Constants.MAXIMUM_MESSAGE_SIZE,
+            Constants.MESSAGE_RETENTION_PERIOD,
+            Constants.RECEIVE_MESSAGE_WAIT_TIME_SECONDS,
+            Constants.VISIBILITY_TIMEOUT,
+            Constants.POLICY,
+            Constants.REDRIVE_POLICY);
 
           Map<String, String> requestAttributeMap = Maps.newTreeMap();
           requestAttributeMap.putAll(attributeMap);
@@ -402,6 +258,7 @@ public class SimpleQueueService {
           if (!Objects.equals(requestAttributeMap, queueAttributeMap)) {
             throw new QueueAlreadyExistsException(request.getQueueName() + " already exists.");
           }
+          // TODO: determine if idempotency updates last modified time.
         }
         String queueUrl = getQueueUrlFromQueueUrlParts(new QueueUrlParts(accountId, request.getQueueName()));
         reply.getCreateQueueResult().setQueueUrl(queueUrl);
@@ -410,6 +267,134 @@ public class SimpleQueueService {
       handleException(ex);
     }
     return reply;
+  }
+
+  private void setAndValidateAttributes(String accountId, Iterable<Attribute> requestAttributes, Map<String, String> attributeMap) throws SimpleQueueException {
+    for (Attribute attribute : requestAttributes) {
+      switch (attribute.getName()) {
+
+        case Constants.DELAY_SECONDS:
+          checkAttributeIntMinMax(attribute, 0, MAX_DELAY_SECONDS);
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.MAXIMUM_MESSAGE_SIZE:
+          checkAttributeIntMinMax(attribute, 1024, MAX_MAXIMUM_MESSAGE_SIZE);
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.MESSAGE_RETENTION_PERIOD:
+          checkAttributeIntMinMax(attribute, 60, MAX_MESSAGE_RETENTION_PERIOD);
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.RECEIVE_MESSAGE_WAIT_TIME_SECONDS:
+          checkAttributeIntMinMax(attribute, 0, MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS);
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.VISIBILITY_TIMEOUT:
+          checkAttributeIntMinMax(attribute, 0, MAX_VISIBILITY_TIMEOUT);
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.POLICY:
+
+          if (Strings.isNullOrEmpty(attribute.getValue())) {
+            attributeMap.remove(attribute.getName());
+            continue;
+          }
+
+          // TODO: we don't support wildcard Principal
+          try {
+            PolicyParser.getResourceInstance().parse(attribute.getValue());
+          } catch (PolicyParseException e) {
+            throw new InvalidParameterValueException("Invalid value for the parameter Policy. ");
+          }
+
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        case Constants.REDRIVE_POLICY:
+
+          if (Strings.isNullOrEmpty(attribute.getValue())) {
+            attributeMap.remove(attribute.getName());
+            continue;
+          }
+
+          // TODO: maybe put this json stuff in its own class/method
+          JsonNode redrivePolicyJsonNode;
+          try {
+            redrivePolicyJsonNode = new ObjectMapper().readTree(attribute.getValue());
+          } catch (IOException e) {
+            throw new InvalidParameterValueException("Invalid value for the parameter RedrivePolicy. Reason: Redrive policy is not a valid JSON map.");
+          }
+
+          if (redrivePolicyJsonNode == null || !redrivePolicyJsonNode.isObject()) {
+            throw new InvalidParameterValueException("Invalid value for the parameter RedrivePolicy. Reason: Redrive policy is not a valid JSON map.");
+          }
+
+          if (!redrivePolicyJsonNode.has("maxReceiveCount")) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: maxReceiveCount.");
+          }
+
+          if (!redrivePolicyJsonNode.has("deadLetterTargetArn")) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: deadLetterTargetArn.");
+          }
+
+          if (redrivePolicyJsonNode.size() > 2) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Only following attributes are supported: [deadLetterTargetArn, maxReceiveCount].");
+          }
+
+          JsonNode maxReceiveCountJsonNode = redrivePolicyJsonNode.get("maxReceiveCount");
+          // note, if node is non-textual or has non-integer value, .asInt() will return 0, which is ok here.
+          if (maxReceiveCountJsonNode == null || (maxReceiveCountJsonNode.asInt() < 1) ||
+            (maxReceiveCountJsonNode.asInt() > MAX_MAX_RECEIVE_COUNT)) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Invalid value for maxReceiveCount: " +
+              maxReceiveCountJsonNode + ", valid values are from 1 to" + MAX_MAX_RECEIVE_COUNT + " both " +
+              "inclusive.");
+          }
+
+          JsonNode deadLetterTargetArnJsonNode = redrivePolicyJsonNode.get("deadLetterTargetArn");
+          if (deadLetterTargetArnJsonNode == null || !(deadLetterTargetArnJsonNode.isTextual())) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
+          }
+
+          Ern simpleQueueArn;
+          try {
+            simpleQueueArn = Ern.parse(deadLetterTargetArnJsonNode.textValue());
+          } catch (JSONException e) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
+          }
+
+          if (!simpleQueueArn.getRegion().equals(RegionConfigurations.getRegionNameOrDefault())) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Dead-letter target must be in same region as the source.");
+          }
+
+          if (!simpleQueueArn.getAccount().equals(accountId)) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Dead-letter target owner should be same as the source.");
+          }
+
+          if (PersistenceFactory.getQueuePersistence().lookupQueue(simpleQueueArn.getAccount(), simpleQueueArn.getResourceName()) == null) {
+            throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
+              "RedrivePolicy is invalid. Reason: Dead letter target does not exist.");
+          }
+
+          attributeMap.put(attribute.getName(), attribute.getValue());
+          break;
+
+        default:
+          throw new InvalidAttributeNameException("Unknown Attribute " + attribute.getName());
+      }
+    }
   }
 
   private String getQueueUrlFromQueueUrlParts(QueueUrlParts queueUrlParts) {
@@ -524,7 +509,33 @@ public class SimpleQueueService {
 
   public GetQueueUrlResponseType getQueueUrl(GetQueueUrlType request) throws EucalyptusCloudException {
     GetQueueUrlResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      if (request.getQueueOwnerAWSAccountId() != null) {
+        try {
+          Accounts.lookupAccountById(request.getQueueOwnerAWSAccountId()).getAccountNumber();
+        } catch (AuthException e) {
+          throw new InvalidAddressException("The address is not valid for this endpoint.");
+        }
+        if (!request.getQueueOwnerAWSAccountId().equals(accountId)) {
+          throw new AccessDeniedException("Access to the resource " + request.getQueueName() + " is denied.");
+        }
+      }
+      // TODO: if account id is passed in, validate after we support Resource Policies
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, request.getQueueName());
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      String queueUrl = getQueueUrlFromQueueUrlParts(new QueueUrlParts(accountId, request.getQueueName()));
+      reply.getGetQueueUrlResult().setQueueUrl(queueUrl);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
+
+
   }
 
   public ListQueuesResponseType listQueues(ListQueuesType request) throws EucalyptusCloudException {
@@ -551,6 +562,30 @@ public class SimpleQueueService {
 
   public ChangeMessageVisibilityResponseType changeMessageVisibility(ChangeMessageVisibilityType request) throws EucalyptusCloudException {
     ChangeMessageVisibilityResponseType reply = request.getReply();
+
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      if (request.getVisibilityTimeout() < 0 || request.getVisibilityTimeout() > MAX_VISIBILITY_TIMEOUT) {
+        throw new InvalidParameterValueException("VisibilityTimeout must be between 0 and " + MAX_VISIBILITY_TIMEOUT);
+      }
+
+      PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue, request.getReceiptHandle(), request.getVisibilityTimeout());
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -572,7 +607,7 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      PersistenceFactory.getMessagePersistence().deleteMessage(accountId, queueName, request.getReceiptHandle());
+      PersistenceFactory.getMessagePersistence().deleteMessage(queue, request.getReceiptHandle());
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -596,7 +631,7 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
       PersistenceFactory.getQueuePersistence().deleteQueue(accountId, queueName);
     } catch (Exception ex) {
       handleException(ex);
@@ -621,7 +656,7 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      PersistenceFactory.getMessagePersistence().deleteAllMessages(accountId, queueName);
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -630,6 +665,52 @@ public class SimpleQueueService {
 
   public GetQueueAttributesResponseType getQueueAttributes(GetQueueAttributesType request) throws EucalyptusCloudException {
     GetQueueAttributesResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      Map<String, String> attributes = Maps.newHashMap();
+      if (queue.getAttributes() != null) {
+        attributes.putAll(queue.getAttributes());
+      }
+      attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue));
+      attributes.put(Constants.QUEUE_ARN, "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + accountId + ":" + queueName);
+      Set<String> validAttributes = ImmutableSet.of(
+        Constants.ALL, Constants.APPROXIMATE_NUMBER_OF_MESSAGES, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
+        Constants.VISIBILITY_TIMEOUT, Constants.CREATED_TIMESTAMP, Constants.LAST_MODIFIED_TIMESTAMP, Constants.POLICY,
+        Constants.MAXIMUM_MESSAGE_SIZE, Constants.MESSAGE_RETENTION_PERIOD, Constants.QUEUE_ARN,
+        Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED, Constants.DELAY_SECONDS,
+        Constants.RECEIVE_MESSAGE_WAIT_TIME_SECONDS, Constants.REDRIVE_POLICY);
+
+      Set<String> passedInAttributes = Sets.newHashSet();
+      if (request.getAttributeName() != null) {
+        for (String passedInAttribute: request.getAttributeName()) {
+          if (!validAttributes.contains(passedInAttribute)) {
+            throw new InvalidAttributeNameException("Invalid attribute " + passedInAttribute);
+          }
+          passedInAttributes.add(passedInAttribute);
+        }
+      }
+      // filter
+      if (!passedInAttributes.contains(Constants.ALL)) {
+        attributes.keySet().retainAll(passedInAttributes);
+      }
+      for (Map.Entry<String, String> attributeEntry: attributes.entrySet()) {
+        reply.getGetQueueAttributesResult().getAttribute().add(new Attribute(attributeEntry.getKey(), attributeEntry.getValue()));
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -654,21 +735,19 @@ public class SimpleQueueService {
       if (queue == null) {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
-
-      int visibilityTimeout = queue.getVisibilityTimeout();
+      Map<String, String> receiveAttributes = Maps.newHashMap();
       if (request.getVisibilityTimeout() != null) {
         if (request.getVisibilityTimeout() < 0 || request.getVisibilityTimeout() > MAX_VISIBILITY_TIMEOUT) {
           throw new InvalidParameterValueException("VisibilityTimeout must be between 0 and " + MAX_VISIBILITY_TIMEOUT);
         }
-        visibilityTimeout = request.getVisibilityTimeout();
+        receiveAttributes.put(Constants.VISIBILITY_TIMEOUT, "" + request.getVisibilityTimeout());
       }
 
-      int waitTimeSeconds = queue.getReceiveMessageWaitTimeSeconds();
       if (request.getWaitTimeSeconds() != null) {
         if (request.getWaitTimeSeconds() < 0 || request.getWaitTimeSeconds() > MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS) {
           throw new InvalidParameterValueException("WaitTimeSeconds must be between 0 and " + MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS);
         }
-        waitTimeSeconds = request.getWaitTimeSeconds();
+        receiveAttributes.put(Constants.WAIT_TIME_SECONDS, "" + request.getWaitTimeSeconds());
       }
 
       int maxNumberOfMessages = 1;
@@ -678,18 +757,13 @@ public class SimpleQueueService {
         }
         maxNumberOfMessages = request.getMaxNumberOfMessages();
       }
+      receiveAttributes.put(Constants.MAX_NUMBER_OF_MESSAGES, "" + maxNumberOfMessages);
 
 
-      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(accountId, queueName, visibilityTimeout, maxNumberOfMessages);
+      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
       if (messages != null) {
-
-        // remove euca internal attributes for external use
-        Set<String> reservedEucaAttributes = Sets.newHashSet();
-        for (EucaInternalMessageAttributeName eucaInternalMessageAttributeName: EucaInternalMessageAttributeName.values()) {
-          reservedEucaAttributes.add(eucaInternalMessageAttributeName.toString());
-        }
         for (Message message: messages) {
-          filterReceiveAttributes(message, request.getAttributeName(), reservedEucaAttributes);
+          filterReceiveAttributes(message, request.getAttributeName());
           filterReceiveMessageAttributes(message, request.getMessageAttributeName());
         }
         reply.getReceiveMessageResult().getMessage().addAll(messages);
@@ -711,7 +785,7 @@ public class SimpleQueueService {
           for (String matchingMessageAttributeName: matchingMessageAttributeNames) {
             // specific matches are exact, All, literal .*, or Prefix.*
             if (matchingMessageAttributeName.equals(messageAttribute.getName()) ||
-              matchingMessageAttributeName.equals("All") || matchingMessageAttributeName.equals(".*")) {
+              matchingMessageAttributeName.equals(Constants.ALL) || matchingMessageAttributeName.equals(".*")) {
               keepMessageAttribute = true;
               break;
             }
@@ -736,16 +810,13 @@ public class SimpleQueueService {
     }
   }
 
-  private void filterReceiveAttributes(Message message, ArrayList<String> matchingAttributeNames, Set<String> reservedEucaAttributes) {
+  private void filterReceiveAttributes(Message message, ArrayList<String> matchingAttributeNames) {
     if (message.getAttribute() != null) {
       Iterator<Attribute> iter = message.getAttribute().iterator();
       while (iter.hasNext()) {
         Attribute attribute = iter.next();
-        boolean removeAttribute = false;
-        // we only keep attributes that match the attribute name set (exact match or "All".  We also remove all internal
-        // 'euca' attributes
-        if (reservedEucaAttributes.contains(attribute.getName()) ||
-          (matchingAttributeNames == null || !(matchingAttributeNames.contains("All") || matchingAttributeNames.contains(attribute.getName())))) {
+        // we only keep attributes that match the attribute name set (exact match or All.)
+        if ((matchingAttributeNames == null || !(matchingAttributeNames.contains(Constants.ALL) || matchingAttributeNames.contains(attribute.getName())))) {
           iter.remove();
         }
       }
@@ -901,14 +972,12 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      int delaySeconds;
+      Map<String, String> sendAttributes = Maps.newHashMap();
       if (request.getDelaySeconds() != null) {
         if (request.getDelaySeconds() < 0 || request.getDelaySeconds() > MAX_DELAY_SECONDS) {
           throw new InvalidParameterValueException("DelaySeconds must be a number between 0 and " + MAX_DELAY_SECONDS);
         }
-        delaySeconds = request.getDelaySeconds();
-      } else {
-        delaySeconds = queue.getDelaySeconds();
+        sendAttributes.put(Constants.DELAY_SECONDS, "" + request.getDelaySeconds());
       }
 
       String md5OfMessageAttributes = null;
@@ -954,21 +1023,12 @@ public class SimpleQueueService {
       message.setmD5OfMessageAttributes(md5OfMessageAttributes);
       message.setmD5OfBody(md5OfMessageBody);
 
-      // set some attributes (for now)
-      message.getAttribute().add(new Attribute(MessageAttributeName.ApproximateReceiveCount.toString(), "0"));
-      message.getAttribute().add(new Attribute(MessageAttributeName.SenderId.toString(), accountId));
-      message.getAttribute().add(new Attribute(MessageAttributeName.SentTimestamp.toString(),
-        "" + System.currentTimeMillis()));
-
-      // some additional attributes (internal) so we don't have to look up the values from the queue again.
-      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaLocalReceiveCount.toString(), "0"));
-      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaDelaySeconds.toString(), "" + delaySeconds));
-      message.getAttribute().add(new Attribute(EucaInternalMessageAttributeName.EucaMessageRetentionPeriod.toString(), "" + queue.getMessageRetentionPeriod()));
+      message.getAttribute().add(new Attribute(Constants.SENDER_ID, accountId));
 
       String messageId = UUID.randomUUID().toString();
 
       message.setMessageId(messageId);
-      PersistenceFactory.getMessagePersistence().sendMessage(accountId, queueName, message);
+      PersistenceFactory.getMessagePersistence().sendMessage(queue, message, sendAttributes);
 
       reply.getSendMessageResult().setmD5OfMessageAttributes(md5OfMessageAttributes);
       reply.getSendMessageResult().setMessageId(messageId);
@@ -981,6 +1041,28 @@ public class SimpleQueueService {
 
   public SetQueueAttributesResponseType setQueueAttributes(SetQueueAttributesType request) throws EucalyptusCloudException {
     SetQueueAttributesResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      Map<String, String> existingAttributes = queue.getAttributes();
+      setAndValidateAttributes(accountId, request.getAttribute(), existingAttributes);
+      existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
+
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -1065,6 +1147,9 @@ public class SimpleQueueService {
     .build();
 
 
+  public static long currentTimeSeconds() {
+    return System.currentTimeMillis() / 1000L;
+  }
   // BEGIN CODE FROM Amazon AWS SDK 1.11.28-SNAPSHOT, file: com.amazonaws.services.sqs.MessageMD5ChecksumHandler
 
   /**
