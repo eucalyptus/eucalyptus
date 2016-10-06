@@ -103,8 +103,8 @@ int truncate_file(char *filename);
 
 int cidrsplit(char *ipname, char **ippart, int *nmpart);
 
-//! TODO: For EDGE mode, replace with proper API from dev_handler.h
 int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len);
+int euca_getifaddrs(u32 **if_ips, int *max_if_ips);
 
 long int timer_get_interval_millis(struct timeval *ts, struct timeval *te);
 long int timer_get_interval_usec(struct timeval *ts, struct timeval *te);
@@ -115,6 +115,7 @@ long int eucanetd_get_timestamp();
 int euca_exec(const char *command);
 int euca_exec_wait(int timeout_sec, const char *file, ...);
 
+int euca_u32_set_insert(u32 **set, int *max_set, u32 value);
 int euca_string_set_insert(char ***set, int *max_set, char *value);
 
 void *zalloc_check(size_t nmemb, size_t size);

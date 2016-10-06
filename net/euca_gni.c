@@ -2327,15 +2327,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
         if (nodeset.nodeNr == 1) {
             startnode = nodeset.nodeTab[0];
 
-            snprintf(expression, 2048, "./property[@name='eucanetdHost']/value");
-            rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
-            for (i = 0; i < max_results; i++) {
-                LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->EucanetdHost, HOSTNAME_LEN, "%s", results[i]);
-                EUCA_FREE(results[i]);
-            }
-            EUCA_FREE(results);
-
             snprintf(expression, 2048, "./property[@name='publicNetworkCidr']/value");
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
@@ -5887,9 +5878,6 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
         }
     }
     if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
-        if (strcmp(a->EucanetdHost, b->EucanetdHost)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_EUCANETDHOST;
-        }
         if (strcmp(a->PublicNetworkCidr, b->PublicNetworkCidr)) {
             ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR;
         }

@@ -622,7 +622,6 @@ int do_midonet_populate(mido_config *mido) {
     eucanetd_timer_usec(&tv);
     rc = populate_mido_core(mido, mido->midocore);
     if (rc) {
-        // This should only happen if eucanetdhost is not properly configured
         return (1);
     }
     LOGINFO("\tmido_core populated in %.2f ms.\n",  eucanetd_timer_usec(&tv) / 1000.0);
@@ -4640,7 +4639,6 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
             !eucanetd_config->eucahome ||
             !int_rtnetwork ||
             !int_rtslashnet ||
-            !strlen(eucanetd_config->midoeucanetdhost) ||
             !strlen(eucanetd_config->midogwhosts) ||
             !strlen(eucanetd_config->midopubnw) ||
             !strlen(eucanetd_config->midopubgwip) ||
@@ -4651,8 +4649,6 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
     mido->eucahome = strdup(eucanetd_config->eucahome);
 
     mido->disable_l2_isolation = eucanetd_config->disable_l2_isolation;
-
-    mido->ext_eucanetdhostname = strdup(eucanetd_config->midoeucanetdhost);
 
     char *toksA[32], *toksB[3];
     int numtoksA = 0, numtoksB = 0, i = 0, idx = 0;
@@ -4684,8 +4680,8 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
     mido->int_rtsn = atoi(int_rtslashnet);
     mido->int_rtaddr = mido->int_rtnw + 1;
     mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
-    LOGTRACE("mido initialized: mido->ext_eucanetdhostname=%s mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
-            SP(mido->ext_eucanetdhostname), SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
+    LOGTRACE("mido initialized: mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
+            SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
             SP(int_rtslashnet));
 
     midonet_api_init();
@@ -5185,20 +5181,25 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
 
     midonet_api_host *endhost = NULL;
     for (i = 0; i < 60 && !endhost; i++) {
-        endhost = mido_get_host(mido->ext_eucanetdhostname, NULL);
+        euca_getifaddrs(&(mido->config->my_ips), &(mido->config->max_my_ips));
+        if (mido->config->my_ips && mido->config->max_my_ips) {
+            char *strptr = hex2dot(mido->config->my_ips[0]);
+            endhost = mido_get_host_byip(strptr);
+            EUCA_FREE(strptr);
+        }
         if (endhost) {
             midocore->eucanetdhost = endhost;
+            LOGTRACE("\tfound eucanetdhost %s\n", endhost->obj->name);
         } else {
             if (i == 0) {
-                LOGWARN("Unable to find eucanetd host %s in mido\n", mido->ext_eucanetdhostname);
+                LOGWARN("Unable to find eucanetd host in mido\n");
             }
             sleep(1);
         }
     }
     if (!endhost) {
         // Meta-tap setup will fail without eucanetdhost
-        LOGERROR("eucanetd host %s not found in mido\n", mido->ext_eucanetdhostname);
-        LOGINFO("Check EucanetdHost configuration in network.json.\n");
+        LOGERROR("eucanetd host not found in mido\n");
         LOGINFO("Make sure that midolman is running\n");
         ret++;
     }
@@ -5648,7 +5649,6 @@ int free_mido_config_v(mido_config *mido, int mode) {
     if (mode == 1) {
         EUCA_FREE(mido->eucahome);
 
-        EUCA_FREE(mido->ext_eucanetdhostname);
         EUCA_FREE(mido->ext_pubnw);
         EUCA_FREE(mido->ext_pubgwip);
 

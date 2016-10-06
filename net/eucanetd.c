@@ -973,6 +973,7 @@ static int eucanetd_cleanup(void) {
         EUCA_FREE(config->eucahome);
         EUCA_FREE(config->eucauser);
         EUCA_FREE(config->euca_version_str);
+        EUCA_FREE(config->my_ips);
         ipt_handler_close(config->ipt);
         ips_handler_close(config->ips);
         ebt_handler_close(config->ebt);
@@ -1160,7 +1161,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = configFileValue("MIDOEUCANETDHOST");
     cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
     cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
     cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
@@ -1173,10 +1173,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
 
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
-
-    if (!cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]) {
-        cvals[EUCANETD_CVAL_MIDOEUCANETDHOST] = strdup(pGni->EucanetdHost);
-    }
 
     if (!cvals[EUCANETD_CVAL_MIDOGWHOSTS]) {
         cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(pGni->GatewayHosts);
@@ -1267,16 +1263,12 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
 
     // mido config opts
 
-    if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
-        snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
     if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
         snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
     if (cvals[EUCANETD_CVAL_MIDOPUBNW])
         snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
     if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
         snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOEUCANETDHOST])
-        snprintf(config->midoeucanetdhost, sizeof(config->midoeucanetdhost), "%s", cvals[EUCANETD_CVAL_MIDOEUCANETDHOST]);
 
     if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)
         snprintf(config->dhcpUser, 32, "%s", cvals[EUCANETD_CVAL_DHCPUSER]);

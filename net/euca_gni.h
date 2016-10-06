@@ -84,10 +84,9 @@ enum gni_vpcmido_config_diff_t {
     GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP       = 0x00000001,
     GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN  = 0x00000002,
     GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS = 0x00000004,
-    GNI_VPCMIDO_CONFIG_DIFF_EUCANETDHOST       = 0x00000008,
-    GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR  = 0x00000010,
-    GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP    = 0x00000020,
-    GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS       = 0x00000040,
+    GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR  = 0x00000008,
+    GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP    = 0x00000010,
+    GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS       = 0x00000020,
     GNI_VPCMIDO_CONFIG_DIFF_OTHER              = 0x80000000,
 };
 
@@ -310,7 +309,6 @@ typedef struct globalNetworkInfo_t {
     char sMode[NETMODE_LEN];                //!< The network mode string passed in the GNI
     euca_netmode nmCode;                    //!< The network mode code (see euca_netmode_t)
     u32 enabledCLCIp;                       //!< IP address of the enabled CLC
-    char EucanetdHost[HOSTNAME_LEN];
     char GatewayHosts[HOSTNAME_LEN*3*33];
     char PublicNetworkCidr[HOSTNAME_LEN];
     char PublicGatewayIP[HOSTNAME_LEN];
