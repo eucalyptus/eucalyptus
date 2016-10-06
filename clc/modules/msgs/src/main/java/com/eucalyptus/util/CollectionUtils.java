@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
@@ -148,8 +149,8 @@ public class CollectionUtils {
     return Predicates.compose( contains( propertyValue ), propertyFunction );
   }
 
-  public static <T> Function<T,List<T>> listUnit() {
-    return new Function<T,List<T>>() {
+  public static <T> CompatFunction<T,List<T>> listUnit() {
+    return new CompatFunction<T,List<T>>() {
       @SuppressWarnings( "unchecked" )
       @Override
       public List<T> apply( final T t ) {
@@ -160,8 +161,8 @@ public class CollectionUtils {
     };    
   }
 
-  public static <T> Function<List<List<T>>,List<T>> listJoin() {
-    return new Function<List<List<T>>,List<T>>() {
+  public static <T> CompatFunction<List<List<T>>,List<T>> listJoin() {
+    return new CompatFunction<List<List<T>>,List<T>>() {
       @SuppressWarnings( "unchecked" )
       @Override
       public List<T> apply( final List<List<T>> t ) {
@@ -172,8 +173,8 @@ public class CollectionUtils {
     };
   }
 
-  public static <T> Function<T,Optional<T>> optionalUnit( ) {
-    return new Function<T,Optional<T>>() {
+  public static <T> CompatFunction<T,Optional<T>> optionalUnit( ) {
+    return new CompatFunction<T,Optional<T>>() {
       @Override
       public Optional<T> apply( final T t ) {
         return Optional.fromNullable( t );
@@ -237,6 +238,26 @@ public class CollectionUtils {
     for ( I item : iterable ) {
       value = reducer.apply( value ).apply( item );      
     }    
+    return value;
+  }
+
+  /**
+   * Reduce a collection using an initial value and a reduction function.
+   *
+   * @param iterable The iterable to be reduced
+   * @param initialValue The initial value
+   * @param reducer The reduction function
+   * @param <T> The result type
+   * @param <I> The iterable type
+   * @return The final value
+   */
+  public static <T,I> T reduce( final Iterable<? extends I> iterable,
+                                final T initialValue,
+                                final BiFunction<T,I,T> reducer ) {
+    T value = initialValue;
+    for ( I item : iterable ) {
+      value = reducer.apply( value, item );
+    }
     return value;
   }
 

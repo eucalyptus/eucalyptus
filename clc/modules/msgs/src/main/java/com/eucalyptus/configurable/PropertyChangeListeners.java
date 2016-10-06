@@ -74,7 +74,7 @@ public class PropertyChangeListeners {
 
   public enum IsPositiveInteger implements PropertyChangeListener {
     INSTANCE;
-    
+
     @SuppressWarnings( "unchecked" )
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
@@ -85,6 +85,26 @@ public class PropertyChangeListeners {
       if ( numberValue != null && Number.class.isAssignableFrom( numberValue.getClass( ) ) ) {
         final Number numElem = ( Number ) numberValue;
         if ( numElem.longValue( ) > 0 ) {
+          return;
+        }
+      }
+      throw new ConfigurablePropertyException( "Value must be an integer greater than zero" );
+    }
+  }
+
+  public enum IsNonNegativeInteger implements PropertyChangeListener {
+    INSTANCE;
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      Object numberValue = newValue;
+      if ( numberValue instanceof String ) {
+        numberValue = Ints.tryParse( String.valueOf( numberValue ) );
+      }
+      if ( numberValue != null && Number.class.isAssignableFrom( numberValue.getClass( ) ) ) {
+        final Number numElem = ( Number ) numberValue;
+        if ( numElem.longValue( ) >= 0 ) {
           return;
         }
       }
@@ -136,5 +156,5 @@ public class PropertyChangeListeners {
     LOG.debug("Property change listener set to: " + changeListener.getClass());
     return changeListener;
   }
-  
+
 }

@@ -27,20 +27,17 @@ import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
 import java.io.InputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.Signature;
 import java.security.cert.Certificate;
-import java.security.spec.RSAPublicKeySpec;
 import java.util.Collections;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -78,6 +75,13 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tokens.TokensException.Code;
+import com.eucalyptus.tokens.oidc.JsonWebKey;
+import com.eucalyptus.tokens.oidc.JsonWebKeySet;
+import com.eucalyptus.tokens.oidc.JsonWebSignatureVerifier;
+import com.eucalyptus.tokens.oidc.OidcIdentityToken;
+import com.eucalyptus.tokens.oidc.OidcParseException;
+import com.eucalyptus.tokens.oidc.OidcProviderConfiguration;
 import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Pair;
@@ -89,8 +93,9 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteStreams;
+import javaslang.collection.Stream;
+import javaslang.control.Option;
 import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
@@ -139,7 +144,7 @@ public class TokensService {
         Collections.emptySet( ) :
         subject.getPublicCredentials( QueryIdCredential.class );
     if ( queryIdCreds.isEmpty( ) ) {
-      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
+      throw new TokensException( Code.MissingAuthenticationToken, "Missing credential." );
     }
 
     final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
@@ -147,7 +152,7 @@ public class TokensService {
     try {
       accessKey = Iterables.find( requestUser.getKeys( ), propertyPredicate( queryId, accessKeyIdentifier( ) ) );
     } catch ( final AuthException | NoSuchElementException e ) {
-      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Invalid credential: " + queryId );
+      throw new TokensException( Code.MissingAuthenticationToken, "Invalid credential: " + queryId );
     }
 
     try {
@@ -166,7 +171,7 @@ public class TokensService {
           token.getExpires()
       ) );
     } catch ( final SecurityTokenValidationException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -192,13 +197,13 @@ public class TokensService {
     if ( queryIdCreds.size( ) == 1 &&
         Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) &&
         Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
-      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
+      throw new TokensException( Code.MissingAuthenticationToken, "Temporary credential not permitted." );
     }
     rejectPasswordCredentials( );
 
     // basic parameter validation
     if ( request.getRoleSessionName( ) == null || !request.getRoleSessionName( ).matches( "[\\w+=,.@-]{2,64}" ) ) {
-      throw new TokensException( TokensException.Code.ValidationError, "Invalid role session name" );
+      throw new TokensException( Code.ValidationError, "Invalid role session name" );
     }
 
     final BaseRole role = lookupRole( request.getRoleArn( ) );
@@ -233,7 +238,7 @@ public class TokensService {
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final Exception e ) {
-        throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
+        throw new TokensException( Code.AccessDenied, e.getMessage( ) );
       }
 
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
@@ -251,7 +256,7 @@ public class TokensService {
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
     } catch ( final SecurityTokenValidationException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -270,17 +275,17 @@ public class TokensService {
     final Subject subject = ctx.getSubject( );
     final Set<Object> creds = subject == null ? Collections.emptySet( ) : subject.getPublicCredentials( );
     if ( !creds.isEmpty( ) ) {
-      throw new TokensException( TokensException.Code.AccessDenied, "Credentials not acceptable for action" );
+      throw new TokensException( Code.AccessDenied, "Credentials not acceptable for action" );
     }
 
     // basic parameter validation
     if ( request.getRoleSessionName( ) == null || !request.getRoleSessionName( ).matches( "[\\w+=,.@-]{2,64}" ) ) {
-      throw new TokensException( TokensException.Code.ValidationError, "Invalid role session name" );
+      throw new TokensException( Code.ValidationError, "Invalid role session name" );
     }
     if ( request.getWebIdentityToken( ) == null ||
         request.getWebIdentityToken( ).length( ) < 4 ||
         request.getWebIdentityToken( ).length( ) > 2048 ) {
-      throw new TokensException( TokensException.Code.ValidationError, "Token invalid" );
+      throw new TokensException( Code.ValidationError, "Token invalid" );
     }
 
     final BaseRole role = lookupRole( request.getRoleArn( ) );
@@ -290,36 +295,37 @@ public class TokensService {
       // parse JWT
       final String[] jwtParts = identityToken.split( "\\." );
       if ( jwtParts.length != 3 ) {
-        throw new TokensException( TokensException.Code.InvalidIdentityToken,
+        throw new TokensException( Code.InvalidIdentityToken,
             "The ID Token provided is not a valid JWT. (You may see this error if you sent an Access Token)" );
       }
       final String issuerUrl;
-      final String aud;
+      final List<String> audList;
       final String sub;
       try {
-        final JSONObject jwtBody = JSONObject.fromObject( new String(
-            BaseEncoding.base64Url( ).decode( jwtParts[ 1 ] ),
-            StandardCharsets.UTF_8 ) );
-        issuerUrl = jwtBody.getString( "iss" );
-
-        // verify aud = clientId and expiration is valid
-        aud = jwtBody.getString( "aud" );
-        sub = jwtBody.getString( "sub" );
+        final OidcIdentityToken idToken = OidcIdentityToken.parse(
+            new String( BaseEncoding.base64Url( ).decode( jwtParts[ 1 ] ), StandardCharsets.UTF_8 ) );
+        issuerUrl = idToken.getIss( );
+        audList = idToken.getAud( );
+        sub = idToken.getSub( );
         if ( Strings.isNullOrEmpty( sub ) ) {
-          throw new TokensException( TokensException.Code.InvalidIdentityToken, "Invalid token subject" );
+          throw new TokensException( Code.InvalidIdentityToken, "Invalid token subject" );
         }
         final long now = System.currentTimeMillis( );
-        final long skew = TimeUnit.MINUTES.toMillis( 1 );
-        final long issued = jwtBody.getLong( "iat" ) * 1000L;
-        if ( issued - skew > now ) {
-          throw new TokensException( TokensException.Code.InvalidIdentityToken, "Token not yet valid" );
+        final long skew = TimeUnit.SECONDS.toMillis( TokensServiceConfiguration.getWebIdentityTokenTimeSkew( ) );
+        final long issued = idToken.getIat( ) * 1000L;
+        if ( ( issued - skew ) > now ) {
+          throw new TokensException( Code.InvalidIdentityToken, "Token not yet valid" );
         }
-        final long expiration = jwtBody.getLong( "exp" ) * 1000L;
-        if ( expiration + skew < now ) {
-          throw new TokensException( TokensException.Code.ExpiredTokenException, "Token has expired" );
+        final long notBefore = idToken.getNbf( ).getOrElse( 0L ) * 1000L;
+        if ( ( notBefore - skew ) > now ) {
+          throw new TokensException( Code.InvalidIdentityToken, "Token not yet valid" );
         }
-      } catch ( JSONException e ) {
-        throw new TokensException( TokensException.Code.InvalidIdentityToken, "Token invalid" );
+        final long expiration = idToken.getExp( ) * 1000L;
+        if ( ( expiration + skew ) < now ) {
+          throw new TokensException( Code.ExpiredTokenException, "Token has expired" );
+        }
+      } catch ( IllegalArgumentException | OidcParseException e ) {
+        throw new TokensException( Code.InvalidIdentityToken, "Token invalid: " + e.getMessage( ) );
       }
 
       // fetch oidc provider
@@ -328,27 +334,40 @@ public class TokensService {
       final OpenIdConnectProvider provider =
           lookupOpenIdConnectProvider( accountId, issuerIdentifier.getHost( ) + issuerIdentifier.getPath( ) );
       final String providerArn = provider.getArn( );
-      final String trustedProviderUrl = OIDCUtils.buildIssuerIdentifier( provider );
 
       // verify aud from token
-      if ( !( provider.getClientIds( ).contains( aud ) ) ) {
-        throw new TokensException( TokensException.Code.InvalidIdentityToken, "Incorrect token audience" );
-      }
+      final String aud = Stream.ofAll( audList ).find( provider.getClientIds( )::contains )
+          .getOrElseThrow( ( ) -> new TokensException( Code.InvalidIdentityToken, "Incorrect token audience" ) );
 
       // oidc discovery
-      final String configJson = readUrl( trustedProviderUrl + "/.well-known/openid-configuration", 128 * 1024 ).getLeft( );
-      final JSONObject config = JSONObject.fromObject( configJson );
+      final String configJson =
+          readUrl( OidcProviderConfiguration.buildDiscoveryUrl( provider ), 128 * 1024 ).getLeft( );
+      final OidcProviderConfiguration providerConfiguration;
+      try {
+        providerConfiguration = OidcProviderConfiguration.parse( configJson );
+      } catch ( final OidcParseException e ) {
+        LOG.warn( "Error performing discovery for oidc provider: " + e.getMessage( ) );
+        throw new TokensException( Code.IDPCommunicationError, "Error discovering OIDC provider configuration" );
+      }
+      if ( !providerConfiguration.getIssuer( ).equals( OIDCUtils.buildIssuerIdentifier( provider ) ) ) {
+        LOG.warn( "OIDC provider discovery error, issuer mismatch: " + providerConfiguration.getIssuer( ) );
+        throw new TokensException( Code.IDPCommunicationError, "Error discovering OIDC provider configuration" );
+      }
 
-      final Pair<String, Certificate[]> readResult = readUrl( (String) config.get( "jwks_uri" ), 128 * 1024 );
+      final Pair<String, Certificate[]> readResult = readUrl( providerConfiguration.getJwksUri( ), 128 * 1024 );
       // TODO: improve this test to account for case issues
       final String thumbprint = Digest.SHA1.digestHex( readResult.getRight( )[ 0 ].getEncoded( ) ).toUpperCase( );
       if ( !provider.getThumbprints( ).contains( thumbprint ) ) {
-        throw new TokensException( TokensException.Code.ValidationError, "SSL Certificate thumbprint does not match" );
+        throw new TokensException( Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
       // verify JWT signature
       final String keysJson = readResult.getLeft( );
-      if ( isSignatureVerified( jwtParts, keysJson ) ) {
-        throw new TokensException( TokensException.Code.InvalidIdentityToken, "Token signature invalid" );
+      if ( !isSignatureVerified(
+          jwtParts,
+          keysJson,
+          alg -> TokensServiceConfiguration.getWebIdSignatureAlgorithmPattern( ).matcher( alg ).matches( ) )
+      ) {
+        throw new TokensException( Code.InvalidIdentityToken, "Token signature invalid" );
       }
 
       // verify assume role policy
@@ -363,7 +382,7 @@ public class TokensService {
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final Exception e ) {
-        throw new TokensException( TokensException.Code.AccessDenied, e.getMessage( ) );
+        throw new TokensException( Code.AccessDenied, e.getMessage( ) );
       }
 
       // issue credentials
@@ -393,12 +412,12 @@ public class TokensService {
           assumedRoleArn( role, request.getRoleSessionName( ) )
       ) );
     } catch ( final SecurityTokenValidationException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     } catch ( final IOException e ) {
-      LOG.info( "Error performing discovery for oidc provider: " + e.getMessage( ) );
+      LOG.warn( "Error performing discovery for oidc provider: " + e.getMessage( ) );
       Logs.exhaust( ).info( "Error performing discovery for oidc provider: " + e.getMessage( ), e );
-      throw new TokensException( TokensException.Code.IDPCommunicationError, e.getMessage( ) );
-    } catch ( GeneralSecurityException  | JSONException e ) {
+      throw new TokensException( Code.IDPCommunicationError, e.getMessage( ) );
+    } catch ( GeneralSecurityException e ) {
       LOG.error( "Error assuming role with web identity", e );
       throw new EucalyptusCloudException( e.getMessage(), e );
     } catch ( final AuthException e ) {
@@ -423,6 +442,8 @@ public class TokensService {
       if ( contentLength > maxContentLength) {
         throw new IOException( url + " content exceeds maximum size, " + maxContentLength );
       }
+      //TODO:STEVE: MUST be returned using the application/json content type.
+      //TODO:STEVE: successful response MUST use the 200 OK HTTP status cod
       final byte[] content = ByteStreams.toByteArray( new BoundedInputStream( istr, maxContentLength + 1 ) );
       if ( content.length > maxContentLength) {
         throw new IOException( url + " content exceeds maximum size, " + maxContentLength );
@@ -431,22 +452,30 @@ public class TokensService {
     }
   }
 
-  static Boolean isSignatureVerified( final String[] jwtParts, final String jwkText) throws GeneralSecurityException {
-    final JSONObject keys = JSONObject.fromObject(jwkText);
-    final JSONObject keyData = keys.getJSONArray("keys").getJSONObject(0);
-    final String jwks_n = keyData.getString("n");
-    final String jwks_e = keyData.getString("e");
-    final String jwks_alg = keyData.getString("alg");
-    final BigInteger modulus = new BigInteger( 1, BaseEncoding.base64Url().decode(jwks_n) );
-    final BigInteger publicExponent = new BigInteger( 1, BaseEncoding.base64Url().decode(jwks_e) );
-    final PublicKey key =
-        KeyFactory.getInstance( "RSA" ).generatePublic( new RSAPublicKeySpec(modulus, publicExponent) );
-    final byte [] sigBytes = BaseEncoding.base64Url( ).decode(jwtParts[2]);
-    final byte [] bytesToSign = (jwtParts[0] + "." + jwtParts[1]).getBytes( StandardCharsets.UTF_8 );
-    final Signature sig = Signature.getInstance("SHA512withRSA", "BC");
-    sig.initVerify(key);
-    sig.update(bytesToSign);
-    return !sig.verify(sigBytes);
+  static Boolean isSignatureVerified(
+      final String[] jwtParts,
+      final String jwkText,
+      final Predicate<String> signatureAlgorithmPredicate
+      ) throws GeneralSecurityException {
+    try {
+      final JsonWebKeySet webKeySet = JsonWebKeySet.parse( jwkText );
+      return JsonWebSignatureVerifier.isValid(
+          jwtParts[ 0 ],
+          jwtParts[ 1 ],
+          jwtParts[ 2 ],
+          new JsonWebSignatureVerifier.KeyResolver( ) {
+            @Override
+            public <K extends JsonWebKey> Option<K> resolve( final Option<String> kid, final Class<K> keyType ) {
+              return webKeySet.findKey( kid, keyType, "sig", "verify" );
+            }
+          },
+          signatureAlgorithmPredicate
+      );
+    } catch ( GeneralSecurityException e ) {
+      throw  e;
+    } catch ( Throwable e ) {
+      throw new GeneralSecurityException( e.getMessage( ), e );
+    }
   }
 
   public GetAccessTokenResponseType getAccessToken( final GetAccessTokenType request ) throws EucalyptusCloudException {
@@ -478,7 +507,7 @@ public class TokensService {
           token.getExpires()
       ) );
     } catch ( final SecurityTokenValidationException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -505,7 +534,7 @@ public class TokensService {
       }
       impersonatedAccount = AccountFullName.getInstance( impersonated.getAccountNumber( ) );
     } catch ( AuthException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     }
 
     try {
@@ -530,7 +559,7 @@ public class TokensService {
           token.getExpires()
       ) );
     } catch ( final SecurityTokenValidationException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+      throw new TokensException( Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -545,7 +574,7 @@ public class TokensService {
         null :
         Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
     if ( accountUsername != null ) {
-      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
+      throw new TokensException( Code.MissingAuthenticationToken, "Missing credential." );
     }
   }
 
@@ -577,9 +606,9 @@ public class TokensService {
       final String roleName = ( (EuareResourceName) roleArn ).getName( );
       return Accounts.lookupRoleByName( roleAccountId, roleName );
     } catch ( IllegalArgumentException | JSONException e ) {
-      throw new TokensException( TokensException.Code.ValidationError, "Invalid role ARN: " + roleArnStringWithAlias );
+      throw new TokensException( Code.ValidationError, "Invalid role ARN: " + roleArnStringWithAlias );
     } catch ( Exception e ) {
-      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid role: " + roleArnStringWithAlias );
+      throw new TokensException( Code.InvalidParameterValue, "Invalid role: " + roleArnStringWithAlias );
     }
   }
 
@@ -600,7 +629,7 @@ public class TokensService {
     try {
       return Accounts.lookupOidcProviderByUrl( accountId, url );
     } catch ( Exception e ) {
-      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid openid connect provider: " + url + ", account: " + accountId );
+      throw new TokensException( Code.InvalidParameterValue, "Invalid openid connect provider: " + url + ", account: " + accountId );
     }
   }
 }
