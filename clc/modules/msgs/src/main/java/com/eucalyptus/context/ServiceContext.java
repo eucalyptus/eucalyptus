@@ -173,7 +173,12 @@ public class ServiceContext {
     executor.execute( runWithContext( dest, msg, ctx -> {
       try {
         final MessagingTemplate template = getMessagingTemplate( );
-        final MessageChannel channel = template.getDestinationResolver().resolveDestination( dest );
+        final MessageChannel channel;
+        try {
+          channel = template.getDestinationResolver( ).resolveDestination( dest );
+        } catch ( final IllegalStateException e ) {
+          throw new MessagingException( "Service context not available", e );
+        }
         errorFuture.complete( null );
         final GenericMessage<M> message = new GenericMessage<>( msg );
         template.send( channel, message );
