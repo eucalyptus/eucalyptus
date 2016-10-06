@@ -2277,7 +2277,8 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
     int rc = 0;
     char expression[2048], *strptra = NULL;
     char **results = NULL;
-    int max_results = 0, i, j, k, l;
+    int max_results = 0;
+    int i, j, k, l, m;
     xmlNodeSet nodeset = {0};
     xmlNodePtr startnode;
 
@@ -2564,19 +2565,23 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                             snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
                             EUCA_FREE(results[i]);
 
+                            char *nc = gni->clusters[j].nodes[k].name;
+                            char *instid = gni->clusters[j].nodes[k].instance_names[i].name;
                             for (l = 0; l < gni->max_instances; l++) {
-                                if (!strcmp(gni->instances[l]->name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                                    snprintf(gni->instances[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
+                                if (!strcmp(gni->instances[l]->name, instid)) {
+                                    snprintf(gni->instances[l]->node, HOSTNAME_LEN, "%s", nc);
+                                    if (IS_NETMODE_VPCMIDO(gni)) {
+                                        for (m = 0; m < gni->instances[l]->max_interfaces; m++) {
+                                            snprintf(gni->instances[l]->interfaces[m]->node, HOSTNAME_LEN, "%s", nc);
+                                        }
+                                    }
                                     l = gni->max_instances;
                                 }
                             }
-                            if (IS_NETMODE_VPCMIDO(gni)) {
-                                for (l = 0; l < gni->max_ifs; l++) {
-                                    if (!strcmp(gni->ifs[l]->instance_name.name, gni->clusters[j].nodes[k].instance_names[i].name)) {
-                                        snprintf(gni->ifs[l]->node, HOSTNAME_LEN, "%s", gni->clusters[j].nodes[k].name);
-                                        l = gni->max_ifs;
-                                    }
-                                }
+                        }
+                        if (IS_NETMODE_VPCMIDO(gni)) {
+                            for (m = 0; m < gni->max_ifs; m++) {
+                                LOGTRACE("\t%s is on NC %s\n", gni->ifs[m]->name, gni->ifs[m]->node);
                             }
                         }
                         gni->clusters[j].nodes[k].max_instance_names = max_results;
