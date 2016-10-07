@@ -265,7 +265,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.ptag = null;
   }
 
-  public UserPrincipalImpl( final EuareRole role ) throws AuthException {
+  public UserPrincipalImpl( final EuareRole role, final String sessionName ) throws AuthException {
     final EuareAccount account = role.getAccount( );
     final EuareUser user = account.lookupAdmin();
     final List<PolicyVersion> policies = Lists.newArrayList( );
@@ -283,7 +283,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.name = user.getName( );
     this.path = user.getPath();
     this.userId = user.getUserId();
-    this.authenticatedId = role.getRoleId();
+    this.authenticatedId = role.getRoleId() + ( sessionName == null ? "" : ":" + sessionName );
     this.canonicalId = account.getCanonicalId();
     this.token = null;
     this.accountAlias = account.getName( );

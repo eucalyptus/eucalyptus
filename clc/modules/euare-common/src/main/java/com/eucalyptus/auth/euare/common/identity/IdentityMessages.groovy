@@ -54,7 +54,7 @@ class Principal extends EucalyptusData {
   Boolean enabled
   String arn
   String userId
-  String roleId
+  String roleId // the role identifier includes the principals session name suffix
   String canonicalId
   String accountAlias
   String token

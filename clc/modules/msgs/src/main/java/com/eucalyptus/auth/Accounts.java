@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -410,7 +411,17 @@ public class Accounts {
     return new EuareResourceName( accountNumber, type, path, name ).toString( );
   }
 
-  public static boolean isRoleIdentifier( final String identifier ) {
+  /**
+   * Check the prefix of the given identifier to check for a role.
+   *
+   * This method does not check the full identifier, so can be used to check
+   * for assumed role identities where the role identifier is combined with a
+   * session name suffix.
+   *
+   * @param identifier The identifier to check
+   * @return True if the identifier is for a role
+   */
+  public static boolean isRoleIdentifier( @Nonnull  final String identifier ) {
     return identifier.startsWith( "ARO" );
   }
 
@@ -420,6 +431,31 @@ public class Accounts {
 
   public static Function<User,String> toUserId() {
     return UserStringProperties.USER_ID;
+  }
+
+  /**
+   * Get the base identifier, removing any text after ':'.
+   */
+  public static String getIdentifier( @Nullable final String identifier ) {
+    String cleanedId = identifier;
+    int suffixIndex;
+    if ( identifier != null && ( suffixIndex = identifier.indexOf( ':' ) ) > 0 ) {
+      cleanedId = identifier.substring( 0, suffixIndex );
+    }
+    return cleanedId;
+  }
+
+  /**
+   * Get the value after the base identifier, the text after ':'.
+   */
+  @Nullable
+  public static String getIdentifierSuffix( @Nullable final String identifier ) {
+    String idSuffix = null;
+    int suffixIndex;
+    if ( identifier != null && ( suffixIndex = identifier.indexOf( ':' ) ) > 0 ) {
+      idSuffix = identifier.substring( suffixIndex + 1 );
+    }
+    return idSuffix;
   }
 
   private enum UserStringProperties implements Function<User,String> {

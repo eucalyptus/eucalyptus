@@ -164,8 +164,8 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     return getAccountProvider().lookupRoleById( roleId );
   }
 
-  public static UserPrincipal roleAsPrincipal( final EuareRole role ) throws AuthException {
-    return new UserPrincipalImpl( role );
+  public static UserPrincipal roleAsPrincipal( final EuareRole role, final String sessionName ) throws AuthException {
+    return new UserPrincipalImpl( role, sessionName );
   }
 
   public static boolean isSystemAccount( EuareAccount account ) {

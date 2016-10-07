@@ -45,6 +45,7 @@ import java.security.Security
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.principal.Certificate
+import com.google.common.base.Optional as GOptional
 
 import static org.junit.Assume.assumeThat
 
@@ -254,7 +255,7 @@ class SecurityTokenManagerTest {
         final Collection<AccessKey> keys = Collections.singleton( accessKey( 0, null, null, secret ) )
         new UserPrincipalImpl( userForLookup, keys )
       }
-      @Override protected UserPrincipal lookupByRoleById(final String roleId, final String nonce) throws AuthException {
+      @Override protected UserPrincipal lookupByRoleById(final String roleId, final GOptional<String> sessionName, final String nonce) throws AuthException {
         new UserPrincipalImpl( userForLookup, Collections.singleton( keyForLookup ) )
       }
       @Override protected UserPrincipal lookupByAccessKeyId(final String accessKeyId, final String nonce) throws AuthException {

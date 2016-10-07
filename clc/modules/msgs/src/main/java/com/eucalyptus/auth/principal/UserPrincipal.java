@@ -49,10 +49,14 @@ public interface UserPrincipal extends User {
   /**
    * The authenticated IAM identifier.
    *
-   * <p>The role or user identifier used when authenticating. The identity
-   * associated with the principals permissions.</p>
+   * <p>The role or user based identifier used when authenticating. The
+   * identity associated with the principals permissions.</p>
+   *
+   * <p>For a role this will be the roleid:sessionName, for a user the
+   * userid</p>
    *
    * @return The identifier
+   * @see com.eucalyptus.auth.Accounts#isRoleIdentifier
    */
   @Nonnull
   String getAuthenticatedId( );

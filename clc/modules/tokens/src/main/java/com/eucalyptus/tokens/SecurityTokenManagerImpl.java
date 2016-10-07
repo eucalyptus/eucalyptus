@@ -84,7 +84,7 @@ import com.google.common.primitives.Longs;
 /**
  * Security token manager for temporary credentials.
  */
-@SuppressWarnings( { "Guava", "StaticPseudoFunctionalStyleMethod" } )
+@SuppressWarnings( { "Guava", "StaticPseudoFunctionalStyleMethod", "OptionalUsedAsFieldOrParameterType" } )
 public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTokenProvider {
 
   private static final Logger log = Logger.getLogger( SecurityTokenManagerImpl.class );
@@ -223,7 +223,12 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
       user = lookupByUserById( userId, securityTokenContent.getNonce() );
       type = TemporaryKeyType.Access;
     } else  {
-      user = lookupByRoleById( securityTokenContent.getOriginatingRoleId( ).get( ), securityTokenContent.getNonce() );
+      final Optional<RoleSecurityTokenAttributes> roleAttributes =
+          RoleSecurityTokenAttributes.forMap( securityTokenContent.getAttributes( ) );
+      user = lookupByRoleById(
+          securityTokenContent.getOriginatingRoleId( ).get( ),
+          roleAttributes.transform( RoleSecurityTokenAttributes::getSessionName ),
+          securityTokenContent.getNonce( ) );
       type = TemporaryKeyType.Role;
     }
 
@@ -312,8 +317,11 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
     return Accounts.lookupCachedPrincipalByUserId( userId, nonce );
   }
 
-  protected UserPrincipal lookupByRoleById( final String roleId, final String nonce ) throws AuthException {
-    return Accounts.lookupCachedPrincipalByRoleId( roleId, nonce );
+  protected UserPrincipal lookupByRoleById(
+      final String roleId,
+      final Optional<String> sessionName,
+      final String nonce ) throws AuthException {
+    return Accounts.lookupCachedPrincipalByRoleId( sessionName.transform( session -> roleId + ":" + session ).or( roleId ), nonce );
   }
 
   protected UserPrincipal lookupByAccessKeyId( final String accessKeyId, final String nonce ) throws AuthException {

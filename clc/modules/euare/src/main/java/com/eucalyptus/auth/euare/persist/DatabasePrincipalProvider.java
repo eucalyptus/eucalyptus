@@ -97,8 +97,8 @@ public class DatabasePrincipalProvider implements PrincipalProvider {
   @Override
   public UserPrincipal lookupPrincipalByRoleId( final String roleId, final String nonce ) throws AuthException {
     try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( RoleEntity.class ) ) {
-      final EuareRole role = Accounts.lookupRoleById( roleId );
-      return decorateCredentials( Accounts.roleAsPrincipal( role ), nonce, role.getSecret() );
+      final EuareRole role = Accounts.lookupRoleById( Accounts.getIdentifier( roleId ) );
+      return decorateCredentials( Accounts.roleAsPrincipal( role, Accounts.getIdentifierSuffix( roleId ) ), nonce, role.getSecret() );
     }
   }
 

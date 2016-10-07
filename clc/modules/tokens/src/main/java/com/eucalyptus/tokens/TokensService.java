@@ -110,16 +110,14 @@ public class TokensService {
     final Context ctx = Contexts.lookup( );
     final UserPrincipal user = ctx.getUser( );
     final String arn;
-    final String userId;
+    final String userId = user.getAuthenticatedId( );
     final String account = ctx.getAccountNumber( );
     try {
       final Optional<RoleSecurityTokenAttributes> roleAttributes = RoleSecurityTokenAttributes.forUser( user );
       if ( roleAttributes.isPresent( ) ) {
-        arn = "arn:aws:sts::"+account+":assumed-role/" + roleAttributes.get( ).getSessionName( );
-        userId = user.getAuthenticatedId( ) + ":" + roleAttributes.get( ).getSessionName( );
+        arn = "arn:aws:sts::"+account+":assumed-role/" + roleAttributes.get( ).getSessionName( ); //TODO should have role path/name in arn
       } else {
         arn = Accounts.getUserArn( user );
-        userId = user.getUserId( );
       }
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage( ), e );
