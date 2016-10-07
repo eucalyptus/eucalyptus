@@ -31,8 +31,6 @@
 package com.eucalyptus.simplequeue.persistence;
 
 import com.eucalyptus.simplequeue.Message;
-import com.eucalyptus.simplequeue.exceptions.InvalidParameterValueException;
-import com.eucalyptus.simplequeue.exceptions.ReceiptHandleIsInvalidException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 
 import java.util.Collection;
@@ -42,7 +40,40 @@ import java.util.Map;
  * Created by ethomas on 9/16/16.
  */
 public interface MessagePersistence {
-  Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException;
+
+  static class MessageWithReceiveCounts {
+    private Message message;
+    Integer receiveCount;
+    Integer localReceiveCount;
+
+    public MessageWithReceiveCounts() {
+    }
+
+    public Message getMessage() {
+      return message;
+    }
+
+    public void setMessage(Message message) {
+      this.message = message;
+    }
+
+    public Integer getReceiveCount() {
+      return receiveCount;
+    }
+
+    public void setReceiveCount(Integer receiveCount) {
+      this.receiveCount = receiveCount;
+    }
+
+    public Integer getLocalReceiveCount() {
+      return localReceiveCount;
+    }
+
+    public void setLocalReceiveCount(Integer localReceiveCount) {
+      this.localReceiveCount = localReceiveCount;
+    }
+  }
+  Collection<MessageWithReceiveCounts> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException;
 
   void sendMessage(Queue queue, Message message, Map<String, String> sendAttributes) throws SimpleQueueException;
 
@@ -53,4 +84,7 @@ public interface MessagePersistence {
   Map<String, String> getApproximateMessageCounts(Queue queue);
 
   void changeMessageVisibility(Queue queue, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException;
+
+  void moveMessageToDeadLetterQueue(Queue queue, Message message, Queue deadLetterQueue);
+
 }

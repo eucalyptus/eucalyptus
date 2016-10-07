@@ -178,8 +178,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
-    List<Message> messages = Lists.newArrayList();
+  public Collection<MessageWithReceiveCounts> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
+    List<MessageWithReceiveCounts> messagesWithExtraInfo = Lists.newArrayList();
     long now = SimpleQueueService.currentTimeSeconds();
     try ( TransactionResource db =
             Entities.transactionFor(MessageEntity.class) ) {
@@ -218,11 +218,15 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
           // send timestamp isn't updated but used in queries.  The attribute is in seconds though, so convert
           message.getAttribute().add(new Attribute(Constants.SENT_TIMESTAMP, "" + (messageEntity.getSentTimestampSecs())));
           message.setReceiptHandle(messageEntity.getAccountId() + ":" + messageEntity.getQueueName() + ":" + messageEntity.getMessageId() + ":" + messageEntity.getLocalReceiveCount());
-          messages.add(message);
+          MessageWithReceiveCounts messageWithReceiveCounts = new MessageWithReceiveCounts();
+          messageWithReceiveCounts.setMessage(message);
+          messageWithReceiveCounts.setLocalReceiveCount(messageEntity.getLocalReceiveCount());
+          messageWithReceiveCounts.setReceiveCount(messageEntity.getReceiveCount());
+          messagesWithExtraInfo.add(messageWithReceiveCounts);
         }
       }
       db.commit();
-      return messages;
+      return messagesWithExtraInfo;
     }
   }
 
@@ -335,6 +339,32 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       }
       if (countedResults == 0) {
         throw new InvalidParameterValueException("Value " + receiptHandle + " for parameter ReceiptHandle is invalid. Reason: Message does not exist or is not available for visibility timeout change.");
+      }
+      db.commit();
+    }
+
+  }
+
+  @Override
+  public void moveMessageToDeadLetterQueue(Queue queue, Message message, Queue deadLetterQueue) {
+    try ( TransactionResource db =
+            Entities.transactionFor(MessageEntity.class) ) {
+
+      List<MessageEntity> messageEntityList = Entities.criteriaQuery(MessageEntity.class)
+        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
+        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+        .whereEqual(MessageEntity_.messageId, message.getMessageId())
+        .list();
+      if (messageEntityList != null) {
+        for (MessageEntity messageEntity:messageEntityList) {
+          // being called this message was received one too many times, reset the count
+          messageEntity.setReceiveCount(messageEntity.getReceiveCount() - 1);
+          // reset the local count
+          messageEntity.setLocalReceiveCount(0);
+          messageEntity.setAccountId(deadLetterQueue.getAccountId());
+          messageEntity.setQueueName(deadLetterQueue.getQueueName());
+          messageEntity.setExpiredTimestampSecs(messageEntity.getSentTimestampSecs() + deadLetterQueue.getMessageRetentionPeriod());
+        }
       }
       db.commit();
     }

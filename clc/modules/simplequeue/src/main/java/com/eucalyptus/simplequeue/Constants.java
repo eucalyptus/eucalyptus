@@ -57,4 +57,6 @@ public class Constants {
   public static final String WAIT_TIME_SECONDS = "WaitTimeSeconds";
   public static final String MAX_NUMBER_OF_MESSAGES = "MaxNumberOfMessages";
 
+  public static final String DEAD_LETTER_TARGET_ARN = "deadLetterTargetArn";
+  public static final String MAX_RECEIVE_COUNT = "maxReceiveCount";
 }

@@ -60,6 +60,7 @@ import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
+import com.eucalyptus.simplequeue.persistence.MessagePersistence;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -67,7 +68,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableRangeSet;
@@ -334,35 +334,35 @@ public class SimpleQueueService {
             throw new InvalidParameterValueException("Invalid value for the parameter RedrivePolicy. Reason: Redrive policy is not a valid JSON map.");
           }
 
-          if (!redrivePolicyJsonNode.has("maxReceiveCount")) {
+          if (!redrivePolicyJsonNode.has(Constants.MAX_RECEIVE_COUNT)) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: maxReceiveCount.");
+              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: " + Constants.MAX_RECEIVE_COUNT + ".");
           }
 
-          if (!redrivePolicyJsonNode.has("deadLetterTargetArn")) {
+          if (!redrivePolicyJsonNode.has(Constants.DEAD_LETTER_TARGET_ARN)) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: deadLetterTargetArn.");
+              "RedrivePolicy is invalid. Reason: Redrive policy does not contain mandatory attribute: " + Constants.DEAD_LETTER_TARGET_ARN + ".");
           }
 
           if (redrivePolicyJsonNode.size() > 2) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Only following attributes are supported: [deadLetterTargetArn, maxReceiveCount].");
+              "RedrivePolicy is invalid. Reason: Only following attributes are supported: [" + Constants.DEAD_LETTER_TARGET_ARN + ", " + Constants.MAX_RECEIVE_COUNT + "].");
           }
 
-          JsonNode maxReceiveCountJsonNode = redrivePolicyJsonNode.get("maxReceiveCount");
+          JsonNode maxReceiveCountJsonNode = redrivePolicyJsonNode.get(Constants.MAX_RECEIVE_COUNT);
           // note, if node is non-textual or has non-integer value, .asInt() will return 0, which is ok here.
           if (maxReceiveCountJsonNode == null || (maxReceiveCountJsonNode.asInt() < 1) ||
             (maxReceiveCountJsonNode.asInt() > MAX_MAX_RECEIVE_COUNT)) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Invalid value for maxReceiveCount: " +
+              "RedrivePolicy is invalid. Reason: Invalid value for " + Constants.MAX_RECEIVE_COUNT + ": " +
               maxReceiveCountJsonNode + ", valid values are from 1 to" + MAX_MAX_RECEIVE_COUNT + " both " +
               "inclusive.");
           }
 
-          JsonNode deadLetterTargetArnJsonNode = redrivePolicyJsonNode.get("deadLetterTargetArn");
+          JsonNode deadLetterTargetArnJsonNode = redrivePolicyJsonNode.get(Constants.DEAD_LETTER_TARGET_ARN);
           if (deadLetterTargetArnJsonNode == null || !(deadLetterTargetArnJsonNode.isTextual())) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
+              "RedrivePolicy is invalid. Reason: Invalid value for " + Constants.DEAD_LETTER_TARGET_ARN + ".");
           }
 
           Ern simpleQueueArn;
@@ -370,7 +370,7 @@ public class SimpleQueueService {
             simpleQueueArn = Ern.parse(deadLetterTargetArnJsonNode.textValue());
           } catch (JSONException e) {
             throw new InvalidParameterValueException("Value " + attribute.getValue() + " for parameter " +
-              "RedrivePolicy is invalid. Reason: Invalid value for deadLetterTargetArn.");
+              "RedrivePolicy is invalid. Reason: Invalid value for " + Constants.DEAD_LETTER_TARGET_ARN + ".");
           }
 
           if (!simpleQueueArn.getRegion().equals(RegionConfigurations.getRegionNameOrDefault())) {
@@ -760,13 +760,32 @@ public class SimpleQueueService {
       receiveAttributes.put(Constants.MAX_NUMBER_OF_MESSAGES, "" + maxNumberOfMessages);
 
 
-      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
-      if (messages != null) {
-        for (Message message: messages) {
-          filterReceiveAttributes(message, request.getAttributeName());
-          filterReceiveMessageAttributes(message, request.getMessageAttributeName());
+      Collection<MessagePersistence.MessageWithReceiveCounts> messagesWithReceiveCounts = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
+
+      boolean hasActiveLegalRedrivePolicy = false;
+      Queue deadLetterQueue = null;
+      int maxReceiveCount = 0;
+      try {
+        if (queue.getRedrivePolicy() != null && queue.getRedrivePolicy().isObject()) {
+          Ern deadLetterQueueArn = Ern.parse(queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).textValue());
+          maxReceiveCount = queue.getRedrivePolicy().get(Constants.MAX_RECEIVE_COUNT).asInt();
+          deadLetterQueue = PersistenceFactory.getQueuePersistence().lookupQueue(deadLetterQueueArn.getAccount(), deadLetterQueueArn.getResourceName());
+          hasActiveLegalRedrivePolicy = (deadLetterQueue != null && maxReceiveCount > 0);
         }
-        reply.getReceiveMessageResult().getMessage().addAll(messages);
+      } catch (Exception ignore) {
+        // malformed or nonexistent redrive policy, just leave the message where it is?
+      }
+      if (messagesWithReceiveCounts != null) {
+        for (MessagePersistence.MessageWithReceiveCounts messageWithReceiveCounts: messagesWithReceiveCounts) {
+          Message message = messageWithReceiveCounts.getMessage();
+          if (hasActiveLegalRedrivePolicy && messageWithReceiveCounts.getLocalReceiveCount() > maxReceiveCount) {
+            PersistenceFactory.getMessagePersistence().moveMessageToDeadLetterQueue(queue, message, deadLetterQueue);
+          } else {
+            filterReceiveAttributes(message, request.getAttributeName());
+            filterReceiveMessageAttributes(message, request.getMessageAttributeName());
+            reply.getReceiveMessageResult().getMessage().add(message);
+          }
+        }
       }
     } catch (Exception ex) {
       handleException(ex);
@@ -1103,6 +1122,30 @@ public class SimpleQueueService {
 
   public ListDeadLetterSourceQueuesResponseType listDeadLetterSourceQueues(ListDeadLetterSourceQueuesType request) throws EucalyptusCloudException {
     ListDeadLetterSourceQueuesResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue deadLetterQueue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (deadLetterQueue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + accountId + ":" + queueName;
+      Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(accountId, queueArn);
+      if (sourceQueues != null) {
+        for (Queue sourceQueue: sourceQueues) {
+          reply.getListDeadLetterSourceQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(sourceQueue.getAccountId(), sourceQueue.getQueueName())));
+        }
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 

@@ -32,8 +32,10 @@ package com.eucalyptus.simplequeue.persistence.postgresql;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
+import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.simplequeue.persistence.QueuePersistence;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -47,11 +49,13 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by ethomas on 9/7/16.
  */
 public class PostgresqlQueuePersistence implements QueuePersistence {
+
   @Override
   public Queue lookupQueue(String accountId, String queueName) {
     try ( TransactionResource db =
@@ -136,6 +140,33 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
       if (queueEntities != null) {
         for (QueueEntity queueEntity: queueEntities) {
           queues.add(queueFromQueueEntity(queueEntity));
+        }
+      }
+      return queues;
+    }
+  }
+
+  @Override
+  public Collection<Queue> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn) {
+    try ( TransactionResource db =
+            Entities.transactionFor(QueueEntity.class) ) {
+      Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.accountId, accountId);
+      List<QueueEntity> queueEntities = queryCriteria.list();
+      List<Queue> queues = Lists.newArrayList();
+      if (queueEntities != null) {
+        for (QueueEntity queueEntity: queueEntities) {
+          Queue queue = queueFromQueueEntity(queueEntity);
+          try {
+            if (queue.getRedrivePolicy() != null && queue.getRedrivePolicy().isObject() &&
+              queue.getRedrivePolicy().has(Constants.DEAD_LETTER_TARGET_ARN) &&
+              queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).isTextual() &&
+              Objects.equals(deadLetterTargetArn, queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).textValue())) {
+              queues.add(queue);
+            }
+          } catch (SimpleQueueException ignore) {
+            // redrive policy doesn't match, ignore it
+          }
         }
       }
       return queues;
