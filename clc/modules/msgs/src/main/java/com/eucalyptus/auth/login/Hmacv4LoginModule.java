@@ -70,7 +70,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final Function<String,List<String>> headerLookup = headerLookup( credentials.getHeaders() );
     final Function<String,List<String>> parameterLookup = parameterLookup( credentials.getParameters() );
     final Map<String,String> authorizationParameters = credentials.getVariant().getAuthorizationParameters( headerLookup, parameterLookup );
-    final SignatureCredential signatureCredential = new SignatureCredential( authorizationParameters.get("Credential") );    
+    final SignatureCredential signatureCredential = new SignatureCredential( authorizationParameters.get("Credential") );
     final AccessKey accessKey = lookupAccessKey( credentials );
     final Date date = HmacUtils.getSignatureDate( EnumSet.of(HmacUtils.SignatureVersion.SignatureV4), headerLookup, parameterLookup );
     signatureCredential.verify( date, null, null, V4_TERMINATOR ); //TODO Do we want to validate region and service name?
@@ -151,16 +151,19 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     return sb;
   }
 
-  private String digestUTF8( final CharSequence text ) throws IOException {
+  /**
+   * Returns a hex encoded SHA256 hash of the {@code text}.
+   */
+  public static String digestUTF8( final CharSequence text ) {
     final ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) );
     return BaseEncoding.base16( ).lowerCase( ).encode( Digest.SHA256.digestBinary( byteBuffer ) );
   }
   
-  private String canonicalizePath( final String servicePath ) throws URISyntaxException {
+  public static String canonicalizePath( final String servicePath ) throws URISyntaxException {
     return servicePath.isEmpty() ? "/" : new URI("http", "0.0.0.0", servicePath, null).normalize().getPath(); //TODO encode path here when it becomes necessary
   }
 
-  private byte[] getHmacSHA256( final byte[] signatureKey,
+  public static byte[] getHmacSHA256( final byte[] signatureKey,
                                 final CharSequence data ) throws AuthenticationException {
     final SecretKeySpec signingKey = new SecretKeySpec( signatureKey, Hmac.HmacSHA256.toString( ) );
     try {
@@ -172,7 +175,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     }
   }
 
-  private byte[] getSignatureKey( final String key,
+  public static byte[] getSignatureKey( final String key,
                                   final SignatureCredential credential ) throws Exception {
     return getHmacSHA256(
         getHmacSHA256(

@@ -161,7 +161,6 @@ public class ObjectStorageProperties {
   public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
   public static final String NULL_VERSION_ID = "null";
   public static final String X_AMZ_DELETE_MARKER = "x-amz-delete-marker";
-  public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
 
   public static final String TRACKER_BINARY = "bttrack";
   public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";

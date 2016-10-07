@@ -62,33 +62,62 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
-import javax.annotation.Nullable;
-
 import com.eucalyptus.auth.login.WrappedCredentials;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
+import com.eucalyptus.util.Assert;
+import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
+import javaslang.control.Try.CheckedFunction;
+
+import java.util.Map;
 
 public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> {
-  private final String queryId;
-  private final String signature;
-  private final String securityToken;
+  enum AuthVersion {
+    V2, V4
+  }
 
-  public ObjectStorageWrappedCredentials(final String correlationId, final String data, final String accessKeyId, final String signature,
-      final String securityToken) {
-    super(correlationId, data);
-    this.queryId = accessKeyId;
-    this.signature = signature;
+  // Common
+  public final AuthVersion authVersion;
+  public final String signature;
+  public final String securityToken;
+
+  // V2
+  public final String accessKeyId;
+
+  // V4
+  public final SignatureCredential credential;
+  public final String signedHeaders;
+
+  /**
+   * V2 auth constructor.
+   *
+   * @throws NullPointerException if any arg is null
+   */
+  public ObjectStorageWrappedCredentials(String correlationId, String signableString, String accessKeyId, String signature, String
+      securityToken) {
+    super(correlationId, signableString);
+    this.authVersion = AuthVersion.V2;
+    this.accessKeyId = Assert.notNull(accessKeyId, "accessKeyId");
+    this.signature = Assert.notNull(signature, "signature");
     this.securityToken = securityToken;
+    this.credential = null;
+    this.signedHeaders = null;
   }
 
-  public String getQueryId() {
-    return this.queryId;
-  }
-
-  public String getSignature() {
-    return this.signature;
-  }
-
-  @Nullable
-  public String getSecurityToken() {
-    return securityToken;
+  /**
+   * V4 auth constructor.
+   *
+   * @throws NullPointerException if any arg is null
+   */
+  public ObjectStorageWrappedCredentials(String correlationId, String stringToSign, SignatureCredential credential, String signedHeaders,
+                                         String signature, String securityToken) {
+    super(correlationId, stringToSign);
+    this.authVersion = AuthVersion.V4;
+    this.credential = Assert.notNull(credential, "credential");
+    this.signedHeaders = Assert.notNull(signedHeaders, "signedHeaders");
+    this.signature = Assert.notNull(signature, "signature");
+    this.securityToken = securityToken;
+    this.accessKeyId = null;
   }
 }

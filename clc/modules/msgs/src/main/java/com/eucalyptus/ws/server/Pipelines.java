@@ -106,24 +106,29 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
+/**
+ * Utilities for discovering pipelines.
+ */
 public class Pipelines {
   private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
   private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
   private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
   private static final Map<Class<? extends ComponentId>, ChannelPipelineFactory> clientPipelines   = Maps.newHashMap( );
-  private static final Supplier<String> subDomain = new Supplier<String>() {
+  //GRZE:TODO: this is not happy ==> {@link DomainNames}
+  private static final Supplier<String> subDomain = () -> SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
 
-    @Override
-    public String get( ) {
-      return SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );//GRZE:TODO: this is not happy ==> {@link DomainNames}
-    }
-    
-  };
-  
+  /**
+   * Returns the ChannelPipelineFactory for the {@code compId} else {@code null} if none was discovered.
+   */
   public static ChannelPipelineFactory lookup( Class<? extends ComponentId> compId ) {
     return clientPipelines.get( compId );
   }
-  
+
+  /**
+   * Finds and returns a pipeline that accepts the {@code request} by checking registered pipelines.
+   *
+   * @throws NoAcceptingPipelineException if no accepting pipeline for the {@code request} can be found
+   */
   static FilteredPipeline find( final HttpRequest request ) throws DuplicatePipelineException, NoAcceptingPipelineException {
     final FilteredPipeline candidate = findAccepting( request );
     if ( candidate == null ) {
@@ -145,14 +150,19 @@ public class Pipelines {
     }
     return candidate;
   }
-  
+
+  /**
+   * Finds and returns a pipeline that accepts the {@code request} by checking registered pipelines.
+   *
+   * @return an accepting pipeline else {@code null}
+   */
   private static FilteredPipeline findAccepting( final HttpRequest request ) {
-    final FilteredPipeline candidate = null;
     for ( final FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         return f;
       }
     }
+
     final String hostHeader = request.getHeader( HttpHeaders.Names.HOST );
     if ( hostHeader != null && ( hostHeader.contains( "amazonaws.com" ) || hostHeader.contains( subDomain.get( ) ) ) ) {
       final String host = hostHeader.indexOf( ':' ) > 0 ? hostHeader.substring( 0, hostHeader.indexOf( ':' ) ) : hostHeader;
@@ -168,7 +178,7 @@ public class Pipelines {
               continue;//Skip pipeline which handles SOAP for this non-SOAP request
             }
             LOG.debug( "Maybe intercepting: " + hostHeader + " using " + f.getClass( ) );
-            if ( Ats.from( compIdClass ).has( AwsServiceName.class ) 
+            if ( Ats.from( compIdClass ).has( AwsServiceName.class )
                 && host.matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "(?:\\.[\\w\\-]+)?\\.amazonaws.com" ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
             } else if ( host.matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
@@ -178,20 +188,23 @@ public class Pipelines {
         }
       }
     }
-    if ( candidate == null ) {
-      for ( final FilteredPipeline f : internalPipelines ) {
-        if ( f.checkAccepts( request ) ) {
-          return f;
-        }
+
+    for ( final FilteredPipeline f : internalPipelines ) {
+      if ( f.checkAccepts( request ) ) {
+        return f;
       }
     }
-    return candidate;
+
+    return null;
   }
-  
+
+  /**
+   * Registers internal query and SOAP pipelines for all components.
+   */
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.UnprivilegedConfiguration )
   public static class PipelineBootstrapper extends Bootstrapper.Simple {
-    
+
     @Override
     public boolean load( ) throws Exception {
       for ( final ComponentId comp : ComponentIds.list( ) ) {
@@ -200,11 +213,14 @@ public class Pipelines {
       }
       return true;
     }
-    
+
   }
-  
+
+  /**
+   * Discovers and registers FilteredPipeline and ChannelPipelineFactory instances for discovered components.
+   */
   public static class PipelineDiscovery extends ServiceJarDiscovery {
-    
+
     @SuppressWarnings( { "rawtypes", "unchecked", "synthetic-access" } )
     @Override
     public boolean processClass( final Class candidate ) throws Exception {
@@ -232,42 +248,42 @@ public class Pipelines {
           LOG.trace( ex, ex );
           return false;
         }
-        
+
       } else {
         return false;
       }
     }
-    
+
     @Override
     public Double getPriority( ) {
       return 0.1d;
     }
-    
+
   }
-  
+
   private static class InternalSoapPipeline extends FilteredPipeline.InternalPipeline {
     private final String servicePath;
     private final String internalServicePath;
     private final String serviceName;
-    
+
     public InternalSoapPipeline( final ComponentId componentId ) {
       super( componentId );
       this.servicePath = componentId.getServicePath( );
       this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
-    
+
     @Override
     public boolean checkAccepts( final HttpRequest message ) {
       return ( message.getUri( ).endsWith( this.servicePath ) || message.getUri( ).endsWith( this.internalServicePath ) )
              && message.getHeaderNames( ).contains( "SOAPAction" );
     }
-    
+
     @Override
     public String getName( ) {
       return "internal-soap-pipeline-" + this.serviceName.toLowerCase( ) + "-" + this.servicePath;
     }
-    
+
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
       pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
@@ -277,30 +293,30 @@ public class Pipelines {
       pipeline.addLast( "binding", Handlers.bindingHandler( ) );
       return pipeline;
     }
-    
+
     @Override
     public String toString( ) {
       return String.format( "InternalSoapPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
     }
-    
+
   }
-  
+
   private static class InternalQueryPipeline extends FilteredPipeline.InternalPipeline {
     public enum RequiredQueryParams {
       Version
     }
-    
+
     private final String servicePath;
     private final String internalServicePath;
     private final String serviceName;
-    
+
     public InternalQueryPipeline( final ComponentId componentId ) {
       super( componentId );
       this.servicePath = componentId.getServicePath( );
       this.internalServicePath = componentId.getInternalServicePath( );
       this.serviceName = componentId.getFullName( ).toString( );
     }
-    
+
     @Override
     public boolean checkAccepts( final HttpRequest message ) {
       if ( message instanceof MappingHttpRequest ) {
@@ -347,12 +363,12 @@ public class Pipelines {
       }
       return false;
     }
-    
+
     @Override
     public String getName( ) {
       return "internal-query-pipeline-" + this.serviceName.toLowerCase( ) + "-" + this.servicePath;
     }
-    
+
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
       pipeline.addLast( "hmac-v2-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role, TemporaryKeyType.Access, TemporaryKeyType.Session) ) );
@@ -360,21 +376,21 @@ public class Pipelines {
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;
     }
-    
+
     @Override
     public String toString( ) {
       return String.format( "InternalQueryPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
     }
-    
+
   }
-  
+
   static class InternalQueryBinding extends BaseQueryBinding<OperationParameter> implements ChannelHandler {
-    
+
     public InternalQueryBinding( ) {
       super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
     }
-    
+
   }
-  
-  
+
+
 }

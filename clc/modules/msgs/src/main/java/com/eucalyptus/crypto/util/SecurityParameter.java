@@ -73,8 +73,6 @@ public enum SecurityParameter {
   SignatureVersion,
   Authorization,
   Date,
-  Content_MD5,
-  Content_Type,
   SecurityToken,
   X_Amz_Date( true ),
   X_Amz_Algorithm( true ),

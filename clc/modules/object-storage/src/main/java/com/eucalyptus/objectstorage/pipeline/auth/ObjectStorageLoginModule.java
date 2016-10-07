@@ -62,25 +62,25 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
-
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.Hmacv4LoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
+import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials.AuthVersion;
+import com.google.common.io.BaseEncoding;
+import org.apache.log4j.Logger;
+import org.apache.xml.security.utils.Base64;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
 
 public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrappedCredentials> {
   private static Logger LOG = Logger.getLogger(ObjectStorageLoginModule.class);
-
-  public ObjectStorageLoginModule() {}
 
   @Override
   public boolean accepts() {
@@ -89,39 +89,60 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 
   @Override
   public boolean authenticate(ObjectStorageWrappedCredentials credentials) throws Exception {
-    String signature = credentials.getSignature().replaceAll("=", "");
-    final AccessKey key;
-    try {
-      key = AccessKeys.lookupAccessKey(credentials.getQueryId(), credentials.getSecurityToken());
-    } catch (AuthException e) {
-      // S3 exception type for "Access Key Not Found" error.
-      throw new InvalidAccessKeyIdException(credentials.getQueryId());
-    }
-    if (!key.isActive()) {
-      throw new InvalidAccessKeyIdException(credentials.getQueryId());
-    }
-    final UserPrincipal user = key.getPrincipal();
-    final String queryKey = key.getSecretKey();
-    final String authSig = checkSignature(queryKey, credentials.getLoginData());
-    if (authSig.equals(signature)) {
-      super.setCredential(credentials.getQueryId());
-      super.setPrincipal(user);
-      return true;
-    }
-
+    if (credentials.authVersion.equals(AuthVersion.V2))
+      return authV2(credentials);
+    else if (credentials.authVersion.equals(AuthVersion.V4))
+      return authV4(credentials);
     return false;
   }
 
-  @Override
-  public void reset() {}
+  private boolean authV2(ObjectStorageWrappedCredentials credentials) throws Exception {
+    AccessKey accessKey = lookupAccessKey(credentials.accessKeyId, credentials.securityToken);
+    String computedSig = getHmacSHA1(accessKey.getSecretKey(), credentials.getLoginData());
+    String providedSig = credentials.signature.replaceAll("=", "");
 
-  protected String checkSignature(final String queryKey, final String subject) throws AuthenticationException {
+    // Compare signatures
+    if (!computedSig.equals(providedSig))
+      return false;
+
+    super.setCredential(credentials.accessKeyId);
+    super.setPrincipal(accessKey.getPrincipal());
+    return true;
+  }
+
+  private boolean authV4(ObjectStorageWrappedCredentials credentials) throws Exception {
+    AccessKey accessKey = lookupAccessKey(credentials.credential.getAccessKeyId(), credentials.securityToken);
+    byte[] signatureKey = Hmacv4LoginModule.getSignatureKey(accessKey.getSecretKey(), credentials.credential);
+    byte[] computedSig = Hmacv4LoginModule.getHmacSHA256(signatureKey, credentials.getLoginData());
+    byte[] providedSig = BaseEncoding.base16().lowerCase().decode(credentials.signature);
+
+    // Compare signatures
+    if (!MessageDigest.isEqual(computedSig, providedSig))
+      return false;
+
+    super.setCredential(credentials.accessKeyId);
+    super.setPrincipal(accessKey.getPrincipal());
+    return true;
+  }
+
+  private static AccessKey lookupAccessKey(String accessKeyId, String securityToken) throws InvalidAccessKeyIdException {
     try {
-      SecretKeySpec signingKey = new SecretKeySpec(queryKey.getBytes("UTF-8"), Hmac.HmacSHA1.toString());
+      AccessKey key = AccessKeys.lookupAccessKey(accessKeyId, securityToken);
+      if (!key.isActive())
+        throw new InvalidAccessKeyIdException(accessKeyId);
+      return key;
+    } catch (AuthException e) {
+      throw new InvalidAccessKeyIdException(accessKeyId);
+    }
+  }
+
+  private static String getHmacSHA1(final String secretKey, final String subject) throws AuthenticationException {
+    try {
+      SecretKeySpec signingKey = new SecretKeySpec(secretKey.getBytes("UTF-8"), Hmac.HmacSHA1.toString());
       Mac mac = Mac.getInstance(Hmac.HmacSHA1.toString());
       mac.init(signingKey);
       byte[] rawHmac = mac.doFinal(subject.getBytes("UTF-8"));
-      return new String(Base64.encode(rawHmac)).replaceAll("=", "");
+      return Base64.encode(rawHmac).replaceAll("=", "");
     } catch (Exception e) {
       LOG.error(e, e);
       throw new AuthenticationException("Failed to compute signature");
