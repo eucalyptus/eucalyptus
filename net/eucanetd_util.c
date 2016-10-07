@@ -462,27 +462,29 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
     char cmdstr[EUCA_MAX_PATH] = "";
     char file[EUCA_MAX_PATH] = "";
 
-    if ((pid < 2) || !psProgramName) {
+    if (pid < 2) {
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
-    if (check_file(file)) {
-        return (EUCA_PERMISSION_ERROR);
-    }
+    if (psProgramName) {
+        snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
+        if (check_file(file)) {
+            return (EUCA_PERMISSION_ERROR);
+        }
 
-    if ((FH = fopen(file, "r")) != NULL) {
-        if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
+        if ((FH = fopen(file, "r")) != NULL) {
+            if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
+                fclose(FH);
+                return (EUCA_ACCESS_ERROR);
+            }
             fclose(FH);
+        } else {
             return (EUCA_ACCESS_ERROR);
         }
-        fclose(FH);
-    } else {
-        return (EUCA_ACCESS_ERROR);
     }
 
     // found running process
-    if (strstr(cmdstr, psProgramName)) {
+    if (!psProgramName || strstr(cmdstr, psProgramName)) {
         // passed in cmd matches running cmd
         if (psRootwrap) {
             snprintf(sPid, 16, "%d", pid);
@@ -912,7 +914,7 @@ int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...) 
     
     if (timeout_sec > 0) {
         if (timewait(pid, &status, timeout_sec) == 0) {
-            eucanetd_kill_program(pid, first, prefix);
+            eucanetd_kill_program(pid, NULL, prefix);
         }
     }
             
