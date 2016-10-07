@@ -25,7 +25,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
@@ -82,7 +81,7 @@ public class Strings {
    * @return The trimming function
    * @see String#trim()
    */
-  public static Function<String,String> trim() {
+  public static CompatFunction<String,String> trim() {
     return StringFunctions.TRIM;
   }
 
@@ -113,8 +112,8 @@ public class Strings {
    * @param match The boundary string to search for
    * @return The substring function, returns null if text was null
    */
-  public static Function<String,String> substringBefore( @Nonnull final String match ) {
-    return new Function<String,String>( ) {
+  public static CompatFunction<String,String> substringBefore( @Nonnull final String match ) {
+    return new CompatFunction<String,String>( ) {
       @Nullable
       @Override
       public String apply( @Nullable final String text ) {
@@ -150,8 +149,8 @@ public class Strings {
    * @param match The boundary string to search for
    * @return The substring function, returns null if text was null
    */
-  public static Function<String,String> substringAfter( @Nonnull  final String match ) {
-    return new Function<String,String>( ) {
+  public static CompatFunction<String,String> substringAfter( @Nonnull  final String match ) {
+    return new CompatFunction<String,String>( ) {
       @Nullable
       @Override
       public String apply( @Nullable final String text ) {
@@ -168,7 +167,7 @@ public class Strings {
    * @return The upper casing function
    * @see String#toUpperCase()
    */
-  public static Function<String,String> upper() {
+  public static CompatFunction<String,String> upper() {
     return StringFunctions.UPPER;
   }
 
@@ -180,7 +179,7 @@ public class Strings {
    * @return The upper casing function
    * @see String#toLowerCase() ()
    */
-  public static Function<String,String> lower() {
+  public static CompatFunction<String,String> lower() {
     return StringFunctions.LOWER;
   }
 
@@ -258,8 +257,8 @@ public class Strings {
    * @param suffix The suffix to append.
    * @return The function
    */
-  public static Function<String,String> append( final String suffix ) {
-    return new Function<String, String>( ) {
+  public static CompatFunction<String,String> append( final String suffix ) {
+    return new CompatFunction<String, String>( ) {
       @Nullable
       @Override
       public String apply( @Nullable final String text ) {
@@ -276,8 +275,8 @@ public class Strings {
    * @param prefix The prefix to prepend.
    * @return The function
    */
-  public static Function<String,String> prepend( final String prefix ) {
-    return new Function<String, String>( ) {
+  public static CompatFunction<String,String> prepend( final String prefix ) {
+    return new CompatFunction<String, String>( ) {
       @Nullable
       @Override
       public String apply( @Nullable final String text ) {
@@ -288,11 +287,11 @@ public class Strings {
     };
   }
 
-  public static Function<String,Function<String,String>> join( ) {
-    return new Function<String,Function<String,String>>( ) {
+  public static CompatFunction<String,CompatFunction<String,String>> join( ) {
+    return new CompatFunction<String,CompatFunction<String,String>>( ) {
       @Nullable
       @Override
-      public Function<String,String> apply( @Nullable final String prefix ) {
+      public CompatFunction<String,String> apply( @Nullable final String prefix ) {
         return prepend( prefix );
       }
     };
@@ -302,12 +301,12 @@ public class Strings {
    *
    * @see java.util.regex.Matcher#quoteReplacement(String)
    */
-  public static Function<String,String> regexReplace(
+  public static CompatFunction<String,String> regexReplace(
       final Pattern pattern,
       final String replacement,
       final String defaultValue
   ) {
-    return new Function<String,String>( ) {
+    return new CompatFunction<String,String>( ) {
       @Nullable
       @Override
       public String apply( @Nullable final String text ) {
@@ -331,7 +330,7 @@ public class Strings {
    * @return The toString function
    * @see #toString(Object)
    */
-  public static Function<Object,String> toStringFunction() {
+  public static CompatFunction<Object,String> toStringFunction() {
     return StringerFunctions.TOSTRING;
   }
 
@@ -398,7 +397,7 @@ public class Strings {
     return length;
   }
 
-  private enum StringFunctions implements Function<String,String> {
+  private enum StringFunctions implements CompatFunction<String,String> {
     LOWER {
       @Override
       public String apply( final String text ) {
@@ -419,7 +418,7 @@ public class Strings {
     }
   }
   
-  private enum StringerFunctions implements Function<Object,String> {
+  private enum StringerFunctions implements CompatFunction<Object,String> {
     TOSTRING {
       @Override
       public String apply( final Object object ) {
