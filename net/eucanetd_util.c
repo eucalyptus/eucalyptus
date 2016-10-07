@@ -852,7 +852,9 @@ static char **strsplit_on_space(const char *str) {
  * @param prefix [in] optional prefix of the command of interest - typically euca_rootwrap.
  * @param first [in] first string of the command of interest.
  * @param ... variable argument section.
- * @return EUCA_OK on success.
+ * @return EUCA_OK on success, EUCA_TIMEOUT_ERROR if the child process created to
+ * execute the command does not exit within timeout_sec, EUCA_INVALID_ERROR if a
+ * malformed command is specified.
  */
 int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...) {
     int result = 0;
@@ -881,6 +883,7 @@ int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...) 
     if (timeout_sec > 0) {
         if (timewait(pid, &status, timeout_sec) == 0) {
             eucanetd_kill_program(pid, NULL, prefix);
+            result = EUCA_TIMEOUT_ERROR;
         }
     }
             

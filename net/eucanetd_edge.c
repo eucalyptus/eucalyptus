@@ -1124,8 +1124,13 @@ int do_edge_update_eips(edge_config *edge) {
             if (!(rc == 0 || rc == 2)) {
                 LOGERROR("could not execute: adding ips\n");
                 ret = 1;
+            } else {
+                // try arping up to 3 times
+                rc = EUCA_TIMEOUT_ERROR;
+                for (j = 1; j < 4 && rc != EUCA_OK; j++) {
+                    rc = euca_exec_wait(j, edge->config->cmdprefix, "arping", "-c", "1", "-U", "-I", edge->config->pubInterface, strptra, NULL);
+                }
             }
-            euca_exec_wait(1, edge->config->cmdprefix, "arping", "-c", "1", "-U", "-I", edge->config->pubInterface, strptra, NULL);
 
             snprintf(rule, MAX_RULE_LEN, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(edge->config->ipt, "nat", "EUCA_NAT_PRE", rule);
