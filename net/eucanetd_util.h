@@ -158,7 +158,7 @@ long int eucanetd_timer_usec(struct timeval *t);
 
 int euca_exec(const char *command);
 int euca_exec_no_wait(const char *file, ...);
-int euca_exec_wait(int timeout_sec, const char *file, ...);
+int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...);
 
 void *zalloc_check(size_t nmemb, size_t size);
 void *realloc_check(void *ptr, size_t nmemb, size_t size);
