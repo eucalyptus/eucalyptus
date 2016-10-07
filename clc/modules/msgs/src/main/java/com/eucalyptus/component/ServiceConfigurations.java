@@ -485,6 +485,7 @@ public class ServiceConfigurations {
   public static <T extends ServiceConfiguration> T lookupByName( final String name ) {
     for ( ComponentId c : ComponentIds.list( ) ) {
       ServiceConfiguration example = ServiceBuilders.lookup( c.getClass( ) ).newInstance( );
+      if ( example instanceof EphemeralConfiguration ) continue;
       example.setName( name );
       try {
         return ( T ) lookup( example );
