@@ -462,27 +462,29 @@ int eucanetd_kill_program(pid_t pid, const char *psProgramName, const char *psRo
     char cmdstr[EUCA_MAX_PATH] = "";
     char file[EUCA_MAX_PATH] = "";
 
-    if ((pid < 2) || !psProgramName) {
+    if (pid < 2) {
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
-    if (check_file(file)) {
-        return (EUCA_PERMISSION_ERROR);
-    }
+    if (psProgramName) {
+        snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
+        if (check_file(file)) {
+            return (EUCA_PERMISSION_ERROR);
+        }
 
-    if ((FH = fopen(file, "r")) != NULL) {
-        if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
+        if ((FH = fopen(file, "r")) != NULL) {
+            if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
+                fclose(FH);
+                return (EUCA_ACCESS_ERROR);
+            }
             fclose(FH);
+        } else {
             return (EUCA_ACCESS_ERROR);
         }
-        fclose(FH);
-    } else {
-        return (EUCA_ACCESS_ERROR);
     }
 
     // found running process
-    if (strstr(cmdstr, psProgramName)) {
+    if (!psProgramName || strstr(cmdstr, psProgramName)) {
         // passed in cmd matches running cmd
         if (psRootwrap) {
             snprintf(sPid, 16, "%d", pid);
@@ -878,32 +880,44 @@ int euca_exec_no_wait(const char *file, ...)
 
 /**
  * Forks a process to execute a command specified in the variable argument section.
- * Waits up to timeout_sec for the child process to exit. No action taken on timeout.
- * @param timeout_sec time to wait for the child process executing the command of interest.
- * @param file first string of the command of interest.
+ * Waits up to timeout_sec for the child process to exit.
+ * Try to terminate/kill the child_process upon time out.
+ * @param timeout_sec [in] time to wait for the child process executing the command of interest.
+ * @param prefix [in] optional prefix of the command of interest - typically euca_rootwrap.
+ * @param first [in] first string of the command of interest.
  * @param ... variable argument section.
  * @return EUCA_OK on success.
  */
-int euca_exec_wait(int timeout_sec, const char *file, ...) {
+int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...) {
     int result = 0;
     char **argv = NULL;
 
     va_list va;
-    va_start(va, file);
-    argv = build_argv(file, va);
+    va_start(va, first);
+    argv = build_argv(first, va);
     va_end(va);
-    if (argv == NULL)
+    if (argv == NULL) {
         return EUCA_INVALID_ERROR;
+    }
 
     pid_t pid;
     int status = 0;
+    if (prefix) {
+        int j = 0;
+        for (; argv[j]; j++);
+        argv = EUCA_REALLOC_C(argv, j + 2, sizeof (char *));
+        memmove(&(argv[1]), &(argv[0]), (j + 1) * sizeof (char *));
+        argv[0] = strdup(prefix);
+    }
     result = euca_execvp_fd(&pid, NULL, NULL, NULL, argv);
     free_char_list(argv);
     
     if (timeout_sec > 0) {
-        timewait(pid, &status, timeout_sec);
+        if (timewait(pid, &status, timeout_sec) == 0) {
+            eucanetd_kill_program(pid, NULL, prefix);
+        }
     }
-
+            
     return result;
 }
 
