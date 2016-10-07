@@ -78,7 +78,7 @@ import com.google.common.base.Strings;
 /**
  * Support class for HMAC login modules
  */
-abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
+public abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
   protected static final Logger signatureLogger = Logger.getLogger( "com.eucalyptus.auth.login.HMAC" );
 
@@ -134,7 +134,7 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
     return URLDecoder.decode( text );
   }
   
-  protected String urlencode( final String text ) {
+  public static String urlencode( final String text ) {
     final byte[] textBytes = Strings.nullToEmpty( text ).getBytes( Charsets.UTF_8 );
     return new String( URLCodec.encodeUrl( URL_SAFE_CHARACTERS, textBytes ), Charsets.US_ASCII );
   }

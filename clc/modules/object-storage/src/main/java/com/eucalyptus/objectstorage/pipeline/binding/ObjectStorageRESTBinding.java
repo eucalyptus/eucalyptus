@@ -120,7 +120,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
-import com.eucalyptus.objectstorage.pipeline.handlers.S3Authentication;
+import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -175,6 +175,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   protected Map<String, String> operationMap;
   protected Map<String, String> unsupportedOperationMap;
   protected String key;
+
+  public enum SecurityParameter {
+    AWSAccessKeyId, Timestamp, Expires, Signature, Authorization, Date, Content_MD5, Content_Type, SecurityToken,
+  }
 
   public ObjectStorageRESTBinding() {
     super("http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION);
@@ -621,7 +625,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       Object key = iterator.next();
       String keyString = key.toString();
       boolean dontIncludeParam = false;
-      for (S3Authentication.SecurityParameter securityParam : S3Authentication.SecurityParameter.values()) {
+      for (SecurityParameter securityParam : SecurityParameter.values()) {
         if (keyString.equals(securityParam.toString().toLowerCase())) {
           dontIncludeParam = true;
           break;
