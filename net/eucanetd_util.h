@@ -113,7 +113,7 @@ long int eucanetd_timer_usec(struct timeval *t);
 long int eucanetd_get_timestamp();
 
 int euca_exec(const char *command);
-int euca_exec_wait(int timeout_sec, const char *file, ...);
+int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...);
 
 int euca_u32_set_insert(u32 **set, int *max_set, u32 value);
 int euca_string_set_insert(char ***set, int *max_set, char *value);

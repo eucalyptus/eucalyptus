@@ -413,7 +413,7 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     }
 
     if (rc == 0) {
-        LOGERROR("waitpid() timed out: pid=%d\n", pid);
+        LOGDEBUG("waitpid() timed out: pid=%d\n", pid);
     }
 
     return (rc);
