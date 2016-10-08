@@ -61,6 +61,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.principal.HasRole;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.auth.principal.Principal.PrincipalType;
 import com.eucalyptus.auth.principal.Principals;
@@ -115,7 +116,7 @@ public class TokensService {
     try {
       final Optional<RoleSecurityTokenAttributes> roleAttributes = RoleSecurityTokenAttributes.forUser( user );
       if ( roleAttributes.isPresent( ) ) {
-        arn = "arn:aws:sts::"+account+":assumed-role/" + roleAttributes.get( ).getSessionName( ); //TODO should have role path/name in arn
+        arn = assumedRoleArn( ((HasRole) user).getRole( ), roleAttributes.get( ).getSessionName( ) );
       } else {
         arn = Accounts.getUserArn( user );
       }
@@ -189,7 +190,7 @@ public class TokensService {
         subject.getPublicCredentials( QueryIdCredential.class );
     //noinspection OptionalGetWithoutIsPresent
     if ( queryIdCreds.size( ) == 1 &&
-        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) && 
+        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) &&
         Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
     }
