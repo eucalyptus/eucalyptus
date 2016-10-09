@@ -30,6 +30,7 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence.postgresql;
 
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.simplequeue.Attribute;
@@ -178,23 +179,60 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public Collection<MessageWithReceiveCounts> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
-    List<MessageWithReceiveCounts> messagesWithExtraInfo = Lists.newArrayList();
+  public Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
+    List<Message> messages = Lists.newArrayList();
     long now = SimpleQueueService.currentTimeSeconds();
     try ( TransactionResource db =
             Entities.transactionFor(MessageEntity.class) ) {
       List<MessageEntity> messageEntityList = Entities.criteriaQuery(MessageEntity.class)
         .whereEqual(MessageEntity_.accountId, queue.getAccountId())
         .whereEqual(MessageEntity_.queueName, queue.getQueueName())
-        // messages with an expiration time of exactly now should expire, so we want the expiration
-        // timestamp to be strictly greater than now
-        .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
+//      -- Just delete the expired messages here
+//        // messages with an expiration time of exactly now should expire, so we want the expiration
+//        // timestamp to be strictly greater than now
+//        .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
         // messages with a visibility time of exactly now should be visible, so we want the the visibility
         // timestamp to be less than or equal to now.
         .where(Entities.restriction(MessageEntity.class).le(MessageEntity_.visibleTimestampSecs, now))
+        .orderBy(MessageEntity_.visibleTimestampSecs)
+        // TODO: consider what happens if this returns too many results.
         .list();
+      boolean deadLetterQueue = false;
+      String deadLetterQueueAccountId = null;
+      String deadLetterQueueName = null;
+      int maxReceiveCount = 0;
+      long deadLetterQueueMessageRetentionPeriod = 0;
+      try {
+        Ern deadLetterQueueErn = Ern.parse(receiveAttributes.get(Constants.DEAD_LETTER_TARGET_ARN));
+        deadLetterQueueAccountId = deadLetterQueueErn.getAccount();
+        deadLetterQueueName = deadLetterQueueErn.getResourceName();
+        maxReceiveCount = Integer.parseInt(receiveAttributes.get(Constants.MAX_RECEIVE_COUNT));
+        deadLetterQueueMessageRetentionPeriod = Long.parseLong(receiveAttributes.get(Constants.MESSAGE_RETENTION_PERIOD));
+        deadLetterQueue = true;
+      } catch (Exception ignore) {
+      }
+      int numMessages = 0;
+      int maxNumMessages = 1;
+      try {
+        maxNumMessages = Integer.parseInt(receiveAttributes.get(Constants.MAX_NUMBER_OF_MESSAGES));
+      } catch (Exception ignore) {
+      }
+
       if (messageEntityList != null) {
         for (MessageEntity messageEntity:messageEntityList) {
+          if (messageEntity.getExpiredTimestampSecs() <= now) {
+            Entities.delete(messageEntity);
+            continue;
+          }
+          if (deadLetterQueue && messageEntity.getLocalReceiveCount() >= maxReceiveCount) {
+            // move to dead letter
+            messageEntity.setLocalReceiveCount(0);
+            messageEntity.setAccountId(deadLetterQueueAccountId);
+            messageEntity.setQueueName(deadLetterQueueName);
+            messageEntity.setExpiredTimestampSecs(messageEntity.getSentTimestampSecs() + deadLetterQueueMessageRetentionPeriod);
+            continue;
+          }
+
           Message message = jsonToMessage(messageEntity.getMessageJson());
           message.setMessageId(messageEntity.getMessageId());
           // set receive timestamp if first time being received
@@ -218,15 +256,13 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
           // send timestamp isn't updated but used in queries.  The attribute is in seconds though, so convert
           message.getAttribute().add(new Attribute(Constants.SENT_TIMESTAMP, "" + (messageEntity.getSentTimestampSecs())));
           message.setReceiptHandle(messageEntity.getAccountId() + ":" + messageEntity.getQueueName() + ":" + messageEntity.getMessageId() + ":" + messageEntity.getLocalReceiveCount());
-          MessageWithReceiveCounts messageWithReceiveCounts = new MessageWithReceiveCounts();
-          messageWithReceiveCounts.setMessage(message);
-          messageWithReceiveCounts.setLocalReceiveCount(messageEntity.getLocalReceiveCount());
-          messageWithReceiveCounts.setReceiveCount(messageEntity.getReceiveCount());
-          messagesWithExtraInfo.add(messageWithReceiveCounts);
+          messages.add(message);
+          numMessages++;
+          if (numMessages >= maxNumMessages) break;
         }
       }
       db.commit();
-      return messagesWithExtraInfo;
+      return messages;
     }
   }
 
@@ -345,31 +381,6 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
 
   }
 
-  @Override
-  public void moveMessageToDeadLetterQueue(Queue queue, Message message, Queue deadLetterQueue) {
-    try ( TransactionResource db =
-            Entities.transactionFor(MessageEntity.class) ) {
-
-      List<MessageEntity> messageEntityList = Entities.criteriaQuery(MessageEntity.class)
-        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
-        .whereEqual(MessageEntity_.messageId, message.getMessageId())
-        .list();
-      if (messageEntityList != null) {
-        for (MessageEntity messageEntity:messageEntityList) {
-          // being called this message was received one too many times, reset the count
-          messageEntity.setReceiveCount(messageEntity.getReceiveCount() - 1);
-          // reset the local count
-          messageEntity.setLocalReceiveCount(0);
-          messageEntity.setAccountId(deadLetterQueue.getAccountId());
-          messageEntity.setQueueName(deadLetterQueue.getQueueName());
-          messageEntity.setExpiredTimestampSecs(messageEntity.getSentTimestampSecs() + deadLetterQueue.getMessageRetentionPeriod());
-        }
-      }
-      db.commit();
-    }
-
-  }
 
   @Override
   public void deleteAllMessages(Queue queue) {

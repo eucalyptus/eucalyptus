@@ -59,4 +59,5 @@ public class Constants {
 
   public static final String DEAD_LETTER_TARGET_ARN = "deadLetterTargetArn";
   public static final String MAX_RECEIVE_COUNT = "maxReceiveCount";
+
 }
