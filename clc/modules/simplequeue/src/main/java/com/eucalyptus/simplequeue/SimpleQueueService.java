@@ -51,20 +51,25 @@ import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.simplequeue.exceptions.AccessDeniedException;
+import com.eucalyptus.simplequeue.exceptions.BatchEntryIdsNotDistinctException;
+import com.eucalyptus.simplequeue.exceptions.EmptyBatchRequestException;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
 import com.eucalyptus.simplequeue.exceptions.InvalidAddressException;
 import com.eucalyptus.simplequeue.exceptions.InvalidAttributeNameException;
+import com.eucalyptus.simplequeue.exceptions.InvalidBatchEntryIdException;
 import com.eucalyptus.simplequeue.exceptions.InvalidParameterValueException;
 import com.eucalyptus.simplequeue.exceptions.MissingParameterException;
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
+import com.eucalyptus.simplequeue.exceptions.TooManyEntriesInBatchRequestException;
 import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
 import com.eucalyptus.simplequeue.persistence.MessagePersistence;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -139,12 +144,20 @@ public class SimpleQueueService {
   public volatile static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = 10;
 
   @ConfigurableField( description = "Maximum length of message attribute name. (chars)",
-    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "256", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH = 256;
 
   @ConfigurableField( description = "Maximum number of bytes in message attribute type. (bytes)",
-    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "256", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH = 256;
+
+  @ConfigurableField( description = "Maximum number of entries in a batch request",
+    initial = "10", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_NUM_BATCH_ENTRIES = 10;
+
+  @ConfigurableField( description = "Maximum length of batch id. (chars)",
+    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_BATCH_ID_LENGTH = 80;
 
   public abstract static class CheckMinIntPropertyChangeListener implements PropertyChangeListener {
     protected int minValue = 0;
@@ -567,6 +580,8 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
+      final Integer visibilityTimeout = request.getVisibilityTimeout();
+      final String receiptHandle = request.getReceiptHandle();
       QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
       if (!queueUrlParts.getAccountId().equals(accountId)) {
         throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
@@ -578,15 +593,25 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      if (request.getVisibilityTimeout() < 0 || request.getVisibilityTimeout() > MAX_VISIBILITY_TIMEOUT) {
-        throw new InvalidParameterValueException("VisibilityTimeout must be between 0 and " + MAX_VISIBILITY_TIMEOUT);
-      }
-
-      PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue, request.getReceiptHandle(), request.getVisibilityTimeout());
+      handleChangeMessageVisibility(visibilityTimeout, receiptHandle, queue);
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  private void handleChangeMessageVisibility(Integer visibilityTimeout, String receiptHandle, Queue queue) throws SimpleQueueException {
+    if (visibilityTimeout == null) {
+      throw new MissingParameterException("VisibilityTimeout is a required field");
+    }
+    if (visibilityTimeout < 0 || visibilityTimeout > MAX_VISIBILITY_TIMEOUT) {
+      throw new InvalidParameterValueException("VisibilityTimeout must be between 0 and " + MAX_VISIBILITY_TIMEOUT);
+    }
+    if (receiptHandle == null) {
+      throw new MissingParameterException("ReceiptHandle is a required field");
+    }
+
+    PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue, receiptHandle, visibilityTimeout);
   }
 
   public DeleteMessageResponseType deleteMessage(DeleteMessageType request) throws EucalyptusCloudException {
@@ -606,12 +631,16 @@ public class SimpleQueueService {
       if (queue == null) {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
-
-      PersistenceFactory.getMessagePersistence().deleteMessage(queue, request.getReceiptHandle());
+      String receiptHandle = request.getReceiptHandle();
+      handleDeleteMessage(queue, receiptHandle);
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  private void handleDeleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
+    PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle);
   }
 
   public DeleteQueueResponseType deleteQueue(DeleteQueueType request) throws EucalyptusCloudException {
@@ -758,33 +787,34 @@ public class SimpleQueueService {
         maxNumberOfMessages = request.getMaxNumberOfMessages();
       }
       receiveAttributes.put(Constants.MAX_NUMBER_OF_MESSAGES, "" + maxNumberOfMessages);
-
-
-      Collection<MessagePersistence.MessageWithReceiveCounts> messagesWithReceiveCounts = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
-
       boolean hasActiveLegalRedrivePolicy = false;
       Queue deadLetterQueue = null;
+      String deadLetterTargetArn = null;
       int maxReceiveCount = 0;
       try {
         if (queue.getRedrivePolicy() != null && queue.getRedrivePolicy().isObject()) {
-          Ern deadLetterQueueArn = Ern.parse(queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).textValue());
+          deadLetterTargetArn = queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).textValue();
+          Ern deadLetterQueueErn = Ern.parse(deadLetterTargetArn);
           maxReceiveCount = queue.getRedrivePolicy().get(Constants.MAX_RECEIVE_COUNT).asInt();
-          deadLetterQueue = PersistenceFactory.getQueuePersistence().lookupQueue(deadLetterQueueArn.getAccount(), deadLetterQueueArn.getResourceName());
+          deadLetterQueue = PersistenceFactory.getQueuePersistence().lookupQueue(deadLetterQueueErn.getAccount(), deadLetterQueueErn.getResourceName());
           hasActiveLegalRedrivePolicy = (deadLetterQueue != null && maxReceiveCount > 0);
         }
       } catch (Exception ignore) {
         // malformed or nonexistent redrive policy, just leave the message where it is?
       }
-      if (messagesWithReceiveCounts != null) {
-        for (MessagePersistence.MessageWithReceiveCounts messageWithReceiveCounts: messagesWithReceiveCounts) {
-          Message message = messageWithReceiveCounts.getMessage();
-          if (hasActiveLegalRedrivePolicy && messageWithReceiveCounts.getLocalReceiveCount() > maxReceiveCount) {
-            PersistenceFactory.getMessagePersistence().moveMessageToDeadLetterQueue(queue, message, deadLetterQueue);
-          } else {
-            filterReceiveAttributes(message, request.getAttributeName());
-            filterReceiveMessageAttributes(message, request.getMessageAttributeName());
-            reply.getReceiveMessageResult().getMessage().add(message);
-          }
+      if (deadLetterQueue != null) {
+        receiveAttributes.put(Constants.DEAD_LETTER_TARGET_ARN, deadLetterTargetArn);
+        receiveAttributes.put(Constants.MESSAGE_RETENTION_PERIOD, ""+deadLetterQueue.getMessageRetentionPeriod());
+        receiveAttributes.put(Constants.MAX_RECEIVE_COUNT, ""+maxReceiveCount);
+      }
+
+      Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
+
+      if (messages != null) {
+        for (Message message: messages) {
+          filterReceiveAttributes(message, request.getAttributeName());
+          filterReceiveMessageAttributes(message, request.getMessageAttributeName());
+          reply.getReceiveMessageResult().getMessage().add(message);
         }
       }
     } catch (Exception ex) {
@@ -972,12 +1002,103 @@ public class SimpleQueueService {
     return attributeValueLength;
   }
 
+  private static class MessageInfo {
+    private Message message;
+    private int messageLength;
+    Map<String, String> sendAttributes = Maps.newHashMap();
+
+    public Message getMessage() {
+      return message;
+    }
+
+    public void setMessage(Message message) {
+      this.message = message;
+    }
+
+    public int getMessageLength() {
+      return messageLength;
+    }
+
+    public void setMessageLength(int messageLength) {
+      this.messageLength = messageLength;
+    }
+
+    public Map<String, String> getSendAttributes() {
+      return sendAttributes;
+    }
+
+    public void setSendAttributes(Map<String, String> sendAttributes) {
+      this.sendAttributes = sendAttributes;
+    }
+
+    private MessageInfo(Message message, int messageLength, Map<String, String> sendAttributes) {
+      this.message = message;
+      this.messageLength = messageLength;
+      this.sendAttributes = sendAttributes;
+    }
+  }
+
+  private MessageInfo validateAndGetMessageInfo(Queue queue, String accountId, String body, Integer delaySeconds, ArrayList<MessageAttribute> messageAttributes) throws EucalyptusCloudException {
+    int messageLength = 0;
+    Map<String, String> sendAttributes = Maps.newHashMap();
+    Message message = new Message();
+    
+    if (delaySeconds != null) {
+      if (delaySeconds < 0 || delaySeconds > MAX_DELAY_SECONDS) {
+        throw new InvalidParameterValueException("DelaySeconds must be a number between 0 and " + MAX_DELAY_SECONDS);
+      }
+      sendAttributes.put(Constants.DELAY_SECONDS, "" + delaySeconds);
+    }
+    // check message attributes
+    if (messageAttributes != null) {
+      Set<String> usedAttributeNames = Sets.newHashSet();
+      for (MessageAttribute messageAttribute : messageAttributes) {
+        if (messageAttribute == null) {
+          throw new InvalidParameterValueException("Message attribute can not be null");
+        }
+        messageLength += validateMessageAttributeNameAndCalculateLength(messageAttribute.getName(), usedAttributeNames);
+        messageLength += validateMessageAttributeValueAndCalculateLength(messageAttribute.getValue(), messageAttribute.getName());
+      }
+      message.setmD5OfMessageAttributes(calculateMessageAttributesMd5(convertMessageAttributesToMap(messageAttributes)));
+    }
+
+    if (Strings.isNullOrEmpty(body)) {
+      throw new MissingParameterException("The request must contain the parameter MessageBody.");
+    }
+
+    // verify ok characters
+    for (int codePoint : body.codePoints().toArray()) {
+      if (!validMessageBodyCodePoints.contains(codePoint)) {
+        throw new InvalidParameterValueException("Invalid binary character '#x" + Integer.toHexString(codePoint) + "' was " +
+          "found in the message body, the set of allowed characters is #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]");
+      }
+    }
+
+    messageLength += body.getBytes(UTF8).length;
+    if (messageLength > queue.getMaximumMessageSize()) {
+      throw new InvalidParameterValueException("The message exceeds the maximum message length of the queue, which is " + queue.getMaximumMessageSize() + " bytes");
+    }
+
+    message.setmD5OfBody(calculateMessageBodyMd5(body));
+
+    message.setBody(body);
+    if (messageAttributes != null) {
+      message.getMessageAttribute().addAll(messageAttributes);
+    }
+
+    message.getAttribute().add(new Attribute(Constants.SENDER_ID, accountId));
+
+    String messageId = UUID.randomUUID().toString();
+
+    message.setMessageId(messageId);
+    
+    return new MessageInfo(message, messageLength, sendAttributes);
+  }
   public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
     SendMessageResponseType reply = request.getReply();
 
     // TODO: IAM rather than own account for now
     try {
-      Message message = new Message();
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
       QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
@@ -991,67 +1112,13 @@ public class SimpleQueueService {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
 
-      Map<String, String> sendAttributes = Maps.newHashMap();
-      if (request.getDelaySeconds() != null) {
-        if (request.getDelaySeconds() < 0 || request.getDelaySeconds() > MAX_DELAY_SECONDS) {
-          throw new InvalidParameterValueException("DelaySeconds must be a number between 0 and " + MAX_DELAY_SECONDS);
-        }
-        sendAttributes.put(Constants.DELAY_SECONDS, "" + request.getDelaySeconds());
-      }
+      MessageInfo messageInfo = validateAndGetMessageInfo(queue, accountId, request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
 
-      String md5OfMessageAttributes = null;
-      String md5OfMessageBody;
+      PersistenceFactory.getMessagePersistence().sendMessage(queue, messageInfo.getMessage(), messageInfo.getSendAttributes());
 
-      int messageLength = 0;
-      // check message attributes
-      if (request.getMessageAttribute() != null) {
-        Set<String> usedAttributeNames = Sets.newHashSet();
-        for (MessageAttribute messageAttribute : request.getMessageAttribute()) {
-          if (messageAttribute == null) {
-            throw new InvalidParameterValueException("Message attribute can not be null");
-          }
-          messageLength += validateMessageAttributeNameAndCalculateLength(messageAttribute.getName(), usedAttributeNames);
-          messageLength += validateMessageAttributeValueAndCalculateLength(messageAttribute.getValue(), messageAttribute.getName());
-        }
-        md5OfMessageAttributes = calculateMessageAttributesMd5(convertMessageAttributesToMap(request.getMessageAttribute()));
-      }
-
-      if (Strings.isNullOrEmpty(request.getMessageBody())) {
-        throw new MissingParameterException("The request must contain the parameter MessageBody.");
-      }
-
-      // verify ok characters
-      for (int codePoint : request.getMessageBody().codePoints().toArray()) {
-        if (!validMessageBodyCodePoints.contains(codePoint)) {
-          throw new InvalidParameterValueException("Invalid binary character '#x" + Integer.toHexString(codePoint) + "' was " +
-            "found in the message body, the set of allowed characters is #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]");
-        }
-      }
-
-      messageLength += request.getMessageBody().getBytes(UTF8).length;
-      if (messageLength > queue.getMaximumMessageSize()) {
-        throw new InvalidParameterValueException("The message exceeds the maximum message length of the queue, which is " + queue.getMaximumMessageSize() + " bytes");
-      }
-
-      md5OfMessageBody = calculateMessageBodyMd5(request.getMessageBody());
-
-      message.setBody(request.getMessageBody());
-      if (request.getMessageAttribute() != null) {
-        message.getMessageAttribute().addAll(request.getMessageAttribute());
-      }
-      message.setmD5OfMessageAttributes(md5OfMessageAttributes);
-      message.setmD5OfBody(md5OfMessageBody);
-
-      message.getAttribute().add(new Attribute(Constants.SENDER_ID, accountId));
-
-      String messageId = UUID.randomUUID().toString();
-
-      message.setMessageId(messageId);
-      PersistenceFactory.getMessagePersistence().sendMessage(queue, message, sendAttributes);
-
-      reply.getSendMessageResult().setmD5OfMessageAttributes(md5OfMessageAttributes);
-      reply.getSendMessageResult().setMessageId(messageId);
-      reply.getSendMessageResult().setmD5OfMessageBody(md5OfMessageBody);
+      reply.getSendMessageResult().setmD5OfMessageAttributes(messageInfo.getMessage().getmD5OfMessageAttributes());
+      reply.getSendMessageResult().setMessageId(messageInfo.getMessage().getMessageId());
+      reply.getSendMessageResult().setmD5OfMessageBody(messageInfo.getMessage().getmD5OfBody());
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -1087,35 +1154,214 @@ public class SimpleQueueService {
 
   public ChangeMessageVisibilityBatchResponseType changeMessageVisibilityBatch(ChangeMessageVisibilityBatchType request) throws EucalyptusCloudException {
     ChangeMessageVisibilityBatchResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      if (request.getChangeMessageVisibilityBatchRequestEntry() == null ||
+        request.getChangeMessageVisibilityBatchRequestEntry().isEmpty()) {
+        throw new EmptyBatchRequestException("There should be at least one ChangeMessageVisibilityBatchRequestEntry in the request.");
+      }
+
+      if (request.getChangeMessageVisibilityBatchRequestEntry().size() > MAX_NUM_BATCH_ENTRIES) {
+        throw new TooManyEntriesInBatchRequestException("Maximum number of entries per request are " + MAX_NUM_BATCH_ENTRIES +
+          ". You have sent " + request.getChangeMessageVisibilityBatchRequestEntry().size() + ".");
+      }
+
+      Set<String> previousIds = Sets.newHashSet();
+      Pattern batchIdPattern = Pattern.compile("[A-Za-z0-9_-]+");
+      for (ChangeMessageVisibilityBatchRequestEntry batchRequestEntry: request.getChangeMessageVisibilityBatchRequestEntry()) {
+        if (batchRequestEntry.getId() == null || batchRequestEntry.getId().isEmpty()) {
+          throw new MissingParameterException("A batch entry id is a required field");
+        }
+        if (batchRequestEntry.getId().length() > MAX_BATCH_ID_LENGTH
+          || !batchIdPattern.matcher(batchRequestEntry.getId()).matches()) {
+          throw new InvalidBatchEntryIdException("A batch entry id can only contain alphanumeric characters, hyphens and underscores. It can be at most "+MAX_BATCH_ID_LENGTH+" letters long.");
+        }
+        if (previousIds.contains(batchRequestEntry.getId())) {
+          throw new BatchEntryIdsNotDistinctException("A batch entry id is duplicated in this request");
+        }
+        previousIds.add(batchRequestEntry.getId());
+      }
+      for (ChangeMessageVisibilityBatchRequestEntry batchRequestEntry: request.getChangeMessageVisibilityBatchRequestEntry()) {
+        try {
+          handleChangeMessageVisibility(batchRequestEntry.getVisibilityTimeout(), batchRequestEntry.getReceiptHandle(), queue);
+          ChangeMessageVisibilityBatchResultEntry success = new ChangeMessageVisibilityBatchResultEntry();
+          success.setId(batchRequestEntry.getId());
+          reply.getChangeMessageVisibilityBatchResult().getChangeMessageVisibilityBatchResultEntry().add(success);
+        } catch (Exception ex) {
+          try {
+            handleException(ex);
+          } catch (SimpleQueueException ex1) {
+            BatchResultErrorEntry failure = new BatchResultErrorEntry();
+            failure.setId(batchRequestEntry.getId());
+            failure.setCode(ex1.getCode());
+            failure.setMessage(ex1.getMessage());
+            failure.setSenderFault(ex1.getRole() != null && ex1.getRole().equals(Role.Sender));
+            reply.getChangeMessageVisibilityBatchResult().getBatchResultErrorEntry().add(failure);
+          }
+        }
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public DeleteMessageBatchResponseType deleteMessageBatch(DeleteMessageBatchType request) throws EucalyptusCloudException {
     DeleteMessageBatchResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      if (request.getDeleteMessageBatchRequestEntry() == null ||
+        request.getDeleteMessageBatchRequestEntry().isEmpty()) {
+        throw new EmptyBatchRequestException("There should be at least one DeleteMessageBatchRequestEntry in the request.");
+      }
+
+      if (request.getDeleteMessageBatchRequestEntry().size() > MAX_NUM_BATCH_ENTRIES) {
+        throw new TooManyEntriesInBatchRequestException("Maximum number of entries per request are " + MAX_NUM_BATCH_ENTRIES +
+          ". You have sent " + request.getDeleteMessageBatchRequestEntry().size() + ".");
+      }
+
+      Set<String> previousIds = Sets.newHashSet();
+      Pattern batchIdPattern = Pattern.compile("[A-Za-z0-9_-]+");
+      for (DeleteMessageBatchRequestEntry batchRequestEntry: request.getDeleteMessageBatchRequestEntry()) {
+        if (batchRequestEntry.getId() == null || batchRequestEntry.getId().isEmpty()) {
+          throw new MissingParameterException("A batch entry id is a required field");
+        }
+        if (batchRequestEntry.getId().length() > MAX_BATCH_ID_LENGTH
+          || !batchIdPattern.matcher(batchRequestEntry.getId()).matches()) {
+          throw new InvalidBatchEntryIdException("A batch entry id can only contain alphanumeric characters, hyphens and underscores. It can be at most "+MAX_BATCH_ID_LENGTH+" letters long.");
+        }
+        if (previousIds.contains(batchRequestEntry.getId())) {
+          throw new BatchEntryIdsNotDistinctException("A batch entry id is duplicated in this request");
+        }
+        previousIds.add(batchRequestEntry.getId());
+      }
+      for (DeleteMessageBatchRequestEntry batchRequestEntry: request.getDeleteMessageBatchRequestEntry()) {
+        try {
+          handleDeleteMessage(queue, batchRequestEntry.getReceiptHandle());
+          DeleteMessageBatchResultEntry success = new DeleteMessageBatchResultEntry();
+          success.setId(batchRequestEntry.getId());
+          reply.getDeleteMessageBatchResult().getDeleteMessageBatchResultEntry().add(success);
+        } catch (Exception ex) {
+          try {
+            handleException(ex);
+          } catch (SimpleQueueException ex1) {
+            BatchResultErrorEntry failure = new BatchResultErrorEntry();
+            failure.setId(batchRequestEntry.getId());
+            failure.setCode(ex1.getCode());
+            failure.setMessage(ex1.getMessage());
+            failure.setSenderFault(ex1.getRole() != null && ex1.getRole().equals(Role.Sender));
+            reply.getDeleteMessageBatchResult().getBatchResultErrorEntry().add(failure);
+          }
+        }
+      }
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public SendMessageBatchResponseType sendMessageBatch(SendMessageBatchType request) throws EucalyptusCloudException {
     SendMessageBatchResponseType reply = request.getReply();
-    if (request.getSendMessageBatchRequestEntry() != null) {
-      for (SendMessageBatchRequestEntry sendMessageBatchRequestEntry: request.getSendMessageBatchRequestEntry()) {
-        if (sendMessageBatchRequestEntry.getId() != null) {
-          SendMessageBatchResultEntry sendMessageBatchResultEntry = new SendMessageBatchResultEntry();
-          // message id is required
-          sendMessageBatchResultEntry.setMessageId(UUID.randomUUID().toString());
-          sendMessageBatchResultEntry.setId(sendMessageBatchRequestEntry.getId());
-          if (sendMessageBatchRequestEntry.getMessageBody() != null) {
-            sendMessageBatchResultEntry.setmD5OfMessageBody(calculateMessageBodyMd5(
-              sendMessageBatchRequestEntry.getMessageBody()));
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+
+      if (request.getSendMessageBatchRequestEntry() == null ||
+        request.getSendMessageBatchRequestEntry().isEmpty()) {
+        throw new EmptyBatchRequestException("There should be at least one SendMessageBatchRequestEntry in the request.");
+      }
+
+      if (request.getSendMessageBatchRequestEntry().size() > MAX_NUM_BATCH_ENTRIES) {
+        throw new TooManyEntriesInBatchRequestException("Maximum number of entries per request are " + MAX_NUM_BATCH_ENTRIES +
+          ". You have sent " + request.getSendMessageBatchRequestEntry().size() + ".");
+      }
+
+      Set<String> previousIds = Sets.newHashSet();
+      Pattern batchIdPattern = Pattern.compile("[A-Za-z0-9_-]+");
+      for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
+        if (batchRequestEntry.getId() == null || batchRequestEntry.getId().isEmpty()) {
+          throw new MissingParameterException("A batch entry id is a required field");
+        }
+        if (batchRequestEntry.getId().length() > MAX_BATCH_ID_LENGTH
+          || !batchIdPattern.matcher(batchRequestEntry.getId()).matches()) {
+          throw new InvalidBatchEntryIdException("A batch entry id can only contain alphanumeric characters, hyphens and underscores. It can be at most "+MAX_BATCH_ID_LENGTH+" letters long.");
+        }
+        if (previousIds.contains(batchRequestEntry.getId())) {
+          throw new BatchEntryIdsNotDistinctException("A batch entry id is duplicated in this request");
+        }
+        previousIds.add(batchRequestEntry.getId());
+      }
+      Map<String, MessageInfo> messageInfoMap = Maps.newLinkedHashMap();
+      int totalMessageLength = 0;
+      for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
+        MessageInfo messageInfo = validateAndGetMessageInfo(queue, accountId, batchRequestEntry.getMessageBody(),
+          batchRequestEntry.getDelaySeconds(), batchRequestEntry.getMessageAttribute());
+        totalMessageLength += messageInfo.getMessageLength();
+        if (totalMessageLength > queue.getMaximumMessageSize()) {
+          throw new InvalidParameterValueException("The combined message lengths exceed the maximum message length of the queue, which is " + queue.getMaximumMessageSize() + " bytes");
+        }
+        messageInfoMap.put(batchRequestEntry.getId(), messageInfo);
+      }
+      for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
+        try {
+          MessageInfo messageInfo = messageInfoMap.get(batchRequestEntry.getId());
+          PersistenceFactory.getMessagePersistence().sendMessage(queue, messageInfo.getMessage(), messageInfo.getSendAttributes());
+          SendMessageBatchResultEntry success = new SendMessageBatchResultEntry();
+          success.setmD5OfMessageAttributes(messageInfo.getMessage().getmD5OfMessageAttributes());
+          success.setMessageId(messageInfo.getMessage().getMessageId());
+          success.setmD5OfMessageBody(messageInfo.getMessage().getmD5OfBody());
+          success.setId(batchRequestEntry.getId());
+          reply.getSendMessageBatchResult().getSendMessageBatchResultEntry().add(success);
+        } catch (Exception ex) {
+          try {
+            handleException(ex);
+          } catch (SimpleQueueException ex1) {
+            BatchResultErrorEntry failure = new BatchResultErrorEntry();
+            failure.setId(batchRequestEntry.getId());
+            failure.setCode(ex1.getCode());
+            failure.setMessage(ex1.getMessage());
+            failure.setSenderFault(ex1.getRole() != null && ex1.getRole().equals(Role.Sender));
+            reply.getSendMessageBatchResult().getBatchResultErrorEntry().add(failure);
           }
-          if (sendMessageBatchRequestEntry.getMessageAttribute() != null) {
-            sendMessageBatchResultEntry.setmD5OfMessageAttributes(
-              calculateMessageAttributesMd5(
-                convertMessageAttributesToMap(sendMessageBatchRequestEntry.getMessageAttribute())));
-          }
-          reply.getSendMessageBatchResult().getSendMessageBatchResultEntry().add(sendMessageBatchResultEntry);
         }
       }
+    } catch (Exception ex) {
+      handleException(ex);
     }
     return reply;
   }
