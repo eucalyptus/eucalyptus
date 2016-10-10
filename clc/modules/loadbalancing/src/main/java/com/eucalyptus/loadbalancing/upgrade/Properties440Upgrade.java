@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2016 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,10 +12,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.upgrade;
 
@@ -31,10 +27,10 @@ import org.apache.log4j.Logger;
  * @author Sang-Min Park (sangmin.park@hpe.com)
  *
  */
-@Upgrades.PreUpgrade( value = LoadBalancing.class, since = Upgrades.Version.v4_3_0 )
-public class Properties430Upgrade implements Callable<Boolean> {
+@Upgrades.PreUpgrade( value = LoadBalancing.class, since = Upgrades.Version.v4_4_0 )
+public class Properties440Upgrade implements Callable<Boolean> {
   private static final Logger LOG = 
-      Logger.getLogger( Properties430Upgrade.class );
+      Logger.getLogger( Properties440Upgrade.class );
 
   private final static Map<String,String> propNameToFieldName = ImmutableMap.<String,String>builder()
       .put("services.loadbalancing.worker.ntp_server", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.ntp_server")

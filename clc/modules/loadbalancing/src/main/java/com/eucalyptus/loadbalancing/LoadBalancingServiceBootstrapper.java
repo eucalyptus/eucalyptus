@@ -67,6 +67,9 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
     private static boolean EmiCheckResult = true;
     private static final String ELB_SERVICE_STATE_WORKFLOW_ID =
             "loadbalancing-service-state-workflow-01";
+    private static final String ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID =
+            "upgrade-loadbalancer-workflow-01";
+
     @Override
     public boolean check() throws Exception {
         if (!super.check())
@@ -87,6 +90,8 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
             return false;
         if (!runServiceStateWorkflow())
             return false;
+        if (!loadBalancerUpgraded)
+            runUpgradeLoadBalancerWorkflow();
         try {
             LoadBalancerPolicies.initialize();
         } catch (final Exception ex) {
@@ -160,5 +165,15 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
             return false;
         }
         return true;
+    }
+
+    private static boolean loadBalancerUpgraded = false;
+    private void runUpgradeLoadBalancerWorkflow() {
+        if(LoadBalancingWorkflows.runUpgradeLoadBalancerWorkflowSync(ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID)) {
+            loadBalancerUpgraded = true;
+        } else {
+            LOG.error("Failed to upgrade old loadbalancers. Will retry...");
+            loadBalancerUpgraded = false;
+        }
     }
 }

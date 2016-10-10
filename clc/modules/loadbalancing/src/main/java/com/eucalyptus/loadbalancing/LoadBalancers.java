@@ -225,6 +225,10 @@ public class LoadBalancers {
 		return versionOnOrLater(lb, DeploymentVersion.v4_3_0);
 	};
 
+	public static Predicate<LoadBalancer> v4_4_0 = (lb) -> {
+		return versionOnOrLater(lb, DeploymentVersion.v4_4_0);
+	};
+
 	private static boolean versionOnOrLater(final LoadBalancer lb, DeploymentVersion version) {
 		if (lb.getLoadbalancerDeploymentVersion() == null) {
 			return false;
@@ -237,9 +241,10 @@ public class LoadBalancers {
 	public enum DeploymentVersion {
 		v4_1_0,
 		v4_2_0, // the version is checked from 4.2.0
-		v4_3_0;
+		v4_3_0,
+		v4_4_0;
 
-		public static DeploymentVersion Latest = v4_3_0;
+		public static DeploymentVersion Latest = v4_4_0;
 
 		public String toVersionString(){
 			return this.name( ).substring( 1 ).replace( "_", "." );

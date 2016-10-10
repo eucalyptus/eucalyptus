@@ -146,6 +146,12 @@ public class WorkflowClients {
         .withTag(account,  loadbalancer)
         .build();
   }
+
+  public static UpgradeLoadBalancerWorkflowClientExternal getUpgradeLoadBalancerClient(final String workflowId) {
+    final UpgradeLoadBalancerWorkflowClientExternalFactory factory =
+            new UpgradeLoadBalancerWorkflowClientExternalFactoryImpl(getSimpleWorkflow(), DOMAIN);
+    return factory.getClient(workflowId);
+  }
   
   public static ApplySecurityGroupsWorkflowClientExternal getApplySecurityGroupsClient(final String accountId, final String loadbalancer) {
     final ApplySecurityGroupsWorkflowClientExternalFactory factory =

@@ -1548,4 +1548,19 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
      */
     Promise<Void> runContinousWorkflows(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#upgrade4_4}
+     */
+    Promise<Void> upgrade4_4();
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#upgrade4_4}
+     */
+    Promise<Void> upgrade4_4(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#upgrade4_4}
+     */
+    Promise<Void> upgrade4_4(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
 }

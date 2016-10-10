@@ -305,7 +305,7 @@ public class Context {
   }
 
   public String getAccountAlias( ) {
-    return getUser( ).getAccountNumber( );
+    return getUser( ).getAccountAlias();
   }
 
   public AccountFullName getAccount( ) {

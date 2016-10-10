@@ -2409,4 +2409,32 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
 
+    @Override
+    public final Promise<Void> upgrade4_4() {
+        return upgrade4_4Impl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> upgrade4_4(Promise<?>... waitFor) {
+        return upgrade4_4Impl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> upgrade4_4(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return upgrade4_4Impl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> upgrade4_4Impl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.upgrade4_4");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
 }

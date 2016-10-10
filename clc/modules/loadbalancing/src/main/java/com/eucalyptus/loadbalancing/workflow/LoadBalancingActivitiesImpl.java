@@ -314,10 +314,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final List<String> policies = EucalyptusActivityTasks.getInstance().listRolePolicies(roleName);
       if(policies.contains(SERVO_ROLE_POLICY_NAME)){
          policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
-      } 
+      }
     }catch(final Exception ex){
     }
-    
+
     boolean putPolicy;
     if(policy == null || policy.getPolicyName() == null || !policy.getPolicyName().equals(SERVO_ROLE_POLICY_NAME)){
       putPolicy=true;
@@ -331,7 +331,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }else{
       putPolicy = false;
     }
-    
+
     if(putPolicy){
       try{
         EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, SERVO_ROLE_POLICY_NAME, SERVO_ROLE_POLICY_DOCUMENT);
@@ -1369,34 +1369,48 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(verifiedStatusMap.isEmpty())
       return;
     boolean updated = false;
+    boolean committed = false;
+    final int TRANSACTION_RETRY = 5;
     final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-      for(final String instanceId : verifiedStatusMap.keySet()) {
-       final LoadBalancerBackendInstance sample =  LoadBalancerBackendInstance.named(lb, instanceId);
-       final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-       final String newStatus = verifiedStatusMap.get(instanceId);
-       final LoadBalancerBackendInstance.STATE oldState = 
-           update.getBackendState();
-       final LoadBalancerBackendInstance.STATE newState =
-           LoadBalancerBackendInstance.STATE.valueOf(newStatus);
-       if(!oldState.equals(newState))
-         updated = true;
-       update.setBackendState(newState);
-       if(LoadBalancerBackendInstance.STATE.InService.equals(newState)) {
-         update.setReasonCode("");
-         update.setDescription("");
-       } else if (LoadBalancerBackendInstance.STATE.OutOfService.equals(newState)) {
-         update.setReasonCode("Instance");
-         update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
-       }
-       update.updateInstanceStateTimestamp();
-       Entities.persist(update);
+    for (int i = 1; i <= TRANSACTION_RETRY; i++) {
+      try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+        for (final String instanceId : verifiedStatusMap.keySet()) {
+          final LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(lb, instanceId);
+          final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
+          final String newStatus = verifiedStatusMap.get(instanceId);
+          final LoadBalancerBackendInstance.STATE oldState =
+                  update.getBackendState();
+          final LoadBalancerBackendInstance.STATE newState =
+                  LoadBalancerBackendInstance.STATE.valueOf(newStatus);
+          if (!oldState.equals(newState))
+            updated = true;
+          update.setBackendState(newState);
+          if (LoadBalancerBackendInstance.STATE.InService.equals(newState)) {
+            update.setReasonCode("");
+            update.setDescription("");
+          } else if (LoadBalancerBackendInstance.STATE.OutOfService.equals(newState)) {
+            update.setReasonCode("Instance");
+            update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+          }
+          update.updateInstanceStateTimestamp();
+          Entities.persist(update);
+        }
+        db.commit();
+      } catch (final Exception ex) {
+        try {
+          Thread.sleep((long) ((Math.random() * 100) * Math.pow(2, i)));
+        }catch(final Exception ex2) {
+          ;
+        }
+        continue;
       }
-      db.commit();
-    }catch(final Exception ex) {
-      throw new LoadBalancingActivityException("Failed to persist instance status", ex);
+      committed = true;
+      break;
     }
-    
+
+    if (!committed) {
+      throw new LoadBalancingActivityException("Failed to persist instance status");
+    }
     // if changed, updating loadbalancer will cause registering instances in the servo VMs
     if(updated) {
       LoadBalancingWorkflows.updateLoadBalancer(accountNumber, lbName);
@@ -3100,5 +3114,40 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
 
     return instances;
+  }
+
+
+  // to make sure that all ELB VMs have the right role policy
+  @Override
+  public void upgrade4_4() throws LoadBalancingActivityException {
+    final List<LoadBalancer> oldLBs =
+            LoadBalancers.listLoadbalancers().stream()
+                    .filter( lb -> !LoadBalancers.v4_4_0.apply(lb) )
+                    .collect(Collectors.toList());
+
+    for (final LoadBalancer lb : oldLBs) {
+      final String accountNumber = lb.getOwnerAccountNumber();
+      final String lbName = lb.getDisplayName();
+      final String roleName = getRoleName(accountNumber, lbName);
+
+      try {
+        GetRolePolicyResult policy = null;
+        final List<String> policies = EucalyptusActivityTasks.getInstance().listRolePolicies(roleName);
+        if (policies.contains(SERVO_ROLE_POLICY_NAME)) {
+          policy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, SERVO_ROLE_POLICY_NAME);
+        }
+
+        final boolean policyAllowsSwf = true ? policy != null && SERVO_ROLE_POLICY_DOCUMENT.toLowerCase().equals(policy.getPolicyDocument().toLowerCase()) : false;
+        if (!policyAllowsSwf) {
+          if (policy != null) {
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policy.getPolicyName());
+          }
+          EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, SERVO_ROLE_POLICY_NAME, SERVO_ROLE_POLICY_DOCUMENT);
+          LOG.info(String.format("IAM role policy was updated for loadbalancer (%s-%s)", accountNumber, lbName));
+        }
+      } catch (final Exception ex) {
+        LOG.warn(String.format("Failed to upgrade old loadbalancer (%s-%s) to 4.4", accountNumber, lbName), ex);
+      }
+    }
   }
 }

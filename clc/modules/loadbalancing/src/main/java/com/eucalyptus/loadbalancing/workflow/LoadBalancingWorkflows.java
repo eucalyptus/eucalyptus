@@ -21,20 +21,12 @@ package com.eucalyptus.loadbalancing.workflow;
 
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
@@ -346,6 +338,35 @@ public class LoadBalancingWorkflows {
           public ElbWorkflowState get() {
             return workflow.getState();
           } 
+        });
+      }
+    };
+  }
+
+  public static Boolean runUpgradeLoadBalancerWorkflowSync(final String workflowId) {
+    final Future<Boolean> task =
+            Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,
+                    upgradeLoadBalancersImpl(workflowId));
+    try{
+      return task.get();
+    }catch(final Exception ex) {
+      LOG.error("Failed to run upgrade-loadbalancer workflow", ex);
+      return false;
+    }
+  }
+
+  private static Callable<Boolean> upgradeLoadBalancersImpl(final String workflowId ) {
+    return new Callable<Boolean>() {
+      @Override
+      public Boolean call() throws Exception {
+        final UpgradeLoadBalancerWorkflowClientExternal workflow =
+                WorkflowClients.getUpgradeLoadBalancerClient(workflowId);
+        workflow.upgradeLoadBalancer();
+        return waitFor(new Supplier<ElbWorkflowState>() {
+          @Override
+          public ElbWorkflowState get() {
+            return workflow.getState();
+          }
         });
       }
     };

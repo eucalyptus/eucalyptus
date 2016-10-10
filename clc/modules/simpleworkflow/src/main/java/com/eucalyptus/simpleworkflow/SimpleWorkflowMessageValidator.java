@@ -21,6 +21,8 @@ package com.eucalyptus.simpleworkflow;
 
 import java.util.Map;
 import javax.annotation.Nonnull;
+
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -37,7 +39,8 @@ public class SimpleWorkflowMessageValidator extends ServiceAdvice {
   protected void beforeService( @Nonnull final Object object ) throws SimpleWorkflowException {
     // check system-only mode
     final Context context = Contexts.lookup( );
-    if ( SimpleWorkflowProperties.isSystemOnly() && !context.hasAdministrativePrivileges( ) ) {
+    if ( SimpleWorkflowProperties.isSystemOnly() &&
+            !(Accounts.isSystemAccount( context.getAccountAlias() ) || context.hasAdministrativePrivileges())) {
       throw new SimpleWorkflowUnavailableException( );
     }
 
