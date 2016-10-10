@@ -127,6 +127,15 @@ enum mido_core_midos_t {
     CORE_END
 };
 
+enum mido_md_midos_t {
+    MD_RT,
+    MD_BR,
+    MD_RT_BRPORT,
+    MD_BR_RTPORT,
+    MD_RT_EXTPORT,
+    MD_END
+};
+
 enum vpc_route_entry_target_t {
     VPC_TARGET_LOCAL,
     VPC_TARGET_INTERNET_GATEWAY,
@@ -258,6 +267,14 @@ typedef struct mido_core_t {
     int max_gws;
 } mido_core;
 
+typedef struct mido_md_t {
+    midoname *midos[MD_END];
+    midonet_api_router *eucamdrt;
+    midonet_api_bridge *eucamdbr;
+    midonet_api_host *eucanetdhost;
+    int population_failed;
+} mido_md;
+
 typedef struct mido_config_t {
     eucanetdConfig *config;
     u32 euca_version;
@@ -276,7 +293,15 @@ typedef struct mido_config_t {
     int int_rtsn;
     int disable_l2_isolation;
 
+    u32 int_mdnw;
+    int int_mdsn;
+    u32 ext_mdnw;
+    int ext_mdsn;
+    u32 mdnw;
+    int mdsn;
+
     mido_core *midocore;
+    mido_md *midomd;
 
     mido_vpc *vpcs;
     int max_vpcs;
@@ -327,10 +352,10 @@ int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
 
 enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target);
 
-int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
-        char *int_rtnetwork, char *int_rtslashnet);
-//                    char *ext_pubgwip, char *int_rtnetwork, char *int_rtslashnet);
+int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config);
 int reinitialize_mido(mido_config *mido);
+int validate_mido(mido_config *mido);
+
 int clear_mido_gnitags(mido_config *mido);
 int check_mido_tunnelzone();
 
@@ -341,6 +366,10 @@ char *discover_mido_bgps_v5(mido_config *mido);
 int populate_mido_core(mido_config *mido, mido_core *midocore);
 int create_mido_core(mido_config *mido, mido_core *midocore);
 int delete_mido_core(mido_config *mido, mido_core *midocore);
+
+int populate_mido_md(mido_config *mido);
+int create_mido_md(mido_config *mido);
+int delete_mido_md(mido_config *mido);
 
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
@@ -404,6 +433,7 @@ int clear_mido_config(mido_config *mido);
 int free_mido_config_v(mido_config *mido, int mode);
 int free_mido_config(mido_config *mido);
 int free_mido_core(mido_core *midocore);
+int free_mido_md(mido_md *midomd);
 int free_mido_vpc(mido_vpc *vpc);
 int free_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet);
 int free_mido_vpc_instance(mido_vpc_instance *vpcinstance);

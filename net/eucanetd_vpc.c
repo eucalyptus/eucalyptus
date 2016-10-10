@@ -244,9 +244,10 @@ static int network_driver_init(eucanetdConfig *pConfig) {
         pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
     }
     pMidoConfig->config = pConfig;
-    rc = initialize_mido(pMidoConfig, pConfig, "169.254.0.0", "17");
+    rc = initialize_mido(pMidoConfig, pConfig);
     if (rc) {
         LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
+        free_mido_config(pMidoConfig);
         EUCA_FREE(pMidoConfig);
         return (1);
     }

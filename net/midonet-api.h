@@ -48,12 +48,23 @@
 \*----------------------------------------------------------------------------*/
 #define VPCMIDO_TENANT     "euca_tenant_1"
 #define VPCMIDO_TUNNELZONE "mido-tz midotz euca-tz eucatz"
+#define VPCMIDO_EUCAVER    "euca_version"
 #define VPCMIDO_CORERT     "eucart"
 #define VPCMIDO_COREBR     "eucabr"
+#define VPCMIDO_CORERTPG   "eucapg"
+#define VPCMIDO_MDRT       "eucamdrt"
+#define VPCMIDO_MDBR       "eucamdbr"
+#define VPCMIDO_MD_VETH_H  "eucamd_host"
+#define VPCMIDO_MD_VETH_M  "eucamd_mido"
+#define VPCMIDO_MD_NETNS   "eucamd"
+
 // Maximum number of active VPCs (mido routers)
 // Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
 // 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
 #define MAX_RTID 32767
+// IDs that conflict with 169.254.169.254 and 169.254.169.253
+#define RTID_169_254 10750
+#define RTID_169_253 10749
 
 #define MIDO_HOST_INTERFACE_PHYSICAL           0x00000001
 #define MIDO_HOST_INTERFACE_VIRTUAL            0x00000002

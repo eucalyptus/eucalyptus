@@ -113,6 +113,12 @@ enum {
     EUCANETD_CVAL_MIDOGWHOSTS,
     EUCANETD_CVAL_MIDOPUBNW,
     EUCANETD_CVAL_MIDOPUBGWIP,
+    EUCANETD_CVAL_MIDOINTRTCIDR,
+    EUCANETD_CVAL_MIDOINTMDCIDR,
+    EUCANETD_CVAL_MIDOEXTMDCIDR,
+    EUCANETD_CVAL_MIDOMDCIDR,
+    EUCANETD_CVAL_ENABLE_MIDOMD,
+    EUCANETD_CVAL_VALIDATE_MIDOCONFIG,
     EUCANETD_CVAL_LOCALIP,
     EUCANETD_CVAL_LAST,
 };
@@ -170,7 +176,6 @@ typedef struct eucanetdConfig_t {
     char *eucahome;                    //!< Pointer to the string containing the eucalyptus area home path
     char *eucauser;                    //!< Pointer to the string containing the eucalyptus system user name
     char cmdprefix[EUCA_MAX_PATH];
-    char sIptPreload[EUCA_MAX_PATH];
     char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
     u32 vmGatewayIP;
     u32 clcMetadataIP;
@@ -188,6 +193,11 @@ typedef struct eucanetdConfig_t {
     char midogwhosts[HOSTNAME_LEN*3*33];
     char midopubnw[HOSTNAME_LEN];
     char midopubgwip[HOSTNAME_LEN];
+    
+    char mido_intrtcidr[NETWORK_ADDR_LEN];
+    char mido_intmdcidr[NETWORK_ADDR_LEN];
+    char mido_extmdcidr[NETWORK_ADDR_LEN];
+    char mido_mdcidr[NETWORK_ADDR_LEN];
 
     atomic_file global_network_info_file;
     char lastAppliedVersion[32];
@@ -205,6 +215,8 @@ typedef struct eucanetdConfig_t {
     int max_my_ips;
 
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
+    boolean enable_mido_md;
+    boolean validate_mido_config;
 
     int debug;
     int flushmode;

@@ -162,6 +162,7 @@ static struct timeval gtv;
  * Stop the local DHCP server. It is assumed that dhcpd was started by eucanetd
  * and that it pid file reflects the real dhcpd system state.
  *
+ * @param config [in] pointer to system-wide eucanetdConfig data structure 
  * @return 0 on success or 1 if a failure occurred
  *
  * @pre
@@ -210,6 +211,7 @@ int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
  * Restart or simply start the local DHCP server so it can pick up the new
  * configuration.
  *
+ * @param config [in] pointer to system-wide eucanetdConfig data structure 
  * @return 0 on success or 1 if a failure occurred
  *
  * @pre

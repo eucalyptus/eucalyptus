@@ -2971,9 +2971,9 @@ int mido_clear_rules(midonet_api_chain *chain) {
 }
 
 /**
- * Removes the host interface - bridge port binding from the bridge port in the argument.
+ * Removes the host interface - port binding from the port in the argument.
  * @param host [in] MidoNet host of interest.
- * @param port [in] Midonet bridge port of interest.
+ * @param port [in] Midonet bridge or router port of interest.
  * @return 0 on success. 1 otherwise.
  */
 int mido_unlink_host_port(midoname *host, midoname *port) {

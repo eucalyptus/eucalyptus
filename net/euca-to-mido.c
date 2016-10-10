@@ -161,7 +161,7 @@ int do_metaproxy_setup(mido_config *mido) {
 int do_metaproxy_maintain(mido_config *mido, int mode) {
     int ret = 0, rc, i = 0, dorun = 0;
     pid_t npid = 0;
-    char rr[EUCA_MAX_PATH], cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
+    char cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
     sequence_executor cmds;
 
     if (!mido || mode < 0 || mode > 1) {
@@ -169,9 +169,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
         return (1);
     }
 
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
-
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     dorun = 0;
     snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_localproxy.pid", mido->eucahome);
@@ -283,12 +281,10 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
  */
 int delete_mido_meta_core(mido_config *mido) {
     int ret = 0, rc = 0;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
     sequence_executor cmds;
 
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
-
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     snprintf(cmd, EUCA_MAX_PATH, "ip link set metabr down");
     rc = se_add(&cmds, cmd, NULL, ignore_exit2);
@@ -307,21 +303,6 @@ int delete_mido_meta_core(mido_config *mido) {
     return (ret);
 }
 
-//!
-//!
-//!
-//! @param[in] mido
-//!
-//! @return
-//!
-//! @see
-//!
-//! @pre
-//!
-//! @post
-//!
-//! @note
-//!
 /**
  * Creates the metadata core artifacts.
  * @param mido [in] data structure that holds MidoNet configuration
@@ -329,12 +310,10 @@ int delete_mido_meta_core(mido_config *mido) {
  */
 int create_mido_meta_core(mido_config *mido) {
     int ret = 0, rc = 0;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
     sequence_executor cmds;
 
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
-
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     snprintf(cmd, EUCA_MAX_PATH, "brctl addbr metabr");
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -370,16 +349,15 @@ int create_mido_meta_core(mido_config *mido) {
  */
 int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
     int ret = 0, rc = 0;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], sid[16];
+    char cmd[EUCA_MAX_PATH], sid[16];
     sequence_executor cmds;
     struct timeval tv;
 
     eucanetd_timer_usec(&tv);
     // create a meta tap namespace/devices
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
     sscanf(vpc->name, "vpc-%8s", sid);
 
-    rc = se_init(&cmds, rr, 10, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 10, 1);
 
     //    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s down", sid);
     //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -411,7 +389,7 @@ int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
 int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
     int ret = 0, rc = 0;
     u32 nw, ip;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], *ipstr = NULL, sid[16];
+    char cmd[EUCA_MAX_PATH], *ipstr = NULL, sid[16];
     sequence_executor cmds;
     struct timeval tv;
 
@@ -423,10 +401,9 @@ int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
     }
 
     // create a meta tap namespace/devices
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
     sscanf(vpc->name, "vpc-%8s", sid);
 
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", vpc->name);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -473,10 +450,9 @@ int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
  * @return 0 on success. Positive integer otherwise.
  */
 int read_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], sid[16];
+    char cmd[EUCA_MAX_PATH], sid[16];
 
     // create a meta tap namespace/devices
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
     sscanf(vpc->name, "vpc-%8s", sid);
 
     snprintf(cmd, EUCA_MAX_PATH, "/var/run/netns/%s", vpc->name);
@@ -506,15 +482,14 @@ int read_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
  */
 int delete_mido_meta_subnet_veth(mido_config *mido, char *name) {
     int ret = 0, rc = 0;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], sid[16];
+    char cmd[EUCA_MAX_PATH], sid[16];
     sequence_executor cmds;
     struct timeval tv;
 
     eucanetd_timer_usec(&tv);
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
     sscanf(name, "subnet-%8s", sid);
 
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     //    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn0_%s down", sid);
     //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -547,13 +522,12 @@ int delete_mido_meta_subnet_veth(mido_config *mido, char *name) {
 int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, char *subnet, char *slashnet, char **tapiface) {
     int ret = 0, rc = 0;
     u32 nw, gw;
-    char cmd[EUCA_MAX_PATH], rr[EUCA_MAX_PATH], *gateway = NULL, sid[16];
+    char cmd[EUCA_MAX_PATH], *gateway = NULL, sid[16];
     sequence_executor cmds;
     struct timeval tv;
 
     eucanetd_timer_usec(&tv);
     // create a meta tap
-    snprintf(rr, EUCA_MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", mido->eucahome);
     sscanf(name, "subnet-%8s", sid);
 
     snprintf(cmd, EUCA_MAX_PATH, "vn0_%s", sid);
@@ -564,7 +538,7 @@ int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, c
         return (0);
     }
 
-    rc = se_init(&cmds, rr, 4, 1);
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     snprintf(cmd, EUCA_MAX_PATH, "ip link add vn0_%s type veth peer name vn1_%s", sid, sid);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -578,7 +552,6 @@ int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, c
     nw = dot2hex(subnet);
     gw = nw + 2;
     gateway = hex2dot(gw);
-    //  snprintf(cmd, EUCA_MAX_PATH, "ssh root@h-41 ip addr add %s/%s dev vn1_%s", gateway, slashnet, sid);
     snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev vn1_%s", vpc->name, gateway, slashnet, sid);
     EUCA_FREE(gateway);
     se_add(&cmds, cmd, NULL, ignore_exit2);
@@ -624,6 +597,15 @@ int do_midonet_populate(mido_config *mido) {
     if (rc) {
         return (1);
     }
+    
+    // populate md
+    if (mido->config->enable_mido_md) {
+        rc = populate_mido_md(mido);
+        if (rc) {
+            return (1);
+        }
+    }
+    
     LOGINFO("\tmido_core populated in %.2f ms.\n",  eucanetd_timer_usec(&tv) / 1000.0);
 
     return (do_midonet_populate_vpcs(mido));
@@ -851,6 +833,9 @@ int do_midonet_teardown(mido_config *mido) {
         delete_mido_vpc_secgroup(mido, &(mido->vpcsecgroups[i]));
     }
 
+    if (mido->config->enable_mido_md) {
+        delete_mido_md(mido);
+    }
     char *bgprecovery = NULL;
     bgprecovery = discover_mido_bgps(mido);
     if (bgprecovery && strlen(bgprecovery)) {
@@ -2445,6 +2430,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
         // make sure that all core objects are in place
+        midonet_api_system_changed = 0;
         rc = create_mido_core(mido, mido->midocore);
         if (rc) {
             LOGERROR("failed to setup midonet core: check midonet health\n");
@@ -2454,6 +2440,21 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         } else {
             LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        }
+        
+        // create mido md objects
+        if (mido->config->enable_mido_md) {
+            midonet_api_system_changed = 0;
+            rc = create_mido_md(mido);
+            if (rc) {
+                LOGERROR("failed to setup midonet md: check midonet health\n");
+                return (1);
+            }
+            if (midonet_api_system_changed == 1) {
+                LOGINFO("\tvpcmido md created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+            } else {
+                LOGINFO("\tvpcmido md maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+            }
         }
         
         mido_info_http_count();
@@ -2523,6 +2524,10 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
 int get_next_router_id(mido_config *mido, int *nextid) {
     int i;
     for (i = 2; i < MAX_RTID; i++) {
+        // Skip IDs that conflict with 169.254.41.254 and 169.254.41.253
+        if ((i == RTID_169_254) || (i == RTID_169_253)) {
+            continue;
+        }
         if (!mido->router_ids[i]) {
             mido->router_ids[i] = 1;
             *nextid = i;
@@ -4627,24 +4632,23 @@ int delete_mido_vpc_natgateway(mido_config *mido, mido_vpc_subnet *vpcsubnet, mi
  * Initializes the mido_config data structure
  * @param mido [in] mido_config data structure of interest
  * @param eucanetd_config [in] data structure holding information about eucanetd
- * @param int_rtnetwork [in] network address of the internal routing subnet
- * @param int_rtslashnet [in] network mask of the internal routing subnet
  * @return 0 on success. 1 on failure.
  */
-int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
-        char *int_rtnetwork, char *int_rtslashnet) {
+int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
     int ret = 0;
 
     if (!mido || !eucanetd_config ||
             !eucanetd_config->eucahome ||
-            !int_rtnetwork ||
-            !int_rtslashnet ||
             !strlen(eucanetd_config->midogwhosts) ||
             !strlen(eucanetd_config->midopubnw) ||
             !strlen(eucanetd_config->midopubgwip) ||
-            !strlen(int_rtnetwork) ||
-            !strlen(int_rtslashnet))
+            !strlen(eucanetd_config->mido_intrtcidr) ||
+            !strlen(eucanetd_config->mido_intmdcidr) ||
+            !strlen(eucanetd_config->mido_extmdcidr) ||
+            !strlen(eucanetd_config->mido_mdcidr)) {
+        LOGWARN("Cannot initialize mido with NULL config.\n");
         return (1);
+    }
 
     mido->eucahome = strdup(eucanetd_config->eucahome);
 
@@ -4676,13 +4680,41 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config,
 
     mido->ext_pubnw = strdup(eucanetd_config->midopubnw);
     mido->ext_pubgwip = strdup(eucanetd_config->midopubgwip);
-    mido->int_rtnw = dot2hex(int_rtnetwork);
-    mido->int_rtsn = atoi(int_rtslashnet);
+
+    char nw[NETWORK_ADDR_LEN] = { 0 };
+    char sn[NETWORK_ADDR_LEN] = { 0 };
+
+    // Subnet used in internal routing - 169.254.0.0/17
+    cidr_split(eucanetd_config->mido_intrtcidr, nw, sn, NULL, NULL);
+    mido->int_rtnw = dot2hex(nw);
+    mido->int_rtsn = atoi(sn);
     mido->int_rtaddr = mido->int_rtnw + 1;
+
+    // Subnet used in internal MD routing - 0.0.0.0/17
+    cidr_split(eucanetd_config->mido_intmdcidr, nw, sn, NULL, NULL);
+    mido->int_mdnw = dot2hex(nw);
+    mido->int_mdsn = atoi(sn);
+
+    // Subnet used in external MD routing - 0.0.169.252/30
+    cidr_split(eucanetd_config->mido_extmdcidr, nw, sn, NULL, NULL);
+    mido->ext_mdnw = dot2hex(nw);
+    mido->ext_mdsn = atoi(sn);
+
+    // Subnet used for MD - 0.0.0.0/14
+    cidr_split(eucanetd_config->mido_mdcidr, nw, sn, NULL, NULL);
+    mido->mdnw = dot2hex(nw);
+    mido->mdsn = atoi(sn);
+
+    if (eucanetd_config->validate_mido_config) {
+        if (validate_mido(mido) != EUCA_OK) {
+            return (1);
+        }
+    }
     mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
-    LOGTRACE("mido initialized: mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s/%s \n",
-            SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(int_rtnetwork),
-            SP(int_rtslashnet));
+    mido->midomd = EUCA_ZALLOC_C(1, sizeof (mido_md));
+    LOGDEBUG("mido initialized: mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s intmdcidr=%s extmdcidr=%s mdcidr=%s\n",
+            SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(eucanetd_config->mido_intrtcidr),
+            SP(eucanetd_config->mido_intmdcidr), SP(eucanetd_config->mido_extmdcidr), SP(eucanetd_config->mido_mdcidr));
 
     midonet_api_init();
     mido_info_midonetapi();
@@ -4699,6 +4731,41 @@ int reinitialize_mido(mido_config *mido) {
     LOGTRACE("Clearing current mido config.\n");
     clear_mido_config(mido);
     return (0);
+}
+
+/**
+ * Validates the information in the given mido_config data structure.
+ * @param mido [in] mido_config data structure of interest
+ * @return EUCA_OK if mido_config parameters are all valid. EUCA_ERROR otherwise.
+ */
+int validate_mido(mido_config *mido) {
+    int ret = EUCA_OK;
+
+    if (mido->config->validate_mido_config) {
+        if (mido->config->enable_mido_md) {
+            // Internal Routing Subnet - 169.254.0.0/17
+            if ((mido->int_rtnw != 0xa9fe0000) || (mido->int_rtsn != 17)) {
+                LOGERROR("Invalid MIDOINTRTCIDR - %s\n", mido->config->mido_intrtcidr);
+                ret = EUCA_ERROR;
+            }
+            // Internal metadata Routing Subnet - 169.254.128.0/17
+            if ((mido->int_mdnw != 0xa9fe8000) || (mido->int_mdsn != 17)) {
+                LOGERROR("Invalid MIDOINTMDCIDR - %s\n", mido->config->mido_intmdcidr);
+                ret = EUCA_ERROR;
+            }
+            // External metadata Routing Subnet - 169.254.255.252/30
+            if ((mido->ext_mdnw != 0xa9fefffc) || (mido->ext_mdsn != 30)) {
+                LOGERROR("Invalid MIDOEXTMDCIDR - %s\n", mido->config->mido_extmdcidr);
+                ret = EUCA_ERROR;
+            }
+            // metadata Subnet - 10.0.0.0/8
+            if ((mido->mdnw != 0x0a000000) || (mido->mdsn != 8)) {
+                LOGERROR("Invalid MIDOMDCIDR - %s\n", mido->config->mido_mdcidr);
+                ret = EUCA_ERROR;
+            }
+        }
+    }
+    return (ret);
 }
 
 /**
@@ -5321,7 +5388,7 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
     }
 
     midonet_api_portgroup *eucapg = NULL;
-    eucapg = mido_get_portgroup("eucapg");
+    eucapg = mido_get_portgroup(VPCMIDO_CORERTPG);
     if (eucapg) {
         LOGTRACE("Found gw portgroup %s\n", eucapg->obj->name);
         midocore->midos[CORE_GWPORTGROUP] = eucapg->obj;
@@ -5330,7 +5397,7 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
     }
 
     midonet_api_ipaddrgroup *veripag = NULL;
-    veripag = mido_get_ipaddrgroup("euca_version");
+    veripag = mido_get_ipaddrgroup(VPCMIDO_EUCAVER);
     if (veripag) {
         LOGTRACE("Found euca_version ip-address-group %s\n", veripag->obj->name);
         midocore->eucaver_iag = veripag;
@@ -5350,6 +5417,104 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
             midocore->population_failed = 1;
         }
         LOGTRACE("\tmidos[%d]: %d\n", i, (midocore->midos[i] == NULL) ? 0 : midocore->midos[i]->init);
+    }
+
+    return (ret);
+}
+
+/**
+ * Populates euca VPC MD models from mido models.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_md(mido_config *mido) {
+    int ret = 0, i = 0, j = 0;
+    int found = 0;
+    midoname **brports = NULL;
+    int max_brports = 0;
+    midoname **rtports = NULL;
+    int max_rtports = 0;
+
+    if (!mido || !mido->midocore || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot populate midomd from NULL config\n");
+        return (1);
+    }
+    
+    mido_md *midomd = mido->midomd;
+
+    midonet_api_router *eucamdrt = NULL;
+    eucamdrt = mido_get_router(VPCMIDO_MDRT);
+    if (eucamdrt) {
+        LOGTRACE("Found md router %s\n", eucamdrt->obj->name);
+        midomd->eucamdrt = eucamdrt;
+        midomd->midos[MD_RT] = eucamdrt->obj;
+        rtports = eucamdrt->ports;
+        max_rtports = eucamdrt->max_ports;
+    } else {
+        LOGINFO("\t\tmd router not found\n");
+    }
+
+    midonet_api_bridge *eucamdbr = NULL;
+    eucamdbr = mido_get_bridge(VPCMIDO_MDBR);
+    if (eucamdbr) {
+        LOGTRACE("Found md bridge %s\n", eucamdbr->obj->name);
+        midomd->eucamdbr = eucamdbr;
+        midomd->midos[MD_BR] = eucamdbr->obj;
+        brports = eucamdbr->ports;
+        max_brports = eucamdbr->max_ports;
+    } else {
+        LOGINFO("\t\tmd bridge not found\n");
+    }
+
+    // search all ports for RT/BR ports
+    found = 0;
+    for (i = 0; i < max_brports && !found; i++) {
+        if (brports[i] == NULL) {
+            continue;
+        }
+        for (j = 0; j < max_rtports && !found; j++) {
+            if (rtports[j] == NULL) {
+                continue;
+            }
+            if (rtports[j]->port && rtports[j]->port->peerid && brports[i]->uuid) {
+                if (!strcmp(rtports[j]->port->peerid, brports[i]->uuid)) {
+                    LOGTRACE("Found eucamdrt-eucamdbr link.\n");
+                    midomd->midos[MD_BR_RTPORT] = brports[i];
+                    midomd->midos[MD_RT_BRPORT] = rtports[j];
+                    found = 1;
+                }
+            }
+        }
+    }
+    if (!found) {
+        LOGINFO("\t\teucart-eucabr link not found.\n");
+    }
+
+    // search for md ext ports
+    found = 0;
+    for (j = 0; j < max_rtports && !found; j++) {
+        if (rtports[j] == NULL) {
+            continue;
+        }
+        if (rtports[j]->port && rtports[j]->port->portaddr) {
+            if (dot2hex(rtports[j]->port->portaddr) == mido->ext_mdnw + 1) {
+                LOGTRACE("Found md ext port.\n");
+                if (!rtports[j]->port->ifname) {
+                    midomd->population_failed = 1;
+                } else {
+                    midomd->midos[MD_RT_EXTPORT] = rtports[j];
+                    found = 1;
+                }
+            }
+        }
+    }
+
+    LOGTRACE("midomd: AFTER POPULATE\n");
+    for (i = 0; i < MD_END; i++) {
+        if (midomd->midos[i] == NULL) {
+            midomd->population_failed = 1;
+        }
+        LOGTRACE("\tmidos[%d]: %d\n", i, (midomd->midos[i] == NULL) ? 0 : midomd->midos[i]->init);
     }
 
     return (ret);
@@ -5662,21 +5827,23 @@ int free_mido_config_v(mido_config *mido, int mode) {
     free_mido_core(mido->midocore);
     if (mode == 1) {
         EUCA_FREE(mido->midocore);
-        mido->midocore = NULL;
+    }
+
+    free_mido_md(mido->midomd);
+    if (mode == 1) {
+        EUCA_FREE(mido->midomd);
     }
 
     for (i = 0; i < mido->max_vpcs; i++) {
         free_mido_vpc(&(mido->vpcs[i]));
     }
     EUCA_FREE(mido->vpcs);
-    mido->vpcs = NULL;
     mido->max_vpcs = 0;
 
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
         free_mido_vpc_secgroup(&(mido->vpcsecgroups[i]));
     }
     EUCA_FREE(mido->vpcsecgroups);
-    mido->vpcsecgroups = NULL;
     mido->max_vpcsecgroups = 0;
 
     if (mode == 1) {
@@ -5698,6 +5865,22 @@ int free_mido_core(mido_core *midocore) {
         return (0);
 
     memset(midocore, 0, sizeof (mido_core));
+
+    return (ret);
+}
+
+/**
+ * Release resources allocated for the midomd data structure.
+ * @param midomd [in] mido_md data structure of interest.
+ * @return always 0.
+ */
+int free_mido_md(mido_md *midomd) {
+    int ret = 0;
+
+    if (!midomd)
+        return (0);
+
+    memset(midomd, 0, sizeof (mido_md));
 
     return (ret);
 }
@@ -6099,7 +6282,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 int delete_mido_core(mido_config *mido, mido_core *midocore) {
     int rc = 0, i = 0;
 
-    // delete the euca_verf ipaddrgroup
+    // delete the euca_version ipaddrgroup
     rc += mido_delete_ipaddrgroup(midocore->midos[CORE_EUCAVER_IPADDRGROUP]);
     midocore->midos[CORE_EUCAVER_IPADDRGROUP] = NULL;
 
@@ -6139,6 +6322,59 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
 }
 
 /**
+ * Removes MidoNet objects that are needed to implement euca VPC md.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int delete_mido_md(mido_config *mido) {
+    int ret = 0, rc = 0;
+
+    if (!mido || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot delete md from NULL config.\n");
+        return (1);
+    }
+
+    mido_md *midomd = mido->midomd;
+
+    // delete the eucanetd host md interface
+    if (mido->midocore && mido->midocore->eucanetdhost && midomd->midos[MD_RT_EXTPORT] && midomd->midos[MD_RT_EXTPORT]->init) {
+        rc += mido_unlink_host_port(mido->midocore->eucanetdhost->obj, midomd->midos[MD_RT_EXTPORT]);
+    }
+
+    // delete the bridge
+    rc += mido_delete_bridge(midomd->midos[MD_BR]);
+    midomd->midos[MD_BR] = NULL;
+    midomd->midos[MD_BR_RTPORT] = NULL;
+    
+    // delete the router
+    rc += mido_delete_router(midomd->midos[MD_RT]);
+    midomd->midos[MD_RT] = NULL;
+    midomd->midos[MD_RT_BRPORT] = NULL;
+
+    // delete external MD veth pair
+    char cmd[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link del %s", VPCMIDO_MD_VETH_M);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", VPCMIDO_MD_NETNS);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not delete md veth pair\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
  * Creates MidoNet objects that are needed to implement euca VPC core.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
@@ -6164,7 +6400,7 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
     LOGTRACE("creating mido core\n");
 
     midonet_api_ipaddrgroup *ig = NULL;
-    ig = mido_create_ipaddrgroup(VPCMIDO_TENANT, "euca_version", &(midocore->midos[CORE_EUCAVER_IPADDRGROUP]));
+    ig = mido_create_ipaddrgroup(VPCMIDO_TENANT, VPCMIDO_EUCAVER, &(midocore->midos[CORE_EUCAVER_IPADDRGROUP]));
     if (!ig) {
         LOGWARN("Failed to create ip adress group euca_version.\n");
         ret++;
@@ -6198,7 +6434,7 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         ret++;
     }
 
-    rc = mido_create_portgroup(VPCMIDO_TENANT, "eucapg", &(midocore->midos[CORE_GWPORTGROUP]));
+    rc = mido_create_portgroup(VPCMIDO_TENANT, VPCMIDO_CORERTPG, &(midocore->midos[CORE_GWPORTGROUP]));
     if (rc) {
         LOGWARN("cannot create portgroup: check midonet health\n");
         ret++;
@@ -6310,6 +6546,160 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
         ret++;
     }
+    return (ret);
+}
+
+/**
+ * Creates MidoNet objects that are needed to implement euca VPC MD.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int create_mido_md(mido_config *mido) {
+    int ret = 0;
+    int rc = 0;
+    char nw[NETWORK_ADDR_LEN];
+    char sn[NETWORK_ADDR_LEN];
+    char gw[NETWORK_ADDR_LEN];
+    char pt[NETWORK_ADDR_LEN];
+    char *strptr = NULL;
+
+    if (!mido || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot create mido MD with NULL config\n");
+        return (1);
+    }
+    
+    mido_md *midomd = mido->midomd;
+
+    if (!midomd->population_failed) {
+        LOGTRACE("\tmidomd fully implemented\n");
+    }
+    LOGTRACE("creating midomd\n");
+
+    midomd->eucamdrt = mido_create_router(VPCMIDO_TENANT, VPCMIDO_MDRT, &(midomd->midos[MD_RT]));
+    if (midomd->eucamdrt == NULL) {
+        LOGERROR("cannot create eucamdrt: check midonet health\n");
+        ret++;
+    }
+
+    strptr = hex2dot(mido->int_mdnw);
+    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->int_mdnw + 1);
+    snprintf(gw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->int_mdsn);
+
+    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], gw, nw, sn,
+            NULL, &(midomd->midos[MD_RT_BRPORT]));
+    if (rc) {
+        LOGERROR("cannot create eucamdrt port: check midonet health\n");
+        ret++;
+    }
+
+    rc = mido_create_route(midomd->eucamdrt, midomd->midos[MD_RT], midomd->midos[MD_RT_BRPORT],
+            "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
+    if (rc) {
+        LOGERROR("cannot create eucamdrt int route: check midonet health\n");
+        ret++;
+    }
+
+    midomd->eucamdbr = mido_create_bridge(VPCMIDO_TENANT, VPCMIDO_MDBR, &(midomd->midos[MD_BR]));
+    if (midomd->eucamdbr == NULL) {
+        LOGERROR("cannot create eucamdbr: check midonet health\n");
+        ret++;
+    }
+
+    rc = mido_create_bridge_port(midomd->eucamdbr, midomd->midos[MD_BR], &(midomd->midos[MD_BR_RTPORT]));
+    if (rc) {
+        LOGERROR("cannot create eucamdbr port: check midonet health\n");
+        ret++;
+    }
+
+    rc = mido_link_ports(midomd->midos[MD_RT_BRPORT], midomd->midos[MD_BR_RTPORT]);
+    if (rc) {
+        LOGERROR("cannot create eucamdrt <-> eucamdbr link: check midonet health\n");
+        ret++;
+    }
+
+    // create veth pair and connect eucamdrt
+    char cmd[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link add %s type veth peer name %s", VPCMIDO_MD_VETH_M, VPCMIDO_MD_VETH_H);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    strptr = hex2dot(mido->ext_mdnw);
+    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->ext_mdnw + 1);
+    snprintf(gw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->ext_mdnw + 2);
+    snprintf(pt, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->ext_mdsn);
+
+    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], gw, nw, sn,
+            NULL, &(midomd->midos[MD_RT_EXTPORT]));
+    if (rc) {
+        LOGERROR("cannot create eucamdrt port: check midonet health\n");
+        ret++;
+    }
+    rc = mido_create_route(midomd->eucamdrt, midomd->midos[MD_RT], midomd->midos[MD_RT_EXTPORT],
+            "0.0.0.0", "0", nw, sn, "UNSET", "0", NULL);
+    if (rc) {
+        LOGERROR("cannot create eucamdrt ext route: check midonet health\n");
+        ret++;
+    }
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", VPCMIDO_MD_NETNS);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link set %s netns %s", VPCMIDO_MD_VETH_H, VPCMIDO_MD_NETNS);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev %s", VPCMIDO_MD_NETNS, pt, sn, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set %s up", VPCMIDO_MD_NETNS, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link set %s up", VPCMIDO_MD_VETH_M);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    strptr = hex2dot(mido->mdnw);
+    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdsn);
+
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip route add %s/%s via %s", VPCMIDO_MD_NETNS, nw, sn, gw);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not create eucamd external interfaces: see above log entries for details\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    if (mido->midocore && mido->midocore->eucanetdhost) {
+        rc = mido_link_host_port(mido->midocore->eucanetdhost->obj, VPCMIDO_MD_VETH_M,
+                midomd->midos[MD_RT], midomd->midos[MD_RT_EXTPORT]);
+        if (rc) {
+            LOGERROR("cannot link eucamdrt port to host interface: check midonet health\n");
+            ret++;
+        }
+    }
+
     return (ret);
 }
 
