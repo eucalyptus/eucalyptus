@@ -240,15 +240,15 @@ the "Install Eucalyptus Release Packages" section (NOT the "Install Nightly
 Release Packages" section).
 
 Skip the "yum install" commands for what you've already installed:
-- the package repositories from downloads.eucalyptus.com
-- the packages you have already installed:
-eucalyptus-node
-eucalyptus-cloud
-eucalyptus-cluster
-eucalyptus-sc 
-eucalyptus-walrus
+1. Skip installing the package repositories from downloads.eucalyptus.com.
+2. Skip installing these packages, because you installed them already:
+     eucalyptus-node
+     eucalyptus-cloud
+     eucalyptus-cluster
+     eucalyptus-sc 
+     eucalyptus-walrus
 
-NOTE: that there are other "yum install" commands and other steps in the
+NOTE: There are other "yum install" commands and other steps in the
 "Install Eucalyptus Release Packages" sections that you still need to
 perform, besides installing Eucalyptus packages, such as removing the
 default libvirt network (virsh commands), and "yum install"s of
