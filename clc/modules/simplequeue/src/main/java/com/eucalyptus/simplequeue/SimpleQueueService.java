@@ -64,7 +64,6 @@ import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.exceptions.TooManyEntriesInBatchRequestException;
 import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
-import com.eucalyptus.simplequeue.persistence.MessagePersistence;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -73,6 +72,8 @@ import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableRangeSet;
@@ -114,6 +115,10 @@ public class SimpleQueueService {
   @ConfigurableField( description = "Maximum number of characters in a queue name.",
     initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static int MAX_QUEUE_NAME_LENGTH_CHARS = 80;
+
+  @ConfigurableField( description = "Maximum number of characters in a label.",
+    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int MAX_LABEL_LENGTH_CHARS = 80;
 
   @ConfigurableField( description = "Maximum value for delay seconds.",
     initial = "900", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
@@ -320,8 +325,9 @@ public class SimpleQueueService {
 
           // TODO: we don't support wildcard Principal
           try {
+            minimallyCheckPolicy(attribute.getValue());
             PolicyParser.getResourceInstance().parse(attribute.getValue());
-          } catch (PolicyParseException e) {
+          } catch (PolicyParseException | IOException e) {
             throw new InvalidParameterValueException("Invalid value for the parameter Policy. ");
           }
 
@@ -406,6 +412,28 @@ public class SimpleQueueService {
 
         default:
           throw new InvalidAttributeNameException("Unknown Attribute " + attribute.getName());
+      }
+    }
+  }
+
+  private void minimallyCheckPolicy(String policyJson) throws IOException {
+    // check valid json
+    JsonNode jsonNode = new ObjectMapper().readTree(policyJson);
+    if (!jsonNode.isObject()) {
+      throw new IOException("Policy is not a JSON object");
+    }
+    if (!jsonNode.has("Statement") || !(jsonNode.get("Statement").isObject() || jsonNode.get("Statement").isArray())) {
+      throw new IOException("Policy requires at least one Statement, which is a JSON object");
+    }
+    if (jsonNode.get("Statement").isArray()) {
+      if (jsonNode.get("Statement").size() < 1) {
+        throw new IOException("Policy requires at least one Statement, which is a JSON object");
+      } else {
+        for (JsonNode statementNode: Lists.newArrayList(jsonNode.get("Statement").elements())) {
+          if (!statementNode.isObject()) {
+            throw new IOException("Each Statement must be a JSON object");
+          }
+        }
       }
     }
   }
@@ -570,7 +598,144 @@ public class SimpleQueueService {
 
   public AddPermissionResponseType addPermission(AddPermissionType request) throws EucalyptusCloudException {
     AddPermissionResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
+        + ":" + queue.getQueueName();
+
+      ArrayList<String> principalIds = Lists.newArrayList();
+      if (request.getAwsAccountId() == null || request.getAwsAccountId().isEmpty()) {
+        // Note: this is the exact message AWS uses.
+        throw new MissingParameterException("The request must contain the parameter PrincipalId.");
+      }
+      for (String awsAccountId: request.getAwsAccountId()) {
+        // oddly AWS will fail if all principal ids are invalid but if even one isn't, it won't fail.  However,
+        // it will only add valid ids.
+        try {
+          Accounts.lookupAccountById(awsAccountId).getAccountNumber();
+          principalIds.add("arn:aws:iam::" + awsAccountId + ":root");
+        } catch (AuthException ignore) {
+        }
+      }
+      if (principalIds.isEmpty()) {
+        throw new InvalidParameterValueException("Value " + request.getAwsAccountId() + " for parameter PrincipalId is invalid. Reason: Unable to verify.");
+      }
+
+      ArrayList<String> actionNames = Lists.newArrayList();
+      if (request.getActionName() == null || request.getActionName().isEmpty()) {
+        throw new MissingParameterException("The request must contain the parameter Actions.");
+      }
+      Set<String> validActionNames = Sets.newHashSet(
+        "*", "SendMessage", "ReceiveMessage", "DeleteMessage", "ChangeMessageVisibility", "GetQueueAttributes", "GetQueueUrl"
+      );
+      for (String actionName: request.getActionName()) {
+        if (validActionNames.contains(actionNames)) {
+          actionNames.add("SQS:" + actionName);
+        } else {
+          throw new InvalidParameterValueException("Value SQS:" + actionName + " for parameter ActionName is invalid. Reason: Please refer to the appropriate WSDL for a list of valid actions.");
+        }
+      }
+
+      if (request.getLabel() == null) {
+        throw new InvalidParameterValueException("Value for parameter Label is invalid. Reason: Must specify a label.");
+      }
+
+      if (request.getLabel().isEmpty()) {
+        throw new InvalidParameterValueException("Label cannot be empty.");
+      }
+
+      Pattern labelPattern = Pattern.compile("[A-Za-z0-9_-]+");
+      if (!labelPattern.matcher(request.getLabel()).matches() ||
+        request.getLabel().length() < 1 ||
+        request.getLabel().length() > MAX_LABEL_LENGTH_CHARS) {
+        throw new InvalidParameterValueException("Label can only include alphanumeric characters, hyphens, or " +
+          "underscores. 1 to " + MAX_LABEL_LENGTH_CHARS + " in length");
+      }
+
+      String policy = queue.getPolicy();
+      if (policy == null || policy.isEmpty()) {
+        // new policy
+        ObjectNode policyNode = new ObjectMapper().createObjectNode();
+        policyNode.put("Version", "2008-10-17");
+        policyNode.put("Id", queueArn + "/SQSDefaultPolicy");
+        ArrayNode statementArrayNode = policyNode.putArray("Statement");
+        addStatementToPolicy(request.getLabel(), principalIds, actionNames, queueArn, statementArrayNode);
+        policy = policyNode.toString();
+      } else {
+        ObjectNode policyNode = null;
+        try {
+          policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicy());
+          if (!policyNode.has("Statement") || !policyNode.get("Statement").isContainerNode()) {
+            throw new IOException("Invalid existing policy");
+          }
+          if (policyNode.get("Statement").isObject()) {
+            ObjectNode statementNodeIndividual = (ObjectNode) policyNode.get("Statement");
+            policyNode.remove("Statement");
+            ArrayNode statementArrayNode = policyNode.putArray("Statement");
+            statementArrayNode.add(statementNodeIndividual);
+          }
+          for (JsonNode statementNode: Lists.newArrayList(policyNode.get("Statement").elements())) {
+            if (!statementNode.isObject()) {
+              throw new IOException("Invalid existing policy");
+            }
+            if (statementNode.has("Sid") && !statementNode.isTextual()) {
+              throw new IOException("Invalid existing policy");
+            }
+            if (statementNode.has("Sid") && request.getLabel().equals(statementNode.textValue())) {
+              throw new InvalidParameterValueException(request.getLabel() + " already used as an Sid in the Queue Policy");
+            }
+          }
+          addStatementToPolicy(request.getLabel(), principalIds, actionNames, queueArn, (ArrayNode) policyNode.get("Statement"));
+          policy = policyNode.toString();
+        } catch (ClassCastException | IOException e) {
+          throw new InternalFailureException("Invalid existing queue policy");
+        }
+      }
+      Map<String, String> existingAttributes = queue.getAttributes();
+      setAndValidateAttributes(accountId, Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
+      existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
+  }
+
+  private void addStatementToPolicy(String label, Collection<String> principalIds, Collection<String> actionNames,
+                                    String resourceId, ArrayNode statementArrayNode) {
+    ObjectNode statementNode = statementArrayNode.addObject();
+    statementNode.put("Sid", label);
+    statementNode.put("Effect","Allow");
+    ObjectNode principalNode = statementNode.putObject("Principal");
+    if (principalIds.size() == 1) {
+      principalNode.put("AWS", principalIds.iterator().next());
+    } else {
+      ArrayNode awsNode = principalNode.putArray("AWS");
+      for (String principalId: principalIds) {
+        awsNode.add(principalId);
+      }
+    }
+    if (actionNames.size() == 1) {
+      principalNode.put("Action", actionNames.iterator().next());
+    } else {
+      ArrayNode actionNode = principalNode.putArray("Action");
+      for (String actionName: actionNames) {
+        actionNode.add(actionName);
+      }
+    }
+    statementNode.put("Resource", resourceId);
   }
 
   public ChangeMessageVisibilityResponseType changeMessageVisibility(ChangeMessageVisibilityType request) throws EucalyptusCloudException {
@@ -745,6 +910,90 @@ public class SimpleQueueService {
 
   public RemovePermissionResponseType removePermission(RemovePermissionType request) throws EucalyptusCloudException {
     RemovePermissionResponseType reply = request.getReply();
+    // TODO: IAM rather than own account for now
+    try {
+      final Context ctx = Contexts.lookup();
+      final String accountId = ctx.getAccountNumber();
+      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
+      if (!queueUrlParts.getAccountId().equals(accountId)) {
+        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
+      }
+      String queueName = queueUrlParts.getQueueName();
+
+      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
+      if (queue == null) {
+        throw new QueueDoesNotExistException("The specified queue does not exist.");
+      }
+      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
+        + ":" + queue.getQueueName();
+
+      if (request.getLabel() == null) {
+        throw new InvalidParameterValueException("Value for parameter Label is invalid. Reason: Must specify a label.");
+      }
+
+      if (request.getLabel().isEmpty()) {
+        throw new InvalidParameterValueException("Label cannot be empty.");
+      }
+
+      Pattern labelPattern = Pattern.compile("[A-Za-z0-9_-]+");
+      if (!labelPattern.matcher(request.getLabel()).matches() ||
+        request.getLabel().length() < 1 ||
+        request.getLabel().length() > MAX_LABEL_LENGTH_CHARS) {
+        throw new InvalidParameterValueException("Label can only include alphanumeric characters, hyphens, or " +
+          "underscores. 1 to " + MAX_LABEL_LENGTH_CHARS + " in length");
+      }
+
+      String policy = queue.getPolicy();
+      if (policy == null || policy.isEmpty()) {
+        throw new InvalidParameterValueException("Value " + request.getLabel() + " for parameter Label is invalid. Reason: can't find label.");
+      }
+
+      ObjectNode policyNode = null;
+      try {
+        policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicy());
+        if (!policyNode.has("Statement") || !policyNode.get("Statement").isContainerNode()) {
+          throw new IOException("Invalid existing policy");
+        }
+        if (policyNode.get("Statement").isObject()) {
+          ObjectNode statementNodeIndividual = (ObjectNode) policyNode.get("Statement");
+          policyNode.remove("Statement");
+          ArrayNode statementArrayNode = policyNode.putArray("Statement");
+          statementArrayNode.add(statementNodeIndividual);
+        }
+        ArrayNode statementArrayNode = (ArrayNode) policyNode.get("Statement");
+        boolean foundLabel = false;
+        for (int i = 0; i < statementArrayNode.size(); i++) {
+          JsonNode statementNode = statementArrayNode.get(i);
+          if (!statementNode.isObject()) {
+            throw new IOException("Invalid existing policy");
+          }
+          if (statementNode.has("Sid") && !statementNode.isTextual()) {
+            throw new IOException("Invalid existing policy");
+          }
+          if (statementNode.has("Sid") && request.getLabel().equals(statementNode.textValue())) {
+            statementArrayNode.remove(i);
+            i--;
+            foundLabel = true;
+          }
+        }
+        if (!foundLabel) {
+          throw new IOException("didn't find label");
+        }
+        if (statementArrayNode.size() == 0) {
+          policy = "";
+        } else {
+          policy = policyNode.toString();
+        }
+      } catch (ClassCastException | IOException e) {
+        throw new InvalidParameterValueException("Value " + request.getLabel() + " for parameter Label is invalid. Reason: can't find label.");
+      }
+      Map<String, String> existingAttributes = queue.getAttributes();
+      setAndValidateAttributes(accountId, Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
+      existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
