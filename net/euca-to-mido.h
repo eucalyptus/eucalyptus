@@ -112,6 +112,10 @@ enum vpc_midos_t {
     VPC_VPCRT_UPLINK_PRECHAIN,
     VPC_VPCRT_UPLINK_POSTCHAIN,
     VPC_VPCRT_PREELIPCHAIN,
+    VPC_EUCAMDBR_DOWNLINK,
+    VPC_VPCRT_MDUPLINK,
+    VPC_VPCRT_MDUPLINK_INFILTER,
+    VPC_VPCRT_MDUPLINK_OUTFILTER,
     VPC_END
 };
 
@@ -244,6 +248,8 @@ struct mido_vpc_t {
     midonet_api_chain *rt_uplink_prechain;
     midonet_api_chain *rt_uplink_postchain;
     midonet_api_chain *rt_preelipchain;
+    midonet_api_chain *rt_mduplink_infilter;
+    midonet_api_chain *rt_mduplink_outfilter;
     midoname *midos[VPC_END];
     mido_vpc_subnet *subnets;
     int max_subnets;

@@ -646,9 +646,10 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     }
     for (i = 0; i < max_routers; i++) {
         LOGTRACE("inspecting mido router '%s'\n", routers[i]->obj->name);
-        bzero(vpcname, 16);
+        memset(vpcname, 0, 16);
         sscanf(routers[i]->obj->name, "vr_%12s_%d", vpcname, &rtid);
-        if (strlen(vpcname)) {
+        if ((sscanf(routers[i]->obj->name, "vr_%12s_%d", vpcname, &rtid) == 2) &&
+                strlen(vpcname) && rtid) {
             vpc = &(mido->vpcs[mido->max_vpcs]);
             mido->max_vpcs++;
             LOGTRACE("discovered VPC installed in midonet: %s\n", vpcname);
@@ -5219,8 +5220,49 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         }
     }
 
+    found = 0;
+    if (mido->config->enable_mido_md) {
+        snprintf(vpcname, 32, "vc_%s_mdulin", vpc->name);
+        chain = mido_get_chain(vpcname);
+        if (chain != NULL) {
+            LOGTRACE("Found chain %s", chain->obj->name);
+            vpc->rt_mduplink_infilter = chain;
+            vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER] = chain->obj;
+        }
+        snprintf(vpcname, 32, "vc_%s_mdulout", vpc->name);
+        chain = mido_get_chain(vpcname);
+        if (chain != NULL) {
+            LOGTRACE("Found chain %s", chain->obj->name);
+            vpc->rt_mduplink_infilter = chain;
+            vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER] = chain->obj;
+        }
+        if ((vpc->vpcrt) && (mido->midomd) && (mido->midomd->eucamdbr)) {
+            midoname **brports = mido->midomd->eucamdbr->ports;
+            int max_brports = mido->midomd->eucamdbr->max_ports;
+            midoname **rtports = vpc->vpcrt->ports;
+            int max_rtports = vpc->vpcrt->max_ports;
+            for (i = 0; i < max_brports && !found; i++) {
+                if (brports[i] == NULL) {
+                    continue;
+                }
+                for (j = 0; j < max_rtports && !found; j++) {
+                    if (rtports[j] == NULL) {
+                        continue;
+                    }
+                    if (rtports[j]->port && rtports[j]->port->peerid && !strcmp(rtports[j]->port->peerid, brports[i]->uuid)) {
+                        LOGTRACE("Found rt-mdbr link %s %s", rtports[j]->name, brports[i]->name);
+                        vpc->midos[VPC_EUCAMDBR_DOWNLINK] = brports[i];
+                        vpc->midos[VPC_VPCRT_MDUPLINK] = rtports[j];
+                        found = 1;
+                    }
+                }
+            }
+        }
+    }
+
     LOGTRACE("vpc (%s): AFTER POPULATE\n", vpc->name);
-    for (i = 0; i < VPC_END; i++) {
+    int iend = mido->config->enable_mido_md ? VPC_END : VPC_EUCAMDBR_DOWNLINK;
+    for (i = 0; i < iend; i++) {
         if (vpc->midos[i] == NULL) {
             LOGWARN("%s failed to populate resource at idx %d\n", vpc->name, i);
             vpc->population_failed = 1;
@@ -6038,6 +6080,12 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
     rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
     rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
 
+    if (mido->config->enable_mido_md) {
+        rc += mido_delete_bridge_port(mido->midomd->eucamdbr, vpc->midos[VPC_EUCAMDBR_DOWNLINK]);
+        rc += mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]);
+        rc += mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]);
+    }
+
     rc += delete_mido_meta_vpc_namespace(mido, vpc);
 
     clear_router_id(mido, vpc->rtid);
@@ -6161,20 +6209,23 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
  */
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     int rc = 0;
-    char name_buf[32], nw[32], sn[32], ip[32], gw[32], *tmpstr = NULL;
+    char name_buf[32];
+    char nw[INET_ADDR_LEN], sn[INET_ADDR_LEN], ip[INET_ADDR_LEN], gw[INET_ADDR_LEN];
+    char mdip[INET_ADDR_LEN], mdnw[INET_ADDR_LEN], mdsn[INET_ADDR_LEN], mdgw[INET_ADDR_LEN];
+    char *tmpstr = NULL;
 
     tmpstr = hex2dot(mido->int_rtnw);
-    snprintf(nw, 32, "%s", tmpstr);
+    snprintf(nw, INET_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
-    snprintf(sn, 32, "%d", mido->int_rtsn);
+    snprintf(sn, INET_ADDR_LEN, "%d", mido->int_rtsn);
 
     tmpstr = hex2dot(mido->int_rtnw + vpc->rtid);
-    snprintf(ip, 32, "%s", tmpstr);
+    snprintf(ip, INET_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
     tmpstr = hex2dot(mido->int_rtaddr);
-    snprintf(gw, 32, "%s", tmpstr);
+    snprintf(gw, INET_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
     // Create the VPC mido router
@@ -6262,6 +6313,86 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     if (rc > 0) {
         LOGERROR("cannot update router port infilter and/or outfilter: check midonet health\n");
         return (1);
+    }
+
+    if (mido->config->enable_mido_md) {
+        tmpstr = hex2dot(mido->int_mdnw);
+        snprintf(mdnw, INET_ADDR_LEN, "%s", tmpstr);
+        EUCA_FREE(tmpstr);
+
+        snprintf(mdsn, INET_ADDR_LEN, "%d", mido->int_mdsn);
+
+        tmpstr = hex2dot(mido->int_mdnw + vpc->rtid);
+        snprintf(mdip, INET_ADDR_LEN, "%s", tmpstr);
+        EUCA_FREE(tmpstr);
+
+        tmpstr = hex2dot(mido->int_mdnw + 1);
+        snprintf(mdgw, INET_ADDR_LEN, "%s", tmpstr);
+        EUCA_FREE(tmpstr);
+
+        mido_md *midomd = mido->midomd;
+
+        // Create an eucamdbr port where this VPC router will be linked
+        rc = mido_create_bridge_port(midomd->eucamdbr, midomd->midos[MD_BR], &(vpc->midos[VPC_EUCAMDBR_DOWNLINK]));
+        if (rc) {
+            LOGERROR("cannot create midomd bridge port: check midonet health\n");
+            return (1);
+        }
+
+        // Create a VPC router port - uplink to eucamdbr
+        rc = mido_create_router_port(vpc->vpcrt, vpc->midos[VPC_VPCRT], mdip, mdnw, mdsn, NULL, &(vpc->midos[VPC_VPCRT_MDUPLINK]));
+        if (rc) {
+            LOGERROR("cannot create midomd router port: check midonet health\n");
+            return (1);
+        }
+
+        // link the vpc network and euca md network
+        rc = mido_link_ports(vpc->midos[VPC_EUCAMDBR_DOWNLINK], vpc->midos[VPC_VPCRT_MDUPLINK]);
+        if (rc) {
+            LOGERROR("cannot create midomd bridge <-> router link: check midonet health\n");
+            return (1);
+        }
+
+        // Route 169.254.255.254 through uplink
+        rc = mido_create_route(vpc->vpcrt, vpc->midos[VPC_VPCRT], vpc->midos[VPC_VPCRT_MDUPLINK],
+                "0.0.0.0", "0", "169.254.255.254", "32", mdgw, "0", NULL);
+        if (rc) {
+            LOGERROR("cannot create route to 169.254.169.253: check midonet health\n");
+            return (1);
+        }
+
+        // Create chains
+        midonet_api_chain *ch = NULL;
+        snprintf(name_buf, 32, "vc_%s_mdulin", vpc->name);
+        ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]));
+        if (!ch) {
+            LOGERROR("cannot create midomd infilter: check midonet health\n");
+            return (1);
+        } else {
+            vpc->rt_mduplink_infilter = ch;
+        }
+
+        snprintf(name_buf, 32, "vc_%s_mdulout", vpc->name);
+        ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]));
+        if (!ch) {
+            LOGERROR("cannot create midomd outfilter chain: check midonet health\n");
+            return (1);
+        } else {
+            vpc->rt_mduplink_outfilter = ch;
+        }
+
+        // apply chains to VPCRT_MDUPLINK port
+        char *portmac = NULL;
+        if (vpc->midos[VPC_VPCRT_MDUPLINK] && vpc->midos[VPC_VPCRT_MDUPLINK]->port && vpc->midos[VPC_VPCRT_MDUPLINK]->port->portmac) {
+            portmac = vpc->midos[VPC_VPCRT_MDUPLINK]->port->portmac;
+        }
+        rc = mido_update_port(vpc->midos[VPC_VPCRT_MDUPLINK], "outboundFilterId", vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]->uuid,
+                "inboundFilterId", vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]->uuid, "id", vpc->midos[VPC_VPCRT_MDUPLINK]->uuid,
+                "networkAddress", mdnw, "networkLength", mdsn, "portAddress", mdip, "portMac", portmac, "type", "Router", NULL);
+        if (rc > 0) {
+            LOGERROR("cannot update router md port infilter and/or outfilter: check midonet health\n");
+            return (1);
+        }
     }
 
     rc = create_mido_meta_vpc_namespace(mido, vpc);
