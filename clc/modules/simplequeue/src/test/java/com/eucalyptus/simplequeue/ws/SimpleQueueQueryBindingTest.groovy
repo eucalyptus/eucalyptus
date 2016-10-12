@@ -181,8 +181,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     parameterMap =
       [
         Label           : 'testLabel',
-        'AwsAccountId.1': '00000000',
-        'AwsAccountId.2': '00000001',
+        'AWSAccountId.1': '00000000',
+        'AWSAccountId.2': '00000001',
         'ActionName.1'  : 'Action1',
         'ActionName.2'  : 'Action2'
       ];
