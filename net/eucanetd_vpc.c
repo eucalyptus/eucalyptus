@@ -279,6 +279,7 @@ static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pG
         }
     }
     midonet_api_cleanup();
+    free_mido_config(pMidoConfig);
     gInitialized = FALSE;
     return (ret);
 }

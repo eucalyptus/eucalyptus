@@ -147,23 +147,21 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"EUCA_USER", "eucalyptus"}
     ,
-    {"MIDOGWHOSTS", NULL}
+    {"MIDO_INTRT_CIDR", "169.254.0.0/17"}
     ,
-    {"MIDOPUBNW", NULL}
+    {"MIDO_INTMD_CIDR", "169.254.128.0/17"}
     ,
-    {"MIDOPUBGWIP", NULL}
+    {"MIDO_EXTMD_CIDR", "169.254.255.252/30"}
     ,
-    {"MIDOINTRTCIDR", "169.254.0.0/17"}
+    {"MIDO_MD_CIDR", "10.0.0.0/8"}
     ,
-    {"MIDOINTMDCIDR", "169.254.128.0/17"}
+    {"MIDO_MAX_RTID", "10240"}
     ,
-    {"MIDOEXTMDCIDR", "169.254.255.252/30"}
+    {"MIDO_MAX_ENIID", "1048576"}
     ,
-    {"MIDOMDCIDR", "10.0.0.0/8"}
+    {"MIDO_ENABLE_MIDOMD", "N"}
     ,
-    {"ENABLE_MIDOMD", "N"}
-    ,
-    {"VALIDATE_MIDOCONFIG", "Y"}
+    {"MIDO_VALIDATE_MIDOCONFIG", "Y"}
     ,
     {NULL, NULL}
     ,
@@ -1171,18 +1169,20 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
-    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
-    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-    cvals[EUCANETD_CVAL_MIDOINTRTCIDR] = configFileValue("MIDOINTRTCIDR");
-    cvals[EUCANETD_CVAL_MIDOINTMDCIDR] = configFileValue("MIDOINTMDCIDR");
-    cvals[EUCANETD_CVAL_MIDOEXTMDCIDR] = configFileValue("MIDOEXTMDCIDR");
-    cvals[EUCANETD_CVAL_MIDOMDCIDR] = configFileValue("MIDOMDCIDR");
-    cvals[EUCANETD_CVAL_ENABLE_MIDOMD] = configFileValue("ENABLE_MIDOMD");
+    //cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = configFileValue("MIDOGWHOSTS");
+    //cvals[EUCANETD_CVAL_MIDO_PUBNW] = configFileValue("MIDOPUBNW");
+    //cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = configFileValue("MIDOPUBGWIP");
+    cvals[EUCANETD_CVAL_MIDO_INTRTCIDR] = configFileValue("MIDO_INTRT_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_INTMDCIDR] = configFileValue("MIDO_INTMD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR] = configFileValue("MIDO_EXTMD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_MDCIDR] = configFileValue("MIDO_MD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_MAX_RTID] = configFileValue("MIDO_MAX_RTID");
+    cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
+    cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
 #ifdef VPCMIDO_DEVELOPER
-    cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG] = configFileValue("VALIDATE_MIDOCONFIG");
+    cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = configFileValue("MIDO_VALIDATE_MIDOCONFIG");
 #else
-    cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG] = strdup("Y");
+    cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = strdup("Y");
 #endif // VPCMIDO_DEVELOPER
 
     EUCA_FREE(config->eucahome);
@@ -1194,17 +1194,9 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
 
-    if (!cvals[EUCANETD_CVAL_MIDOGWHOSTS]) {
-        cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(pGni->GatewayHosts);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
-        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(pGni->PublicNetworkCidr);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOPUBGWIP]) {
-        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(pGni->PublicGatewayIP);
-    }
+    cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = strdup(pGni->GatewayHosts);
+    cvals[EUCANETD_CVAL_MIDO_PUBNW] = strdup(pGni->PublicNetworkCidr);
+    cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = strdup(pGni->PublicGatewayIP);
 
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
         config->disable_l2_isolation = 1;
@@ -1282,29 +1274,33 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
 
     // mido config opts
-    if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
-        snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBNW])
-        snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
-        snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOINTRTCIDR])
-        snprintf(config->mido_intrtcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOINTRTCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOINTMDCIDR])
-        snprintf(config->mido_intmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOINTMDCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOEXTMDCIDR])
-        snprintf(config->mido_extmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOEXTMDCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOMDCIDR])
-        snprintf(config->mido_mdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOMDCIDR]);
-    if (!strcmp(cvals[EUCANETD_CVAL_ENABLE_MIDOMD], "Y")) {
-        config->enable_mido_md = TRUE;
-    } else {
-        config->enable_mido_md = FALSE;
-    }
-    if (!strcmp(cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG], "Y")) {
-        config->validate_mido_config = TRUE;
-    } else {
-        config->validate_mido_config = FALSE;
+    if (IS_NETMODE_VPCMIDO(config)) {
+        if (cvals[EUCANETD_CVAL_MIDO_GWHOSTS])
+            snprintf(config->midogwhosts, sizeof (config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDO_GWHOSTS]);
+        if (cvals[EUCANETD_CVAL_MIDO_PUBNW])
+            snprintf(config->midopubnw, sizeof (config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDO_PUBNW]);
+        if (cvals[EUCANETD_CVAL_MIDO_PUBGWIP])
+            snprintf(config->midopubgwip, sizeof (config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDO_PUBGWIP]);
+        if (cvals[EUCANETD_CVAL_MIDO_INTRTCIDR])
+            snprintf(config->mido_intrtcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_INTRTCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_INTMDCIDR])
+            snprintf(config->mido_intmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_INTMDCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR])
+            snprintf(config->mido_extmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_MDCIDR])
+            snprintf(config->mido_mdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_MDCIDR]);
+        config->mido_max_rtid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_RTID]);
+        config->mido_max_eniid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_ENIID]);
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD], "Y")) {
+            config->enable_mido_md = TRUE;
+        } else {
+            config->enable_mido_md = FALSE;
+        }
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG], "Y")) {
+            config->validate_mido_config = TRUE;
+        } else {
+            config->validate_mido_config = FALSE;
+        }
     }
 
     if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)

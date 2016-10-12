@@ -199,6 +199,7 @@ struct mido_vpc_instance_t {
     midoname *midos[INST_END];
     u32 privip;
     u32 pubip;
+    int eniid;
     int pubip_changed;
     int host_changed;
     int srcdst_changed;
@@ -316,7 +317,8 @@ typedef struct mido_config_t {
     int max_vpcsecgroups;
 
     int udpsock;
-    int router_ids[MAX_RTID];
+    boolean *rt_ids;
+    boolean *eni_ids; 
 } mido_config;
 
 /*----------------------------------------------------------------------------*\
@@ -352,6 +354,9 @@ typedef struct mido_config_t {
 int get_next_router_id(mido_config *mido, int *nextid);
 int set_router_id(mido_config *mido, int id);
 int clear_router_id(mido_config *mido, int id);
+int get_next_eni_id(mido_config *mido, int *nextid);
+int set_eni_id(mido_config *mido, int id);
+int clear_eni_id(mido_config *mido, int id);
 
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
 int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);

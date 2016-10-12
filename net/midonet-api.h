@@ -58,11 +58,7 @@
 #define VPCMIDO_MD_VETH_M  "eucamd_mido"
 #define VPCMIDO_MD_NETNS   "eucamd"
 
-// Maximum number of active VPCs (mido routers)
-// Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
-// 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
-#define MAX_RTID 32767
-// IDs that conflict with 169.254.169.254 and 169.254.169.253
+// Internal Router IDs that conflict with 169.254.169.254 and 169.254.169.253
 #define RTID_169_254 10750
 #define RTID_169_253 10749
 

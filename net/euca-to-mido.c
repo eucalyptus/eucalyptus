@@ -1807,7 +1807,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             // create the instance model
             // necessary memory should have been allocated in pass1
             vpcif = &(vpcsubnet->instances[vpcsubnet->max_instances]);
-            bzero(vpcif, sizeof (mido_vpc_instance));
+            memset(vpcif, 0, sizeof (mido_vpc_instance));
             vpcsubnet->max_instances++;
             snprintf(vpcif->name, INTERFACE_ID_LEN, "%s", gniif->name);
             vpcif->gniInst = gniif;
@@ -1816,6 +1816,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             vpcif->srcdst_changed = 1;
             vpcif->pubip_changed = 1;
             vpcif->sg_changed = 1;
+            get_next_eni_id(mido, &(vpcif->eniid));
             LOGINFO("\tcreating %s\n", gniif->name);
         }
 
@@ -2524,15 +2525,16 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
  */
 int get_next_router_id(mido_config *mido, int *nextid) {
     int i;
-    for (i = 2; i < MAX_RTID; i++) {
+    for (i = 2; i < mido->config->mido_max_rtid; i++) {
         // Skip IDs that conflict with 169.254.41.254 and 169.254.41.253
         if ((i == RTID_169_254) || (i == RTID_169_253)) {
             continue;
         }
-        if (!mido->router_ids[i]) {
-            mido->router_ids[i] = 1;
-            *nextid = i;
-            LOGTRACE("router id %d allocated.\n", i);
+        if (!mido->rt_ids[i]) {
+            set_router_id(mido, i);
+            if (nextid) {
+                *nextid = i;
+            }
             return (0);
         }
     }
@@ -2546,8 +2548,9 @@ int get_next_router_id(mido_config *mido, int *nextid) {
  * @return 0 on success. Positive integer otherwise.
  */
 int set_router_id(mido_config *mido, int id) {
-    if (id < MAX_RTID) {
-        mido->router_ids[id] = 1;
+    if (id < mido->config->mido_max_rtid) {
+        mido->rt_ids[id] = TRUE;
+        LOGTRACE("router id %d allocated.\n", id);
         return (0);
     }
     return (1);
@@ -2560,9 +2563,61 @@ int set_router_id(mido_config *mido, int id) {
  * @return 0 on success. Positive integer otherwise.
  */
 int clear_router_id(mido_config *mido, int id) {
-    if (id < MAX_RTID) {
-        mido->router_ids[id] = 0;
+    if (id < mido->config->mido_max_rtid) {
+        mido->rt_ids[id] = FALSE;
         LOGTRACE("router id %d released.\n", id);
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Allocates a free internal VPCMIDO ENI ID.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param nextid [out] the newly allocated eni id
+ * @return 0 on success. Positive integer otherwise.
+ */
+int get_next_eni_id(mido_config *mido, int *nextid) {
+    int i;
+    for (i = 1; i < mido->config->mido_max_eniid; i++) {
+        if (!mido->eni_ids[i]) {
+            set_eni_id(mido, i);
+            if (nextid) {
+                *nextid = i;
+            }
+            return (0);
+        }
+    }
+    return (1);
+}
+
+/**
+ * Marks the ENI ID id as in use.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param id [in] eni id to mark as used
+ * @return 0 on success. Positive integer otherwise.
+ */
+int set_eni_id(mido_config *mido, int id) {
+    if (id < mido->config->mido_max_eniid) {
+        mido->eni_ids[id] = TRUE;
+        LOGTRACE("eni id %d allocated.\n", id);
+        LOGINFO("\t12824 eni id %d allocated.\n", id);
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Clears the use flag of an ENI ID.
+ * @param mido [in] current mido_config data structure.
+ * @param id [in] eni id of interest.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int clear_eni_id(mido_config *mido, int id) {
+    if (id < mido->config->mido_max_eniid) {
+        mido->eni_ids[id] = FALSE;
+        LOGTRACE("eni id %d released.\n", id);
+        LOGINFO("\t12824 eni id %d released.\n", id);
         return (0);
     }
     return (1);
@@ -4175,6 +4230,7 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
     rc += mido_delete_ipaddrgroup(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]);
     rc += mido_delete_chain(vpcinstance->midos[INST_PRECHAIN]);
     rc += mido_delete_chain(vpcinstance->midos[INST_POSTCHAIN]);
+    clear_eni_id(mido, vpcinstance->eniid);
 
     free_mido_vpc_instance(vpcinstance);
 
@@ -4651,6 +4707,9 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
         return (1);
     }
 
+    mido->rt_ids = EUCA_ZALLOC_C(mido->config->mido_max_rtid, sizeof (boolean));
+    mido->eni_ids = EUCA_ZALLOC_C(mido->config->mido_max_eniid, sizeof (boolean));
+
     mido->eucahome = strdup(eucanetd_config->eucahome);
 
     mido->disable_l2_isolation = eucanetd_config->disable_l2_isolation;
@@ -4711,6 +4770,7 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
             return (1);
         }
     }
+
     mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
     mido->midomd = EUCA_ZALLOC_C(1, sizeof (mido_md));
     LOGDEBUG("mido initialized: mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s intmdcidr=%s extmdcidr=%s mdcidr=%s\n",
@@ -4746,24 +4806,30 @@ int validate_mido(mido_config *mido) {
         if (mido->config->enable_mido_md) {
             // Internal Routing Subnet - 169.254.0.0/17
             if ((mido->int_rtnw != 0xa9fe0000) || (mido->int_rtsn != 17)) {
-                LOGERROR("Invalid MIDOINTRTCIDR - %s\n", mido->config->mido_intrtcidr);
+                LOGERROR("Invalid MIDO_INTRT_CIDR - %s\n", mido->config->mido_intrtcidr);
                 ret = EUCA_ERROR;
             }
             // Internal metadata Routing Subnet - 169.254.128.0/17
             if ((mido->int_mdnw != 0xa9fe8000) || (mido->int_mdsn != 17)) {
-                LOGERROR("Invalid MIDOINTMDCIDR - %s\n", mido->config->mido_intmdcidr);
+                LOGERROR("Invalid MIDO_INTMD_CIDR - %s\n", mido->config->mido_intmdcidr);
                 ret = EUCA_ERROR;
             }
             // External metadata Routing Subnet - 169.254.255.252/30
             if ((mido->ext_mdnw != 0xa9fefffc) || (mido->ext_mdsn != 30)) {
-                LOGERROR("Invalid MIDOEXTMDCIDR - %s\n", mido->config->mido_extmdcidr);
+                LOGERROR("Invalid MIDO_EXTMD_CIDR - %s\n", mido->config->mido_extmdcidr);
                 ret = EUCA_ERROR;
             }
             // metadata Subnet - 10.0.0.0/8
             if ((mido->mdnw != 0x0a000000) || (mido->mdsn != 8)) {
-                LOGERROR("Invalid MIDOMDCIDR - %s\n", mido->config->mido_mdcidr);
+                LOGERROR("Invalid MIDO_MD_CIDR - %s\n", mido->config->mido_mdcidr);
                 ret = EUCA_ERROR;
             }
+        }
+        if (mido->config->mido_max_rtid > 32750) {
+            LOGERROR("Invalid MIDO_MAX_RTID - %d\n", mido->config->mido_max_rtid);
+        }
+        if (mido->config->mido_max_rtid > 16777215) {
+            LOGERROR("Invalid MIDO_MAX_ENIID - %d\n", mido->config->mido_max_eniid);
         }
     }
     return (ret);
@@ -5874,6 +5940,11 @@ int free_mido_config_v(mido_config *mido, int mode) {
     free_mido_md(mido->midomd);
     if (mode == 1) {
         EUCA_FREE(mido->midomd);
+    }
+    
+    if (mode == 1) {
+        EUCA_FREE(mido->rt_ids);
+        EUCA_FREE(mido->eni_ids);
     }
 
     for (i = 0; i < mido->max_vpcs; i++) {
