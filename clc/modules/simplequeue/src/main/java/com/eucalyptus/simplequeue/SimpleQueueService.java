@@ -638,11 +638,17 @@ public class SimpleQueueService {
         throw new MissingParameterException("The request must contain the parameter Actions.");
       }
       Set<String> validActionNames = Sets.newHashSet(
-        "*", "SendMessage", "ReceiveMessage", "DeleteMessage", "ChangeMessageVisibility", "GetQueueAttributes", "GetQueueUrl"
+        "*", "SendMessage", "ReceiveMessage", "DeleteMessage", "ChangeMessageVisibility", "GetQueueAttributes",
+        "GetQueueUrl", "ListDeadLetterSourceQueues", "PurgeQueue"
+      );
+      Set<String> onlyOwnerActionNames = Sets.newHashSet(
+        "AddPermission", "CreateQueue", "DeleteQueue", "ListQueues", "SetQueueAttributes", "RemovePermission"
       );
       for (String actionName: request.getActionName()) {
-        if (validActionNames.contains(actionNames)) {
+        if (validActionNames.contains(actionName)) {
           actionNames.add("SQS:" + actionName);
+        } else if (onlyOwnerActionNames.contains(actionName)) {
+          throw new InvalidParameterValueException("Value SQS:" + actionName + " for parameter ActionName is invalid. Reason: Only the queue owner is allowed to invoke this action.");
         } else {
           throw new InvalidParameterValueException("Value SQS:" + actionName + " for parameter ActionName is invalid. Reason: Please refer to the appropriate WSDL for a list of valid actions.");
         }
@@ -690,10 +696,10 @@ public class SimpleQueueService {
             if (!statementNode.isObject()) {
               throw new IOException("Invalid existing policy");
             }
-            if (statementNode.has("Sid") && !statementNode.isTextual()) {
+            if (statementNode.has("Sid") && !statementNode.get("Sid").isTextual()) {
               throw new IOException("Invalid existing policy");
             }
-            if (statementNode.has("Sid") && request.getLabel().equals(statementNode.textValue())) {
+            if (statementNode.has("Sid") && request.getLabel().equals(statementNode.get("Sid").textValue())) {
               throw new InvalidParameterValueException(request.getLabel() + " already used as an Sid in the Queue Policy");
             }
           }
@@ -728,9 +734,9 @@ public class SimpleQueueService {
       }
     }
     if (actionNames.size() == 1) {
-      principalNode.put("Action", actionNames.iterator().next());
+      statementNode.put("Action", actionNames.iterator().next());
     } else {
-      ArrayNode actionNode = principalNode.putArray("Action");
+      ArrayNode actionNode = statementNode.putArray("Action");
       for (String actionName: actionNames) {
         actionNode.add(actionName);
       }
@@ -967,10 +973,10 @@ public class SimpleQueueService {
           if (!statementNode.isObject()) {
             throw new IOException("Invalid existing policy");
           }
-          if (statementNode.has("Sid") && !statementNode.isTextual()) {
+          if (statementNode.has("Sid") && !statementNode.get("Sid").isTextual()) {
             throw new IOException("Invalid existing policy");
           }
-          if (statementNode.has("Sid") && request.getLabel().equals(statementNode.textValue())) {
+          if (statementNode.has("Sid") && request.getLabel().equals(statementNode.get("Sid").textValue())) {
             statementArrayNode.remove(i);
             i--;
             foundLabel = true;
