@@ -123,6 +123,7 @@ public class DeleteMessageBatchResult extends EucalyptusData {
 public class AddPermissionType extends SimpleQueueMessageWithQueueUrl {
   String label;
   public AddPermissionType() {  }
+  @HttpParameterMapping(parameter="AWSAccountId")
   ArrayList<String> awsAccountId = new ArrayList<String>();
   ArrayList<String> actionName = new ArrayList<String>();
 }
