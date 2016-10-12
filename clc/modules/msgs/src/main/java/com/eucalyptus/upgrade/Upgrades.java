@@ -193,7 +193,11 @@ public class Upgrades {
     v4_3_1,
     v4_3_2,
     v4_3_3,
-    v4_4_0;
+    v4_4_0,
+    v4_4_1,
+    v4_4_2,
+    v4_4_3,
+    v5_0_0;
 
     public String getVersion( ) {
       return this.name( ).substring( 1 ).replace( "_", "." );
