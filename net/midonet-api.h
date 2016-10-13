@@ -238,6 +238,10 @@ typedef struct midoname_ipagip_extras_t {
 
 typedef struct midoname_rule_extras_t {
     char *type;
+    char *nwdstaddress;
+    char *nwdstlength;
+    char *nwsrcaddress;
+    char *nwsrclength;
     char *nattarget;
     char *jumpchainid;
 } midoname_rule_extras;

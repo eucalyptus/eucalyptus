@@ -92,6 +92,9 @@ enum vpc_instance_midos_t {
     INST_ELIP_PRE,
     INST_ELIP_POST,
     INST_ELIP_ROUTE,
+    INST_MD_DNAT,
+    INST_MD_SNAT,
+    INST_MD_ROUTE,
     INST_END
 };
 
@@ -204,6 +207,7 @@ struct mido_vpc_instance_t {
     int host_changed;
     int srcdst_changed;
     int sg_changed;
+    int eniid_changed;
     int population_failed;
     int midopresent;
     int gnipresent;
@@ -438,6 +442,9 @@ int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpc
 
 int connect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance);
 int disconnect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_instance *vpcinstance);
+
+int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance);
+int disconnect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_instance *vpcinstance);
 
 int clear_mido_config(mido_config *mido);
 

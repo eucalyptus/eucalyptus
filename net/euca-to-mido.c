@@ -1816,7 +1816,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             vpcif->srcdst_changed = 1;
             vpcif->pubip_changed = 1;
             vpcif->sg_changed = 1;
-            get_next_eni_id(mido, &(vpcif->eniid));
+            vpcif->eniid_changed = 1;
             LOGINFO("\tcreating %s\n", gniif->name);
         }
 
@@ -1900,6 +1900,23 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                 if (rc) {
                     LOGERROR("failed to setup public/elastic IP for %s\n", gniif->name);
                     ret++;
+                }
+            }
+        }
+            
+        // do instance/interface md connection
+        if (mido->config->enable_mido_md) {
+            if (vpcif->population_failed || vpcif->eniid_changed) {
+                if (vpcif->eniid == 0) {
+                    get_next_eni_id(mido, &(vpcif->eniid));
+                }
+                vpcif->eniid_changed = 0;
+                if (vpcif->eniid != 0) {
+                    rc = connect_mido_vpc_instance_md(mido, vpc, vpcsubnet, vpcif);
+                    if (rc) {
+                        LOGERROR("failed to setup md IP for %s\n", gniif->name);
+                        ret++;
+                    }
                 }
             }
         }
@@ -2601,7 +2618,6 @@ int set_eni_id(mido_config *mido, int id) {
     if (id < mido->config->mido_max_eniid) {
         mido->eni_ids[id] = TRUE;
         LOGTRACE("eni id %d allocated.\n", id);
-        LOGINFO("\t12824 eni id %d allocated.\n", id);
         return (0);
     }
     return (1);
@@ -2617,7 +2633,6 @@ int clear_eni_id(mido_config *mido, int id) {
     if (id < mido->config->mido_max_eniid) {
         mido->eni_ids[id] = FALSE;
         LOGTRACE("eni id %d released.\n", id);
-        LOGINFO("\t12824 eni id %d released.\n", id);
         return (0);
     }
     return (1);
@@ -3957,6 +3972,8 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     char fstr[64], tmp_name[32];
     char *targetIP = NULL;
     char *rdst = NULL;
+    char *privip = NULL;
+    char mdip[NETWORK_ADDR_LEN] = { 0 };
     char matchStr[64];
 
     LOGTRACE("populating VPC instance %s\n", vpcinstance->name);
@@ -4073,6 +4090,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
                 && strlen(ipag->ips[0]->ipagip->ip)) {
             vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP_IP] = ipag->ips[0];
             vpcinstance->privip = dot2hex(ipag->ips[0]->ipagip->ip);
+            privip = ipag->ips[0]->ipagip->ip;
             vpcinstance->iag_post = ipag;
             found = 0;
             // DNAT rule
@@ -4125,6 +4143,81 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         vpcinstance->midos[INST_POSTCHAIN] = ic->obj;
     }
 
+    if (mido->config->enable_mido_md) {
+        // MD SNAT rule
+        midoname **chain_rules = NULL;
+        int max_chain_rules = 0;
+        if (vpc->rt_mduplink_outfilter && vpc->rt_mduplink_outfilter->max_rules) {
+            chain_rules = vpc->rt_mduplink_outfilter->rules;
+            max_chain_rules = vpc->rt_mduplink_outfilter->max_rules;
+        }
+        found = 0;
+        for (j = 0; j < max_chain_rules && !found; j++) {
+            if (chain_rules[j] == NULL) {
+                continue;
+            }
+            if (chain_rules[j]->rule && chain_rules[j]->rule->type && (!strcmp(chain_rules[j]->rule->type, "snat")) &&
+                    chain_rules[j]->rule->nwsrcaddress && (!strcmp(chain_rules[j]->rule->nwsrcaddress, privip))) {
+                sscanf(chain_rules[j]->rule->nattarget, "%*[^\"]\"addressFrom\": \"%16[^\"]", mdip);
+                vpcinstance->midos[INST_MD_SNAT] = chain_rules[j];
+            }
+        }
+        if (strlen(mdip)) {
+            vpcinstance->eniid = dot2hex(mdip) - mido->mdnw;
+        }
+
+        // MD DNAT rule
+        if (vpcinstance->eniid) {
+            midoname **chain_rules = NULL;
+            int max_chain_rules = 0;
+            if (vpc->rt_mduplink_infilter && vpc->rt_mduplink_infilter->max_rules) {
+                chain_rules = vpc->rt_mduplink_infilter->rules;
+                max_chain_rules = vpc->rt_mduplink_infilter->max_rules;
+            }
+            found = 0;
+            for (j = 0; j < max_chain_rules && !found; j++) {
+                if (chain_rules[j] == NULL) {
+                    continue;
+                }
+                if (chain_rules[j]->rule && chain_rules[j]->rule->type && (!strcmp(chain_rules[j]->rule->type, "dnat")) &&
+                        chain_rules[j]->rule->nwdstaddress && (!strcmp(chain_rules[j]->rule->nwdstaddress, mdip))) {
+                    if (chain_rules[j]->rule->nattarget) {
+                        targetIP = chain_rules[j]->rule->nattarget;
+                        snprintf(matchStr, 64, "\"addressTo\": \"%s\"", privip);
+                        if (targetIP && strstr(targetIP, matchStr)) {
+                            vpcinstance->midos[INST_MD_DNAT] = chain_rules[j];
+                            found = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        // MD IP route
+        if (vpcinstance->eniid) {
+            midonet_api_router *eucamdrt = mido->midomd->eucamdrt;
+            if (eucamdrt != NULL) {
+                found = 0;
+                for (j = 0; j < eucamdrt->max_routes && !found; j++) {
+                    if (eucamdrt->routes[j] == NULL) {
+                        continue;
+                    }
+                    rdst = NULL;
+                    if (eucamdrt->routes[j]->route) {
+                        rdst = eucamdrt->routes[j]->route->dstnet;
+                    }
+                    if (rdst && !strcmp(mdip, rdst)) {
+                        vpcinstance->midos[INST_MD_ROUTE] = eucamdrt->routes[j];
+                        found = 1;
+                    }
+                }
+            } else {
+                LOGWARN("Unable to populate instance %s: eucamdrt not found.\n", vpcinstance->name);
+            }
+        }
+
+    }
+
     LOGTRACE("vpc instance (%s): AFTER POPULATE\n", vpcinstance->name);
     for (i = 0; i < INST_ELIP_PRE_IPADDRGROUP_IP; i++) {
         if (vpcinstance->midos[i] == NULL) {
@@ -4133,9 +4226,17 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         }
     }
     if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP_IP]) {
-        for (i = INST_ELIP_PRE_IPADDRGROUP_IP; i < INST_END; i++) {
+        for (i = INST_ELIP_PRE_IPADDRGROUP_IP; i < INST_MD_DNAT; i++) {
             if (vpcinstance->midos[i] == NULL) {
-                LOGWARN("VPC elip instance population failed to populate resource at idx %d\n", i);
+                LOGWARN("VPC instance population failed to populate resource at idx %d\n", i);
+                vpcinstance->population_failed = 1;
+            }
+        }
+    }
+    if (mido->config->enable_mido_md) {
+        for (i = INST_MD_DNAT; i < INST_END; i++) {
+            if (vpcinstance->midos[i] == NULL) {
+                LOGWARN("VPC instance population failed to populate resource at idx %d\n", i);
                 vpcinstance->population_failed = 1;
             }
         }
@@ -4222,6 +4323,9 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
         return (1);
     }
 
+    if (mido->config->enable_mido_md) {
+        rc += disconnect_mido_vpc_instance_md(mido, vpc, vpcinstance);
+    }
     if (vpcinstance->pubip != 0) {
         rc += disconnect_mido_vpc_instance_elip(mido, vpc, vpcinstance);
     }
@@ -4230,7 +4334,6 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
     rc += mido_delete_ipaddrgroup(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]);
     rc += mido_delete_chain(vpcinstance->midos[INST_PRECHAIN]);
     rc += mido_delete_chain(vpcinstance->midos[INST_POSTCHAIN]);
-    clear_eni_id(mido, vpcinstance->eniid);
 
     free_mido_vpc_instance(vpcinstance);
 
@@ -5299,7 +5402,7 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         chain = mido_get_chain(vpcname);
         if (chain != NULL) {
             LOGTRACE("Found chain %s", chain->obj->name);
-            vpc->rt_mduplink_infilter = chain;
+            vpc->rt_mduplink_outfilter = chain;
             vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER] = chain->obj;
         }
         if ((vpc->vpcrt) && (mido->midomd) && (mido->midomd->eucamdbr)) {
@@ -5821,6 +5924,117 @@ int connect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_su
 
     EUCA_FREE(ipAddr_pub);
     EUCA_FREE(ipAddr_priv);
+    return (ret);
+}
+
+/**
+ * Remove MidoNet objects created to implement MD network path of vpcinstance.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param vpc [in] vpc of the interface of interest.
+ * @param vpcinstance [in] interface of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int disconnect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_instance *vpcinstance) {
+    int ret = 0, rc = 0;
+
+    if (!mido || !vpc || !vpcinstance) {
+        LOGERROR("Invalid argument: cannot disconnect md from NULL\n");
+        return (1);
+    }
+    rc = mido_delete_route(mido->midomd->eucamdrt, vpcinstance->midos[INST_MD_ROUTE]);
+    vpcinstance->midos[INST_MD_ROUTE] = NULL;
+    if (rc) {
+        LOGWARN("Failed to delete MD_ROUTE for %s\n", vpcinstance->name);
+        ret = 1;
+    }
+
+    rc = mido_delete_rule(vpc->rt_mduplink_infilter, vpcinstance->midos[INST_MD_DNAT]);
+    vpcinstance->midos[INST_MD_DNAT] = NULL;
+    if (rc) {
+        LOGWARN("Failed to delete MD_DNAT for %s\n", vpcinstance->name);
+        ret = 1;
+    }
+
+    rc = mido_delete_rule(vpc->rt_mduplink_outfilter, vpcinstance->midos[INST_MD_SNAT]);
+    vpcinstance->midos[INST_MD_SNAT] = NULL;
+    if (rc) {
+        LOGWARN("Failed to delete MD_SNAT for %s\n", vpcinstance->name);
+        ret = 1;
+    }
+
+    if (vpcinstance->eniid) {
+        clear_eni_id(mido, vpcinstance->eniid);
+        vpcinstance->eniid = 0;
+    }
+
+    return (ret);
+}
+
+/**
+ * Create MidoNet objects to route metadata traffic to/from vpcinstance interface.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param vpc [in] vpc of the interface of interest.
+ * @param vpcinstance [in] interface of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance) {
+    int rc = 0, ret = 0;
+    char *ipAddr_priv = NULL, *ipAddr_md = NULL, *tmpstr = NULL;
+    char vpc_rtip[32];
+    mido_md *midomd = NULL;
+    
+    if (!mido || !vpc || !vpcsubnet || !vpcinstance) {
+        LOGWARN("Invalid argument: cannot process ENI md path for NULL\n");
+        return (1);
+    }
+
+    if (!vpcinstance->gniInst->privateIp) {
+        LOGWARN("input ip is 0.0.0.0: - will not connect_mido_vpc_instance_md\n");
+        return (0);
+    }
+
+    midomd = mido->midomd;
+    
+    tmpstr = hex2dot(mido->int_mdnw + vpc->rtid);
+    snprintf(vpc_rtip, 32, "%s", tmpstr);
+    EUCA_FREE(tmpstr);
+
+    ipAddr_priv = hex2dot(vpcinstance->gniInst->privateIp);
+    ipAddr_md = hex2dot(mido->mdnw + vpcinstance->eniid);
+
+    // DNAT
+    rc = mido_create_rule(vpc->rt_mduplink_infilter, NULL, &(vpcinstance->midos[INST_MD_DNAT]),
+            NULL, "type", "dnat", "flowAction", "continue", "nwDstAddress",
+            ipAddr_md, "nwDstLength", "32", "natTargets", "jsonlist", "natTargets:addressTo",
+            ipAddr_priv, "natTargets:addressFrom", ipAddr_priv, "natTargets:portFrom", "0",
+            "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    if (rc) {
+        LOGERROR("cannot create md dnat rule: check midonet health\n");
+        ret++;
+    }
+
+    // SNAT
+    rc = mido_create_rule(vpc->rt_mduplink_outfilter, NULL, &(vpcinstance->midos[INST_MD_SNAT]),
+            NULL, "type", "snat", "nwDstAddress", "169.254.255.254",
+            "nwDstLength", "32", "flowAction", "continue", "nwSrcAddress",
+            ipAddr_priv, "nwSrcLength", "32", "natTargets", "jsonlist",
+            "natTargets:addressTo", ipAddr_md, "natTargets:addressFrom", ipAddr_md,
+            "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
+    if (rc) {
+        LOGERROR("cannot create md snat rule: check midonet health\n");
+        ret++;
+    }
+
+    // MD ip route in main MD router (eucamdrt)
+    rc = mido_create_route(midomd->eucamdrt, NULL, midomd->midos[MD_RT_BRPORT],
+            "0.0.0.0", "0", ipAddr_md, "32", vpc_rtip, "100", &(vpcinstance->midos[INST_MD_ROUTE]));
+    if (rc) {
+        LOGERROR("failed to setup md IP route on midomdrt: check midonet health\n");
+        ret++;
+    }
+
+    EUCA_FREE(ipAddr_priv);
+    EUCA_FREE(ipAddr_md);
     return (ret);
 }
 
@@ -7592,25 +7806,6 @@ int do_midonet_tag_midonames(mido_config *mido) {
     return (0);
 }
 
-/**
- *
- *
- * @param cidr [in]
- * @param outnet [out]
- * @param outslashnet [out]
- * @param outgw [out]
- * @param outplustwo [out]
- *
- * @return
- *
- * @see
- *
- * @pre
- *
- * @post
- *
- * @note
- */
 /**
  * Splits the input string cidr that represents a CIDR block to subnet and slashnet
  * parts. Plusone and plustwo addresses are also computed. Buffer of the output
