@@ -1,42 +1,42 @@
 /*************************************************************************
  * Copyright 2009-2014 Eucalyptus Systems, Inc.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see http://www.gnu.org/licenses/.
- * 
+ *
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- * 
+ *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- * 
+ *
  * Software License Agreement (BSD License)
- * 
+ *
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- * 
+ *
  * Redistribution and use of this software in source and binary forms,
  * with or without modification, are permitted provided that the
  * following conditions are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer
  * in the documentation and/or other materials provided with the
  * distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -60,7 +60,7 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.dns.resolvers;
+package com.eucalyptus.vm.dns;
 
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 
@@ -92,7 +92,6 @@ import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.vm.dns.InstanceDomainNames;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -101,16 +100,16 @@ import com.google.common.net.InetAddresses;
 /**
  * Implementation of a recursive resolver. The resolver works by taking whatever the QNAME and QTYPE
  * are and performing a lookup. There are two response cases:
- * 
+ *
  * 1. The response type is the same as QTYPE: the returned response is passed back.
  * 2. The response type is CNAME: the target canonical name is queried starting over with
  * QNAME=CNAME and QTYPE=A. This happens repeatedly until the CNAME chain is fully resolved to the
  * root A record. The ordered set of CNAMEs followed by any A records are returned in the answer
  * section.
- * 
+ *
  * All responses include corresponding NS records in the authority section and their A records in
  * the additional section.
- * 
+ *
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 @ConfigurableClass( root = "dns.recursive",
@@ -119,7 +118,7 @@ public class RecursiveDnsResolver extends DnsResolver {
   private static Logger LOG = Logger.getLogger( RecursiveDnsResolver.class );
   @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
-  
+
   private static List<Name> subdomainsForName( Name name ) {
     final List<Name> names = Lists.newArrayList( name );
     final String sub = parentDomainForName( name );
@@ -130,11 +129,11 @@ public class RecursiveDnsResolver extends DnsResolver {
     }
     return names;
   }
-  
+
   private static String parentDomainForName( Name name ) {
     return name.toString( ).replaceAll( "\\A[^\\.]+\\.", "" );
   }
-  
+
   private static List<Record> lookupNSRecords( Name name, Cache cache ) {
     List<Name> subdomains = subdomainsForName( name );
     for ( Name sub : subdomains ) {
@@ -147,7 +146,7 @@ public class RecursiveDnsResolver extends DnsResolver {
     }
     return Lists.newArrayList( );
   }
-  
+
   @Override
   public DnsResponse lookupRecords( final DnsRequest request ) {
     final Record query = request.getQuery( );
@@ -158,7 +157,7 @@ public class RecursiveDnsResolver extends DnsResolver {
       return DnsResponse.forName( query.getName( ) )
       .recursive( )
       .refused();
-    
+
     final Cache cache = new Cache( );
     Lookup aLookup = new Lookup( name, type );
     aLookup.setCache( cache );
@@ -170,14 +169,14 @@ public class RecursiveDnsResolver extends DnsResolver {
     final Set<Record> answer = Sets.newLinkedHashSet( );
     final Set<Record> authority = Sets.newLinkedHashSet( );
     final Set<Record> additional = Sets.newLinkedHashSet( );
-    
+
     boolean iamAuthority = false;
     for ( Record aRec : queriedrrs ) {
       List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
       for ( Record nsRec : nsRecs ) {
         if(nsRec.getName().equals(DomainNames.externalSubdomain()))
           iamAuthority = true;
-        authority.add( nsRec );        
+        authority.add( nsRec );
         Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), type );
         nsLookup.setCache( cache );
         Record[] nsAnswers = nsLookup.run( );
@@ -186,7 +185,7 @@ public class RecursiveDnsResolver extends DnsResolver {
         }
       }
     }
-     
+
     for ( Name cnameRec : cnames ) {
       SetResponse sr = cache.lookupRecords( cnameRec, Type.CNAME, Credibility.ANY );
       if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
@@ -200,7 +199,7 @@ public class RecursiveDnsResolver extends DnsResolver {
         }
       }
     }
-   
+
     for ( Record queriedRec : queriedrrs ) {
       SetResponse sr = cache.lookupRecords( queriedRec.getName( ),
         queriedRec.getType( ),
@@ -231,22 +230,22 @@ public class RecursiveDnsResolver extends DnsResolver {
         }
       }
     }
-    
-    if((aLookup.getResult() == Lookup.SUCCESSFUL 
-        || aLookup.getResult() == Lookup.TYPE_NOT_FOUND ) 
+
+    if((aLookup.getResult() == Lookup.SUCCESSFUL
+        || aLookup.getResult() == Lookup.TYPE_NOT_FOUND )
         && queriedrrs.size()==0){
       List<Record> nsRecs = lookupNSRecords( name, cache );
       for ( Record nsRec : nsRecs ) {
         authority.add( nsRec );
       }
     }
-   
+
     DnsResponse response = DnsResponse.forName( query.getName( ) )
         .recursive( )
         .withAuthority( Lists.newArrayList( authority ) )
         .withAdditional( Lists.newArrayList( additional ) )
         .answer( Lists.newArrayList( answer ) );
-    
+
     if(aLookup.getResult() == Lookup.HOST_NOT_FOUND && queriedrrs.size()==0){
         response = DnsResponse.forName( query.getName( ) )
           .recursive( )
@@ -255,13 +254,13 @@ public class RecursiveDnsResolver extends DnsResolver {
     }
     return response;
   }
-  
+
   /**
    * This resolver works when it is:
    * 1. Enabled
    * 2. The query is absolute
    * 3. The name/address is not in a Eucalyptus controlled subdomain
-   * 
+   *
    * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(DnsRequest)
    */
   @Override
@@ -280,12 +279,12 @@ public class RecursiveDnsResolver extends DnsResolver {
     }
     return false;
   }
-  
+
   @Override
   public int getOrder( ) {
     return DEFAULT_ORDER + 1;
   }
-  
+
   @Override
   public String toString( ) {
     return this.getClass( ).getSimpleName( );
