@@ -108,7 +108,7 @@ public class PropertyChangeListeners {
           return;
         }
       }
-      throw new ConfigurablePropertyException( "Value must be an integer greater than zero" );
+      throw new ConfigurablePropertyException( "Value must be an integer greater than or equal to zero" );
     }
   }
 

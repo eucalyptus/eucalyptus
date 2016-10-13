@@ -53,6 +53,7 @@ public class TokensServiceConfiguration {
 
   private static final String DEFAULT_ROLE_ARN_ALIAS = "eucalyptus";
   private static final String DEFAULT_WEB_ID_SIG_ALGORITHMS = "RS512";
+  private static final String DEFAULT_OIDC_DISCOVERY_CACHE = "maximumSize=20, expireAfterWrite=15m";
 
   @ConfigurableField(
       description = "Actions to enable (ignored if empty)",
@@ -81,6 +82,18 @@ public class TokensServiceConfiguration {
       description = "List of JSON Web Signature algorithms to allow in web identity tokens",
       changeListener = TokensServiceWebIdentitySignatureAlgorithmPropertyChangeListener.class )
   public static volatile String webIdentitySignatureAlgorithmWhitelist = DEFAULT_WEB_ID_SIG_ALGORITHMS;
+
+  @ConfigurableField(
+      description = "OpenID Connect discovery cache configuration, for provider metadata",
+      initial = DEFAULT_OIDC_DISCOVERY_CACHE,
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
+  public static volatile String webIdentityOidcDiscoveryCache = DEFAULT_OIDC_DISCOVERY_CACHE;
+
+  @ConfigurableField(
+      description = "OpenID Connect discovery cache refresh expiry (seconds)",
+      initial = "60",
+      changeListener = PropertyChangeListeners.IsNonNegativeInteger.class )
+  public static volatile Long webIdentityOidcDiscoveryRefresh = 60L;
 
   private static final AtomicReference<Set<String>> enabledActionsSet =
       new AtomicReference<>( Collections.emptySet() );

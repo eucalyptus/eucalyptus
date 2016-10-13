@@ -25,12 +25,10 @@ import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
-import java.io.InputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +39,6 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import javax.net.ssl.HttpsURLConnection;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
@@ -73,12 +70,12 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tokens.TokensException.Code;
 import com.eucalyptus.tokens.oidc.JsonWebKey;
 import com.eucalyptus.tokens.oidc.JsonWebKeySet;
 import com.eucalyptus.tokens.oidc.JsonWebSignatureVerifier;
+import com.eucalyptus.tokens.oidc.OidcDiscoveryCache;
 import com.eucalyptus.tokens.oidc.OidcIdentityToken;
 import com.eucalyptus.tokens.oidc.OidcParseException;
 import com.eucalyptus.tokens.oidc.OidcProviderConfiguration;
@@ -86,17 +83,16 @@ import com.eucalyptus.tokens.policy.ExternalIdKey;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Ascii;
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
-import com.google.common.io.ByteStreams;
 import javaslang.collection.Stream;
 import javaslang.control.Option;
 import net.sf.json.JSONException;
-import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 
 /**
@@ -108,6 +104,7 @@ public class TokensService {
   private static final Logger LOG = Logger.getLogger( TokensService.class );
   private static final Pattern ROLE_ARN_PATTERN = Pattern.compile( "arn:aws:iam::([0-9\\p{javaLowerCase}-]{1,63}):role/.+" );
   private static final int ROLE_ARN_PATTERN_ACCOUNT_GROUP = 1;
+  private static final OidcDiscoveryCache oidcDiscoveryCache = new OidcDiscoveryCache( );
 
   public GetCallerIdentityResponseType getCallerIdentity(
       final GetCallerIdentityType request
@@ -340,8 +337,7 @@ public class TokensService {
           .getOrElseThrow( ( ) -> new TokensException( Code.InvalidIdentityToken, "Incorrect token audience" ) );
 
       // oidc discovery
-      final String configJson =
-          readUrl( OidcProviderConfiguration.buildDiscoveryUrl( provider ), 128 * 1024 ).getLeft( );
+      final String configJson = resolveUrl( OidcProviderConfiguration.buildDiscoveryUrl( provider ) ).getLeft( );
       final OidcProviderConfiguration providerConfiguration;
       try {
         providerConfiguration = OidcProviderConfiguration.parse( configJson );
@@ -354,10 +350,13 @@ public class TokensService {
         throw new TokensException( Code.IDPCommunicationError, "Error discovering OIDC provider configuration" );
       }
 
-      final Pair<String, Certificate[]> readResult = readUrl( providerConfiguration.getJwksUri( ), 128 * 1024 );
-      // TODO: improve this test to account for case issues
-      final String thumbprint = Digest.SHA1.digestHex( readResult.getRight( )[ 0 ].getEncoded( ) ).toUpperCase( );
-      if ( !provider.getThumbprints( ).contains( thumbprint ) ) {
+      final Pair<String, Certificate[]> readResult = resolveUrl( providerConfiguration.getJwksUri( ) );
+      final byte[] thumbprint = Digest.SHA1.digestBinary( readResult.getRight( )[ 0 ].getEncoded( ) );
+      if ( !Stream.ofAll( provider.getThumbprints( ) ).find( providerThumb ->
+          MessageDigest.isEqual(
+              thumbprint,
+              BaseEncoding.base16( ).decode( Ascii.toUpperCase( providerThumb ) ) )
+      ).isDefined( ) ) {
         throw new TokensException( Code.ValidationError, "SSL Certificate thumbprint does not match" );
       }
       // verify JWT signature
@@ -427,29 +426,12 @@ public class TokensService {
     return reply;
   }
 
-  @SuppressWarnings( "WeakerAccess" )
-  protected static Pair<String, Certificate []> readUrl( String url, int maxContentLength ) throws IOException {
-    final URL location = new URL( url );
-    LOG.debug( "Reading content from " + url );
-    URLConnection conn = location.openConnection();
-    SslSetup.configureHttpsUrlConnection( conn );
-    try ( final InputStream istr = conn.getInputStream( ) ) {
-      Certificate[] certs = new Certificate[0];
-      if (conn instanceof HttpsURLConnection) {
-        certs = ((HttpsURLConnection)conn).getServerCertificates();
-      }
-      final long contentLength = conn.getContentLengthLong( );
-      if ( contentLength > maxContentLength) {
-        throw new IOException( url + " content exceeds maximum size, " + maxContentLength );
-      }
-      //TODO:STEVE: MUST be returned using the application/json content type.
-      //TODO:STEVE: successful response MUST use the 200 OK HTTP status cod
-      final byte[] content = ByteStreams.toByteArray( new BoundedInputStream( istr, maxContentLength + 1 ) );
-      if ( content.length > maxContentLength) {
-        throw new IOException( url + " content exceeds maximum size, " + maxContentLength );
-      }
-      return Pair.pair( new String( content, StandardCharsets.UTF_8 ), certs );
-    }
+  private static Pair<String, Certificate[]> resolveUrl( final String url ) throws IOException {
+    return oidcDiscoveryCache.get(
+        TokensServiceConfiguration.webIdentityOidcDiscoveryCache,
+        TokensServiceConfiguration.webIdentityOidcDiscoveryRefresh * 1000L,
+        System.currentTimeMillis( ),
+        url );
   }
 
   static Boolean isSignatureVerified(

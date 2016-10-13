@@ -245,6 +245,47 @@ class TokensServiceTest {
     doSignatureVerification( jwt, jwksText )
   }
 
+  @Test( expected = GeneralSecurityException )
+  void testValidateJsonWebKeyUseFailure( ) {
+    String jwt = 'eyJhbGciOiJSUzUxMiIsImN0eSI6InRleHRcL3BsYWluIn0.eyJoZWxsbyI6ICJ3b3JsZCJ9.KP_mwCVRIxcF6ErdrzNcXZQDFGcL-Hlyocc4tIl3tJfzSfc7rz7qOLPjHpZ6UFH1ncd5TlpRc1B_pgvY-l0BNtx_s7n_QA55X4c1oeD8csrIoXQ6A6mtvdVGoSlGu2JnP6N2aqlDmlcefKqjl_Z-8nwDMGTMkDNhHKfHlIb2_Dliwxeq8LmNMREEdvNH2XVp_ffxBjiaKv2Eqbwc6I17241GCEmjDCvnagSgjX_5uu-da2H7TK2gtPJYUo8r9nzC7uzZJ5SB8suZH0COSofsP-9wvH0FESO40evCyEBylqg3bh9M9dIzeq8_bdTiC5kG93Fal44OEY8_Zm88wB_VjQ'
+    final X509Certificate cert = PEMFiles.getCert( X509_RSA_2048_PEM.getBytes( StandardCharsets.UTF_8 ) )
+    String jwksText = """\
+    {
+      "keys" : [
+        {
+          "kty": "RSA",
+          "alg": "RS512",
+          "use": "enc",
+          "n": "${BaseEncoding.base64Url( ).encode( ((RSAPublicKey)cert.getPublicKey( )).modulus.toByteArray( ) )}",
+          "e": "${BaseEncoding.base64Url( ).encode( ((RSAPublicKey)cert.getPublicKey( )).publicExponent.toByteArray( ) )}"
+        }
+      ]
+    }
+    """.stripIndent( )
+    doSignatureVerification( jwt, jwksText )
+  }
+
+
+  @Test( expected = GeneralSecurityException )
+  void testValidateJsonWebKeyKeyOpsFailure( ) {
+    String jwt = 'eyJhbGciOiJSUzUxMiIsImN0eSI6InRleHRcL3BsYWluIn0.eyJoZWxsbyI6ICJ3b3JsZCJ9.KP_mwCVRIxcF6ErdrzNcXZQDFGcL-Hlyocc4tIl3tJfzSfc7rz7qOLPjHpZ6UFH1ncd5TlpRc1B_pgvY-l0BNtx_s7n_QA55X4c1oeD8csrIoXQ6A6mtvdVGoSlGu2JnP6N2aqlDmlcefKqjl_Z-8nwDMGTMkDNhHKfHlIb2_Dliwxeq8LmNMREEdvNH2XVp_ffxBjiaKv2Eqbwc6I17241GCEmjDCvnagSgjX_5uu-da2H7TK2gtPJYUo8r9nzC7uzZJ5SB8suZH0COSofsP-9wvH0FESO40evCyEBylqg3bh9M9dIzeq8_bdTiC5kG93Fal44OEY8_Zm88wB_VjQ'
+    final X509Certificate cert = PEMFiles.getCert( X509_RSA_2048_PEM.getBytes( StandardCharsets.UTF_8 ) )
+    String jwksText = """\
+    {
+      "keys" : [
+        {
+          "kty": "RSA",
+          "alg": "RS512",
+          "key_ops": ["encrypt"],
+          "n": "${BaseEncoding.base64Url( ).encode( ((RSAPublicKey)cert.getPublicKey( )).modulus.toByteArray( ) )}",
+          "e": "${BaseEncoding.base64Url( ).encode( ((RSAPublicKey)cert.getPublicKey( )).publicExponent.toByteArray( ) )}"
+        }
+      ]
+    }
+    """.stripIndent( )
+    doSignatureVerification( jwt, jwksText )
+  }
+
   private static doSignatureVerification( String jwt, String jwksText, Predicate<String> algorithmPredicate = { true } ) {
     String [] jwtParts = jwt.split( "\\." )
     Boolean verified = TokensService.isSignatureVerified( jwtParts, jwksText, algorithmPredicate )
