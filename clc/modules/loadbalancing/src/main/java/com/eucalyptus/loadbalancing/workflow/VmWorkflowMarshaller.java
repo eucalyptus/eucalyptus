@@ -20,8 +20,12 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Map;
 
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
@@ -45,10 +49,23 @@ public class VmWorkflowMarshaller {
   private static Logger    LOG     = 
       Logger.getLogger(  VmWorkflowMarshaller.class );
 
+  public static String marshalPolicy(final PolicyDescription policy) {
+    final LoadBalancerServoDescriptions descriptions = new LoadBalancerServoDescriptions();
+    final LoadBalancerServoDescription desc = new LoadBalancerServoDescription();
+
+    final PolicyDescriptions policies = new PolicyDescriptions();
+    policies.setMember(new ArrayList<PolicyDescription>());
+    policies.getMember().add(policy);
+    desc.setPolicyDescriptions(policies);
+
+    descriptions.setMember(new ArrayList<LoadBalancerServoDescription>());
+    descriptions.getMember().add(desc);
+    return marshalLoadBalancer(descriptions);
+  }
+
   public static String marshalLoadBalancer(final LoadBalancerServoDescriptions desc) {
-    final Binding binding = 
+    final Binding binding =
         BindingManager.getBinding(LOADBALANCING_BINDING_NAME);
-    
     final ByteArrayOutputStream stream = new ByteArrayOutputStream();
     try{
       binding.toStream(stream, desc);

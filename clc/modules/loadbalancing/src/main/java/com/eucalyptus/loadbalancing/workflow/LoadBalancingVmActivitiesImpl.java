@@ -20,6 +20,7 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import java.util.List;
+
 import org.apache.log4j.Logger;
 import com.google.common.base.Supplier;
 import redis.clients.jedis.Jedis;
@@ -35,7 +36,9 @@ public class LoadBalancingVmActivitiesImpl
       Logger.getLogger(  LoadBalancingVmActivitiesImpl.class );
   
   static class NoSubscriberException extends Exception { }
-  
+
+  private static RedisPubSubClient setPolicyClient =
+          new RedisPubSubClient("localhost", "set-policy");
   private static RedisPubSubClient setLoadBalancerClient =
       new RedisPubSubClient("localhost", "set-loadbalancer");
   private static RedisPubSubClient getInstanceStatusClient =
@@ -129,6 +132,20 @@ public class LoadBalancingVmActivitiesImpl
      }finally {
        this.close();
      }
+    }
+  }
+
+  @Override
+  public void setPolicy(final String policy) throws LoadBalancingActivityException {
+    try {
+      setPolicyClient.publish(new Supplier<String>() {
+        @Override
+        public String get() {
+          return policy;
+        }
+      });
+    } catch(final NoSubscriberException ex) {
+      throw new LoadBalancingActivityException("No subscriber is found to receive the policy");
     }
   }
 

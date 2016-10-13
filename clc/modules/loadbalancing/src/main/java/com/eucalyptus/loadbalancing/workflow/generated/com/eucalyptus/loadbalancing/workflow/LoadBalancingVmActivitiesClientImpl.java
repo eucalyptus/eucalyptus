@@ -31,6 +31,50 @@ public class LoadBalancingVmActivitiesClientImpl extends ActivitiesClientBase im
     }
     
     @Override
+    public final Promise<Void> setPolicy(String policy) {
+        return setPolicyImpl(Promise.asPromise(policy), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> setPolicy(String policy, Promise<?>... waitFor) {
+        return setPolicyImpl(Promise.asPromise(policy), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> setPolicy(String policy, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return setPolicyImpl(Promise.asPromise(policy), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> setPolicy(Promise<String> policy) {
+        return setPolicyImpl(policy, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> setPolicy(Promise<String> policy, Promise<?>... waitFor) {
+        return setPolicyImpl(policy, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> setPolicy(Promise<String> policy, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return setPolicyImpl(policy, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> setPolicyImpl(final Promise<String> policy, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingVmActivities.setPolicy");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[1];
+        _input_[0] = policy;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
     public final Promise<Void> setLoadBalancer(String loadbalancer) {
         return setLoadBalancerImpl(Promise.asPromise(loadbalancer), (ActivitySchedulingOptions)null);
     }

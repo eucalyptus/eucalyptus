@@ -34,6 +34,7 @@ import com.amazonaws.services.simpleworkflow.flow.common.FlowConstants;
     defaultTaskScheduleToStartTimeoutSeconds = 60,
     defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface LoadBalancingVmActivities {
+  void setPolicy(String policy) throws LoadBalancingActivityException;
   void setLoadBalancer(String loadbalancer) throws LoadBalancingActivityException;
   String getCloudWatchMetrics() throws LoadBalancingActivityException;
   String getInstanceStatus() throws LoadBalancingActivityException;

@@ -19,6 +19,36 @@ public interface LoadBalancingVmActivitiesClient extends ActivitiesClient
 {
 
     /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(String policy);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(String policy, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(String policy, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(Promise<String> policy);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(Promise<String> policy, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setPolicy}
+     */
+    Promise<Void> setPolicy(Promise<String> policy, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingVmActivities#setLoadBalancer}
      */
     Promise<Void> setLoadBalancer(String loadbalancer);

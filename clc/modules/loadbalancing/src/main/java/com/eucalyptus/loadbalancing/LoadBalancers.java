@@ -705,9 +705,6 @@ public class LoadBalancers {
 	   for(final LoadBalancerBackendServerDescriptionCoreView backendView : lb.getBackendServers()) {
 	     backendServers.add(LoadBalancerBackendServerDescriptionEntityTransform.INSTANCE.apply(backendView));
 	   }
-	   for(final LoadBalancerPolicyDescriptionCoreView policyView : lb.getPolicies()) {
-	     lbPolicies.add(LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(policyView));
-	   }
 	 }catch(final Exception ex) {
 	   throw new LoadBalancingException("Unexpected error while preparing loadbalancer description", ex);
 	 }

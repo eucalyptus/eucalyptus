@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 
@@ -1476,7 +1477,58 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
     }
   }
-  
+
+  @Override
+  public List<String> listLoadBalancerPolicies(final String accountNumber, final String lbName) throws LoadBalancingActivityException {
+    try {
+      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final List<LoadBalancerListener> listeners = lb.getListeners().stream()
+              .map(view -> LoadBalancerListenerEntityTransform.INSTANCE.apply(view))
+              .collect(Collectors.toList());
+      final List<LoadBalancerBackendServerDescription> backendServers =
+              LoadBalancerBackendServers.getLoadBalancerBackendServerDescription(lb);
+
+      final List<String> listenerPolicies = listeners.stream()
+              .map(l -> l.getPolicies())
+              .flatMap(p -> p.stream())
+              .map(p -> p.getPolicyName())
+              .distinct()
+              .collect(Collectors.toList());
+
+      final List<String> backendPolicies = backendServers.stream()
+              .map(s -> s.getPolicyDescriptions())
+              .flatMap(p -> p.stream())
+              .map(p -> p.getPolicyName())
+              .distinct()
+              .collect(Collectors.toList());
+
+      final List<String> publicKeyPolicies = lb.getPolicies().stream()
+              .filter(p -> "PublicKeyPolicyType".equals(p.getPolicyTypeName()))
+              .map(p -> p.getPolicyName())
+              .distinct()
+              .collect(Collectors.toList());
+      final List<String> policies = Lists.newArrayList(listenerPolicies);
+      policies.addAll(backendPolicies);
+      policies.addAll(publicKeyPolicies);
+      return policies.stream().distinct().collect(Collectors.toList());
+    }catch(final Exception ex) {
+      throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
+    }
+  }
+
+  @Override
+  public PolicyDescription getLoadBalancerPolicy(final String accountNumber, final String lbName, final String policyName)
+          throws LoadBalancingActivityException {
+    try {
+      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancerPolicyDescription policy =
+              LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName);
+      return LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(policy);
+    } catch(final Exception ex) {
+      throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
+    }
+  }
+
   // TODO: SCALE
   @Override
   public Map<String, LoadBalancerServoDescription> lookupLoadBalancerDescription(final String accountNumber, final String lbName) 

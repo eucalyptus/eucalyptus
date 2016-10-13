@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.flow.ActivitySchedulingOptions;
@@ -121,21 +122,43 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
       return;
     }
     // get map of instance->ELB description
-    final Promise<Map<String, LoadBalancerServoDescription>> lookup =
+    final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer =
             client.lookupLoadBalancerDescription(this.accountId, this.loadbalancer);
-    doUpdateInstances(count, lookup);
+    // each policy is a large text and SWF has a  limit on input/output text;
+    // so we push the policy in iteration
+    final Promise<List<String>> policies =
+            client.listLoadBalancerPolicies(this.accountId, this.loadbalancer);
+    final Promise<List<Void>> policyUpdate = updatePolicies(loadbalancer, policies);
+    doUpdateInstances(count, loadbalancer, policyUpdate); // push LB definition after policies are pushed
+  }
+
+  @Asynchronous
+  Promise<List<Void>> updatePolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
+                                                     final Promise<List<String>> policyNames) {
+    final List<Promise<PolicyDescription>> policies = Lists.newArrayList();
+    for (final String policyName : policyNames.get()) {
+      policies.add( client.getLoadBalancerPolicy(Promise.asPromise(this.accountId),
+              Promise.asPromise(this.loadbalancer),
+              Promise.asPromise(policyName)) );
+    }
+
+    final Promise<List<Void>> policyUpdated =
+            pushPolicies(loadbalancer, Promises.listOfPromisesToPromise(policies));
+    return policyUpdated;
   }
 
   @Asynchronous
   private void doUpdateInstances(final int count,
-                                 final Promise<Map<String, LoadBalancerServoDescription>> lookup) {
+                                 final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
+                                 final Promise<List<Void>> policyUpdated) {
     // update each instance
-    final Map<String, LoadBalancerServoDescription> description = lookup.get();
+    final Map<String, LoadBalancerServoDescription> description = loadbalancer.get();
+
     final List<Promise<Void>> results = Lists.newArrayList();
     for(final String instanceId : description.keySet()) {
       final LoadBalancerServoDescription desc = description.get(instanceId);
       // update each servo VM
-      final String message = prepareMessage(desc);
+      final String message = encodeLoadBalancer(desc);
       final ActivitySchedulingOptions scheduler =
               new ActivitySchedulingOptions();
       scheduler.setTaskList(instanceId);
@@ -150,7 +173,29 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
     updateInstancesPeriodic(count+1, new AndPromise(waitOrSignal, updated));
   }
 
-  private String prepareMessage(final LoadBalancerServoDescription lbDescription) {
+  @Asynchronous
+  private Promise<List<Void>> pushPolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
+                              final Promise<List<PolicyDescription>> policies) {
+    final Map<String, LoadBalancerServoDescription> description = loadbalancer.get();
+    final List<Promise<Void>> results = Lists.newArrayList();
+    for(final String instanceId : description.keySet()) {
+      final ActivitySchedulingOptions scheduler =
+              new ActivitySchedulingOptions();
+      scheduler.setTaskList(instanceId);
+      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+      scheduler.setStartToCloseTimeoutSeconds(10L);
+      for(final PolicyDescription p : policies.get()) {
+        results.add(vmClient.setPolicy(encodePolicy(p), scheduler));
+      }
+    }
+    return Promises.listOfPromisesToPromise(results);
+  }
+
+  private String encodePolicy(final PolicyDescription policy) {
+    return VmWorkflowMarshaller.marshalPolicy(policy);
+  }
+
+  private String encodeLoadBalancer(final LoadBalancerServoDescription lbDescription) {
     final LoadBalancerServoDescriptions lbDescriptions = new LoadBalancerServoDescriptions();
     lbDescriptions.setMember(new ArrayList<LoadBalancerServoDescription>());
     lbDescriptions.getMember().add(lbDescription);
@@ -158,7 +203,7 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
             VmWorkflowMarshaller.marshalLoadBalancer(lbDescriptions);
     return encoded;
   }
-  
+
   @Asynchronous(daemon = true)
   private Promise<Void> startDaemonTimer(int seconds) {
       Promise<Void> timer = clock.createTimer(seconds);

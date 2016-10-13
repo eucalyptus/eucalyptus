@@ -1968,6 +1968,97 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(String accountNumber, String lbName) {
+        return listLoadBalancerPoliciesImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(String accountNumber, String lbName, Promise<?>... waitFor) {
+        return listLoadBalancerPoliciesImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(String accountNumber, String lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return listLoadBalancerPoliciesImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(Promise<String> accountNumber, Promise<String> lbName) {
+        return listLoadBalancerPoliciesImpl(accountNumber, lbName, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(Promise<String> accountNumber, Promise<String> lbName, Promise<?>... waitFor) {
+        return listLoadBalancerPoliciesImpl(accountNumber, lbName, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<java.util.List<java.lang.String>> listLoadBalancerPolicies(Promise<String> accountNumber, Promise<String> lbName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return listLoadBalancerPoliciesImpl(accountNumber, lbName, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<java.util.List<java.lang.String>> listLoadBalancerPoliciesImpl(final Promise<String> accountNumber, final Promise<String> lbName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.listLoadBalancerPolicies");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[2];
+        _input_[0] = accountNumber;
+        _input_[1] = lbName;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, java.util.List.class, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(String accountNumber, String lbName, String policyName) {
+        return getLoadBalancerPolicyImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(policyName), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(String accountNumber, String lbName, String policyName, Promise<?>... waitFor) {
+        return getLoadBalancerPolicyImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(policyName), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(String accountNumber, String lbName, String policyName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getLoadBalancerPolicyImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(policyName), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<String> policyName) {
+        return getLoadBalancerPolicyImpl(accountNumber, lbName, policyName, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<String> policyName, Promise<?>... waitFor) {
+        return getLoadBalancerPolicyImpl(accountNumber, lbName, policyName, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicy(Promise<String> accountNumber, Promise<String> lbName, Promise<String> policyName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getLoadBalancerPolicyImpl(accountNumber, lbName, policyName, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<com.eucalyptus.loadbalancing.common.msgs.PolicyDescription> getLoadBalancerPolicyImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<String> policyName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.getLoadBalancerPolicy");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[3];
+        _input_[0] = accountNumber;
+        _input_[1] = lbName;
+        _input_[2] = policyName;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, com.eucalyptus.loadbalancing.common.msgs.PolicyDescription.class, waitFor);
+    }
+
+    @Override
     public final Promise<java.util.Map<java.lang.String,com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription>> lookupLoadBalancerDescription(String accountNumber, String lbName) {
         return lookupLoadBalancerDescriptionImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), (ActivitySchedulingOptions)null);
     }

@@ -28,6 +28,8 @@ import com.amazonaws.services.simpleworkflow.flow.common.FlowConstants;
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
  *
@@ -143,6 +145,8 @@ public interface LoadBalancingActivities {
   /***** Activities for ELB VMs *****/
   /// to update servo VMs with the latest ELB
   List<String> lookupServoInstances(String accountNumber, String lbName) throws LoadBalancingActivityException;
+  List<String> listLoadBalancerPolicies(String accountNumber, String lbName) throws LoadBalancingActivityException;
+  PolicyDescription getLoadBalancerPolicy(String accountNumber, String lbName, String policyName) throws LoadBalancingActivityException;
   Map<String, LoadBalancerServoDescription> lookupLoadBalancerDescription(String accountNumber, String lbName)
       throws LoadBalancingActivityException;
 
