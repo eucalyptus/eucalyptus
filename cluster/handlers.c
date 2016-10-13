@@ -6214,7 +6214,7 @@ int init_config(void)
             return (1);
         }
 
-        if (!(!strcmp(pubmode, NETMODE_MANAGED_NOVLAN) || !strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_VPCMIDO))) {
+        if (!(!strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_VPCMIDO))) {
             LOGERROR("Invalid network mode!\n");
             EUCA_FREE(pubmode);
             return (1);
@@ -6231,7 +6231,7 @@ int init_config(void)
         } else {
             unsigned int a = 0, b = 0;
             if (sscanf(macPrefix, "%02X:%02X", &a, &b) != 2 || (a > 0xFF || b > 0xFF)) {
-                LOGWARN("VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+                LOGWARN("VNET_MACPREFIX is not defined correctly, defaulting to 'd0:0d'\n");
                 EUCA_FREE(macPrefix);
                 macPrefix = strdup("d0:0d");
             }

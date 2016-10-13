@@ -717,7 +717,7 @@ int init_eucafaults(const char *fileprefix)
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter, alphasort);
-                if (numfaults == 0) {
+                if (numfaults < 1) {
                     LOGDEBUG("No faults found in %s\n", faultdirs[i]);
                 } else {
                     LOGDEBUG("Found %d %s files in %s\n", numfaults, XML_SUFFIX, faultdirs[i]);

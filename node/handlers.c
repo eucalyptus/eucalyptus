@@ -1832,11 +1832,7 @@ void *startup_thread(void *arg)
     unlock_hypervisor_conn();          // unlock right away, since we are just checking on it
 
     // set up networking
-    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED)) {
-        snprintf(brname, IF_NAME_LEN, "%s", instance->groupIds[0]);
-    } else {
-        snprintf(brname, IF_NAME_LEN, "%s", nc_state.pEucaNet->sBridgeDevice);
-    }
+    snprintf(brname, IF_NAME_LEN, "%s", nc_state.pEucaNet->sBridgeDevice);
 
     euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
 
@@ -2788,24 +2784,23 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp && !(!strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp && !(!strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
         LOGFATAL("%s\n", errorm);
-        log_eucafault("1012", "component", euca_this_component_name, "cause", errorm, NULL);
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
+    if (tmp && (!strcmp(tmp, NETMODE_EDGE) || !strcmp(tmp, NETMODE_VPCMIDO))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
-            LOGFATAL("in 'EDGE', 'VPC' , or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
+            LOGFATAL("in 'EDGE' or 'VPCMIDO' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     }
 
-    if (tmp && (!strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
+    if (tmp && !strcmp(tmp, NETMODE_EDGE)) {
         pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface)
             pubinterface = getConfString(nc_state.configFiles, 2, "VNET_INTERFACE");
@@ -4114,24 +4109,6 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
                 LOGDEBUG("[%s] cannot read valid global network view file '%s' (yet), waiting\n", instance->instanceId, xmlfile);
             }
             EUCA_FREE(fileBuf);
-        } else if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED) || !strcmp(nc_state.pEucaNet->sMode, NETMODE_MANAGED_NOVLAN)) {
-            int fd;
-            pid_t pid;
-            char buf[CHAR_BUFFER_SIZE] = "";
-            char bridge[SMALL_CHAR_BUFFER_SIZE] = "";
-            boolean found = TRUE;
-            snprintf(bridge, SMALL_CHAR_BUFFER_SIZE, "%s", instance->params.guestNicDeviceName);
-            if (euca_execlp_fd(&pid, NULL, &fd, NULL, "/usr/sbin/brctl", "show", bridge, NULL) == EUCA_OK) {
-                if (read(fd, &buf, CHAR_BUFFER_SIZE-1) > 0 && strstr(buf, "No such device")) {
-                    found = FALSE;
-                }
-                waitpid(pid, NULL, 0);
-                close(fd);
-            } else {
-                LOGWARN("Can't run brctl show");
-            }
-            if (found)
-                return (0);
         } else {
             return(0);
         }

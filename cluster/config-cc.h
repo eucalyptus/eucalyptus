@@ -83,39 +83,15 @@ configEntry configKeysRestartCC[] = {
     ,
     {"SCHEDPOLICY", "ROUNDROBIN"}
     ,
-    {"VNET_ADDRSPERNET", NULL}
-    ,
     {"VNET_BRIDGE", NULL}
-    ,
-    {"VNET_BROADCAST", NULL}
     ,
     {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd"}
     ,
     {"VNET_DHCPUSER", "dhcpd"}
     ,
-    {"VNET_DNS", NULL}
-    ,
-    {"VNET_DOMAINNAME", "eucalyptus.internal"}
-    ,
-    {"VNET_LOCALIP", NULL}
-    ,
-    {"VNET_MACMAP", NULL}
-    ,
     {"VNET_MODE", NETMODE_INVALID}
     ,
-    {"VNET_NETMASK", NULL}
-    ,
-    {"VNET_PRIVINTERFACE", "eth0"}
-    ,
     {"VNET_PUBINTERFACE", "eth0"}
-    ,
-    {"VNET_PUBLICIPS", NULL}
-    ,
-    {"VNET_PRIVATEIPS", NULL}
-    ,
-    {"VNET_ROUTER", NULL}
-    ,
-    {"VNET_SUBNET", NULL}
     ,
     {"VNET_MACPREFIX", "d0:0d"}
     ,

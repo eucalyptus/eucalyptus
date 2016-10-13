@@ -740,19 +740,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
                     snprintf(statusMessage, 255, "ERROR");
                 } else {
                     adb_describeNetworksResponseType_set_mode(snrt, env, gpEucaNet->sMode);
-                    if (!strcmp(gpEucaNet->sMode, NETMODE_MANAGED) || !strcmp(gpEucaNet->sMode, NETMODE_MANAGED_NOVLAN)) {
-                        psNumAddrs = configFileValue("VNET_ADDRSPERNET");
-                        numAddrs = atoi(psNumAddrs);
-                        EUCA_FREE(psNumAddrs);
-
-                        adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
-                        adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, numAddrs);
-                        adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, 9);    // MAX NUM CC + 1
-                        adb_describeNetworksResponseType_set_addrIndexMax(snrt, env, (numAddrs - 2));
-                    } else {
-                        adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
-                    }
-
+                    adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
                     adb_describeNetworksResponseType_set_vlanMin(snrt, env, MIN_VLAN_EUCA);
                     adb_describeNetworksResponseType_set_vlanMax(snrt, env, NB_VLAN_802_1Q);
                     status = AXIS2_TRUE;
