@@ -34,6 +34,7 @@ package com.eucalyptus.simplequeue;
 import com.amazonaws.util.BinaryUtils;
 import com.amazonaws.util.Md5Utils;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
@@ -50,6 +51,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
 import com.eucalyptus.simplequeue.exceptions.AccessDeniedException;
 import com.eucalyptus.simplequeue.exceptions.BatchEntryIdsNotDistinctException;
 import com.eucalyptus.simplequeue.exceptions.EmptyBatchRequestException;
@@ -68,6 +70,7 @@ import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -547,30 +550,20 @@ public class SimpleQueueService {
     return queueUrlParts;
   }
 
-
   public GetQueueUrlResponseType getQueueUrl(GetQueueUrlType request) throws EucalyptusCloudException {
     GetQueueUrlResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      if (request.getQueueOwnerAWSAccountId() != null) {
-        try {
-          Accounts.lookupAccountById(request.getQueueOwnerAWSAccountId()).getAccountNumber();
-        } catch (AuthException e) {
-          throw new InvalidAddressException("The address is not valid for this endpoint.");
-        }
-        if (!request.getQueueOwnerAWSAccountId().equals(accountId)) {
-          throw new AccessDeniedException("Access to the resource " + request.getQueueName() + " is denied.");
-        }
-      }
-      // TODO: if account id is passed in, validate after we support Resource Policies
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, request.getQueueName());
-      if (queue == null) {
+      final String accountId = request.getQueueOwnerAWSAccountId() != null ? request.getQueueOwnerAWSAccountId() :
+        ctx.getAccountNumber();
+      String queueUrl = getQueueUrlFromQueueUrlParts(new QueueUrlParts(accountId, request.getQueueName()));
+      try {
+        Queue queue = getAndCheckPermissionOnQueue(queueUrl);
+        reply.getGetQueueUrlResult().setQueueUrl(queueUrl);
+      } catch (AccessDeniedException ex) {
+        // This is an example to comply with AWS.  Get queue url doesn't return "AccessDenied"
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
-      String queueUrl = getQueueUrlFromQueueUrlParts(new QueueUrlParts(accountId, request.getQueueName()));
-      reply.getGetQueueUrlResult().setQueueUrl(queueUrl);
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -584,7 +577,15 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
-      Collection<Queue> queues = PersistenceFactory.getQueuePersistence().listQueuesByPrefix(accountId, request.getQueueNamePrefix());
+      if (!Permissions.isAuthorized(SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, SimpleQueuePolicySpec.SIMPLEQUEUE_LISTQUEUES, "",
+        ctx.getAccount(), SimpleQueuePolicySpec.SIMPLEQUEUE_LISTQUEUES, ctx.getAuthContext())) {
+        throw new AccessDeniedException("Not authorized.");
+      }
+      Collection<Queue> queues;
+      if (ctx.isAdministrator() && "verbose".equals(request.getQueueNamePrefix())) {
+        queues = PersistenceFactory.getQueuePersistence().listQueues(null, null);
+      } else
+        queues = PersistenceFactory.getQueuePersistence().listQueues(accountId, request.getQueueNamePrefix());
       if (queues != null) {
         for (Queue queue: queues) {
           reply.getListQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(queue.getAccountId(), queue.getQueueName())));
@@ -598,20 +599,9 @@ public class SimpleQueueService {
 
   public AddPermissionResponseType addPermission(AddPermissionType request) throws EucalyptusCloudException {
     AddPermissionResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
         + ":" + queue.getQueueName();
 
@@ -710,9 +700,9 @@ public class SimpleQueueService {
         }
       }
       Map<String, String> existingAttributes = queue.getAttributes();
-      setAndValidateAttributes(accountId, Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
+      setAndValidateAttributes(queue.getAccountId(), Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
       existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
-      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(queue.getAccountId(), queue.getQueueName(), existingAttributes);
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -744,26 +734,16 @@ public class SimpleQueueService {
     statementNode.put("Resource", resourceId);
   }
 
-  public ChangeMessageVisibilityResponseType changeMessageVisibility(ChangeMessageVisibilityType request) throws EucalyptusCloudException {
+  public ChangeMessageVisibilityResponseType changeMessageVisibility(ChangeMessageVisibilityType request)
+    throws EucalyptusCloudException {
     ChangeMessageVisibilityResponseType reply = request.getReply();
 
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       final Integer visibilityTimeout = request.getVisibilityTimeout();
       final String receiptHandle = request.getReceiptHandle();
       QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
       handleChangeMessageVisibility(visibilityTimeout, receiptHandle, queue);
     } catch (Exception ex) {
       handleException(ex);
@@ -787,21 +767,9 @@ public class SimpleQueueService {
 
   public DeleteMessageResponseType deleteMessage(DeleteMessageType request) throws EucalyptusCloudException {
     DeleteMessageResponseType reply = request.getReply();
-
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String receiptHandle = request.getReceiptHandle();
       handleDeleteMessage(queue, receiptHandle);
     } catch (Exception ex) {
@@ -816,46 +784,34 @@ public class SimpleQueueService {
 
   public DeleteQueueResponseType deleteQueue(DeleteQueueType request) throws EucalyptusCloudException {
     DeleteQueueResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
-      PersistenceFactory.getQueuePersistence().deleteQueue(accountId, queueName);
+      PersistenceFactory.getQueuePersistence().deleteQueue(queue.getAccountId(), queue.getQueueName());
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
   }
 
+  private Queue getAndCheckPermissionOnQueue(String queueUrl) throws QueueDoesNotExistException, AccessDeniedException, InvalidAddressException {
+    QueueUrlParts queueUrlParts = getQueueUrlParts(queueUrl);
+    Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(queueUrlParts.getAccountId(), queueUrlParts.getQueueName());
+    if (queue == null) {
+      throw new QueueDoesNotExistException("The specified queue does not exist.");
+    }
+    if (!RestrictedTypes.filterPrivileged().apply( queue ) ) {
+      throw new AccessDeniedException("Not authorized.");
+    }
+    return queue;
+  }
+
   public PurgeQueueResponseType purgeQueue(PurgeQueueType request) throws EucalyptusCloudException {
     PurgeQueueResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
     } catch (Exception ex) {
       handleException(ex);
@@ -865,26 +821,15 @@ public class SimpleQueueService {
 
   public GetQueueAttributesResponseType getQueueAttributes(GetQueueAttributesType request) throws EucalyptusCloudException {
     GetQueueAttributesResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       Map<String, String> attributes = Maps.newHashMap();
       if (queue.getAttributes() != null) {
         attributes.putAll(queue.getAttributes());
       }
       attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue));
-      attributes.put(Constants.QUEUE_ARN, "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + accountId + ":" + queueName);
+      attributes.put(Constants.QUEUE_ARN, "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId() + ":" + queue.getQueueName());
       Set<String> validAttributes = ImmutableSet.of(
         Constants.ALL, Constants.APPROXIMATE_NUMBER_OF_MESSAGES, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
         Constants.VISIBILITY_TIMEOUT, Constants.CREATED_TIMESTAMP, Constants.LAST_MODIFIED_TIMESTAMP, Constants.POLICY,
@@ -916,23 +861,9 @@ public class SimpleQueueService {
 
   public RemovePermissionResponseType removePermission(RemovePermissionType request) throws EucalyptusCloudException {
     RemovePermissionResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
-        + ":" + queue.getQueueName();
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       if (request.getLabel() == null) {
         throw new InvalidParameterValueException("Value for parameter Label is invalid. Reason: Must specify a label.");
       }
@@ -994,9 +925,9 @@ public class SimpleQueueService {
         throw new InvalidParameterValueException("Value " + request.getLabel() + " for parameter Label is invalid. Reason: can't find label.");
       }
       Map<String, String> existingAttributes = queue.getAttributes();
-      setAndValidateAttributes(accountId, Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
+      setAndValidateAttributes(queue.getAccountId(), Collections.singletonList(new Attribute(Constants.POLICY, policy)), existingAttributes);
       existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
-      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(queue.getAccountId(), queue.getQueueName(), existingAttributes);
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -1005,20 +936,9 @@ public class SimpleQueueService {
 
   public ReceiveMessageResponseType receiveMessage(ReceiveMessageType request) throws EucalyptusCloudException {
     ReceiveMessageResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       Map<String, String> receiveAttributes = Maps.newHashMap();
       if (request.getVisibilityTimeout() != null) {
         if (request.getVisibilityTimeout() < 0 || request.getVisibilityTimeout() > MAX_VISIBILITY_TIMEOUT) {
@@ -1078,7 +998,8 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void filterReceiveMessageAttributes(Message message, ArrayList<String> matchingMessageAttributeNames) throws EucalyptusCloudException {
+  private void filterReceiveMessageAttributes(Message message, ArrayList<String> matchingMessageAttributeNames)
+    throws EucalyptusCloudException {
     if (message.getMessageAttribute() != null) {
       boolean changed = true;
       Iterator<MessageAttribute> iter = message.getMessageAttribute().iterator();
@@ -1293,7 +1214,7 @@ public class SimpleQueueService {
     }
   }
 
-  private MessageInfo validateAndGetMessageInfo(Queue queue, String accountId, String body, Integer delaySeconds, ArrayList<MessageAttribute> messageAttributes) throws EucalyptusCloudException {
+  private MessageInfo validateAndGetMessageInfo(Queue queue, String senderId, String body, Integer delaySeconds, ArrayList<MessageAttribute> messageAttributes) throws EucalyptusCloudException {
     int messageLength = 0;
     Map<String, String> sendAttributes = Maps.newHashMap();
     Message message = new Message();
@@ -1341,7 +1262,7 @@ public class SimpleQueueService {
       message.getMessageAttribute().addAll(messageAttributes);
     }
 
-    message.getAttribute().add(new Attribute(Constants.SENDER_ID, accountId));
+    message.getAttribute().add(new Attribute(Constants.SENDER_ID, senderId));
 
     String messageId = UUID.randomUUID().toString();
 
@@ -1351,23 +1272,11 @@ public class SimpleQueueService {
   }
   public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
     SendMessageResponseType reply = request.getReply();
-
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
 
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
-      MessageInfo messageInfo = validateAndGetMessageInfo(queue, accountId, request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
+      MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getAccountNumber(), request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
 
       PersistenceFactory.getMessagePersistence().sendMessage(queue, messageInfo.getMessage(), messageInfo.getSendAttributes());
 
@@ -1382,48 +1291,26 @@ public class SimpleQueueService {
 
   public SetQueueAttributesResponseType setQueueAttributes(SetQueueAttributesType request) throws EucalyptusCloudException {
     SetQueueAttributesResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       Map<String, String> existingAttributes = queue.getAttributes();
-      setAndValidateAttributes(accountId, request.getAttribute(), existingAttributes);
+      setAndValidateAttributes(queue.getAccountId(), request.getAttribute(), existingAttributes);
       existingAttributes.put(Constants.LAST_MODIFIED_TIMESTAMP, String.valueOf(currentTimeSeconds()));
 
-      PersistenceFactory.getQueuePersistence().updateQueueAttributes(accountId, queueName, existingAttributes);
+      PersistenceFactory.getQueuePersistence().updateQueueAttributes(queue.getAccountId(), queue.getQueueName(), existingAttributes);
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
   }
 
-  public ChangeMessageVisibilityBatchResponseType changeMessageVisibilityBatch(ChangeMessageVisibilityBatchType request) throws EucalyptusCloudException {
+  public ChangeMessageVisibilityBatchResponseType changeMessageVisibilityBatch(ChangeMessageVisibilityBatchType request)
+    throws EucalyptusCloudException {
     ChangeMessageVisibilityBatchResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       if (request.getChangeMessageVisibilityBatchRequestEntry() == null ||
         request.getChangeMessageVisibilityBatchRequestEntry().isEmpty()) {
         throw new EmptyBatchRequestException("There should be at least one ChangeMessageVisibilityBatchRequestEntry in the request.");
@@ -1478,18 +1365,7 @@ public class SimpleQueueService {
     DeleteMessageBatchResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       if (request.getDeleteMessageBatchRequestEntry() == null ||
         request.getDeleteMessageBatchRequestEntry().isEmpty()) {
         throw new EmptyBatchRequestException("There should be at least one DeleteMessageBatchRequestEntry in the request.");
@@ -1544,18 +1420,7 @@ public class SimpleQueueService {
     SendMessageBatchResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (queue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       if (request.getSendMessageBatchRequestEntry() == null ||
         request.getSendMessageBatchRequestEntry().isEmpty()) {
         throw new EmptyBatchRequestException("There should be at least one SendMessageBatchRequestEntry in the request.");
@@ -1584,7 +1449,7 @@ public class SimpleQueueService {
       Map<String, MessageInfo> messageInfoMap = Maps.newLinkedHashMap();
       int totalMessageLength = 0;
       for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
-        MessageInfo messageInfo = validateAndGetMessageInfo(queue, accountId, batchRequestEntry.getMessageBody(),
+        MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getAccountNumber(), batchRequestEntry.getMessageBody(),
           batchRequestEntry.getDelaySeconds(), batchRequestEntry.getMessageAttribute());
         totalMessageLength += messageInfo.getMessageLength();
         if (totalMessageLength > queue.getMaximumMessageSize()) {
@@ -1621,24 +1486,14 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public ListDeadLetterSourceQueuesResponseType listDeadLetterSourceQueues(ListDeadLetterSourceQueuesType request) throws EucalyptusCloudException {
+  public ListDeadLetterSourceQueuesResponseType listDeadLetterSourceQueues(ListDeadLetterSourceQueuesType request)
+    throws EucalyptusCloudException {
     ListDeadLetterSourceQueuesResponseType reply = request.getReply();
-    // TODO: IAM rather than own account for now
     try {
       final Context ctx = Contexts.lookup();
-      final String accountId = ctx.getAccountNumber();
-      QueueUrlParts queueUrlParts = getQueueUrlParts(request.getQueueUrl());
-      if (!queueUrlParts.getAccountId().equals(accountId)) {
-        throw new AccessDeniedException("Access to the resource " + request.getQueueUrl() + " is denied.");
-      }
-      String queueName = queueUrlParts.getQueueName();
-
-      Queue deadLetterQueue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, queueName);
-      if (deadLetterQueue == null) {
-        throw new QueueDoesNotExistException("The specified queue does not exist.");
-      }
-      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + accountId + ":" + queueName;
-      Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(accountId, queueArn);
+      Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
+      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId() + ":" + queue.getQueueName();
+      Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(queue.getAccountId(), queueArn);
       if (sourceQueues != null) {
         for (Queue sourceQueue: sourceQueues) {
           reply.getListDeadLetterSourceQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(sourceQueue.getAccountId(), sourceQueue.getQueueName())));

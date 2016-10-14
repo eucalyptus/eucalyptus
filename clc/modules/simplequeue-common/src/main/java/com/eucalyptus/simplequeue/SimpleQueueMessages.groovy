@@ -16,9 +16,11 @@
 @GroovyAddClassUUID
 package com.eucalyptus.simplequeue
 
+import com.eucalyptus.auth.policy.annotation.PolicyAction
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.annotation.ComponentMessage
+import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -146,6 +148,7 @@ public class ChangeMessageVisibilityBatchResultEntry extends EucalyptusData {
   String id;
   public ChangeMessageVisibilityBatchResultEntry() {  }
 }
+@PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_CHANGEMESSAGEVISIBILITY)
 public class ChangeMessageVisibilityBatchType extends SimpleQueueMessageWithQueueUrl {
   public ChangeMessageVisibilityBatchType() {  }
   @HttpEmbedded(multiple=true)
@@ -297,6 +300,7 @@ public class GetQueueUrlResponseType extends SimpleQueueMessage {
 public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
+@PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_SENDMESSAGE)
 public class SendMessageBatchType extends SimpleQueueMessageWithQueueUrl {
   public SendMessageBatchType() {  }
   @HttpEmbedded(multiple=true)
@@ -306,6 +310,7 @@ public class ResponseMetadata extends EucalyptusData {
   String requestId;
   public ResponseMetadata() {  }
 }
+@PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_DELETEMESSAGE)
 public class DeleteMessageBatchType extends SimpleQueueMessageWithQueueUrl {
   public DeleteMessageBatchType() {  }
   @HttpEmbedded(multiple=true)

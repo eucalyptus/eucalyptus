@@ -32,6 +32,7 @@ package com.eucalyptus.simplequeue.persistence;
 
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
+import com.google.common.base.Predicate;
 
 import java.util.Collection;
 import java.util.Map;
@@ -42,7 +43,7 @@ import java.util.Map;
 public interface QueuePersistence {
   Queue lookupQueue(String accountId, String queueName);
   Queue createQueue(String accountId, String queueName, Map<String, String> attributes) throws QueueAlreadyExistsException;
-  Collection<Queue> listQueuesByPrefix(String accountId, String queueNamePrefix);
+  Collection<Queue> listQueues(String accountId, String queueNamePrefix);
   Collection<Queue> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn);
   Queue updateQueueAttributes(String accountId, String queueName, Map<String, String> attributes) throws QueueDoesNotExistException;
   void deleteQueue(String accountId, String queueName) throws QueueDoesNotExistException;
