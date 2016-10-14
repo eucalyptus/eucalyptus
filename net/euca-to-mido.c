@@ -604,7 +604,12 @@ int do_midonet_populate(mido_config *mido) {
     }
     
     // populate md
-    if (mido->config->enable_mido_md) {
+    if (mido_get_router(VPCMIDO_MDRT)) {
+        mido->config->populate_mido_md = TRUE;
+    } else {
+        mido->config->populate_mido_md = FALSE;
+    }
+    if (mido->config->enable_mido_md || mido->config->populate_mido_md) {
         rc = populate_mido_md(mido);
         if (rc) {
             return (1);
@@ -839,9 +844,10 @@ int do_midonet_teardown(mido_config *mido) {
         delete_mido_vpc_secgroup(mido, &(mido->vpcsecgroups[i]));
     }
 
-    if (mido->config->enable_mido_md) {
+    if ((mido->config->flushmode == FLUSH_MIDO_ALL) || (!mido->config->enable_mido_md && mido->config->populate_mido_md)) {
         delete_mido_md(mido);
     }
+
     char *bgprecovery = NULL;
     bgprecovery = discover_mido_bgps(mido);
     if (bgprecovery && strlen(bgprecovery)) {
@@ -2502,6 +2508,11 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             LOGWARN("failed to populate euca VPC models.\n");
         }
         LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+        // Disable eucamd
+        if (!mido->config->enable_mido_md && mido->config->populate_mido_md) {
+            disable_mido_md(mido);
+        }
 
         // make sure that all core objects are in place
         midonet_api_system_changed = 0;
@@ -4198,7 +4209,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         vpcinstance->midos[INST_POSTCHAIN] = ic->obj;
     }
 
-    if (privip && (mido->config->enable_mido_md)) {
+    if (privip && (mido->config->enable_mido_md || mido->config->populate_mido_md)) {
         // MD SNAT rule
         midoname **chain_rules = NULL;
         int max_chain_rules = 0;
@@ -4379,7 +4390,7 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
         return (1);
     }
 
-    if (mido->config->enable_mido_md) {
+    if (mido->config->enable_mido_md || mido->config->populate_mido_md) {
         rc += disconnect_mido_vpc_instance_md(mido, vpc, vpcinstance);
     }
     if (vpcinstance->pubip != 0) {
@@ -4978,11 +4989,6 @@ int validate_mido(mido_config *mido) {
 
     if (mido->config->validate_mido_config) {
         if (mido->config->enable_mido_md) {
-            // Internal Routing Subnet - 169.254.0.0/17
-            if ((mido->int_rtnw != 0xa9fe0000) || (mido->int_rtsn != 17)) {
-                LOGERROR("Invalid MIDO_INTRT_CIDR - %s\n", mido->config->mido_intrtcidr);
-                ret = EUCA_ERROR;
-            }
             // Internal metadata Routing Subnet - 169.254.128.0/17
             if ((mido->mdconfig.int_mdnw != 0xa9fe8000) || (mido->mdconfig.int_mdsn != 17)) {
                 LOGERROR("Invalid MIDO_INTMD_CIDR - %s\n", mido->config->mido_intmdcidr);
@@ -4999,11 +5005,18 @@ int validate_mido(mido_config *mido) {
                 ret = EUCA_ERROR;
             }
         }
+        // Internal Routing Subnet - 169.254.0.0/17
+        if ((mido->int_rtnw != 0xa9fe0000) || (mido->int_rtsn != 17)) {
+            LOGERROR("Invalid MIDO_INTRT_CIDR - %s\n", mido->config->mido_intrtcidr);
+            ret = EUCA_ERROR;
+        }
         if (mido->config->mido_max_rtid > 32750) {
             LOGERROR("Invalid MIDO_MAX_RTID - %d\n", mido->config->mido_max_rtid);
+            ret = EUCA_ERROR;
         }
         if (mido->config->mido_max_rtid > 16777215) {
             LOGERROR("Invalid MIDO_MAX_ENIID - %d\n", mido->config->mido_max_eniid);
+            ret = EUCA_ERROR;
         }
     }
     return (ret);
@@ -5461,7 +5474,7 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     }
 
     found = 0;
-    if (mido->config->enable_mido_md) {
+    if (mido->config->enable_mido_md || mido->config->populate_mido_md) {
         snprintf(vpcname, 32, "vc_%s_mdulin", vpc->name);
         chain = mido_get_chain(vpcname);
         if (chain != NULL) {
@@ -5769,7 +5782,7 @@ int populate_mido_md(mido_config *mido) {
         }
     }
     if (!found) {
-        LOGINFO("\t\teucart-eucabr link not found.\n");
+        LOGINFO("\t\teucamdrt-eucamdbr link not found.\n");
     }
 
     // search for md ext ports
@@ -6442,7 +6455,7 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
     rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]);
     rc += mido_delete_chain(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]);
 
-    if (mido->config->enable_mido_md) {
+    if (mido->config->enable_mido_md || mido->config->populate_mido_md) {
         rc += mido_delete_bridge_port(mido->midomd->eucamdbr, vpc->midos[VPC_EUCAMDBR_DOWNLINK]);
         rc += mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]);
         rc += mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]);
@@ -6830,7 +6843,7 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
 }
 
 /**
- * Removes MidoNet objects that are needed to implement euca VPC md.
+ * Removes MidoNet objects that are needed to implement euca VPC md core.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @return 0 on success. 1 otherwise.
  */
@@ -6880,6 +6893,50 @@ int delete_mido_md(mido_config *mido) {
     se_free(&cmds);
 
     return (ret);
+}
+
+/**
+ * Removes MidoNet objects that are needed to implement euca VPC md.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int disable_mido_md(mido_config *mido) {
+    if (!mido || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot delete md from NULL config.\n");
+        return (1);
+    }
+
+    mido_md *midomd = mido->midomd;
+    
+    if (mido->config->enable_mido_md || !mido->config->populate_mido_md) {
+        return (0);
+    }
+
+    if (!midomd || !midomd->eucamdrt || !midomd->eucamdbr) {
+        return (0);
+    }
+
+    // Disconnect instances/interfaces from md
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        mido_vpc *vpc = &(mido->vpcs[i]);
+        for (int j = 0; j < vpc->max_subnets; j++) {
+            mido_vpc_subnet *subnet = &(vpc->subnets[j]);
+            for (int k = 0; k < subnet->max_instances; k++) {
+                mido_vpc_instance *vpcif = &(subnet->instances[k]);
+                disconnect_mido_vpc_instance_md(mido, vpc, vpcif);
+            }
+        }
+    }
+
+    // Disconnect VPC routers from md
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        mido_vpc *vpc = &(mido->vpcs[i]);
+        mido_delete_bridge_port(mido->midomd->eucamdbr, vpc->midos[VPC_EUCAMDBR_DOWNLINK]);
+        mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]);
+        mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]);
+    }
+
+    return (delete_mido_md(mido));
 }
 
 /**

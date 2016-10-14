@@ -159,8 +159,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_MAX_ENIID", "1048576"}
     ,
-    {"MIDO_ENABLE_MIDOMD", "N"}
-    ,
     {"MIDO_VALIDATE_MIDOCONFIG", "Y"}
     ,
     {NULL, NULL}
@@ -172,6 +170,8 @@ configEntry configKeysNoRestartEUCANETD[] = {
     {"POLLING_FREQUENCY", "1"}
     ,
     {"DISABLE_L2_ISOLATION", "N"}
+    ,
+    {"MIDO_ENABLE_MIDOMD", "N"}
     ,
     {"NC_PROXY", "N"}
     ,
@@ -257,7 +257,7 @@ static int eucanetd_read_config_bootstrap(void);
 static int eucanetd_setlog_bootstrap(void);
 static int eucanetd_read_config(globalNetworkInfo *pGni);
 static int eucanetd_initialize_logs(void);
-static int eucanetd_fetch_latest_network(boolean *update_globalnet);
+static int eucanetd_fetch_latest_network(boolean *update_globalnet, boolean *config_changed);
 static int eucanetd_fetch_latest_euca_network(boolean *update_globalnet);
 static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo *pGni);
@@ -296,6 +296,7 @@ int main(int argc, char **argv) {
     struct timeval tv = { 0 };
     struct timeval ttv = { 0 };
     
+    boolean config_changed = FALSE;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
     boolean update_version_file = FALSE;
@@ -523,9 +524,12 @@ int main(int argc, char **argv) {
         counter++;
 
         // fetch all latest networking information from various sources
-        rc = eucanetd_fetch_latest_network(&update_globalnet);
+        rc = eucanetd_fetch_latest_network(&update_globalnet, &config_changed);
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsuccessful\n");
+        }
+        if (config_changed) {
+            pGniApplied = NULL;
         }
         // first time we run, force an update
         if (firstrun) {
@@ -826,12 +830,14 @@ static void eucanetd_install_signal_handlers(void) {
 /**
  * Check eucanetd config files for changes
  *
- * @return always 0.
+ * @return 0 if no changes have been detected. Positive integer if configuration
+ * parameters not requiring restart has changed.
  *
  * @note
  *     Currently only /etc/eucalyptus/eucalyptus.conf is checked
  */
 static int eucanetd_fetch_latest_local_config(void) {
+    int ret = 0;
     if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {
         // config modification time has changed
         if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
@@ -839,10 +845,22 @@ static int eucanetd_fetch_latest_local_config(void) {
             LOGINFO("configuration file has been modified, ingressing new options\n");
             eucanetd_initialize_logs();
 
-            // TODO  pick up other NC options dynamically
+            if (IS_NETMODE_VPCMIDO(config)) {
+                char *cval = configFileValue("MIDO_ENABLE_MIDOMD");
+                LOGINFO("cofig MIDO_ENABLE_MIDOMD = %s\n", cval);
+                if (!strcmp(cval, "Y")) {
+                    config->enable_mido_md = TRUE;
+                } else {
+                    config->enable_mido_md = FALSE;
+                }
+                EUCA_FREE(cval);
+            }
+            ret++;
+
+            // TODO  pick up other eucanetd options dynamically
         }
     }
-    return (0);
+    return (ret);
 }
 
 /**
@@ -1384,10 +1402,12 @@ static int eucanetd_initialize_logs(void)
  * Checks if the contents of the global network information has changed.
  *
  * @param update_globalnet [out] set to true if the network information changed
+ * @param config_changed [out] set to true if local configuration (not requiring
+ * restart) has changed
  *
  * @return 0 on success. 1 on failure.
  */
-static int eucanetd_fetch_latest_network(boolean *update_globalnet) {
+static int eucanetd_fetch_latest_network(boolean *update_globalnet, boolean *config_changed) {
     int rc = 0, ret = 0;
 
     LOGTRACE("fetching latest network view\n");
@@ -1399,9 +1419,14 @@ static int eucanetd_fetch_latest_network(boolean *update_globalnet) {
     // don't run any updates unless something new has happened
     *update_globalnet = FALSE;
 
+    if (config_changed) {
+        *config_changed = FALSE;
+    }
     rc = eucanetd_fetch_latest_local_config();
     if (rc) {
-        LOGWARN("Failed to effect local eucalyptus.conf\n");
+        if (config_changed) {
+            *config_changed = TRUE;
+        }
     }
     // get latest networking data from eucalyptus, set update flags if content has changed
     rc = eucanetd_fetch_latest_euca_network(update_globalnet);

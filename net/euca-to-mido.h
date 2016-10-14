@@ -396,6 +396,7 @@ int delete_mido_core(mido_config *mido, mido_core *midocore);
 int populate_mido_md(mido_config *mido);
 int create_mido_md(mido_config *mido);
 int delete_mido_md(mido_config *mido);
+int disable_mido_md(mido_config *mido);
 
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
