@@ -58,9 +58,9 @@
 #define VPCMIDO_MD_VETH_M  "eucamd_mido"
 #define VPCMIDO_MD_NETNS   "eucamd"
 
-// Internal Router IDs that conflict with 169.254.169.254 and 169.254.169.253
-#define RTID_169_254 10750
-#define RTID_169_253 10749
+// Internal Router IDs that conflict with 169.254.169.248 through 169.254.169.255
+#define RTID_169_255 10751
+#define RTID_169_248 10744
 
 #define MIDO_HOST_INTERFACE_PHYSICAL           0x00000001
 #define MIDO_HOST_INTERFACE_VIRTUAL            0x00000002

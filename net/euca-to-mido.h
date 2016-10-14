@@ -278,6 +278,19 @@ typedef struct mido_core_t {
     int max_gws;
 } mido_core;
 
+typedef struct mido_md_config_t {
+    u32 int_mdnw;
+    int int_mdsn;
+    u32 ext_mdnw;
+    int ext_mdsn;
+    u32 mdnw;
+    int mdsn;
+    u32 md_veth_host;
+    u32 md_veth_mido;
+    u32 md_http;
+    u32 md_dns;
+} mido_md_config;
+
 typedef struct mido_md_t {
     midoname *midos[MD_END];
     midonet_api_router *eucamdrt;
@@ -304,12 +317,7 @@ typedef struct mido_config_t {
     int int_rtsn;
     int disable_l2_isolation;
 
-    u32 int_mdnw;
-    int int_mdsn;
-    u32 ext_mdnw;
-    int ext_mdsn;
-    u32 mdnw;
-    int mdsn;
+    mido_md_config mdconfig;
 
     mido_core *midocore;
     mido_md *midomd;

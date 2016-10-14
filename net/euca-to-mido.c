@@ -2543,8 +2543,8 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
 int get_next_router_id(mido_config *mido, int *nextid) {
     int i;
     for (i = 2; i < mido->config->mido_max_rtid; i++) {
-        // Skip IDs that conflict with 169.254.41.254 and 169.254.41.253
-        if ((i == RTID_169_254) || (i == RTID_169_253)) {
+        // Skip IDs that conflict with 169.254.41.248 through 169.254.41.255
+        if ((i >= RTID_169_248) && (i <= RTID_169_255)) {
             continue;
         }
         if (!mido->rt_ids[i]) {
@@ -4143,7 +4143,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         vpcinstance->midos[INST_POSTCHAIN] = ic->obj;
     }
 
-    if (mido->config->enable_mido_md) {
+    if (privip && (mido->config->enable_mido_md)) {
         // MD SNAT rule
         midoname **chain_rules = NULL;
         int max_chain_rules = 0;
@@ -4163,7 +4163,8 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
             }
         }
         if (strlen(mdip)) {
-            vpcinstance->eniid = dot2hex(mdip) - mido->mdnw;
+            vpcinstance->eniid = dot2hex(mdip) - mido->mdconfig.mdnw;
+            set_eni_id(mido, vpcinstance->eniid);
         }
 
         // MD DNAT rule
@@ -4853,26 +4854,36 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
     mido->int_rtsn = atoi(sn);
     mido->int_rtaddr = mido->int_rtnw + 1;
 
+    u32 netmask = 0;
     // Subnet used in internal MD routing - 0.0.0.0/17
     cidr_split(eucanetd_config->mido_intmdcidr, nw, sn, NULL, NULL);
-    mido->int_mdnw = dot2hex(nw);
-    mido->int_mdsn = atoi(sn);
+    mido->mdconfig.int_mdsn = atoi(sn);
+    netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.int_mdsn);
+    mido->mdconfig.int_mdnw = dot2hex(nw) & netmask;
 
-    // Subnet used in external MD routing - 0.0.169.252/30
-    cidr_split(eucanetd_config->mido_extmdcidr, nw, sn, NULL, NULL);
-    mido->ext_mdnw = dot2hex(nw);
-    mido->ext_mdsn = atoi(sn);
-
-    // Subnet used for MD - 0.0.0.0/14
+    // Subnet used for MD - 232.0.0.0/8
     cidr_split(eucanetd_config->mido_mdcidr, nw, sn, NULL, NULL);
-    mido->mdnw = dot2hex(nw);
-    mido->mdsn = atoi(sn);
+    mido->mdconfig.mdsn = atoi(sn);
+    netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.mdsn);
+    mido->mdconfig.mdnw = dot2hex(nw) & netmask;
+
+    // Subnet used in external MD routing - 169.254.169.248/29
+    cidr_split(eucanetd_config->mido_extmdcidr, nw, sn, NULL, NULL);
+    mido->mdconfig.ext_mdsn = atoi(sn);
+    netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.ext_mdsn);
+    mido->mdconfig.ext_mdnw = dot2hex(nw) & netmask;
 
     if (eucanetd_config->validate_mido_config) {
         if (validate_mido(mido) != EUCA_OK) {
             return (1);
         }
     }
+
+    // Reserved IP addressses in external MD subnet
+    mido->mdconfig.md_veth_mido = mido->mdconfig.ext_mdnw + 1;
+    mido->mdconfig.md_veth_host = (mido->mdconfig.ext_mdnw | (~netmask)) - 1;
+    mido->mdconfig.md_http = mido->mdconfig.md_veth_host;
+    mido->mdconfig.md_dns = mido->mdconfig.md_veth_host - 1;
 
     mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
     mido->midomd = EUCA_ZALLOC_C(1, sizeof (mido_md));
@@ -4913,17 +4924,17 @@ int validate_mido(mido_config *mido) {
                 ret = EUCA_ERROR;
             }
             // Internal metadata Routing Subnet - 169.254.128.0/17
-            if ((mido->int_mdnw != 0xa9fe8000) || (mido->int_mdsn != 17)) {
+            if ((mido->mdconfig.int_mdnw != 0xa9fe8000) || (mido->mdconfig.int_mdsn != 17)) {
                 LOGERROR("Invalid MIDO_INTMD_CIDR - %s\n", mido->config->mido_intmdcidr);
                 ret = EUCA_ERROR;
             }
-            // External metadata Routing Subnet - 169.254.255.252/30
-            if ((mido->ext_mdnw != 0xa9fefffc) || (mido->ext_mdsn != 30)) {
+            // External metadata Routing Subnet - 169.254.169.248/29
+            if ((mido->mdconfig.ext_mdnw != 0xa9fea9f8) || (mido->mdconfig.ext_mdsn != 29)) {
                 LOGERROR("Invalid MIDO_EXTMD_CIDR - %s\n", mido->config->mido_extmdcidr);
                 ret = EUCA_ERROR;
             }
-            // metadata Subnet - 10.0.0.0/8
-            if ((mido->mdnw != 0x0a000000) || (mido->mdsn != 8)) {
+            // metadata Subnet - 255.0.0.0/8
+            if ((mido->mdconfig.mdnw != 0xff000000) || (mido->mdconfig.mdsn != 8)) {
                 LOGERROR("Invalid MIDO_MD_CIDR - %s\n", mido->config->mido_mdcidr);
                 ret = EUCA_ERROR;
             }
@@ -5708,7 +5719,7 @@ int populate_mido_md(mido_config *mido) {
             continue;
         }
         if (rtports[j]->port && rtports[j]->port->portaddr) {
-            if (dot2hex(rtports[j]->port->portaddr) == mido->ext_mdnw + 1) {
+            if (dot2hex(rtports[j]->port->portaddr) == mido->mdconfig.ext_mdnw + 1) {
                 LOGTRACE("Found md ext port.\n");
                 if (!rtports[j]->port->ifname) {
                     midomd->population_failed = 1;
@@ -5980,7 +5991,9 @@ int disconnect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_i
 int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance) {
     int rc = 0, ret = 0;
     char *ipAddr_priv = NULL, *ipAddr_md = NULL, *tmpstr = NULL;
-    char vpc_rtip[32];
+    char *ext_mdnw = NULL;
+    char ext_mdsn[NETWORK_ADDR_LEN];
+    char vpc_rtip[NETWORK_ADDR_LEN];
     mido_md *midomd = NULL;
     
     if (!mido || !vpc || !vpcsubnet || !vpcinstance) {
@@ -5995,12 +6008,15 @@ int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
 
     midomd = mido->midomd;
     
-    tmpstr = hex2dot(mido->int_mdnw + vpc->rtid);
-    snprintf(vpc_rtip, 32, "%s", tmpstr);
+    tmpstr = hex2dot(mido->mdconfig.int_mdnw + vpc->rtid);
+    snprintf(vpc_rtip, NETWORK_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
     ipAddr_priv = hex2dot(vpcinstance->gniInst->privateIp);
-    ipAddr_md = hex2dot(mido->mdnw + vpcinstance->eniid);
+    ipAddr_md = hex2dot(mido->mdconfig.mdnw + vpcinstance->eniid);
+    
+    ext_mdnw = hex2dot(mido->mdconfig.ext_mdnw);
+    snprintf(ext_mdsn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.ext_mdsn);
 
     // DNAT
     rc = mido_create_rule(vpc->rt_mduplink_infilter, NULL, &(vpcinstance->midos[INST_MD_DNAT]),
@@ -6015,8 +6031,8 @@ int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
 
     // SNAT
     rc = mido_create_rule(vpc->rt_mduplink_outfilter, NULL, &(vpcinstance->midos[INST_MD_SNAT]),
-            NULL, "type", "snat", "nwDstAddress", "169.254.255.254",
-            "nwDstLength", "32", "flowAction", "continue", "nwSrcAddress",
+            NULL, "type", "snat", "nwDstAddress", ext_mdnw,
+            "nwDstLength", ext_mdsn, "flowAction", "continue", "nwSrcAddress",
             ipAddr_priv, "nwSrcLength", "32", "natTargets", "jsonlist",
             "natTargets:addressTo", ipAddr_md, "natTargets:addressFrom", ipAddr_md,
             "natTargets:portFrom", "0", "natTargets:portTo", "0", "natTargets:END", "END", NULL);
@@ -6035,6 +6051,7 @@ int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
 
     EUCA_FREE(ipAddr_priv);
     EUCA_FREE(ipAddr_md);
+    EUCA_FREE(ext_mdnw);
     return (ret);
 }
 
@@ -6497,6 +6514,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     char name_buf[32];
     char nw[INET_ADDR_LEN], sn[INET_ADDR_LEN], ip[INET_ADDR_LEN], gw[INET_ADDR_LEN];
     char mdip[INET_ADDR_LEN], mdnw[INET_ADDR_LEN], mdsn[INET_ADDR_LEN], mdgw[INET_ADDR_LEN];
+    char mdhttp[INET_ADDR_LEN], mddns[INET_ADDR_LEN];
     char *tmpstr = NULL;
 
     tmpstr = hex2dot(mido->int_rtnw);
@@ -6601,18 +6619,26 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     }
 
     if (mido->config->enable_mido_md) {
-        tmpstr = hex2dot(mido->int_mdnw);
+        tmpstr = hex2dot(mido->mdconfig.int_mdnw);
         snprintf(mdnw, INET_ADDR_LEN, "%s", tmpstr);
         EUCA_FREE(tmpstr);
 
-        snprintf(mdsn, INET_ADDR_LEN, "%d", mido->int_mdsn);
+        snprintf(mdsn, INET_ADDR_LEN, "%d", mido->mdconfig.int_mdsn);
 
-        tmpstr = hex2dot(mido->int_mdnw + vpc->rtid);
+        tmpstr = hex2dot(mido->mdconfig.int_mdnw + vpc->rtid);
         snprintf(mdip, INET_ADDR_LEN, "%s", tmpstr);
         EUCA_FREE(tmpstr);
 
-        tmpstr = hex2dot(mido->int_mdnw + 1);
+        tmpstr = hex2dot(mido->mdconfig.int_mdnw + 1);
         snprintf(mdgw, INET_ADDR_LEN, "%s", tmpstr);
+        EUCA_FREE(tmpstr);
+
+        tmpstr = hex2dot(mido->mdconfig.md_http);
+        snprintf(mdhttp, INET_ADDR_LEN, "%s", tmpstr);
+        EUCA_FREE(tmpstr);
+
+        tmpstr = hex2dot(mido->mdconfig.md_dns);
+        snprintf(mddns, INET_ADDR_LEN, "%s", tmpstr);
         EUCA_FREE(tmpstr);
 
         mido_md *midomd = mido->midomd;
@@ -6638,11 +6664,17 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
             return (1);
         }
 
-        // Route 169.254.255.254 through uplink
+        // Route md_http and md_dns through uplink
         rc = mido_create_route(vpc->vpcrt, vpc->midos[VPC_VPCRT], vpc->midos[VPC_VPCRT_MDUPLINK],
-                "0.0.0.0", "0", "169.254.255.254", "32", mdgw, "0", NULL);
+                "0.0.0.0", "0", mdhttp, "32", mdgw, "0", NULL);
         if (rc) {
-            LOGERROR("cannot create route to 169.254.169.253: check midonet health\n");
+            LOGERROR("cannot create route to md_http: check midonet health\n");
+            return (1);
+        }
+        rc = mido_create_route(vpc->vpcrt, vpc->midos[VPC_VPCRT], vpc->midos[VPC_VPCRT_MDUPLINK],
+                "0.0.0.0", "0", mddns, "32", mdgw, "0", NULL);
+        if (rc) {
+            LOGERROR("cannot create route to md_dns: check midonet health\n");
             return (1);
         }
 
@@ -6975,8 +7007,9 @@ int create_mido_md(mido_config *mido) {
     int rc = 0;
     char nw[NETWORK_ADDR_LEN];
     char sn[NETWORK_ADDR_LEN];
-    char gw[NETWORK_ADDR_LEN];
-    char pt[NETWORK_ADDR_LEN];
+    char ip1[NETWORK_ADDR_LEN];
+    char ip2[NETWORK_ADDR_LEN];
+    char ip3[NETWORK_ADDR_LEN];
     char *strptr = NULL;
 
     if (!mido || !mido->midomd) {
@@ -6997,17 +7030,17 @@ int create_mido_md(mido_config *mido) {
         ret++;
     }
 
-    strptr = hex2dot(mido->int_mdnw);
+    strptr = hex2dot(mido->mdconfig.int_mdnw);
     snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    strptr = hex2dot(mido->int_mdnw + 1);
-    snprintf(gw, NETWORK_ADDR_LEN, "%s", strptr);
+    strptr = hex2dot(mido->mdconfig.int_mdnw + 1);
+    snprintf(ip1, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->int_mdsn);
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.int_mdsn);
 
-    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], gw, nw, sn,
+    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], ip1, nw, sn,
             NULL, &(midomd->midos[MD_RT_BRPORT]));
     if (rc) {
         LOGERROR("cannot create eucamdrt port: check midonet health\n");
@@ -7048,21 +7081,25 @@ int create_mido_md(mido_config *mido) {
     snprintf(cmd, EUCA_MAX_PATH, "ip link add %s type veth peer name %s", VPCMIDO_MD_VETH_M, VPCMIDO_MD_VETH_H);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    strptr = hex2dot(mido->ext_mdnw);
+    strptr = hex2dot(mido->mdconfig.ext_mdnw);
     snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    strptr = hex2dot(mido->ext_mdnw + 1);
-    snprintf(gw, NETWORK_ADDR_LEN, "%s", strptr);
+    strptr = hex2dot(mido->mdconfig.md_veth_mido);
+    snprintf(ip1, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    strptr = hex2dot(mido->ext_mdnw + 2);
-    snprintf(pt, NETWORK_ADDR_LEN, "%s", strptr);
+    strptr = hex2dot(mido->mdconfig.md_veth_host);
+    snprintf(ip2, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->ext_mdsn);
+    strptr = hex2dot(mido->mdconfig.md_dns);
+    snprintf(ip3, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
 
-    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], gw, nw, sn,
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.ext_mdsn);
+
+    rc = mido_create_router_port(midomd->eucamdrt, midomd->midos[MD_RT], ip1, nw, sn,
             NULL, &(midomd->midos[MD_RT_EXTPORT]));
     if (rc) {
         LOGERROR("cannot create eucamdrt port: check midonet health\n");
@@ -7081,7 +7118,10 @@ int create_mido_md(mido_config *mido) {
     snprintf(cmd, EUCA_MAX_PATH, "ip link set %s netns %s", VPCMIDO_MD_VETH_H, VPCMIDO_MD_NETNS);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev %s", VPCMIDO_MD_NETNS, pt, sn, VPCMIDO_MD_VETH_H);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev %s", VPCMIDO_MD_NETNS, ip2, sn, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/32 dev %s", VPCMIDO_MD_NETNS, ip3, VPCMIDO_MD_VETH_H);
     se_add(&cmds, cmd, NULL, ignore_exit2);
 
     snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set %s up", VPCMIDO_MD_NETNS, VPCMIDO_MD_VETH_H);
@@ -7090,13 +7130,13 @@ int create_mido_md(mido_config *mido) {
     snprintf(cmd, EUCA_MAX_PATH, "ip link set %s up", VPCMIDO_MD_VETH_M);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    strptr = hex2dot(mido->mdnw);
+    strptr = hex2dot(mido->mdconfig.mdnw);
     snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
-    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdsn);
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.mdsn);
 
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip route add %s/%s via %s", VPCMIDO_MD_NETNS, nw, sn, gw);
+    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip route add %s/%s via %s", VPCMIDO_MD_NETNS, nw, sn, ip1);
     rc = se_add(&cmds, cmd, NULL, ignore_exit2);
 
     se_print(&cmds);

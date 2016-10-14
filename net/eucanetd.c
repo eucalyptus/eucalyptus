@@ -151,9 +151,9 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_INTMD_CIDR", "169.254.128.0/17"}
     ,
-    {"MIDO_EXTMD_CIDR", "169.254.255.252/30"}
+    {"MIDO_EXTMD_CIDR", "169.254.169.248/29"}
     ,
-    {"MIDO_MD_CIDR", "10.0.0.0/8"}
+    {"MIDO_MD_CIDR", "255.0.0.0/8"}
     ,
     {"MIDO_MAX_RTID", "10240"}
     ,
