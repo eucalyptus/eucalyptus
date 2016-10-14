@@ -27,11 +27,11 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.lang.reflect.Field
 
-public class SimpleQueueMessageWithQueueUrl extends SimpleQueueMessage {
-  String queueUrl;
-  public SimpleQueueMessageWithQueueUrl() {  }
-}
+public interface QueueUrlGetterSetter {
+  public void setQueueUrl(String queueUrl);
+  public String getQueueUrl();
 
+}
 public class CreateQueueType extends SimpleQueueMessage {
   String queueName;
   public CreateQueueType() {  }
@@ -51,7 +51,8 @@ public class SendMessageBatchResultEntry extends EucalyptusData {
   String mD5OfMessageAttributes;
   public SendMessageBatchResultEntry() {  }
 }
-public class RemovePermissionType extends SimpleQueueMessageWithQueueUrl {
+public class RemovePermissionType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String label;
   public RemovePermissionType() {  }
 }
@@ -63,7 +64,8 @@ public class ListDeadLetterSourceQueuesResult extends EucalyptusData {
   public ListDeadLetterSourceQueuesResult() {  }
   ArrayList<String> queueUrl = new ArrayList<String>();
 }
-public class ChangeMessageVisibilityType extends SimpleQueueMessageWithQueueUrl {
+public class ChangeMessageVisibilityType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String receiptHandle;
   Integer visibilityTimeout;
   public ChangeMessageVisibilityType() {  }
@@ -82,7 +84,8 @@ public class SendMessageBatchResponseType extends SimpleQueueMessage {
   SendMessageBatchResult sendMessageBatchResult = new SendMessageBatchResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class SetQueueAttributesType extends SimpleQueueMessageWithQueueUrl {
+public class SetQueueAttributesType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public SetQueueAttributesType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<Attribute> attribute = new ArrayList<Attribute>();
@@ -108,7 +111,8 @@ public class ChangeMessageVisibilityBatchRequestEntry extends EucalyptusData {
   Integer visibilityTimeout;
   public ChangeMessageVisibilityBatchRequestEntry() {  }
 }
-public class SendMessageType extends SimpleQueueMessageWithQueueUrl {
+public class SendMessageType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String messageBody;
   Integer delaySeconds;
   public SendMessageType() {  }
@@ -122,7 +126,8 @@ public class DeleteMessageBatchResult extends EucalyptusData {
   ArrayList<DeleteMessageBatchResultEntry> deleteMessageBatchResultEntry = new ArrayList<DeleteMessageBatchResultEntry>();
   ArrayList<BatchResultErrorEntry> batchResultErrorEntry = new ArrayList<BatchResultErrorEntry>();
 }
-public class AddPermissionType extends SimpleQueueMessageWithQueueUrl {
+public class AddPermissionType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String label;
   public AddPermissionType() {  }
   @HttpParameterMapping(parameter="AWSAccountId")
@@ -149,7 +154,8 @@ public class ChangeMessageVisibilityBatchResultEntry extends EucalyptusData {
   public ChangeMessageVisibilityBatchResultEntry() {  }
 }
 @PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_CHANGEMESSAGEVISIBILITY)
-public class ChangeMessageVisibilityBatchType extends SimpleQueueMessageWithQueueUrl {
+public class ChangeMessageVisibilityBatchType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public ChangeMessageVisibilityBatchType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<ChangeMessageVisibilityBatchRequestEntry> changeMessageVisibilityBatchRequestEntry = new ArrayList<ChangeMessageVisibilityBatchRequestEntry>();
@@ -158,7 +164,8 @@ public class GetQueueAttributesResult extends EucalyptusData {
   public GetQueueAttributesResult() {  }
   ArrayList<Attribute> attribute = new ArrayList<Attribute>();
 }
-public class ListDeadLetterSourceQueuesType extends SimpleQueueMessageWithQueueUrl {
+public class ListDeadLetterSourceQueuesType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public ListDeadLetterSourceQueuesType() {  }
 }
 public class SendMessageBatchRequestEntry extends EucalyptusData {
@@ -174,7 +181,8 @@ public class DeleteMessageBatchResponseType extends SimpleQueueMessage {
   DeleteMessageBatchResult deleteMessageBatchResult = new DeleteMessageBatchResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class GetQueueAttributesType extends SimpleQueueMessageWithQueueUrl {
+public class GetQueueAttributesType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String unused;
   public GetQueueAttributesType() {  }
   ArrayList<String> attributeName = new ArrayList<String>();
@@ -184,12 +192,14 @@ public class MessageAttribute extends EucalyptusData {
   MessageAttributeValue value;
   public MessageAttribute() {  }
 }
-public class DeleteQueueType extends SimpleQueueMessageWithQueueUrl {
+public class DeleteQueueType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public DeleteQueueType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<Attribute> attribute = new ArrayList<Attribute>();
 }
-public class PurgeQueueType extends SimpleQueueMessageWithQueueUrl {
+public class PurgeQueueType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public PurgeQueueType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<Attribute> attribute = new ArrayList<Attribute>();
@@ -282,7 +292,8 @@ public class SendMessageResponseType extends SimpleQueueMessage {
   SendMessageResult sendMessageResult = new SendMessageResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class DeleteMessageType extends SimpleQueueMessageWithQueueUrl {
+public class DeleteMessageType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   String receiptHandle;
   public DeleteMessageType() {  }
   @HttpEmbedded(multiple=true)
@@ -301,7 +312,8 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 @PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_SENDMESSAGE)
-public class SendMessageBatchType extends SimpleQueueMessageWithQueueUrl {
+public class SendMessageBatchType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public SendMessageBatchType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<SendMessageBatchRequestEntry> sendMessageBatchRequestEntry = new ArrayList<SendMessageBatchRequestEntry>();
@@ -311,12 +323,14 @@ public class ResponseMetadata extends EucalyptusData {
   public ResponseMetadata() {  }
 }
 @PolicyAction(vendor=SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, action=SimpleQueuePolicySpec.SIMPLEQUEUE_DELETEMESSAGE)
-public class DeleteMessageBatchType extends SimpleQueueMessageWithQueueUrl {
+public class DeleteMessageBatchType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   public DeleteMessageBatchType() {  }
   @HttpEmbedded(multiple=true)
   ArrayList<DeleteMessageBatchRequestEntry> deleteMessageBatchRequestEntry = new ArrayList<DeleteMessageBatchRequestEntry>();
 }
-public class ReceiveMessageType extends SimpleQueueMessageWithQueueUrl {
+public class ReceiveMessageType extends SimpleQueueMessage implements QueueUrlGetterSetter {
+  String queueUrl;
   Integer maxNumberOfMessages;
   Integer visibilityTimeout;
   Integer waitTimeSeconds;

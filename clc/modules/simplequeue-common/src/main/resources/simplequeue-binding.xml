@@ -52,6 +52,7 @@
   </mapping>
   <mapping name="ChangeMessageVisibility" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <value name="VisibilityTimeout" field="visibilityTimeout" usage="required"/>
     <collection field="attribute">
@@ -64,6 +65,7 @@
   </mapping>
   <mapping name="DeleteMessage" class="com.eucalyptus.simplequeue.DeleteMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <collection field="attribute">
       <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
@@ -75,6 +77,7 @@
   </mapping>
   <mapping name="DeleteQueue" class="com.eucalyptus.simplequeue.DeleteQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
       <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
     </collection>
@@ -85,6 +88,7 @@
   </mapping>
   <mapping name="PurgeQueue" class="com.eucalyptus.simplequeue.PurgeQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
       <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
     </collection>
@@ -95,6 +99,7 @@
   </mapping>
   <mapping name="GetQueueAttributes" class="com.eucalyptus.simplequeue.GetQueueAttributesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attributeName">
       <value name="AttributeName" type="java.lang.String"/>
     </collection>
@@ -107,6 +112,7 @@
   </mapping>
   <mapping name="ReceiveMessage" class="com.eucalyptus.simplequeue.ReceiveMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="MaxNumberOfMessages" field="maxNumberOfMessages" usage="optional"/>
     <value name="VisibilityTimeout" field="visibilityTimeout" usage="optional"/>
     <value name="WaitTimeSeconds" field="waitTimeSeconds" usage="optional"/>
@@ -125,6 +131,7 @@
   </mapping>
   <mapping name="SendMessage" class="com.eucalyptus.simplequeue.SendMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="MessageBody" field="messageBody" usage="required"/>
     <value name="DelaySeconds" field="delaySeconds" usage="optional"/>
     <collection field="attribute">
@@ -141,6 +148,7 @@
   </mapping>
   <mapping name="SetQueueAttributes" class="com.eucalyptus.simplequeue.SetQueueAttributesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
       <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
     </collection>
@@ -162,6 +170,7 @@
   </mapping>
   <mapping name="ChangeMessageVisibilityBatch" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="changeMessageVisibilityBatchRequestEntry">
       <structure name="ChangeMessageVisibilityBatchRequestEntry" type="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchRequestEntry"/>
     </collection>
@@ -188,6 +197,7 @@
   </mapping>
   <mapping name="DeleteMessageBatch" class="com.eucalyptus.simplequeue.DeleteMessageBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="deleteMessageBatchRequestEntry">
       <structure name="DeleteMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.DeleteMessageBatchRequestEntry"/>
     </collection>
@@ -218,6 +228,7 @@
   </mapping>
   <mapping name="SendMessageBatch" class="com.eucalyptus.simplequeue.SendMessageBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="sendMessageBatchRequestEntry">
       <structure name="SendMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.SendMessageBatchRequestEntry"/>
     </collection>
@@ -243,6 +254,7 @@
   </mapping>
   <mapping name="AddPermission" class="com.eucalyptus.simplequeue.AddPermissionType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="Label" field="label" usage="required"/>
     <collection field="awsAccountId">
       <value name="AWSAccountId" type="java.lang.String"/>
@@ -257,6 +269,7 @@
   </mapping>
   <mapping name="RemovePermission" class="com.eucalyptus.simplequeue.RemovePermissionType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="Label" field="label" usage="required"/>
   </mapping>
   <mapping name="RemovePermissionResponse" class="com.eucalyptus.simplequeue.RemovePermissionResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
@@ -264,6 +277,7 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
   </mapping>
   <mapping name="ListDeadLetterSourceQueues" class="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
+    <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
   </mapping>
   <mapping name="ListDeadLetterSourceQueuesResponse" class="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">

@@ -17,7 +17,7 @@ package com.eucalyptus.simplequeue.ws;
 
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.simplequeue.SimpleQueueMessageWithQueueUrl;
+import com.eucalyptus.simplequeue.QueueUrlGetterSetter;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -40,7 +40,7 @@ public class SimpleQueueQueueUrlQueryBinding extends SimpleQueueQueryBinding {
   public Object bind(MappingHttpRequest httpRequest) throws BindingException {
     Object result = super.bind(httpRequest);
 
-    if (result instanceof SimpleQueueMessageWithQueueUrl) {
+    if (result instanceof QueueUrlGetterSetter && ((QueueUrlGetterSetter) result).getQueueUrl() == null) {
       String scheme = null;
       String userInfo = null;
       String host = null;
@@ -70,7 +70,7 @@ public class SimpleQueueQueueUrlQueryBinding extends SimpleQueueQueryBinding {
       }
       path = httpRequest.getServicePath();
       try {
-        ((SimpleQueueMessageWithQueueUrl) result).setQueueUrl(new URI(scheme, userInfo, host, port, path, query, fragment).toString());
+        ((QueueUrlGetterSetter) result).setQueueUrl(new URI(scheme, userInfo, host, port, path, query, fragment).toString());
       } catch (URISyntaxException e) {
         throw new BindingException("Unable to bind queueUrl, values would be: scheme="+scheme+",userInfo="+userInfo+",host="+host+",port="+port+",path="+path+",query="+query+",fragment="+fragment);
       }
