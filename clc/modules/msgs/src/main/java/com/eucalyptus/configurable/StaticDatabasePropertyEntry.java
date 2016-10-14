@@ -85,8 +85,11 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import javaslang.Tuple;
+import javaslang.Tuple3;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
@@ -100,8 +103,8 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   private String       value;
   @Column( name = "config_static_prop_name", nullable = false, unique = true )
   private String       propName;
-  
-  
+
+
   private StaticDatabasePropertyEntry( ) {
     super( );
     this.fieldName = null;
@@ -113,7 +116,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     this.fieldName = fieldName;
     this.value = value;
   }
-  
+
   public static StaticDatabasePropertyEntry update(
       final String fieldName,
       final String propName,
@@ -134,9 +137,9 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       db.close( );
     }
   }
-  
+
   static StaticDatabasePropertyEntry lookup( String fieldName, String propName, String defaultFieldValue ) throws Exception {
-    
+
     EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
     try {
       StaticDatabasePropertyEntry entity = Entities.uniqueResult( new StaticDatabasePropertyEntry( fieldName, propName, null ) );
@@ -148,7 +151,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         db.commit( );
         return entity;
       } catch ( Exception ex1 ) {
-        Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName ); 
+        Logs.extreme( ).error( "Failed to lookup static configuration property for: " + fieldName + " with property name: " + propName );
         db.rollback( );
         throw ex;
       }
@@ -158,7 +161,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   private void setValue( String value ) {
     this.value = value;
   }
-  
+
   private String getFieldName( ) {
     return this.fieldName;
   }
@@ -174,7 +177,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   public String getPropName( ) {
     return this.propName;
   }
-  
+
   private void setPropName( String propName ) {
     this.propName = propName;
   }
@@ -210,7 +213,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
     return true;
   }
-  
+
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade implements Predicate<Class> {
     INSTANCE;
@@ -229,7 +232,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
 
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_3_0, value = Empyrean.class )
@@ -245,7 +248,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       try {
         List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
         for ( StaticDatabasePropertyEntry entry : entities ) {
-          if (REPORTING_DEFAULT_POLL_INTERVAL_MINS_FIELD_NAME.equals(entry.getFieldName()) && 
+          if (REPORTING_DEFAULT_POLL_INTERVAL_MINS_FIELD_NAME.equals(entry.getFieldName()) &&
               REPORTING_DEFAULT_POLL_INTERVAL_MINS.equals(entry.getPropName())) {
             entry.setPropName(CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS);
             LOG.debug( "Upgrading: Changing property '"+REPORTING_DEFAULT_POLL_INTERVAL_MINS+"' to '"+CLOUD_MONITOR_DEFAULT_POLL_INTERVAL_MINS+"'");
@@ -257,7 +260,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
 
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_4_0, value = Empyrean.class )
@@ -715,9 +718,31 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void updateMovedProperties( final Iterable<Tuple3<String,String,String>> movedProperties ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> movedProperty : movedProperties ) {
+          final String propName = movedProperty._1( );
+          final String oldFieldName = movedProperty._2( );
+          final String newFieldName = movedProperty._3( );
+          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
+              .uniqueResultOption( ).transform( property -> {
+            if ( oldFieldName.equals( property.getFieldName( ) ) ) {
+              LOG.info( "Updating field for "+propName+" property" );
+              property.setFieldName( newFieldName );
+            }
+            return property;
+          } );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
     @Override
-    public boolean apply( Class arg0 ) {
-      deleteRemovedProperties( Lists.newArrayList(
+    public boolean apply( final Class arg0 ) {
+      deleteRemovedProperties( ImmutableList.of(
           "bootstrap.servicebus.max_outstanding_messages",
           "bootstrap.servicebus.min_scheduler_core_size",
           "bootstrap.servicebus.workers_per_stage",
@@ -726,6 +751,12 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "cloud.network.global_min_network_index",
           "cloud.network.global_max_network_index",
           "cloud.network.network_tag_pending_timeout"
+      ) );
+
+      updateMovedProperties( ImmutableList.of(
+          Tuple.of( "dns.recursive.enabled",
+              "com.eucalyptus.dns.resolvers.RecursiveDnsResolver.enabled",
+              "com.eucalyptus.vm.dns.RecursiveDnsResolver.enabled" )
       ) );
 
       return true;

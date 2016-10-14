@@ -37,6 +37,7 @@ public class Pair<L,R> {
   private final R right;
 
   /**
+   * @see #of(Object, Object)
    * @see #pair(Object, Object)
    * @see #opair(Object, Object)
    * @see #lopair(Object, Object)
@@ -67,6 +68,19 @@ public class Pair<L,R> {
         };
       }
     };
+  }
+
+  /**
+   * Convenience constructor
+   *
+   * @param left The left value
+   * @param right The right value
+   * @param <L> The left type
+   * @param <R> The right type
+   * @return The new pair
+   */
+  public static <L,R> Pair<L,R> of( @Nonnull final L left, @Nonnull final R right ) {
+    return new Pair<>( left, right );
   }
 
   /**
