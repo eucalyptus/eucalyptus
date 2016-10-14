@@ -2032,9 +2032,9 @@ int edge_dump_netmeter(edge_config *edge) {
     } else {
         eucahome = strdup("");
     }
-    snprintf(sensorfname, EUCA_MAX_PATH, "/tmp/eucanetd_getstats_net.out");
-    snprintf(nmfname, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/edge_netmeter", eucahome);
-    snprintf(dfname, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/edge_netmeter_done", eucahome);
+    snprintf(sensorfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_TMP);
+    snprintf(nmfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_NEW, eucahome);
+    snprintf(dfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_DONE, eucahome);
     EUCA_FREE(eucahome);
 
     long int timestamp = eucanetd_get_timestamp();

@@ -172,7 +172,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
     rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
     dorun = 0;
-    snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_localproxy.pid", mido->eucahome);
+    snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_localproxy.pid", mido->eucahome);
     if (!check_file(pidfile)) {
         pidstr = file2str(pidfile);
         if (pidstr) {
@@ -204,7 +204,9 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
         if (mode == 0) {
             LOGTRACE("core proxy not running, starting new core proxy\n");
             snprintf(cmd, EUCA_MAX_PATH,
-                    "nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_localproxy.pid; env NEXTHOP=127.0.0.1; env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                    "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_proxy.conf -g 'pid "
+                    EUCALYPTUS_RUN_DIR "/nginx_localproxy.pid; env NEXTHOP=127.0.0.1; "
+                    "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
                     mido->eucahome, mido->eucahome, mido->eucahome);
         } else if (mode == 1) {
             LOGTRACE("core proxy running, terminating core proxy\n");
@@ -218,7 +220,8 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
     for (i = 0; i < mido->max_vpcs; i++) {
         if (strlen(mido->vpcs[i].name)) {
             dorun = 0;
-            snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/nginx_vpcproxy_%s.pid", mido->eucahome, mido->vpcs[i].name);
+            snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_vpcproxy_%s.pid",
+                    mido->eucahome, mido->vpcs[i].name);
             if (!check_file(pidfile)) {
                 pidstr = file2str(pidfile);
                 if (pidstr) {
@@ -250,7 +253,9 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
                 if (mode == 0) {
                     LOGTRACE("VPC (%s) proxy not running, starting new proxy\n", mido->vpcs[i].name);
                     snprintf(cmd, EUCA_MAX_PATH,
-                            "nsenter --net=/var/run/netns/%s nginx -p . -c %s/usr/share/eucalyptus/nginx_proxy.conf -g 'pid %s/var/run/eucalyptus/nginx_vpcproxy_%s.pid; env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=8009; env EUCAHOME=%s;'",
+                            "nsenter --net=/var/run/netns/%s nginx -p . -c " EUCALYPTUS_DATA_DIR
+                            "/nginx_proxy.conf -g 'pid " EUCALYPTUS_RUN_DIR "/nginx_vpcproxy_%s.pid; "
+                            "env VPCID=%s; env NEXTHOP=169.254.0.1; env NEXTHOPPORT=8009; env EUCAHOME=%s;'",
                             mido->vpcs[i].name, mido->eucahome, mido->eucahome, mido->vpcs[i].name, mido->vpcs[i].name, mido->eucahome);
                 } else if (mode == 1) {
                     LOGTRACE("VPC (%s) proxy running, terminating VPC proxy\n", mido->vpcs[i].name);
@@ -876,6 +881,9 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     int vpcinstanceidx = 0;
     char *privIp = NULL, mapfile[EUCA_MAX_PATH];
     FILE *PFH = NULL;
+    char intipmapfile_tmp[EUCA_MAX_PATH];
+    char intipmapfile[EUCA_MAX_PATH];
+    FILE *INTIPMAPFH = NULL;
 
     mido_vpc *vpc = NULL;
     mido_vpc_secgroup *vpcsecgroup = NULL;
@@ -898,12 +906,24 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     gni_secgroup *appliedsecgroup = NULL;
 
     // pass1: ensure that the meta-data map is populated right away
-    snprintf(mapfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd_vpc_instance_ip_map", mido->eucahome);
+    snprintf(mapfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_vpc_instance_ip_map", mido->eucahome);
     unlink(mapfile);
     PFH = fopen(mapfile, "w");
     if (!PFH) {
         LOGERROR("cannot open VPC map file %s: check permissions and disk capacity\n", mapfile);
         ret = 1;
+    }
+
+    if (mido->config->enable_mido_md) {
+        snprintf(intipmapfile_tmp, EUCA_MAX_PATH, INTIP_ENI_MAP_FILE_TMP, mido->eucahome);
+        snprintf(intipmapfile, EUCA_MAX_PATH, INTIP_ENI_MAP_FILE, mido->eucahome);
+        unlink(INTIP_ENI_MAP_FILE_TMP);
+        INTIPMAPFH = fopen(intipmapfile_tmp, "w");
+        if (!INTIPMAPFH) {
+            LOGERROR("unable to open %s: check permissions and disk capacity\n", intipmapfile_tmp);
+            LOGINFO("Eucalyptus metadata service will not work properly.\n");
+            ret = 1;
+        }
     }
 
     // pass1 - tag everything that is both in GNI and in MIDO
@@ -1015,6 +1035,12 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                     vpcinstance->gniInst = gniinstance;
                     vpcinstance->gnipresent = 1;
                     gniinstance->mido_present = vpcinstance;
+                    if (INTIPMAPFH && vpcinstance->eniid) {
+                        char *internalIp = hex2dot(mido->mdconfig.mdnw + vpcinstance->eniid);
+                        fprintf(INTIPMAPFH, "%s %s %s %s\n", SP(internalIp), SP(vpcinstance->name),
+                                SP(vpcinstance->gniInst->vpc), SP(vpcinstance->gniInst->subnet));
+                        EUCA_FREE(internalIp);
+                    }
                 }
             }
         }
@@ -1067,6 +1093,13 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     }
 
     if (PFH) fclose(PFH);
+    if (INTIPMAPFH) {
+        fclose(INTIPMAPFH);
+        // move temporary map file to EUCALYPUTS_RUN_DIR
+        if (rename(intipmapfile_tmp, intipmapfile)) {
+            LOGWARN("Failed to move %s\n", intipmapfile_tmp);
+        }
+    }
 
     // pass1: do security groups
     if ((gni->max_secgroups > 0) && (ret == 0)) {
@@ -1782,6 +1815,19 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
 
     struct timeval tv;
 
+    // Open Internal_IP-to-ENI_ID map file
+    char intipmapfile[EUCA_MAX_PATH];
+    FILE *INTIPMAPFH = NULL;
+    if (mido->config->enable_mido_md) {
+        snprintf(intipmapfile, EUCA_MAX_PATH, INTIP_ENI_MAP_FILE, mido->eucahome);
+        INTIPMAPFH = fopen(intipmapfile, "a");
+        if (!INTIPMAPFH) {
+            LOGERROR("unable to open %s: check permissions and disk capacity\n", intipmapfile);
+            LOGINFO("Eucalyptus metadata service will not work properly.\n");
+            ret++;
+        }
+    }
+
     // Process instances/interfaces
     for (i = 0; i < gni->max_ifs; i++) {
         eucanetd_timer_usec(&tv);
@@ -1916,6 +1962,11 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
                     if (rc) {
                         LOGERROR("failed to setup md IP for %s\n", gniif->name);
                         ret++;
+                    } else {
+                        char *internalIp = hex2dot(mido->mdconfig.mdnw + vpcif->eniid);
+                        fprintf(INTIPMAPFH, "%s %s %s %s new\n", SP(internalIp), SP(vpcif->name),
+                                SP(vpcif->gniInst->vpc), SP(vpcif->gniInst->subnet));
+                        EUCA_FREE(internalIp);
                     }
                 }
             }
@@ -2362,6 +2413,10 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         }
 
         LOGDEBUG("\t%s implemented in %.2f ms\n", vpcif->name, eucanetd_timer_usec(&tv) / 1000.0);
+    }
+    
+    if (INTIPMAPFH) {
+        fclose(INTIPMAPFH);
     }
     
     return (ret);
@@ -4815,6 +4870,11 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
     mido->eni_ids = EUCA_ZALLOC_C(mido->config->mido_max_eniid, sizeof (boolean));
 
     mido->eucahome = strdup(eucanetd_config->eucahome);
+    if (strlen(mido->eucahome)) {
+        if (mido->eucahome[strlen(mido->eucahome) - 1] == '/') {
+            mido->eucahome[strlen(mido->eucahome) - 1] = '\0';
+        }
+    }
 
     mido->disable_l2_isolation = eucanetd_config->disable_l2_isolation;
 

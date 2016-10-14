@@ -895,7 +895,7 @@ static int eucanetd_daemonize(void) {
 
     pid = getpid();
     if (pid > 1) {
-        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd.pid", config->eucahome);
         FH = fopen(pidfile, "w");
         if (FH) {
             fprintf(FH, "%d\n", pid);
@@ -1019,6 +1019,11 @@ static int eucanetd_read_config_bootstrap(void) {
     }
 
     config->eucahome = strdup(home);
+    if (strlen(config->eucahome)) {
+        if (config->eucahome[strlen(config->eucahome) - 1] == '/') {
+            config->eucahome[strlen(config->eucahome) - 1] = '\0';
+        }
+    }
     config->eucauser = strdup(user);
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
