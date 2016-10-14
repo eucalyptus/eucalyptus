@@ -255,6 +255,7 @@ public class ImageDetails extends EucalyptusData {
   String description;
   String virtualizationType;
   String hypervisor;
+  Date creationDate;
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
