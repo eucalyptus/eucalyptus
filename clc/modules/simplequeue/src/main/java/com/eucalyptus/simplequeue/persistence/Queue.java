@@ -30,7 +30,10 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.simplequeue.Constants;
+import com.eucalyptus.simplequeue.SimpleQueueMetadata;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -44,7 +47,7 @@ import java.util.Map;
 /**
  * Created by ethomas on 9/7/16.
  */
-public class Queue {
+public class Queue implements SimpleQueueMetadata.QueueMetadata {
   private String accountId;
   private String queueName;
   private Map<String, String> attributes = Maps.newTreeMap();
@@ -129,5 +132,14 @@ public class Queue {
 
   public void setAttributes(Map<String, String> attributes) {
     this.attributes = attributes;
+  }
+
+  @Override
+  public String getDisplayName() {
+    return queueName;
+  }
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance(accountId);
   }
 }

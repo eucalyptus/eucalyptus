@@ -30,7 +30,10 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence.postgresql;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.simplequeue.SimpleQueueMetadata;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
@@ -86,4 +89,5 @@ public class QueueEntity extends AbstractPersistent {
   public void setQueueName(String queueName) {
     this.queueName = queueName;
   }
+
 }
