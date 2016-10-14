@@ -142,7 +142,6 @@ public class ServiceOperations {
         final Context ctx = Contexts.lookup( request.getCorrelationId( ) );
         final Function<I, O> op = ( Function<I, O> ) serviceOperations.get( request.getClass( ) );
         Timers.loggingWrapper( new Callable( ) {
-
           @Override
           public Object call( ) throws Exception {
             if ( StackConfiguration.ASYNC_INTERNAL_OPERATIONS ) {
@@ -162,7 +161,7 @@ public class ServiceOperations {
 
           @Override
           public String toString( ) {
-            return super.toString( );
+            return "Service operation " + op.getClass( ).getSimpleName( );
           }
 
         } ).call( );
@@ -186,5 +185,5 @@ public class ServiceOperations {
       Contexts.removeThreadLocal( );
     }
   }
-  
+
 }

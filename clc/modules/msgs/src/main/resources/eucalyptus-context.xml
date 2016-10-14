@@ -47,15 +47,25 @@
 
     <int:channel id="dispatch-queue"/>
 
-    <int:channel id="request-queue"/>
+    <int:channel id="request-queue">
+        <int:interceptors>
+            <int:wire-tap channel="logging-queue" selector="contextWireTapMessageSelector"/>
+        </int:interceptors>
+    </int:channel>
 
-    <int:channel id="response-queue"/>
+    <int:channel id="response-queue">
+        <int:interceptors>
+            <int:wire-tap channel="logging-queue" selector="contextWireTapMessageSelector"/>
+        </int:interceptors>
+    </int:channel>
 
     <int:router input-channel="error-queue" expression="payload.failedMessage.headers.errorChannel" default-output-channel="error-reply-queue"/>
 
     <int:service-activator input-channel="error-reply-queue" ref="replyQueue"/>
 
     <int:service-activator input-channel="default-reply-queue" ref="replyQueue"/>
+
+    <int:logging-channel-adapter id="logging-queue" logger-name="com.eucalyptus.context.MessageLogger" level="INFO"/>
 
     <int:gateway id="messaging-gateway-dispatch"
                  async-executor=""

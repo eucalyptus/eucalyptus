@@ -89,7 +89,6 @@ public class EuareReplyQueue {
 
   public void handle( BaseMessage responseMessage ) {
     EventRecord.here( EuareReplyQueue.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ) ).debug( );
-    LOG.debug( "HERE: " + responseMessage );
     String corrId = responseMessage.getCorrelationId( );
     try {
       Context context = Contexts.lookup( corrId );
@@ -98,7 +97,9 @@ public class EuareReplyQueue {
       Contexts.clear(context);
     } catch ( NoSuchContextException e ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message.", e );
-      LOG.debug( responseMessage );
+      if ( LOG.isDebugEnabled( ) ) {
+        LOG.debug( responseMessage );
+      }
     }
   }
 
@@ -140,5 +141,5 @@ public class EuareReplyQueue {
     }
     return new EucalyptusErrorMessageType( "ReplyQueue", LogUtil.dumpObject( payload ) );
   }
-    
+
 }

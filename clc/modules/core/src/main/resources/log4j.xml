@@ -91,7 +91,7 @@
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <param name="Permissions" value="rw-r-----" />
-    <layout class="com.eucalyptus.system.RequestTrackingLayout" /> 
+    <layout class="com.eucalyptus.system.RequestTrackingLayout" />
   </appender>
   <appender name="cloud-debug-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
@@ -293,6 +293,27 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="org.springframework.integration.channel.DirectChannel" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework.integration.handler.MessageHandlerChain" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework.integration.handler.ServiceActivatingHandler" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework.integration.router.PayloadTypeRouter" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework.integration.transformer.MessageTransformingHandler" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+
   <category name="org.eclipse.jetty" additivity="false">
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />

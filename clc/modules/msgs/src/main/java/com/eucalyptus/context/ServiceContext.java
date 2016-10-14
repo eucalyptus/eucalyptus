@@ -104,22 +104,25 @@ public class ServiceContext {
   private static Logger                        LOG                      = Logger.getLogger( ServiceContext.class );
   private static LinkedBlockingQueue<Pair<Long,CompletableFuture<?>>> FUTURE_QUEUE = new LinkedBlockingQueue<>( );
 
-  @ConfigurableField( initial = "0", description = "Do a soft reset.", changeListener = HupListener.class )
+  @ConfigurableField( initial = "0", description = "Do a soft reset", changeListener = HupListener.class )
   public volatile static Integer HUP = 0;
 
   @ConfigurableField( initial = "256", description = "Common thread pool size (zero enables dispatch/component pools)" )
   public volatile static Integer COMMON_THREAD_POOL_SIZE = 256;
 
-  @ConfigurableField( initial = "64", description = "Component thread pool size.",
+  @ConfigurableField( initial = "64", description = "Component thread pool size",
       changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static Integer COMPONENT_THREAD_POOL_SIZE = 64;
 
-  @ConfigurableField( initial = "256", description = "Message dispatch thread pool size.",
+  @ConfigurableField( initial = "256", description = "Message dispatch thread pool size",
       changeListener = PropertyChangeListeners.IsPositiveInteger.class )
   public volatile static Integer DISPATCH_THREAD_POOL_SIZE = 256;
 
   @ConfigurableField( initial = "60", description = "Message context timeout (seconds)" )
   public volatile static Integer CONTEXT_TIMEOUT = 60;
+
+  @ConfigurableField( description = "Message patterns to match for logging" )
+  public volatile static String CONTEXT_MESSAGE_LOG_WHITELIST = "";
 
   public static class HupListener implements PropertyChangeListener {
     @Override

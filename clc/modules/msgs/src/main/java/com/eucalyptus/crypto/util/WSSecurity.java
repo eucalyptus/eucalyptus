@@ -269,8 +269,10 @@ public class WSSecurity {
   
   private static void verifyTimestamp(Node node) throws WSSecurityException {
 	  TimestampProcessor tsProc = new TimestampProcessor();
-	 
-	  LOG.debug("Timestamp: " + node);
+	
+	  if ( LOG.isTraceEnabled( ) ) {
+	    LOG.trace("Timestamp: " + node);
+	  }
 	  
 	  // can't call handleTimestamp() directly because 
 	  // the config will not be set in that case
@@ -283,7 +285,9 @@ public class WSSecurity {
 	  // need to make sure that the timestamp's valid period
 	  // is at least as long as the request caching time
 	  Timestamp ts = (Timestamp)retResults.get(0).get( WSSecurityEngineResult.TAG_TIMESTAMP );
-	  LOG.debug("timestamp: " + ts);
+	  if ( LOG.isTraceEnabled( ) ) {
+	    LOG.trace("timestamp: " + ts);
+	  }
 	 
 	  Date expires = ts.getExpires();
 	 
