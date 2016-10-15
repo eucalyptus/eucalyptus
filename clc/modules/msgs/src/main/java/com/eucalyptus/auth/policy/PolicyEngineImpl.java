@@ -122,7 +122,7 @@ import com.google.common.collect.Lists;
  * The implementation of policy engine, which evaluates a request against specified policies.
  */
 public class PolicyEngineImpl implements PolicyEngine {
-  
+
   private static final Logger LOG = Logger.getLogger( PolicyEngineImpl.class );
 
   private static final Cache<String,ImmutableList<Authorization>> authorizationCache = CacheBuilder
@@ -145,11 +145,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     DENY,    // explicit deny
     ALLOW,   // explicit allow
   }
-  
+
   private interface Matcher {
     boolean match( String pattern, String instance );
   }
-  
+
   private static final Matcher PATTERN_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
@@ -160,7 +160,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Pattern.matches( pattern, instance );
     }
   };
-  
+
   private static final Matcher ADDRESS_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
@@ -170,7 +170,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       return AddressUtil.addressRangeMatch( pattern, instance );
     }
   };
-  
+
   private static final Matcher SERVER_CERTIFICATE_MATCHER = new Matcher( ) {
     @Override
     public boolean match( String pattern, String instance ) {
@@ -179,7 +179,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       // instance is in full ARN form while pattern is /{cert_name};
       if(! instance.startsWith("arn:aws:iam::"))
         return false;
-      
+
       int idx = instance.indexOf(":server-certificate");
       if(idx<0)
         return false;
@@ -191,7 +191,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       return Pattern.matches( pattern, certPathAndName );
     }
   };
-  
+
   public PolicyEngineImpl(
       @Nonnull final Supplier<Boolean> enableSystemQuotas,
       @Nonnull final Supplier<String> region
@@ -213,7 +213,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * The authorization evaluation algorithm is a combination of AWS IAM policy evaluation logic and
    * AWS inter-account permission checking logic (including EC2 image and snapshot permission, and
    * S3 bucket ACL and bucket policy). The algorithm is described in the following:
-   * 
+   *
    * 1. If request user is system admin, access is GRANTED.
    * 2. Otherwise, check global (inter-account) authorizations, which are attached to account admin.
    *    If explicitly denied, access is DENIED.
@@ -225,7 +225,7 @@ public class PolicyEngineImpl implements PolicyEngine {
    * 4. Otherwise, check local (intra-account) authorizations.
    *    If explicitly or default denied, access is DENIED.
    *    If explicitly allowed, access is GRANTED.
-   * 
+   *
    * (non-Javadoc)
    * @see com.eucalyptus.auth.api.PolicyEngine#evaluateAuthorization(java.lang.Class, java.lang.String, java.lang.String)
    */
@@ -238,11 +238,11 @@ public class PolicyEngineImpl implements PolicyEngine {
     try {
       final AuthEvaluationContextImpl evaluationContext = (AuthEvaluationContextImpl)context;
       if ( Decision.ALLOW != evaluateResourceAuthorization(
-          evaluationContext, 
+          evaluationContext,
           authorizationMatch,
           !evaluationContext.isSystemUser( ),
-          resourceAccountNumber, 
-          resourceName, 
+          resourceAccountNumber,
+          resourceName,
           contracts ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
@@ -252,7 +252,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
-    }    
+    }
   }
 
   @Override
@@ -326,7 +326,7 @@ public class PolicyEngineImpl implements PolicyEngine {
             quantity );
       }
     } catch ( AuthException e ) {
-      //throw by the policy engine implementation 
+      //throw by the policy engine implementation
       throw e;
     } catch ( Exception e ) {
       throw new AuthException( "An error occurred while trying to evaluate policy for resource allocation.", e );
@@ -440,11 +440,11 @@ public class PolicyEngineImpl implements PolicyEngine {
         return Decision.DENY;
       } else {
         result = Decision.ALLOW;
-      }      
+      }
     }
     return result;
   }
-  
+
   private boolean matchActions( Authorization auth, String action ) throws AuthException {
     return evaluateElement( matchOne( auth.getActions( ), action, PATTERN_MATCHER ), auth.isNotAction( ) );
   }
@@ -480,11 +480,11 @@ public class PolicyEngineImpl implements PolicyEngine {
       return evaluateElement( matchOne( auth.getPolicyVariables( ), auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
     }
   }
-  
+
   private static boolean matchOne( Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
     return matchOne( Collections.<String>emptySet( ), patterns, instance, matcher );
   }
-  
+
   private static boolean matchOne( Set<String> variables, Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
     for ( String pattern : patterns ) {
       if ( matcher.match( variableExplode( variables, pattern ) , instance ) ) {
@@ -496,18 +496,18 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   private static String variableExplode( Set<String> variables, String text ) throws AuthException {
     if ( variables.isEmpty( ) ) return text;
-    
+
     String result = text;
     for ( final String variable : variables ) {
       final String variableValue = PolicyVariables.getPolicyVariable( variable ).evaluate( );
       //TODO: variable values cannot currently contain ? or *, if they could we would need
       //TODO: to escape the values when they were used in regex matches
-      result = result.replace( variable, variableValue ); 
+      result = result.replace( variable, variableValue );
     }
-    
+
     return result;
   }
-  
+
   private String resolveAccount( final String accountNumberOrAlias ) {
     return accountResolver.apply( accountNumberOrAlias );
   }
@@ -515,16 +515,16 @@ public class PolicyEngineImpl implements PolicyEngine {
   private boolean evaluateElement( boolean patternMatched, boolean isNot ) {
     return ( ( patternMatched && !isNot ) || ( !patternMatched && isNot ) );
   }
-  
+
   /**
    * Evaluate conditions for an authorization.
    */
-  private boolean evaluateConditions( 
+  private boolean evaluateConditions(
       final Set<String> policyVariables,
-      final List<? extends Condition> conditions, 
-      final String action, 
-      final CachedKeyEvaluator keyEval, 
-      final ContractKeyEvaluator contractEval 
+      final List<? extends Condition> conditions,
+      final String action,
+      final CachedKeyEvaluator keyEval,
+      final ContractKeyEvaluator contractEval
   ) throws AuthException {
     for ( Condition cond : conditions ) {
       ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
@@ -547,10 +547,10 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
     return true;
   }
-  
+
   /**
    * Process each of the quota authorizations. If any of them is exceeded, deny access.
-   * 
+   *
    * @param quotas The quota authorizations
    * @param action The request action.
    * @param resourceType The resource type for allocation
@@ -603,10 +603,10 @@ public class PolicyEngineImpl implements PolicyEngine {
       }
     }
   }
-  
+
   /**
    * Get the principal ID for an authorization based on scope.
-   * 
+   *
    * @param scope The scope
    * @return The principal ID (account, group or user)
    * @throws AuthException for any error
@@ -749,7 +749,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         return authorizationCache.get( policy.getPolicyHash( ), new Callable<ImmutableList<Authorization>>() {
           @Override
           public ImmutableList<Authorization> call() throws Exception {
-            return ImmutableList.copyOf(  ( resourcePolicy ? PolicyParser.getResourceInstance( ) : PolicyParser.getInstance( ) ).parse( policy.getPolicy( ) ).getAuthorizations( ) );
+            return ImmutableList.copyOf(  ( resourcePolicy ? PolicyParser.getLaxResourceInstance( ) : PolicyParser.getLaxInstance( ) ).parse( policy.getPolicy( ) ).getAuthorizations( ) );
           }
         } );
       } catch ( final ExecutionException e ) {
