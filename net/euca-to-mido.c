@@ -6843,6 +6843,44 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
 }
 
 /**
+ * Deletes the veth pair that connects euca VPC md core to external network
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int disconnect_mido_md_ext_veth(mido_config *mido) {
+    int ret = 0, rc = 0;
+
+    if (!mido || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot disconnect md with NULL config.\n");
+        return (1);
+    }
+
+    // delete external MD veth pair
+    char cmd[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link del %s", VPCMIDO_MD_VETH_M);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    if (mido->config->mido_md_veth_use_netns) {
+        snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", VPCMIDO_MD_NETNS);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    }
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not delete md veth pair\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
  * Removes MidoNet objects that are needed to implement euca VPC md core.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @return 0 on success. 1 otherwise.
@@ -6873,24 +6911,9 @@ int delete_mido_md(mido_config *mido) {
     midomd->midos[MD_RT_BRPORT] = NULL;
 
     // delete external MD veth pair
-    char cmd[EUCA_MAX_PATH];
-    sequence_executor cmds;
-
-    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
-
-    snprintf(cmd, EUCA_MAX_PATH, "ip link del %s", VPCMIDO_MD_VETH_M);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", VPCMIDO_MD_NETNS);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-    se_print(&cmds);
-    rc = se_execute(&cmds);
-    if (rc) {
-        LOGERROR("could not delete md veth pair\n");
-        ret = 1;
-    }
-    se_free(&cmds);
+    rc += disconnect_mido_md_ext_veth(mido);
+    
+    ret = rc;
 
     return (ret);
 }
@@ -7115,6 +7138,97 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
 }
 
 /**
+ * Connect euca vpc md to external veth pair.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int connect_mido_md_ext_veth(mido_config *mido) {
+    int ret = 0;
+    int rc = 0;
+    char nw[NETWORK_ADDR_LEN];
+    char sn[NETWORK_ADDR_LEN];
+    char ip1[NETWORK_ADDR_LEN];
+    char ip2[NETWORK_ADDR_LEN];
+    char ip3[NETWORK_ADDR_LEN];
+    char nsprefix[256];
+    char *strptr = NULL;
+
+    if (!mido || !mido->midomd) {
+        LOGWARN("Invalid argument: cannot connect mido MD with NULL config\n");
+        return (1);
+    }
+    
+    // create veth pair and connect eucamdrt
+    char cmd[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    strptr = hex2dot(mido->mdconfig.ext_mdnw);
+    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->mdconfig.md_veth_mido);
+    snprintf(ip1, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->mdconfig.md_veth_host);
+    snprintf(ip2, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    strptr = hex2dot(mido->mdconfig.md_dns);
+    snprintf(ip3, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.ext_mdsn);
+
+    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link add %s type veth peer name %s", VPCMIDO_MD_VETH_M, VPCMIDO_MD_VETH_H);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    nsprefix[0] = '\0';
+    if (mido->config->mido_md_veth_use_netns) {
+        snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", VPCMIDO_MD_NETNS);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+        snprintf(cmd, EUCA_MAX_PATH, "ip link set %s netns %s", VPCMIDO_MD_VETH_H, VPCMIDO_MD_NETNS);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+        snprintf(nsprefix, 256, "nsenter --net=/var/run/netns/%s ", VPCMIDO_MD_NETNS);
+    }
+
+    snprintf(cmd, EUCA_MAX_PATH, "%s ip addr add %s/%s dev %s", nsprefix, ip2, sn, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "%s ip addr add %s/32 dev %s", nsprefix, ip3, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "%s ip link set %s up", nsprefix, VPCMIDO_MD_VETH_H);
+    se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    snprintf(cmd, EUCA_MAX_PATH, "ip link set %s up", VPCMIDO_MD_VETH_M);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
+    strptr = hex2dot(mido->mdconfig.mdnw);
+    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
+    EUCA_FREE(strptr);
+
+    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.mdsn);
+
+    snprintf(cmd, EUCA_MAX_PATH, "%s ip route add %s/%s via %s", nsprefix, nw, sn, ip1);
+    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not create eucamd external interfaces: see above log entries for details\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
  * Creates MidoNet objects that are needed to implement euca VPC MD.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @return 0 on success. 1 otherwise.
@@ -7125,8 +7239,6 @@ int create_mido_md(mido_config *mido) {
     char nw[NETWORK_ADDR_LEN];
     char sn[NETWORK_ADDR_LEN];
     char ip1[NETWORK_ADDR_LEN];
-    char ip2[NETWORK_ADDR_LEN];
-    char ip3[NETWORK_ADDR_LEN];
     char *strptr = NULL;
 
     if (!mido || !mido->midomd) {
@@ -7189,29 +7301,12 @@ int create_mido_md(mido_config *mido) {
         ret++;
     }
 
-    // create veth pair and connect eucamdrt
-    char cmd[EUCA_MAX_PATH];
-    sequence_executor cmds;
-
-    rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
-
-    snprintf(cmd, EUCA_MAX_PATH, "ip link add %s type veth peer name %s", VPCMIDO_MD_VETH_M, VPCMIDO_MD_VETH_H);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
     strptr = hex2dot(mido->mdconfig.ext_mdnw);
     snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
     strptr = hex2dot(mido->mdconfig.md_veth_mido);
     snprintf(ip1, NETWORK_ADDR_LEN, "%s", strptr);
-    EUCA_FREE(strptr);
-
-    strptr = hex2dot(mido->mdconfig.md_veth_host);
-    snprintf(ip2, NETWORK_ADDR_LEN, "%s", strptr);
-    EUCA_FREE(strptr);
-
-    strptr = hex2dot(mido->mdconfig.md_dns);
-    snprintf(ip3, NETWORK_ADDR_LEN, "%s", strptr);
     EUCA_FREE(strptr);
 
     snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.ext_mdsn);
@@ -7229,40 +7324,8 @@ int create_mido_md(mido_config *mido) {
         ret++;
     }
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", VPCMIDO_MD_NETNS);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-    snprintf(cmd, EUCA_MAX_PATH, "ip link set %s netns %s", VPCMIDO_MD_VETH_H, VPCMIDO_MD_NETNS);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev %s", VPCMIDO_MD_NETNS, ip2, sn, VPCMIDO_MD_VETH_H);
-    se_add(&cmds, cmd, NULL, ignore_exit2);
-
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/32 dev %s", VPCMIDO_MD_NETNS, ip3, VPCMIDO_MD_VETH_H);
-    se_add(&cmds, cmd, NULL, ignore_exit2);
-
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set %s up", VPCMIDO_MD_NETNS, VPCMIDO_MD_VETH_H);
-    se_add(&cmds, cmd, NULL, ignore_exit2);
-
-    snprintf(cmd, EUCA_MAX_PATH, "ip link set %s up", VPCMIDO_MD_VETH_M);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-
-    strptr = hex2dot(mido->mdconfig.mdnw);
-    snprintf(nw, NETWORK_ADDR_LEN, "%s", strptr);
-    EUCA_FREE(strptr);
-
-    snprintf(sn, NETWORK_ADDR_LEN, "%d", mido->mdconfig.mdsn);
-
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip route add %s/%s via %s", VPCMIDO_MD_NETNS, nw, sn, ip1);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-
-    se_print(&cmds);
-    rc = se_execute(&cmds);
-    if (rc) {
-        LOGERROR("could not create eucamd external interfaces: see above log entries for details\n");
-        ret = 1;
-    }
-    se_free(&cmds);
+    // create veth pair and connect eucamdrt
+    rc = connect_mido_md_ext_veth(mido);
 
     if (mido->midocore && mido->midocore->eucanetdhost) {
         rc = mido_link_host_port(mido->midocore->eucanetdhost->obj, VPCMIDO_MD_VETH_M,

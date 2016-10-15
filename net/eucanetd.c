@@ -155,6 +155,8 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_MD_CIDR", "255.0.0.0/8"}
     ,
+    {"MIDO_MD_VETH_USE_NETNS", "N"}
+    ,
     {"MIDO_MAX_RTID", "10240"}
     ,
     {"MIDO_MAX_ENIID", "1048576"}
@@ -1202,6 +1204,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_MIDO_MAX_RTID] = configFileValue("MIDO_MAX_RTID");
     cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
     cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
+    cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS] = configFileValue("MIDO_MD_VETH_USE_NETNS");
 #ifdef VPCMIDO_DEVELOPER
     cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = configFileValue("MIDO_VALIDATE_MIDOCONFIG");
 #else
@@ -1318,6 +1321,11 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             config->enable_mido_md = TRUE;
         } else {
             config->enable_mido_md = FALSE;
+        }
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS], "Y")) {
+            config->mido_md_veth_use_netns = TRUE;
+        } else {
+            config->mido_md_veth_use_netns = FALSE;
         }
         if (!strcmp(cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG], "Y")) {
             config->validate_mido_config = TRUE;

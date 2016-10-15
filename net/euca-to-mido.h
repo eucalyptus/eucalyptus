@@ -398,6 +398,9 @@ int create_mido_md(mido_config *mido);
 int delete_mido_md(mido_config *mido);
 int disable_mido_md(mido_config *mido);
 
+int connect_mido_md_ext_veth(mido_config *mido);
+int disconnect_mido_md_ext_veth(mido_config *mido);
+
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int delete_mido_vpc(mido_config *mido, mido_vpc *vpc);
