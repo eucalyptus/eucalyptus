@@ -203,7 +203,7 @@ public class SimpleQueueService {
 
   static final Logger LOG = Logger.getLogger(SimpleQueueService.class);
 
-  private int checkAttributeIntMinMax(Attribute attribute, int min, int max) throws InvalidParameterValueException {
+  private static int checkAttributeIntMinMax(Attribute attribute, int min, int max) throws InvalidParameterValueException {
     int value;
     try {
       value = Integer.parseInt(attribute.getValue());
@@ -290,7 +290,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void setAndValidateAttributes(String accountId, Iterable<Attribute> requestAttributes, Map<String, String> attributeMap) throws SimpleQueueException {
+  private static void setAndValidateAttributes(String accountId, Iterable<Attribute> requestAttributes, Map<String, String> attributeMap) throws SimpleQueueException {
     for (Attribute attribute : requestAttributes) {
       switch (attribute.getName()) {
 
@@ -419,7 +419,7 @@ public class SimpleQueueService {
     }
   }
 
-  private void minimallyCheckPolicy(String policyJson) throws IOException {
+  private static void minimallyCheckPolicy(String policyJson) throws IOException {
     // check valid json
     JsonNode jsonNode = new ObjectMapper().readTree(policyJson);
     if (!jsonNode.isObject()) {
@@ -441,7 +441,7 @@ public class SimpleQueueService {
     }
   }
 
-  private String getQueueUrlFromQueueUrlParts(QueueUrlParts queueUrlParts) {
+  private static String getQueueUrlFromQueueUrlParts(QueueUrlParts queueUrlParts) {
     return ServiceUris.remotePublicify(Topology.lookup(SimpleQueue.class)).toString() + queueUrlParts.getAccountId() + "/" + queueUrlParts.getQueueName();
   }
 
@@ -511,8 +511,8 @@ public class SimpleQueueService {
     public boolean matches(URL queueUrl) {
       if (queueUrl != null && queueUrl.getPath() != null) {
         List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath());
-        return (pathParts != null && "services".equals(pathParts.get(0))
-          && "simplequeue".equals(pathParts.get(1)) && pathParts.size() == 4);
+        return (pathParts != null && pathParts.size() == 4 && "services".equals(pathParts.get(0))
+          && "simplequeue".equals(pathParts.get(1)));
       } else {
         return false;
       }
@@ -529,7 +529,7 @@ public class SimpleQueueService {
     }
   }
 
-  private QueueUrlParts getQueueUrlParts(String queueUrlStr) throws InvalidAddressException {
+  private static QueueUrlParts getQueueUrlParts(String queueUrlStr) throws InvalidAddressException {
     QueueUrlParts queueUrlParts = null;
     try {
       URL queueUrl = new URL(queueUrlStr);
@@ -602,8 +602,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
-        + ":" + queue.getQueueName();
+      String queueArn = getQueueArn(queue);
 
       ArrayList<String> principalIds = Lists.newArrayList();
       if (request.getAwsAccountId() == null || request.getAwsAccountId().isEmpty()) {
@@ -709,7 +708,12 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void addStatementToPolicy(String label, Collection<String> principalIds, Collection<String> actionNames,
+  private static String getQueueArn(Queue queue) {
+    return "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
+      + ":" + queue.getQueueName();
+  }
+
+  private static void addStatementToPolicy(String label, Collection<String> principalIds, Collection<String> actionNames,
                                     String resourceId, ArrayNode statementArrayNode) {
     ObjectNode statementNode = statementArrayNode.addObject();
     statementNode.put("Sid", label);
@@ -751,7 +755,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void handleChangeMessageVisibility(Integer visibilityTimeout, String receiptHandle, Queue queue) throws SimpleQueueException {
+  private static void handleChangeMessageVisibility(Integer visibilityTimeout, String receiptHandle, Queue queue) throws SimpleQueueException {
     if (visibilityTimeout == null) {
       throw new MissingParameterException("VisibilityTimeout is a required field");
     }
@@ -778,7 +782,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void handleDeleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
+  private static void handleDeleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
     PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle);
   }
 
@@ -795,7 +799,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private Queue getAndCheckPermissionOnQueue(String queueUrl) throws QueueDoesNotExistException, AccessDeniedException, InvalidAddressException {
+  private static Queue getAndCheckPermissionOnQueue(String queueUrl) throws QueueDoesNotExistException, AccessDeniedException, InvalidAddressException {
     QueueUrlParts queueUrlParts = getQueueUrlParts(queueUrl);
     Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(queueUrlParts.getAccountId(), queueUrlParts.getQueueName());
     if (queue == null) {
@@ -829,7 +833,7 @@ public class SimpleQueueService {
         attributes.putAll(queue.getAttributes());
       }
       attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue));
-      attributes.put(Constants.QUEUE_ARN, "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId() + ":" + queue.getQueueName());
+      attributes.put(Constants.QUEUE_ARN, getQueueArn(queue));
       Set<String> validAttributes = ImmutableSet.of(
         Constants.ALL, Constants.APPROXIMATE_NUMBER_OF_MESSAGES, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
         Constants.VISIBILITY_TIMEOUT, Constants.CREATED_TIMESTAMP, Constants.LAST_MODIFIED_TIMESTAMP, Constants.POLICY,
@@ -998,7 +1002,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private void filterReceiveMessageAttributes(Message message, ArrayList<String> matchingMessageAttributeNames)
+  private static void filterReceiveMessageAttributes(Message message, ArrayList<String> matchingMessageAttributeNames)
     throws EucalyptusCloudException {
     if (message.getMessageAttribute() != null) {
       boolean changed = true;
@@ -1035,7 +1039,7 @@ public class SimpleQueueService {
     }
   }
 
-  private void filterReceiveAttributes(Message message, ArrayList<String> matchingAttributeNames) {
+  private static void filterReceiveAttributes(Message message, ArrayList<String> matchingAttributeNames) {
     if (message.getAttribute() != null) {
       Iterator<Attribute> iter = message.getAttribute().iterator();
       while (iter.hasNext()) {
@@ -1048,7 +1052,7 @@ public class SimpleQueueService {
     }
   }
 
-  private int validateMessageAttributeNameAndCalculateLength(String name, Collection<String> previousNames) throws InvalidParameterValueException {
+  private static int validateMessageAttributeNameAndCalculateLength(String name, Collection<String> previousNames) throws InvalidParameterValueException {
     if (Strings.isNullOrEmpty(name)) {
       throw new InvalidParameterValueException("Message attribute name can not be null or empty");
     }
@@ -1073,7 +1077,7 @@ public class SimpleQueueService {
     return name.getBytes(UTF8).length;
   }
 
-  private int validateMessageAttributeValueAndCalculateLength(MessageAttributeValue value, String name) throws com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException, InvalidParameterValueException {
+  private static int validateMessageAttributeValueAndCalculateLength(MessageAttributeValue value, String name) throws com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException, InvalidParameterValueException {
     int attributeValueLength = 0;
 
     if (value == null) {
@@ -1214,7 +1218,7 @@ public class SimpleQueueService {
     }
   }
 
-  private MessageInfo validateAndGetMessageInfo(Queue queue, String senderId, String body, Integer delaySeconds, ArrayList<MessageAttribute> messageAttributes) throws EucalyptusCloudException {
+  private static MessageInfo validateAndGetMessageInfo(Queue queue, String senderId, String body, Integer delaySeconds, ArrayList<MessageAttribute> messageAttributes) throws EucalyptusCloudException {
     int messageLength = 0;
     Map<String, String> sendAttributes = Maps.newHashMap();
     Message message = new Message();
@@ -1492,7 +1496,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      String queueArn = "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId() + ":" + queue.getQueueName();
+      String queueArn = getQueueArn(queue);
       Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(queue.getAccountId(), queueArn);
       if (sourceQueues != null) {
         for (Queue sourceQueue: sourceQueues) {
