@@ -121,6 +121,8 @@ enum {
     EUCANETD_CVAL_MIDO_MAX_ENIID,
     EUCANETD_CVAL_MIDO_ENABLE_MIDOMD,
     EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS,
+    EUCANETD_CVAL_MIDO_MD_254_EGRESS,
+    EUCANETD_CVAL_MIDO_MD_253_EGRESS,
     EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG,
     EUCANETD_CVAL_LOCALIP,
     EUCANETD_CVAL_LAST,
@@ -201,6 +203,8 @@ typedef struct eucanetdConfig_t {
     char mido_intmdcidr[NETWORK_ADDR_LEN];
     char mido_extmdcidr[NETWORK_ADDR_LEN];
     char mido_mdcidr[NETWORK_ADDR_LEN];
+    char mido_md_254_egress[256];
+    char mido_md_253_egress[256];
     int mido_max_rtid;
     int mido_max_eniid;
 

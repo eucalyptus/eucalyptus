@@ -157,6 +157,10 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_MD_VETH_USE_NETNS", "N"}
     ,
+    {"MIDO_MD_254_EGRESS", "tcp:80 tcp:8000"}
+    ,
+    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53"}
+    ,
     {"MIDO_MAX_RTID", "10240"}
     ,
     {"MIDO_MAX_ENIID", "1048576"}
@@ -1205,6 +1209,8 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
     cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
     cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS] = configFileValue("MIDO_MD_VETH_USE_NETNS");
+    cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS] = configFileValue("MIDO_MD_254_EGRESS");
+    cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS] = configFileValue("MIDO_MD_253_EGRESS");
 #ifdef VPCMIDO_DEVELOPER
     cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = configFileValue("MIDO_VALIDATE_MIDOCONFIG");
 #else
@@ -1317,6 +1323,10 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             snprintf(config->mido_mdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_MDCIDR]);
         config->mido_max_rtid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_RTID]);
         config->mido_max_eniid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_ENIID]);
+        if (cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS])
+            snprintf(config->mido_md_254_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS]);
+        if (cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS])
+            snprintf(config->mido_md_253_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS]);
         if (!strcmp(cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD], "Y")) {
             config->enable_mido_md = TRUE;
         } else {

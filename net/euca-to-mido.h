@@ -143,6 +143,7 @@ enum mido_md_midos_t {
     MD_RT_BRPORT,
     MD_BR_RTPORT,
     MD_RT_EXTPORT,
+    MD_RT_EXTPORT_OUTFILTER,
     MD_END
 };
 
@@ -299,6 +300,7 @@ typedef struct mido_md_t {
     midonet_api_router *eucamdrt;
     midonet_api_bridge *eucamdbr;
     midonet_api_host *eucanetdhost;
+    midonet_api_chain *eucamdrt_extport_outfilter;
     int population_failed;
 } mido_md;
 
@@ -400,6 +402,8 @@ int disable_mido_md(mido_config *mido);
 
 int connect_mido_md_ext_veth(mido_config *mido);
 int disconnect_mido_md_ext_veth(mido_config *mido);
+int create_mido_md_egress_rules(mido_config *mido, midonet_api_chain *chain);
+int parse_mido_md_egress_rules(mido_config *mido, mido_parsed_chain_rule ***parsedrules, int *max_parsedrules);
 
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);

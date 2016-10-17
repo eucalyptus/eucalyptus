@@ -5785,7 +5785,7 @@ int populate_mido_md(mido_config *mido) {
         LOGINFO("\t\teucamdrt-eucamdbr link not found.\n");
     }
 
-    // search for md ext ports
+    // search for md ext port
     found = 0;
     for (j = 0; j < max_rtports && !found; j++) {
         if (rtports[j] == NULL) {
@@ -5804,6 +5804,17 @@ int populate_mido_md(mido_config *mido) {
         }
     }
 
+    // search for md ext port outfilter
+    midonet_api_chain *eucamdrt_extport_outfilter = NULL;
+    eucamdrt_extport_outfilter = mido_get_chain("eucamdrt_extportout");
+    if (eucamdrt_extport_outfilter) {
+        LOGTRACE("Found eucamdrt chain %s\n", eucamdrt_extport_outfilter->obj->name);
+        midomd->eucamdrt_extport_outfilter = eucamdrt_extport_outfilter;
+        midomd->midos[MD_RT_EXTPORT_OUTFILTER] = eucamdrt_extport_outfilter->obj;
+    } else {
+        LOGINFO("\t\teucamdrt extport outfilter not found\n");
+    }
+    
     LOGTRACE("midomd: AFTER POPULATE\n");
     for (i = 0; i < MD_END; i++) {
         if (midomd->midos[i] == NULL) {
@@ -6910,6 +6921,12 @@ int delete_mido_md(mido_config *mido) {
     midomd->midos[MD_RT] = NULL;
     midomd->midos[MD_RT_BRPORT] = NULL;
 
+    // delete the router extport outfilter
+    if (midomd->eucamdrt_extport_outfilter && midomd->eucamdrt_extport_outfilter->obj) {
+        rc += mido_delete_chain(midomd->eucamdrt_extport_outfilter->obj);
+        midomd->eucamdrt_extport_outfilter = NULL;
+    } 
+
     // delete external MD veth pair
     rc += disconnect_mido_md_ext_veth(mido);
     
@@ -7229,6 +7246,134 @@ int connect_mido_md_ext_veth(mido_config *mido) {
 }
 
 /**
+ * Extract midomd external port egress rules from configuration and create an
+ * array of mido_parsed_chain_rule data structures.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param parsedrules [out] pointer to an array of pointer to mido_parsed_chain_rule data structures.
+ * Memory is allocated for the array of pointers, and for the data structure pointed by
+ * each entry in the array. Caller is responsible to release this memory.
+ * Use free_ptrarr() to release memory.
+ * @param max_parsedrules [out] number entries in parsedrules
+ * @return 0 on success. 1 on any failure.
+ */
+int parse_mido_md_egress_rules(mido_config *mido, mido_parsed_chain_rule ***parsedrules, int *max_parsedrules) {
+    if (!mido || !parsedrules || !max_parsedrules) {
+        LOGWARN("Invalid argument: cannot parse md egress rules with NULL\n");
+        return (1);
+    }
+
+    mido_parsed_chain_rule **result = *parsedrules;
+    
+    char **ports = NULL;
+    int max_ports = 0;
+    
+    // Get rules to create
+    euca_split_string(mido->config->mido_md_254_egress, &ports, &max_ports, ' ');
+    for (int i = 0; i < max_ports; i++) {
+        char protoc[8];
+        int port = 0;
+        protoc[0] = '\0';
+        if (sscanf(ports[i], "%3s:%d", protoc, &port) == 2) {
+            mido_parsed_chain_rule *crule = NULL;
+            result = EUCA_REALLOC_C(result, *max_parsedrules + 1, sizeof (void *));
+            result[*max_parsedrules] = EUCA_ZALLOC_C(1, sizeof (mido_parsed_chain_rule));
+            crule = result[*max_parsedrules];
+            (*max_parsedrules)++;
+            clear_parsed_chain_rule(crule);
+            if (!strcmp(protoc, "udp")) {
+                snprintf(crule->jsonel[MIDO_CRULE_PROTO], 64, "17");
+            }
+            if (!strcmp(protoc, "tcp")) {
+                snprintf(crule->jsonel[MIDO_CRULE_PROTO], 64, "6");
+            }
+            snprintf(crule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", port);
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", port);
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+            snprintf(crule->jsonel[MIDO_CRULE_NW], 64, "169.254.169.254");
+            snprintf(crule->jsonel[MIDO_CRULE_NWLEN], 64, "32");
+        }
+    }
+    free_ptrarr(ports, max_ports);
+    ports = NULL;
+    max_ports = 0;
+    
+    euca_split_string(mido->config->mido_md_253_egress, &ports, &max_ports, ' ');
+    for (int i = 0; i < max_ports; i++) {
+        char protoc[8];
+        int port = 0;
+        protoc[0] = '\0';
+        if (sscanf(ports[i], "%3s:%d", protoc, &port) == 2) {
+            mido_parsed_chain_rule *crule = NULL;
+            result = EUCA_REALLOC_C(result, *max_parsedrules + 1, sizeof (void *));
+            result[*max_parsedrules] = EUCA_ZALLOC_C(1, sizeof (mido_parsed_chain_rule));
+            crule = result[*max_parsedrules];
+            (*max_parsedrules)++;
+            clear_parsed_chain_rule(crule);
+            if (!strcmp(protoc, "udp")) {
+                snprintf(crule->jsonel[MIDO_CRULE_PROTO], 64, "6");
+            }
+            if (!strcmp(protoc, "tcp")) {
+                snprintf(crule->jsonel[MIDO_CRULE_PROTO], 64, "17");
+            }
+            snprintf(crule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", port);
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", port);
+            snprintf(crule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+            snprintf(crule->jsonel[MIDO_CRULE_NW], 64, "169.254.169.253");
+            snprintf(crule->jsonel[MIDO_CRULE_NWLEN], 64, "32");
+        }
+    }
+    free_ptrarr(ports, max_ports);
+    ports = NULL;
+    max_ports = 0;
+
+    *parsedrules = result;
+    return (0);
+}
+
+/**
+ * Add egress filtering rules to the given chain. The chain in the argument is assumed
+ * to be the chain attached to VPCMIDO eucamdrt external port.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param chain [in] MN chain where egress rules will be added.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int create_mido_md_egress_rules(mido_config *mido, midonet_api_chain *chain) {
+    int ret = 0;
+    int rc = 0;
+
+    if (!mido || !mido->midomd || !chain) {
+        LOGWARN("Invalid argument: cannot create mido MD egress rules with NULL config\n");
+        return (1);
+    }
+
+    mido_parsed_chain_rule **rules = NULL;
+    int max_rules = 0;
+    parse_mido_md_egress_rules(mido, &rules, &max_rules);
+    for (int i = 0; i < max_rules; i++) {
+        mido_parsed_chain_rule *crule = rules[i];
+        rc = create_mido_vpc_secgroup_rule(chain, NULL, -1, MIDO_RULE_SG_EGRESS, crule);
+        if (rc) {
+            ret++;
+        }
+    }
+
+    // default drop all
+    char pos[16];
+    snprintf(pos, 16, "%d", chain->rules_count + 1);
+    rc = mido_create_rule(chain, chain->obj, NULL, NULL,
+            "position", pos, "type", "drop", "invDlType", "true", "dlType", "2054", NULL);
+    if (rc) {
+        LOGWARN("Failed to create egress drop rule for midomdrt ext port\n");
+        ret++;
+    }
+
+    free_ptrarr(rules, max_rules);
+    return (ret);
+}
+
+/**
  * Creates MidoNet objects that are needed to implement euca VPC MD.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @return 0 on success. 1 otherwise.
@@ -7322,6 +7467,35 @@ int create_mido_md(mido_config *mido) {
     if (rc) {
         LOGERROR("cannot create eucamdrt ext route: check midonet health\n");
         ret++;
+    }
+
+    // attach outfilter to eucamdrt external port
+    midonet_api_chain *eucamdrt_extport_outfilter = NULL;
+    eucamdrt_extport_outfilter = mido_create_chain(VPCMIDO_TENANT, "eucamdrt_extportout", &(midomd->midos[MD_RT_EXTPORT_OUTFILTER]));
+    if (!eucamdrt_extport_outfilter) {
+        LOGERROR("cannot create eucamdrt outfilter.\n");
+        ret++;
+    } else {
+        midomd->eucamdrt_extport_outfilter = eucamdrt_extport_outfilter;
+        char *portmac = NULL;
+        if (midomd->midos[MD_RT_EXTPORT] && midomd->midos[MD_RT_EXTPORT]->port && midomd->midos[MD_RT_EXTPORT]->port->portmac) {
+            portmac = midomd->midos[MD_RT_EXTPORT]->port->portmac;
+        }
+        rc = mido_update_port(midomd->midos[MD_RT_EXTPORT],
+                "outboundFilterId", midomd->midos[MD_RT_EXTPORT_OUTFILTER]->uuid,
+                "id", midomd->midos[MD_RT_EXTPORT]->uuid,
+                "networkAddress", nw, "networkLength", sn, "portAddress", ip1,
+                "type", "Router",
+                "portMac", portmac,
+                NULL);
+
+        if ((rc != 0) && (rc != -1)) {
+            LOGERROR("cannot attach eucamdrt extport outfilter\n");
+            ret++;
+        }
+        
+        // Create eucamdrt external port egress rules
+        create_mido_md_egress_rules(mido, eucamdrt_extport_outfilter);
     }
 
     // create veth pair and connect eucamdrt
