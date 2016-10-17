@@ -380,6 +380,8 @@ public class TokensService {
             RestrictedTypes.doPrivilegedWithoutOwner(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
+      } catch ( final AuthException e ) {
+        throw new TokensException( Code.AccessDenied, "Not authorized to perform sts:AssumeRoleWithWebIdentity" );
       } catch ( final Exception e ) {
         throw new TokensException( Code.AccessDenied, e.getMessage( ) );
       }
