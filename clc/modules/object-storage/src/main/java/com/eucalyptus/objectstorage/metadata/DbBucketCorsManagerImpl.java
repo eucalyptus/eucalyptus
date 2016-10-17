@@ -122,7 +122,7 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
       BucketCorsManagers.getInstance().deleteCorsRules(bucketUuid, tran);
       tran.commit();
     } catch (Exception ex) {
-      LOG.error("Exception caught while deleting CORS rules for bucket " + bucketUuid + ": " + ex.getMessage());
+      LOG.error("Exception caught while deleting CORS rules for bucket " + bucketUuid, ex);
       throw new ObjectStorageException("InternalServerError", "Exception caught while deleting CORS rules for bucket "
           + bucketUuid, "Bucket", bucketUuid, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
@@ -144,14 +144,14 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
       }
       tran.commit();
     } catch (Exception ex) {
-      LOG.error("Exception caught while adding CORS rules for bucket " + bucketUuid + ": " + ex.getMessage());
+      LOG.error("Exception caught while adding CORS rules for bucket " + bucketUuid, ex);
       throw new ObjectStorageException("InternalServerError", "An exception was caught while adding CORS rules for bucket "
           + bucketUuid, "Bucket", bucketUuid, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   @Override
-  public List<com.eucalyptus.storage.msgs.s3.CorsRule> getCorsRules(@Nonnull String bucketUuid) throws Exception {
+  public List<com.eucalyptus.storage.msgs.s3.CorsRule> getCorsRules(@Nonnull String bucketUuid) {
 
     List<CorsRule> rulesFromDb = null;
 
@@ -163,7 +163,7 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
     } catch (NoSuchElementException e) {
       // No CORS configuration exists. An empty list will be returned.
     } catch (Exception ex) {
-      LOG.error("Exception caught while retrieving CORS rules for bucket " + bucketUuid + ": ", ex);
+      LOG.error("Exception caught while retrieving CORS rules for bucket " + bucketUuid, ex);
     }
 
     List<com.eucalyptus.storage.msgs.s3.CorsRule> responseRules = null;

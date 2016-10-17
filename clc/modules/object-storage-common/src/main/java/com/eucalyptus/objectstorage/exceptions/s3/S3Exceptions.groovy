@@ -690,6 +690,12 @@ class MalformedXMLException extends S3Exception {
     this();
     this.resource = resource;
   }
+
+  def MalformedXMLException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
+  }
 }
 
 class MaxMessageLengthExceededException extends S3Exception {
@@ -1125,6 +1131,9 @@ class UserKeyMustBeSpecifiedException extends S3Exception {
   }
 }
 
+// Currently not used. Would not work anyway with newly added CORS exceptions that are
+// many-to-one of string-to-exception.class.
+// TODO: Remove?
 public enum S3Exceptions {
   INSTANCE;
   public static final Map<String, Class<? extends S3Exception>> exceptionCodeToClassMap;

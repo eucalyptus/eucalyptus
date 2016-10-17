@@ -75,6 +75,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
@@ -83,6 +84,7 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketCorsResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
@@ -90,6 +92,7 @@ import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
@@ -127,6 +130,14 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+
+      // Need to add the CORS headers before later code nulls out
+      // the Message that contains the response fields we need.
+      // Watch out for code created in the future that creates a different
+      // httpResponse object later in this code (like 
+      // ObjectStorageGETOutboundHandler does), or that overrides any of 
+      // the fields we set here.
+      OSGUtil.addCorsResponseHeaders(httpResponse);
 
       // Ordering if-else conditions from most to least restrictive i.e. narrow to broad filters
       if (msg instanceof PostObjectResponseType) {
@@ -178,7 +189,8 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
         // Remove the content in response for certain operations
         if (msg instanceof SetBucketAccessControlPolicyResponseType || msg instanceof SetBucketLifecycleResponseType
             || msg instanceof SetBucketLoggingStatusResponseType || msg instanceof SetBucketVersioningStatusResponseType
-            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType) {
+            || msg instanceof SetObjectAccessControlPolicyResponseType || msg instanceof SetBucketTaggingResponseType
+            || msg instanceof SetBucketCorsResponseType ) {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }

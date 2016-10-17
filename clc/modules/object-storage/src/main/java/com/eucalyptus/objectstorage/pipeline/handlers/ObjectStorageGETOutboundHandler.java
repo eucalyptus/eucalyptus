@@ -84,6 +84,8 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -151,12 +153,16 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
         ObjectStorageDataGetResponseType dataResponse = (ObjectStorageDataGetResponseType) msg;
         writeObjectStorageDataGetResponse(dataResponse, ctx);
         return true;
+      } else {
+        // CORS headers are also added within createHttpResponse().
+        // Do it here for any other message types.
+        OSGUtil.addCorsResponseHeaders(httpResponse);
       }
     }
     return false;
   }
 
-  protected void writeObjectStorageDataGetResponse(final ObjectStorageDataGetResponseType response, final ChannelHandlerContext ctx) {
+  protected void writeObjectStorageDataGetResponse(final ObjectStorageDataGetResponseType response, final ChannelHandlerContext ctx) throws S3Exception {
     DefaultHttpResponse httpResponse = createHttpResponse(response);
     if (!Strings.isNullOrEmpty(response.getCorrelationId())) {
       httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, response.getCorrelationId());
@@ -194,7 +200,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
   }
 
   // TODO: zhill - this should all be done in bindings, just need 2-way bindings
-  protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) {
+  protected DefaultHttpResponse createHttpResponse(ObjectStorageDataGetResponseType reply) throws S3Exception {
     DefaultHttpResponse httpResponse = null;
 
     if (reply.getStatus() == HttpResponseStatus.OK) {
@@ -244,6 +250,10 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
     // add copied headers
     OSGUtil.addCopiedHeadersToResponse(httpResponse, reply);
 
+    // Have to do this here instead of in handleOutgoing() because here we
+    // created a new/replacement httpResponse object.
+    OSGUtil.addCorsResponseHeaders(httpResponse, reply);
+    
     return httpResponse;
   }
 

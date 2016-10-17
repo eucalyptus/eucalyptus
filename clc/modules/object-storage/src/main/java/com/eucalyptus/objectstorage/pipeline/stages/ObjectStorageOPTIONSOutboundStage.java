@@ -82,8 +82,8 @@ public class ObjectStorageOPTIONSOutboundStage implements UnrollableStage {
 
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast("objectstorage-options-outbound", new ObjectStorageOPTIONSOutboundHandler());
     pipeline.addLast("objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler());
+    pipeline.addLast("objectstorage-options-outbound", new ObjectStorageOPTIONSOutboundHandler());
   }
 
 }

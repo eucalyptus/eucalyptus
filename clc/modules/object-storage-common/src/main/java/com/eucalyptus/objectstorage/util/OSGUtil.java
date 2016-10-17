@@ -89,11 +89,13 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageCommonResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
@@ -161,7 +163,15 @@ public class OSGUtil {
   }
 
   public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
+      String requestMethod) {
+    // All S3 operations except Preflight (OPTIONS) requests call matchCorsRules with this signature,
+    // because "Access-Control-Request-Headers" are only present (if at all) in preflight requests.
+    return matchCorsRules(corsRules, requestOrigin, requestMethod, null);
+  }
+
+  public static CorsMatchResult matchCorsRules (List<CorsRule> corsRules, String requestOrigin, 
       String requestMethod, List<String> requestHeaders) {
+    // Only Preflight (OPTIONS) requests call matchCorsRules with this signature.
     CorsMatchResult corsMatchResult = new CorsMatchResult();
     boolean found = false;
     boolean anyOrigin = false;
@@ -287,6 +297,38 @@ public class OSGUtil {
     }
     return corsMatchResult;
   }  
+
+  public static void addCorsResponseHeaders (MappingHttpResponse mappingHttpResponse) throws S3Exception {
+    if (mappingHttpResponse != null &&
+        mappingHttpResponse.getMessage() instanceof ObjectStorageCommonResponseType) 
+    {
+      addCorsResponseHeaders((HttpResponse) mappingHttpResponse, (ObjectStorageCommonResponseType) mappingHttpResponse.getMessage());
+    }
+  }
+  
+  public static void addCorsResponseHeaders (HttpResponse httpResponse, ObjectStorageCommonResponseType response) throws S3Exception {
+    if (response.getAllowedOrigin() == null) {
+      // If no allowed origin header then we know there are no CORS headers at all
+      return;
+    }
+    
+    httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_ORIGIN, response.getAllowedOrigin());
+    if (response.getAllowedMethods() != null) {
+      httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_METHODS, response.getAllowedMethods());
+    }
+    if (response.getExposeHeaders() != null) {
+      httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_EXPOSE_HEADERS, response.getExposeHeaders());
+    }
+    if (response.getMaxAgeSeconds() != null) {
+      httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_MAX_AGE, response.getMaxAgeSeconds());
+    }
+    if (response.getAllowCredentials() != null) {
+      httpResponse.setHeader(HttpHeaders.Names.ACCESS_CONTROL_ALLOW_CREDENTIALS, response.getAllowCredentials());
+    }
+    if (response.getVary() != null) {
+      httpResponse.setHeader(HttpHeaders.Names.VARY, response.getVary());
+    }
+  }  // end addCorsResponseHeaders()
 
   public static String[] getTarget(String operationPath) {
     operationPath = operationPath.replaceAll("^/{2,}", "/"); // If its in the form "/////bucket/key", change it to "/bucket/key"

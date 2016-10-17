@@ -384,6 +384,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         operationKey = BUCKET + verb;
         operationParams.put("Bucket", target[0]);
         operationParams.put("Operation", verb.toUpperCase() + "." + "BUCKET");
+        if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
+            httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
+          operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+          operationParams.put("HttpMethod", httpRequest.getMethod().getName());
+        }
         if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
           if (params.containsKey(ObjectStorageProperties.BucketParameter.delete.toString())) {
             operationParams.put("delete", getMultiObjectDeleteMessage(httpRequest));
@@ -474,6 +479,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       operationParams.put("Bucket", target[0]);
       operationParams.put("Key", objectKey);
       operationParams.put("Operation", verb.toUpperCase() + "." + "OBJECT");
+
+      if (AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(verb)) &&
+          httpRequest.getHeader(HttpHeaders.Names.ORIGIN) != null) {
+        operationParams.put("Origin", httpRequest.getHeader(HttpHeaders.Names.ORIGIN));
+        operationParams.put("HttpMethod", httpRequest.getMethod().getName());
+      }
 
       if (!params.containsKey(ObjectStorageProperties.BucketParameter.acl.toString())) {
         if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
@@ -1615,7 +1626,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
         List<String> requestHeaders = new ArrayList<String>();
         for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
-          requestHeaders.add(requestHeadersArrayFromRequest[idx]);
+          requestHeaders.add(requestHeadersArrayFromRequest[idx].trim());
         }
         preflightRequest.setRequestHeaders(requestHeaders);
       }

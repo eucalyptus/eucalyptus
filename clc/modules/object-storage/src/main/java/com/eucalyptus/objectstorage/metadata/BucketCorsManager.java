@@ -81,8 +81,8 @@ public interface BucketCorsManager {
 
   public void deleteCorsRules(String bucketUuid, TransactionResource tran);
 
-  public void addCorsRules(List<com.eucalyptus.storage.msgs.s3.CorsRule> rules, String bucketUuid) throws ObjectStorageException;
+  public void addCorsRules(List<CorsRule> rules, String bucketUuid) throws ObjectStorageException;
 
-  public List<CorsRule> getCorsRules(String bucketUuid) throws Exception;
+  public List<CorsRule> getCorsRules(String bucketUuid);
 
 }
