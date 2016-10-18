@@ -58,13 +58,9 @@
 #define VPCMIDO_MD_VETH_M  "eucamd_mido"
 #define VPCMIDO_MD_NETNS   "eucamd"
 
-// Maximum number of active VPCs (mido routers)
-// Should be less than 43518 - avoid collision with metadata server IP, 169.254.169.254
-// 32767 is a good value - to match router IPs in 169.254.0.0/17 subnet
-#define MAX_RTID 32767
-// IDs that conflict with 169.254.169.254 and 169.254.169.253
-#define RTID_169_254 10750
-#define RTID_169_253 10749
+// Internal Router IDs that conflict with 169.254.169.248 through 169.254.169.255
+#define RTID_169_255 10751
+#define RTID_169_248 10744
 
 #define MIDO_HOST_INTERFACE_PHYSICAL           0x00000001
 #define MIDO_HOST_INTERFACE_VIRTUAL            0x00000002
@@ -242,6 +238,10 @@ typedef struct midoname_ipagip_extras_t {
 
 typedef struct midoname_rule_extras_t {
     char *type;
+    char *nwdstaddress;
+    char *nwdstlength;
+    char *nwsrcaddress;
+    char *nwsrclength;
     char *nattarget;
     char *jumpchainid;
 } midoname_rule_extras;

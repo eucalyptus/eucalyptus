@@ -814,6 +814,40 @@ long int eucanetd_get_timestamp() {
     return (res);
 }
 
+/**
+ * Splits a separator separated list of words and creates an array of pointer to strings.
+ * Memory is allocated for the array and each string pointed in the array.
+ * If result has memory pre-allocated, it will be reallocated and/or overwritten.
+ * Caller is responsible to release all memory (use free_ptrarr).
+ * @param string [in] string to be split
+ * @param result [out] pointer to an array of pointers to string
+ * @param nmemb [out] pointer to integer with the number of elements in result
+ * @param separator [in] separator character to be used
+ * @return 0 on success. 1 on failure.
+ */
+int euca_split_string(char *string, char ***result, int *nmemb, char separator) {
+    if (!string || !result || !nmemb) {
+        LOGWARN("Invalid argument: cannot split NULL string\n");
+        return (1);
+    }
+    char delim[2] = { 0 };
+    char *input = strdup(string);
+    char *saveptr = NULL;
+    char **words = *result;
+
+    snprintf(delim, 2, "%c", separator);
+    char *token = strtok_r(input, delim, &saveptr);
+    while (token) {
+        words = EUCA_REALLOC_C(words, *nmemb + 1, sizeof (char *));
+        words[*nmemb] = strdup(token);
+        (*nmemb)++;
+        token = strtok_r(NULL, delim, &saveptr);
+    }
+    
+    *result = words;
+    EUCA_FREE(input);
+    return (0);
+}
 
 /**
  * Splits a space separated list of words and turn into an array of strings
@@ -1020,6 +1054,28 @@ void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
     parr[*max_arr] = ptr;
     (*max_arr)++;
     return (arr);    
+}
+
+/**
+ * Releases memory allocated for an array of pointers. Each element of the array
+ * is assumed to have also allocated memory, which will also be released.
+ * @param arr [in] array of pointers of interest
+ * @param nmemb [in] number of elements in the array
+ * @return 0 on success. 1 on any error.
+ */
+int free_ptrarr(void *arr, int nmemb) {
+    if (!arr) {
+        return (1);
+    }
+    if (!nmemb) {
+        return (0);
+    }
+    void **a = arr;
+    for (int i = 0; i < nmemb; i++) {
+        free(a[i]);
+    }
+    free(a);
+    return (0);
 }
 
 /**

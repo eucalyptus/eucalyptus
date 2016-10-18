@@ -41,6 +41,10 @@
 
 #define EDGE_NETMETER_FILE_MAX_SIZE 10000000
 
+#define EDGE_NETMETER_FILE_TMP "/tmp/eucanetd_getstats_net.out"
+#define EDGE_NETMETER_FILE_NEW NC_NET_PATH_DEFAULT "/edge_netmeter"
+#define EDGE_NETMETER_FILE_DONE NC_NET_PATH_DEFAULT "/edge_netmeter_done"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |

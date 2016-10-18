@@ -110,15 +110,20 @@ enum {
     EUCANETD_CVAL_LOGLEVEL,
     EUCANETD_CVAL_LOGROLLNUMBER,
     EUCANETD_CVAL_LOGMAXSIZE,
-    EUCANETD_CVAL_MIDOGWHOSTS,
-    EUCANETD_CVAL_MIDOPUBNW,
-    EUCANETD_CVAL_MIDOPUBGWIP,
-    EUCANETD_CVAL_MIDOINTRTCIDR,
-    EUCANETD_CVAL_MIDOINTMDCIDR,
-    EUCANETD_CVAL_MIDOEXTMDCIDR,
-    EUCANETD_CVAL_MIDOMDCIDR,
-    EUCANETD_CVAL_ENABLE_MIDOMD,
-    EUCANETD_CVAL_VALIDATE_MIDOCONFIG,
+    EUCANETD_CVAL_MIDO_GWHOSTS,
+    EUCANETD_CVAL_MIDO_PUBNW,
+    EUCANETD_CVAL_MIDO_PUBGWIP,
+    EUCANETD_CVAL_MIDO_INTRTCIDR,
+    EUCANETD_CVAL_MIDO_INTMDCIDR,
+    EUCANETD_CVAL_MIDO_EXTMDCIDR,
+    EUCANETD_CVAL_MIDO_MDCIDR,
+    EUCANETD_CVAL_MIDO_MAX_RTID,
+    EUCANETD_CVAL_MIDO_MAX_ENIID,
+    EUCANETD_CVAL_MIDO_ENABLE_MIDOMD,
+    EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS,
+    EUCANETD_CVAL_MIDO_MD_254_EGRESS,
+    EUCANETD_CVAL_MIDO_MD_253_EGRESS,
+    EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG,
     EUCANETD_CVAL_LOCALIP,
     EUCANETD_CVAL_LAST,
 };
@@ -198,6 +203,10 @@ typedef struct eucanetdConfig_t {
     char mido_intmdcidr[NETWORK_ADDR_LEN];
     char mido_extmdcidr[NETWORK_ADDR_LEN];
     char mido_mdcidr[NETWORK_ADDR_LEN];
+    char mido_md_254_egress[256];
+    char mido_md_253_egress[256];
+    int mido_max_rtid;
+    int mido_max_eniid;
 
     atomic_file global_network_info_file;
     char lastAppliedVersion[32];
@@ -216,6 +225,8 @@ typedef struct eucanetdConfig_t {
 
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
     boolean enable_mido_md;
+    boolean mido_md_veth_use_netns;
+    boolean populate_mido_md;
     boolean validate_mido_config;
 
     int debug;

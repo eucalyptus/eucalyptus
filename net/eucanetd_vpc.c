@@ -279,6 +279,7 @@ static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pG
         }
     }
     midonet_api_cleanup();
+    free_mido_config(pMidoConfig);
     gInitialized = FALSE;
     return (ret);
 }
@@ -315,14 +316,20 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     midoname **ips = NULL;
     int max_ips = 0;
     int rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &ipgs, &max_ipgs);
+    boolean found = FALSE;
     if (!rc && max_ipgs) {
-        for (int i = 0; i < max_ipgs; i++) {
+        for (int i = 0; i < max_ipgs && !found; i++) {
             if (!strcmp(ipgs[i]->name, "euca_version")) {
                 rc = mido_get_ipaddrgroup_ips(ipgs[i], &ips, &max_ips);
                 if (!rc && ips && max_ips) {
                     mido_euca_version = euca_version_dot2hex(ips[0]->ipagip->ip);
                     mido_euca_version_str = hex2dot(mido_euca_version);
+                    found = TRUE;
                     LOGTRACE("\tFound %s artifacts\n", mido_euca_version_str);
+                    if (mido_euca_version < pConfig->euca_version) {
+                        LOGINFO("Upgrading Eucalyptus %s to Eucalyptus %s\n", mido_euca_version_str, pConfig->euca_version_str);
+                        mido_delete_resource(ipgs[i], ips[0]);
+                    }
                 }
                 EUCA_FREE(ips);
             }

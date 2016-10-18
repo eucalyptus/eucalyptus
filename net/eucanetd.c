@@ -147,23 +147,25 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"EUCA_USER", "eucalyptus"}
     ,
-    {"MIDOGWHOSTS", NULL}
+    {"MIDO_INTRT_CIDR", "169.254.0.0/17"}
     ,
-    {"MIDOPUBNW", NULL}
+    {"MIDO_INTMD_CIDR", "169.254.128.0/17"}
     ,
-    {"MIDOPUBGWIP", NULL}
+    {"MIDO_EXTMD_CIDR", "169.254.169.248/29"}
     ,
-    {"MIDOINTRTCIDR", "169.254.0.0/17"}
+    {"MIDO_MD_CIDR", "255.0.0.0/8"}
     ,
-    {"MIDOINTMDCIDR", "169.254.128.0/17"}
+    {"MIDO_MD_VETH_USE_NETNS", "N"}
     ,
-    {"MIDOEXTMDCIDR", "169.254.255.252/30"}
+    {"MIDO_MD_254_EGRESS", "tcp:80 tcp:8000"}
     ,
-    {"MIDOMDCIDR", "10.0.0.0/8"}
+    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53"}
     ,
-    {"ENABLE_MIDOMD", "N"}
+    {"MIDO_MAX_RTID", "10240"}
     ,
-    {"VALIDATE_MIDOCONFIG", "Y"}
+    {"MIDO_MAX_ENIID", "1048576"}
+    ,
+    {"MIDO_VALIDATE_MIDOCONFIG", "Y"}
     ,
     {NULL, NULL}
     ,
@@ -174,6 +176,8 @@ configEntry configKeysNoRestartEUCANETD[] = {
     {"POLLING_FREQUENCY", "1"}
     ,
     {"DISABLE_L2_ISOLATION", "N"}
+    ,
+    {"MIDO_ENABLE_MIDOMD", "N"}
     ,
     {"NC_PROXY", "N"}
     ,
@@ -259,7 +263,7 @@ static int eucanetd_read_config_bootstrap(void);
 static int eucanetd_setlog_bootstrap(void);
 static int eucanetd_read_config(globalNetworkInfo *pGni);
 static int eucanetd_initialize_logs(void);
-static int eucanetd_fetch_latest_network(boolean *update_globalnet);
+static int eucanetd_fetch_latest_network(boolean *update_globalnet, boolean *config_changed);
 static int eucanetd_fetch_latest_euca_network(boolean *update_globalnet);
 static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update_globalnet);
 static int eucanetd_detect_peer(globalNetworkInfo *pGni);
@@ -298,6 +302,7 @@ int main(int argc, char **argv) {
     struct timeval tv = { 0 };
     struct timeval ttv = { 0 };
     
+    boolean config_changed = FALSE;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
     boolean update_version_file = FALSE;
@@ -525,9 +530,12 @@ int main(int argc, char **argv) {
         counter++;
 
         // fetch all latest networking information from various sources
-        rc = eucanetd_fetch_latest_network(&update_globalnet);
+        rc = eucanetd_fetch_latest_network(&update_globalnet, &config_changed);
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsuccessful\n");
+        }
+        if (config_changed) {
+            pGniApplied = NULL;
         }
         // first time we run, force an update
         if (firstrun) {
@@ -828,12 +836,14 @@ static void eucanetd_install_signal_handlers(void) {
 /**
  * Check eucanetd config files for changes
  *
- * @return always 0.
+ * @return 0 if no changes have been detected. Positive integer if configuration
+ * parameters not requiring restart has changed.
  *
  * @note
  *     Currently only /etc/eucalyptus/eucalyptus.conf is checked
  */
 static int eucanetd_fetch_latest_local_config(void) {
+    int ret = 0;
     if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {
         // config modification time has changed
         if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
@@ -841,10 +851,22 @@ static int eucanetd_fetch_latest_local_config(void) {
             LOGINFO("configuration file has been modified, ingressing new options\n");
             eucanetd_initialize_logs();
 
-            // TODO  pick up other NC options dynamically
+            if (IS_NETMODE_VPCMIDO(config)) {
+                char *cval = configFileValue("MIDO_ENABLE_MIDOMD");
+                LOGINFO("cofig MIDO_ENABLE_MIDOMD = %s\n", cval);
+                if (!strcmp(cval, "Y")) {
+                    config->enable_mido_md = TRUE;
+                } else {
+                    config->enable_mido_md = FALSE;
+                }
+                EUCA_FREE(cval);
+            }
+            ret++;
+
+            // TODO  pick up other eucanetd options dynamically
         }
     }
-    return (0);
+    return (ret);
 }
 
 /**
@@ -897,7 +919,7 @@ static int eucanetd_daemonize(void) {
 
     pid = getpid();
     if (pid > 1) {
-        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd.pid", config->eucahome);
         FH = fopen(pidfile, "w");
         if (FH) {
             fprintf(FH, "%d\n", pid);
@@ -1021,6 +1043,11 @@ static int eucanetd_read_config_bootstrap(void) {
     }
 
     config->eucahome = strdup(home);
+    if (strlen(config->eucahome)) {
+        if (config->eucahome[strlen(config->eucahome) - 1] == '/') {
+            config->eucahome[strlen(config->eucahome) - 1] = '\0';
+        }
+    }
     config->eucauser = strdup(user);
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
@@ -1171,18 +1198,23 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    cvals[EUCANETD_CVAL_MIDOGWHOSTS] = configFileValue("MIDOGWHOSTS");
-    cvals[EUCANETD_CVAL_MIDOPUBNW] = configFileValue("MIDOPUBNW");
-    cvals[EUCANETD_CVAL_MIDOPUBGWIP] = configFileValue("MIDOPUBGWIP");
-    cvals[EUCANETD_CVAL_MIDOINTRTCIDR] = configFileValue("MIDOINTRTCIDR");
-    cvals[EUCANETD_CVAL_MIDOINTMDCIDR] = configFileValue("MIDOINTMDCIDR");
-    cvals[EUCANETD_CVAL_MIDOEXTMDCIDR] = configFileValue("MIDOEXTMDCIDR");
-    cvals[EUCANETD_CVAL_MIDOMDCIDR] = configFileValue("MIDOMDCIDR");
-    cvals[EUCANETD_CVAL_ENABLE_MIDOMD] = configFileValue("ENABLE_MIDOMD");
+    //cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = configFileValue("MIDOGWHOSTS");
+    //cvals[EUCANETD_CVAL_MIDO_PUBNW] = configFileValue("MIDOPUBNW");
+    //cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = configFileValue("MIDOPUBGWIP");
+    cvals[EUCANETD_CVAL_MIDO_INTRTCIDR] = configFileValue("MIDO_INTRT_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_INTMDCIDR] = configFileValue("MIDO_INTMD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR] = configFileValue("MIDO_EXTMD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_MDCIDR] = configFileValue("MIDO_MD_CIDR");
+    cvals[EUCANETD_CVAL_MIDO_MAX_RTID] = configFileValue("MIDO_MAX_RTID");
+    cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
+    cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
+    cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS] = configFileValue("MIDO_MD_VETH_USE_NETNS");
+    cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS] = configFileValue("MIDO_MD_254_EGRESS");
+    cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS] = configFileValue("MIDO_MD_253_EGRESS");
 #ifdef VPCMIDO_DEVELOPER
-    cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG] = configFileValue("VALIDATE_MIDOCONFIG");
+    cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = configFileValue("MIDO_VALIDATE_MIDOCONFIG");
 #else
-    cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG] = strdup("Y");
+    cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG] = strdup("Y");
 #endif // VPCMIDO_DEVELOPER
 
     EUCA_FREE(config->eucahome);
@@ -1194,17 +1226,9 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
 
-    if (!cvals[EUCANETD_CVAL_MIDOGWHOSTS]) {
-        cvals[EUCANETD_CVAL_MIDOGWHOSTS] = strdup(pGni->GatewayHosts);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOPUBNW]) {
-        cvals[EUCANETD_CVAL_MIDOPUBNW] = strdup(pGni->PublicNetworkCidr);
-    }
-
-    if (!cvals[EUCANETD_CVAL_MIDOPUBGWIP]) {
-        cvals[EUCANETD_CVAL_MIDOPUBGWIP] = strdup(pGni->PublicGatewayIP);
-    }
+    cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = strdup(pGni->GatewayHosts);
+    cvals[EUCANETD_CVAL_MIDO_PUBNW] = strdup(pGni->PublicNetworkCidr);
+    cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = strdup(pGni->PublicGatewayIP);
 
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
         config->disable_l2_isolation = 1;
@@ -1282,29 +1306,42 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
 
     // mido config opts
-    if (cvals[EUCANETD_CVAL_MIDOGWHOSTS])
-        snprintf(config->midogwhosts, sizeof(config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDOGWHOSTS]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBNW])
-        snprintf(config->midopubnw, sizeof(config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDOPUBNW]);
-    if (cvals[EUCANETD_CVAL_MIDOPUBGWIP])
-        snprintf(config->midopubgwip, sizeof(config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDOPUBGWIP]);
-    if (cvals[EUCANETD_CVAL_MIDOINTRTCIDR])
-        snprintf(config->mido_intrtcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOINTRTCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOINTMDCIDR])
-        snprintf(config->mido_intmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOINTMDCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOEXTMDCIDR])
-        snprintf(config->mido_extmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOEXTMDCIDR]);
-    if (cvals[EUCANETD_CVAL_MIDOMDCIDR])
-        snprintf(config->mido_mdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDOMDCIDR]);
-    if (!strcmp(cvals[EUCANETD_CVAL_ENABLE_MIDOMD], "Y")) {
-        config->enable_mido_md = TRUE;
-    } else {
-        config->enable_mido_md = FALSE;
-    }
-    if (!strcmp(cvals[EUCANETD_CVAL_VALIDATE_MIDOCONFIG], "Y")) {
-        config->validate_mido_config = TRUE;
-    } else {
-        config->validate_mido_config = FALSE;
+    if (IS_NETMODE_VPCMIDO(config)) {
+        if (cvals[EUCANETD_CVAL_MIDO_GWHOSTS])
+            snprintf(config->midogwhosts, sizeof (config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDO_GWHOSTS]);
+        if (cvals[EUCANETD_CVAL_MIDO_PUBNW])
+            snprintf(config->midopubnw, sizeof (config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDO_PUBNW]);
+        if (cvals[EUCANETD_CVAL_MIDO_PUBGWIP])
+            snprintf(config->midopubgwip, sizeof (config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDO_PUBGWIP]);
+        if (cvals[EUCANETD_CVAL_MIDO_INTRTCIDR])
+            snprintf(config->mido_intrtcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_INTRTCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_INTMDCIDR])
+            snprintf(config->mido_intmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_INTMDCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR])
+            snprintf(config->mido_extmdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR]);
+        if (cvals[EUCANETD_CVAL_MIDO_MDCIDR])
+            snprintf(config->mido_mdcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_MDCIDR]);
+        config->mido_max_rtid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_RTID]);
+        config->mido_max_eniid = atoi(cvals[EUCANETD_CVAL_MIDO_MAX_ENIID]);
+        if (cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS])
+            snprintf(config->mido_md_254_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS]);
+        if (cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS])
+            snprintf(config->mido_md_253_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS]);
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD], "Y")) {
+            config->enable_mido_md = TRUE;
+        } else {
+            config->enable_mido_md = FALSE;
+        }
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS], "Y")) {
+            config->mido_md_veth_use_netns = TRUE;
+        } else {
+            config->mido_md_veth_use_netns = FALSE;
+        }
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_VALIDATE_MIDOCONFIG], "Y")) {
+            config->validate_mido_config = TRUE;
+        } else {
+            config->validate_mido_config = FALSE;
+        }
     }
 
     if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)
@@ -1383,10 +1420,12 @@ static int eucanetd_initialize_logs(void)
  * Checks if the contents of the global network information has changed.
  *
  * @param update_globalnet [out] set to true if the network information changed
+ * @param config_changed [out] set to true if local configuration (not requiring
+ * restart) has changed
  *
  * @return 0 on success. 1 on failure.
  */
-static int eucanetd_fetch_latest_network(boolean *update_globalnet) {
+static int eucanetd_fetch_latest_network(boolean *update_globalnet, boolean *config_changed) {
     int rc = 0, ret = 0;
 
     LOGTRACE("fetching latest network view\n");
@@ -1398,9 +1437,14 @@ static int eucanetd_fetch_latest_network(boolean *update_globalnet) {
     // don't run any updates unless something new has happened
     *update_globalnet = FALSE;
 
+    if (config_changed) {
+        *config_changed = FALSE;
+    }
     rc = eucanetd_fetch_latest_local_config();
     if (rc) {
-        LOGWARN("Failed to effect local eucalyptus.conf\n");
+        if (config_changed) {
+            *config_changed = TRUE;
+        }
     }
     // get latest networking data from eucalyptus, set update flags if content has changed
     rc = eucanetd_fetch_latest_euca_network(update_globalnet);

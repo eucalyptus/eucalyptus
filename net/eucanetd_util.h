@@ -115,12 +115,17 @@ long int eucanetd_get_timestamp();
 int euca_exec(const char *command);
 int euca_exec_wait(int timeout_sec, const char *prefix, const char *first, ...);
 
+int euca_split_string(char *string, char ***result, int *nmemb, char separator);
+
 int euca_u32_set_insert(u32 **set, int *max_set, u32 value);
 int euca_string_set_insert(char ***set, int *max_set, char *value);
 
 void *zalloc_check(size_t nmemb, size_t size);
 void *realloc_check(void *ptr, size_t nmemb, size_t size);
 void *append_ptrarr(void *arr, int *max_arr, void *ptr);
+
+int free_ptrarr(void *arr, int nmemb);
+
 void get_stack_trace ();
 
 u32 euca_version_dot2hex(const char *ver);

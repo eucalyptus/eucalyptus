@@ -497,6 +497,10 @@ void mido_free_midoname(midoname *name) {
     }
     if (name->rule) {
         EUCA_FREE(name->rule->type);
+        EUCA_FREE(name->rule->nwdstaddress);
+        EUCA_FREE(name->rule->nwdstlength);
+        EUCA_FREE(name->rule->nwsrcaddress);
+        EUCA_FREE(name->rule->nwsrclength);
         EUCA_FREE(name->rule->nattarget);
         EUCA_FREE(name->rule->jumpchainid);
         EUCA_FREE(name->rule);
@@ -1412,7 +1416,7 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
 
     midoname *out = NULL;
     
-    if (devname == NULL) {
+    if ((br == NULL) && (devname == NULL)) {
         LOGWARN("Invalid argument: cannot create dhcp for NULL\n");
         return (1);
     }
@@ -1446,7 +1450,7 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
 
     if (!found) {
         bzero(&myname, sizeof (midoname));
-        myname.tenant = strdup(devname->tenant);
+        myname.tenant = strdup(br->obj->tenant);
         myname.resource_type = strdup("dhcp");
         myname.media_type = strdup(midonet_api_mtypes[APPLICATION_DHCP_SUBNET_JSON]);
 
@@ -1466,7 +1470,7 @@ int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, ch
             snprintf(dnslist, 16, "8.8.8.8");
         }
 
-        rc = mido_create_resource(devname, 1, &myname, &out, "subnetPrefix", subnet,
+        rc = mido_create_resource(br->obj, 1, &myname, &out, "subnetPrefix", subnet,
                 "subnetLength", slashnet, "defaultGateway", gw, "dnsServerAddrs", "jsonarr",
                 "dnsServerAddrs:LIST", dnslist, "dnsServerAddrs:END", "END", NULL);
         if (rc == 0) {
@@ -2262,11 +2266,11 @@ int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname,
 
     if (!found) {
         bzero(&myname, sizeof (midoname));
-        myname.tenant = strdup(chain->tenant);
+        myname.tenant = strdup(ch->obj->tenant);
         myname.resource_type = strdup("rules");
         myname.media_type = strdup(midonet_api_mtypes[APPLICATION_RULE_JSON]);
 
-        rc = mido_create_resource_v(chain, 1, &myname, &out, &ap);
+        rc = mido_create_resource_v(ch->obj, 1, &myname, &out, &ap);
         if (rc == 0) {
             if (outname) {
                 *outname = out;
@@ -2282,7 +2286,7 @@ int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname,
     }
 
     va_end(ap);
-    LOGTRACE("%s pos rule create max_rules %d count %d\n", chain->name, ch->max_rules, ch->rules_count);
+    LOGTRACE("%s pos rule create max_rules %d count %d\n", ch->obj->name, ch->max_rules, ch->rules_count);
     if (next_position) *next_position = ch->rules_count + 1;
 
     return (ret);
@@ -2409,7 +2413,7 @@ int mido_create_bridge_port(midonet_api_bridge *br, midoname *devname, midoname 
         }
         out = NULL;
     }
-    rc = mido_create_port(devname, "Bridge", NULL, NULL, NULL, NULL, &out);
+    rc = mido_create_port(br->obj, "Bridge", NULL, NULL, NULL, NULL, &out);
     if (rc == 0) {
         if (outname) {
             *outname = out;
@@ -2491,7 +2495,7 @@ int mido_create_router_port(midonet_api_router *rt, midoname *devname, char *ip,
     }
 
     if (!found) {
-        rc = mido_create_port(devname, "Router", ip, nw, slashnet, mac, &out);
+        rc = mido_create_port(rt->obj, "Router", ip, nw, slashnet, mac, &out);
         if (rc == 0) {
             if (outname) {
                 *outname = out;
@@ -3652,6 +3656,10 @@ int mido_update_midoname(midoname *name) {
         } else if (!strcmp(name->resource_type, "rules")) {
             if (name->rule) {
                 EUCA_FREE(name->rule->type);
+                EUCA_FREE(name->rule->nwdstaddress);
+                EUCA_FREE(name->rule->nwdstlength);
+                EUCA_FREE(name->rule->nwsrcaddress);
+                EUCA_FREE(name->rule->nwsrclength);
                 EUCA_FREE(name->rule->nattarget);
                 EUCA_FREE(name->rule->jumpchainid);
             } else {
@@ -3660,6 +3668,22 @@ int mido_update_midoname(midoname *name) {
             json_object_object_get_ex(jobj, "type", &el);
             if (el) {
                 name->rule->type = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "nwDstAddress", &el);
+            if (el) {
+                name->rule->nwdstaddress = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "nwDstLength", &el);
+            if (el) {
+                name->rule->nwsrclength = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "nwSrcAddress", &el);
+            if (el) {
+                name->rule->nwsrcaddress = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "nwSrcLength", &el);
+            if (el) {
+                name->rule->nwdstlength = strdup(json_object_get_string(el));
             }
             json_object_object_get_ex(jobj, "natTargets", &el);
             if (el) {
@@ -4552,7 +4576,7 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
     }
     // get the router information from midocache
     if (rt == NULL) {
-        LOGWARN("Unable to find router %s in midocache.\n", router->name);
+        LOGWARN("Unable to find router %s in midocache.\n", rt->obj->name);
         return (1);
     } else {
         routes = rt->routes;
@@ -4570,17 +4594,17 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
 
     if (!found) {
         bzero(&myname, sizeof (midoname));
-        myname.tenant = strdup(router->tenant);
+        myname.tenant = strdup(rt->obj->tenant);
         myname.resource_type = strdup("routes");
         myname.media_type = strdup(midonet_api_mtypes[APPLICATION_ROUTE_JSON]);
 
         if (strcmp(next_hop_ip, "UNSET")) {
-            rc = mido_create_resource(router, 1, &myname, &out, "srcNetworkAddr", src,
+            rc = mido_create_resource(rt->obj, 1, &myname, &out, "srcNetworkAddr", src,
                     "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength",
                     dst_slashnet, "type", "Normal", "nextHopPort", rport->uuid,
                     "weight", weight, "nextHopGateway", next_hop_ip, NULL);
         } else {
-            rc = mido_create_resource(router, 1, &myname, &out, "srcNetworkAddr", src,
+            rc = mido_create_resource(rt->obj, 1, &myname, &out, "srcNetworkAddr", src,
                     "srcNetworkLength", src_slashnet, "dstNetworkAddr", dst, "dstNetworkLength",
                     dst_slashnet, "type", "Normal", "nextHopPort", rport->uuid, "weight", weight, NULL);
         }
