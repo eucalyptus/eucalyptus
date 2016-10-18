@@ -99,7 +99,7 @@ import com.google.common.cache.LoadingCache;
 public class VmMetadata {
   private static//
   Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
- 
+
   private static//
   Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
@@ -146,7 +146,7 @@ public class VmMetadata {
                                                                                             throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
                                                                                           }
                                                                                         };
-  
+
   private static//
   ConcurrentMap<String, Function<MetadataRequest, ByteArray>> publicMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
                                                                                           {
@@ -166,10 +166,14 @@ public class VmMetadata {
                                                                                               new Function<MetadataRequest, ByteArray>( ) {
                                                                                                 public ByteArray apply( MetadataRequest arg0 ) {
                                                                                                   String listing = "";
-                                                                                                  for ( String key : keySet( ) ) {
+                                                                                                  for ( String key : keySet( ) ) try {
                                                                                                     if ( !"".equals( key )
                                                                                                          && get( key ).apply( arg0 ) != null ) {
                                                                                                       listing += key + "\n";
+                                                                                                    }
+                                                                                                  } catch ( final RuntimeException e ) {
+                                                                                                    if ( !Exceptions.isCausedBy( e, NoSuchElementException.class ) ) {
+                                                                                                      throw e;
                                                                                                     }
                                                                                                   }
                                                                                                   listing = listing.replaceAll( "\n$", "" );
@@ -181,7 +185,7 @@ public class VmMetadata {
                                                                                             put( "meta-data", cache( metaDataFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                           }
                                                                                         };
-  
+
   private static//
   ConcurrentMap<String, Function<MetadataRequest, ByteArray>> //
                                                               systemMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
@@ -239,7 +243,10 @@ public class VmMetadata {
   }
 
 
-  public byte[] handle( final String path ) {
+  /**
+   * @return byte[] for content or String for expected error
+   */
+  public Object handle( final String path ) {
     final String[] parts = path.split( ":", 2 );
     try {
       final String requestIpOrInstanceId = ResourceIdentifiers.tryNormalize( ).apply( parts[0] );
@@ -262,10 +269,8 @@ public class VmMetadata {
       } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
         return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else {
-        throw new NoSuchElementException( "Metadata request failed: " + path ); 
+        return "Metadata request failed: " + path;
       }
-    } catch ( NoSuchElementException ex ) {
-      throw ex;
     } catch ( Exception ex ) {
       NoSuchElementException noSuchElementException = Exceptions.findCause( ex, NoSuchElementException.class );
       if ( noSuchElementException != null ) throw noSuchElementException;
@@ -276,5 +281,5 @@ public class VmMetadata {
       throw Exceptions.toUndeclared( ex );
     }
   }
-  
+
 }
