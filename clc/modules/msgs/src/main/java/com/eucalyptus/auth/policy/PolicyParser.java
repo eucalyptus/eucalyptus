@@ -64,6 +64,7 @@ package com.eucalyptus.auth.policy;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -91,6 +92,7 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Json;
 import com.eucalyptus.util.Parameters;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -106,9 +108,9 @@ import com.google.common.collect.Sets;
 public class PolicyParser {
 
   private static final Logger LOG = Logger.getLogger( PolicyParser.class );
-  
+
   private static final Pattern VARIABLE_MATCHER = Pattern.compile( "\\$\\{(?:[a-zA-Z][a-zA-Z0-9]*:[a-zA-Z]+|[*]|[?]|[$])}" );
-  
+
   private enum PolicyAttachmentType {
     Identity( true/*requireResource*/, false/*requirePrincipal*/ ),
     Resource( false/*requireResource*/, true/*requirePrincipal*/ );
@@ -130,37 +132,51 @@ public class PolicyParser {
       return requirePrincipal;
     }
   }
-  
+
   private static final class PolicyParseContext {
     private final String version;
 
     private PolicyParseContext( final String version ) {
       this.version = version;
     }
-    
+
     public String getVersion() {
       return version;
     }
   }
 
   private final PolicyAttachmentType attachmentType;
-  
+
+  private final boolean validating; // true for json validation
+
+  public static PolicyParser getLaxInstance( ) {
+    return new PolicyParser( PolicyAttachmentType.Identity, false );
+  }
+
+  public static PolicyParser getLaxResourceInstance( ) {
+    return new PolicyParser( PolicyAttachmentType.Resource, false );
+  }
+
   public static PolicyParser getInstance( ) {
-    return new PolicyParser( PolicyAttachmentType.Identity );
+    return new PolicyParser( PolicyAttachmentType.Identity, true );
   }
 
   public static PolicyParser getResourceInstance( ) {
-    return new PolicyParser( PolicyAttachmentType.Resource );
+    return new PolicyParser( PolicyAttachmentType.Resource, true );
   }
 
-  private PolicyParser( final PolicyAttachmentType attachmentType  ) {
+  private PolicyParser(
+      final PolicyAttachmentType attachmentType,
+      final boolean validating
+  ) {
     this.attachmentType = attachmentType;
+    this.validating = validating;
   }
-  
+
   /**
    * Parse the input policy text and returns an PolicyEntity object that
    * represents the policy internally.
-   * 
+   *
    * @param policy The input policy text.
    * @return The parsed the policy entity.
    * @throws PolicyParseException for policy syntax error.
@@ -171,6 +187,14 @@ public class PolicyParser {
     }
     if ( policy.length( ) > AuthenticationLimitProvider.Values.getPolicySizeLimit( ) ) {
       throw new PolicyParseException( PolicyParseException.SIZE_TOO_LARGE );
+    }
+    if ( validating && AuthenticationLimitProvider.Values.getUseValidatingPolicyParser( ) ) {
+      try { // parser that ensures policy is valid json
+        Json.parse( policy );
+      } catch ( IOException e ) {
+        Debugging.logError( LOG, e, "Syntax error in input policy" );
+        throw new PolicyParseException( e.getMessage( ), e );
+      }
     }
     try {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
@@ -183,17 +207,17 @@ public class PolicyParser {
       throw new PolicyParseException( e );
     }
   }
-  
+
   /**
    * Parse all statements.
-   * 
+   *
    * @param policy Input policy text.
    * @return A list of statement entities from the input policy.
    * @throws JSONException for syntax error.
    */
-  private List<PolicyAuthorization> parseStatements( 
+  private List<PolicyAuthorization> parseStatements(
       final PolicyParseContext context,
-      final JSONObject policy 
+      final JSONObject policy
   ) throws JSONException {
     List<JSONObject> objs;
     if ( policy.get( PolicySpec.STATEMENT ) instanceof JSONObject ) {
@@ -207,20 +231,20 @@ public class PolicyParser {
     }
     return authorizations;
   }
-  
+
   /**
    * Parse one statement. A statement is internally represented by a list of authorizations
    * and a list of conditions. The action list and the resource list of the statement are
    * parsed into authorizations (which action is allowed on which resource). The condition
    * block is translated into conditions (keys, values and their relationships).
-   * 
+   *
    * @param statement The JSON object of the statement
    * @return The parsed statement entity
    * @throws JSONException for syntax error
    */
   private List<PolicyAuthorization> parseStatement(
       final PolicyParseContext context,
-      final JSONObject statement 
+      final JSONObject statement
   ) throws JSONException {
     // statement ID
     String sid = JsonUtils.getByType( String.class, statement, PolicySpec.SID );
@@ -243,7 +267,7 @@ public class PolicyParser {
    * @throws JSONException for syntax error.
    */
   private PolicyPrincipal parsePrincipal(
-      final JSONObject statement 
+      final JSONObject statement
   ) {
     final String principalElement =
         JsonUtils.checkBinaryOption( statement, PolicySpec.PRINCIPAL, PolicySpec.NOTPRINCIPAL, attachmentType.isPrincipalRequired() );
@@ -275,7 +299,7 @@ public class PolicyParser {
 
   /**
    * Parse the authorization part of a statement.
-   * 
+   *
    * @param statement The input statement in JSON object.
    * @param effect The effect of the statement
    * @return A list of authorization entities.
@@ -303,7 +327,7 @@ public class PolicyParser {
     // decompose actions and resources and re-combine them into a list of authorizations
     return decomposeStatement( context, effect, sid, actionElement, actions, resourceElement, resources, principal, conditions );
   }
-  
+
   /**
    * The algorithm of decomposing the actions and resources of a statement into authorizations:
    * 1. Group actions into different vendors.
@@ -371,7 +395,7 @@ public class PolicyParser {
         }
       }
       if ( !added ) {
-        results.add( new PolicyAuthorization( 
+        results.add( new PolicyAuthorization(
             sid, EffectType.valueOf( effect ), principal, conditions, actionSet, notAction, variableSet( context, conditions ) ) );
       }
     }
@@ -380,20 +404,20 @@ public class PolicyParser {
 
   /**
    * Parse the conditions of a statement
-   * 
+   *
    * @param statement The JSON object of the statement
    * @param effect The effect of the statement
    * @return A list of parsed condition entity.
    * @throws JSONException for syntax error.
    */
   private List<PolicyCondition> parseConditions(
-      final JSONObject statement, 
-      final String effect 
+      final JSONObject statement,
+      final String effect
   ) throws JSONException {
     JSONObject condsObj = JsonUtils.getByType( JSONObject.class, statement, PolicySpec.CONDITION );
     boolean isQuota = EffectType.Limit.name( ).equals( effect );
     List<PolicyCondition> results = Lists.newArrayList( );
-    if ( condsObj != null ) {    
+    if ( condsObj != null ) {
       for ( Object t : condsObj.keySet( ) ) {
         String type = ( String ) t;
         Class<? extends ConditionOp> typeClass = checkConditionType( type );
@@ -413,7 +437,7 @@ public class PolicyParser {
 
   /**
    * Check validity of the action value.
-   * 
+   *
    * @param action The input action pattern.
    * @return The vendor of the action.
    * @throws JSONException for any error
@@ -431,7 +455,7 @@ public class PolicyParser {
 
   /**
    * Check the validity of a condition type.
-   * 
+   *
    * @param type The condition type string.
    * @return The class represents the condition type.
    * @throws JSONException for syntax error.
@@ -446,10 +470,10 @@ public class PolicyParser {
     }
     return typeClass;
   }
-  
+
   /**
    * Check the condition key and value validity.
-   * 
+   *
    * @param key Condition key.
    * @param values Condition values.
    * @param typeClass The condition type
@@ -485,7 +509,7 @@ public class PolicyParser {
       keyObj.validateValueType( v );
     }
   }
-  
+
   /**
    * Check the validity of effect.
    */
@@ -497,39 +521,39 @@ public class PolicyParser {
       throw new JSONException( "Invalid Effect value: " + effect );
     }
   }
-  
+
   private String normalize( String value ) {
     return ( value != null ) ? value.trim( ).toLowerCase( ) : null;
   }
 
   private Set<String> variableSet(
       final PolicyParseContext context,
-      final List<PolicyCondition> conditions 
-  ) { 
+      final List<PolicyCondition> conditions
+  ) {
     return variableSet( context, conditions, Collections.<String>emptySet( ) );
   }
 
   private static boolean supportsPolicyVariables( final PolicyParseContext context ) {
-    return context.getVersion( ) != null && "2012-10-17".compareTo( context.getVersion( ) ) <= 0;   
+    return context.getVersion( ) != null && "2012-10-17".compareTo( context.getVersion( ) ) <= 0;
   }
-  
+
   private Set<String> variableSet(
       final PolicyParseContext context,
-      final List<PolicyCondition> conditions, 
-      final Set<String> resources 
+      final List<PolicyCondition> conditions,
+      final Set<String> resources
   ) {
     if ( !supportsPolicyVariables( context ) ) {
       return Collections.emptySet( );
     }
-    
+
     final Set<String> variables = Sets.newHashSet( );
-    
+
     for ( final Condition condition : conditions ) {
       for ( final String value : condition.getValues( ) ) {
         addVariablesFrom( variables, value );
       }
     }
-    
+
     for ( final String resource : resources ) {
       try {
         addVariablesFrom( variables, resource );
@@ -537,17 +561,17 @@ public class PolicyParser {
         Logs.exhaust( ).error( e, e );
       }
     }
-    
+
     return variables;
   }
-  
+
   private void addVariablesFrom( final Set<String> variables, final String text ) {
-    final Matcher matcher = VARIABLE_MATCHER.matcher( text );  
-    while ( matcher.find( ) ) { 
+    final Matcher matcher = VARIABLE_MATCHER.matcher( text );
+    while ( matcher.find( ) ) {
       variables.add( matcher.group( ) );
     }
   }
-  
+
   private static PolicyResourceSetKey key( final String region, final String account, final String type ) {
     return new PolicyResourceSetKey( Strings.emptyToNull( region ), Strings.emptyToNull( account ), type );
   }

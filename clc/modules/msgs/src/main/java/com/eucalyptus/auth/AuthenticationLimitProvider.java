@@ -36,6 +36,8 @@ public interface AuthenticationLimitProvider {
 
   int getPolicySizeLimitSpi( );
 
+  boolean getUseValidatingPolicyParserSpi( );
+
   class Values {
     public static long getDefaultPasswordExpiry( ) {
       return getLongValue( AuthenticationLongProperties.DEFAULT_PASSWORD_EXPIRY );
@@ -57,11 +59,19 @@ public interface AuthenticationLimitProvider {
 
     public static int getOpenIdConnectProviderThumprintLimit( ) { return 5; }
 
+    public static boolean getUseValidatingPolicyParser( ) {
+      return getBooleanValue( AuthenticationBooleanProperties.USE_VALIDATING );
+    }
+
     static int getIntValue( final NonNullFunction<AuthenticationLimitProvider, Integer> valueFunction ) {
       return getValue( valueFunction );
     }
 
     static long getLongValue( final NonNullFunction<AuthenticationLimitProvider, Long> valueFunction ) {
+      return getValue( valueFunction );
+    }
+
+    static boolean getBooleanValue( final NonNullFunction<AuthenticationLimitProvider, Boolean> valueFunction ) {
       return getValue( valueFunction );
     }
 
@@ -105,4 +115,18 @@ public interface AuthenticationLimitProvider {
       }
     },
   }
+
+  enum AuthenticationBooleanProperties implements NonNullFunction<AuthenticationLimitProvider, Boolean> {
+    USE_VALIDATING {
+      @Nonnull
+      @Override
+      public Boolean apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
+        return authenticationLimitProvider.getUseValidatingPolicyParserSpi();
+      }
+    }
+  }
+
+
 }
+
+

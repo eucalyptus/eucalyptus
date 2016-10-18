@@ -137,6 +137,9 @@ public class AuthenticationProperties {
   @ConfigurableField( description = "Maximum size for an IAM policy (bytes)", initial = DEFAULT_MAX_POLICY_SIZE_TEXT )
   public static volatile int MAX_POLICY_SIZE = Integer.parseInt( DEFAULT_MAX_POLICY_SIZE_TEXT );
 
+  @ConfigurableField( description = "Use strict validation for IAM policy syntax", initial = "true" )
+  public static volatile boolean STRICT_POLICY_VALIDATION = true;
+
   private static AtomicLong DEFAULT_PASSWORD_EXPIRY_MILLIS = new AtomicLong( TimeUnit.DAYS.toMillis( 60 ) );
 
   private static AtomicLong AUTHORIZATION_EXPIRY_MILLIS = new AtomicLong( TimeUnit.SECONDS.toMillis( 5 ) );
@@ -241,6 +244,11 @@ public class AuthenticationProperties {
     @Override
     public int getPolicySizeLimitSpi( ) {
       return MAX_POLICY_SIZE;
+    }
+
+    @Override
+    public boolean getUseValidatingPolicyParserSpi( ) {
+      return STRICT_POLICY_VALIDATION;
     }
   }
 

@@ -46,4 +46,9 @@ public class TestAuthenticationLimitProvider implements AuthenticationLimitProvi
   public int getPolicySizeLimitSpi( ) {
     return 16384;
   }
+
+  @Override
+  public boolean getUseValidatingPolicyParserSpi( ) {
+    return true;
+  }
 }
