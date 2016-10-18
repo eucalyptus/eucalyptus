@@ -59,11 +59,11 @@ public class LoadBalancingWorkerProperties {
 
   @ConfigurableField( displayName = "instance_type", 
       description = "instance type for loadbalancer instances",
-      initial = "m1.small", 
+      initial = "m1.medium",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbInstanceTypeChangeListener.class)
-  public static String INSTANCE_TYPE = "m1.small";
+  public static String INSTANCE_TYPE = "m1.medium";
   // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.instance_type
 
   @ConfigurableField( displayName = "keyname", 
