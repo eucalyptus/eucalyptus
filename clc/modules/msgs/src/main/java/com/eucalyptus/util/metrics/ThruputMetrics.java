@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.log4j.Logger;
@@ -87,8 +88,8 @@ public class ThruputMetrics {
    * If the same action was already recorded as ended due to asynchronous communication,
    * adds its execution time as a new data point.
    */
-  public static void startOperation(final MonitoredAction action, final String id, final long startTime) {
-    Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
+  public static Future<Boolean> startOperation(final MonitoredAction action, final String id, final long startTime) {
+    return Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
       new Callable<Boolean>() {
         @Override
         public Boolean call() throws Exception {
@@ -111,8 +112,8 @@ public class ThruputMetrics {
    * Adds end time for monitored action that was started before and adds its execution
    * time as a new data point.
    */
-  public static void endOperation(final MonitoredAction action, final String id, final long endTime) {
-    Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
+  public static Future<Boolean> endOperation(final MonitoredAction action, final String id, final long endTime) {
+    return Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
       new Callable<Boolean>() {
         @Override
         public Boolean call() throws Exception {

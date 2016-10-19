@@ -22,6 +22,8 @@ package com.eucalyptus.util.metrics;
 import static org.junit.Assert.*;
 
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
@@ -31,25 +33,20 @@ import com.eucalyptus.util.metrics.ThruputMetrics;
 public class PartialMetricsTest {
 
   @Test
-  public void testStartStop() {
+  public void testStartStop() throws Exception {
     long end = System.currentTimeMillis();
     long start = end - 1000;
-    ThruputMetrics.startOperation(MonitoredAction.CREATE_VOLUME, "vol-123456", start);
-    ThruputMetrics.endOperation(MonitoredAction.CREATE_VOLUME, "vol-123456", end);
-    try {
-      Thread.sleep(200); // add operation is asynchronous so we need to wait
-    } catch (InterruptedException ex) {}
+    ThruputMetrics.startOperation(MonitoredAction.CREATE_VOLUME, "vol-123456", start).get(3, TimeUnit.SECONDS);
+    ThruputMetrics.endOperation(MonitoredAction.CREATE_VOLUME, "vol-123456", end).get(3, TimeUnit.SECONDS);
     ThruputMetrics.DataPoint[] res = ThruputMetrics.getDataPoints(MonitoredAction.CREATE_VOLUME);
     assertEquals(1, res.length);
     assertEquals(1000, res[0].value);
   }
 
-  public void testNoStart() {
-    ThruputMetrics.endOperation(MonitoredAction.CREATE_SNAPSHOT, "vol-123456", System.currentTimeMillis());
-    try {
-      Thread.sleep(200); // add operation is asynchronous so we need to wait
-    } catch (InterruptedException ex) {}
-    ThruputMetrics.DataPoint[] res = ThruputMetrics.getDataPoints(MonitoredAction.CREATE_VOLUME);
+  @Test
+  public void testNoStart() throws Exception {
+    ThruputMetrics.endOperation(MonitoredAction.CREATE_SNAPSHOT, "vol-123450", System.currentTimeMillis()).get(3, TimeUnit.SECONDS);
+    ThruputMetrics.DataPoint[] res = ThruputMetrics.getDataPoints(MonitoredAction.CREATE_SNAPSHOT);
     assertEquals(0, res.length);
   }
 
