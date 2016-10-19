@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  */
 public class CloudFormationErnBuilder extends ServiceErnBuilder {
 
-  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z-]+)/(\\*|[a-zA-Z0-9-]+/[a-zA-Z0-9-]+)" );
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile( "([a-z-]+)/(\\*|[a-zA-Z0-9-]+/(?:\\*|[a-zA-Z0-9-]+))" );
 
   public static final int ARN_PATTERNGROUP_CF_TYPE = 1;
   public static final int ARN_PATTERNGROUP_CF_ID = 2;
