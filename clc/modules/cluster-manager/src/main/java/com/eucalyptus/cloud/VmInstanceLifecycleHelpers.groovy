@@ -96,6 +96,7 @@ import com.eucalyptus.vm.VmInstances.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
 import com.google.common.base.Function
+import com.google.common.base.MoreObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicates
 import com.google.common.base.Strings
@@ -774,6 +775,10 @@ class VmInstanceLifecycleHelpers {
             throw new InvalidParameterCombinationMetadataException(
                 "Network interfaces and an instance-level private address may not be specified on the same request" )
           }
+          if ( MoreObjects.firstNonNull( instanceNetworkInterface.associatePublicIpAddress, false ) && secondaryNetworkInterfaces ) {
+            throw new InvalidParameterCombinationMetadataException(
+                "The associatePublicIPAddress parameter cannot be specified when launching with multiple network interfaces." )
+          }
         } else if ( secondaryNetworkInterfaces ) {
           throw new InvalidParameterCombinationMetadataException(
               "Primary network interface required when secondary network interface(s) specified" )
@@ -1094,7 +1099,7 @@ class VmInstanceLifecycleHelpers {
         final VpcNetworkInterfaceResource primaryInterface = resources.find{ NetworkResource networkResource ->
           networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device == 0
         } as VpcNetworkInterfaceResource
-        
+
         if ( primaryInterface.mac == null ) {
           VpcNetworkInterface networkInterface =
               RestrictedTypes.resolver( VpcNetworkInterface ).apply( primaryInterface.value )
@@ -1106,12 +1111,12 @@ class VmInstanceLifecycleHelpers {
           builder.macAddress( primaryInterface.mac )
           builder.primaryEniAttachmentId( primaryInterface.attachmentId );
         }
-        
+
         // Handle secondary interfaces
         final List<VpcNetworkInterfaceResource> secondaryInterfaces = resources.findAll{ NetworkResource networkResource ->
           networkResource instanceof VpcNetworkInterfaceResource && ((VpcNetworkInterfaceResource)networkResource).device != 0
         } as List<VpcNetworkInterfaceResource>
-      
+
         secondaryInterfaces.each { VpcNetworkInterfaceResource secondaryInterface ->
           NetworkConfigType netConfig = new NetworkConfigType(secondaryInterface.value, secondaryInterface.device)
           if ( secondaryInterface.mac == null ) {
