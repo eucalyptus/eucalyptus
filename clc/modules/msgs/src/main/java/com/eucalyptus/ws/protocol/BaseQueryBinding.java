@@ -328,7 +328,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
             subParams = params;
           } else {
             for ( final String item : Sets.newHashSet( params.keySet( ) ) ) {
-              if ( item.startsWith( e.getKey( ) + "." ) || item.equals( e.getKey( ) ) ) {
+              if ( item.startsWith( e.getKey( ) + "." ) || (item.equals( e.getKey( ) ) && isValueObject( declaredType ) )) {
                 subParams.put( replaceStringPrefixIfExists(item, e.getKey( ) + ".", "" ), params.remove( item ) );
               }
             }
@@ -534,6 +534,10 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       targetType = targetType.getSuperclass( );
     }
     return null;
+  }
+
+  private boolean isValueObject( final Class<?> targetType ) {
+    return findValueField( targetType ) != null;
   }
 
   private Map<String, String> buildFieldMap( Class<?> targetType ) {
