@@ -75,9 +75,9 @@ import com.google.common.collect.Iterators;
  * NOTE: Please do not add service specific IAM policy details here.
  */
 public class PolicySpec {
-  
+
   public static final String VERSION = "Version";
-  
+
   public static final String STATEMENT = "Statement";
   public static final String SID = "Sid";
   public static final String EFFECT = "Effect";
@@ -88,7 +88,7 @@ public class PolicySpec {
   public static final String PRINCIPAL = "Principal";
   public static final String NOTPRINCIPAL = "NotPrincipal";
   public static final String CONDITION = "Condition";
-    
+
   // Effect
   public static final Set<String> EFFECTS = ImmutableSet.copyOf( Iterators.transform( Iterators.forArray(EffectType.values()), new Function<EffectType,String>() {
     @Override
@@ -96,7 +96,7 @@ public class PolicySpec {
       return effect.name( );
     }
   }) );
-  
+
   // Vendor (AWS products)
 	// Do not add vendors here (use modules)
   public static final String VENDOR_IAM = "iam";
@@ -105,6 +105,8 @@ public class PolicySpec {
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
 	// Do not add vendors here (use modules)
+
+  public static final String ALL_PRINCIPALS = "*";
 
   public static final String ALL_ACTION = "*";
 
@@ -338,10 +340,10 @@ public class PolicySpec {
 
   // Action syntax
   public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:([a-z0-9]+):(\\S+))" );
-  
+
   // Wildcard
   public static final String ALL_RESOURCE = "*";
-  
+
   // IAM resource types (see IamPolicySpec for all resources)
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";
@@ -398,7 +400,7 @@ public class PolicySpec {
     .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
-  
+
   // S3 resource types
   public static final String S3_RESOURCE_BUCKET = "bucket";
   public static final String S3_RESOURCE_OBJECT = "object";
@@ -432,5 +434,5 @@ public class PolicySpec {
         name :
         name.toLowerCase();
   }
-  
+
 }

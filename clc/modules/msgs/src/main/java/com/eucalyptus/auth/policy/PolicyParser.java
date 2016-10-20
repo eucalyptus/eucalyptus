@@ -271,6 +271,10 @@ public class PolicyParser {
   ) {
     final String principalElement =
         JsonUtils.checkBinaryOption( statement, PolicySpec.PRINCIPAL, PolicySpec.NOTPRINCIPAL, attachmentType.isPrincipalRequired() );
+    final boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
+    if ( PolicySpec.ALL_PRINCIPALS.equals( statement.get( principalElement ) ) ) {
+      return new PolicyPrincipal( notPrincipal, PrincipalType.AWS, Sets.newHashSet( PolicySpec.ALL_PRINCIPALS ) );
+    }
     final JSONObject principal = JsonUtils.getByType( JSONObject.class, statement, principalElement );
     if ( principal == null ) return null;
 
@@ -293,7 +297,6 @@ public class PolicyParser {
     if ( values.size( ) > 0 && !attachmentType.isPrincipalRequired() ) {
       throw new JSONException( "Policy document should not specify a principal." );
     }
-    boolean notPrincipal = PolicySpec.NOTPRINCIPAL.equals( principalElement );
     return new PolicyPrincipal( notPrincipal, PrincipalType.valueOf( principalType ), Sets.newHashSet( values ) );
   }
 

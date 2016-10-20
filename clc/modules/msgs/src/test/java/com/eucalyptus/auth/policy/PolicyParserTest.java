@@ -85,16 +85,16 @@ public class PolicyParserTest {
   public static void main( String[] args ) throws Exception {
     if ( args.length < 1 ) {
       System.err.println( "Requires input policy file" );
-      System.exit( 1 ); 
+      System.exit( 1 );
     }
 
     String policy = Files.toString( new File( args[0] ), Charsets.UTF_8 );
-        
+
     PolicyPolicy parsed = PolicyParser.getInstance( ).parse( policy );
-    
+
     printPolicy( parsed );
   }
-  
+
   private static void printPolicy( PolicyPolicy parsed ) {
     System.out.println( "Version = " + parsed.getPolicyVersion( ) );
     for ( Authorization auth : parsed.getAuthorizations() ) {
@@ -104,7 +104,7 @@ public class PolicyParserTest {
       }
     }
   }
-  
+
   @BeforeClass
   public static void beforeClass( ) {
     Ern.registerServiceErnBuilder( new EuareErnBuilder( ) );
@@ -134,7 +134,7 @@ public class PolicyParserTest {
     assertEquals( "Authorization resource count", 1, authorization.getResources().size() );
     assertEquals( "Authorization resources", Sets.newHashSet("*"), authorization.getResources() );
     assertNotNull( "Authorization conditions", authorization.getConditions() );
-    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );  
+    assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
   }
 
   @Test
@@ -254,7 +254,73 @@ public class PolicyParserTest {
 
     PolicyParser.getResourceInstance().parse( policyJson );
   }
-  
+
+  @Test
+  public void testParseResourcePolicyWithWildcardPrincipal() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": \"*\",\n" +
+            "      \"Action\": \"*\"\n" +
+            "    } ]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getResourceInstance( ).parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations( ) );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations( ).size( ) );
+    Authorization authorization = policy.getAuthorizations( ).get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNotNull( "Authorization principal", authorization.getPrincipal( ) );
+    Principal principal = authorization.getPrincipal();
+    assertEquals( "Principal type", Principal.PrincipalType.AWS, principal.getType() );
+    assertEquals( "Principal values", Sets.newHashSet( "*" ), principal.getValues() );
+    assertEquals( "Principal not", false, principal.isNotPrincipal() );
+    assertEquals( "Authorization actions", Sets.newHashSet( "*" ), authorization.getActions( ) );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect( ) );
+    assertNotNull( "Authorization resources", authorization.getResources( ) );
+    assertEquals( "Authorization resource count", 0, authorization.getResources( ).size( ) );
+    assertNotNull( "Authorization conditions", authorization.getConditions( ) );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions( ).size( ) );
+    assertNotNull( "Authorization policy variables", authorization.getPolicyVariables( ) );
+    assertEquals( "Authorization policy variable count", 0, authorization.getPolicyVariables( ).size( ) );
+  }
+
+  @Test
+  public void testParseResourcePolicyWithWildcardAWSPrincipal() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"NotPrincipal\": {\n" +
+            "         \"AWS\": [ \"*\" ]\n" +
+            "      },\n" +
+            "      \"Action\": [ \"*\" ]\n" +
+            "    } ]\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getResourceInstance( ).parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations( ) );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations( ).size( ) );
+    Authorization authorization = policy.getAuthorizations( ).get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNotNull( "Authorization principal", authorization.getPrincipal( ) );
+    Principal principal = authorization.getPrincipal();
+    assertEquals( "Principal type", Principal.PrincipalType.AWS, principal.getType() );
+    assertEquals( "Principal values", Sets.newHashSet( "*" ), principal.getValues() );
+    assertEquals( "Principal not", true, principal.isNotPrincipal() );
+    assertEquals( "Authorization actions", Sets.newHashSet( "*" ), authorization.getActions( ) );
+    assertEquals( "Authorization effect", Authorization.EffectType.Allow, authorization.getEffect( ) );
+    assertNotNull( "Authorization resources", authorization.getResources( ) );
+    assertEquals( "Authorization resource count", 0, authorization.getResources( ).size( ) );
+    assertNotNull( "Authorization conditions", authorization.getConditions( ) );
+    assertEquals( "Authorization condition count", 0, authorization.getConditions( ).size( ) );
+    assertNotNull( "Authorization policy variables", authorization.getPolicyVariables( ) );
+    assertEquals( "Authorization policy variable count", 0, authorization.getPolicyVariables( ).size( ) );
+  }
+
   @Test
   public void testParsePolicyWithVariables( ) throws Exception {
     String policyJson =
