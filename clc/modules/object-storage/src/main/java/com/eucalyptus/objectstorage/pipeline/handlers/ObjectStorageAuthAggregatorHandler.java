@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,53 +60,53 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline;
+package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.objectstorage.pipeline.stages.*;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.crypto.util.SecurityParameter;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.OSGChannelWriter;
+import com.eucalyptus.objectstorage.OSGMessageResponse;
+import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication;
+import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.Strings;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 /**
- * The pipeline for HTTP PUT data requests to the OSG
- *
- * @author zhill
+ * Aggregates chunked data if needed prior to authentication.
  */
-@ComponentPart(ObjectStorage.class)
-public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
-  private final UnrollableStage authAggregator = new ObjectStorageAuthAggregatorStage();
-  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
-  private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
-  private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage();
-  private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
-  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
+public class ObjectStorageAuthAggregatorHandler extends HttpChunkAggregator {
+  private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
 
   /**
-   * Accept PUT object or upload part operations only.
+   * A request that is to be continued
    */
-  @Override
-  public boolean checkAccepts(HttpRequest message) {
-    return super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message, ObjectStorageRESTPipeline.getServicePaths());
+  private boolean continuableRequest;
+
+  public ObjectStorageAuthAggregatorHandler() {
+    super(DEFAULT_MAX_CONTENT_LENGTH);
   }
 
   @Override
-  public String getName() {
-    return "objectstorage-put-data";
-  }
+  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    if (event.getMessage() instanceof MappingHttpRequest) {
+      MappingHttpRequest request = (MappingHttpRequest) event.getMessage();
+      String authHeader = request.getHeader(SecurityParameter.Authorization.toString());
 
-  @Override
-  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
-    authAggregator.unrollStage(pipeline);
-    auth.unrollStage(pipeline);
-    bind.unrollStage(pipeline);
-    aggr.unrollStage(pipeline);
-    out.unrollStage(pipeline);
-    exHandler.unrollStage(pipeline);
-    return pipeline;
+      // Continue unchunked, V4 continuable requests
+      if (!Strings.isNullOrEmpty(authHeader) && authHeader.startsWith(S3V4Authentication.AWS_V4_AUTH_TYPE) && HttpHeaders
+          .is100ContinueExpected(request)) {
+        continuableRequest = true;
+        OSGChannelWriter.writeResponse(ctx.getChannel(), OSGMessageResponse.Continue);
+      }
+    }
+
+    // Aggregate continuable requests
+    if (continuableRequest)
+      super.messageReceived(ctx, event);
+    else
+      ctx.sendUpstream(event);
   }
 }

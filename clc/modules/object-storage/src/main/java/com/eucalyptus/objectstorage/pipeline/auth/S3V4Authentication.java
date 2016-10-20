@@ -48,11 +48,11 @@ import static com.eucalyptus.auth.login.Hmacv4LoginModule.digestUTF8;
 /**
  * S3 V4 specific authentication utilities.
  */
-final class S3V4Authentication {
+public final class S3V4Authentication {
   private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
   private static final Splitter NVP_SPLITTER = Splitter.on('=').limit(2).trimResults().omitEmptyStrings();
   private static final String AWS_V4_TERMINATOR = "aws4_request";
-  static final String AWS_V4_AUTH_TYPE = "AWS4-HMAC-SHA256";
+  public static final String AWS_V4_AUTH_TYPE = "AWS4-HMAC-SHA256";
   static final String CONTENT_SHA_HEADER = "x-amz-content-sha256";
   static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
   static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,53 +60,30 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline;
+package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.pipeline.stages.*;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageMetadataAggregatorHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import org.jboss.netty.channel.ChannelPipeline;
 
 /**
- * The pipeline for HTTP PUT data requests to the OSG
- *
- * @author zhill
+ * Aggregates HTTP Chunks for non-streaming sigv4 requests.
  */
-@ComponentPart(ObjectStorage.class)
-public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
-  private final UnrollableStage authAggregator = new ObjectStorageAuthAggregatorStage();
-  private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
-  private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
-  private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage();
-  private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
-  private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage();
+public class ObjectStorageAuthAggregatorStage implements UnrollableStage {
+  private final static String NAME = "objectstorage-auth-aggregator-stage";
 
-  /**
-   * Accept PUT object or upload part operations only.
-   */
   @Override
-  public boolean checkAccepts(HttpRequest message) {
-    return super.checkAccepts(message) && OSGUtil.isPUTDataRequest(message, ObjectStorageRESTPipeline.getServicePaths());
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast(NAME, new ObjectStorageMetadataAggregatorHandler());
   }
 
   @Override
   public String getName() {
-    return "objectstorage-put-data";
+    return NAME;
   }
 
   @Override
-  public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
-    authAggregator.unrollStage(pipeline);
-    auth.unrollStage(pipeline);
-    bind.unrollStage(pipeline);
-    aggr.unrollStage(pipeline);
-    out.unrollStage(pipeline);
-    exHandler.unrollStage(pipeline);
-    return pipeline;
+  public int compareTo(UnrollableStage o) {
+    return getName().compareTo(o.getName());
   }
 }
