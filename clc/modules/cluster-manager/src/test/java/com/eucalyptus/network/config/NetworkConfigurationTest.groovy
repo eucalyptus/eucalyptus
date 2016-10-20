@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.network.config
+
+import org.hamcrest.CoreMatchers
 
 import static org.junit.Assert.*
 import org.junit.Test
@@ -116,7 +118,7 @@ class NetworkConfigurationTest {
         "PublicIps": [
             "10.111.200.1-10.111.200.2"
         ],
-        
+
         "Clusters": [
             {
                 "Name": "edgecluster0",
@@ -444,7 +446,7 @@ class NetworkConfigurationTest {
   }
 
   @Test
-  void testVpcMidoParse() {
+  void testVpcMidoOldConfigFormatParse() {
     String config = """
     {
         "Mode": "VPCMIDO",
@@ -492,7 +494,7 @@ class NetworkConfigurationTest {
   }
 
   @Test
-  void testVpcMidoSingleGatewayParse() {
+  void testVpcMidoOldConfigFormatSingleGatewayParse() {
     String config = """
     {
         "Mode": "VPCMIDO",
@@ -532,6 +534,209 @@ class NetworkConfigurationTest {
   }
 
   @Test
+  void testVpcMidoParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "BgpAsn": "64512",
+          "Gateways": [
+            {
+              "Ip": "10.111.5.11",
+              "ExternalDevice": "em1.116",
+              "ExternalCidr": "10.116.128.0/17",
+              "ExternalIp": "10.116.133.11",
+              "BgpPeerIp": "10.116.133.173",
+              "BgpPeerAsn": "65000",
+              "BgpAdRoutes": [
+                "10.116.150.0/24"
+              ]
+            },
+            {
+              "Ip": "10.111.5.22",
+              "ExternalDevice": "em1.117",
+              "ExternalCidr": "10.117.128.0/17",
+              "ExternalIp": "10.117.133.22",
+              "BgpPeerIp": "10.117.133.173",
+              "BgpPeerAsn": "65001",
+              "BgpAdRoutes": [
+                  "10.117.150.0/24"
+              ]
+            }
+          ]
+        }
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        mode: 'VPCMIDO',
+        macPrefix: 'd0:0d',
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        mido: new Midonet(
+            bgpAsn: '64512',
+            gateways: [
+                new MidonetGateway(
+                    ip: '10.111.5.11',
+                    externalDevice: 'em1.116',
+                    externalCidr: '10.116.128.0/17',
+                    externalIp: '10.116.133.11',
+                    bgpPeerIp: '10.116.133.173',
+                    bgpPeerAsn: '65000',
+                    bgpAdRoutes: [
+                        '10.116.150.0/24'
+                    ]
+                ),
+                new MidonetGateway(
+                    ip: '10.111.5.22',
+                    externalDevice: 'em1.117',
+                    externalCidr: '10.117.128.0/17',
+                    externalIp: '10.117.133.22',
+                    bgpPeerIp: '10.117.133.173',
+                    bgpPeerAsn: '65001',
+                    bgpAdRoutes: [
+                        '10.117.150.0/24'
+                    ]
+                ),
+            ]
+        )
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testVpcMidoInvalidMissingGatewaysParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
+          "BgpAsn": "64512"
+        }
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to missing Mido.Gateways property" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error', 'Missing required property "Mido.Gateways"', nce.message )
+    }
+  }
+
+  @Test
+  void testVpcMidoInvalidEmptyGatewaysParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
+          "BgpAsn": "64512",
+          "Gateways": []
+        }
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to missing Mido.Gateways property" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error', 'At least one gateway is required "Mido.Gateways"', nce.message )
+    }
+  }
+
+  @Test
+  void testVpcMidoInvalidMixedGatewayParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
+          "BgpAsn": "64512",
+          "Gateways": [
+            {
+              "GatewayIP": "10.111.5.11",
+              "Ip": "10.111.5.11",
+              "ExternalDevice": "em1.116",
+              "ExternalCidr": "10.116.128.0/17",
+              "ExternalIp": "10.116.133.11",
+              "BgpPeerIp": "10.116.133.173",
+              "BgpPeerAsn": "65000",
+              "BgpAdRoutes": [
+                "10.116.150.0/24"
+              ]
+            }
+          ]
+        }
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to legacy GatewayIP property used with new properties" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error', 'Invalid use of property "Mido.Gateways[0].GatewayIP"', nce.message )
+    }
+  }
+
+  @Test
+  void testVpcMidoInvalidExternalIpGatewayParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Mido": {
+          "EucanetdHost": "a",
+          "BgpAsn": "64512",
+          "Gateways": [
+            {
+              "Ip": "10.111.5.11",
+              "ExternalDevice": "em1.116",
+              "ExternalCidr": "10.116.128.0/17",
+              "ExternalIp": "10.116.128.0",
+              "BgpPeerIp": "10.116.133.173",
+              "BgpPeerAsn": "65000",
+              "BgpAdRoutes": [
+                "10.116.150.0/24"
+              ]
+            }
+          ]
+        }
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to ExternalIP not within ExternalCidr" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error',
+          'ExternalIp must be within ExternalCidr "Mido.Gateways[0].ExternalIp"', nce.message )
+    }
+  }
+
+  @Test
   void testVpcMidoInvalidParse() {
     String config = """
     {
@@ -548,6 +753,27 @@ class NetworkConfigurationTest {
       fail( "Expected error due to missing Mido property" )
     } catch ( NetworkConfigurationException nce ) {
       assertEquals( 'Parsing error', 'Missing required property "Mido"', nce.message )
+    }
+  }
+
+  @Test
+  void testUnknownPropertyParse() {
+    String config = """
+    {
+        "PublicIpss": [
+            "10.111.200.1-10.111.200.2"
+        ]
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to incorrect PublicIpss property" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertThat( 'Parsing error starts with field',
+          nce.message, CoreMatchers.startsWith('Unrecognized field "PublicIpss"') )
+      assertThat( 'Parsing error does not mention MetaClass',
+          nce.message, CoreMatchers.not( CoreMatchers.containsString('MetaClass') ) )
     }
   }
 }

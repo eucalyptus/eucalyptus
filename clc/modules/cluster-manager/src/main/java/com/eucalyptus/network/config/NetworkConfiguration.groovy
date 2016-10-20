@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network.config
 
+import com.google.common.primitives.Longs
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -71,22 +72,35 @@ class NetworkConfiguration {
 @Canonical
 class Midonet {
   String eucanetdHost
-  // top level,single gateway specification
+  // old config format, top level,single gateway specification
   String gatewayHost
   String gatewayIP
   String gatewayInterface
   // gateway list
   List<MidonetGateway> gateways
+  // old config format
   String publicNetworkCidr
   String publicGatewayIP
+  // new format
+  String bgpAsn
 }
 
 @CompileStatic
 @Canonical
 class MidonetGateway {
-  String gatewayHost
+  // old config format
   String gatewayIP
+  String gatewayHost
   String gatewayInterface
+  // new format
+  String ip
+  String externalCidr
+  String externalDevice
+  String externalIp
+  String externalRouterIp
+  String bgpPeerIp
+  String bgpPeerAsn
+  List<String> bgpAdRoutes
 }
 
 /**
@@ -138,8 +152,7 @@ class ManagedSubnet extends Subnet {
   // The fields we need configured
   Integer minVlan
   Integer maxVlan
-  Integer segmentSize  // This must be a power of 2 (e.g. 16, 32, 64, 128, ..., 2048) and MUST NOT be modified if instances are running
-                       // TODO: Check if instances are running if this parameter is modified. Only accept modifications when NO instances are running
+  Integer segmentSize  // This must be a power of 2 (e.g. 16, 32, 64, 128, ..., 2048)
 }
 
 /**
@@ -202,6 +215,15 @@ abstract class TypedValidator<T> implements Validator {
     ValidationUtils.rejectIfEmptyOrWhitespace( errors, fieldName, 'property.required', [pathTranslate(errors.nestedPath,fieldName)] as Object[], 'Missing required property \"{0}\"' );
   }
 
+  void forbid( Closure<?> closure ) {
+    MethodClosure methodClosure = (MethodClosure) closure
+    String fieldName = toFieldName(methodClosure.method)
+    Object value = errors.getFieldValue( fieldName );
+    if( value != null ) {
+      errors.rejectValue( fieldName, 'property.invalid', [pathTranslate(errors.nestedPath,fieldName)] as Object[], 'Invalid use of property \"{0}\"');
+    }
+  }
+
   void validate( Closure<?> closure, Validator validator ) {
     MethodClosure methodClosure = (MethodClosure) closure
     validate( closure.call(), toFieldName( methodClosure.method ), validator );
@@ -235,8 +257,8 @@ abstract class TypedValidator<T> implements Validator {
 @PackageScope
 class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration> {
   public static final Pattern MAC_PREFIX_PATTERN = Pattern.compile( '[0-9a-fA-F]{2}:[0-9a-fA-F]{2}' )
-  public static final Pattern MODE_PATTERN = Pattern.compile( 
-    Joiner.on('|').join( Iterables.transform( Arrays.<NetworkMode>asList( NetworkMode.values( ) ), (Function<NetworkMode, String>)Functions.toStringFunction( ) ) ) 
+  public static final Pattern MODE_PATTERN = Pattern.compile(
+    Joiner.on('|').join( Iterables.transform( Arrays.<NetworkMode>asList( NetworkMode.values( ) ), (Function<NetworkMode, String>)Functions.toStringFunction( ) ) )
   )
 
   Errors errors
@@ -252,7 +274,7 @@ class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration>
     validateAll( configuration.&getPrivateIps, new IPRangeValidator( errors ) )
     if ( configuration.mode == 'VPCMIDO' ) {
       require( configuration.&getMido )
-      if ( configuration.mido ) 
+      if ( configuration.mido )
           validate( configuration.&getMido, new MidonetValidator( errors ) )
     } else if ( 'EDGE'.equals( configuration.mode ) || !configuration.mode ) {
       // In EDGE modes, we need the subnets information which is optional globally. If a managed subnet
@@ -279,25 +301,76 @@ class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration>
 class MidonetValidator extends TypedValidator<Midonet> {
   Errors errors
 
+  private Closure<Boolean> gatewayPredicate( ) {
+    { MidonetGateway midonetGateway ->
+          midonetGateway.ip ||
+          midonetGateway.externalDevice ||
+          midonetGateway.externalCidr ||
+          midonetGateway.externalIp ||
+          midonetGateway.externalRouterIp ||
+          midonetGateway.bgpPeerIp ||
+          midonetGateway.bgpPeerAsn ||
+          midonetGateway.bgpAdRoutes != null
+    }
+  }
+
   @Override
   void validate( final Midonet midonet ) {
-    require( midonet.&getEucanetdHost )
-    if ( !midonet.gatewayHost || !midonet.gatewayIP || !midonet.gatewayInterface ) {
+    boolean regularValidation = midonet?.gateways?.find( gatewayPredicate( ) ) ?: false
+    if ( !regularValidation && !midonet?.gateways && !midonet.publicNetworkCidr && !midonet.publicGatewayIP ) {
+      regularValidation = true;
+    }
+    if ( regularValidation || !midonet.gatewayHost || !midonet.gatewayIP || !midonet.gatewayInterface ) {
       require( midonet.&getGateways )
-      validateAll( midonet.&getGateways, new MidonetGatewayValidator( errors ) )
+      validateAll( midonet.&getGateways, regularValidation ?
+          new MidonetGatewayValidator( errors, midonet.bgpAsn != null ) :
+          new MidonetGatewayLegacyValidator( errors ) )
       if ( midonet.gateways != null && midonet.gateways.empty ) {
         errors.reject( "property.invalid.gateways", [ pathTranslate( errors.getNestedPath( ), "Gateways" ) ] as Object[ ], 'At least one gateway is required "{0}"' )
       } else if ( midonet.gateways != null && midonet.gateways.size( ) > 6 ) {
         errors.reject( "property.invalid.gateways", [ pathTranslate( errors.getNestedPath( ), "Gateways" ), midonet.gateways.size( ) ] as Object[ ], 'Maximum allowed gateways (6) exceeded "{0}": {1}' )
       }
     }
-    require( midonet.&getPublicNetworkCidr )
-    require( midonet.&getPublicGatewayIP )
+    if ( !regularValidation ) {
+      require( midonet.&getPublicNetworkCidr )
+      require( midonet.&getPublicGatewayIP )
+    } else {
+      forbid( midonet.&getPublicNetworkCidr )
+      forbid( midonet.&getPublicGatewayIP )
+    }
     validate( midonet.&getEucanetdHost, new HostValidator(errors) )
     validate( midonet.&getGatewayHost, new HostValidator(errors) )
     validate( midonet.&getGatewayIP, new IPValidator(errors) )
     validate( midonet.&getPublicNetworkCidr, new CidrValidator(errors) )
     validate( midonet.&getPublicGatewayIP, new IPValidator(errors) )
+    validate( midonet.&getBgpAsn, new InclusiveRangeValidator( errors, 1L, 4294967295L, 'Invalid ASN "{0}": "{1}"' ) )
+
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class MidonetGatewayLegacyValidator extends TypedValidator<MidonetGateway> {
+  Errors errors
+
+  @Override
+  void validate( final MidonetGateway midonetGateway ) {
+    forbid( midonetGateway.&getIp )
+    forbid( midonetGateway.&getExternalCidr )
+    forbid( midonetGateway.&getExternalDevice )
+    forbid( midonetGateway.&getExternalIp )
+    forbid( midonetGateway.&getExternalRouterIp )
+    forbid( midonetGateway.&getBgpPeerIp )
+    forbid( midonetGateway.&getBgpPeerAsn )
+    forbid( midonetGateway.&getBgpAdRoutes )
+
+    require( midonetGateway.&getGatewayHost )
+    require( midonetGateway.&getGatewayIP )
+    require( midonetGateway.&getGatewayInterface )
+
+    validate( midonetGateway.&getGatewayHost, new HostValidator(errors) )
+    validate( midonetGateway.&getGatewayIP, new IPValidator(errors) )
   }
 }
 
@@ -306,14 +379,48 @@ class MidonetValidator extends TypedValidator<Midonet> {
 @PackageScope
 class MidonetGatewayValidator extends TypedValidator<MidonetGateway> {
   Errors errors
+  Boolean requireBgp
 
   @Override
   void validate( final MidonetGateway midonetGateway ) {
-    require( midonetGateway.&getGatewayHost )
-    require( midonetGateway.&getGatewayIP )
-    require( midonetGateway.&getGatewayInterface )
-    validate( midonetGateway.&getGatewayHost, new HostValidator(errors) )
-    validate( midonetGateway.&getGatewayIP, new IPValidator(errors) )
+    forbid( midonetGateway.&getGatewayHost )
+    forbid( midonetGateway.&getGatewayIP )
+    forbid( midonetGateway.&getGatewayInterface )
+
+    require( midonetGateway.&getIp )
+    require( midonetGateway.&getExternalCidr )
+    require( midonetGateway.&getExternalDevice )
+    require( midonetGateway.&getExternalIp )
+    if ( requireBgp ) {
+      require( midonetGateway.&getBgpPeerIp )
+      require( midonetGateway.&getBgpPeerAsn )
+      require( midonetGateway.&getBgpAdRoutes )
+      if ( midonetGateway.bgpAdRoutes.empty ) {
+        errors.reject("property.invalid.bgproutes", [pathTranslate(errors.getNestedPath()),"BgpAdRoutes"] as Object[], 'At least one route is required "{0}"')
+      }
+    } else {
+      require( midonetGateway.&getExternalRouterIp )
+    }
+    validate( midonetGateway.&getIp, new IPValidator(errors) )
+    validate( midonetGateway.&getExternalCidr, new CidrValidator(errors) )
+    validate( midonetGateway.&getExternalIp, new IPValidator(errors) )
+    validate( midonetGateway.&getExternalRouterIp, new IPValidator(errors) )
+    validate( midonetGateway.&getBgpPeerIp, new IPValidator(errors) )
+    validate( midonetGateway.&getBgpPeerAsn, new InclusiveRangeValidator( errors, 1L, 4294967295L, 'Invalid ASN "{0}": "{1}"' ) )
+    validateAll( midonetGateway.&getBgpAdRoutes, new CidrValidator(errors) )
+
+    if ( midonetGateway.externalCidr ) {
+      IPRange range = IPRange.fromCidr( Cidr.parse( midonetGateway.externalCidr ) ).perhapsShrink( )
+      [
+          [ midonetGateway.externalIp, 'ExternalIp' ],
+          [ midonetGateway.externalRouterIp, 'ExternalRouterIp' ],
+          [ midonetGateway.bgpPeerIp, 'BgpPeerIp' ]
+      ].each { String value, String property ->
+        if ( value && !range.contains( IPRange.parse( value ) ) ) {
+          errors.reject("property.invalid.forexternalcidr", [pathTranslate(errors.getNestedPath(),property),property] as Object[], '{1} must be within ExternalCidr "{0}"')
+        }
+      }
+    }
   }
 }
 
@@ -424,7 +531,7 @@ class CidrValidator extends TypedValidator<String> {
 
   @Override
   void validate( final String cidr ) {
-    if ( !Cidr.parse( ).apply( cidr ).isPresent( ) ) {
+    if ( cidr && !Cidr.parse( ).apply( cidr ).isPresent( ) ) {
       errors.reject( "property.invalid.cidr", [pathTranslate( errors.getNestedPath( ) ), cidr ] as Object[], 'Invalid CIDR for \"{0}\": \"{1}\"' )
     }
   }
@@ -586,7 +693,7 @@ class ClusterValidator extends TypedValidator<Cluster> {
     validate( cluster.&getMacPrefix, new RegexValidator( errors, NetworkConfigurationValidator.MAC_PREFIX_PATTERN, 'Invalid MAC prefix "{0}": "{1}"' ) )
     if ( ( subnetNames.size( ) > 1 ) || cluster.subnet ) {
       require( cluster.&getSubnet )
-      if ( cluster.subnet ) 
+      if ( cluster.subnet )
           validate( cluster.&getSubnet, new ReferenceEdgeSubnetValidator( errors, subnetNames ) )
     }
     if ( cluster.privateIps && ( cluster.privateIps.size( ) > 0 ) )
@@ -606,6 +713,24 @@ class RegexValidator extends TypedValidator<String> {
   void validate( final String value ) {
     if ( value && !pattern.matcher( value ).matches( ) ) {
       errors.reject( "property.invalid.regex", [pathTranslate( errors.getNestedPath( ) ), value ] as Object[], errorMessage )
+    }
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class InclusiveRangeValidator extends TypedValidator<String> {
+  Errors errors
+  Long min
+  Long max
+  String errorMessage
+
+  @Override
+  void validate( final String value ) {
+    Long longValue
+    if ( value && ( ( longValue = Longs.tryParse( value ) ) == null || longValue < min || longValue > max ) ) {
+      errors.reject( "property.invalid.integer", [pathTranslate( errors.getNestedPath( ) ), value ] as Object[], errorMessage )
     }
   }
 }
