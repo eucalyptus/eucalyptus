@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.service.ws
+package com.eucalyptus.loadbalancing.ws
 
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones
 import com.eucalyptus.loadbalancing.common.msgs.CreateLoadBalancerListenersType
@@ -36,7 +36,6 @@ import com.eucalyptus.loadbalancing.common.msgs.PolicyNames
 import com.eucalyptus.loadbalancing.common.msgs.Ports
 import com.eucalyptus.loadbalancing.common.msgs.RegisterInstancesWithLoadBalancerType
 import com.eucalyptus.loadbalancing.common.msgs.SetLoadBalancerPoliciesOfListenerType
-import com.eucalyptus.loadbalancing.ws.LoadBalancingQueryBinding
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
