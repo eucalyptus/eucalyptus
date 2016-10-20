@@ -77,7 +77,6 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers.DeploymentVersion;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancingMetadatas;
 import com.eucalyptus.loadbalancing.common.msgs.AddTagsResponseType;
 import com.eucalyptus.loadbalancing.common.msgs.AddTagsType;
@@ -183,7 +182,6 @@ import com.eucalyptus.loadbalancing.common.msgs.TagDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.TagKeyOnly;
 import com.eucalyptus.loadbalancing.common.msgs.TagList;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -2410,14 +2408,13 @@ public class LoadBalancingService {
     if (accessLog != null) {
       final boolean accessLogEnabled = accessLog.getEnabled();
       if (accessLogEnabled) {
-        // No verification of accessLog.getS3BucketPrefix() is done
         final String bucketName = accessLog.getS3BucketName();
+        if (! EucalyptusActivityTasks.getInstance().bucketExists(ctx.getAccount(), bucketName)) {
+          throw new InvalidConfigurationRequestException(String.format("S3Bucket: %s does not exist", bucketName));
+        }
         final Integer emitInterval =
             com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
 
-        if (!ObjectStorageGateway.checkBucketNameValidity(bucketName)) {
-          throw new InvalidConfigurationRequestException("Invalid bucket name specified");
-        }
         if(emitInterval < 5 || emitInterval > 60) {
           throw new InvalidConfigurationRequestException("Access log's emit interval must be between 5 and 60 minutes");
         }
@@ -2434,7 +2431,6 @@ public class LoadBalancingService {
       }
     }
     /************ END Verify AccessLog attributes ************/
-    
     try{
       if(! LoadBalancingWorkflows.modifyLoadBalancerAttributesSync(accountNumber, 
           request.getLoadBalancerName(), request.getLoadBalancerAttributes()))

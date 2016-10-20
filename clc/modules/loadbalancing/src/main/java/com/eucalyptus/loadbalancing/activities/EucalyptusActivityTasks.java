@@ -26,9 +26,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
 import javax.annotation.Nullable;
+
+import com.amazonaws.services.s3.model.Bucket;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.compute.common.*;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -430,8 +434,34 @@ public class EucalyptusActivityTasks {
 				"failed to put metric data"
 		);
 	}
-	
 
+	private final EucaS3Client getS3Client(final AccountFullName account) throws AuthException {
+			return EucaS3ClientFactory.getEucaS3Client(
+							new SecurityTokenAWSCredentialsProvider( account ) ) ;
+	}
+
+	public List<Bucket> listBuckets(final AccountFullName account) {
+		try{
+			final EucaS3Client s3c = getS3Client(account);
+			return s3c.listBuckets();
+		} catch (final AuthException e) {
+			LOG.error("Failed to create s3 client for listing buckets");
+			return Lists.newArrayList();
+		}
+	}
+
+	public boolean bucketExists(final AccountFullName account, final String bucketName) {
+		try{
+			final EucaS3Client s3c = getS3Client(account);
+			s3c.getBucketAcl(bucketName);
+			return true;
+		} catch (final AuthException e) {
+			LOG.error("Failed to create s3 client for testing bucket");
+			return false;
+		} catch (final Exception e) {
+			return false;
+		}
+	}
   public void createLaunchConfiguration(
     final String imageId,
     final String instanceType,
