@@ -77,7 +77,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
@@ -180,7 +179,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
    * Returns a representation of the {@code map} with lowercase keys.
    */
   static Map<String, String> lowercaseKeys(Map<String, String> map) {
-    Map<String,  String> result = new HashMap<>();
+    Map<String, String> result = new HashMap<>();
     map.entrySet().forEach(e -> result.put(e.getKey().toLowerCase(), e.getValue()));
     return result;
   }
