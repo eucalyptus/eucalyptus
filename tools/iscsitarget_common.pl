@@ -61,7 +61,6 @@
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
 use IPC::Open2;
-use FileHandle;
 
 $SK_TARGET = "target";
 $SK_PORTAL = "portal"; # current portal
