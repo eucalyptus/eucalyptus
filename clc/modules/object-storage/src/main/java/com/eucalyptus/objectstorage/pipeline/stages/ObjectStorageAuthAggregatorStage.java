@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthAggregatorHandler;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageMetadataAggregatorHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -74,7 +75,7 @@ public class ObjectStorageAuthAggregatorStage implements UnrollableStage {
 
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast(NAME, new ObjectStorageMetadataAggregatorHandler());
+    pipeline.addLast(NAME, new ObjectStorageAuthAggregatorHandler());
   }
 
   @Override
