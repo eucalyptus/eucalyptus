@@ -1513,6 +1513,7 @@ public class VpcManager {
                   } else { // mark detaching and process on vm state callback
                     vpcId[0] = networkInterface.getVpc( ).getDisplayName( );
                     networkInterface.getAttachment( ).transitionStatus( NetworkInterfaceAttachment.Status.detaching );
+                    networkInterface.getInstance( ).updateTimeStamps( ); // mark dirty
                   }
                 }
               } catch ( Exception e ) {
