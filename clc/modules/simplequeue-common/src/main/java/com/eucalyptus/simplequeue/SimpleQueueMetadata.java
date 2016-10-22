@@ -15,17 +15,28 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue;
 
+import java.util.Set;
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.util.Strings;
+import javaslang.collection.Stream;
 
 /**
  * Created by ethomas on 10/22/14.
  */
 @PolicyVendor( SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE)
 public interface SimpleQueueMetadata extends RestrictedType {
-  @PolicyResourceType("queue")
-  public interface QueueMetadata extends SimpleQueueMetadata {}
+  @PolicyResourceType(value = "queue", resourcePolicyActions = {"sqs:sendmessage", "sqs:receivemessage",
+      "sqs:deletemessage", "sqs:changemessagevisibility", "sqs:getqueueattributes", "sqs:getqueueurl",
+      "sqs:listdeadlettersourcequeues", "sqs:purgequeue" } )
+  public interface QueueMetadata extends SimpleQueueMetadata, PolicyRestrictedType {}
 
+  static Set<String> sharedQueueActions( ) {
+    return Stream.of( Ats.from( QueueMetadata.class ).get( PolicyResourceType.class ).resourcePolicyActions( ) )
+        .map( Strings.substringAfter( "sqs:" ) )
+        .toJavaSet( );
+  }
 }

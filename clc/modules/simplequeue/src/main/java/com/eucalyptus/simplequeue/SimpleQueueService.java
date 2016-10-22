@@ -77,6 +77,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableRangeSet;
@@ -91,12 +92,15 @@ import org.apache.log4j.Logger;
 import org.apache.xml.security.exceptions.Base64DecodingException;
 import org.apache.xml.security.utils.Base64;
 
+import javax.annotation.Nullable;
+import javax.persistence.PersistenceException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -104,6 +108,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -222,6 +227,10 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       final String accountId = ctx.getAccountNumber();
+      if (!Permissions.isAuthorized(SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE, SimpleQueuePolicySpec.SIMPLEQUEUE_CREATEQUEUE, "",
+        ctx.getAccount(), SimpleQueuePolicySpec.SIMPLEQUEUE_CREATEQUEUE, ctx.getAuthContext())) {
+        throw new AccessDeniedException("Not authorized.");
+      }
       if (request.getQueueName() == null) {
         throw new InvalidParameterValueException("Value for parameter QueueName is invalid. Reason: Must specify a queue name.");
       }
@@ -602,7 +611,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      String queueArn = getQueueArn(queue);
+      String queueArn = queue.getArn();
 
       ArrayList<String> principalIds = Lists.newArrayList();
       if (request.getAwsAccountId() == null || request.getAwsAccountId().isEmpty()) {
@@ -659,7 +668,7 @@ public class SimpleQueueService {
           "underscores. 1 to " + MAX_LABEL_LENGTH_CHARS + " in length");
       }
 
-      String policy = queue.getPolicy();
+      String policy = queue.getPolicyAsString();
       if (policy == null || policy.isEmpty()) {
         // new policy
         ObjectNode policyNode = new ObjectMapper().createObjectNode();
@@ -671,7 +680,7 @@ public class SimpleQueueService {
       } else {
         ObjectNode policyNode = null;
         try {
-          policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicy());
+          policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicyAsString());
           if (!policyNode.has("Statement") || !policyNode.get("Statement").isContainerNode()) {
             throw new IOException("Invalid existing policy");
           }
@@ -706,11 +715,6 @@ public class SimpleQueueService {
       handleException(ex);
     }
     return reply;
-  }
-
-  private static String getQueueArn(Queue queue) {
-    return "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + queue.getAccountId()
-      + ":" + queue.getQueueName();
   }
 
   private static void addStatementToPolicy(String label, Collection<String> principalIds, Collection<String> actionNames,
@@ -799,16 +803,37 @@ public class SimpleQueueService {
     return reply;
   }
 
-  private static Queue getAndCheckPermissionOnQueue(String queueUrl) throws QueueDoesNotExistException, AccessDeniedException, InvalidAddressException {
-    QueueUrlParts queueUrlParts = getQueueUrlParts(queueUrl);
-    Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(queueUrlParts.getAccountId(), queueUrlParts.getQueueName());
-    if (queue == null) {
-      throw new QueueDoesNotExistException("The specified queue does not exist.");
-    }
-    if (!RestrictedTypes.filterPrivileged().apply( queue ) ) {
+  private static Queue getAndCheckPermissionOnQueue(String queueUrl)
+    throws QueueDoesNotExistException, AccessDeniedException, InvalidAddressException, InternalFailureException {
+    try {
+      final QueueUrlParts queueUrlParts = getQueueUrlParts( queueUrl );
+      final Queue queue = PersistenceFactory.getQueuePersistence( )
+          .lookupQueue( queueUrlParts.getAccountId( ), queueUrlParts.getQueueName( ) );
+
+      // some actions support inter-account access, so authorize accordingly
+      boolean actionIsASharedQueueAction = SimpleQueueMetadata.sharedQueueActions().contains(RestrictedTypes.getIamActionByMessageType());
+      boolean requestAccountMatchesQueueAccount = queueUrlParts.getAccountId().equals(Contexts.lookup().getAccountNumber());
+
+      if (queue == null) {
+        if (requestAccountMatchesQueueAccount) {
+          throw new QueueDoesNotExistException("The specified queue does not exist.");
+        } else if (actionIsASharedQueueAction) {
+          throw new QueueDoesNotExistException("The specified queue does not exist or you do not have access to it.");
+        } else {
+          throw new AccessDeniedException("Not authorized.");
+        }
+      }
+      final QueueResolver resolver = new QueueResolver( queue );
+      return actionIsASharedQueueAction && !requestAccountMatchesQueueAccount ?
+          RestrictedTypes.doPrivilegedWithoutOwner( queue.getDisplayName( ), resolver ) :
+          RestrictedTypes.doPrivileged( queue.getDisplayName( ), resolver );
+    } catch (AuthException ex) {
       throw new AccessDeniedException("Not authorized.");
+    } catch (NoSuchElementException ex) {
+      throw new QueueDoesNotExistException("The specified queue does not exist.");
+    } catch (PersistenceException ex) {
+      throw new InternalFailureException(ex.getMessage());
     }
-    return queue;
   }
 
   public PurgeQueueResponseType purgeQueue(PurgeQueueType request) throws EucalyptusCloudException {
@@ -833,7 +858,7 @@ public class SimpleQueueService {
         attributes.putAll(queue.getAttributes());
       }
       attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue));
-      attributes.put(Constants.QUEUE_ARN, getQueueArn(queue));
+      attributes.put(Constants.QUEUE_ARN, queue.getArn());
       Set<String> validAttributes = ImmutableSet.of(
         Constants.ALL, Constants.APPROXIMATE_NUMBER_OF_MESSAGES, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
         Constants.VISIBILITY_TIMEOUT, Constants.CREATED_TIMESTAMP, Constants.LAST_MODIFIED_TIMESTAMP, Constants.POLICY,
@@ -884,14 +909,14 @@ public class SimpleQueueService {
           "underscores. 1 to " + MAX_LABEL_LENGTH_CHARS + " in length");
       }
 
-      String policy = queue.getPolicy();
+      String policy = queue.getPolicyAsString();
       if (policy == null || policy.isEmpty()) {
         throw new InvalidParameterValueException("Value " + request.getLabel() + " for parameter Label is invalid. Reason: can't find label.");
       }
 
       ObjectNode policyNode = null;
       try {
-        policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicy());
+        policyNode = (ObjectNode) new ObjectMapper().readTree(queue.getPolicyAsString());
         if (!policyNode.has("Statement") || !policyNode.get("Statement").isContainerNode()) {
           throw new IOException("Invalid existing policy");
         }
@@ -1222,7 +1247,7 @@ public class SimpleQueueService {
     int messageLength = 0;
     Map<String, String> sendAttributes = Maps.newHashMap();
     Message message = new Message();
-    
+
     if (delaySeconds != null) {
       if (delaySeconds < 0 || delaySeconds > MAX_DELAY_SECONDS) {
         throw new InvalidParameterValueException("DelaySeconds must be a number between 0 and " + MAX_DELAY_SECONDS);
@@ -1271,7 +1296,7 @@ public class SimpleQueueService {
     String messageId = UUID.randomUUID().toString();
 
     message.setMessageId(messageId);
-    
+
     return new MessageInfo(message, messageLength, sendAttributes);
   }
   public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
@@ -1496,7 +1521,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      String queueArn = getQueueArn(queue);
+      String queueArn = queue.getArn();
       Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(queue.getAccountId(), queueArn);
       if (sourceQueues != null) {
         for (Queue sourceQueue: sourceQueues) {
@@ -1553,6 +1578,21 @@ public class SimpleQueueService {
   public static long currentTimeSeconds() {
     return System.currentTimeMillis() / 1000L;
   }
+
+  private static class QueueResolver implements Function<String,Queue> {
+    private final Queue queue;
+
+    private QueueResolver( final Queue queue ) {
+      this.queue = queue;
+    }
+
+    @Override
+    public Queue apply( @Nullable final String queueFullName ) {
+      return queue;
+    }
+  }
+
+
   // BEGIN CODE FROM Amazon AWS SDK 1.11.28-SNAPSHOT, file: com.amazonaws.services.sqs.MessageMD5ChecksumHandler
 
   /**
@@ -1666,9 +1706,7 @@ public class SimpleQueueService {
 
   // From com.amazonaws.util.StringUtils:
 
-  private static final String DEFAULT_ENCODING = "UTF-8";
-
-  public static final Charset UTF8 = Charset.forName(DEFAULT_ENCODING);
+  public static final Charset UTF8 = StandardCharsets.UTF_8;
 
   // END CODE FROM Amazon AWS SDK 1.11.28-SNAPSHOT
 

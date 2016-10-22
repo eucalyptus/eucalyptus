@@ -30,8 +30,12 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.SimpleQueueMetadata;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
@@ -50,9 +54,30 @@ import java.util.Map;
 public class Queue implements SimpleQueueMetadata.QueueMetadata {
   private String accountId;
   private String queueName;
+
+  private String uniqueId;
+  private Integer version;
+
+
   private Map<String, String> attributes = Maps.newTreeMap();
 
   public Queue() {
+  }
+
+  public String getUniqueId() {
+    return uniqueId;
+  }
+
+  public void setUniqueId(String uniqueId) {
+    this.uniqueId = uniqueId;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer version) {
+    this.version = version;
   }
 
   public String getAccountId() {
@@ -88,7 +113,7 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
     return Integer.parseInt(attributes.get(Constants.VISIBILITY_TIMEOUT));
   }
 
-  public String getPolicy() {
+  public String getPolicyAsString() {
     return attributes.get(Constants.POLICY);
   }
 
@@ -141,5 +166,59 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
   @Override
   public OwnerFullName getOwner() {
     return AccountFullName.getInstance(accountId);
+  }
+
+  @Override
+  public PolicyVersion getPolicy() {
+    return new PolicyVersion() {
+
+      @Override
+      public String getPolicyVersionId() {
+        return getArn() + "/policy/" + getUniqueId() + "/" + getVersion();
+      }
+
+      @Override
+      public String getPolicyName() {
+        return "QueuePolicy"; // TODO: use Id?
+      }
+
+      @Override
+      public PolicyScope getPolicyScope() {
+        return PolicyScope.Resource;
+      }
+
+      @Override
+      public String getPolicy() {
+        if (getPolicyAsString() == null) {
+          return "{\n" +
+            "  \"Version\": \"2012-10-17\",\n" +
+            "  \"Id\": \""+getArn()+"/SQSDefaultPolicy\",\n" +
+            "  \"Statement\": [\n" +
+            "    {\n" +
+            "      \"Sid\": \"DefaultSid"+getVersion()+"\",\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": {\n" +
+            "        \"AWS\": \"arn:aws:iam::"+getAccountId()+":root\"\n" +
+            "      },\n" +
+            "      \"Action\": \"SQS:*\",\n" +
+            "      \"Resource\": \""+getArn()+"\"\n" +
+            "    }\n" +
+            "  ]\n" +
+            "}";
+        } else {
+          return getPolicyAsString();
+        }
+      }
+
+      @Override
+      public String getPolicyHash() {
+        return PolicyVersions.hash(getPolicy());
+      }
+    };
+  }
+
+  public String getArn() {
+    return "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + getAccountId()
+      + ":" + getQueueName();
   }
 }

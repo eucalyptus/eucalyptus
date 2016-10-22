@@ -270,7 +270,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
         // Check resource authorizations
-        Decision decision = resourcePolicy == null ?
+        Decision decision = resourcePolicy == null || ( resourceAccountNumber != null && context.getRequestUser( ).isAccountAdmin( ) && context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber ) ) ?
             Decision.ALLOW :
             processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
         // Denied by explicit or default deny

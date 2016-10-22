@@ -100,6 +100,8 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
     queue.setAccountId(queueEntity.getAccountId());
     queue.setQueueName(queueEntity.getQueueName());
     queue.getAttributes().putAll(convertJsonToAttributeMap(queueEntity.getAttributes()));
+    queue.setUniqueId(queueEntity.getNaturalId());
+    queue.setVersion(queueEntity.getVersion());
     return queue;
   }
 
