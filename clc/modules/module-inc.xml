@@ -196,7 +196,7 @@
 			<pathelement path="${buildlist-build-path}"/>
 			<fileset dir="${lib.dir}">
 				<include name="**/*.jar" />
-				<exclude name="**/openjdk-crypto.jar" />
+				<exclude name="**/eucalyptus-*-${euca.version}.jar" />
 			</fileset>
 		</path>
 		<path id="test-classpath">
@@ -288,7 +288,7 @@
         </target>
 	<target name="junit-fail-flag" depends="junit-run" if="junit.failure">
 		<touch file="${build.dir}/reports/junit/failure"/>
-	</target>  
+	</target>
 	<!--================================== jar target ==================================-->
 	<target name="jar">
 		<mkdir dir="${target.dir}" />
