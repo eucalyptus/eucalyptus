@@ -2721,7 +2721,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     //final List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
     for(LoadBalancerServoInstanceCoreView instanceView : servoRecords){
-      /// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE QUERY RESPONSE
+      /// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE ASG QUERY RESPONSE
       if(! foundInstances.containsKey(instanceView.getInstanceId()) &&
               ! instanceView.getState().equals(LoadBalancerServoInstance.STATE.Retired)){
         LoadBalancerServoInstance instance;
@@ -2740,7 +2740,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           LOG.error(String.format("Failed to mark the servo instance's state to ERROR (%s)",
                   instance.getInstanceId()));
         }
-      }else{/// CASE 3: INSTANCE STATE UPDATED
+      } else if (foundInstances.containsKey(instanceView.getInstanceId())) {
+        /// CASE 3: INSTANCE STATE UPDATED
         Instance instanceCurrent = foundInstances.get(instanceView.getInstanceId());
         final String healthState = instanceCurrent.getHealthStatus();
         final String lifecycleState = instanceCurrent.getLifecycleState();

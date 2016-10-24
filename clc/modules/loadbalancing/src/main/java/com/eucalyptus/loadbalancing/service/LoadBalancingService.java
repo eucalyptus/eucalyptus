@@ -2100,7 +2100,7 @@ public class LoadBalancingService {
     Iterables.addAll( requestedZones, Iterables.transform( requestedSubnetIds, Functions.forMap( zoneToSubnetIdMap.inverse( ) ) ) );
     try{
       LoadBalancingWorkflows.enableZonesSync(ctx.getAccountNumber(), lbName, 
-          requestedZones, zoneToSubnetIdMap);
+          requestedZones, Maps.newHashMap(zoneToSubnetIdMap));
     }catch(final Exception e){
       LOG.error("Workflow for enabling availablity zones failed", e);
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
