@@ -596,11 +596,29 @@ class NetworkInfoBroadcasts {
                               name: 'gateways',
                               gateways : networkConfiguration?.mido?.gateways?.collect{ MidonetGateway gateway ->
                                 new NIMidonetGateway(
-                                    properties: [
+                                    properties: ( gateway.gatewayIP?
+                                    [ // legacy format
                                         new NIProperty( name: 'gatewayHost', values: [ gateway.gatewayHost ] ),
                                         new NIProperty( name: 'gatewayIP', values: [ gateway.gatewayIP ] ),
                                         new NIProperty( name: 'gatewayInterface', values: [ gateway.gatewayInterface ] ),
-                                    ].findAll( ) as List<NIProperty>,
+                                    ] : [
+                                        new NIProperty( name: 'ip', values: [ gateway.ip ] ),
+                                        new NIProperty( name: 'externalCidr', values: [ gateway.externalCidr ] ),
+                                        new NIProperty( name: 'externalDevice', values: [ gateway.externalDevice ] ),
+                                        new NIProperty( name: 'externalIp', values: [ gateway.externalIp ] ),
+                                        gateway.externalRouterIp ?
+                                            new NIProperty( name: 'externalRouterIp', values: [ gateway.externalRouterIp ] ) :
+                                            null,
+                                        gateway.bgpPeerIp ?
+                                            new NIProperty( name: 'bgpPeerIp', values: [ gateway.bgpPeerIp ] ) :
+                                            null,
+                                        gateway.bgpPeerAsn ?
+                                          new NIProperty( name: 'bgpPeerAsn', values: [ gateway.bgpPeerAsn ] ) :
+                                          null,
+                                        gateway.bgpAdRoutes ?
+                                          new NIProperty( name: 'bgpAdRoutes', values: gateway.bgpAdRoutes ) :
+                                          null,
+                                    ] ).findAll( ) as List<NIProperty>,
                                 )
                               } as List<NIMidonetGateway>
                           ) :
@@ -608,6 +626,9 @@ class NetworkInfoBroadcasts {
                   properties: [
                       networkConfiguration?.mido?.eucanetdHost ?
                           new NIProperty( name: 'eucanetdHost', values: [ networkConfiguration.mido.eucanetdHost ] ) :
+                          null,
+                      networkConfiguration?.mido?.bgpAsn ?
+                          new NIProperty( name: 'bgpAsn', values: [ networkConfiguration.mido.bgpAsn ] ) :
                           null,
                       networkConfiguration?.mido?.publicNetworkCidr ?
                           new NIProperty( name: 'publicNetworkCidr', values: [ networkConfiguration.mido.publicNetworkCidr ] ) :

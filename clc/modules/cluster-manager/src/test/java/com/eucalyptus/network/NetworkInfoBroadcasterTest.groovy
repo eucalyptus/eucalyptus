@@ -366,6 +366,122 @@ class NetworkInfoBroadcasterTest {
   void testBroadcastVpcMido( ) {
     Midonet midonet = new Midonet(
         eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
+        bgpAsn: '64512',
+        gateways: [
+            new MidonetGateway(
+                ip: '10.111.5.11',
+                externalCidr: '10.116.128.0/17',
+                externalDevice: 'em1.116',
+                externalIp: '10.116.133.11',
+                bgpPeerIp: '10.116.133.173',
+                bgpPeerAsn: '65000',
+                bgpAdRoutes: [
+                    '10.116.150.0/24'
+                ]
+            ),
+            new MidonetGateway(
+                ip: '10.111.5.22',
+                externalCidr: '10.117.128.0/17',
+                externalDevice: 'em1.117',
+                externalIp: '10.117.133.22',
+                bgpPeerIp: '10.117.133.173',
+                bgpPeerAsn: '65001',
+                bgpAdRoutes: [
+                    '10.117.150.0/24'
+                ]
+            ),
+        ],
+    )
+    NIMidonet niMidonet = new NIMidonet(
+        name: 'mido',
+        gateways: new NIMidonetGateways(
+            name: 'gateways',
+            gateways: [
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'ip', values: ['10.111.5.11'] ),
+                        new NIProperty( name: 'externalCidr', values: ['10.116.128.0/17'] ),
+                        new NIProperty( name: 'externalDevice', values: ['em1.116'] ),
+                        new NIProperty( name: 'externalIp', values: ['10.116.133.11'] ),
+                        new NIProperty( name: 'bgpPeerIp', values: ['10.116.133.173'] ),
+                        new NIProperty( name: 'bgpPeerAsn', values: ['65000'] ),
+                        new NIProperty( name: 'bgpAdRoutes', values: ['10.116.150.0/24'] ),
+                    ]
+                ),
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'ip', values: ['10.111.5.22'] ),
+                        new NIProperty( name: 'externalCidr', values: ['10.117.128.0/17'] ),
+                        new NIProperty( name: 'externalDevice', values: ['em1.117'] ),
+                        new NIProperty( name: 'externalIp', values: ['10.117.133.22'] ),
+                        new NIProperty( name: 'bgpPeerIp', values: ['10.117.133.173'] ),
+                        new NIProperty( name: 'bgpPeerAsn', values: ['65001'] ),
+                        new NIProperty( name: 'bgpAdRoutes', values: ['10.117.150.0/24'] ),
+                    ]
+                ),
+            ]
+        ),
+        properties: [
+            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
+            new NIProperty( name: 'bgpAsn', values: ['64512'] ),
+        ]
+    )
+    vpcBroadcastTest( midonet, niMidonet )
+  }
+
+  @Test
+  void testBroadcastVpcStaticMido( ) {
+    Midonet midonet = new Midonet(
+        gateways: [
+            new MidonetGateway(
+                ip: '10.111.5.11',
+                externalCidr: '10.116.128.0/17',
+                externalDevice: 'em1.116',
+                externalIp: '10.116.133.11',
+                externalRouterIp: '10.116.133.173'
+            ),
+            new MidonetGateway(
+                ip: '10.111.5.22',
+                externalCidr: '10.117.128.0/17',
+                externalDevice: 'em1.117',
+                externalIp: '10.117.133.22',
+                externalRouterIp: '10.117.133.173'
+            ),
+        ],
+    )
+    NIMidonet niMidonet = new NIMidonet(
+        name: 'mido',
+        gateways: new NIMidonetGateways(
+            name: 'gateways',
+            gateways: [
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'ip', values: ['10.111.5.11'] ),
+                        new NIProperty( name: 'externalCidr', values: ['10.116.128.0/17'] ),
+                        new NIProperty( name: 'externalDevice', values: ['em1.116'] ),
+                        new NIProperty( name: 'externalIp', values: ['10.116.133.11'] ),
+                        new NIProperty( name: 'externalRouterIp', values: ['10.116.133.173'] ),
+                    ]
+                ),
+                new NIMidonetGateway(
+                    properties: [
+                        new NIProperty( name: 'ip', values: ['10.111.5.22'] ),
+                        new NIProperty( name: 'externalCidr', values: ['10.117.128.0/17'] ),
+                        new NIProperty( name: 'externalDevice', values: ['em1.117'] ),
+                        new NIProperty( name: 'externalIp', values: ['10.117.133.22'] ),
+                        new NIProperty( name: 'externalRouterIp', values: ['10.117.133.173'] ),
+                    ]
+                ),
+            ]
+        )
+    )
+    vpcBroadcastTest( midonet, niMidonet )
+  }
+
+  @Test
+  void testBroadcastVpcMidoLegacy( ) {
+    Midonet midonet = new Midonet(
+        eucanetdHost: 'a-35.qa1.eucalyptus-systems.com',
         gateways: [
             new MidonetGateway(
                 gatewayHost: 'a-35.qa1.eucalyptus-systems.com',

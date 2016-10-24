@@ -22,9 +22,12 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaClass;
 import javaslang.Function1;
 import javaslang.Predicates;
 import javaslang.collection.Stream;
@@ -41,6 +44,8 @@ public class Json {
   private static final Function1<String,Supplier<IOException>> missingExceptionSupplierFunc =
       fieldName -> () -> new IOException( "Missing required value " + fieldName );
 
+
+
   public static JsonNode parse( final String jsonText ) throws IOException {
     if ( jsonText == null ) throw new IOException( "Null" );
     return reader.readTree( new StringReader( jsonText ) {
@@ -54,6 +59,15 @@ public class Json {
       throw new IOException( "Invalid object" );
     }
     return node;
+  }
+
+  /**
+   * Get a mapper configured to ignore groovy object properties.
+   */
+  public static ObjectMapper mapper( ) {
+    final ObjectMapper objectMapper = new ObjectMapper( );
+    objectMapper.addMixInAnnotations( GroovyObject.class, GroovyMixin.class );
+    return objectMapper;
   }
 
   public static boolean isText( final JsonNode parent, final String fieldName ) throws IOException {
@@ -156,5 +170,11 @@ public class Json {
 
   private static Supplier<IOException> ifMissing( final String fieldName ) {
     return missingExceptionSupplierFunc.apply( fieldName );
+  }
+
+  private interface GroovyMixin {
+    @JsonIgnore
+    void setMetaClass( MetaClass var1);
+    @JsonIgnore MetaClass getMetaClass( );
   }
 }

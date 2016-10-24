@@ -42,10 +42,13 @@ import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkMode
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.util.Exceptions
+import com.eucalyptus.util.Json
 import com.eucalyptus.util.Pair
-import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
 import com.eucalyptus.vm.VmInstances
-import com.google.common.base.Objects as GObjects
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.google.common.base.MoreObjects
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
@@ -58,8 +61,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
-import org.codehaus.jackson.JsonProcessingException
-import org.codehaus.jackson.map.ObjectMapper
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.BeanPropertyBindingResult
@@ -118,7 +119,7 @@ class NetworkConfigurations {
       Components.lookup(ClusterController.class).services( ).each { ServiceConfiguration config ->
         (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult((ClusterConfiguration)config)
-          clusterConfiguration.networkMode = GObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
+          clusterConfiguration.networkMode = MoreObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
 
           if ( networkConfiguration?.managedSubnet ) {
             clusterConfiguration.vnetSubnet = networkConfiguration?.managedSubnet?.subnet
@@ -204,8 +205,8 @@ class NetworkConfigurations {
   }
 
   static NetworkConfiguration parse( final String configuration ) throws NetworkConfigurationException {
-    final ObjectMapper mapper = new ObjectMapper( )
-    mapper.setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) )
+    final ObjectMapper mapper = Json.mapper( )
+    mapper.setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE )
     final NetworkConfiguration networkConfiguration
     try {
       networkConfiguration = mapper.readValue( new StringReader( configuration ){
@@ -231,7 +232,7 @@ class NetworkConfigurations {
    */
   static NetworkConfiguration copyOf( final NetworkConfiguration configuration ) {
     final ObjectMapper mapper = new ObjectMapper( )
-    mapper.readValue( mapper.valueToTree( configuration ), NetworkConfiguration )
+    mapper.treeToValue( mapper.valueToTree( configuration ), NetworkConfiguration )
   }
 
   /**
