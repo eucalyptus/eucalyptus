@@ -130,8 +130,6 @@ public interface LoadBalancingActivities {
   /***** END ModifyAttributes activities *****/
   
   /***** ApplySecurityGroups activities *****/
-  void applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, Map<String,String> groupIdToNames)
-      throws LoadBalancingActivityException;
   void applySecurityGroupUpdateSecurityGroup(String accountNumber, String lbName, Map<String,String> groupIdToNames)
           throws LoadBalancingActivityException;
   /***** END ApplySecurityGroups activities ****/

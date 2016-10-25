@@ -1129,36 +1129,6 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     Promise<Void> modifyLoadBalancerAttributesPersistAttributes(Promise<String> accountNumber, Promise<String> lbName, Promise<Boolean> accessLogEnabled, Promise<String> s3BucketName, Promise<String> s3BucketPrefix, Promise<Integer> emitInterval, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames);
-
-    /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames, Promise<?>... waitFor);
-
-    /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
-
-    /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames);
-
-    /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames, Promise<?>... waitFor);
-
-    /**
-     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateAutoScalingGroup}
-     */
-    Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
-
-    /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#applySecurityGroupUpdateSecurityGroup}
      */
     Promise<Void> applySecurityGroupUpdateSecurityGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames);

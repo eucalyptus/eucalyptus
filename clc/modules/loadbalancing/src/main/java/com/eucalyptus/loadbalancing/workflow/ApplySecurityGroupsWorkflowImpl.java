@@ -20,9 +20,12 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
+import com.amazonaws.services.simpleworkflow.flow.core.TryCatchFinally;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import org.apache.log4j.Logger;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
@@ -31,24 +34,49 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 @ComponentPart(LoadBalancing.class)
 public class ApplySecurityGroupsWorkflowImpl
     implements ApplySecurityGroupsWorkflow {
+  private static Logger LOG     = Logger.getLogger(  ApplySecurityGroupsWorkflowImpl.class );
+  final LoadBalancingActivitiesClient client =
+          new LoadBalancingActivitiesClientImpl();
+  private ElbWorkflowState state =
+          ElbWorkflowState.WORKFLOW_RUNNING;
+  TryCatchFinally task = null;
+  private String accountNumber = null;
+  private String loadbalancer = null;
 
-  /* (non-Javadoc)
-   * @see com.eucalyptus.loadbalancing.workflow.ApplySecurityGroupsWorkflow#createLoadBalancer(java.lang.String, java.lang.String, java.util.Map)
-   */
   @Override
-  public void applySecurityGroups(String accountId, String loadbalancer,
-      Map<String, String> groupIdToNameMap) {
-    // TODO Auto-generated method stub
+  public void applySecurityGroups(final String accountId, final String loadbalancer,
+      final Map<String, String> groupIdToNameMap) {
+    this.accountNumber = accountNumber;
+    this.loadbalancer = loadbalancer;
+    task = new TryCatchFinally() {
+      @Override
+      protected void doTry() throws Throwable {
+        client.applySecurityGroupUpdateSecurityGroup(accountId, loadbalancer,
+                groupIdToNameMap);
+      }
 
+      @Override
+      protected void doCatch(Throwable e) throws Throwable {
+        if (e instanceof CancellationException) {
+          LOG.warn("Workflow for applying security group is cancelled");
+          state = ElbWorkflowState.WORKFLOW_CANCELLED;
+          return;
+        }
+
+        state = ElbWorkflowState.WORKFLOW_FAILED;
+        LOG.error("Workflow for applying security group has failed", e);
+      }
+
+      @Override
+      protected void doFinally() throws Throwable {
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+          state = ElbWorkflowState.WORKFLOW_SUCCESS;
+      }
+    };
   }
 
-  /* (non-Javadoc)
-   * @see com.eucalyptus.loadbalancing.workflow.ApplySecurityGroupsWorkflow#getState()
-   */
   @Override
   public ElbWorkflowState getState() {
-    // TODO Auto-generated method stub
-    return null;
+    return this.state;
   }
-
 }

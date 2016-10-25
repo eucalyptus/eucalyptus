@@ -1737,52 +1737,6 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(groupIdToNames), (ActivitySchedulingOptions)null);
-    }
-
-    @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames, Promise<?>... waitFor) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(groupIdToNames), (ActivitySchedulingOptions)null, waitFor);
-    }
-
-    @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(groupIdToNames), optionsOverride, waitFor);
-    }
-
-    @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(accountNumber, lbName, groupIdToNames, (ActivitySchedulingOptions)null);
-    }
-
-    @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames, Promise<?>... waitFor) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(accountNumber, lbName, groupIdToNames, (ActivitySchedulingOptions)null, waitFor);
-    }
-
-    @Override
-    public final Promise<Void> applySecurityGroupUpdateAutoScalingGroup(Promise<String> accountNumber, Promise<String> lbName, Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return applySecurityGroupUpdateAutoScalingGroupImpl(accountNumber, lbName, groupIdToNames, optionsOverride, waitFor);
-    }
-    
-    
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<Void> applySecurityGroupUpdateAutoScalingGroupImpl(final Promise<String> accountNumber, final Promise<String> lbName, final Promise<java.util.Map<java.lang.String,java.lang.String>> groupIdToNames, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-
-        ActivityType _activityType = new ActivityType();
-		_activityType.setName("LoadBalancingActivities.applySecurityGroupUpdateAutoScalingGroup");
-		_activityType.setVersion("1.0");
-
-        Promise[] _input_ = new Promise[3];
-        _input_[0] = accountNumber;
-        _input_[1] = lbName;
-        _input_[2] = groupIdToNames;
-
-        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
-    }
-
-    @Override
     public final Promise<Void> applySecurityGroupUpdateSecurityGroup(String accountNumber, String lbName, java.util.Map<java.lang.String,java.lang.String> groupIdToNames) {
         return applySecurityGroupUpdateSecurityGroupImpl(Promise.asPromise(accountNumber), Promise.asPromise(lbName), Promise.asPromise(groupIdToNames), (ActivitySchedulingOptions)null);
     }

@@ -2255,6 +2255,39 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   }
 
   @Override
+  public void modifyServicePropertiesValidateRequest(final String emi,
+                                                           final String instanceType, final String keyname, final String initScript)
+          throws LoadBalancingActivityException {
+    if(emi!=null){
+      try{
+        final List<ImageDetails> images =
+                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
+        if(images == null || images.size()<=0)
+          throw new LoadBalancingActivityException("No such EMI is found in the system");
+        if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
+          throw new LoadBalancingActivityException("No such EMI is found in the system");
+      }catch(final LoadBalancingActivityException ex){
+        throw ex;
+      }catch(final Exception ex){
+        throw new LoadBalancingActivityException("Failed to verify EMI in the system");
+      }
+    }
+    // validate instance type
+    if(instanceType!=null){
+      try{
+        final List<VmTypeDetails> vmTypes =
+                EucalyptusActivityTasks.getInstance().describeInstanceTypes(Lists.newArrayList(instanceType));
+        if(vmTypes.size()<=0)
+          throw new LoadBalancingActivityException("Invalid instance type -- " + instanceType);
+      }catch(final LoadBalancingActivityException ex){
+        throw ex;
+      }catch(final Exception ex) {
+        throw new LoadBalancingActivityException("Failed to verify instance type -- " + instanceType);
+      }
+    }
+  }
+
+  @Override
   public void applySecurityGroupUpdateSecurityGroup(final String accountNumber,
                                                     final String lbName, final Map<String, String> groupIdToNames)
           throws LoadBalancingActivityException {
@@ -2296,151 +2329,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
   }
 
-  @Override
-  public void applySecurityGroupUpdateAutoScalingGroup(final String accountNumber,
-      final String lbName, final Map<String, String> groupIdToNames)
-          throws LoadBalancingActivityException {
-
-    final LoadBalancer lb;
-    try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
-    }catch(NoSuchElementException ex){
-      throw new LoadBalancingActivityException("Failed to find the loadbalancer "+lbName, ex);
-    }catch(Exception ex){
-      throw new LoadBalancingActivityException("Failed due to query exception", ex);
-    }
-    
-    final Set<String> groupIds = groupIdToNames.keySet();
-    final Set<String> zones = 
-        Sets.newHashSet(  Collections2.transform(
-            Collections2.filter(lb.getZones(), new Predicate<LoadBalancerZoneCoreView> () {
-              @Override
-              public boolean apply(LoadBalancerZoneCoreView arg0) {
-                return LoadBalancerZone.STATE.InService.equals(arg0.getState());
-              } 
-            }),
-            new Function<LoadBalancerZoneCoreView, String> () {
-              @Override
-              public String apply(LoadBalancerZoneCoreView arg0) {
-                return arg0.getName();
-              } }
-            ) );
-    
-    if(zones==null)
-      return;
-    
-    for(final String availabilityZone : zones) {
-      final String scalingGroupName = getAutoScalingGroupName( accountNumber, lbName, availabilityZone);
-      boolean asgFound = false;
-      String launchConfigName = null;
-      boolean updateLaunchConfig = true;
-      
-      String imageId = null;
-      String instanceType = null;
-      String instanceProfileName = null;
-      String keyName = null;
-      String userData = null;
-      Boolean associatePublicIp = null;
-      Integer capacity = null;
-      
-      try{
-        final DescribeAutoScalingGroupsResponseType response = 
-            EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(scalingGroupName), lb.useSystemAccount());
-
-        final List<AutoScalingGroupType> groups =
-            response.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
-        if(groups.size()>0 && groups.get(0).getAutoScalingGroupName().equals(scalingGroupName)){
-          asgFound =true;
-          launchConfigName = groups.get(0).getLaunchConfigurationName();
-          capacity = groups.get(0).getDesiredCapacity();
-          if ( !groupIds.isEmpty( ) ) {
-            final LaunchConfigurationType lc = 
-                EucalyptusActivityTasks.getInstance().describeLaunchConfiguration( launchConfigName, lb.useSystemAccount() );
-                 
-            imageId = lc.getImageId();
-            instanceType = lc.getInstanceType();
-            instanceProfileName = lc.getIamInstanceProfile();
-            keyName = lc.getKeyName();
-            userData = lc.getUserData();
-            associatePublicIp = lc.getAssociatePublicIpAddress();
-            updateLaunchConfig = lc == null ||
-                lc.getSecurityGroups( ) == null ||
-                !Sets.newHashSet( lc.getSecurityGroups( ).getMember( ) ).equals( groupIds );
-          }
-        }
-      }catch(final Exception ex){
-        asgFound = false;
-      }
-      
-      if(!asgFound) 
-        throw new LoadBalancingActivityException("Failed to find the autoscaling group: " + scalingGroupName);
-      
-      String launchConfigToDelete = null;
-      if(updateLaunchConfig) {
-        launchConfigToDelete = launchConfigName; // delete the existing one later
-        //FIXME: 
-        do {
-          launchConfigName = getLaunchConfigName(accountNumber, lbName, availabilityZone);
-        }while(launchConfigName.equals(launchConfigToDelete));
-
-        try{
-          EucalyptusActivityTasks.getInstance().createLaunchConfiguration(imageId, 
-              instanceType, instanceProfileName,
-              launchConfigName, groupIds, keyName, userData,
-              associatePublicIp, lb.useSystemAccount() );
-        }catch(final Exception ex) {
-          throw new LoadBalancingActivityException("Failed to create launch configuration", ex);
-        }
-        
-        try{
-          EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(scalingGroupName, 
-              Lists.newArrayList(availabilityZone), 
-              capacity, launchConfigName, lb.useSystemAccount());
-        }catch(final Exception ex) {
-          throw new LoadBalancingActivityException("Failed to update autoscaling group", ex);
-        }
-        
-        if(launchConfigToDelete!=null) try {
-          EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration( launchConfigToDelete, lb.useSystemAccount());
-        }catch(final Exception ex) {
-          LOG.warn("Failed to delete the old launch config: " + launchConfigToDelete, ex);
-        }
-      }
-    }
-  }
-
-  @Override
-  public void modifyServicePropertiesValidateRequest(final String emi,
-      final String instanceType, final String keyname, final String initScript)
-          throws LoadBalancingActivityException {
-    if(emi!=null){
-      try{
-        final List<ImageDetails> images =
-          EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
-        if(images == null || images.size()<=0)
-          throw new LoadBalancingActivityException("No such EMI is found in the system");
-        if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
-          throw new LoadBalancingActivityException("No such EMI is found in the system");
-      }catch(final LoadBalancingActivityException ex){
-        throw ex;
-      }catch(final Exception ex){
-        throw new LoadBalancingActivityException("Failed to verify EMI in the system");
-      }
-    }
-    // validate instance type
-    if(instanceType!=null){
-      try{
-        final List<VmTypeDetails> vmTypes =
-            EucalyptusActivityTasks.getInstance().describeInstanceTypes(Lists.newArrayList(instanceType));
-        if(vmTypes.size()<=0)
-          throw new LoadBalancingActivityException("Invalid instance type -- " + instanceType);
-      }catch(final LoadBalancingActivityException ex){
-        throw ex;
-      }catch(final Exception ex) {
-        throw new LoadBalancingActivityException("Failed to verify instance type -- " + instanceType);
-      }
-    }
-  }
 
   @Override
   public void modifyServicePropertiesUpdateScalingGroup(final String emi,
