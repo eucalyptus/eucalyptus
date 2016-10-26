@@ -111,6 +111,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -124,14 +125,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   private final Partition    partitionInfo;
   private final GenerateKeys keyInfo;
   private final String       vendorName;
-  
+
   protected ComponentId( final String name ) {
     this( );
     this.capitalizedName = ( name == null
                                          ? this.getClass( ).getSimpleName( )
                                          : name );
   }
-  
+
   protected ComponentId( ) {
     this.capitalizedName = this.getClass( ).getSimpleName( );
     this.ats = Ats.from( this );
@@ -180,57 +181,57 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public String getServicePath( final String... pathParts ) {
     return "/services/" + this.capitalizedName;
   }
-  
+
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/" + this.capitalizedName;
   }
 
   /**
    * Components may declare a namespace suffix for internal use.
-   * 
+   *
    * <p>To avoid binding conflicts between components a namespace suffix may be
    * declared. By default all components use the same namespace in the internal
    * binding.</p>
-   * 
+   *
    * @return The suffix or null for no suffix
    */
   @Nullable
   public String getInternalNamespaceSuffix() {
     return null;
   }
-  
+
   public Map<String,String> getServiceQueryParameters() {
     return Collections.emptyMap();
   }
-  
+
   public final String getVendorName( ) {
     return this.vendorName;
   }
-  
+
   public final String name( ) {
     return this.capitalizedName.toLowerCase();
   }
-  
+
   @Override
   public final String getName( ) {
     return this.name();
   }
-  
+
   @Override
   public final FullName getFullName( ) {
     return ComponentFullName.getInstance(ServiceConfigurations.createEphemeral(this),
                                          this.getPartition(), this.name());
   }
-  
+
   @Override
   public String getPartition( ) {
     return this.partitionParent( ).name();
   }
-  
+
   public final boolean isRootService( ) {
     return this.partitionParent( ).equals( this );
   }
-  
+
   public final boolean isAncestor( final Class<? extends ComponentId> compId ) {
     if ( this.isCloudLocal( ) && Eucalyptus.class.equals( compId ) ) {
       return true;
@@ -245,7 +246,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
     return false;
   }
-  
+
   final ComponentId partitionParent( ) {
     if ( this.partitionInfo == null ) {
       return this;
@@ -261,33 +262,33 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return ComponentIds.lookup( this.partitionInfo.value( )[0] );
     }
   }
-  
+
   public boolean isPartitioned( ) {
     return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
-  
+
   public Boolean isCloudLocal( ) {
     return Eucalyptus.INSTANCE.isRelated( ).apply( this );
   }
-  
+
   public final Boolean isAlwaysLocal( ) {
     return Empyrean.INSTANCE.isRelated( ).apply( this );
   }
-  
+
   public Predicate<ComponentId> isRelated( ) {
     return new Predicate<ComponentId>( ) {
-      
+
       @Override
       public boolean apply( final ComponentId input ) {
         return ComponentId.this.equals( input ) || ( input.partitionInfo != null && Arrays.asList( input.partitionInfo.value( ) ).contains( ComponentId.this.getClass( ) ) );
       }
     };
   }
-  
+
   public Boolean hasCredentials( ) {
     return this.ats.has( GenerateKeys.class );
   }
-  
+
   private static final ConcurrentMap<String, Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
 
   public ClientBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
@@ -303,9 +304,9 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
     return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
   }
-  
+
   private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
-  
+
   protected static ChannelPipelineFactory helpGetClientPipeline( final String fqName ) {
     if ( clientPipelines.containsKey( fqName ) ) {
       try {
@@ -328,18 +329,18 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       }
     }
     return new ChannelPipelineFactory( ) {
-      
+
       @Override
       public ChannelPipeline getPipeline( ) throws Exception {
         return Channels.pipeline( );
       }
     };
   }
-  
+
   public final String getCapitalizedName( ) {
     return this.capitalizedName;
   }
-  
+
   public final String getFaultLogPrefix( ) {
 	  if ( Ats.from( this ).has( FaultLogPrefix.class ) ) {
 		  String value = Ats.from( this ).get( FaultLogPrefix.class ).value( );
@@ -352,11 +353,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Integer getPort( ) {
     return 8773;
   }
-  
+
   public String getChannelName( ) {
     return String.format( "%s-request", getName( ) );
   }
-  
+
   public String getServiceModelFileName( ) {
     return String.format("%s-model.xml", this.getName());
   }
@@ -373,7 +374,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public final int compareTo( final ComponentId that ) {
     return this.name( ).compareTo( that.name( ) );
   }
-  
+
   @Override
   public final int hashCode( ) {
     final int prime = 31;
@@ -384,7 +385,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
                                          : this.name( ).hashCode( ) );
     return result;
   }
-  
+
   @Override
   public final boolean equals( final Object obj ) {
     if ( this == obj ) return true;
@@ -396,11 +397,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else if ( !this.name( ).equals( other.name( ) ) ) return false;
     return true;
   }
-  
+
   public boolean runLimitedServices( ) {
     return false;
   }
-  
+
   @Override
   public String toString( ) {
     final StringBuilder builder = new StringBuilder( );
@@ -418,7 +419,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
     return builder.toString();
   }
-  
+
   public final boolean isInternal( ) {
     return this.ats.has( InternalService.class )
            || !this.isAdminService( )
@@ -426,14 +427,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
            || ( this.partitionParent( ).equals( Empyrean.INSTANCE ) && !this.isRegisterable( ) )
            || ( this.partitionParent( ).equals( Eucalyptus.INSTANCE ) && !this.isRegisterable( ) );
   }
-  
+
   /**
    * @return true if does not require internal system privileges, false otherwise.
    */
   public boolean isPublicService( ) {
     return this.ats.has( PublicService.class );
   }
-  
+
   /**
    * @return true if does not require internal system privileges, false otherwise.
    */
@@ -455,20 +456,20 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean isRegisterable( ) {
     return !( ServiceBuilders.lookup( this ) instanceof DummyServiceBuilder );
   }
-  
+
   /**
    * Temporarily this includes only a registerability check.
-   * 
+   *
    * @param config
    * @return
    */
   public boolean isDistributedService( ) {
     return this.isRegisterable( );
   }
-  
+
   /**
    * Can the component be run locally (i.e., is the needed code available)
-   * 
+   *
    * @param component TODO
    * @return true if the component could be run locally.
    */
@@ -495,9 +496,12 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
 
-  public Optional<String> getAdminServiceName( ) {
+  public Optional<Set<String>> getAdminServiceNames( ) {
     if ( this.ats.has( AdminServiceName.class ) ) {
-      return Optional.of( this.ats.get( AdminServiceName.class ).value( ) );
+      final String[] names = this.ats.get( AdminServiceName.class ).value( );
+      if ( names.length > 0 ) {
+        return Optional.of( ImmutableSortedSet.orderedBy( String.CASE_INSENSITIVE_ORDER ).add( names ).build( ) );
+      }
     }
     return Optional.absent( );
   }
@@ -512,7 +516,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     } else if ( this.ats.has( AwsServiceName.class ) ) {
       names = Collections.singleton( getAwsServiceName( ) );
     } else if ( this.ats.has( AdminServiceName.class ) ) {
-      names = Collections.singleton( getAdminServiceName( ).get( ) );
+      names = getAdminServiceNames( ).or( Sets::newHashSet );
     }
     return names;
   }
@@ -534,11 +538,11 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return DatabaseNamingStrategy.Schema;
     }
   }
-  
+
   public Boolean isManyToOnePartition( ) {
     return this.ats.has( Partition.class ) && this.ats.get( Partition.class ).manyToOne( );
   }
-  
+
   private boolean checkComponentParts( ) {
     return true;//TODO:GRZE:add checks to ensure full component state is present
 //  try {
@@ -547,5 +551,5 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
 //    return false;
 //  }
   }
-  
+
 }

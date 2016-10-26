@@ -70,11 +70,13 @@ import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.ServiceNames;
 
 @Partition( Empyrean.class )
 @GenerateKeys
 @AdminService
-@AdminServiceName("bootstrap-admin")
+@AdminServiceName( { "bootstrap", "bootstrap-admin" } )
+@ServiceNames( { "bootstrap-public", "bootstrap", "bootstrap-admin" } )
 @PolicyVendor("euserv")
 @FaultLogPrefix( "cloud" )
 public class Empyrean extends ComponentId {
@@ -85,17 +87,17 @@ public class Empyrean extends ComponentId {
   public Empyrean( ) {
     super( "Bootstrap" );
   }
-  
+
   @Override
   public String getServiceModelFileName( ) {
     return "eucalyptus-bootstrap.xml";
   }
-  
+
   @Override
   public String getInternalServicePath( final String... pathParts ) {
     return "/internal/Empyrean";
   }
-  
+
   @Override
   public String getServicePath( final String... pathParts ) {
     return "/services/Empyrean";

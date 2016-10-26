@@ -1,42 +1,42 @@
 /*************************************************************************
  * Copyright 2009-2016 Eucalyptus Systems, Inc.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see http://www.gnu.org/licenses/.
- * 
+ *
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- * 
+ *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- * 
+ *
  * Software License Agreement (BSD License)
- * 
+ *
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- * 
+ *
  * Redistribution and use of this software in source and binary forms,
  * with or without modification, are permitted provided that the
  * following conditions are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer
  * in the documentation and/or other materials provided with the
  * distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -68,6 +68,7 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
@@ -97,18 +98,18 @@ import com.google.common.collect.Lists;
 
 /**
  * DNS Resolver which bases replies on the current system topology.
- * 
+ *
  * Here system-subdomain is to be read as either the internal-subdomain
  * or the public-subdomain
- * 
+ *
  * Each logical service name is a CNAME record of the form:
  * 1. component.system-subdomain if component is not partitioned.
  * 2. component.partition.system-subdomain if component is partitioned.
- * 
+ *
  * Then, each instance of a particular service has an A record of the form:
  * 1. service-name.component.system-subdomain if component is not partitioned.
  * 2. service-name.component.partition.system-subdomain if component is partitioned.
- * 
+ *
  * For example, if we had two Walruses in HA called WS_1 and WS_2,
  * with WS_1 being ENABLED, then we would have:
  * 1. WS_1.walrus.public-subdomain. 60 IN A <registered address for WS_1>
@@ -117,7 +118,7 @@ import com.google.common.collect.Lists;
  * 4. WS_2.walrus.internal-subdomain. 60 IN A <registered address for WS_2>
  * 5. walrus.public-subdomain. 60 IN CNAME WS_1.walrus.public-subdomain.
  * 6. walrus.internal-subdomain. 60 IN CNAME WS_1.walrus.internal-subdomain.
- * 
+ *
  * @note the current implementation does not support service names which have '.'s in them.
  */
 @ConfigurableClass( root = "dns.services",
@@ -129,7 +130,7 @@ public class TopologyDnsResolver extends DnsResolver {
   public static Boolean enabled = Boolean.TRUE;
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {
-      
+
       @Override
       public boolean apply( Name input ) {
         boolean exists = false;
@@ -157,7 +158,7 @@ public class TopologyDnsResolver extends DnsResolver {
         }
         return exists;
       }
-      
+
     },
     SERVICE {
       @Override
@@ -182,7 +183,7 @@ public class TopologyDnsResolver extends DnsResolver {
         }
         return exists;
       }
-      
+
     };
     public static final//
     Function<Name, ServiceConfiguration>        //
@@ -247,17 +248,17 @@ public class TopologyDnsResolver extends DnsResolver {
                                                                         }
                                                                       }
                                                                     };
-    
+
     @Override
     public abstract boolean apply( Name input );
-    
+
   }
-  
+
   private static final LoadingCache<Name, ServiceConfiguration> //
                                                                 serviceNameMap = CacheBuilder.newBuilder( )
                                                                                              .refreshAfterWrite( 30, TimeUnit.SECONDS )
                                                                                              .build( CacheLoader.from( ResolverSupport.SERVICE_FUNCTION ) );
-  
+
   @Override
   public boolean checkAccepts( DnsRequest request ) {
     final Record query = request.getQuery( );
@@ -270,10 +271,10 @@ public class TopologyDnsResolver extends DnsResolver {
       } else if ( query.getName( ).labels( ) <= 3 && ResolverSupport.SERVICE.apply( query.getName( ) ) ) {
         return true;
       }
-    } 
+    }
     return false;
   }
-  
+
   private Predicate<ServiceConfiguration> RESOLVABLE_STATE = new Predicate<ServiceConfiguration>(){
     @Override
     public boolean apply(ServiceConfiguration arg0) {
@@ -282,7 +283,7 @@ public class TopologyDnsResolver extends DnsResolver {
       return false;
     }
   };
-  
+
   @Override
   public DnsResponse lookupRecords( DnsRequest request ) {
     final Record query = request.getQuery( );
@@ -291,11 +292,11 @@ public class TopologyDnsResolver extends DnsResolver {
       final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
       final ComponentId componentId = ComponentIds.lookup( compIdType );
       final List<ServiceConfiguration> configs = Lists.newArrayList( );
-      final Optional<String> adminServiceName = componentId.getAdminServiceName( );
+      final Optional<Set<String>> adminServiceName = componentId.getAdminServiceNames( );
       final Host coordinator = Hosts.getCoordinator( );
       Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE;
       if ( coordinator != null && adminServiceName.isPresent( ) &&
-          adminServiceName.get( ).equals( name.getLabelString( 0 ) ) ) {
+          adminServiceName.get( ).contains( name.getLabelString( 0 ) ) ) {
         configFilter = Predicates.alwaysTrue( );
         configs.add( ServiceConfigurations.createEphemeral( componentId, coordinator.getBindAddress( ) ) );
       } else if ( componentId.isPartitioned( ) ) {
@@ -334,16 +335,16 @@ public class TopologyDnsResolver extends DnsResolver {
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
       final ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )
-                        .answer( RequestType.A.apply( query ) ? 
+                        .answer( RequestType.A.apply( query ) ?
                             DomainNameRecords.addressRecord(
                                 name,
-                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) ) 
+                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) )
                                 : null );
     } else {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }
   }
-  
+
   @Override
   public String toString( ) {
     return this.getClass( ).getSimpleName( );
