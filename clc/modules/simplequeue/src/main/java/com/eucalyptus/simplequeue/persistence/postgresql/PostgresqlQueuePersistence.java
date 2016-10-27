@@ -33,11 +33,13 @@ package com.eucalyptus.simplequeue.persistence.postgresql;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.simplequeue.Constants;
+import com.eucalyptus.simplequeue.SimpleQueueService;
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.simplequeue.persistence.QueuePersistence;
+import com.eucalyptus.util.SynchronousClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,20 +47,34 @@ import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Projections;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by ethomas on 9/7/16.
  */
 public class PostgresqlQueuePersistence implements QueuePersistence {
 
+  static Random random = new Random();
+
+  private static final int NUM_PARTITIONS = 25;
+
+  private static final Collection<String> partitionTokens = IntStream.range(0, NUM_PARTITIONS).boxed().map(String::valueOf).collect(Collectors.toSet());
+
   @Override
   public Queue lookupQueue(String accountId, String queueName) {
+    Queue queue = null;
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
       Optional<QueueEntity> queueEntityOptional = Entities.criteriaQuery(QueueEntity.class)
@@ -66,11 +82,12 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
         .whereEqual(QueueEntity_.queueName, queueName)
         .uniqueResultOption();
       if (queueEntityOptional.isPresent()) {
-        return queueFromQueueEntity(queueEntityOptional.get());
-      } else {
-        return null;
+        queueEntityOptional.get().setLastLookupTimestampSecs(SimpleQueueService.currentTimeSeconds());
+        queue =  queueFromQueueEntity(queueEntityOptional.get());
       }
+      db.commit();
     }
+    return queue;
   }
 
   @Override
@@ -88,6 +105,8 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
         queueEntity.setAccountId(accountId);
         queueEntity.setQueueName(queueName);
         queueEntity.setAttributes(convertAttributeMapToJson(attributes));
+        queueEntity.setLastLookupTimestampSecs(SimpleQueueService.currentTimeSeconds());
+        queueEntity.setPartitionToken(String.valueOf(random.nextInt(NUM_PARTITIONS)));
         Entities.persist(queueEntity);
         db.commit( );
         return queueFromQueueEntity(queueEntity);
@@ -212,6 +231,35 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
         throw new QueueDoesNotExistException("The specified queue does not exist.");
       }
       db.commit();
+    }
+  }
+
+  @Override
+  public Collection<String> getPartitionTokens() {
+    if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+      return partitionTokens;
+    } else {
+      return Collections.EMPTY_LIST;
+    }
+  }
+
+  @Override
+  public Collection<Queue> listActiveQueues(String partitionToken) {
+    try (TransactionResource db =
+           Entities.transactionFor(QueueEntity.class)) {
+      long nowSecs = SimpleQueueService.currentTimeSeconds();
+      Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class)
+        .whereEqual(QueueEntity_.partitionToken, partitionToken)
+        .where(Entities.restriction(QueueEntity.class).ge(QueueEntity_.lastLookupTimestampSecs, nowSecs - SimpleQueueService.ACTIVE_QUEUE_TIME_SECS));
+      List<QueueEntity> queueEntities = queryCriteria.list();
+      List<Queue> queues = Lists.newArrayList();
+      if (queueEntities != null) {
+        for (QueueEntity queueEntity : queueEntities) {
+          Queue queue = queueFromQueueEntity(queueEntity);
+          queues.add(queue);
+        }
+      }
+      return queues;
     }
   }
 }

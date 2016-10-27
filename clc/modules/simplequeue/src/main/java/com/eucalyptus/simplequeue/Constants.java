@@ -60,4 +60,14 @@ public class Constants {
   public static final String DEAD_LETTER_TARGET_ARN = "deadLetterTargetArn";
   public static final String MAX_RECEIVE_COUNT = "maxReceiveCount";
 
+  public static final String NUMBER_OF_MESSAGES_SENT = "NumberOfMessagesSent";
+  public static final String AWS_SQS = "AWS/SQS";
+  public static final String QUEUE_NAME = "QueueName";
+  public static final String SENT_MESSAGE_SIZE = "SentMessageSize";
+  public static final String APPROXIMATE_AGE_OF_OLDEST_MESSAGE = "ApproximateAgeOfOldestMessage";
+
+  public static final String APPROXIMATE_NUMBER_OF_MESSAGES_VISIBLE = "ApproximateNumberOfMessagesVisible";
+  public static final String NUMBER_OF_EMPTY_RECEIVES = "NumberOfEmptyReceives";
+  public static final String NUMBER_OF_MESSAGES_DELETED = "NumberOfMessagesDeleted";
+  public static final String NUMBER_OF_MESSAGES_RECEIVED = "NumberOfMessagesReceived";
 }

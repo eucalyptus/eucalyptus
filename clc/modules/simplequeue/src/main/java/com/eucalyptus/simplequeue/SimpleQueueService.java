@@ -40,6 +40,13 @@ import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
+import com.eucalyptus.cloudwatch.common.msgs.Dimension;
+import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
+import com.eucalyptus.cloudwatch.common.msgs.MetricData;
+import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
+import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -68,9 +75,11 @@ import com.eucalyptus.simplequeue.exceptions.TooManyEntriesInBatchRequestExcepti
 import com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
+import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.WebServices;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -105,6 +114,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +122,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -119,6 +130,46 @@ import java.util.stream.Collectors;
 
 @ComponentNamed
 public class SimpleQueueService {
+
+  @ConfigurableField(
+    initial = "true",
+    description = "The simple workflow service domain for simplequeue",
+    changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
+  public static volatile String ENABLE_METRICS_COLLECTION = "true";
+
+  @ConfigurableField(
+    initial = "SimpleQueueDomain",
+    description = "The simple workflow service domain for simplequeue",
+    changeListener = Config.NameValidatingChangeListener.class )
+  public static volatile String SWF_DOMAIN = "SimpleQueueDomain";
+
+  @ConfigurableField(
+    initial = "SimpleQueueTaskList",
+    description = "The simple workflow service task list for simplequeue",
+    changeListener = Config.NameValidatingChangeListener.class )
+  public static volatile String SWF_TASKLIST = "SimpleQueueTaskList";
+
+  @ConfigurableField(
+    initial = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}",
+    description = "JSON configuration for the simplequeue simple workflow client",
+    changeListener = Config.ClientConfigurationValidatingChangeListener.class )
+  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+
+  @ConfigurableField(
+    initial = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    description = "JSON configuration for the simplequeue simple workflow activity worker",
+    changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+
+  @ConfigurableField(
+    initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    description = "JSON configuration for the simplequeue simple workflow decision worker",
+    changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+
+  @ConfigurableField( description = "How long a queue is considered 'active' in seconds after it has been accessed.",
+    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+  public volatile static int ACTIVE_QUEUE_TIME_SECS = 21600;
 
   @ConfigurableField( description = "Maximum number of characters in a queue name.",
     initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
@@ -193,6 +244,12 @@ public class SimpleQueueService {
     }
   }
 
+  public static Date roundDown5Minutes(Date date) {
+    if (date == null) return date;
+    long timestamp = date.getTime();
+    long unitStep = TimeUnit.MINUTES.toMillis(5);
+    return new Date(timestamp - timestamp %  unitStep);
+  }
 
   public static class CheckMin1024IntPropertyChangeListener extends CheckMinIntPropertyChangeListener {
     public CheckMin1024IntPropertyChangeListener() {
@@ -779,15 +836,28 @@ public class SimpleQueueService {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String receiptHandle = request.getReceiptHandle();
-      handleDeleteMessage(queue, receiptHandle);
+      handleDeleteMessage(queue, receiptHandle, new Date());
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
   }
 
-  private static void handleDeleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
-    PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle);
+  private static void handleDeleteMessage(Queue queue, String receiptHandle, Date now) throws Exception {
+    if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle)) {
+      if (!"false".equalsIgnoreCase(ENABLE_METRICS_COLLECTION)) {
+        // send a cloudwatch statistic
+        ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
+        PutMetricDataType putMetricDataType = getSQSPutMetricDataType(queue);
+        // add 1 to number of messages deleted...
+        MetricDatum messagesSentMetricDatum = getSQSMetricDatum(queue, now);
+        messagesSentMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_DELETED);
+        messagesSentMetricDatum.setValue(1.0);
+        messagesSentMetricDatum.setUnit("Count");
+        putMetricDataType.getMetricData().getMember().add(messagesSentMetricDatum);
+        AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
+      }
+    }
   }
 
   public DeleteQueueResponseType deleteQueue(DeleteQueueType request) throws EucalyptusCloudException {
@@ -1014,11 +1084,37 @@ public class SimpleQueueService {
 
       Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
 
-      if (messages != null) {
+      ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
+      Date now = new Date();
+      if (messages != null && !messages.isEmpty()) {
         for (Message message: messages) {
           filterReceiveAttributes(message, request.getAttributeName());
           filterReceiveMessageAttributes(message, request.getMessageAttributeName());
           reply.getReceiveMessageResult().getMessage().add(message);
+
+          if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+            // send a cloudwatch statistic
+            PutMetricDataType putMetricDataType = getSQSPutMetricDataType(queue);
+            // add 1 to number of messages received...
+            MetricDatum messagesSentMetricDatum = getSQSMetricDatum(queue, now);
+            messagesSentMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_RECEIVED);
+            messagesSentMetricDatum.setValue(1.0);
+            messagesSentMetricDatum.setUnit("Count");
+            putMetricDataType.getMetricData().getMember().add(messagesSentMetricDatum);
+            AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
+          }
+        }
+      } else {
+        if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+          // send a cloudwatch statistic
+          PutMetricDataType putMetricDataType = getSQSPutMetricDataType(queue);
+          // add 1 to number of empty receives...
+          MetricDatum messagesSentMetricDatum = getSQSMetricDatum(queue, now);
+          messagesSentMetricDatum.setMetricName(Constants.NUMBER_OF_EMPTY_RECEIVES);
+          messagesSentMetricDatum.setValue(1.0);
+          messagesSentMetricDatum.setUnit("Count");
+          putMetricDataType.getMetricData().getMember().add(messagesSentMetricDatum);
+          AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
         }
       }
     } catch (Exception ex) {
@@ -1312,10 +1408,58 @@ public class SimpleQueueService {
       reply.getSendMessageResult().setmD5OfMessageAttributes(messageInfo.getMessage().getmD5OfMessageAttributes());
       reply.getSendMessageResult().setMessageId(messageInfo.getMessage().getMessageId());
       reply.getSendMessageResult().setmD5OfMessageBody(messageInfo.getMessage().getmD5OfBody());
+
+      if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+        // send a cloudwatch statistic
+        ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
+        PutMetricDataType putMetricDataType = getSQSPutMetricDataType(queue);
+
+        Date now = new Date();
+        // add 1 to number of messages sent...
+        MetricDatum messagesSentMetricDatum = getSQSMetricDatum(queue, now);
+        messagesSentMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_SENT);
+        messagesSentMetricDatum.setValue(1.0);
+        messagesSentMetricDatum.setUnit("Count");
+        putMetricDataType.getMetricData().getMember().add(messagesSentMetricDatum);
+
+        // figure out number of bytes sent
+        MetricDatum sentMessageSizeMetricDatum = getSQSMetricDatum(queue, now);
+        sentMessageSizeMetricDatum.setMetricName(Constants.SENT_MESSAGE_SIZE);
+        sentMessageSizeMetricDatum.setValue((double) messageInfo.getMessageLength());
+        sentMessageSizeMetricDatum.setUnit("Bytes");
+        putMetricDataType.getMetricData().getMember().add(sentMessageSizeMetricDatum);
+
+        AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  public static MetricDatum getSQSMetricDatum(Queue queue, Date date) {
+    MetricDatum metricDatum = new MetricDatum();
+    metricDatum.setTimestamp(roundDown5Minutes(date));
+    metricDatum.setDimensions(getDimensions(queue));
+    return metricDatum;
+  }
+
+  public static PutMetricDataType getSQSPutMetricDataType(Queue queue) throws AuthException {
+    PutMetricDataType putMetricDataType = new PutMetricDataType();
+    putMetricDataType.setUserId(com.eucalyptus.auth.Accounts.lookupPrincipalByAccountNumber(queue.getAccountId()).getUserId());
+    putMetricDataType.markPrivileged();
+    putMetricDataType.setNamespace(Constants.AWS_SQS);
+    putMetricDataType.setMetricData(new MetricData());
+    return putMetricDataType;
+  }
+
+  private static Dimensions getDimensions(Queue queue) {
+    Dimensions dimensions = new Dimensions();
+    Dimension dimension = new Dimension();
+    dimension.setName(Constants.QUEUE_NAME);
+    dimension.setValue(queue.getQueueName());
+    dimensions.getMember().add(dimension);
+    return dimensions;
   }
 
   public SetQueueAttributesResponseType setQueueAttributes(SetQueueAttributesType request) throws EucalyptusCloudException {
@@ -1420,9 +1564,10 @@ public class SimpleQueueService {
         }
         previousIds.add(batchRequestEntry.getId());
       }
+      Date now = new Date();
       for (DeleteMessageBatchRequestEntry batchRequestEntry: request.getDeleteMessageBatchRequestEntry()) {
         try {
-          handleDeleteMessage(queue, batchRequestEntry.getReceiptHandle());
+          handleDeleteMessage(queue, batchRequestEntry.getReceiptHandle(), now);
           DeleteMessageBatchResultEntry success = new DeleteMessageBatchResultEntry();
           success.setId(batchRequestEntry.getId());
           reply.getDeleteMessageBatchResult().getDeleteMessageBatchResultEntry().add(success);
@@ -1486,6 +1631,10 @@ public class SimpleQueueService {
         }
         messageInfoMap.put(batchRequestEntry.getId(), messageInfo);
       }
+      // send a cloudwatch statistic
+      ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
+
+      Date now = new Date();
       for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
         try {
           MessageInfo messageInfo = messageInfoMap.get(batchRequestEntry.getId());
@@ -1496,6 +1645,26 @@ public class SimpleQueueService {
           success.setmD5OfMessageBody(messageInfo.getMessage().getmD5OfBody());
           success.setId(batchRequestEntry.getId());
           reply.getSendMessageBatchResult().getSendMessageBatchResultEntry().add(success);
+
+          if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+            PutMetricDataType putMetricDataType = getSQSPutMetricDataType(queue);
+
+            // add 1 to number of messages sent...
+            MetricDatum messagesSentMetricDatum = getSQSMetricDatum(queue, now);
+            messagesSentMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_SENT);
+            messagesSentMetricDatum.setValue(1.0);
+            messagesSentMetricDatum.setUnit("Count");
+            putMetricDataType.getMetricData().getMember().add(messagesSentMetricDatum);
+
+            // figure out number of bytes sent
+            MetricDatum sentMessageSizeMetricDatum = getSQSMetricDatum(queue, now);
+            sentMessageSizeMetricDatum.setMetricName(Constants.SENT_MESSAGE_SIZE);
+            sentMessageSizeMetricDatum.setValue((double) messageInfo.getMessageLength());
+            sentMessageSizeMetricDatum.setUnit("Bytes");
+            putMetricDataType.getMetricData().getMember().add(sentMessageSizeMetricDatum);
+
+            AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
+          }
         } catch (Exception ex) {
           try {
             handleException(ex);

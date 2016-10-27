@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.StringTokenizer;
 
 /**
@@ -298,7 +299,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public void deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
+  public boolean deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
+    boolean found = false;
     // receipt handle (currently) looks like accountId:queueName:message-id:<message-id>-<receive-count>
     StringTokenizer stok = new StringTokenizer(receiptHandle,":");
     if (stok.countTokens() != 4) {
@@ -328,12 +330,14 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
         .whereEqual(MessageEntity_.receiveCount, receiveCount)
         .list();
       if (messageEntityList != null) {
+        found = true;
         for (MessageEntity messageEntity:messageEntityList) {
           Entities.delete(messageEntity);
         }
       }
       db.commit();
     }
+    return found;
   }
 
   @Override
@@ -379,6 +383,24 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       db.commit();
     }
 
+  }
+
+  @Override
+  public Long getApproximateAgeOfOldestMessage(Queue queue) {
+    long now = SimpleQueueService.currentTimeSeconds();
+    try ( TransactionResource db =
+            Entities.transactionFor(MessageEntity.class) ) {
+      List<MessageEntity> messageEntities = Entities.criteriaQuery(MessageEntity.class)
+        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
+        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+        // messages with an expiration time of exactly now should expire, so we want the expiration
+        // timestamp to be strictly greater than now
+        .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
+        .orderBy(MessageEntity_.sentTimestampSecs)
+        .list();
+      if (messageEntities == null || messageEntities.size() == 0) return 0L;
+      return now - messageEntities.get(0).getSentTimestampSecs();
+    }
   }
 
 

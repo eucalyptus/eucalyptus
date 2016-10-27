@@ -44,6 +44,7 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+import java.util.Date;
 
 /**
  * Created by ethomas on 9/7/16.
@@ -58,10 +59,15 @@ public class QueueEntity extends AbstractPersistent {
   String accountId;
   @Column(name = "queue_name", nullable = false)
   String queueName;
+  @Column(name = "partition_token", nullable = false)
+  String partitionToken;
   @Column(name = "attributes_json", nullable = false)
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String attributes;
+
+  @Column(name = "last_lookup_timestamp", nullable = false)
+  Long lastLookupTimestampSecs;
 
   public QueueEntity() {
   }
@@ -90,4 +96,20 @@ public class QueueEntity extends AbstractPersistent {
     this.queueName = queueName;
   }
 
+
+  public Long getLastLookupTimestampSecs() {
+    return lastLookupTimestampSecs;
+  }
+
+  public void setLastLookupTimestampSecs(Long lastLookupTimestampSecs) {
+    this.lastLookupTimestampSecs = lastLookupTimestampSecs;
+  }
+
+  public String getPartitionToken() {
+    return partitionToken;
+  }
+
+  public void setPartitionToken(String partitionToken) {
+    this.partitionToken = partitionToken;
+  }
 }

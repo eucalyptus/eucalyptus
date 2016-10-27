@@ -22,6 +22,8 @@
     <info organisation="com.eucalyptus" module="eucalyptus-simplequeue"/>
     <dependencies>
         <dependency name="eucalyptus-simplequeue-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-simpleworkflow-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-euare" rev="latest.integration"/>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-ws" rev="latest.integration"/>

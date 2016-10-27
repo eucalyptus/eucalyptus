@@ -28,31 +28,21 @@
  *   express or implied. See the License for the specific language governing
  *   permissions and limitations under the License.
  ************************************************************************/
-package com.eucalyptus.simplequeue.persistence;
+package com.eucalyptus.simplequeue.workflow;
 
-import com.eucalyptus.simplequeue.Message;
-import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
+import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrationOptions;
 
 import java.util.Collection;
-import java.util.Map;
+import java.util.Date;
 
 /**
- * Created by ethomas on 9/16/16.
+ * Created by ethomas on 10/25/16.
  */
-public interface MessagePersistence {
-
-  Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException;
-
-  void sendMessage(Queue queue, Message message, Map<String, String> sendAttributes) throws SimpleQueueException;
-
-  boolean deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException;
-
-  void deleteAllMessages(Queue queue);
-
-  Map<String, String> getApproximateMessageCounts(Queue queue);
-
-  void changeMessageVisibility(Queue queue, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException;
-
-  Long getApproximateAgeOfOldestMessage(Queue queue);
-
+@ActivityRegistrationOptions(defaultTaskScheduleToStartTimeoutSeconds = 400,
+  defaultTaskStartToCloseTimeoutSeconds = 300)
+@Activities(version="2.0")
+public interface CloudWatchActivities {
+  public Collection<String> getPartitions();
+  public void performWork(String partitionInfo);
 }
