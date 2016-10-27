@@ -126,12 +126,7 @@ public class CloudWatchPutMetricWorkflowImpl implements CloudWatchPutMetricWorkf
     final Map<String, Promise<String>> metrics = Maps.newHashMap();
     final List<String> instances = servoInstances.get();
     for(final String instanceId : instances) {
-      final ActivitySchedulingOptions scheduler =
-          new ActivitySchedulingOptions();
-      scheduler.setTaskList(instanceId);
-      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
-      scheduler.setStartToCloseTimeoutSeconds(10L);
-      metrics.put(instanceId, vmClient.getCloudWatchMetrics(scheduler));
+      metrics.put(instanceId, getCloudWatchMetricsFromVM(instanceId));
     }
 
     final Promise<Map<String, String>> metricMap = Promises.mapOfPromisesToPromise(metrics);
@@ -149,6 +144,59 @@ public class CloudWatchPutMetricWorkflowImpl implements CloudWatchPutMetricWorkf
             new AndPromise(timer, Promises.listOfPromisesToPromise(activities)));
   }
 
+  @Asynchronous
+  private Promise<String> getCloudWatchMetricsFromVM(final String instanceId) {
+    final Settable<String> failure = new Settable<String>();
+    final Settable<String> result = new Settable<String>();
+
+    new TryCatchFinally() {
+      protected void doTry() throws Throwable {
+
+        final ActivitySchedulingOptions scheduler =
+                new ActivitySchedulingOptions();
+        scheduler.setTaskList(instanceId);
+        scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+        scheduler.setStartToCloseTimeoutSeconds(10L);
+        result.chain(vmClient.getCloudWatchMetrics(scheduler));
+      }
+
+      protected void doCatch(Throwable e) {
+        failure.set(instanceId);
+      }
+
+      protected void doFinally() throws Throwable {
+        if ( result.isReady() ) {
+          failure.set(null);
+        } else if ( failure.isReady()) {
+          result.set(null);
+        } else {
+          result.set(null);
+          failure.set(null);
+        }
+      }
+    };
+    return done(result, failure);
+  }
+
+  @Asynchronous
+  private Promise<String> done(final Settable<String> result, final Settable<String> failure) {
+    if (result.get() != null ) {
+      return Promise.asPromise(result.get());
+    } else if (failure.get() != null) {
+      return checkInstanceFailure(failure);
+    } else {
+      return Promise.asPromise(null); // this shouldn't happen
+    }
+  }
+
+  @Asynchronous
+  private Promise<String> checkInstanceFailure(Promise<String> failure) {
+    final String instanceId = failure.get();
+    if (instanceId != null) {
+      client.recordInstanceTaskFailure(instanceId);
+    }
+    return Promise.asPromise(null);
+  }
 
   @Asynchronous(daemon = true)
   private Promise<Void> startDaemonTimer(int seconds) {

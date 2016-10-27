@@ -176,10 +176,12 @@ public interface LoadBalancingActivities {
   void cleanupSecurityGroups() throws LoadBalancingActivityException;
   void cleanupServoInstances() throws LoadBalancingActivityException;
   void runContinousWorkflows() throws LoadBalancingActivityException;
+  void recycleFailedServoInstances() throws LoadBalancingActivityException;
        // for each LB, there are workflows that must continue to run
        // if for any reason the workflows are terminated, this actvity should re-run it
   /**** END Activities for monitoring all ELBs in the system *****/
 
+  void recordInstanceTaskFailure(String instanceId) throws LoadBalancingActivityException;
   /***** Upgrade activities  *****/
   void upgrade4_4() throws LoadBalancingActivityException; // to make sure that all ELB VMs have the right role policy
   /***** END Upgrade activities  *****/

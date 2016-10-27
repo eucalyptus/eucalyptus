@@ -1312,6 +1312,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public Map<String, String> filterInstanceStatus(final String accountNumber, final String lbName,
                                     final String servoInstanceId, final String encodedStatus)
           throws LoadBalancingActivityException {
+    if (encodedStatus == null) {
+      return Maps.newHashMap();
+    }
+
     String monitoringZone = null;
     try {
       final LoadBalancerServoInstance servo =
@@ -1441,7 +1445,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }else if (backend.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
         LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
       }
-    }  
+    }
   }
 
   @Override
@@ -1450,9 +1454,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
    
     if (metrics!= null) {
       for(final String instanceId : metrics.keySet()) {
+        final String metric = metrics.get(instanceId);
+        if (metric == null)
+          continue;
         /// metric data from the servo VM
         final MetricData data =
-            VmWorkflowMarshaller.unmarshalMetrics(metrics.get(instanceId));
+            VmWorkflowMarshaller.unmarshalMetrics(metric);
         if(data.getMember()== null || data.getMember().size()<=0)
           continue;
 
@@ -3002,7 +3009,66 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
     }  
   }
-  
+
+  @Override
+  public   void recycleFailedServoInstances() throws LoadBalancingActivityException {
+    /// when SWF activity fails on the VM more than the threshold (property), the VM is terminated
+    /// and the autoscaling group replaces it with the new VM.
+    /// The terminated Vms will be cleaned up later by checkServoInstances() and cleanupServoInstances()
+    final int failureThreshold = Integer.parseInt(LoadBalancingWorkerProperties.FAILURE_THRESHOLD_FOR_RECYCLE);
+    if (failureThreshold <= 0) {
+      return;
+    }
+    try{
+      final List<LoadBalancerServoInstance> inServiceInstances = Lists.newArrayList();
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+        LoadBalancerServoInstance sample =
+                LoadBalancerServoInstance.withState(LoadBalancerServoInstance.STATE.InService.name());
+        inServiceInstances.addAll(Entities.query(sample));
+      }
+      final Date oneHourAgo = new Date(System.currentTimeMillis() - (1 * 60 * 60 * 1000));
+      final List<String> unhealthyInstances = inServiceInstances.stream()
+              .filter(vm ->
+                      vm.getActivityFailureCount() >= failureThreshold)
+              .map(vm -> vm.getInstanceId())
+              .collect(Collectors.toList());
+      final List<String> newInstances = inServiceInstances.stream()
+              .filter(vm -> vm.getActivityFailureUpdateTime() == null)
+              .map(vm -> vm.getInstanceId())
+              .collect(Collectors.toList());
+      final List<String> temporallyFailedInstances = inServiceInstances.stream()
+              .filter(vm ->
+                      vm.getActivityFailureCount() < failureThreshold && vm.getActivityFailureCount() > 0
+                      && (vm.getActivityFailureUpdateTime()!=null && vm.getActivityFailureUpdateTime().before(oneHourAgo)))
+              .map(vm -> vm.getInstanceId())
+              .collect(Collectors.toList());
+
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+        for (final String instanceId : newInstances) {
+          final LoadBalancerServoInstance update =
+                  Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+          update.setActivityFailureUpdateTime(new Date(System.currentTimeMillis()));
+          Entities.persist(update);
+        }
+        for (final String instanceId : temporallyFailedInstances) {
+          final LoadBalancerServoInstance update =
+                  Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+          update.setActivityFailureCount(0);
+          update.setActivityFailureUpdateTime(new Date(System.currentTimeMillis()));
+          Entities.persist(update);
+        }
+        db.commit();
+      }
+
+      for (final String instanceId : unhealthyInstances) {
+       EucalyptusActivityTasks.getInstance().terminateInstances(Lists.newArrayList(instanceId));
+        LOG.debug(String.format("Unhealthy loadbalancer VM is detected and terminated (%s)", instanceId));
+      }
+    } catch(final Exception ex) {
+      LOG.error("Failed to recycle unhealthy worker VMs", ex);
+    }
+  }
+
   @Override
   public void runContinousWorkflows() throws LoadBalancingActivityException {
     List<LoadBalancer> loadbalancers = null;
@@ -3089,6 +3155,23 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       } catch (final Exception ex) {
         LOG.warn(String.format("Failed to upgrade old loadbalancer (%s-%s) to 4.4", accountNumber, lbName), ex);
       }
+    }
+  }
+
+  @Override
+  public void recordInstanceTaskFailure(final String instanceId) throws LoadBalancingActivityException {
+    try {
+      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+        final LoadBalancerServoInstance sample =
+                LoadBalancerServoInstance.named(instanceId);
+        final LoadBalancerServoInstance entity =
+                Entities.uniqueResult(sample);
+        entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
+        Entities.persist(entity);
+        db.commit();
+      }
+    }catch(final Exception ex) {
+       LOG.warn(String.format("Failed to mark the VM (%s) as failed", instanceId), ex);
     }
   }
 }

@@ -88,7 +88,8 @@ implements LoadBalancingServiceHealthCheckWorkflow {
     final Promise<Void> checkBackend = client.checkBackendInstances(checkDns);
     final Promise<Void> cleanupServo = client.cleanupServoInstances(checkBackend);
     final Promise<Void> cleanupSecurityGroup = client.cleanupSecurityGroups(cleanupServo);
-    performServiceHealthCheckPeriodic(count+1, new AndPromise(timer, cleanupSecurityGroup));
+    final Promise<Void> recycleServo = client.recycleFailedServoInstances(cleanupSecurityGroup);
+    performServiceHealthCheckPeriodic(count+1, new AndPromise(timer, recycleServo));
   }
 
   @Asynchronous(daemon = true)

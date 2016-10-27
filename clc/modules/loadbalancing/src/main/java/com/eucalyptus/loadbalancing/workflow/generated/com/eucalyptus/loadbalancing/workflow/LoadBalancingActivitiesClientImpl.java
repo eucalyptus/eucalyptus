@@ -2455,6 +2455,78 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
+    public final Promise<Void> recycleFailedServoInstances() {
+        return recycleFailedServoInstancesImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> recycleFailedServoInstances(Promise<?>... waitFor) {
+        return recycleFailedServoInstancesImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> recycleFailedServoInstances(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return recycleFailedServoInstancesImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> recycleFailedServoInstancesImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.recycleFailedServoInstances");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(String instanceId) {
+        return recordInstanceTaskFailureImpl(Promise.asPromise(instanceId), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(String instanceId, Promise<?>... waitFor) {
+        return recordInstanceTaskFailureImpl(Promise.asPromise(instanceId), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(String instanceId, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return recordInstanceTaskFailureImpl(Promise.asPromise(instanceId), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId) {
+        return recordInstanceTaskFailureImpl(instanceId, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId, Promise<?>... waitFor) {
+        return recordInstanceTaskFailureImpl(instanceId, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return recordInstanceTaskFailureImpl(instanceId, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> recordInstanceTaskFailureImpl(final Promise<String> instanceId, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.recordInstanceTaskFailure");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[1];
+        _input_[0] = instanceId;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
     public final Promise<Void> upgrade4_4() {
         return upgrade4_4Impl((ActivitySchedulingOptions)null);
     }

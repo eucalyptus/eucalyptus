@@ -103,12 +103,18 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     private String privateIp = null;
     
     @Column(name="metadata_dns_state", nullable=true)
-    private String dnsState = null;
+		private String dnsState = null;
 
 	@Column(name="metadata_certificate_expiration_date", nullable=true)
 	private Date certificateExpirationDate = null;
 
-    private LoadBalancerServoInstance(){
+	@Column(name="metadata_activity_failure_count", nullable=true)
+	private Integer activityFailureCount = null;
+
+	@Column(name="metadata_activity_failure_update_time", nullable=true)
+	private Date activityFailureUpdateTime = null;
+
+	private LoadBalancerServoInstance(){
     }
     
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
@@ -238,6 +244,24 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 			return false;
 	}
 
+	public int getActivityFailureCount() {
+		if (this.activityFailureCount == null )
+			return 0;
+		else
+			return this.activityFailureCount;
+	}
+
+	public void setActivityFailureCount(final int count) {
+		this.activityFailureCount = count;
+	}
+
+	public Date getActivityFailureUpdateTime() {
+		return this.activityFailureUpdateTime;
+	}
+
+	public void setActivityFailureUpdateTime(final Date updateTime) {
+		this.activityFailureUpdateTime = updateTime;
+	}
 
 	@Override
 	public String toString(){

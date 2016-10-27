@@ -1579,6 +1579,51 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     Promise<Void> runContinousWorkflows(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recycleFailedServoInstances}
+     */
+    Promise<Void> recycleFailedServoInstances();
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recycleFailedServoInstances}
+     */
+    Promise<Void> recycleFailedServoInstances(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recycleFailedServoInstances}
+     */
+    Promise<Void> recycleFailedServoInstances(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(String instanceId);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(String instanceId, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(String instanceId, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#recordInstanceTaskFailure}
+     */
+    Promise<Void> recordInstanceTaskFailure(Promise<String> instanceId, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#upgrade4_4}
      */
     Promise<Void> upgrade4_4();

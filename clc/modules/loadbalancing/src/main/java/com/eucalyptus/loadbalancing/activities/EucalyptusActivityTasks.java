@@ -1110,6 +1110,14 @@ public class EucalyptusActivityTasks {
 		);
 	}
 
+	public void terminateInstances(final List<String> instanceIds) {
+		checkResult(
+						new EucaTerminateInstancesTask(instanceIds),
+						new ComputeSystemActivity(),
+						"Failed to terminate VMs"
+		);
+	}
+
 	private class EucaDescribeImagesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ImageDetails>> {
 		private List<String> imageIds = null;
 		private EucaDescribeImagesTask(final List<String> imageIds){
@@ -1154,7 +1162,21 @@ public class EucalyptusActivityTasks {
       return req;
     }
 	}
-	
+
+	private class EucaTerminateInstancesTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
+		private List<String> instanceIds = Lists.newArrayList();
+
+		private EucaTerminateInstancesTask(final List<String> instanceIds) {
+			this.instanceIds.addAll(instanceIds);
+		}
+
+		ComputeMessage getRequest() {
+			final TerminateInstancesType req = new TerminateInstancesType();
+			req.setInstancesSet((ArrayList<String>) this.instanceIds);
+			return req;
+		}
+	}
+
 	private class EucaDeleteTagsTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String tagKey = null;
 		private String tagValue = null;

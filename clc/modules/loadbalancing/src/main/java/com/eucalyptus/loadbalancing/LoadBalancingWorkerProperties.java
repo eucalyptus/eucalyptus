@@ -55,7 +55,6 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbEmiChangeListener.class)
   public static String IMAGE = "NULL";
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.image
 
   @ConfigurableField( displayName = "instance_type", 
       description = "instance type for loadbalancer instances",
@@ -64,7 +63,6 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbInstanceTypeChangeListener.class)
   public static String INSTANCE_TYPE = "m1.medium";
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.instance_type
 
   @ConfigurableField( displayName = "keyname", 
       description = "keyname to use when debugging loadbalancer VMs",
@@ -72,7 +70,6 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbKeyNameChangeListener.class)
   public static String KEYNAME = null;
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.keyname
 
   @ConfigurableField( displayName = "ntp_server", 
       description = "the address of the NTP server used by loadbalancer VMs", 
@@ -81,7 +78,6 @@ public class LoadBalancingWorkerProperties {
       changeListener = ElbNTPServerChangeListener.class
       )
   public static String NTP_SERVER = null;
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.ntp_server
 
   @ConfigurableField( displayName = "app_cookie_duration",
       description = "duration of app-controlled cookie to be kept in-memory (hours)",
@@ -90,7 +86,6 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbAppCookieDurationChangeListener.class)
   public static String APP_COOKIE_DURATION = "24";
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.app_cookie_duration
 
   @ConfigurableField( displayName = "expiration_days",
       description = "the days after which the loadbalancer Vms expire",
@@ -99,7 +94,6 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbVmExpirationDaysChangeListener.class)
   public static String EXPIRATION_DAYS = "365";
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.expiration_days
 
   @ConfigurableField(displayName = "init_script",
       description = "bash script that will be executed before service configuration and start up",
@@ -107,8 +101,26 @@ public class LoadBalancingWorkerProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = InitScriptChangeListener.class)
   public static String INIT_SCRIPT = null;
-  // com.eucalyptus.loadbalancing.activities.LoadBalancerASGroupCreator.init_script
 
+  @ConfigurableField( displayName = "failure_threshold_for_recycle",
+          description = "number of activity failure that will trigger recycling workers",
+          initial = "24", // 24 hours by default
+          readonly = false,
+          type = ConfigurableFieldType.KEYVALUE,
+          changeListener = FailureThresholdChangeListener.class)
+  public static String FAILURE_THRESHOLD_FOR_RECYCLE = "24";
+
+  public static class FailureThresholdChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+            throws ConfigurablePropertyException {
+      try{
+        final int threshold = Integer.parseInt(newValue);
+      }catch(final Exception ex) {
+        throw new ConfigurablePropertyException("The value must be number type");
+      }
+    }
+  }
 
   public static class InitScriptChangeListener implements PropertyChangeListener<String> {
     @Override

@@ -128,12 +128,12 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
     // so we push the policy in iteration
     final Promise<List<String>> policies =
             client.listLoadBalancerPolicies(this.accountId, this.loadbalancer);
-    final Promise<List<Void>> policyUpdate = updatePolicies(loadbalancer, policies);
+    final Promise<Void> policyUpdate = updatePolicies(loadbalancer, policies);
     doUpdateInstances(count, loadbalancer, policyUpdate); // push LB definition after policies are pushed
   }
 
   @Asynchronous
-  Promise<List<Void>> updatePolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
+  Promise<Void> updatePolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
                                                      final Promise<List<String>> policyNames) {
     final List<Promise<PolicyDescription>> policies = Lists.newArrayList();
     for (final String policyName : policyNames.get()) {
@@ -142,7 +142,7 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
               Promise.asPromise(policyName)) );
     }
 
-    final Promise<List<Void>> policyUpdated =
+    final Promise<Void> policyUpdated =
             pushPolicies(loadbalancer, Promises.listOfPromisesToPromise(policies));
     return policyUpdated;
   }
@@ -150,45 +150,104 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
   @Asynchronous
   private void doUpdateInstances(final int count,
                                  final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
-                                 final Promise<List<Void>> policyUpdated) {
+                                 final Promise<Void> policyUpdated) {
     // update each instance
     final Map<String, LoadBalancerServoDescription> description = loadbalancer.get();
 
-    final List<Promise<Void>> results = Lists.newArrayList();
+    final List<Promise<Void>> result = Lists.newArrayList();
     for(final String instanceId : description.keySet()) {
       final LoadBalancerServoDescription desc = description.get(instanceId);
-      // update each servo VM
-      final String message = encodeLoadBalancer(desc);
-      final ActivitySchedulingOptions scheduler =
-              new ActivitySchedulingOptions();
-      scheduler.setTaskList(instanceId);
-      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
-      scheduler.setStartToCloseTimeoutSeconds(10L);
-      results.add(vmClient.setLoadBalancer(message, scheduler));
+      result.add(doUpdateInstance(instanceId, desc));
     }
-    final Promise<List<Void>> updated = Promises.listOfPromisesToPromise(results);
 
     final Promise<Void> timer = startDaemonTimer(UPDATE_PERIOD_SEC);
     final OrPromise waitOrSignal = new OrPromise(timer, signalReceived);
-    updateInstancesPeriodic(count+1, new AndPromise(waitOrSignal, updated));
+    updateInstancesPeriodic(count+1,
+            new AndPromise(waitOrSignal, Promises.listOfPromisesToPromise(result)));
   }
 
   @Asynchronous
-  private Promise<List<Void>> pushPolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
+  private Promise<Void> doUpdateInstance(final String instanceId,
+                                         final LoadBalancerServoDescription desc) {
+    // update each servo VM
+    final String message = encodeLoadBalancer(desc);
+    final Settable<Void> result = new Settable<Void>();
+    final Settable<String> failure = new Settable<String>();
+    new TryCatchFinally() {
+      protected void doTry() throws Throwable {
+        final ActivitySchedulingOptions scheduler =
+                new ActivitySchedulingOptions();
+        scheduler.setTaskList(instanceId);
+        scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+        scheduler.setStartToCloseTimeoutSeconds(10L);
+        result.chain(vmClient.setLoadBalancer(message, scheduler));
+      }
+
+      protected void doCatch(Throwable e) {
+        failure.set(instanceId);
+      }
+
+      protected void doFinally() throws Throwable {
+        if (!failure.isReady()) {
+          failure.set(null);
+        }
+      }
+    };
+    return checkInstanceFailure(failure);
+  }
+
+  @Asynchronous
+  private Promise<Void> pushPolicies(final Promise<Map<String, LoadBalancerServoDescription>> loadbalancer,
                               final Promise<List<PolicyDescription>> policies) {
     final Map<String, LoadBalancerServoDescription> description = loadbalancer.get();
-    final List<Promise<Void>> results = Lists.newArrayList();
+    final List<Promise<Void>> result = Lists.newArrayList();
     for(final String instanceId : description.keySet()) {
-      final ActivitySchedulingOptions scheduler =
-              new ActivitySchedulingOptions();
-      scheduler.setTaskList(instanceId);
-      scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
-      scheduler.setStartToCloseTimeoutSeconds(10L);
-      for(final PolicyDescription p : policies.get()) {
-        results.add(vmClient.setPolicy(encodePolicy(p), scheduler));
-      }
+      result.add(pushPoliciesToVM(instanceId, policies));
     }
-    return Promises.listOfPromisesToPromise(results);
+    return done(Promises.listOfPromisesToPromise(result));
+  }
+
+  @Asynchronous
+  private Promise<Void> pushPoliciesToVM(final String instanceId, final Promise<List<PolicyDescription>> policies) {
+    final List<Promise<Void>> result =  Lists.newArrayList();
+    final Settable<String> failure = new Settable<String>();
+    new TryCatchFinally() {
+      protected void doTry() throws Throwable {
+        final ActivitySchedulingOptions scheduler =
+                new ActivitySchedulingOptions();
+        scheduler.setTaskList(instanceId);
+        scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
+        scheduler.setStartToCloseTimeoutSeconds(10L);
+        for (final PolicyDescription p : policies.get()) {
+          result.add(vmClient.setPolicy(encodePolicy(p), scheduler));
+        }
+      }
+
+      protected void doCatch(Throwable e) {
+        failure.set(instanceId);
+      }
+
+      protected void doFinally() throws Throwable {
+        if (!failure.isReady()) {
+          failure.set(null);
+        }
+      }
+    };
+    return checkInstanceFailure(failure);
+  }
+
+  @Asynchronous
+  private Promise<Void> checkInstanceFailure(Promise<String> failure) {
+    final String instanceId = failure.get();
+    if (instanceId != null) {
+      return client.recordInstanceTaskFailure(instanceId);
+    }
+    return Promise.Void();
+  }
+
+  @Asynchronous
+  private Promise<Void> done(Promise<List<Void>> result) {
+    return Promise.Void();
   }
 
   private String encodePolicy(final PolicyDescription policy) {
