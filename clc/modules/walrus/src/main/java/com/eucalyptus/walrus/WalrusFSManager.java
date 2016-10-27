@@ -1518,7 +1518,7 @@ public class WalrusFSManager extends WalrusManager {
     long size = 0;
     Date lastModified = null;
     String md5 = new String();
-    String key = bucketName + "." + objectKey;
+    String key = bucketName + "." + objectKey + "." + partNumber;
     String randomKey = request.getRandomKey();
     String prevObjectName = null;
     String tempObjectName = UUID.randomUUID().toString();
@@ -1977,7 +1977,7 @@ public class WalrusFSManager extends WalrusManager {
 
   /**
    * Clean up <b>ALL</b> parts in the bucket. To be called only when all parts in the bucket need to be deleted, for instance before bucket deletion
-   * 
+   *
    * @param bucketName
    */
   private void deleteParts(String bucketName) {
@@ -2022,7 +2022,7 @@ public class WalrusFSManager extends WalrusManager {
   /**
    * Utility method for fetching ordered listing of parts that make up an object. Use this method against objects that have been previously created
    * and persisted to the database.
-   * 
+   *
    * @param objectInfo
    * @return
    * @throws InternalErrorException
