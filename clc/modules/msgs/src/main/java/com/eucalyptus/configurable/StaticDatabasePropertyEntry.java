@@ -750,7 +750,11 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "cloud.network.global_max_network_tag",
           "cloud.network.global_min_network_index",
           "cloud.network.global_max_network_index",
-          "cloud.network.network_tag_pending_timeout"
+          "cloud.network.network_tag_pending_timeout",
+              "services.loadbalancing.worker.backend_instance_update_interval",
+              "services.loadbalancing.worker.cache_duration",
+              "services.loadbalancing.worker.cw_put_interval",
+              "services.loadbalancing.worker.lb_poll_interval"
       ) );
 
       updateMovedProperties( ImmutableList.of(
