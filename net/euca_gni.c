@@ -2098,7 +2098,7 @@ int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_inf
     }
     LOGDEBUG("gni validated in %ld us.\n", eucanetd_timer_usec(&tv));
 
-    LOGINFO("gni populated in %.2f ms.\n", eucanetd_timer_usec(&ttv) / 1000.0);
+    LOGDEBUG("gni populated in %.2f ms.\n", eucanetd_timer_usec(&ttv) / 1000.0);
 
 /*
     for (int i = 0; i < gni->max_instances; i++) {

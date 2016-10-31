@@ -198,8 +198,14 @@ int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
         if (pid > 1) {
             LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
             if ((rc = safekill(pid, config->dhcpDaemon, 9, config->cmdprefix)) != 0) {
-                LOGWARN("failed to kill previous dhcp daemon\n");
-                ret = 1;
+                // safekill returns EUCA_PERMISSION_ERROR if /proc/pid/cmdline is not accessible
+                // In this case, it is likely that dhcpd is not running.
+                if (rc != EUCA_PERMISSION_ERROR) {
+                    LOGWARN("failed to kill previous dhcp daemon\n");
+                    ret = 1;
+                } else {
+                    LOGDEBUG("unable to find dhcpd (%d).\n", pid);
+                }
             }
         }
     }

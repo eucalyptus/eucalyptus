@@ -112,14 +112,20 @@ foreach my $dom (@domains) {
     # iterate over NICs and add up rx and tx byte counters
     my $rx_bytes = 0;
     my $tx_bytes = 0;
+    my $rx_packets = 0;
+    my $tx_packets = 0;
     foreach my $nic (@{$xml_struct->{devices}->{interface}}) {
 	my $guest_nic = $nic->{target}->{dev};
 	$rx_bytes += $dom->interface_stats($guest_nic)->{rx_bytes};
 	$tx_bytes += $dom->interface_stats($guest_nic)->{tx_bytes};
+	$rx_packets += $dom->interface_stats($guest_nic)->{rx_packets};
+	$tx_packets += $dom->interface_stats($guest_nic)->{tx_packets};
     }
     my $ts = get_ts();
     print_stat ($dom, $ts, "total", "summation", "NetworkIn",  $rx_bytes);
     print_stat ($dom, $ts, "total", "summation", "NetworkOut", $tx_bytes);
+    # print_stat ($dom, $ts, "total", "summation", "NetworkPacketsIn",  $rx_packets);
+    # print_stat ($dom, $ts, "total", "summation", "NetworkPacketsOut", $tx_packets);
 
     # iterate over disks of the instance and pull out relevant stats from the %diskstats dictionary
     foreach my $disk (@{$xml_struct->{devices}->{disk}}) {
@@ -140,13 +146,22 @@ foreach my $dom (@domains) {
     }
 }
 
-#execute getstats_net.pl, if it exists on the system (for EDGE networking)
+#retrieve external net stats from $EUCALYPTUS/var/run/eucalyptus/net/eucanetd_getstats_net.out
+#TODO: revise how to get $EUCALYPTUS
+my $netout = "";
 my @runarray = split("/", $0);
-if (@runarray) {
-    $runarray[@runarray - 1] = "getstats_net.pl";
+if (@runarray >= 4) {
+    $runarray[@runarray - 1] = "net";
+    $runarray[@runarray - 2] = "eucalyptus";
+    $runarray[@runarray - 3] = "run";
+    $runarray[@runarray - 4] = "var";
     my $runcommand = join("/", @runarray);
-    if ( -x "$runcommand" ) {
-        system("$runcommand 2>/dev/null");
+    $runcommand = $runcommand . "/eucanetd_getstats_net.out";
+    if ( -r "$runcommand" ) {
+        open(my $gsn, $runcommand);
+        while (my $line = <$gsn>) {
+            print "$line";
+        }
     }
 }
 

@@ -2032,7 +2032,7 @@ int edge_dump_netmeter(edge_config *edge) {
     } else {
         eucahome = strdup("");
     }
-    snprintf(sensorfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_TMP);
+    snprintf(sensorfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_SENSOR, eucahome);
     snprintf(nmfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_NEW, eucahome);
     snprintf(dfname, EUCA_MAX_PATH, EDGE_NETMETER_FILE_DONE, eucahome);
     EUCA_FREE(eucahome);
@@ -2076,10 +2076,16 @@ int edge_dump_netmeter(edge_config *edge) {
             if (nm->updated) {
                 fprintf(NMFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
                         nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);
-                fprintf(SRFH, "%s\t%ld\tNetworkInExternal\tsummation\ttotal\t%ld\n",
+                fprintf(SRFH, "%s\t%ld\tNetworkInExternal\tsummation\tdefault\t%ld\n",
                         nm->instance_id, timestamp, nm->bytes_in);
-                fprintf(SRFH, "%s\t%ld\tNetworkOutExternal\tsummation\ttotal\t%ld\n",
+                fprintf(SRFH, "%s\t%ld\tNetworkOutExternal\tsummation\tdefault\t%ld\n",
                         nm->instance_id, timestamp, nm->bytes_out);
+/*
+                fprintf(SRFH, "%s\t%ld\tNetworkPacketsInExternal\tsummation\tdefault\t%ld\n",
+                        nm->instance_id, timestamp, nm->pkts_in);
+                fprintf(SRFH, "%s\t%ld\tNetworkPacketsOutExternal\tsummation\tdefault\t%ld\n",
+                        nm->instance_id, timestamp, nm->pkts_out);
+*/
             } else {
                 fprintf(DFH, "%s,%s,%s,pub,%ld,%ld,%ld,%ld\n", ts, nm->instance_id, nm->ipaddr,
                         nm->pkts_in, nm->bytes_in, nm->pkts_out, nm->bytes_out);

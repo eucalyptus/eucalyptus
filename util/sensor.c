@@ -320,24 +320,24 @@ static int getstat_generate(getstat *** pstats)
 
     errno = 0;
     char *output = NULL;
-    if (!strcmp(euca_this_component_name, "cc")) {
+    if (!strcmp(euca_this_component_name, "nc")) {
         char *instroot = NULL;
         char getstats_cmd[EUCA_MAX_PATH] = "";
 
         if (euca_sanitize_path(getenv(EUCALYPTUS_ENV_VAR_NAME)) == EUCA_OK) {
             instroot = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
-            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
+            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats.pl", instroot, instroot);
             EUCA_FREE(instroot);
         } else {
-            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
+            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats.pl", "", "");
         }
 
         output = system_output(getstats_cmd);   // invoke th Perl script
-        LOGTRACE("getstats_net.pl output:\n%s\n", output);
-    } else if (!strcmp(euca_this_component_name, "nc")) {
-        // Right now !CC means the NC.
-        output = system_output("euca_rootwrap getstats.pl");    // invoke th Perl script
         LOGTRACE("getstats.pl output:\n%s\n", output);
+    } else if (!strcmp(euca_this_component_name, "cc")) {
+        // sensors local to CC were only used for MANAGED and MANAGED-NOVLAN
+        // continue with an empty string to avoid warning logs
+        output = strdup("");
     } else {
         // output will be NULL, so we'll return with an error
         errno = EBADSLT;               // using an obscure errno to mean internal error

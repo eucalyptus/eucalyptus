@@ -2995,37 +2995,28 @@ int attach_or_detach(bunchOfInstances **pHead, ncInstance *pInstance, void *pDat
  */
 int find_interface_changes(char *gni_path) {
     globalNetworkInfo *gni = NULL;
-    gni_hostname_info *host_info = NULL;
     int rc = EUCA_OK;
     static char lastVersion[32] = "";
 
 
     if (!global_instances) return EUCA_OK;
 
-    LOGDEBUG("gni init()\n");
     gni = gni_init();
-    LOGDEBUG("gni hostname init\n");
-    host_info = gni_init_hostname_info();
 
-
-    if (gni && host_info) {
-        LOGDEBUG("attempting gni_populate\n");
-        rc = gni_populate(gni,host_info,gni_path);
-        LOGDEBUG("done with gni_populate()\n");
+    if (gni) {
+        rc = gni_populate(gni, NULL, gni_path);
 
         LOGDEBUG("lastVersion %s from gni\n", lastVersion);
 
         if (strcmp(gni->version, gni->appliedVersion)){
             LOGDEBUG("skipping detection of interfaces changes until gni version and appliedversion match %s %s\n", gni->version, gni->appliedVersion);
             if(gni) gni_free(gni);
-            if(host_info) gni_hostnames_free(host_info);
             return EUCA_OK;
         }
 
         if (!strcmp(gni->appliedVersion, lastVersion)){
             LOGDEBUG("skipping detection of interfaces changes as gni appliedVersion and lastVersion match %s %s\n", gni->appliedVersion, lastVersion);
             if(gni) gni_free(gni);
-            if(host_info) gni_hostnames_free(host_info);
             return EUCA_OK;
         }
 
@@ -3042,7 +3033,6 @@ int find_interface_changes(char *gni_path) {
     }
 
     rc = gni_free(gni);
-    rc = gni_hostnames_free(host_info);
 
     return rc;
 }
