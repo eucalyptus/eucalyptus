@@ -230,7 +230,7 @@ public class PurgeQueueResponseType extends SimpleQueueMessage {
   public PurgeQueueResponseType() {  }
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Message extends SimpleQueueMessage {
+public class Message extends EucalyptusData {
   String messageId;
   String receiptHandle;
   String mD5OfBody;

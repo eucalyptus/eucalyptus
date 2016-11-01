@@ -39,7 +39,8 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.SimpleQueue;
-import com.eucalyptus.simplequeue.SimpleQueueService;
+import com.eucalyptus.simplequeue.async.CloudWatchClient;
+import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -64,72 +65,43 @@ public class CloudWatchActivitiesImpl implements CloudWatchActivities {
 
   @Override
   public void performWork(String partitionInfo) {
-    // send a cloudwatch statistic
-    ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
-    for (Queue queue : PersistenceFactory.getQueuePersistence().listActiveQueues(partitionInfo)) {
-      PutMetricDataType putMetricDataType = null;
-      try {
-        putMetricDataType = SimpleQueueService.getSQSPutMetricDataType(queue);
-      } catch (AuthException e) {
-        LOG.warn("Unable to get account info for queue " + queue.getArn() + ", skipping metrics");
-        continue;
-      }
-      try {
-        Date now = new Date();
-        MetricDatum oldestMessageMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        oldestMessageMetricDatum.setMetricName(Constants.APPROXIMATE_AGE_OF_OLDEST_MESSAGE);
-        oldestMessageMetricDatum.setValue((double) PersistenceFactory.getMessagePersistence().getApproximateAgeOfOldestMessage(queue));
-        oldestMessageMetricDatum.setUnit("Seconds");
-        putMetricDataType.getMetricData().getMember().add(oldestMessageMetricDatum);
+    if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
+      // send a cloudwatch statistic
+      ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
+      for (Queue queue : PersistenceFactory.getQueuePersistence().listActiveQueues(partitionInfo)) {
+        PutMetricDataType putMetricDataType = null;
+        try {
+          putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+        } catch (AuthException e) {
+          LOG.warn("Unable to get account info for queue " + queue.getArn() + ", skipping metrics");
+          continue;
+        }
+        try {
+          Date now = new Date();
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_AGE_OF_OLDEST_MESSAGE,
+            (double) PersistenceFactory.getMessagePersistence().getApproximateAgeOfOldestMessage(queue), "Seconds");
 
-        Map<String, String> messageCounts = PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue);
+          Map<String, String> messageCounts = PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue);
 
-        MetricDatum messagesDelayedMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        messagesDelayedMetricDatum.setMetricName(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED);
-        messagesDelayedMetricDatum.setValue((double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED)));
-        messagesDelayedMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(messagesDelayedMetricDatum);
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED,
+            (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED)), "Count");
 
-        MetricDatum messagesVisibleMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        messagesVisibleMetricDatum.setMetricName(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_VISIBLE);
-        messagesVisibleMetricDatum.setValue((double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)));
-        messagesVisibleMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(messagesVisibleMetricDatum);
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_VISIBLE,
+            (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)), "Count");
 
-        MetricDatum messagesNotVisibleMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        messagesNotVisibleMetricDatum.setMetricName(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE);
-        messagesNotVisibleMetricDatum.setValue((double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE)));
-        messagesNotVisibleMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(messagesNotVisibleMetricDatum);
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
+            (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE)), "Count");
 
-        //Add empty values for num deleted/sent/received to mimic AWS
-        MetricDatum emptyReceivesMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        emptyReceivesMetricDatum.setMetricName(Constants.NUMBER_OF_EMPTY_RECEIVES);
-        emptyReceivesMetricDatum.setValue(0.0);
-        emptyReceivesMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(emptyReceivesMetricDatum);
+          //Add empty values for num deleted/sent/received to mimic AWS
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_EMPTY_RECEIVES, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_DELETED, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, 0.0, "Count");
 
-        MetricDatum deletedMessagesMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        deletedMessagesMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_DELETED);
-        deletedMessagesMetricDatum.setValue(0.0);
-        deletedMessagesMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(deletedMessagesMetricDatum);
-
-        MetricDatum receivedMessagesMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        receivedMessagesMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_RECEIVED);
-        receivedMessagesMetricDatum.setValue(0.0);
-        receivedMessagesMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(receivedMessagesMetricDatum);
-
-        MetricDatum sentMessagesMetricDatum = SimpleQueueService.getSQSMetricDatum(queue, now);
-        sentMessagesMetricDatum.setMetricName(Constants.NUMBER_OF_MESSAGES_SENT);
-        sentMessagesMetricDatum.setValue(0.0);
-        sentMessagesMetricDatum.setUnit("Count");
-        putMetricDataType.getMetricData().getMember().add(sentMessagesMetricDatum);
-
-        AsyncRequests.sendSync(cwConfiguration, putMetricDataType);
-      } catch (Exception ex) {
-        LOG.warn("Unable to send metrics for " + queue.getArn() + ", Reason: " + ex.getMessage());
+          CloudWatchClient.putMetricData(putMetricDataType);
+        } catch (Exception ex) {
+          LOG.warn("Unable to send metrics for " + queue.getArn() + ", Reason: " + ex.getMessage());
+        }
       }
     }
   }

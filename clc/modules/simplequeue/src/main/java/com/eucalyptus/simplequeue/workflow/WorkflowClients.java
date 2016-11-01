@@ -19,16 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.workflow;
 
-import com.eucalyptus.simplequeue.SimpleQueueService;
-import com.eucalyptus.simplequeue.workflow.CloudWatchWorkflowClientExternal;
-import com.eucalyptus.simplequeue.workflow.CloudWatchWorkflowClientExternalFactory;
-import com.eucalyptus.simplequeue.workflow.CloudWatchWorkflowClientExternalFactoryImpl;
+import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 
 public class WorkflowClients {
 
   public static CloudWatchWorkflowClientExternal getCloudWatchWorkflowClient(final String workflowId) {
     final CloudWatchWorkflowClientExternalFactory factory =
-      new CloudWatchWorkflowClientExternalFactoryImpl(WorkflowClientManager.getSimpleWorkflowClient(), SimpleQueueService.SWF_DOMAIN);
+      new CloudWatchWorkflowClientExternalFactoryImpl(WorkflowClientManager.getSimpleWorkflowClient(), SimpleQueueProperties.SWF_DOMAIN);
     return factory.getClient(workflowId);
   }
 

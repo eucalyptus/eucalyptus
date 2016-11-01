@@ -26,8 +26,8 @@ import com.amazonaws.services.simpleworkflow.model.ListDomainsRequest;
 import com.amazonaws.services.simpleworkflow.model.RegisterDomainRequest;
 import com.amazonaws.services.simpleworkflow.model.RegistrationStatus;
 import com.eucalyptus.simplequeue.SimpleQueue;
-import com.eucalyptus.simplequeue.SimpleQueueService;
 import com.eucalyptus.simplequeue.bootstrap.SimpleQueueAWSCredentialsProvider;
+import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.simpleworkflow.common.client.WorkflowClient;
 import org.apache.log4j.Logger;
@@ -50,15 +50,15 @@ public class WorkflowClientManager {
   public static void start( ) throws Exception {
     final AmazonSimpleWorkflow simpleWorkflowClient = Config.buildClient(
       SimpleQueueAWSCredentialsProvider.SimpleQueueUserSupplier.INSTANCE,
-      SimpleQueueService.SWF_CLIENT_CONFIG );
+      SimpleQueueProperties.SWF_CLIENT_CONFIG );
 
   workflowClient = new WorkflowClient(
     SimpleQueue.class,
     simpleWorkflowClient,
-    SimpleQueueService.SWF_DOMAIN,
-    SimpleQueueService.SWF_TASKLIST,
-    SimpleQueueService.SWF_WORKFLOW_WORKER_CONFIG,
-    SimpleQueueService.SWF_ACTIVITY_WORKER_CONFIG );
+    SimpleQueueProperties.SWF_DOMAIN,
+    SimpleQueueProperties.SWF_TASKLIST,
+    SimpleQueueProperties.SWF_WORKFLOW_WORKER_CONFIG,
+    SimpleQueueProperties.SWF_ACTIVITY_WORKER_CONFIG );
 
   workflowClient.start( );
 
@@ -79,7 +79,7 @@ public class WorkflowClientManager {
       return false;
     }
     for (final DomainInfo dom : domains.getDomainInfos()) {
-      if (SimpleQueueService.SWF_DOMAIN.equals(dom.getName()) && "REGISTERED".equals(dom.getStatus())) {
+      if (SimpleQueueProperties.SWF_DOMAIN.equals(dom.getName()) && "REGISTERED".equals(dom.getStatus())) {
         return true;
       }
     }
@@ -88,7 +88,7 @@ public class WorkflowClientManager {
 
   private static void registerDomain(final AmazonSimpleWorkflow client) {
     final RegisterDomainRequest req = new RegisterDomainRequest();
-    req.setName(SimpleQueueService.SWF_DOMAIN);
+    req.setName(SimpleQueueProperties.SWF_DOMAIN);
     req.setDescription("SWF Domain for Simple Queue Service");
     req.setWorkflowExecutionRetentionPeriodInDays("1");
     client.registerDomain(req);
