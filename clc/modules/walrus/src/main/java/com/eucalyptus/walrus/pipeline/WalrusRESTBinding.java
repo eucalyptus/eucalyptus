@@ -616,7 +616,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
           } else {
             // handle PUTs
-            key = target[0] + "." + objectKey;
+            // partnumber copied to operationParams later with any other object parameters
+            String partNumber = params.get( WalrusProperties.ObjectParameter.partNumber.toString( ) );
+            key = target[0] + "." + objectKey + ( partNumber == null ? "" : "." + partNumber );
             randomKey = key + "." + Crypto.getRandom( 10 );
             String contentType = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
             if (contentType != null)
@@ -1031,7 +1033,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
   /**
    * Removes the service path for processing the bucket/key split.
-   * 
+   *
    * @param httpRequest
    * @return
    */
