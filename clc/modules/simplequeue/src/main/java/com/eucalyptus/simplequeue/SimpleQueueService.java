@@ -697,21 +697,17 @@ public class SimpleQueueService {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String receiptHandle = request.getReceiptHandle();
-      handleDeleteMessage(queue, receiptHandle, new Date());
+      if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle)) {
+        if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
+          PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_MESSAGES_DELETED, 1.0, "Count");
+          CloudWatchClient.putMetricData(putMetricDataType);
+        }
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
-  }
-
-  private static void handleDeleteMessage(Queue queue, String receiptHandle, Date now) throws Exception {
-    if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle)) {
-      if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
-        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_DELETED, 1.0, "Count");
-        CloudWatchClient.putMetricData(putMetricDataType);
-      }
-    }
   }
 
   public DeleteQueueResponseType deleteQueue(DeleteQueueType request) throws EucalyptusCloudException {
@@ -942,19 +938,18 @@ public class SimpleQueueService {
         sendReceivedMessagesCW(queue, messages, request.getAttributeName(), request.getMessageAttributeName());
         reply.getReceiveMessageResult().getMessage().addAll(messages);
       } else {
-        if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_LONG_POLLING) && waitTimeSeconds > 0) {
+        if (SimpleQueueProperties.ENABLE_LONG_POLLING && waitTimeSeconds > 0) {
           handleQueuePollingForReceive(queue,
-            request.getCorrelationId(),
             reply,
-            new Callable<ReceiveMessageResponseType>() {
+            new Callable<ReceiveMessageResult>() {
               @Override
-              public ReceiveMessageResponseType call() throws Exception {
+              public ReceiveMessageResult call() throws Exception {
                 Collection<Message> messages = PersistenceFactory.getMessagePersistence().receiveMessages(queue, receiveAttributes);
                 if (messages != null && !messages.isEmpty()) {
                   sendReceivedMessagesCW(queue, messages, request.getAttributeName(), request.getMessageAttributeName());
-                  ReceiveMessageResponseType receiveMessageResponseType = reply;
-                  receiveMessageResponseType.getReceiveMessageResult().getMessage().addAll(messages);
-                  return receiveMessageResponseType;
+                  ReceiveMessageResult receiveMessageResult = new ReceiveMessageResult();
+                  receiveMessageResult.getMessage().addAll(messages);
+                  return receiveMessageResult;
                 } else {
                   return null;
                 }
@@ -980,16 +975,16 @@ public class SimpleQueueService {
     for (Message message: messages) {
       filterReceiveAttributes(message, attributeNames);
       filterReceiveMessageAttributes(message, messageAttributeNames);
-      if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
-        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, 1.0, "Count");
-        CloudWatchClient.putMetricData(putMetricDataType);
-      }
+    }
+    if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
+      PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+      CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, messages.size(), 1.0, 1.0, messages.size(), "Count");
+      CloudWatchClient.putMetricData(putMetricDataType);
     }
   }
 
   static void sendEmptyReceiveCW(Queue queue) throws AuthException {
-    if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
+    if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
       CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_EMPTY_RECEIVES, 1.0, "Count");
       CloudWatchClient.putMetricData(putMetricDataType);
@@ -1283,10 +1278,10 @@ public class SimpleQueueService {
       reply.getSendMessageResult().setmD5OfMessageBody(messageInfo.getMessage().getmD5OfBody());
 
       int delaySeconds = request.getDelaySeconds() == null ? queue.getDelaySeconds() : request.getDelaySeconds().intValue();
-      if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_LONG_POLLING)) {
+      if (SimpleQueueProperties.ENABLE_LONG_POLLING) {
         sendMessageNotificationsScheduledExecutorService.schedule(() -> NotifyClient.notifyQueue(queue), delaySeconds, TimeUnit.SECONDS);
       }
-      if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
+      if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
         Date now = new Date();
         PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
         CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, 1.0, "Count");
@@ -1402,9 +1397,14 @@ public class SimpleQueueService {
         previousIds.add(batchRequestEntry.getId());
       }
       Date now = new Date();
+      int numSuccessfulRealDeletes = 0;
       for (DeleteMessageBatchRequestEntry batchRequestEntry: request.getDeleteMessageBatchRequestEntry()) {
         try {
-          handleDeleteMessage(queue, batchRequestEntry.getReceiptHandle(), now);
+          if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, batchRequestEntry.getReceiptHandle())) {
+            // note: only send a CW metric if we actually delete a message.  We can still 'succeed' on a stale
+            // receipt handle.
+            numSuccessfulRealDeletes++;
+          }
           DeleteMessageBatchResultEntry success = new DeleteMessageBatchResultEntry();
           success.setId(batchRequestEntry.getId());
           reply.getDeleteMessageBatchResult().getDeleteMessageBatchResultEntry().add(success);
@@ -1420,6 +1420,12 @@ public class SimpleQueueService {
             reply.getDeleteMessageBatchResult().getBatchResultErrorEntry().add(failure);
           }
         }
+      }
+      if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION && numSuccessfulRealDeletes > 0) {
+        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_MESSAGES_DELETED,
+          numSuccessfulRealDeletes, 1.0, 1.0, numSuccessfulRealDeletes, "Count");
+        CloudWatchClient.putMetricData(putMetricDataType);
       }
     } catch (Exception ex) {
       handleException(ex);
@@ -1469,6 +1475,10 @@ public class SimpleQueueService {
         messageInfoMap.put(batchRequestEntry.getId(), messageInfo);
       }
       Date now = new Date();
+      int numSuccessfulMessages = 0;
+      int totalSuccessfulMessagesLength = 0;
+      Integer smallestSuccessfulMessageLength = null;
+      Integer largestSuccessfulMessageLength = null;
       for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
         try {
           MessageInfo messageInfo = messageInfoMap.get(batchRequestEntry.getId());
@@ -1480,15 +1490,17 @@ public class SimpleQueueService {
           success.setId(batchRequestEntry.getId());
           reply.getSendMessageBatchResult().getSendMessageBatchResultEntry().add(success);
           int delaySeconds = batchRequestEntry.getDelaySeconds() == null ? queue.getDelaySeconds() : batchRequestEntry.getDelaySeconds().intValue();
-          if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_LONG_POLLING)) {
+          if (SimpleQueueProperties.ENABLE_LONG_POLLING) {
             sendMessageNotificationsScheduledExecutorService.schedule(() -> NotifyClient.notifyQueue(queue), delaySeconds, TimeUnit.SECONDS);
           }
-          if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
-            PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-            CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, 1.0, "Count");
-            CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.SENT_MESSAGE_SIZE, (double) messageInfo.getMessageLength(), "Bytes");
-            CloudWatchClient.putMetricData(putMetricDataType);
-        }
+          numSuccessfulMessages += 1;
+          if (smallestSuccessfulMessageLength == null || smallestSuccessfulMessageLength < messageInfo.getMessageLength()) {
+            smallestSuccessfulMessageLength = messageInfo.getMessageLength();
+          }
+          if (largestSuccessfulMessageLength == null || largestSuccessfulMessageLength > messageInfo.getMessageLength()) {
+            largestSuccessfulMessageLength = messageInfo.getMessageLength();
+          }
+          totalSuccessfulMessagesLength += messageInfo.getMessageLength();
         } catch (Exception ex) {
           try {
             handleException(ex);
@@ -1501,6 +1513,12 @@ public class SimpleQueueService {
             reply.getSendMessageBatchResult().getBatchResultErrorEntry().add(failure);
           }
         }
+      }
+      if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION && numSuccessfulMessages > 0) {
+        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, numSuccessfulMessages, 1.0, 1.0, numSuccessfulMessages, "Count");
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.SENT_MESSAGE_SIZE, numSuccessfulMessages, smallestSuccessfulMessageLength, largestSuccessfulMessageLength, totalSuccessfulMessagesLength, "Bytes");
+        CloudWatchClient.putMetricData(putMetricDataType);
       }
     } catch (Exception ex) {
       handleException(ex);
@@ -1568,28 +1586,26 @@ public class SimpleQueueService {
     .build();
 
   private static void handleQueuePollingForReceive( final Queue queue,
-                                                    final String correlationId,
-                                                    final ReceiveMessageResponseType emptyResponse,
-                                                    final Callable<? extends ReceiveMessageResponseType> responseCallable,
+                                                    final ReceiveMessageResponseType response,
+                                                    final Callable<? extends ReceiveMessageResult> resultCallable,
                                                     final long pollTimeout) throws AuthException {
     try {
       NotifyClient.pollQueue(queue, pollTimeout, Contexts.consumerWithCurrentContext(
         (notified) -> {
           try {
             if (notified) {
-              final ReceiveMessageResponseType queueResponse = responseCallable.call();
-              if (queueResponse != null) {
-                queueResponse.setCorrelationId(correlationId);
-                Contexts.response(queueResponse);
+              final ReceiveMessageResult receiveMessageResult = resultCallable.call();
+              if (receiveMessageResult != null) {
+                response.setReceiveMessageResult(receiveMessageResult);
+                Contexts.response(response);
                 return;
               } else if (System.currentTimeMillis() < pollTimeout) {
-                handleQueuePollingForReceive(queue, correlationId, emptyResponse, responseCallable, pollTimeout);
+                handleQueuePollingForReceive(queue, response, resultCallable, pollTimeout);
                 return;
               }
             }
             sendEmptyReceiveCW(queue);
-            emptyResponse.setCorrelationId(correlationId);
-            Contexts.response(emptyResponse);
+            Contexts.response(response);
           } catch (final InterruptedException e) {
             LOG.info("Interrupted while polling for task " + queue.getArn(), e);
           } catch (final Exception e) {
@@ -1598,10 +1614,9 @@ public class SimpleQueueService {
         }
       ));
     } catch ( Exception e ) {
-      LOG.error( "Error polling for task " + queue.getArn(), e );
+      LOG.error("Error polling for task " + queue.getArn(), e);
       sendEmptyReceiveCW(queue);
-      emptyResponse.setCorrelationId( correlationId );
-      Contexts.response( emptyResponse );
+      Contexts.response( response );
     }
   }
 

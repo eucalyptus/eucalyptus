@@ -45,6 +45,7 @@ import com.eucalyptus.simplequeue.exceptions.ReceiptHandleIsInvalidException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.persistence.MessagePersistence;
 import com.eucalyptus.simplequeue.persistence.Queue;
+import com.eucalyptus.util.Either;
 import com.eucalyptus.util.Pair;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -184,12 +185,13 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
 
   @Override
   public Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
-    Pair<Optional<SimpleQueueException>, List<Message>> returnValue =
-      Entities.asDistinctTransaction(MessageEntity.class, new Function<Void, Pair<Optional<SimpleQueueException>, List<Message>>>() {
+    Either<SimpleQueueException, List<Message>> returnValue =
+      Entities.asDistinctTransaction(MessageEntity.class, new Function<Void, Either<SimpleQueueException, List<Message>>>() {
 
       @Nullable
       @Override
-      public Pair apply(@Nullable Void aVoid) {
+      public Either<SimpleQueueException, List<Message>> apply(@Nullable Void aVoid) {
+        Either<SimpleQueueException, List<Message>> either;
         long now = SimpleQueueService.currentTimeSeconds();
         List<Message> messages = Lists.newArrayList();
         Optional<SimpleQueueException> simpleQueueExceptionOptional;
@@ -271,15 +273,15 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
               if (numMessages >= maxNumMessages) break;
             }
           }
-          simpleQueueExceptionOptional = Optional.absent();
+          either = Either.right(messages);
         } catch (SimpleQueueException ex) {
-          simpleQueueExceptionOptional = Optional.of(ex);
+          either = Either.left(ex);
         }
-        return new Pair<Optional<SimpleQueueException>, List<Message>>(simpleQueueExceptionOptional, messages);
+        return either;
       }
     }).apply(null);
-    if (returnValue.getLeft().isPresent()) {
-      throw returnValue.getLeft().get();
+    if (returnValue.isLeft()) {
+      throw returnValue.getLeft();
     } else {
       return returnValue.getRight();
     }
@@ -416,6 +418,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
         // timestamp to be strictly greater than now
         .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
         .orderBy(MessageEntity_.sentTimestampSecs)
+        .maxResults(1)
         .list();
       if (messageEntities == null || messageEntities.size() == 0) return 0L;
       return now - messageEntities.get(0).getSentTimestampSecs();

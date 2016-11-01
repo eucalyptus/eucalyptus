@@ -12,21 +12,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- *  This file may incorporate work covered under the following copyright and permission notice:
- *
- *   Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
  ************************************************************************/
 package com.eucalyptus.simplequeue.async;
 
@@ -37,6 +22,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
+import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
@@ -76,9 +62,24 @@ public class CloudWatchClient {
     putMetricDataType.getMetricData().getMember().add(metricDatum);
   }
 
+  public static void addSQSMetricDatum(PutMetricDataType putMetricDataType, Queue queue, Date date, String metricName, double sampleCount, double minimum, double maximum, double sum, String unit) {
+    MetricDatum metricDatum = new MetricDatum();
+    metricDatum.setTimestamp(roundDown5Minutes(date));
+    metricDatum.setDimensions(getDimensions(queue));
+    metricDatum.setMetricName(metricName);
+    StatisticSet statisticSet = new StatisticSet();
+    statisticSet.setMaximum(maximum);
+    statisticSet.setMinimum(minimum);
+    statisticSet.setSampleCount(sampleCount);
+    statisticSet.setSum(sum);
+    metricDatum.setStatisticValues(statisticSet);
+    metricDatum.setUnit(unit);
+    putMetricDataType.getMetricData().getMember().add(metricDatum);
+  }
+
   public static PutMetricDataType getSQSPutMetricDataType(Queue queue) throws AuthException {
     PutMetricDataType putMetricDataType = new PutMetricDataType();
-    putMetricDataType.setUserId(com.eucalyptus.auth.Accounts.lookupPrincipalByAccountNumber(queue.getAccountId()).getUserId());
+    putMetricDataType.setUserId(queue.getAccountId());
     putMetricDataType.markPrivileged();
     putMetricDataType.setNamespace(Constants.AWS_SQS);
     putMetricDataType.setMetricData(new MetricData());

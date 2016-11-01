@@ -232,7 +232,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
 
   @Override
   public Collection<String> getPartitionTokens() {
-    if (!"false".equalsIgnoreCase(SimpleQueueProperties.ENABLE_METRICS_COLLECTION)) {
+    if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       return partitionTokens;
     } else {
       return Collections.EMPTY_LIST;

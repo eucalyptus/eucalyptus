@@ -12,21 +12,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- *  This file may incorporate work covered under the following copyright and permission notice:
- *
- *   Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
  ************************************************************************/
 package com.eucalyptus.simplequeue.config;
 
@@ -36,8 +21,16 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
+import com.eucalyptus.configurable.StaticPropertyEntry;
 import com.eucalyptus.simpleworkflow.common.client.Config;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.ws.WebServices;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Field;
 
 /**
  * Created by ethomas on 10/28/16.
@@ -55,103 +48,117 @@ public class SimpleQueueProperties {
     changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_TASKLIST = "SimpleQueueTaskList";
   @ConfigurableField(
-    initial = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}",
+    initial = "{\"ConnectionTimeout\": 10000}",
     description = "JSON configuration for the simplequeue simple workflow client",
     changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000}";
   @ConfigurableField(
-    initial = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    initial = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
     description = "JSON configuration for the simplequeue simple workflow activity worker",
     changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
   @ConfigurableField(
-    initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50 }",
     description = "JSON configuration for the simplequeue simple workflow decision worker",
     changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50 }";
   @ConfigurableField( description = "How long a queue is considered 'active' in seconds after it has been accessed.",
-    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "80", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int ACTIVE_QUEUE_TIME_SECS = 21600;
   @ConfigurableField( description = "Maximum number of characters in a queue name.",
-    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "80", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_QUEUE_NAME_LENGTH_CHARS = 80;
   @ConfigurableField( description = "Maximum number of characters in a label.",
-    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "80", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_LABEL_LENGTH_CHARS = 80;
   @ConfigurableField( description = "Maximum value for delay seconds.",
-    initial = "900", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+    initial = "900", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 0)
   public volatile static int MAX_DELAY_SECONDS = 900;
   @ConfigurableField( description = "Maximum value for maximum message size.",
-    initial = "262144", changeListener = CheckMin1024IntPropertyChangeListener.class )
+    initial = "262144", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 1024)
   public volatile static int MAX_MAXIMUM_MESSAGE_SIZE = 262144;
   @ConfigurableField( description = "Maximum value for message retention period.",
-    initial = "1209600", changeListener = CheckMin60IntPropertyChangeListener.class )
+    initial = "1209600", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 60)
   public volatile static int MAX_MESSAGE_RETENTION_PERIOD = 1209600;
   @ConfigurableField( description = "Maximum value for receive message wait time seconds.",
-    initial = "20", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+    initial = "20", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 0)
   public volatile static int MAX_RECEIVE_MESSAGE_WAIT_TIME_SECONDS = 20;
   @ConfigurableField( description = "Maximum value for visibility timeout.",
-    initial = "43200", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+    initial = "43200", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 0)
   public volatile static int MAX_VISIBILITY_TIMEOUT = 43200;
   @ConfigurableField( description = "Maximum value for maxReceiveCount (dead letter queue).",
-    initial = "1000", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "1000", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 1)
   public volatile static int MAX_MAX_RECEIVE_COUNT = 1000;
   @ConfigurableField( description = "Maximum value for maxNumberOfMessages (ReceiveMessages).",
-    initial = "10", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "10", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_RECEIVE_MESSAGE_MAX_NUMBER_OF_MESSAGES = 10;
   @ConfigurableField( description = "Maximum length of message attribute name. (chars)",
-    initial = "256", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "256", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_MESSAGE_ATTRIBUTE_NAME_LENGTH = 256;
   @ConfigurableField( description = "Maximum number of bytes in message attribute type. (bytes)",
-    initial = "256", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "256", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_MESSAGE_ATTRIBUTE_TYPE_LENGTH = 256;
   @ConfigurableField( description = "Maximum number of entries in a batch request",
-    initial = "10", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "10", changeListener = MinValuePropertyChangeListener.class )   
+  @MinValue(min = 1)
   public volatile static int MAX_NUM_BATCH_ENTRIES = 10;
   @ConfigurableField( description = "Maximum length of batch id. (chars)",
-    initial = "80", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
+    initial = "80", changeListener = MinValuePropertyChangeListener.class )
+  @MinValue(min = 1)
   public volatile static int MAX_BATCH_ID_LENGTH = 80;
   @ConfigurableField(
     initial = "true",
     description = "Set 'true' to allow CloudWatch Metrics for SQS",
-    changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
-  public static volatile String ENABLE_METRICS_COLLECTION = "true";
+    changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static volatile Boolean ENABLE_METRICS_COLLECTION = true;
   @ConfigurableField(
     initial = "true",
     description = "Set 'true' to allow Long Polling for SQS",
-    changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
-  public static volatile String ENABLE_LONG_POLLING = "true";
+    changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static volatile Boolean ENABLE_LONG_POLLING = true;
 
-  public abstract static class CheckMinIntPropertyChangeListener implements PropertyChangeListener {
-    protected int minValue = 0;
+  @Target(ElementType.FIELD)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface MinValue {
+    long min() default 0;
+  }
 
-    public CheckMinIntPropertyChangeListener(int minValue) {
-      this.minValue = minValue;
-    }
-
+  public static class MinValuePropertyChangeListener implements PropertyChangeListener {
+    @SuppressWarnings( "unchecked" )
     @Override
-    public void fireChange(ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      if ( !(t instanceof StaticPropertyEntry) ) {
+        throw new ConfigurablePropertyException( "Invalid use of listener" );
+      }
+      final StaticPropertyEntry staticPropertyEntry = (StaticPropertyEntry) t;
+      final Field field = staticPropertyEntry.getField( );
+      final MinValue minValue;
       long value;
       try {
+        minValue = Ats.from(field).get( MinValue.class );
+        if (minValue == null) {
+          throw new ConfigurablePropertyException("This listener requires an @MinValue annotation");
+        }
         value = Long.parseLong((String) newValue);
       } catch (Exception ex) {
         throw new ConfigurablePropertyException("Invalid value " + newValue);
       }
-      if (value > minValue ) {
+      if (value < minValue.min() ) {
         throw new ConfigurablePropertyException("Invalid value " + newValue);
       }
     }
   }
 
-  public static class CheckMin1024IntPropertyChangeListener extends CheckMinIntPropertyChangeListener {
-    public CheckMin1024IntPropertyChangeListener() {
-      super(1024);
-    }
-  }
-
-  public static class CheckMin60IntPropertyChangeListener extends CheckMinIntPropertyChangeListener {
-    public CheckMin60IntPropertyChangeListener() {
-      super(60);
-    }
-  }
 }
