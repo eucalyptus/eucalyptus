@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
+
 package com.eucalyptus.simplequeue.workflow;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
@@ -26,8 +23,8 @@ import com.amazonaws.services.simpleworkflow.model.ListDomainsRequest;
 import com.amazonaws.services.simpleworkflow.model.RegisterDomainRequest;
 import com.amazonaws.services.simpleworkflow.model.RegistrationStatus;
 import com.eucalyptus.simplequeue.SimpleQueue;
-import com.eucalyptus.simplequeue.SimpleQueueService;
 import com.eucalyptus.simplequeue.bootstrap.SimpleQueueAWSCredentialsProvider;
+import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.simpleworkflow.common.client.WorkflowClient;
 import org.apache.log4j.Logger;
@@ -50,15 +47,15 @@ public class WorkflowClientManager {
   public static void start( ) throws Exception {
     final AmazonSimpleWorkflow simpleWorkflowClient = Config.buildClient(
       SimpleQueueAWSCredentialsProvider.SimpleQueueUserSupplier.INSTANCE,
-      SimpleQueueService.SWF_CLIENT_CONFIG );
+      SimpleQueueProperties.SWF_CLIENT_CONFIG );
 
   workflowClient = new WorkflowClient(
     SimpleQueue.class,
     simpleWorkflowClient,
-    SimpleQueueService.SWF_DOMAIN,
-    SimpleQueueService.SWF_TASKLIST,
-    SimpleQueueService.SWF_WORKFLOW_WORKER_CONFIG,
-    SimpleQueueService.SWF_ACTIVITY_WORKER_CONFIG );
+    SimpleQueueProperties.SWF_DOMAIN,
+    SimpleQueueProperties.SWF_TASKLIST,
+    SimpleQueueProperties.SWF_WORKFLOW_WORKER_CONFIG,
+    SimpleQueueProperties.SWF_ACTIVITY_WORKER_CONFIG );
 
   workflowClient.start( );
 
@@ -71,26 +68,4 @@ public class WorkflowClientManager {
     }
   }
 
-  private static boolean isDomainRegistered(final AmazonSimpleWorkflow client) {
-    final ListDomainsRequest req = new ListDomainsRequest();
-    req.setRegistrationStatus(RegistrationStatus.REGISTERED);
-    final DomainInfos domains = client.listDomains(req);
-    if (domains == null || domains.getDomainInfos() == null) {
-      return false;
-    }
-    for (final DomainInfo dom : domains.getDomainInfos()) {
-      if (SimpleQueueService.SWF_DOMAIN.equals(dom.getName()) && "REGISTERED".equals(dom.getStatus())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static void registerDomain(final AmazonSimpleWorkflow client) {
-    final RegisterDomainRequest req = new RegisterDomainRequest();
-    req.setName(SimpleQueueService.SWF_DOMAIN);
-    req.setDescription("SWF Domain for Simple Queue Service");
-    req.setWorkflowExecutionRetentionPeriodInDays("1");
-    client.registerDomain(req);
-  }
 }

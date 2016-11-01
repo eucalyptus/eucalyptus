@@ -34,26 +34,22 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.SimpleQueueService;
+import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.eucalyptus.simplequeue.persistence.Queue;
 import com.eucalyptus.simplequeue.persistence.QueuePersistence;
-import com.eucalyptus.util.SynchronousClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Projections;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -236,7 +232,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
 
   @Override
   public Collection<String> getPartitionTokens() {
-    if (!"false".equalsIgnoreCase(SimpleQueueService.ENABLE_METRICS_COLLECTION)) {
+    if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       return partitionTokens;
     } else {
       return Collections.EMPTY_LIST;
@@ -250,7 +246,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
       long nowSecs = SimpleQueueService.currentTimeSeconds();
       Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class)
         .whereEqual(QueueEntity_.partitionToken, partitionToken)
-        .where(Entities.restriction(QueueEntity.class).ge(QueueEntity_.lastLookupTimestampSecs, nowSecs - SimpleQueueService.ACTIVE_QUEUE_TIME_SECS));
+        .where(Entities.restriction(QueueEntity.class).ge(QueueEntity_.lastLookupTimestampSecs, nowSecs - SimpleQueueProperties.ACTIVE_QUEUE_TIME_SECS));
       List<QueueEntity> queueEntities = queryCriteria.list();
       List<Queue> queues = Lists.newArrayList();
       if (queueEntities != null) {
