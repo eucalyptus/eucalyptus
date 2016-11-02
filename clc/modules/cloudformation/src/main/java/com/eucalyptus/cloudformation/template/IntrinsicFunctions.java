@@ -42,8 +42,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.bouncycastle.util.encoders.Base64;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public enum IntrinsicFunctions implements IntrinsicFunction {
   NO_VALUE {
@@ -72,6 +75,12 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
     @Override
     public boolean isBooleanFunction() {
+      return false;
+    }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      // TODO: not sure in this case, but certainly shouldn't be in Fn::String
       return false;
     }
   },
@@ -121,6 +130,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
   },
   CONDITION {
     @Override
@@ -154,6 +167,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public boolean isBooleanFunction() {
       return true;
+    }
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
     }
   },
   IF {
@@ -195,6 +212,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
 
   },
   EQUALS {
@@ -231,6 +252,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public boolean isBooleanFunction() {
       return true;
+    }
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
     }
   },
   AND {
@@ -279,6 +304,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return true;
     }
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
+    }
   },
   OR {
     @Override
@@ -326,6 +355,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return true;
     }
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
+    }
   },
   NOT {
     @Override
@@ -366,6 +399,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public boolean isBooleanFunction() {
       return true;
+    }
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
     }
   },
   FIND_IN_MAP {
@@ -424,6 +461,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
   },
   BASE64 {
     @Override
@@ -457,6 +498,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     @Override
     public boolean isBooleanFunction() {
       return false;
+    }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
     }
   },
   SELECT {
@@ -513,6 +559,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
   },
   JOIN {
     @Override
@@ -568,6 +619,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
   },
   GET_AZS {
     public MatchResult evaluateMatch(JsonNode jsonNode) {
@@ -621,6 +677,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       return false;
     }
 
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
+    }
+
     private List<String> describeAvailabilityZones(String userId) throws Exception {
       ServiceConfiguration configuration = Topology.lookup(Compute.class);
       DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
@@ -634,6 +695,136 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
       }
       return availabilityZones;
+    }
+  },
+  FN_SUB {
+    public MatchResult evaluateMatch(JsonNode jsonNode) {
+      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_SUB));
+      return new MatchResult(match, jsonNode, this);
+    }
+    @Override
+    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
+      checkState(matchResult, this);
+      JsonNode key = matchResult.getJsonNode().get(FunctionEvaluation.FN_SUB);
+      if (key == null || !(
+        (key.isValueNode()) ||
+          (key.isArray() && key.size() == 2 && key.get(0) != null &&
+           key.get(0).isValueNode() && key.get(1) != null && key.get(1).isObject()))
+        ) {
+        throw new ValidationErrorException("Template error: One or more Fn::Sub intrinsic functions don't " +
+          "specify expected arguments. Specify a string as first argument, and an optional second " +
+          "argument to specify a mapping of values to replace in the string");
+      }
+      // a little checking of field values
+      if (key.isValueNode()) {
+        FnSubHelper.extractVariables(key.asText());
+      } else {
+        FnSubHelper.extractVariables(key.get(0).asText());
+        checkValidSubstitutionKeys(key.get(1).fieldNames());
+        checkValidStringOrStringFunctions(key.get(1));
+      }
+      return new ValidateResult(matchResult.getJsonNode(), this);
+    }
+
+    private void checkValidSubstitutionKeys(Iterator<String> stringIterator) throws ValidationErrorException {
+      if (stringIterator != null) {
+        for (String key: (Iterable<String>) ()-> stringIterator) {
+          Pattern pattern = Pattern.compile("[A-Za-z0-9_]+");
+          if (!pattern.matcher(key).matches()) {
+            throw new ValidationErrorException("Template error: every key of the context object of every Fn::Sub object " +
+              "must contain only alphanumeric characters and underscores");
+          }
+        }
+      }
+    }
+
+    @Override
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
+      checkState(validateResult, this);
+      Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
+      Map<String, StackEntity.Parameter> parameterMap = template.getParameterMap();
+      JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_SUB);
+      String value;
+      // a little checking of field values
+      Map<String, String> variableMapping = Maps.newHashMap();
+      if (key.isValueNode()) {
+        value = key.asText();
+      } else {
+        value = key.get(0).asText();
+        for (String fieldName : Lists.newArrayList(key.get(1).fieldNames())) {
+          JsonNode valueNode = FunctionEvaluation.evaluateFunctions(key.get(1).get(fieldName), template, effectiveUserId);
+          if (valueNode == null || !valueNode.isValueNode()) {
+            throw new ValidationErrorException("Template error: every value of the context object of every Fn::Sub object must be a string or a function that returns a string");
+          }
+          variableMapping.put(fieldName, valueNode.asText());
+        }
+      }
+      Collection<String> variables = FnSubHelper.extractVariables(value);
+      // check variables
+      for (String variable: variables) {
+        if (!variableMapping.containsKey(variable)) {
+          if (pseudoParameterMap.containsKey(variable)) {
+            checkAndAddJsonNodeToVariableMapping(variable, variableMapping, pseudoParameterMap.get(variable));
+          } else if (parameterMap.containsKey(variable)) {
+            checkAndAddJsonNodeToVariableMapping(variable, variableMapping, parameterMap.get(variable).getJsonValue());
+          } else if (template.getResourceInfoMap().containsKey(variable)) {
+            ResourceInfo resourceInfo = template.getResourceInfoMap().get(variable);
+            if (!resourceInfo.getReady()) {
+              throw new ValidationErrorException("Template error: reference " + key + " not ready");
+            } else {
+              checkAndAddJsonNodeToVariableMapping(variable, variableMapping, resourceInfo.getReferenceValueJson());
+            }
+          } else if (variable.indexOf(".") == -1) {
+            throw new ValidationErrorException("Unresolved resource dependencies [" + variable + "] in the Resources block of the template");
+          } else {
+            int dotPos = variable.indexOf(".");
+            String resourceName = variable.substring(0, dotPos);
+            String attributeName = variable.substring(dotPos + 1);
+            if (template.getResourceInfoMap().containsKey(resourceName) &&
+              template.getResourceInfoMap().get(resourceName).isAttributeAllowed(attributeName)) {
+              ResourceInfo resourceInfo = template.getResourceInfoMap().get(resourceName);
+              if (!resourceInfo.getReady()) {
+                throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
+              }
+              try {
+                checkAndAddJsonNodeToVariableMapping(variable, variableMapping, resourceInfo.getResourceAttributeJson(attributeName));
+              } catch (Exception ex) {
+                throw new ValidationErrorException("Template error: resource " + resourceName + " does not support " +
+                  "attribute type " + attributeName + " in Fn::GetAtt");
+              }
+            } else {
+              throw new ValidationErrorException("Template error: instance of Fn::Sub references invalid resource attribute " + variable);
+            }
+          }
+        }
+      }
+      return new TextNode(FnSubHelper.replaceVariables(value, variableMapping));
+    }
+
+    private void checkValidStringOrStringFunctions(JsonNode jsonNode) throws ValidationErrorException {
+      for (String fieldName: Lists.newArrayList(jsonNode.fieldNames())) {
+        JsonNode valueNode = jsonNode.get(fieldName);
+        if (valueNode == null || !(valueNode.isValueNode() || FunctionEvaluation.mayRepresentStringFunction(valueNode))) {
+          throw new ValidationErrorException("Template error: every value of the context object of every Fn::Sub object must be a string or a function that returns a string");
+        }
+      }
+    }
+
+    private void checkAndAddJsonNodeToVariableMapping(String variable, Map<String, String> variableMapping, String jsonString) throws ValidationErrorException {
+      JsonNode jsonNode = JsonHelper.getJsonNodeFromString(jsonString);
+      if (jsonNode == null || !jsonNode.isValueNode()) {
+        throw new ValidationErrorException("Template error: every variable in an Fn::sub object must reference a string");
+      }
+      variableMapping.put(variable, jsonNode.asText());
+    }
+
+    @Override
+    public boolean isBooleanFunction() {
+      return false;
+    }
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
     }
   },
   GET_ATT {
@@ -680,6 +871,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public boolean isBooleanFunction() {
       return false;
     }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      return true;
+    }
   },
   UNKNOWN {
     @Override
@@ -705,15 +901,21 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       throw new ValidationErrorException("Template Error: Encountered unsupported function: " +
         validateResult.getJsonNode().fieldNames().next()+" Supported functions are: [Fn::Base64, Fn::GetAtt, " +
         "Fn::GetAZs, Fn::Join, Fn::FindInMap, Fn::Select, Ref, Fn::Equals, Fn::If, Fn::Not, " +
-        "Condition, Fn::And, Fn::Or]");
+        "Condition, Fn::And, Fn::Or, Fn::Sub]");
     }
     @Override
     public boolean isBooleanFunction() {
       return false;
     }
+
+    @Override
+    public boolean mayBeStringFunction() {
+      return false;
+    }
   };
 
   public abstract boolean isBooleanFunction();
+  public abstract boolean mayBeStringFunction();
 
   protected void checkState(MatchResult matchResult, IntrinsicFunction intrinsicFunction) {
     if (matchResult == null || matchResult.isMatch() == false || !intrinsicFunction.equals(matchResult.getCallingFunction())) {

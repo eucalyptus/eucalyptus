@@ -1106,6 +1106,52 @@ public class TemplateParser {
       return;
     }
 
+    // Check "Fn::Sub" ... could be either resource or attribute
+    IntrinsicFunction.MatchResult fnSubMatcher = IntrinsicFunctions.FN_SUB.evaluateMatch(jsonNode);
+    if (fnSubMatcher.isMatch()) {
+      IntrinsicFunctions.FN_SUB.validateArgTypesWherePossible(fnSubMatcher);
+      // we have a match against a "sub"...
+      JsonNode subNode = jsonNode.get(FunctionEvaluation.FN_SUB);
+      Set<String> mappedVariableNames = Sets.newHashSet();
+      String value;
+      // either a value node or an array with 2 elements: value and mapping
+      if (subNode.isValueNode()) {
+        value = subNode.asText();
+      } else {
+        value = subNode.get(0).textValue();
+        mappedVariableNames.addAll(Lists.newArrayList(subNode.get(1).fieldNames()));
+      }
+      Collection<String> variables = FnSubHelper.extractVariables(value);
+      for (String variable: variables) {
+        // first see if it is in the accompanying mapping... (or parameter/pseudo-parameter values)
+        // TODO: fail if wrong type of parameter or pseudoparameter
+        if (mappedVariableNames.contains(variable) || pseudoParameterMap.containsKey(variable) ||
+          parameterMap.containsKey(variable)) {
+        } else if (template.getResourceInfoMap().containsKey(variable)) { // check ref
+          if (onLiveBranch) { // the onLiveBranch will add a dependency only if the condition is true
+            resourceDependencies.addDependency(resourceKey, variable);
+          }
+        } else if (variable.contains(".")) {
+          String refName = variable.substring(0, variable.indexOf("."));
+          String attName = variable.substring(variable.indexOf(".") + 1);
+          if (template.getResourceInfoMap().containsKey(refName)) {
+            ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
+            if (!resourceInfo.isAttributeAllowed(attName)) {
+              throw new ValidationErrorException("Template error: resource " + refName +
+                " does not support attribute type " + attName + " in Fn::GetAtt");
+            } else {
+              if (onLiveBranch) { // the onLiveBranch will add a dependency only if the condition is true
+                resourceDependencies.addDependency(resourceKey, refName);
+              }
+            }
+          }
+        } else {
+          unresolvedResourceDependencies.add(variable);
+        }
+      }
+      return;
+    }
+
     // Now either just an object or a different function.  Either way, crawl in the innards
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String fieldName: fieldNames) {

@@ -49,8 +49,18 @@ public class FunctionEvaluation {
   public static final String FN_FIND_IN_MAP = "Fn::FindInMap";
   public static final String FN_GET_AZS = "Fn::GetAZs";
   public static final String FN_GET_ATT = "Fn::GetAtt";
+  public static final String FN_SUB = "Fn::Sub";
   public static final String AWS_NO_VALUE ="AWS::NoValue" ;
 
+
+  public static boolean mayRepresentStringFunction(JsonNode jsonNode) {
+    for (IntrinsicFunctions value: IntrinsicFunctions.values()) {
+      if (value.evaluateMatch(jsonNode).isMatch() && value.mayBeStringFunction()) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   public static boolean representsBooleanFunction(JsonNode jsonNode) {
     for (IntrinsicFunctions value: IntrinsicFunctions.values()) {
