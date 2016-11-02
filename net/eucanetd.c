@@ -177,7 +177,7 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
-    {"MIDO_ENABLE_MIDOMD", "N"}
+    {"MIDO_ENABLE_MIDOMD", "Y"}
     ,
     {"NC_PROXY", "N"}
     ,

@@ -56,6 +56,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+enum vpcmido_nginx_t {
+    VPCMIDO_NGINX_START,
+    VPCMIDO_NGINX_STOP
+};
+
 enum vpc_sg_midos_t {
     VPCSG_INGRESS,
     VPCSG_EGRESS,
@@ -517,6 +522,7 @@ int do_metaproxy_maintain(mido_config *mido, int mode);
 int create_mido_meta_core(mido_config *mido);
 int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc);
 int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, char *subnet, char *slashnet, char **tapiface);
+int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t);
 
 int delete_mido_meta_core(mido_config *mido);
 int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc);

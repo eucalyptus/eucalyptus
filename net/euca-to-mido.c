@@ -254,8 +254,6 @@ int do_metaproxy_setup(mido_config *mido) {
 /**
  * Maintenance of metaproxy (nginx) process(es)
  * @param mido [in] data structure that holds MidoNet configuration
- * @param vpcid [in] optional ID of the VPC of interest. If NULL, metaproxies of ALL
- * VPCs are affected
  * @param mode [in] 0 to create. 1 to terminate.
  * @return 0 on success. Positive integer otherwise.
  * 
@@ -377,6 +375,85 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
     rc = se_execute(&cmds);
     if (rc) {
         LOGERROR("could not execute meta core bridge setup/proxy commands: see above log entries for details\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
+ * Controls metadata nginx instance
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param mode [in] VPCMIDO_NGINX_START to create. VPCMIDO_NGINX_STOP to terminate.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
+    int ret = 0, rc;
+    boolean do_start = FALSE;
+    boolean do_stop = FALSE;
+    pid_t npid = 0;
+    char cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    if (!mido || mode < VPCMIDO_NGINX_START || mode > VPCMIDO_NGINX_STOP) {
+        LOGERROR("invalid argument: unable to maintain md nginx\n");
+        return (1);
+    }
+
+    se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_md.pid", mido->eucahome);
+    if (!check_file(pidfile)) {
+        pidstr = file2str(pidfile);
+        if (pidstr) {
+            npid = atoi(pidstr);
+        } else {
+            npid = 0;
+        }
+        EUCA_FREE(pidstr);
+    } else {
+        npid = 0;
+    }
+
+    if (mode == VPCMIDO_NGINX_START) {
+        if (npid > 1) {
+            if (check_process(npid, "nginx")) {
+                unlink(pidfile);
+                do_start = TRUE;
+            }
+        } else {
+            do_start = TRUE;
+        }
+    } else if (mode == VPCMIDO_NGINX_STOP) {
+        if (npid > 1 && !check_process(npid, "nginx")) {
+            do_stop = TRUE;
+        }
+    }
+
+    if (do_start) {
+        LOGINFO("\tstarting md nginx process\n");
+        snprintf(cmd, EUCA_MAX_PATH,
+                "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                mido->eucahome, mido->eucahome, mido->eucahome);
+        se_add(&cmds, cmd, NULL, ignore_exit);
+    }
+    if (do_stop) {
+        LOGINFO("\tstopping md nginx process\n");
+        snprintf(cmd, EUCA_MAX_PATH,
+                "nginx -p . -s stop -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                mido->eucahome, mido->eucahome, mido->eucahome);
+        se_add(&cmds, cmd, NULL, ignore_exit);
+    }
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not perform md nginx maintenance\n");
         ret = 1;
     }
     se_free(&cmds);
@@ -963,6 +1040,7 @@ int do_midonet_teardown(mido_config *mido) {
     if (mido->config->flushmode == FLUSH_MIDO_ALL) {
         LOGINFO("deleting mido core\n");
         delete_mido_core(mido, mido->midocore);
+        do_md_nginx_maintain(mido, VPCMIDO_NGINX_STOP);
     } else {
         LOGDEBUG("skipping the delete of midocore - FLUSH_DYNAMIC selected.\n");
     }
@@ -7643,6 +7721,9 @@ int create_mido_md(mido_config *mido) {
         if (rc) {
             LOGERROR("cannot link eucamdrt port to host interface: check midonet health\n");
             ret++;
+        } else {
+            // start md nginx
+            do_md_nginx_maintain(mido, VPCMIDO_NGINX_START);
         }
     }
 

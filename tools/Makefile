@@ -116,6 +116,7 @@ install: build
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 644 nginx_md.conf $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 clcadmin-grant-admin-access $(DESTDIR)$(sbindir)/clcadmin-grant-admin-access
 	@$(INSTALL) -m 755 clcadmin-assume-system-credentials $(DESTDIR)$(sbindir)/clcadmin-assume-system-credentials
 	@$(INSTALL) -m 755 clcadmin-copy-keys $(DESTDIR)$(sbindir)/clcadmin-copy-keys
