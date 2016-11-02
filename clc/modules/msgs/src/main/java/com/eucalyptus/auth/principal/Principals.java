@@ -375,12 +375,24 @@ public class Principals {
                                                 }
                                               };
 
-  private static final AccountIdentifiers NOBODY_ACCOUNT = new SystemAccount( AccountIdentifiers.NOBODY_ACCOUNT_ID, AccountIdentifiers.NOBODY_ACCOUNT );
-  private static final AccountIdentifiers SYSTEM_ACCOUNT = new SystemAccount( AccountIdentifiers.SYSTEM_ACCOUNT_ID, AccountIdentifiers.SYSTEM_ACCOUNT );
+  private static final AccountIdentifiers NOBODY_ACCOUNT = 
+      new SystemAccount( 
+          AccountIdentifiers.NOBODY_ACCOUNT_ID, 
+          AccountIdentifiers.NOBODY_ACCOUNT,
+          AccountIdentifiers.NOBODY_CANONICAL_ID
+          );
+  private static final AccountIdentifiers SYSTEM_ACCOUNT = 
+      new SystemAccount( 
+          AccountIdentifiers.SYSTEM_ACCOUNT_ID, 
+          AccountIdentifiers.SYSTEM_ACCOUNT,
+          AccountIdentifiers.SYSTEM_CANONICAL_ID
+          );
 
   private static final Set<AccountIdentifiers> FAKE_ACCOUNTS        = ImmutableSet.of( systemAccount(), nobodyAccount() );
   private static final Set<String>  FAKE_ACCOUNT_NUMBERS =
       ImmutableSet.copyOf( Iterables.transform(FAKE_ACCOUNTS, AccountIdentifiers.Properties.accountNumber( ) ) );
+  private static final Set<String>  FAKE_CANONICAL_IDS =
+      ImmutableSet.copyOf( Iterables.transform(FAKE_ACCOUNTS, AccountIdentifiers.Properties.accountCanonicalId( ) ) );
   private static final Set<SystemUser> FAKE_USERS         = ImmutableSet.of( systemUser(), nobodyUser() );
   private static final Set<String>  FAKE_USER_IDS        =
       ImmutableSet.copyOf( Iterables.transform(FAKE_USERS, Accounts.toUserId() ) );
@@ -416,6 +428,10 @@ public class Principals {
     return FAKE_ACCOUNT_NUMBERS.contains( id );
   }
 
+  public static boolean isFakeIdentityCanonicalId( final String id ) {
+    return FAKE_CANONICAL_IDS.contains( id );
+  }
+
   public static boolean isFakeIdentityUserId( final String id ) {
     return FAKE_USER_IDS.contains( id );
   }
@@ -423,6 +439,7 @@ public class Principals {
   public static boolean isFakeIdentify( String id ) {
     return
         isFakeIdentityAccountNumber( id ) ||
+        isFakeIdentityCanonicalId( id ) ||
         isFakeIdentityUserId( id );
   }
 
@@ -446,16 +463,14 @@ public class Principals {
   private static class SystemAccount implements AccountIdentifiers {
     private final Long accountId;
     private final String accountAlias;
+    private final String canonicalId;
 
     private SystemAccount( final Long accountId,
-                           final String accountAlias ) {
+                           final String accountAlias,
+                           final String canonicalId) {
       this.accountId = accountId;
       this.accountAlias = accountAlias;
-    }
-
-    @Override
-    public String getCanonicalId() {
-          return ""; // TODO need to calculate a canonical ID
+      this.canonicalId = canonicalId;
     }
 
     @Override
@@ -466,6 +481,11 @@ public class Principals {
     @Override
     public String getAccountAlias( ) {
       return accountAlias;
+    }
+
+    @Override
+    public String getCanonicalId() {
+          return canonicalId;
     }
 
   }

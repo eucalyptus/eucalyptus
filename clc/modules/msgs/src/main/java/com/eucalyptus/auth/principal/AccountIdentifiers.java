@@ -28,6 +28,7 @@ import com.google.common.base.Function;
 public interface AccountIdentifiers {
   String NOBODY_ACCOUNT = "nobody";
   Long NOBODY_ACCOUNT_ID = 1l;
+  String NOBODY_CANONICAL_ID = "65a011a29cdf8ec533ec3d1ccaae921c"; // Matches AWS magic number
 
   /**
    * <h2>NOTE:GRZE:</h2> there will <b>always</b> be an account named <tt>eucalyptus</tt>. The name is used
@@ -39,6 +40,8 @@ public interface AccountIdentifiers {
   String SYSTEM_ACCOUNT = "eucalyptus";
   String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
   Long SYSTEM_ACCOUNT_ID = 0l;
+  String SYSTEM_CANONICAL_ID = ""; // Should never be used as a lookup key;
+  
   //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635
   String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";
 
@@ -70,6 +73,10 @@ public interface AccountIdentifiers {
       return StringProperties.NUMBER;
     }
 
+    public static Function<AccountIdentifiers,String> accountCanonicalId( ) {
+      return StringProperties.CANONICAL_ID;
+    }
+
     private enum StringProperties implements Function<AccountIdentifiers,String> {
       NUMBER {
         @Nonnull
@@ -78,6 +85,13 @@ public interface AccountIdentifiers {
           return accountIdentifiers.getAccountNumber( );
         }
       },
+      CANONICAL_ID {
+        @Nonnull
+        @Override
+        public String apply( final AccountIdentifiers accountIdentifiers ) {
+          return accountIdentifiers.getCanonicalId( );
+        }
+      }
     }
   }
 }
