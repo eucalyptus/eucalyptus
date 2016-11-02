@@ -152,6 +152,7 @@ public class VpcWorkflow {
 
           networkInterfaces.save( NatGatewayHelper.createNetworkInterface( natGateway, subnet ) );
         } catch ( final ComputeException e ) { // NAT gateway creation failure
+          natGateway.markDeletion( );
           natGateway.setState( NatGateway.State.failed );
           natGateway.setFailureCode( e.getCode( ) );
           natGateway.setFailureMessage( e.getMessage( ) );
@@ -182,6 +183,7 @@ public class VpcWorkflow {
           natGateway.setState( NatGateway.State.available );
           invalidate = true;
         } catch ( final ComputeException e ) { // NAT gateway creation failure
+          natGateway.markDeletion( );
           natGateway.setState( NatGateway.State.failed );
           natGateway.setFailureCode( e.getCode( ) );
           natGateway.setFailureMessage( e.getMessage( ) );

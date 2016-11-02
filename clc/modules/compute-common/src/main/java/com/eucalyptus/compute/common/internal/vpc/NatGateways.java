@@ -85,34 +85,24 @@ public interface NatGateways extends Lister<NatGateway> {
     public NatGatewayType apply( @Nullable final NatGateway natGateway ) {
       return natGateway == null ?
           null :
-          natGateway.getState( ) == NatGateway.State.failed ?
-              new NatGatewayType(
-                  natGateway.getDisplayName( ),
-                  natGateway.getCreationTimestamp( ),
-                  natGateway.getFailureCode( ),
-                  natGateway.getFailureMessage( ),
-                  natGateway.getVpcId( ),
-                  natGateway.getSubnetId( ),
-                  NatGateway.State.failed.toString( ),
-                  new NatGatewayAddressSetItemType( natGateway.getAllocationId( ) )
-              ) :
-              new NatGatewayType(
-                  natGateway.getDisplayName( ),
-                  natGateway.getCreationTimestamp( ),
-                  natGateway.getDeletionTimestamp( ),
-                  natGateway.getVpcId( ),
-                  natGateway.getSubnetId( ),
-                  Objects.toString( natGateway.getState( ), NatGateway.State.failed.toString( ) ),
-                  new NatGatewayAddressSetItemType(
-                      natGateway.getNetworkInterfaceId( ),
-                      natGateway.getPrivateIpAddress( ),
-                      natGateway.getAllocationId( ),
-                      natGateway.getPublicIpAddress( )
-                  )
-              );
+          new NatGatewayType(
+              natGateway.getDisplayName( ),
+              natGateway.getCreationTimestamp( ),
+              natGateway.getDeletionTimestamp( ),
+              natGateway.getFailureCode( ),
+              natGateway.getFailureMessage( ),
+              natGateway.getVpcId( ),
+              natGateway.getSubnetId( ),
+              Objects.toString( natGateway.getState( ), NatGateway.State.failed.toString( ) ),
+              new NatGatewayAddressSetItemType(
+                  natGateway.getNetworkInterfaceId( ),
+                  natGateway.getPrivateIpAddress( ),
+                  natGateway.getAllocationId( ),
+                  natGateway.getPublicIpAddress( )
+              )
+          );
     }
   }
-
 
   class NatGatewayFilterSupport extends FilterSupport<NatGateway> {
     public NatGatewayFilterSupport( ) {

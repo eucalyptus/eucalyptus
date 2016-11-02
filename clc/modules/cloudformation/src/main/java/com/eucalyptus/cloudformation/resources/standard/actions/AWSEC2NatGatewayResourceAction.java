@@ -42,7 +42,9 @@ import com.eucalyptus.compute.common.DescribeNatGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeNatGatewaysType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.ws.WebServiceError;
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.apache.log4j.Logger;
 
@@ -142,7 +144,13 @@ public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DeleteNatGatewayType deleteNatGatewayType = MessageHelper.createMessage(DeleteNatGatewayType.class, action.info.getEffectiveUserId());
         deleteNatGatewayType.setNatGatewayId(action.info.getPhysicalResourceId());
-        AsyncRequests.sendSync(configuration, deleteNatGatewayType);
+        try {
+          AsyncRequests.sendSync( configuration, deleteNatGatewayType );
+        } catch ( final Exception e ) {
+          if ( !AsyncExceptions.isWebServiceErrorCode( e, "NatGatewayNotFound" ) ) {
+            throw e;
+          }
+        }
         return action;
       }
     };

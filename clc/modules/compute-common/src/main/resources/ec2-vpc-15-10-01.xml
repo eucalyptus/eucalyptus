@@ -950,12 +950,12 @@
   <mapping class="com.eucalyptus.compute.common.NatGatewayType" abstract="true">
     <value name="subnetId" field="subnetId" usage="optional"/>
     <structure name="natGatewayAddressSet" field="natGatewayAddressSet" usage="optional" type="com.eucalyptus.compute.common.NatGatewayAddressSetType"/>
+    <value name="failureCode" field="failureCode" usage="optional"/>
     <value name="createTime" field="createTime" usage="optional"/>
     <value name="deleteTime" field="deleteTime" usage="optional"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
     <value name="natGatewayId" field="natGatewayId" usage="required"/>
     <value name="state" field="state" usage="optional"/>
-    <value name="failureCode" field="failureCode" usage="optional"/>
     <value name="failureMessage" field="failureMessage" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.NatGatewaySetType" abstract="true">

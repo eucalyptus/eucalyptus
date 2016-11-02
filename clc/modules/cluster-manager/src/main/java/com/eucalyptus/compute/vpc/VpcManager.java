@@ -1164,9 +1164,11 @@ public class VpcManager {
           }
       );
     } catch ( final Exception e ) {
-      if ( !Exceptions.isCausedBy( e, VpcMetadataNotFoundException.class ) ) {
+      if ( Exceptions.isCausedBy( e, VpcMetadataNotFoundException.class ) ) {
+        throw new ClientComputeException( "NatGatewayNotFound", "The Nat Gateway "+natGatewayId+" was not found" );
+      } else {
         throw handleException( e );
-      } // else ignore missing on delete?
+      }
     }
     reply.setNatGatewayId( request.getNatGatewayId( ) );
     return reply;
