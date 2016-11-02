@@ -1326,16 +1326,13 @@ class NatGatewayAddressSetItemType extends EucalyptusData {
   String allocationId
   String publicIp
   NatGatewayAddressSetItemType( ) { }
-  NatGatewayAddressSetItemType( final String allocationId ) {
-    this.allocationId = allocationId
-  }
   NatGatewayAddressSetItemType( final String networkInterfaceId,
                                 final String privateIp,
                                 final String allocationId,
                                 final String publicIp ) {
-    this( allocationId )
     this.networkInterfaceId = networkInterfaceId
     this.privateIp = privateIp
+    this.allocationId = allocationId
     this.publicIp = publicIp
   }
 }
@@ -1356,6 +1353,7 @@ class NatGatewayType extends EucalyptusData {
 
   NatGatewayType( final String natGatewayId,
                   final Date createTime,
+                  final Date deleteTime,
                   final String failureCode,
                   final String failureMessage,
                   final String vpcId,
@@ -1364,27 +1362,9 @@ class NatGatewayType extends EucalyptusData {
                   final NatGatewayAddressSetItemType address ) {
     this.natGatewayId = natGatewayId
     this.createTime = createTime
+    this.deleteTime = deleteTime
     this.failureCode = failureCode
     this.failureMessage = failureMessage
-    this.deleteTime = deleteTime
-    this.vpcId = vpcId
-    this.subnetId = subnetId
-    this.state = state
-    if ( address ) {
-      natGatewayAddressSet.item.add( address )
-    }
-  }
-
-  NatGatewayType( final String natGatewayId,
-                  final Date createTime,
-                  final Date deleteTime,
-                  final String vpcId,
-                  final String subnetId,
-                  final String state,
-                  final NatGatewayAddressSetItemType address ) {
-    this.natGatewayId = natGatewayId
-    this.createTime = createTime
-    this.deleteTime = deleteTime
     this.vpcId = vpcId
     this.subnetId = subnetId
     this.state = state

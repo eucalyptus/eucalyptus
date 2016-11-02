@@ -119,7 +119,7 @@ public class NatGatewayHelper {
     }
     if ( address.isAssigned( ) ) {
       throw new ClientComputeException(
-          "Resource.AlreadyAssociated", "Address ("+address.getAddress()+") already associated" );
+          "Resource.AlreadyAssociated", "Elastic IP address ["+allocationId+"] is already associated" );
     }
     // Network interface for a NAT gateway does not show as associated with the EIP
     Addresses.getInstance( ).assign( address, natGateway.getNetworkInterface( ) );

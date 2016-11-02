@@ -355,7 +355,10 @@ public class NatGateway extends UserMetadata<NatGateway.State> implements NatGat
     final Function<RestrictedType, String> nameTransform =  RestrictedTypes.toDisplayName( );
     setVpcId( nameTransform.apply( getVpc( ) ) );
     setSubnetId( nameTransform.apply( getSubnet( ) ) );
-    setNetworkInterfaceId( nameTransform.apply( getNetworkInterface( ) ) );
+    final NetworkInterface networkInterface = getNetworkInterface( );
+    if ( networkInterface != null ) {
+      setNetworkInterfaceId( nameTransform.apply( getNetworkInterface( ) ) );
+    }
   }
 
   private static String uniqueClientToken( final OwnerFullName owner, final String clientToken ) {
