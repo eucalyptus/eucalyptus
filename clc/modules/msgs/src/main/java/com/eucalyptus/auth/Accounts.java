@@ -80,6 +80,7 @@ import com.eucalyptus.auth.principal.BaseOpenIdConnectProvider;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.User;
@@ -249,7 +250,11 @@ public class Accounts {
 
   @Nonnull
   public static UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException {
-    return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
+    if (canonicalId.equals(AccountIdentifiers.NOBODY_CANONICAL_ID)) {
+      return Principals.nobodyUser();
+    } else {
+      return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
+    }
   }
 
   @Nonnull
