@@ -19,19 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
-import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.GetTemplateSummaryResult;
-import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
-import com.eucalyptus.cloudformation.Limits;
-import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.ParameterConstraints;
-import com.eucalyptus.cloudformation.ParameterDeclaration;
-import com.eucalyptus.cloudformation.ParameterDeclarations;
-import com.eucalyptus.cloudformation.ResourceList;
-import com.eucalyptus.cloudformation.TemplateParameter;
-import com.eucalyptus.cloudformation.TemplateParameters;
-import com.eucalyptus.cloudformation.ValidateTemplateResult;
-import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.amazonaws.services.cloudformation.model.StackResource;
+import com.eucalyptus.cloudformation.*;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
@@ -225,10 +214,13 @@ public class TemplateParser {
 
     Set<String> capabilitiesResourceTypes = Sets.newLinkedHashSet();
     Set<String> requiredCapabilities = Sets.newLinkedHashSet();
+    Set<String> resourceTypes = Sets.newLinkedHashSet();
     for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
+      String resourceType = resourceInfo.getType();
+      resourceTypes.add(resourceType);
       if (resourceInfo.getRequiredCapabilities() != null && !resourceInfo.getRequiredCapabilities().isEmpty()) {
         requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
-        capabilitiesResourceTypes.add(resourceInfo.getType());
+        capabilitiesResourceTypes.add(resourceType);
       }
     }
     GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
@@ -241,6 +233,8 @@ public class TemplateParser {
     getTemplateSummaryResult.setParameters(new ParameterDeclarations());
     getTemplateSummaryResult.getParameters().setMember(template.getParameterDeclarations());
     getTemplateSummaryResult.setMetadata(template.getMetadataJSON());
+    getTemplateSummaryResult.setResourceTypes(new ResourceList());
+    getTemplateSummaryResult.getResourceTypes().setMember(Lists.newArrayList(resourceTypes));
     return getTemplateSummaryResult;
   }
 

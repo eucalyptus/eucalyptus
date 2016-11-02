@@ -282,6 +282,8 @@ public class GetTemplateResult extends EucalyptusData {
 public class GetTemplateSummaryResult extends EucalyptusData {
   @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList resourceTypes;
   String capabilitiesReason;
   String description;
   String metadata;
