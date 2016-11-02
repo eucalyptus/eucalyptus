@@ -226,6 +226,7 @@ typedef struct eucanetdConfig_t {
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
     boolean enable_mido_md;
     boolean mido_md_veth_use_netns;
+    boolean mido_md_config_changed;
     boolean populate_mido_md;
     boolean validate_mido_config;
 

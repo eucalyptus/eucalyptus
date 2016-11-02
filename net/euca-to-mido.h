@@ -509,6 +509,7 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly);
 void do_midonet_test(mido_config *mido);
 int do_midonet_tag_midonames(mido_config *mido);
 
+int do_metaproxy_disable(mido_config *mido);
 int do_metaproxy_setup(mido_config *mido);
 int do_metaproxy_teardown(mido_config *mido);
 int do_metaproxy_maintain(mido_config *mido, int mode);

@@ -853,10 +853,16 @@ static int eucanetd_fetch_latest_local_config(void) {
 
             if (IS_NETMODE_VPCMIDO(config)) {
                 char *cval = configFileValue("MIDO_ENABLE_MIDOMD");
-                LOGINFO("cofig MIDO_ENABLE_MIDOMD = %s\n", cval);
+                LOGINFO("config MIDO_ENABLE_MIDOMD = %s\n", cval);
                 if (!strcmp(cval, "Y")) {
+                    if (!config->enable_mido_md) {
+                        config->mido_md_config_changed = TRUE;
+                    }
                     config->enable_mido_md = TRUE;
                 } else {
+                    if (config->enable_mido_md) {
+                        config->mido_md_config_changed = TRUE;
+                    }
                     config->enable_mido_md = FALSE;
                 }
                 EUCA_FREE(cval);
@@ -954,6 +960,7 @@ static int eucanetd_initialize(void) {
 
     config->euca_version = euca_version_dot2hex(EUCA_VERSION);
     config->euca_version_str = hex2dot(config->euca_version);
+    config->mido_md_config_changed = TRUE;
 
     config->polling_frequency = 5;
     config->init = 1;
