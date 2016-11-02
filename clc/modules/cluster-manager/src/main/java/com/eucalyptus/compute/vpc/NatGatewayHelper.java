@@ -33,6 +33,7 @@ import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.compute.common.internal.vpc.NatGateway;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAssociation;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
@@ -87,9 +88,7 @@ public class NatGatewayHelper {
         identifier,
         mac,
         ip,
-        vpc.getDnsHostnames( ) ?
-            VmInstances.dnsName( ip, DomainNames.internalSubdomain( ) ) :
-            null,
+        null,
         "Interface for NAT Gateway "  + natGateway.getDisplayName( ) );
     networkInterface.attach( NetworkInterfaceAttachment.create(
         ResourceIdentifiers.generateString( "ela-attach" ),
@@ -121,8 +120,15 @@ public class NatGatewayHelper {
       throw new ClientComputeException(
           "Resource.AlreadyAssociated", "Elastic IP address ["+allocationId+"] is already associated" );
     }
-    // Network interface for a NAT gateway does not show as associated with the EIP
-    Addresses.getInstance( ).assign( address, natGateway.getNetworkInterface( ) );
+    final NetworkInterface networkInterface = natGateway.getNetworkInterface( );
+    Addresses.getInstance( ).assign( address, networkInterface );
+    networkInterface.associate( NetworkInterfaceAssociation.create(
+        address.getAssociationId( ),
+        address.getAllocationId( ),
+        address.getOwnerAccountNumber( ),
+        address.getDisplayName( ),
+        null
+    ) );
     natGateway.associate( address.getDisplayName( ), address.getAssociationId( ) );
     return address;
   }

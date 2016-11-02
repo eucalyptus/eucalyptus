@@ -639,7 +639,7 @@ class NetworkInterfaceType extends EucalyptusData implements VpcTagged {
   GroupSetType groupSet = new GroupSetType();
   NetworkInterfaceAttachmentType attachment;
   NetworkInterfaceAssociationType association;
-  ResourceTagSetType tagSet;
+  ResourceTagSetType tagSet = new ResourceTagSetType( )
   NetworkInterfacePrivateIpAddressesSetType privateIpAddressesSet = new NetworkInterfacePrivateIpAddressesSetType( );
   NetworkInterfaceType() {  }
 
