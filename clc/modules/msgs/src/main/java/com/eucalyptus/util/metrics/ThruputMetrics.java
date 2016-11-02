@@ -25,7 +25,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.log4j.Logger;
@@ -151,14 +155,44 @@ public class ThruputMetrics {
     }
   }
 
+  private static final class QuickFuture implements Future<Boolean> {
+    @Override
+    public boolean cancel(boolean mayInterruptIfRunning) {
+      return true;
+    }
+
+    @Override
+    public Boolean get() throws InterruptedException, ExecutionException {
+      return true;
+    }
+
+    @Override
+    public Boolean get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
+      return true;
+    }
+
+    @Override
+    public boolean isCancelled() {
+      return false;
+    }
+
+    @Override
+    public boolean isDone() {
+      return true;
+    }
+  }
+
+  private static final QuickFuture emptyCallable = new QuickFuture();
+
   /**
    * Adds new data point (non-negative long) for storing and logging.
    * Function ignores negative input values
    */
-  public static void addDataPoint(final MonitoredAction action, final long newDataPoint) {
+  public static Future<Boolean> addDataPoint(final MonitoredAction action, final long newDataPoint) {
     if (newDataPoint < 0)
-      return;
-    Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
+      return emptyCallable;
+    return Threads.enqueue(Eucalyptus.class, ThruputMetrics.class,
         new Callable<Boolean>() {
           @Override
           public Boolean call() throws Exception {
