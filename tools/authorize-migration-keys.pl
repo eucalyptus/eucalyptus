@@ -258,8 +258,40 @@ rename ($new_config, $config_file);
 
 # Now restart libvirtd if called with -r.
 if ($opt_r) {
+
+  # Did the files actually change?
+  `diff -q $config_file $backup_config`;
+  if (($?>>8) == 0)
+  {
+     dprint "No configuration file change detected, exiting without libvirtd restart\n";
+     exit 0;
+  } 
+
   # Using backticks rather than system() so as to not clutter output if this script is called from an init script.
   `/sbin/service libvirtd restart`;
+
+  # Make sure that libvirtd comes back up, sometimes it takes a while to recover
+  $connected = 0;
+  for my $i (0..20)
+  {
+     `virsh connect`;
+     if (($?>>8) == 0)
+     {
+        dprint "Connected to hypervisor\n";
+         $connected = 1;
+         last;
+     }
+     else 
+     {
+       dprint "Can't connect to hypervisor attempt: $i\n";
+       sleep 1;
+     }
+  }
+  if ($connected == 0) 
+  { 
+     print STDERR "Could not connect to the hypervisor\n";
+     exit 1; 
+  }
 }
 
 exit 0;
