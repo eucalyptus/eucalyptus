@@ -833,6 +833,11 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                 if (!credentials_prepared) {
                     if (generate_migration_keys(sourceNodeName, credentials, TRUE, instance) != EUCA_OK) {
                         pMeta->replyString = strdup("internal error (migration credentials generation failed)");
+                        sem_p(inst_sem);
+                        instance->migration_state = NOT_MIGRATING;
+                        save_instance_struct(instance);
+                        copy_instances();
+                        sem_v(inst_sem);
                         return (EUCA_SYSTEM_ERROR);
                     } else {
                         credentials_prepared++;
