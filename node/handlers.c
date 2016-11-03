@@ -219,8 +219,6 @@ struct nc_state_t nc_state = { 0 };    //!< Global NC state structure
 configEntry configKeysRestartNC[] = {
     {CONFIG_ENABLE_WS_SECURITY, "Y"},
     {"EUCALYPTUS", "/"},
-    {"NC_PORT", "8775"},
-    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
     {NULL, NULL},
 };
 

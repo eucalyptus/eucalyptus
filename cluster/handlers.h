@@ -467,8 +467,6 @@ int restoreNetworkState(void);
 int reconfigureNetworkFromCLC(void);
 int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts);
 void shawn(void);
-int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory,
-                        int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart);
 int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
                         char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet, netConfig * ncnet,

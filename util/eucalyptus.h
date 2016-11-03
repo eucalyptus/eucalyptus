@@ -209,7 +209,6 @@
 #define CONFIG_VNET_PORT                        "VNET_PORT"
 #define CONFIG_VNET_DHCPDAEMON                  "VNET_DHCPDAEMON"
 #define CONFIG_VNET_PRIVINTERFACE               "VNET_PRIVINTERFACE"
-#define CONFIG_NC_SERVICE                       "NC_SERVICE"
 #define CONFIG_NC_PORT                          "NC_PORT"
 #define CONFIG_NODES                            "NODES"
 #define CONFIG_HYPERVISOR                       "HYPERVISOR"
@@ -244,6 +243,8 @@
 #define CONFIG_NC_CEPH_CONF                     "CEPH_CONFIG_PATH"
 
 //! @}
+//! path to axis on NC
+#define NC_SERVICE                              "axis2/services/EucalyptusNC"
 
 //! name of the administrative user within Eucalyptus
 #define EUCALYPTUS_ADMIN                         "eucalyptus"

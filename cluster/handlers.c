@@ -6646,25 +6646,11 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
 {
     int rc, i, lockmod;
     char *tmpstr, *ipbuf;
-    char ncservice[512];
     int ncport;
     char **hosts;
 
     *numHosts = 0;
     *res = NULL;
-
-    tmpstr = configFileValue(CONFIG_NC_SERVICE);
-    if (!tmpstr) {
-        // error
-        LOGFATAL("parsing config files (%s,%s) for NC_SERVICE\n", config->configFiles[1], config->configFiles[0]);
-        return (1);
-    } else {
-        if (tmpstr) {
-            snprintf(ncservice, 512, "%s", tmpstr);
-        }
-
-    }
-    EUCA_FREE(tmpstr);
 
     tmpstr = configFileValue(CONFIG_NC_PORT);
     if (!tmpstr) {
@@ -6706,8 +6692,8 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
             EUCA_FREE(ipbuf);
 
             (*res)[*numHosts - 1].ncPort = ncport;
-            snprintf((*res)[*numHosts - 1].ncService, 128, "%s", ncservice);
-            snprintf((*res)[*numHosts - 1].ncURL, 384, "http://%s:%d/%s", hosts[i], ncport, ncservice);
+            snprintf((*res)[*numHosts - 1].ncService, 128, "%s", NC_SERVICE);
+            snprintf((*res)[*numHosts - 1].ncURL, 384, "http://%s:%d/%s", hosts[i], ncport, NC_SERVICE);
             (*res)[*numHosts - 1].state = RESDOWN;
             (*res)[*numHosts - 1].lastState = RESDOWN;
             (*res)[*numHosts - 1].lockidx = NCCALL0 + lockmod;
@@ -6755,65 +6741,6 @@ void shawn(void)
         msync(config, sizeof(ccConfig), MS_ASYNC);
     if (gpEucaNet)
         msync(gpEucaNet, sizeof(euca_network), MS_ASYNC);
-}
-
-//!
-//!
-//!
-//! @param[in] out
-//! @param[in] ncURL
-//! @param[in] ncService
-//! @param[in] ncPort
-//! @param[in] hostname
-//! @param[in] mac
-//! @param[in] ip
-//! @param[in] maxMemory
-//! @param[in] availMemory
-//! @param[in] maxDisk
-//! @param[in] availDisk
-//! @param[in] maxCores
-//! @param[in] availCores
-//! @param[in] state
-//! @param[in] laststate
-//! @param[in] stateChange
-//! @param[in] idleStart
-//!
-//! @return
-//!
-//! @pre
-//!
-//! @note
-//!
-int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPort, char *hostname, char *mac, char *ip, int maxMemory,
-                        int availMemory, int maxDisk, int availDisk, int maxCores, int availCores, int state, int laststate, time_t stateChange, time_t idleStart)
-{
-
-    if (out != NULL) {
-        if (ncURL)
-            euca_strncpy(out->ncURL, ncURL, 384);
-        if (ncService)
-            euca_strncpy(out->ncService, ncService, 128);
-        if (hostname)
-            euca_strncpy(out->hostname, hostname, 256);
-        if (mac)
-            euca_strncpy(out->mac, mac, 24);
-        if (ip)
-            euca_strncpy(out->ip, ip, 24);
-
-        out->ncPort = ncPort;
-        out->maxMemory = maxMemory;
-        out->availMemory = availMemory;
-        out->maxDisk = maxDisk;
-        out->availDisk = availDisk;
-        out->maxCores = maxCores;
-        out->availCores = availCores;
-        out->state = state;
-        out->lastState = laststate;
-        out->stateChange = stateChange;
-        out->idleStart = idleStart;
-    }
-
-    return (0);
 }
 
 //!

@@ -79,8 +79,6 @@ configEntry configKeysRestartCC[] = {
     ,
     {"NC_PORT", "8775"}
     ,
-    {"NC_SERVICE", "axis2/services/EucalyptusNC"}
-    ,
     {"SCHEDPOLICY", "ROUNDROBIN"}
     ,
     {"VNET_BRIDGE", NULL}
