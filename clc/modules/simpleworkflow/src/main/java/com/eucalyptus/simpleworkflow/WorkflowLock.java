@@ -21,6 +21,7 @@ package com.eucalyptus.simpleworkflow;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.util.Pair;
 import com.google.common.collect.Interner;
@@ -36,10 +37,11 @@ import com.google.common.collect.Interners;
 public final class WorkflowLock implements AutoCloseable {
   private static final Interner<WorkflowLock> workflowLockInterner = Interners.newWeakInterner();
 
-  private final Lock lock = new ReentrantLock( );
+  private final ReentrantLock lock = new ReentrantLock( );
   private final String accountNumber;
   private final String domainUuid;
   private final String runId;
+
 
   public static WorkflowLock lock( final AccountFullName accountFullName, final Domain domain, final String runId ) {
     return lock( accountFullName.getAccountNumber( ), domain.getNaturalId( ), runId );
@@ -57,6 +59,14 @@ public final class WorkflowLock implements AutoCloseable {
     return workflowLockInterner.intern( new WorkflowLock( accountNumber, domainUuid, runId ) ).lock( );
   }
 
+  public static WorkflowLock tryLock( final AccountFullName accountFullName, final String domainUuid, final String runId ) {
+    return tryLock( accountFullName.getAccountNumber( ), domainUuid, runId );
+  }
+
+  public static WorkflowLock tryLock( final String accountNumber, final String domainUuid, final String runId ) {
+    return workflowLockInterner.intern( new WorkflowLock( accountNumber, domainUuid, runId ) ).tryLock( );
+  }
+
   WorkflowLock( final String accountNumber, final String domainUuid, final String runId ) {
     this.accountNumber = accountNumber;
     this.domainUuid = domainUuid;
@@ -68,9 +78,20 @@ public final class WorkflowLock implements AutoCloseable {
     return this;
   }
 
+  public WorkflowLock tryLock( ) {
+    lock.tryLock( );
+    return this;
+  }
+
+  public Boolean isHeldByCurrentThread( ) {
+    return lock.isHeldByCurrentThread( );
+  }
+
   @Override
-  public void close( )  {
-    lock.unlock( );
+  public void close( ) {
+    if ( isHeldByCurrentThread( ) ) {
+      lock.unlock( );
+    }
   }
 
   @SuppressWarnings( "RedundantIfStatement" )
