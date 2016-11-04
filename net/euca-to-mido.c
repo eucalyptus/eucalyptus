@@ -7214,6 +7214,8 @@ int delete_mido_md(mido_config *mido) {
         return (1);
     }
 
+    do_md_nginx_maintain(mido, VPCMIDO_NGINX_STOP);
+    
     mido_md *midomd = mido->midomd;
 
     // delete the eucanetd host md interface
