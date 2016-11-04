@@ -128,6 +128,149 @@ int midocache_invalid = 0;
 \*----------------------------------------------------------------------------*/
 
 /**
+ * Deletes all VPC metaproxy namespace interfaces and metabr.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int do_delete_meta_nslinks(mido_config *mido) {
+    int ret = 0, rc = 0;
+    char cmd[EUCA_MAX_PATH], sid[16];
+    char devpath[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    mido_vpc *vpc;
+    se_init(&cmds, mido->config->cmdprefix, 4, 1);
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        vpc = &(mido->vpcs[i]);
+        sscanf(vpc->name, "vpc-%8s", sid);
+
+        snprintf(devpath, EUCA_MAX_PATH, "/sys/class/net/vn2_%s/", sid);
+        if (!check_directory(devpath)) {
+            snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
+            rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        }
+    }
+
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGWARN("failed to delete metaproxy ip namespace veth pairs\n");
+        ret = 1;
+    }
+
+    delete_mido_meta_core(mido);
+
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
+ * Deletes all VPC instances/interfaces MidoNet chains.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int do_delete_vpceni_chains(mido_config *mido) {
+    int ret = 0;
+    if (!mido) {
+        LOGWARN("Invalid argument: cannot delete VPC ifs chains - NULL config.\n");
+        return (1);
+    }
+
+    // Remove all ic_* chains
+    midoname **chains = NULL;
+    int max_chains = 0;
+    
+    mido_get_chains(VPCMIDO_TENANT, &chains, &max_chains);
+    for (int i = 0; i < max_chains; i++) {
+        midoname *chain = chains[i];
+        if (strstr(chain->name, "ic_")) {
+            mido_delete_chain(chain);
+        }
+    }
+    EUCA_FREE(chains);
+
+    return (ret);
+}
+
+/**
+ * Removes MidoNet objects that are needed to implement metaproxy-based VPC MD.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @return 0 on success. 1 otherwise.
+ */
+int do_metaproxy_disable(mido_config *mido) {
+    int ret = 0;
+    int rc = 0;
+    if (!mido) {
+        LOGWARN("Invalid argument: cannot disable metaproxy - NULL config.\n");
+        return (1);
+    }
+
+    if (!mido->config->enable_mido_md) {
+        return (0);
+    }
+
+    // Tear down metaproxies
+    rc = do_metaproxy_teardown(mido);
+    if (rc) {
+        LOGERROR("failed to teardown metadata proxies\n");
+        ret++;
+    }
+
+    // Disconnect instances/interfaces from md
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        mido_vpc *vpc = &(mido->vpcs[i]);
+        for (int j = 0; j < vpc->max_subnets; j++) {
+            mido_vpc_subnet *subnet = &(vpc->subnets[j]);
+            u32 subnet_addr = 0;
+            // Get the Subnet CIDR
+            boolean found = FALSE;
+            for (int k = 0; k < vpc->vpcrt->max_routes && !found; k++) {
+                midoname *route = vpc->vpcrt->routes[k];
+                if (!strcmp(route->route->nexthopport, subnet->midos[SUBN_VPCRT_BRPORT]->uuid) &&
+                        !route->route->nexthopgateway && strcmp(route->route->dstlen, "32")) {
+                    found = TRUE;
+                    subnet_addr = dot2hex(route->route->dstnet);
+                    LOGTRACE("\t%s : %s\n", subnet->name, route->route->dstnet);
+                }
+            }
+            // Due to dot2 dns nat rules, removing metaproxy nat rules is not sufficient
+            for (int k = 0; k < subnet->max_instances && FALSE; k++) {
+                mido_vpc_instance *vpcif = &(subnet->instances[k]);
+                midoname *ptmpmn = NULL;
+                // Search metaproxy DNAT rule
+                char *pt_buf = hex2dot(subnet_addr + 3);
+                mido_find_rule_from_list(vpcif->prechain->rules, vpcif->prechain->max_rules, &ptmpmn,
+                        "type", "dnat", "flowAction", "continue",
+                        "ipAddrGroupDst", mido->midocore->midos[CORE_METADATA_IPADDRGROUP]->uuid,
+                        "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
+                        "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf,
+                        "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
+                        "8008", "natTargets:portTo", "8008", "natTargets:END", "END", NULL);
+                if (ptmpmn) {
+                    LOGTRACE("%s: deleting DNAT rule %s\n", vpcif->name, ptmpmn->uuid);
+                    mido_delete_rule(vpcif->prechain, ptmpmn);
+                }
+                // Search metaproxy SNAT rule
+                mido_find_rule_from_list(vpcif->postchain->rules, vpcif->postchain->max_rules, &ptmpmn,
+                        "type", "snat", "flowAction", "continue",
+                        "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6",
+                        "tpSrc", "jsonjson", "tpSrc:start", "8008", "tpSrc:end", "8008", "tpSrc:END", "END",
+                        "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254",
+                        "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80",
+                        "natTargets:portTo", "80", "natTargets:END", "END", NULL);
+                if (ptmpmn) {
+                    LOGTRACE("%s: deleting SNAT rule %s\n", vpcif->name, ptmpmn->uuid);
+                    mido_delete_rule(vpcif->postchain, ptmpmn);
+                }
+                EUCA_FREE(pt_buf);
+            }
+        }
+    }
+
+    return (ret);
+}
+
+/**
  * Terminate metaproxy (nginx) processes of all VPCs
  * @param mido [in] data structure that holds MidoNet configuration
  * @return 0 on success. Positive integer otherwise.
@@ -149,8 +292,6 @@ int do_metaproxy_setup(mido_config *mido) {
 /**
  * Maintenance of metaproxy (nginx) process(es)
  * @param mido [in] data structure that holds MidoNet configuration
- * @param vpcid [in] optional ID of the VPC of interest. If NULL, metaproxies of ALL
- * VPCs are affected
  * @param mode [in] 0 to create. 1 to terminate.
  * @return 0 on success. Positive integer otherwise.
  * 
@@ -280,6 +421,85 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
 }
 
 /**
+ * Controls metadata nginx instance
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param mode [in] VPCMIDO_NGINX_START to create. VPCMIDO_NGINX_STOP to terminate.
+ * @return 0 on success. Positive integer otherwise.
+ */
+int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
+    int ret = 0, rc;
+    boolean do_start = FALSE;
+    boolean do_stop = FALSE;
+    pid_t npid = 0;
+    char cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
+    sequence_executor cmds;
+
+    if (!mido || mode < VPCMIDO_NGINX_START || mode > VPCMIDO_NGINX_STOP) {
+        LOGERROR("invalid argument: unable to maintain md nginx\n");
+        return (1);
+    }
+
+    se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+    snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_md.pid", mido->eucahome);
+    if (!check_file(pidfile)) {
+        pidstr = file2str(pidfile);
+        if (pidstr) {
+            npid = atoi(pidstr);
+        } else {
+            npid = 0;
+        }
+        EUCA_FREE(pidstr);
+    } else {
+        npid = 0;
+    }
+
+    if (mode == VPCMIDO_NGINX_START) {
+        if (npid > 1) {
+            if (check_process(npid, "nginx")) {
+                unlink(pidfile);
+                do_start = TRUE;
+            }
+        } else {
+            do_start = TRUE;
+        }
+    } else if (mode == VPCMIDO_NGINX_STOP) {
+        if (npid > 1 && !check_process(npid, "nginx")) {
+            do_stop = TRUE;
+        }
+    }
+
+    if (do_start) {
+        LOGINFO("\tstarting md nginx process\n");
+        snprintf(cmd, EUCA_MAX_PATH,
+                "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                mido->eucahome, mido->eucahome, mido->eucahome);
+        se_add(&cmds, cmd, NULL, ignore_exit);
+    }
+    if (do_stop) {
+        LOGINFO("\tstopping md nginx process\n");
+        snprintf(cmd, EUCA_MAX_PATH,
+                "nginx -p . -s stop -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                mido->eucahome, mido->eucahome, mido->eucahome);
+        se_add(&cmds, cmd, NULL, ignore_exit);
+    }
+
+    se_print(&cmds);
+    rc = se_execute(&cmds);
+    if (rc) {
+        LOGERROR("could not perform md nginx maintenance\n");
+        ret = 1;
+    }
+    se_free(&cmds);
+
+    return (ret);
+}
+
+/**
  * Remove metadata core artifacts from the system.
  * @param mido [in] data structure that holds MidoNet configuration
  * @return 0 on success. Positive integer otherwise.
@@ -287,15 +507,19 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
 int delete_mido_meta_core(mido_config *mido) {
     int ret = 0, rc = 0;
     char cmd[EUCA_MAX_PATH];
+    char devpath[EUCA_MAX_PATH];
     sequence_executor cmds;
 
     rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip link set metabr down");
-    rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+    snprintf(devpath, EUCA_MAX_PATH, "/sys/class/net/metabr/");
+    if (!check_directory(devpath)) {
+        snprintf(cmd, EUCA_MAX_PATH, "ip link set metabr down");
+        rc = se_add(&cmds, cmd, NULL, ignore_exit2);
 
-    snprintf(cmd, EUCA_MAX_PATH, "brctl delbr metabr");
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "brctl delbr metabr");
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    }
 
     se_print(&cmds);
     rc = se_execute(&cmds);
@@ -349,28 +573,32 @@ int create_mido_meta_core(mido_config *mido) {
 /**
  * Deletes metadata artifacts created for VPC vpc.
  * @param mido [in] data structure that holds MidoNet configuration
- * @param vpc [in] pointer to the mido_vpc data structure of interest
+ * @param vpcname [in] vpc name/id of interest
  * @return 0 on success. Positive integer otherwise.
  */
-int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
+int delete_mido_meta_vpc_namespace(mido_config *mido, char *vpcname) {
     int ret = 0, rc = 0;
     char cmd[EUCA_MAX_PATH], sid[16];
+    char devpath[EUCA_MAX_PATH];
     sequence_executor cmds;
     struct timeval tv;
 
     eucanetd_timer_usec(&tv);
-    // create a meta tap namespace/devices
-    sscanf(vpc->name, "vpc-%8s", sid);
+
+    sscanf(vpcname, "vpc-%8s", sid);
 
     rc = se_init(&cmds, mido->config->cmdprefix, 10, 1);
 
     //    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s down", sid);
     //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    snprintf(devpath, EUCA_MAX_PATH, "/sys/class/net/vn2_%s/", sid);
+    if (!check_directory(devpath)) {
+        snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    }
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", vpc->name);
+    snprintf(cmd, EUCA_MAX_PATH, "ip netns del %s", vpcname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
     se_print(&cmds);
@@ -405,7 +633,7 @@ int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
         return (0);
     }
 
-    // create a meta tap namespace/devices
+    // create meta tap namespace/devices
     sscanf(vpc->name, "vpc-%8s", sid);
 
     rc = se_init(&cmds, mido->config->cmdprefix, 4, 1);
@@ -413,27 +641,29 @@ int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
     snprintf(cmd, EUCA_MAX_PATH, "ip netns add %s", vpc->name);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip link add vn2_%s type veth peer name vn3_%s", sid, sid);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    if (!mido->config->enable_mido_md) {
+        snprintf(cmd, EUCA_MAX_PATH, "ip link add vn2_%s type veth peer name vn3_%s", sid, sid);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s up", sid);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "ip link set vn2_%s up", sid);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "brctl addif metabr vn2_%s", sid);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "brctl addif metabr vn2_%s", sid);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    snprintf(cmd, EUCA_MAX_PATH, "ip link set vn3_%s netns %s", sid, vpc->name);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "ip link set vn3_%s netns %s", sid, vpc->name);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
-    nw = dot2hex("169.254.0.0");
-    ip = nw + vpc->rtid;
-    ipstr = hex2dot(ip);
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/16 dev vn3_%s", vpc->name, ipstr, sid);
-    EUCA_FREE(ipstr);
-    se_add(&cmds, cmd, NULL, ignore_exit2);
+        nw = dot2hex("169.254.0.0");
+        ip = nw + vpc->rtid;
+        ipstr = hex2dot(ip);
+        snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/16 dev vn3_%s", vpc->name, ipstr, sid);
+        EUCA_FREE(ipstr);
+        se_add(&cmds, cmd, NULL, ignore_exit2);
 
-    snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set vn3_%s up", vpc->name, sid);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip link set vn3_%s up", vpc->name, sid);
+        rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    }
 
     se_print(&cmds);
     rc = se_execute(&cmds);
@@ -468,12 +698,14 @@ int read_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc) {
         LOGTRACE("found VPC netns: %s\n", cmd);
     }
 
-    snprintf(cmd, EUCA_MAX_PATH, "vn2_%s", sid);
-    if (!dev_exist(cmd)) {
-        LOGTRACE("cannot find VPC metataps vn2_%s\n", sid);
-        return (1);
-    } else {
-        LOGTRACE("found VPC metataps vn2_%s\n", sid);
+    if (!mido->config->enable_mido_md) {
+        snprintf(cmd, EUCA_MAX_PATH, "vn2_%s", sid);
+        if (!dev_exist(cmd)) {
+            LOGTRACE("cannot find VPC metataps vn2_%s\n", sid);
+            return (1);
+        } else {
+            LOGTRACE("found VPC metataps vn2_%s\n", sid);
+        }
     }
 
     return (0);
@@ -555,7 +787,7 @@ int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, c
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
     nw = dot2hex(subnet);
-    gw = nw + 2;
+    gw = nw + 3;
     gateway = hex2dot(gw);
     snprintf(cmd, EUCA_MAX_PATH, "nsenter --net=/var/run/netns/%s ip addr add %s/%s dev vn1_%s", vpc->name, gateway, slashnet, sid);
     EUCA_FREE(gateway);
@@ -858,6 +1090,7 @@ int do_midonet_teardown(mido_config *mido) {
     if (mido->config->flushmode == FLUSH_MIDO_ALL) {
         LOGINFO("deleting mido core\n");
         delete_mido_core(mido, mido->midocore);
+        do_md_nginx_maintain(mido, VPCMIDO_NGINX_STOP);
     } else {
         LOGDEBUG("skipping the delete of midocore - FLUSH_DYNAMIC selected.\n");
     }
@@ -1371,16 +1604,20 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
         }
         if (!vpc->gnipresent) {
             LOGINFO("\tdeleting %s\n", vpc->name);
-            rc = do_metaproxy_teardown(mido);
-            if (rc) {
-                LOGERROR("cannot teardown metadata proxies\n");
-                ret += rc;
+            if (!mido->config->enable_mido_md) {
+                rc = do_metaproxy_teardown(mido);
+                if (rc) {
+                    LOGERROR("cannot teardown metadata proxies\n");
+                    ret += rc;
+                }
             }
             ret += delete_mido_vpc(mido, vpc);
             // Re-enable nginx
-            rc = do_metaproxy_setup(mido);
-            if (rc) {
-                LOGERROR("failed to start metadata proxies\n");
+            if (!mido->config->enable_mido_md) {
+                rc = do_metaproxy_setup(mido);
+                if (rc) {
+                    LOGERROR("failed to start metadata proxies\n");
+                }
             }
         } else {
             LOGTRACE("pass2: mido VPC %s in global: Y\n", vpc->name);
@@ -1449,7 +1686,10 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             rc = create_mido_vpc(mido, mido->midocore, vpc);
             if (rc) {
                 LOGERROR("failed to create VPC %s: check midonet health\n", gnivpc->name);
-                rc = do_metaproxy_teardown(mido);
+                rc = 0;
+                if (!mido->config->enable_mido_md) {
+                    rc = do_metaproxy_teardown(mido);
+                }
                 if (rc) {
                     LOGERROR("cannot teardown metadata proxies\n");
                     ret++;
@@ -1461,7 +1701,10 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                     ret++;
                 }
                 // Re-enable nginx
-                rc = do_metaproxy_setup(mido);
+                rc = 0;
+                if (!mido->config->enable_mido_md) {
+                    rc = do_metaproxy_setup(mido);
+                }
                 if (rc) {
                     LOGERROR("failed to setup metadata proxies\n");
                 }
@@ -1497,7 +1740,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             }
 
             subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
-            cidr_split(gnivpcsubnet->cidr, subnet_buf, slashnet_buf, gw_buf, NULL);
+            cidr_split(gnivpcsubnet->cidr, subnet_buf, slashnet_buf, gw_buf, NULL, NULL);
 
             if (vpcsubnet->midopresent) {
                 // VPC subnet presence test passed in pass1
@@ -1538,7 +1781,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             }
 
             subnet_buf[0] = slashnet_buf[0] = gw_buf[0] = '\0';
-            cidr_split(gnivpcsubnet->cidr, subnet_buf, slashnet_buf, gw_buf, NULL);
+            cidr_split(gnivpcsubnet->cidr, subnet_buf, slashnet_buf, gw_buf, NULL, NULL);
 
             // Implement subnet routing table routes
             gni_rtable = gnivpcsubnet->routeTable;
@@ -1606,7 +1849,10 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
     }
 
     // set up metadata proxies once vpcs/subnets are all set up
-    rc = do_metaproxy_setup(mido);
+    rc = 0;
+    if (!mido->config->enable_mido_md) {
+        rc = do_metaproxy_setup(mido);
+    }
     if (rc) {
         LOGERROR("cannot set up metadata proxies: see above log for details\n");
         ret++;
@@ -1799,7 +2045,7 @@ int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido) {
  */
 int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
     int rc = 0, ret = 0, i = 0, j = 0, k = 0;
-    char subnet_buf[24], slashnet_buf[8], gw_buf[24], pt_buf[24];
+    char subnet_buf[24], slashnet_buf[8], gw_buf[24], dot2[24], dot3[24];
 
     mido_vpc_secgroup *vpcsecgroup = NULL;
     mido_vpc_instance *vpcif = NULL;
@@ -1914,7 +2160,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         }
 
         // do instance/interface-host connection
-        if (vpcif->host_changed) {
+        if (vpcif->host_changed || vpcif->population_failed) {
             LOGTRACE("\tconnecting mido host %s with interface %s\n",
                     vpcif->midos[INST_VMHOST]->name, gniif->name);
             rc = connect_mido_vpc_instance(vpcsubnet, vpcif, gni->instanceDNSDomain);
@@ -1988,7 +2234,9 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         subnet_buf[0] = '\0'; 
         slashnet_buf[0] = '\0';
         gw_buf[0] = '\0';
-        cidr_split(vpcsubnet->gniSubnet->cidr, subnet_buf, slashnet_buf, gw_buf, pt_buf);
+        dot2[0] = '\0';
+        dot3[0] = '\0';
+        cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, gw_buf, dot2, dot3);
 
         hex2mac(gniif->macAddress, &instMac);
         instIp = hex2dot(gniif->privateIp);
@@ -2225,36 +2473,38 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         EUCA_FREE(instIp);
 
         // metadata
-        // metadata redirect egress
-        rulepos = vpcif->prechain->rules_count + 1;
-        snprintf(pos_str, 32, "%d", rulepos);
-        rc = mido_create_rule(vpcif->prechain, vpcif->midos[INST_PRECHAIN],
-                NULL, &rulepos,
-                "position", pos_str, "type", "dnat", "flowAction", "continue",
-                "ipAddrGroupDst", mido->midocore->midos[CORE_METADATA_IPADDRGROUP]->uuid,
-                "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
-                "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", pt_buf,
-                "natTargets:addressFrom", pt_buf, "natTargets:portFrom",
-                "8008", "natTargets:portTo", "8008", "natTargets:END", "END", NULL);
-        if (rc) {
-            LOGWARN("Failed to create MD dnat rule for %s\n", gniif->name);
-            ret++;
-        }
+        if (!mido->config->enable_mido_md) {
+            // metadata redirect egress
+            rulepos = vpcif->prechain->rules_count + 1;
+            snprintf(pos_str, 32, "%d", rulepos);
+            rc = mido_create_rule(vpcif->prechain, vpcif->midos[INST_PRECHAIN],
+                    NULL, &rulepos,
+                    "position", pos_str, "type", "dnat", "flowAction", "continue",
+                    "ipAddrGroupDst", mido->midocore->midos[CORE_METADATA_IPADDRGROUP]->uuid,
+                    "nwProto", "6", "tpDst", "jsonjson", "tpDst:start", "80", "tpDst:end", "80",
+                    "tpDst:END", "END", "natTargets", "jsonlist", "natTargets:addressTo", dot3,
+                    "natTargets:addressFrom", dot3, "natTargets:portFrom",
+                    "8008", "natTargets:portTo", "8008", "natTargets:END", "END", NULL);
+            if (rc) {
+                LOGWARN("Failed to create MD dnat rule for %s\n", gniif->name);
+                ret++;
+            }
 
-        // metadata redirect ingress
-        rulepos = vpcif->postchain->rules_count + 1;
-        snprintf(pos_str, 32, "%d", rulepos);
-        rc = mido_create_rule(vpcif->postchain, vpcif->midos[INST_POSTCHAIN],
-                NULL, &rulepos,
-                "position", pos_str, "type", "snat", "flowAction", "continue",
-                "nwSrcAddress", pt_buf, "nwSrcLength", "32", "nwProto", "6",
-                "tpSrc", "jsonjson", "tpSrc:start", "8008", "tpSrc:end", "8008", "tpSrc:END", "END",
-                "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254",
-                "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80",
-                "natTargets:portTo", "80", "natTargets:END", "END", NULL);
-        if (rc) {
-            LOGWARN("Failed to create MD snat rule for %s\n", gniif->name);
-            ret++;
+            // metadata redirect ingress
+            rulepos = vpcif->postchain->rules_count + 1;
+            snprintf(pos_str, 32, "%d", rulepos);
+            rc = mido_create_rule(vpcif->postchain, vpcif->midos[INST_POSTCHAIN],
+                    NULL, &rulepos,
+                    "position", pos_str, "type", "snat", "flowAction", "continue",
+                    "nwSrcAddress", dot3, "nwSrcLength", "32", "nwProto", "6",
+                    "tpSrc", "jsonjson", "tpSrc:start", "8008", "tpSrc:end", "8008", "tpSrc:END", "END",
+                    "natTargets", "jsonlist", "natTargets:addressTo", "169.254.169.254",
+                    "natTargets:addressFrom", "169.254.169.254", "natTargets:portFrom", "80",
+                    "natTargets:portTo", "80", "natTargets:END", "END", NULL);
+            if (rc) {
+                LOGWARN("Failed to create MD snat rule for %s\n", gniif->name);
+                ret++;
+            }
         }
 
         // contrack
@@ -2280,14 +2530,27 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             ret++;
         }
 
-        // plus two accept for metadata egress
+        // plus two/three accept for metaproxy-based md, and dot2 DNS egress 
         rulepos = vpcif->prechain->rules_count + 1;
         snprintf(pos_str, 32, "%d", rulepos);
         rc = mido_create_rule(vpcif->prechain, vpcif->midos[INST_PRECHAIN],
                 NULL, &rulepos,
-                "position", pos_str, "type", "accept", "nwDstAddress", pt_buf, "nwDstLength", "32", NULL);
+                "position", pos_str, "type", "accept", "nwDstAddress", dot2, "nwDstLength", "31", NULL);
         if (rc) {
-            LOGWARN("Failed to create egress +2 rule for %s\n", gniif->name);
+            LOGWARN("Failed to create egress +2/+3 rule for %s\n", gniif->name);
+            ret++;
+        }
+
+        // midomd subnet accept (169.254.169.248/29)
+        cidr_split(mido->config->mido_extmdcidr, subnet_buf, slashnet_buf, NULL, NULL, NULL);
+        rulepos = vpcif->prechain->rules_count + 1;
+        snprintf(pos_str, 32, "%d", rulepos);
+        rc = mido_create_rule(vpcif->prechain, vpcif->midos[INST_PRECHAIN],
+                NULL, &rulepos,
+                "position", pos_str, "type", "accept", "nwDstAddress", subnet_buf,
+                "nwDstLength", slashnet_buf, NULL);
+        if (rc) {
+            LOGWARN("Failed to create egress +2/+3 rule for %s\n", gniif->name);
             ret++;
         }
 
@@ -2434,8 +2697,6 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
  * @return 0 on success. 1 otherwise.
  */
 int do_midonet_maint(mido_config *mido) {
-    int rc = 0;
-    struct timeval tv;
 
     if (!mido) {
         return (1);
@@ -2444,6 +2705,8 @@ int do_midonet_maint(mido_config *mido) {
     // Check for number of midoname releases in midocache_midos
     midonet_api_cache_check();
     
+    int rc = 0;
+    struct timeval tv;
     if (midocache_invalid) {
         eucanetd_timer_usec(&tv);
         rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
@@ -2458,10 +2721,38 @@ int do_midonet_maint(mido_config *mido) {
             LOGWARN("failed to populate euca VPC models.\n");
             return (1);
         }
-        LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        LOGINFO("\tvpcmido models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
         mido_info_http_count();
         midonet_api_system_changed = 0;
         midocache_invalid = 0;
+
+        // make sure that all core objects are in place
+        rc = create_mido_core(mido, mido->midocore);
+        if (rc) {
+            LOGERROR("failed to setup midonet core: check midonet health\n");
+            return (1);
+        }
+        if (midonet_api_system_changed == 1) {
+            LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        } else {
+            LOGINFO("\tvpcmido core maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+        }
+        
+        // create mido md objects
+        if (mido->config->enable_mido_md) {
+            midonet_api_system_changed = 0;
+            rc = create_mido_md(mido);
+            if (rc) {
+                LOGERROR("failed to setup midonet md: check midonet health\n");
+                return (1);
+            }
+            if (midonet_api_system_changed == 1) {
+                LOGINFO("\tvpcmido md created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+            } else {
+                LOGINFO("\tvpcmido md maint in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+            }
+        }
+        midonet_api_system_changed = 0;
     }
 
     return (0);
@@ -2509,11 +2800,28 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         }
         LOGINFO("\tVPCMIDO models populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
-        // Disable eucamd
-        if (!mido->config->enable_mido_md && mido->config->populate_mido_md) {
-            disable_mido_md(mido);
+        if (mido->config->mido_md_config_changed) {
+            mido->config->mido_md_config_changed = FALSE;
+            // Disable eucamd
+            if (!mido->config->enable_mido_md) {
+                disable_mido_md(mido);
+                // Delete all instance/interface chains and force full eucanetd iteration
+                if (mido->config->populate_mido_md) {
+                    do_delete_vpceni_chains(mido);
+                    return (1);
+                }
+            }
+            // Disable metaproxy-based MD
+            if (mido->config->enable_mido_md) {
+                do_metaproxy_disable(mido);
+                do_delete_meta_nslinks(mido);
+                if (!mido->config->populate_mido_md) {
+                    do_delete_vpceni_chains(mido);
+                    return (1);
+                }
+            }
         }
-
+        
         // make sure that all core objects are in place
         midonet_api_system_changed = 0;
         rc = create_mido_core(mido, mido->midocore);
@@ -2662,7 +2970,7 @@ int clear_router_id(mido_config *mido, int id) {
  */
 int get_next_eni_id(mido_config *mido, int *nextid) {
     int i;
-    for (i = 1; i < mido->config->mido_max_eniid; i++) {
+    for (i = 10; i < mido->config->mido_max_eniid; i++) {
         if (!mido->eni_ids[i]) {
             set_eni_id(mido, i);
             if (nextid) {
@@ -3058,7 +3366,7 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
     EUCA_FREE(tmpstr);
 
     for (i = 0; i < rtable->max_entries; i++) {
-        cidr_split(rtable->entries[i].destCidr, dstNetaddr, dstSlashnet, NULL, NULL);
+        cidr_split(rtable->entries[i].destCidr, dstNetaddr, dstSlashnet, NULL, NULL, NULL);
 
         switch (parse_mido_route_entry_target(rtable->entries[i].target)) {
             case VPC_TARGET_LOCAL:
@@ -3812,7 +4120,7 @@ int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_c
         // source SG is not set, default CIDR 0.0.0.0 or set explicitly
         subnet_buf[0] = slashnet_buf[0] = '\0';
         if (strlen(rule->cidr)) {
-            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL);
+            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL, NULL);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", subnet_buf);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", slashnet_buf);
         } else {
@@ -3893,7 +4201,7 @@ int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_c
         // source SG is not set, default CIDR 0.0.0.0 or set explicitly
         subnet_buf[0] = slashnet_buf[0] = '\0';
         if (strlen(rule->cidr)) {
-            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL);
+            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL, NULL);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", subnet_buf);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", slashnet_buf);
         } else {
@@ -4622,8 +4930,8 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
     snprintf(mido_rtip, INET_ADDR_LEN, "%s", tmpstr);
     EUCA_FREE(tmpstr);
 
-    cidr_split(vpc->gniVpc->cidr, vpc_net, vpc_mask, NULL, NULL);
-    cidr_split(vpcnatgateway->gniVpcSubnet->cidr, subnet_net, subnet_mask, subnet_gwip, NULL);
+    cidr_split(vpc->gniVpc->cidr, vpc_net, vpc_mask, NULL, NULL, NULL);
+    cidr_split(vpcnatgateway->gniVpcSubnet->cidr, subnet_net, subnet_mask, subnet_gwip, NULL, NULL);
     
     tmpstr = hex2dot(vpcnatgateway->gniNatGateway->privateIp);
     snprintf(natg_subnetip, INET_ADDR_LEN, "%s", tmpstr);
@@ -4920,26 +5228,26 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
     char sn[NETWORK_ADDR_LEN] = { 0 };
 
     // Subnet used in internal routing - 169.254.0.0/17
-    cidr_split(eucanetd_config->mido_intrtcidr, nw, sn, NULL, NULL);
+    cidr_split(eucanetd_config->mido_intrtcidr, nw, sn, NULL, NULL, NULL);
     mido->int_rtnw = dot2hex(nw);
     mido->int_rtsn = atoi(sn);
     mido->int_rtaddr = mido->int_rtnw + 1;
 
     u32 netmask = 0;
     // Subnet used in internal MD routing - 0.0.0.0/17
-    cidr_split(eucanetd_config->mido_intmdcidr, nw, sn, NULL, NULL);
+    cidr_split(eucanetd_config->mido_intmdcidr, nw, sn, NULL, NULL, NULL);
     mido->mdconfig.int_mdsn = atoi(sn);
     netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.int_mdsn);
     mido->mdconfig.int_mdnw = dot2hex(nw) & netmask;
 
     // Subnet used for MD - 232.0.0.0/8
-    cidr_split(eucanetd_config->mido_mdcidr, nw, sn, NULL, NULL);
+    cidr_split(eucanetd_config->mido_mdcidr, nw, sn, NULL, NULL, NULL);
     mido->mdconfig.mdsn = atoi(sn);
     netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.mdsn);
     mido->mdconfig.mdnw = dot2hex(nw) & netmask;
 
     // Subnet used in external MD routing - 169.254.169.248/29
-    cidr_split(eucanetd_config->mido_extmdcidr, nw, sn, NULL, NULL);
+    cidr_split(eucanetd_config->mido_extmdcidr, nw, sn, NULL, NULL, NULL);
     mido->mdconfig.ext_mdsn = atoi(sn);
     netmask = (u32) 0xFFFFFFFF << (32 - mido->mdconfig.ext_mdsn);
     mido->mdconfig.ext_mdnw = dot2hex(nw) & netmask;
@@ -5951,7 +6259,7 @@ int connect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_su
 
     midocore = mido->midocore;
     
-    cidr_split(vpc->gniVpc->cidr, vpc_nw, vpc_nm, NULL, NULL);
+    cidr_split(vpc->gniVpc->cidr, vpc_nw, vpc_nm, NULL, NULL, NULL);
     tmpstr = hex2dot(mido->int_rtnw + vpc->rtid);
     snprintf(vpc_rtip, 32, "%s", tmpstr);
     EUCA_FREE(tmpstr);
@@ -6472,7 +6780,7 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
         rc += mido_delete_chain(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]);
     }
 
-    rc += delete_mido_meta_vpc_namespace(mido, vpc);
+    rc += delete_mido_meta_vpc_namespace(mido, vpc->name);
 
     clear_router_id(mido, vpc->rtid);
     free_mido_vpc(vpc);
@@ -6481,7 +6789,7 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
 }
 
 /**
- * Creates mido objects to implement a VPC.
+ * Creates mido objects to implement a VPC subnet.
  * @param mido [in] data structure that holds MidoNet configuration
  * @param midocore [in] data structure that holds midocore configuration
  * @param vpc [in] data structure that holds information about the VPC of interest.
@@ -6848,7 +7156,9 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
     rc += mido_delete_router(midocore->midos[CORE_EUCART]);
     midocore->midos[CORE_EUCART] = NULL;
 
-    rc += delete_mido_meta_core(mido);
+    if (!mido->config->enable_mido_md) {
+        rc += delete_mido_meta_core(mido);
+    }
 
     return (0);
 }
@@ -7048,7 +7358,7 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
     // conditional here depending on whether we have multi GW or single GW defined in config
     if (mido->ext_rthostarrmax) {
         for (i = 0; i < mido->ext_rthostarrmax; i++) {
-            cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL, NULL);
+            cidr_split(mido->ext_pubnw, pubnw, pubnm, NULL, NULL, NULL);
             rc = mido_create_router_port(midocore->eucart, midocore->midos[CORE_EUCART], mido->ext_rthostaddrarr[i],
                     pubnw, pubnm, NULL, &(midocore->gwports[i]));
             if (rc) {
@@ -7146,10 +7456,12 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         }
     }
 
-    rc = create_mido_meta_core(mido);
-    if (rc) {
-        LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
-        ret++;
+    if (!mido->config->enable_mido_md) {
+        rc = create_mido_meta_core(mido);
+        if (rc) {
+            LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
+            ret++;
+        }
     }
     return (ret);
 }
@@ -7507,6 +7819,9 @@ int create_mido_md(mido_config *mido) {
         if (rc) {
             LOGERROR("cannot link eucamdrt port to host interface: check midonet health\n");
             ret++;
+        } else {
+            // start md nginx
+            do_md_nginx_maintain(mido, VPCMIDO_NGINX_START);
         }
     }
 
@@ -7662,6 +7977,7 @@ int do_midonet_delete_vpc_object(mido_config *mido, char *id, boolean checkonly)
  * @return 0 on success. Positive integer on any error.
  */
 int do_midonet_delete_vpc(mido_config *mido, char *id, boolean checkonly) {
+    int rc = 0;
     if (!mido || !id) {
         return (1);
     }
@@ -7670,13 +7986,25 @@ int do_midonet_delete_vpc(mido_config *mido, char *id, boolean checkonly) {
     mido_vpc *vpc = NULL;
     if (!find_mido_vpc(mido, id, &vpc) && vpc) {
         if (!checkonly) {
-            int rc = do_metaproxy_teardown(mido);
-            if (rc) {
-                LOGERROR("cannot teardown metadata proxies, aborting vpc flush\n");
-                return (1);
+            if (!mido->config->enable_mido_md) {
+                rc = do_metaproxy_teardown(mido);
+                if (rc) {
+                    LOGERROR("cannot teardown metadata proxies, aborting vpc flush\n");
+                    return (1);
+                }
             }
 
-            return (delete_mido_vpc(mido, vpc));
+            int ret = delete_mido_vpc(mido, vpc);
+
+            // Re-enable nginx
+            rc = 0;
+            if (!mido->config->enable_mido_md) {
+                rc = do_metaproxy_setup(mido);
+            }
+            if (rc) {
+                LOGERROR("failed to setup metadata proxies\n");
+            }
+            return (ret);
         }
         for (int i = 0; i < VPC_END; i++) {
             if (!vpc->midos[i]) {
@@ -8209,9 +8537,10 @@ int do_midonet_tag_midonames(mido_config *mido) {
  * @param outslashnet [out] extracted network mask (optional)
  * @param outgw [out] extracted gateway (plusone) address (optional)
  * @param outplustwo [out] extracted plustwo address (optional)
+ * @param outplusthree [out] extracted plusthree address (optional)
  * @return 0 on success. 1 on failure.
  */
-int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo) {
+int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo, char *outplusthree) {
     char *tok = NULL;
     char *cpy = NULL;
     u32 nw = 0, gw = 0;
@@ -8236,19 +8565,26 @@ int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *o
     EUCA_FREE(cpy);
 
     if (nw) {
-        gw = nw + 1;
-        tok = hex2dot(gw);
         if (outgw) {
+            gw = nw + 1;
+            tok = hex2dot(gw);
             snprintf(outgw, strlen(tok) + 1, "%s", tok);
+            EUCA_FREE(tok);
         }
-        EUCA_FREE(tok);
 
         if (outplustwo) {
             gw = nw + 2;
             tok = hex2dot(gw);
             snprintf(outplustwo, strlen(tok) + 1, "%s", tok);
+            EUCA_FREE(tok);
         }
-        EUCA_FREE(tok);
+
+        if (outplusthree) {
+            gw = nw + 3;
+            tok = hex2dot(gw);
+            snprintf(outplusthree, strlen(tok) + 1, "%s", tok);
+            EUCA_FREE(tok);
+        }
     }
 
     return (0);
@@ -8279,7 +8615,7 @@ int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck) {
             vpcsubnet = &(vpc->subnets[j]);
             if (vpc->gnipresent && vpcsubnet->gnipresent) {
                 tmpip[0] = '\0';
-                rc = cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, tmpip);
+                rc = cidr_split(vpcsubnet->gniSubnet->cidr, NULL, NULL, NULL, tmpip, NULL);
                 if (!rc) {
                     LOGDEBUG("cidr_split() failed.\n");
                 }

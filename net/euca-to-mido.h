@@ -56,6 +56,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+enum vpcmido_nginx_t {
+    VPCMIDO_NGINX_START,
+    VPCMIDO_NGINX_STOP
+};
+
 enum vpc_sg_midos_t {
     VPCSG_INGRESS,
     VPCSG_EGRESS,
@@ -375,7 +380,7 @@ int get_next_eni_id(mido_config *mido, int *nextid);
 int set_eni_id(mido_config *mido, int id);
 int clear_eni_id(mido_config *mido, int id);
 
-int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo);
+int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo, char *outplusthree);
 int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
 
 enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target);
@@ -509,6 +514,9 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly);
 void do_midonet_test(mido_config *mido);
 int do_midonet_tag_midonames(mido_config *mido);
 
+int do_delete_meta_nslinks(mido_config *mido);
+int do_delete_vpceni_chains(mido_config *mido);
+int do_metaproxy_disable(mido_config *mido);
 int do_metaproxy_setup(mido_config *mido);
 int do_metaproxy_teardown(mido_config *mido);
 int do_metaproxy_maintain(mido_config *mido, int mode);
@@ -516,9 +524,10 @@ int do_metaproxy_maintain(mido_config *mido, int mode);
 int create_mido_meta_core(mido_config *mido);
 int create_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc);
 int create_mido_meta_subnet_veth(mido_config *mido, mido_vpc *vpc, char *name, char *subnet, char *slashnet, char **tapiface);
+int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t);
 
 int delete_mido_meta_core(mido_config *mido);
-int delete_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc);
+int delete_mido_meta_vpc_namespace(mido_config *mido, char *vpcname);
 int delete_mido_meta_subnet_veth(mido_config *mido, char *name);
 
 int read_mido_meta_vpc_namespace(mido_config *mido, mido_vpc *vpc);

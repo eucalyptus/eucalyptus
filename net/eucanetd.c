@@ -157,9 +157,9 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_MD_VETH_USE_NETNS", "N"}
     ,
-    {"MIDO_MD_254_EGRESS", "tcp:80 tcp:8000"}
+    {"MIDO_MD_254_EGRESS", "tcp:80"}
     ,
-    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53"}
+    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53 udp:5353 tcp:5353"}
     ,
     {"MIDO_MAX_RTID", "10240"}
     ,
@@ -177,7 +177,7 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
-    {"MIDO_ENABLE_MIDOMD", "N"}
+    {"MIDO_ENABLE_MIDOMD", "Y"}
     ,
     {"NC_PROXY", "N"}
     ,
@@ -542,6 +542,21 @@ int main(int argc, char **argv) {
             update_globalnet = TRUE;
             firstrun = 0;
         }
+
+        if (gUsr1Caught) {
+            if (pDriverHandler->handle_signal) {
+                pDriverHandler->handle_signal(config, pGni, SIGUSR1);
+            }
+            gUsr1Caught = FALSE;
+        }
+        if (gUsr2Caught) {
+            if (pDriverHandler->handle_signal) {
+                pDriverHandler->handle_signal(config, pGni, SIGUSR2);
+            }
+            gUsr2Caught = FALSE;
+            // emulate HUP - force update
+            gHupCaught = TRUE;
+        }
         // Force an update if SIGHUP is caught
         if (gHupCaught) {
             update_globalnet = TRUE;
@@ -691,18 +706,6 @@ int main(int argc, char **argv) {
             }
         }
         epoch_checks++;
-        if (gUsr1Caught) {
-            if (pDriverHandler->handle_signal) {
-                pDriverHandler->handle_signal(config, pGni, SIGUSR1);
-            }
-            gUsr1Caught = FALSE;
-        }
-        if (gUsr2Caught) {
-            if (pDriverHandler->handle_signal) {
-                pDriverHandler->handle_signal(config, pGni, SIGUSR2);
-            }
-            gUsr2Caught = FALSE;
-        }
 
         if (epoch_timer >= 300) {
             LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d\n\tsuccess_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
@@ -853,13 +856,21 @@ static int eucanetd_fetch_latest_local_config(void) {
 
             if (IS_NETMODE_VPCMIDO(config)) {
                 char *cval = configFileValue("MIDO_ENABLE_MIDOMD");
-                LOGINFO("cofig MIDO_ENABLE_MIDOMD = %s\n", cval);
+                LOGINFO("config MIDO_ENABLE_MIDOMD = %s\n", cval);
                 if (!strcmp(cval, "Y")) {
+                    if (!config->enable_mido_md) {
+                        config->mido_md_config_changed = TRUE;
+                    }
                     config->enable_mido_md = TRUE;
                 } else {
+                    if (config->enable_mido_md) {
+                        config->mido_md_config_changed = TRUE;
+                    }
                     config->enable_mido_md = FALSE;
                 }
                 EUCA_FREE(cval);
+                // emulate HUP signal
+                gHupCaught = TRUE;
             }
             ret++;
 
@@ -954,6 +965,7 @@ static int eucanetd_initialize(void) {
 
     config->euca_version = euca_version_dot2hex(EUCA_VERSION);
     config->euca_version_str = hex2dot(config->euca_version);
+    config->mido_md_config_changed = TRUE;
 
     config->polling_frequency = 5;
     config->init = 1;
@@ -1219,6 +1231,11 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
+    if (strlen(config->eucahome)) {
+        if (config->eucahome[strlen(config->eucahome) - 1] == '/') {
+            config->eucahome[strlen(config->eucahome) - 1] = '\0';
+        }
+    }
 
     EUCA_FREE(config->eucauser);
     config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
