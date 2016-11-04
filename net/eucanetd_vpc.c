@@ -293,6 +293,7 @@ static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pG
  */
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int ret = 0;
+    int rc = 0;
 
     // Skip upgrade in flush mode
     if (pMidoConfig && pMidoConfig->config && (pMidoConfig->config->flushmode != FLUSH_NONE)) {
@@ -300,7 +301,7 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         return (0);
     }
 
-    LOGINFO("Upgrade '%s' network driver.\n", DRIVER_NAME());
+    LOGDEBUG("Upgrade '%s' network driver.\n", DRIVER_NAME());
     if (!pConfig || !pGni) {
         LOGERROR("Invalid argument: cannot process upgrade with NULL config.\n");
         return (1);
@@ -315,8 +316,9 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     int max_ipgs = 0;
     midoname **ips = NULL;
     int max_ips = 0;
-    int rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &ipgs, &max_ipgs);
+    rc = mido_get_ipaddrgroups(VPCMIDO_TENANT, &ipgs, &max_ipgs);
     boolean found = FALSE;
+    boolean do_upgrade = FALSE;
     if (!rc && max_ipgs) {
         for (int i = 0; i < max_ipgs && !found; i++) {
             if (!strcmp(ipgs[i]->name, "euca_version")) {
@@ -327,8 +329,14 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
                     found = TRUE;
                     LOGTRACE("\tFound %s artifacts\n", mido_euca_version_str);
                     if (mido_euca_version < pConfig->euca_version) {
-                        LOGINFO("Upgrading Eucalyptus %s to Eucalyptus %s\n", mido_euca_version_str, pConfig->euca_version_str);
+                        LOGINFO("Upgrading Eucalyptus %s to %s\n", mido_euca_version_str, pConfig->euca_version_str);
                         mido_delete_resource(ipgs[i], ips[0]);
+                        do_upgrade = TRUE;
+                    }
+                    if (mido_euca_version > pConfig->euca_version) {
+                        LOGFATAL("Downgrading Eucalyptus %s to %s not supported\n", mido_euca_version_str, pConfig->euca_version_str);
+                        LOGFATAL("eucanetd going down.\n");
+                        exit(1);
                     }
                 }
                 EUCA_FREE(ips);
@@ -336,6 +344,35 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         }
     }
     EUCA_FREE(ipgs);
+
+    if (do_upgrade) {
+        // Retrieve all objects
+        rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
+        if (rc) {
+            LOGERROR("failed to retrieve objects from MidoNet.\n");
+            return (1);
+        }
+
+        mido_config *mido = pMidoConfig;
+        rc = do_midonet_populate(mido);
+        if (rc) {
+            LOGWARN("failed to populate VPC models prior to upgrade.\n");
+        }
+
+        LOGINFO("\tremoving pre-4.4 meta taps\n");
+        for (int i = 0; i < mido->max_vpcs; i++) {
+            mido_vpc *vpc = &(mido->vpcs[i]);
+            for (int j = 0; j < vpc->max_subnets; j++) {
+                mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
+                mido_delete_bridge_port(vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_BR_METAPORT]);
+                vpcsubnet->midos[SUBN_BR_METAPORT] = NULL;
+                delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
+            }
+        }
+        
+        LOGINFO("\tremoving pre-4.4 eni chains\n");
+        do_delete_vpceni_chains(mido);
+    }
 
     EUCA_FREE(mido_euca_version_str);
     return (ret);
