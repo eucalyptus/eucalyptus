@@ -1008,7 +1008,7 @@ public class SANManagerTest {
     context.checking(new Expectations() {
       {
         // oneOf(sanProvider).snapshotExists(existing.getSanVolumeId()); will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, "bar", parentIqn);
+        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "foo" + rezSuffix, "bar");
         will(returnValue("foo-iqn"));
       }
     });
@@ -1051,7 +1051,7 @@ public class SANManagerTest {
       {
         oneOf(sanProvider).snapshotExists(existingClone.getSanVolumeId(), existingClone.getIqn());
         will(returnValue(Boolean.FALSE));
-        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "testvol" + rezSuffix, "bar", existing.getIqn());
+        oneOf(sanProvider).createSnapshot(existing.getSanVolumeId(), rezPrefix + "testvol" + rezSuffix, "bar");
         will(returnValue("foo-iqn"));
       }
     });
@@ -1206,7 +1206,7 @@ public class SANManagerTest {
     });
 
     SANManager test = new SANManager(sanProvider);
-    test.prepareSnapshot(volId, snapSz.intValue(), snapSz.intValue() * 1024l);
+    test.prepSnapshotForDownload(volId, snapSz.intValue(), snapSz.intValue() * 1024l);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());

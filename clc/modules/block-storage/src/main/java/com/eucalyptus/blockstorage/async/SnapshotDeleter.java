@@ -64,23 +64,29 @@ package com.eucalyptus.blockstorage.async;
 
 import java.util.Date;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
+
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+
 /**
  * Checker task for removing snapshots marked in deleting status
  * 
@@ -107,6 +113,13 @@ public class SnapshotDeleter extends CheckerTask {
 
   @Override
   public void run() {
+    // Clean up on EBS backend
+    deleteFromEBS();
+    // Clean up on OSG
+    deleteFromOSG();
+  }
+
+  private void deleteFromEBS() {
     try {
       SnapshotInfo searchSnap = new SnapshotInfo();
       searchSnap.setStatus(StorageProperties.Status.deleting.toString());
@@ -119,53 +132,171 @@ public class SnapshotDeleter extends CheckerTask {
       }
       if (snapshotsToBeDeleted != null && !snapshotsToBeDeleted.isEmpty()) {
         for (SnapshotInfo snap : snapshotsToBeDeleted) {
-          String snapshotId = snap.getSnapshotId();
-          LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
           try {
-            blockManager.deleteSnapshot(snapshotId);
-          } catch (EucalyptusCloudException e1) {
-            LOG.debug("Failed to delete " + snapshotId, e1);
-            LOG.warn("Unable to delete " + snapshotId + ". Will retry later");
-            continue;
-          }
-          SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+            String snapshotId = snap.getSnapshotId();
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
 
-          SnapshotInfo foundSnapshotInfo;
-          try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
-            foundSnapshotInfo = Entities.uniqueResult(snapInfo);
-            foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
-            foundSnapshotInfo.setDeletionTime(new Date());
-            tran.commit();
-          } catch (TransactionException | NoSuchElementException e) {
-            LOG.error(e);
-            continue;
-          }
-
-          if (StringUtils.isNotBlank(foundSnapshotInfo.getSnapshotLocation())) {
-            try {
-              String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
-              if (snapshotTransfer == null) {
-                snapshotTransfer = new S3SnapshotTransfer();
+            if (snap.getIsOrigin() != null && snap.getIsOrigin()) { // check if snapshot originates in this az
+              // acquire semaphore before deleting to avoid concurrent interaction with delta creation process
+              LOG.trace("Snapshot " + snapshotId + " originates from this az, acquire semaphore before deletion");
+              EucaSemaphore snapSemaphore = EucaSemaphoreDirectory.getSolitarySemaphore(snapshotId);
+              try {
+                try {
+                  snapSemaphore.acquire();
+                } catch (InterruptedException ex) {
+                  LOG.warn("Cannot process deletion of " + snapshotId + " due to an error acquiring semaphore. Will retry again later");
+                  continue;
+                }
+                deleteSnapFromEBS(snap);
+              } finally {
+                snapSemaphore.release();
               }
-              snapshotTransfer.setSnapshotId(snapshotId);
-              snapshotTransfer.setBucketName(names[0]);
-              snapshotTransfer.setKeyName(names[1]);
-              snapshotTransfer.delete();
-            } catch (Exception e) {
-              LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
-            } finally {
-              ThruputMetrics.endOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, System.currentTimeMillis());
+            } else { // either pre 4.4 snapshot or snapshot does not originate in this az
+              // no need to acquire semaphore, delete straight away
+              deleteSnapFromEBS(snap);
             }
-          } else {
-            LOG.debug("Snapshot location missing for " + snapshotId + ". Skipping deletion from ObjectStorageGateway");
+          } catch (Exception e) {
+            LOG.warn("Failed to process deletion for " + snap.getSnapshotId() + " on EBS backend", e);
+            continue;
+          } finally {
+            ThruputMetrics.endOperation(MonitoredAction.DELETE_SNAPSHOT, snap.getSnapshotId(), System.currentTimeMillis());
           }
         }
       } else {
         LOG.trace("No snapshots marked for deletion");
       }
     } catch (Exception e) { // could catch InterruptedException
-      LOG.warn("Unable to remove snapshots marked for deletion", e);
+      LOG.warn("Unable to remove snapshots marked for deletion from EBS backend", e);
       return;
+    }
+  }
+
+  private void deleteFromOSG() {
+    try {
+      SnapshotInfo searchSnap = new SnapshotInfo();
+      searchSnap.setStatus(StorageProperties.Status.deletedfromebs.toString());
+      List<SnapshotInfo> snapshotsToBeDeleted = null;
+      try {
+        snapshotsToBeDeleted = Transactions.findAll(searchSnap);
+      } catch (Exception e) {
+        LOG.warn("Failed to lookup snapshots marked for deletion from OSG", e);
+        return;
+      }
+      if (snapshotsToBeDeleted != null && !snapshotsToBeDeleted.isEmpty()) {
+        for (SnapshotInfo snap : snapshotsToBeDeleted) {
+          try {
+            String snapshotId = snap.getSnapshotId();
+
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequistes for cleanup...");
+            if (snap.getIsOrigin() == null) { // old snapshot prior to 4.4
+              LOG.trace("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
+              deleteSnapFromOSG(snap); // delete snapshot
+            } else if (snap.getIsOrigin()) { // snapshot originated in the same az
+              LOG.trace("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
+              try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
+
+                SnapshotInfo nextSnapSearch = new SnapshotInfo();
+                nextSnapSearch.setScName(snap.getScName());
+                nextSnapSearch.setVolumeId(snap.getVolumeId());
+                nextSnapSearch.setIsOrigin(Boolean.TRUE);
+                nextSnapSearch.setPreviousSnapshotId(snap.getSnapshotId());
+                Criteria search = Entities.createCriteria(SnapshotInfo.class);
+                search.add(Example.create(nextSnapSearch).enableLike(MatchMode.EXACT));
+                search.add(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION);
+                search.setReadOnly(true);
+
+                List<SnapshotInfo> nextSnaps = (List<SnapshotInfo>) search.list();
+                tr.commit();
+
+                if (nextSnaps != null && !nextSnaps.isEmpty()) {
+                  // Found deltas that might depend on this snapshot for reconstruction, don't delete
+                  LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
+                } else {
+                  LOG.trace("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
+                  deleteSnapFromOSG(snap); // delete snapshot
+                }
+              } catch (Exception e) {
+                LOG.warn("Failed to lookup snapshots that may depend on " + snapshotId + " for reconstruction", e);
+              }
+            } else { // snapshot originated in a different az
+              // skip evaluation and just mark the snapshot deleted, let the source az deal with the osg remnants TODO fix this later
+              LOG.trace("Snapshot " + snapshotId + " orignated from a different az, let the source az deal with deletion from OSG");
+              markSnapDeleted(snapshotId);
+            }
+          } catch (Exception e) {
+            LOG.warn("Failed to process deletion for " + snap.getSnapshotId() + " on ObjectStorageGateway", e);
+            continue;
+          }
+        }
+      } else {
+        LOG.trace("No snapshots marked for deletion from OSG");
+      }
+    } catch (Exception e) { // could catch InterruptedException
+      LOG.warn("Unable to remove snapshots marked for deletion from OSG", e);
+      return;
+    }
+  }
+
+  private void deleteSnapFromEBS(SnapshotInfo snap) {
+    String snapshotId = snap.getSnapshotId();
+    LOG.debug("Deleting snapshot " + snapshotId + " from EBS backend...");
+
+    try {
+      blockManager.deleteSnapshot(snapshotId);
+    } catch (EucalyptusCloudException e) {
+      LOG.warn("Unable to delete " + snapshotId + " from EBS backend. Will retry later", e);
+      return;
+    }
+
+    if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
+      // snapshot removal from s3 needs evaluation
+      markSnapDeletedFromEBS(snapshotId);
+    } else {
+      // no evidence of snapshot upload to OSG, mark the snapshot as deleted
+      markSnapDeleted(snapshotId);
+    }
+  }
+
+  private void deleteSnapFromOSG(SnapshotInfo snap) {
+    if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
+      LOG.debug("Deleting snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway");
+      try {
+        String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snap.getSnapshotLocation());
+        if (snapshotTransfer == null) {
+          snapshotTransfer = new S3SnapshotTransfer();
+        }
+        snapshotTransfer.setSnapshotId(snap.getSnapshotId());
+        snapshotTransfer.setBucketName(names[0]);
+        snapshotTransfer.setKeyName(names[1]);
+        snapshotTransfer.delete();
+
+        markSnapDeleted(snap.getSnapshotId());
+      } catch (Exception e) {
+        LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
+      }
+    } else {
+      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
+    }
+  }
+
+  private void markSnapDeleted(String snapshotId) {
+    try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
+      SnapshotInfo foundSnapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+      foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
+      foundSnapshotInfo.setDeletionTime(new Date());
+      tran.commit();
+    } catch (Exception e) {
+      LOG.warn("Failed to update status for " + snapshotId + " to deleted", e);
+    }
+  }
+
+  private void markSnapDeletedFromEBS(String snapshotId) {
+    try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
+      SnapshotInfo foundSnapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+      foundSnapshotInfo.setStatus(StorageProperties.Status.deletedfromebs.toString());
+      tran.commit();
+    } catch (Exception e) {
+      LOG.warn("Failed to update status for " + snapshotId + " to deletedfromebs", e);
     }
   }
 }

@@ -88,6 +88,8 @@ import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
@@ -103,6 +105,7 @@ public class OverlayManager extends DASManager {
 
   private static final Joiner JOINER = Joiner.on(" ").skipNulls();
 
+  @Override
   public void checkPreconditions() throws EucalyptusCloudException {
     // check if binaries exist, commands can be executed, etc.
     if (!new File(StorageProperties.EUCA_ROOT_WRAPPER).exists()) {
@@ -208,6 +211,7 @@ public class OverlayManager extends DASManager {
     return -1;
   }
 
+  @Override
   public void initialize() throws EucalyptusCloudException {
     File storageRootDir = new File(getStorageRootDirectory());
     if (!storageRootDir.exists()) {
@@ -223,6 +227,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void configure() throws EucalyptusCloudException {
     exportManager.configure();
     // First call to StorageInfo.getStorageInfo will add entity if it does not exist
@@ -247,6 +252,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void cleanVolume(String volumeId) {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
@@ -281,6 +287,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void cleanSnapshot(String snapshotId) {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -327,6 +334,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void dupFile(String oldFileName, String newFileName) {
     FileOutputStream fileOutputStream = null;
     FileChannel out = null;
@@ -439,6 +447,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
     LVMVolumeInfo lvmVolumeInfo = new ISCSIVolumeInfo();
 
@@ -479,6 +488,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -495,7 +505,7 @@ public class OverlayManager extends DASManager {
             String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
             // create file and attach to loopback device
             File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
-            assert(snapshotFile.exists());
+            assert (snapshotFile.exists());
             long absoluteSize;
             if (size <= 0 || size == foundSnapshotInfo.getSize()) {
               size = (int) (snapshotFile.length() / StorageProperties.GB);
@@ -542,6 +552,7 @@ public class OverlayManager extends DASManager {
     return size;
   }
 
+  @Override
   public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundVolumeInfo = volumeManager.getVolumeInfo(parentVolumeId);
@@ -557,7 +568,7 @@ public class OverlayManager extends DASManager {
           String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
           // create file and attach to loopback device
           File parentVolumeFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + parentVolumeId);
-          assert(parentVolumeFile.exists());
+          assert (parentVolumeFile.exists());
           long absoluteSize = parentVolumeFile.length();
 
           String loDevName = createLoopback(rawFileName, absoluteSize);
@@ -600,6 +611,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
     String snapshotRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
     File snapshotFile = new File(snapshotRawFileName);
@@ -618,6 +630,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void deleteVolume(String volumeId) throws EucalyptusCloudException {
     LVMVolumeInfo foundLVMVolumeInfo = null;
     {
@@ -706,15 +719,15 @@ public class OverlayManager extends DASManager {
     }
   }
 
-  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot)
-      throws EucalyptusCloudException {
+  @Override
+  public void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     if (snapshotPointId != null) {
       throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
     }
 
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-      StorageResource snapInfo = null;
+      // StorageResource snapInfo = null;
       if (foundLVMVolumeInfo != null) {
         LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
         snapshotInfo.setVolumeId(snapshotId);
@@ -782,7 +795,6 @@ public class OverlayManager extends DASManager {
               LVMWrapper.disableLogicalVolume(absoluteVolLVName);
               removeLoopback(volLoDevName);
             }
-            snapInfo = new FileResource(snapshotId, snapRawFileName);
             try (VolumeMetadataManager nestedVolumeManager = new VolumeMetadataManager()) {
               LVMVolumeInfo foundSnapshotInfo = nestedVolumeManager.getVolumeInfo(snapshotId);
               foundSnapshotInfo.setLoFileName(snapRawFileName);
@@ -796,10 +808,10 @@ public class OverlayManager extends DASManager {
           throw new EucalyptusCloudException(error);
         }
       }
-      return snapInfo;
     }
   }
 
+  @Override
   public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -816,6 +828,7 @@ public class OverlayManager extends DASManager {
     }
   }
 
+  @Override
   public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -836,7 +849,7 @@ public class OverlayManager extends DASManager {
   }
 
   public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
-    assert(snapshotSet.size() == snapshotFileNames.size());
+    assert (snapshotSet.size() == snapshotFileNames.size());
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       int i = 0;
       for (String snapshotFileName : snapshotFileNames) {
@@ -961,7 +974,8 @@ public class OverlayManager extends DASManager {
   }
 
   @Override
-  public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+      throws EucalyptusCloudException {
     String deviceName = null;
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -975,7 +989,18 @@ public class OverlayManager extends DASManager {
         volumeManager.add(snapshotInfo);
       }
       volumeManager.finish();
-      return new FileResource(snapshotId, deviceName);
+      return new StorageResourceWithCallback(new FileResource(snapshotId, deviceName), new Function<StorageResource, String>() {
+
+        @Override
+        public String apply(StorageResource arg0) {
+          try {
+            finishVolume(snapshotId);
+          } catch (Exception e) {
+            Exceptions.toException("Failed to execute callback for prepSnapshotForDownload() " + snapshotId, e);
+          }
+          return null;
+        }
+      });
     }
   }
 
