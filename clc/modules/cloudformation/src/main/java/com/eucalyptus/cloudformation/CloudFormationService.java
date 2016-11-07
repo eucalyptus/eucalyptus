@@ -88,10 +88,10 @@ import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
+import com.eucalyptus.util.Json;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -964,7 +964,7 @@ public class CloudFormationService {
     }
     return reply;
   }
-  
+
   public ListStacksResponseType listStacks(ListStacksType request)
       throws CloudFormationException {
     ListStacksResponseType reply = request.getReply();
@@ -1439,19 +1439,18 @@ public class CloudFormationService {
   private boolean stackPolicyIsDifferent(String previousStackPolicy, String nextStackPolicy) throws ValidationErrorException {
     if (nextStackPolicy == null) return false;
     if (previousStackPolicy == null && nextStackPolicy != null) return true;
-    ObjectMapper objectMapper = new ObjectMapper();
-    JsonNode previousStackPolicyNode = null;
+    JsonNode previousStackPolicyNode;
     try {
-      previousStackPolicyNode = objectMapper.readTree(previousStackPolicy);
+      previousStackPolicyNode = Json.parse( previousStackPolicy );
     } catch (IOException ex) {
       throw new ValidationErrorException("Current stack policy is invalid");
     }
     if (!previousStackPolicyNode.isObject()) {
       throw new ValidationErrorException("Current stack policy is invalid");
     }
-    JsonNode nextStackPolicyNode = null;
+    JsonNode nextStackPolicyNode;
     try {
-      nextStackPolicyNode = objectMapper.readTree(nextStackPolicy);
+      nextStackPolicyNode = Json.parse( nextStackPolicy );
     } catch (IOException ex) {
       throw new ValidationErrorException("stack policy is invalid");
     }

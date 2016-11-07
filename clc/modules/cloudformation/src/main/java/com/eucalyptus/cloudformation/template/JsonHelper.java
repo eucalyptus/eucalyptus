@@ -24,10 +24,15 @@ import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
 
 public class JsonHelper {
+
+  private static final JsonNodeFactory nodeFactory = JsonNodeFactory.instance;
 
   public static JsonNode checkObject(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
@@ -160,4 +165,11 @@ public class JsonHelper {
     return (jsonNode == null || jsonNode.isValueNode() && jsonNode.asText() == null) ? null : jsonNode.toString();
   }
 
+  public static ArrayNode createArrayNode( ) {
+    return nodeFactory.arrayNode( );
+  }
+
+  public static ObjectNode createObjectNode( ) {
+    return nodeFactory.objectNode( );
+  }
 }

@@ -91,8 +91,7 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
           }
           s3c.createBucket( bucketName );
           String keyName = action.getStackEntity().getStackId() + "/" + action.info.getLogicalResourceId() + "/WaitHandle";
-          ObjectMapper mapper = new ObjectMapper();
-          objectNode = mapper.createObjectNode();
+          objectNode = JsonHelper.createObjectNode();
           objectNode.put( "version", "1.0" );
           objectNode.put( "bucket", bucketName );
           objectNode.put( "key", keyName );

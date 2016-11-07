@@ -24,7 +24,6 @@ import com.eucalyptus.cloudformation.resources.standard.actions.AWSAutoScalingAu
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import org.hibernate.annotations.Cache;
@@ -261,8 +260,7 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
     }
 
     public static String obsoleteInstancesToJson(Collection<ObsoleteInstance> obsoleteInstances) {
-      ObjectMapper objectMapper = new ObjectMapper();
-      ObjectNode objectNode = objectMapper.createObjectNode();
+      ObjectNode objectNode = JsonHelper.createObjectNode();
       for (ObsoleteInstance obsoleteInstance: obsoleteInstances) {
         objectNode.put(obsoleteInstance.getInstanceId(), obsoleteInstance.getLastKnownState().toString());
       }

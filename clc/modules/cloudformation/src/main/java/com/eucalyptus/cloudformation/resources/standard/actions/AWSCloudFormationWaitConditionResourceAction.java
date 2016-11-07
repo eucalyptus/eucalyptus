@@ -47,8 +47,8 @@ import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+import com.eucalyptus.util.Json;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Maps;
@@ -195,7 +195,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
             }
             throw new RetryAfterConditionCheckFailedException("Not enough success signals yet");
           }
-          ObjectNode dataNode = new ObjectMapper().createObjectNode();
+          ObjectNode dataNode = JsonHelper.createObjectNode();
           action.info.setData(JsonHelper.getStringFromJsonNode(new TextNode(dataNode.toString())));
           return action;
         } else {
@@ -231,7 +231,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
                 S3Object s3Object = s3c.getObject(getObjectRequest);
                 JsonNode jsonNode = null;
                 try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
-                  jsonNode = new ObjectMapper().readTree(s3ObjectInputStream);
+                  jsonNode = Json.parse(s3ObjectInputStream);
                 }
                 if (!jsonNode.isObject()) {
                   LOG.trace("Read object, json but not object..skipping file");
@@ -276,7 +276,7 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
           LOG.trace("Have " + dataMap.size() + " success signals, need " + numSignals);
           if (dataMap.size() >= numSignals) {
             LOG.trace("Success");
-            ObjectNode dataNode = new ObjectMapper().createObjectNode();
+            ObjectNode dataNode = JsonHelper.createObjectNode();
             for (String uniqueId : dataMap.keySet()) {
               dataNode.put(uniqueId, dataMap.get(uniqueId));
             }
