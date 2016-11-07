@@ -4445,6 +4445,14 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
 void midonet_api_init(void) {
     mido_libcurl_init(&libcurl_handles);
     mido_initialize_apiuribase();
+
+    // Check MidoNet API version - only API version v1.9 is supported
+    if (strcmp(midonet_api_version, "v1.9")) {
+        LOGWARN("\nUnsupported MidoNet API version (%s) detected.\n"
+                "Eucalyptus VPCMIDO mode has been validated with MEM v1.9.\n"
+                "Please update MidoNet to a (MEM v1.9).\n"
+                midonet_api_version);
+    }
 }
 
 /**
