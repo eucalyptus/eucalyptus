@@ -81,6 +81,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.groups.ServiceGroups;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.google.common.base.Functions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
@@ -115,11 +116,11 @@ import com.google.common.io.BaseEncoding;
 @ComponentNamed
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
-  
+
   @ServiceOperation
   public enum ModifyService implements Function<ModifyServiceType, ModifyServiceResponseType> {
     INSTANCE;
-    
+
     @Override
     public ModifyServiceResponseType apply( final ModifyServiceType input ) {
       try {
@@ -128,13 +129,13 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
+
   @ServiceOperation
   public enum StartService implements Function<StartServiceType, StartServiceResponseType> {
     INSTANCE;
-    
+
     @Override
     public StartServiceResponseType apply( final StartServiceType input ) {
       try {
@@ -143,13 +144,13 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
+
   @ServiceOperation
   public enum StopService implements Function<StopServiceType, StopServiceResponseType> {
     INSTANCE;
-    
+
     @Override
     public StopServiceResponseType apply( final StopServiceType input ) {
       try {
@@ -158,13 +159,13 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
+
   @ServiceOperation
   public enum EnableService implements Function<EnableServiceType, EnableServiceResponseType> {
     INSTANCE;
-    
+
     @Override
     public EnableServiceResponseType apply( final EnableServiceType input ) {
       try {
@@ -173,13 +174,13 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
+
   @ServiceOperation
   public enum DisableService implements Function<DisableServiceType, DisableServiceResponseType> {
     INSTANCE;
-    
+
     @Override
     public DisableServiceResponseType apply( final DisableServiceType input ) {
       try {
@@ -188,12 +189,12 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
+
   enum NamedTransition implements Predicate<ModifyServiceType> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( ModifyServiceType request ) {
       try {
@@ -219,15 +220,15 @@ public class EmpyreanService {
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       }
-      
+
       return true;
     }
   }
-  
+
   private static ServiceConfiguration findService( final String name ) {
     checkParam( name, notNullValue() );
     Predicate<ServiceConfiguration> nameOrFullName = new Predicate<ServiceConfiguration>( ) {
-      
+
       @Override
       public boolean apply( ServiceConfiguration input ) {
         return name.equals( input.getName( ) ) || name.equals( input.getFullName( ).toString( ) );
@@ -247,7 +248,7 @@ public class EmpyreanService {
     }
     throw new NoSuchElementException( "Failed to lookup service named: " + name );
   }
-  
+
   public static ModifyServiceResponseType modifyService( final ModifyServiceType request ) throws Exception {
     final ModifyServiceResponseType reply = request.getReply( );
     try {
@@ -274,7 +275,7 @@ public class EmpyreanService {
     }
     return reply;
   }
-  
+
   public static StartServiceResponseType startService( final StartServiceType request ) throws Exception {
     final StartServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -291,13 +292,18 @@ public class EmpyreanService {
           }
         }
       } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
+        final OrderlyTransitionException otex = Exceptions.findCause( ex, OrderlyTransitionException.class );
+        if ( otex != null ) {
+          LOG.info( otex );
+        } else {
+          LOG.error( ex, ex );
+        }
         throw ex;
       }
     }
     return reply;
   }
-  
+
   public static DestroyServiceResponseType destroyService( final DestroyServiceType request ) throws Exception {
     DestroyServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -309,16 +315,16 @@ public class EmpyreanService {
           } catch ( final IllegalStateException ex ) {
             LOG.error( ex, ex );
           }
-        }        
+        }
         reply.getServices( ).add( serviceInfo );
       } catch ( final Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).debug( ex, ex );
       }
     }
-    return reply;    
+    return reply;
   }
-  
+
   public static StopServiceResponseType stopService( final StopServiceType request ) throws Exception {
     final StopServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -341,7 +347,7 @@ public class EmpyreanService {
     }
     return reply;
   }
-  
+
   public static EnableServiceResponseType enableService( final EnableServiceType request ) throws Exception {
     final EnableServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -364,7 +370,7 @@ public class EmpyreanService {
     }
     return reply;
   }
-  
+
   public static DisableServiceResponseType disableService( final DisableServiceType request ) throws Exception {
     final DisableServiceResponseType reply = request.getReply( );
     for ( final ServiceId serviceInfo : request.getServices( ) ) {
@@ -387,7 +393,7 @@ public class EmpyreanService {
     }
     return reply;
   }
-  
+
   static class Filters {
     /**
      * Build a predicate from the given filters
@@ -636,7 +642,7 @@ public class EmpyreanService {
   @ServiceOperation(user=true)
   public enum DescribeService implements Function<DescribeServicesType, DescribeServicesResponseType> {
     INSTANCE;
-    
+
     @Override
     public DescribeServicesResponseType apply( final DescribeServicesType input ) {
       try {
@@ -649,19 +655,19 @@ public class EmpyreanService {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
     public DescribeServicesResponseType user(  final DescribeServicesType request ) {
       final DescribeServicesResponseType reply = request.getReply( );
       /**
        * Only show public services to normal users.
-       * Allow for filtering by component and state w/in that set. 
+       * Allow for filtering by component and state w/in that set.
        */
       final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
         {
           this.add( Filters.from( request.getFilters( ) ) );
           this.add( Filters.publicService( ) );
           if ( request.getByPartition( ) != null ) {
-            this.add( Filters.partition( request.getByPartition( ) ) ); 
+            this.add( Filters.partition( request.getByPartition( ) ) );
           }
           if ( request.getByState( ) != null ) {
             this.add( Filters.state( Component.State.valueOf( request.getByState( ).toUpperCase( ) ) ) );
@@ -684,10 +690,10 @@ public class EmpyreanService {
       reply.getServiceStatuses().addAll( replyStatuses );
       return reply;
     }
-    
+
   }
 
-  
+
   public static DescribeServicesResponseType describeService( final DescribeServicesType request ) {
     final DescribeServicesResponseType reply = request.getReply( );
     Topology.touch( request );
@@ -697,7 +703,7 @@ public class EmpyreanService {
         : Empyrean.INSTANCE;
       final boolean showEventStacks = Boolean.TRUE.equals( request.getShowEventStacks( ) );
       final boolean showEvents = Boolean.TRUE.equals( request.getShowEvents( ) ) || showEventStacks;
-      
+
       final Function<ServiceConfiguration, ServiceStatusType> transformToStatus = ServiceConfigurations.asServiceStatus( showEvents, showEventStacks );
       final List<Predicate<ServiceConfiguration>> filters = new ArrayList<Predicate<ServiceConfiguration>>( ) {
         {
@@ -719,7 +725,7 @@ public class EmpyreanService {
       };
       final Predicate<Component> componentFilter = Filters.componentType( compId );
       final Predicate<ServiceConfiguration> configPredicate = Predicates.and( filters );
-      
+
       List<ServiceConfiguration> replyConfigs = Lists.newArrayList();
       for ( final Component comp : Components.list( ) ) {
         if ( componentFilter.apply( comp ) ) {

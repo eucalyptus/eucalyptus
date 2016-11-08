@@ -1269,7 +1269,7 @@ public class SimpleQueueService {
       final Context ctx = Contexts.lookup();
       final Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
 
-      MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getAccountNumber(), request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
+      MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getUser().getAuthenticatedId(), request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
 
       PersistenceFactory.getMessagePersistence().sendMessage(queue, messageInfo.getMessage(), messageInfo.getSendAttributes());
 
@@ -1466,7 +1466,7 @@ public class SimpleQueueService {
       Map<String, MessageInfo> messageInfoMap = Maps.newLinkedHashMap();
       int totalMessageLength = 0;
       for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
-        MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getAccountNumber(), batchRequestEntry.getMessageBody(),
+        MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getUser().getAuthenticatedId(), batchRequestEntry.getMessageBody(),
           batchRequestEntry.getDelaySeconds(), batchRequestEntry.getMessageAttribute());
         totalMessageLength += messageInfo.getMessageLength();
         if (totalMessageLength > queue.getMaximumMessageSize()) {

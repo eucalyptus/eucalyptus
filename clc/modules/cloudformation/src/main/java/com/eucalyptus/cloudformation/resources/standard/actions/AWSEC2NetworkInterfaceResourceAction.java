@@ -224,7 +224,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         // Get the private ip addresses
         String primaryIp = null;
         boolean foundPrimary = false;
-        ArrayNode secondaryIpArrayNode = new ObjectMapper().createArrayNode();
+        ArrayNode secondaryIpArrayNode = JsonHelper.createArrayNode();
         for (NetworkInterfacePrivateIpAddressesSetItemType networkInterfacePrivateIpAddressesSetItemType : describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getPrivateIpAddressesSet().getItem()) {
           if (networkInterfacePrivateIpAddressesSetItemType.getPrimary()) {
             if (foundPrimary) {
@@ -464,7 +464,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         // Get the private ip addresses
         String primaryIp = null;
         boolean foundPrimary = false;
-        ArrayNode secondaryIpArrayNode = new ObjectMapper().createArrayNode();
+        ArrayNode secondaryIpArrayNode = JsonHelper.createArrayNode();
         for (NetworkInterfacePrivateIpAddressesSetItemType networkInterfacePrivateIpAddressesSetItemType : describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().get(0).getPrivateIpAddressesSet().getItem()) {
           if (networkInterfacePrivateIpAddressesSetItemType.getPrimary()) {
             if (foundPrimary) {

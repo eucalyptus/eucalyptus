@@ -23,7 +23,6 @@ package com.eucalyptus.cloudformation.resources;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -32,7 +31,6 @@ import java.util.Collection;
 
 public class ResourceInfoHelper {
   private static final Logger LOG = Logger.getLogger(ResourceInfoHelper.class);
-  private static final ObjectMapper mapper = new ObjectMapper();
 
   public static void setResourceAttributesJson(ResourceInfo resourceInfo, String json) throws CloudFormationException {
     JsonNode attributeNode = JsonHelper.getJsonNodeFromString(json);
@@ -42,9 +40,8 @@ public class ResourceInfoHelper {
   }
 
   public static String getResourceAttributesJson(ResourceInfo resourceInfo) throws CloudFormationException {
-    ObjectMapper mapper = new ObjectMapper();
     Collection<String> attributeNames = resourceInfo.getAttributeNames();
-    ObjectNode attributesNode = mapper.createObjectNode();
+    ObjectNode attributesNode = JsonHelper.createObjectNode();
     if (attributeNames != null) {
       for (String attributeName: attributeNames) {
         attributesNode.put(attributeName, resourceInfo.getResourceAttributeJson(attributeName));
