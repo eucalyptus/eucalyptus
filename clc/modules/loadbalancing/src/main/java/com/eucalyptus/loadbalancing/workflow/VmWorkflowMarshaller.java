@@ -27,8 +27,6 @@ import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -37,6 +35,8 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescriptions;
 import com.eucalyptus.util.Exceptions;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 
 /**
@@ -46,7 +46,7 @@ import com.google.common.collect.Lists;
 public class VmWorkflowMarshaller {
   private static final String LOADBALANCING_BINDING_NAME =
       "elasticloadbalancing_amazonaws_com_doc_2012_06_01";
-  private static Logger    LOG     = 
+  private static Logger    LOG     =
       Logger.getLogger(  VmWorkflowMarshaller.class );
 
   public static String marshalPolicy(final PolicyDescription policy) {
@@ -76,7 +76,7 @@ public class VmWorkflowMarshaller {
     final String outString = new String(stream.toByteArray());
     return outString;
   }
-  
+
   public static Map<String,String> unmarshalInstances(final String encodedStatus) {
     return decodeJsonStringMap(encodedStatus);
   }
@@ -100,7 +100,7 @@ public class VmWorkflowMarshaller {
     }
     return data;
   }
-  
+
   public static Map<String,String> decodeJsonStringMap(final String encodedMap) {
     final ObjectMapper mapper = new ObjectMapper();
     final TypeReference<Map<String,String>> typeRef = new TypeReference<Map<String,String>>() {};
@@ -111,5 +111,5 @@ public class VmWorkflowMarshaller {
       throw Exceptions.toUndeclared("Failed to decode String map in json", ex);
     }
   }
-  
+
 }
