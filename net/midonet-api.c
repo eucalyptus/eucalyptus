@@ -4450,7 +4450,7 @@ void midonet_api_init(void) {
     if (strcmp(midonet_api_version, "v1.9")) {
         LOGWARN("\nUnsupported MidoNet API version (%s) detected.\n"
                 "Eucalyptus VPCMIDO mode has been validated with MEM v1.9.\n"
-                "Please update MidoNet to a (MEM v1.9).\n"
+                "Please update MidoNet to a (MEM v1.9).\n",
                 midonet_api_version);
     }
 }
