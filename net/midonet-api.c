@@ -3900,6 +3900,14 @@ void midonet_api_init(void) {
     mido_libcurl_init(&libcurl_handles);
     mido_initialize_apiuribase();
     
+    // Check MidoNet API version - only API version v1.9 and v5.0 are supported
+    if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
+        LOGWARN("\nUnsupported MidoNet API version (%s) detected.\n"
+                "Eucalyptus VPCMIDO mode has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
+                "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
+                midonet_api_version);
+    }
+    
     // Initialize media_types array
     for (int i = 0; i < APPLICATION_MAX_INDEX; i++) {
         midonet_api_mtypes[i][0] = '\0';
