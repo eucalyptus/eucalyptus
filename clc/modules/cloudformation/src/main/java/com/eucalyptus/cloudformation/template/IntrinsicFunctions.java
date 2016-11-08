@@ -34,7 +34,6 @@ import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Throwables;
@@ -665,8 +664,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       } else {
         // AWS appears to return no values in a different (or non-existant) region so we do the same.
       }
-      ObjectMapper objectMapper = new ObjectMapper();
-      ArrayNode arrayNode = objectMapper.createArrayNode();
+      ArrayNode arrayNode = JsonHelper.createArrayNode();
       for (String availabilityZone: availabilityZones) {
         arrayNode.add(availabilityZone);
       }

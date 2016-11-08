@@ -26,7 +26,6 @@ import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
@@ -118,9 +117,8 @@ public class FunctionEvaluation {
   public static JsonNode evaluateFunctions(JsonNode jsonNode, Template template, String effectiveUserId) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
-    ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
-      ArrayNode arrayCopy = objectMapper.createArrayNode();
+      ArrayNode arrayCopy = JsonHelper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
         JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), template, effectiveUserId);
         arrayCopy.add(arrayElement);
@@ -139,7 +137,7 @@ public class FunctionEvaluation {
       }
     }
     // Otherwise, not a function, so evaluate functions of values
-    ObjectNode objectCopy = objectMapper.createObjectNode();
+    ObjectNode objectCopy = JsonHelper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
       JsonNode objectElement = evaluateFunctions(jsonNode.get(key), template, effectiveUserId);
@@ -151,9 +149,8 @@ public class FunctionEvaluation {
   public static JsonNode evaluateFunctionsPreResourceResolution(JsonNode jsonNode, Template template, String effectiveUserId) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
-    ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
-      ArrayNode arrayCopy = objectMapper.createArrayNode();
+      ArrayNode arrayCopy = JsonHelper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
         JsonNode arrayElement = evaluateFunctionsPreResourceResolution(jsonNode.get(i), template, effectiveUserId);
         arrayCopy.add(arrayElement);
@@ -177,7 +174,7 @@ public class FunctionEvaluation {
       }
     }
     // Otherwise, not a function, so evaluate functions of values
-    ObjectNode objectCopy = objectMapper.createObjectNode();
+    ObjectNode objectCopy = JsonHelper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
       JsonNode objectElement = evaluateFunctionsPreResourceResolution(jsonNode.get(key), template, effectiveUserId);

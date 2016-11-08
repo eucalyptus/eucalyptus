@@ -19,15 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
-import com.amazonaws.services.cloudformation.model.StackResource;
 import com.eucalyptus.cloudformation.*;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.dependencies.CyclicDependencyException;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
+import com.eucalyptus.util.Json;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -113,14 +112,13 @@ public class TemplateParser {
 
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
-  private ObjectMapper objectMapper = new ObjectMapper();
 
   public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
-    JsonNode templateJsonNode = null;
+    JsonNode templateJsonNode;
     try {
-      templateJsonNode = objectMapper.readTree(templateBody);
+      templateJsonNode = Json.parse( templateBody );
     } catch (IOException ex) {
       throw new ValidationErrorException(ex.getMessage());
     }
@@ -190,9 +188,9 @@ public class TemplateParser {
   public GetTemplateSummaryResult getTemplateSummary(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
-    JsonNode templateJsonNode = null;
+    JsonNode templateJsonNode;
     try {
-      templateJsonNode = objectMapper.readTree(templateBody);
+      templateJsonNode = Json.parse(templateBody);
     } catch (IOException ex) {
       throw new ValidationErrorException(ex.getMessage());
     }
@@ -243,10 +241,9 @@ public class TemplateParser {
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
     // The reason all of this json wrapping is going around is because evaluating a pseudoparameter needs to result in a json node (as it could be an array or string)
     Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
-    ObjectMapper mapper = new ObjectMapper();
     pseudoParameterMap.put(AWS_ACCOUNT_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
 
-    ArrayNode notificationsArnNode = objectMapper.createArrayNode();
+    ArrayNode notificationsArnNode = JsonHelper.createArrayNode( );
     if (pseudoParameterValues.getNotificationArns() != null) {
       for (String notificationArn: pseudoParameterValues.getNotificationArns()) {
         notificationsArnNode.add(notificationArn);
@@ -254,7 +251,7 @@ public class TemplateParser {
     }
     pseudoParameterMap.put(AWS_NOTIFICATION_ARNS, JsonHelper.getStringFromJsonNode(notificationsArnNode));
 
-    ObjectNode noValueNode = mapper.createObjectNode();
+    ObjectNode noValueNode = JsonHelper.createObjectNode( );
     noValueNode.put(FunctionEvaluation.REF_STR, AWS_NO_VALUE);
     pseudoParameterMap.put(AWS_NO_VALUE, JsonHelper.getStringFromJsonNode(noValueNode));
 
@@ -514,7 +511,7 @@ public class TemplateParser {
       JsonNode jsonValueNode = null;
       if (stringValue != null) {
         if (isList || actualParameterType == ParameterType.CommaDelimitedList) {
-          ArrayNode arrayNode = new ObjectMapper().createArrayNode();
+          ArrayNode arrayNode = JsonHelper.createArrayNode( );
           for (String s: splitAndTrimCSVString(stringValue)) {
             arrayNode.add(s);
           }
@@ -1293,9 +1290,9 @@ public class TemplateParser {
 
   public Map<String,ParameterType> getParameterTypeMap(String templateBody) throws CloudFormationException {
     Map<String, ParameterType> returnVal = Maps.newHashMap();
-    JsonNode templateJsonNode = null;
+    JsonNode templateJsonNode;
     try {
-      templateJsonNode = objectMapper.readTree(templateBody);
+      templateJsonNode = Json.parse( templateBody );
     } catch (IOException ex) {
       throw new ValidationErrorException(ex.getMessage());
     }

@@ -25,8 +25,8 @@ import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.annotations.Property;
 import com.eucalyptus.cloudformation.resources.annotations.Required;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
@@ -52,8 +52,7 @@ public class ResourcePropertyResolver {
 
   private static JsonNode getJsonNodeFromObject(Object object) throws CloudFormationException {
     if (object == null) return null;
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode jsonNode = mapper.createObjectNode();
+    ObjectNode jsonNode = JsonHelper.createObjectNode();
     BeanInfo beanInfo = null;
     try {
       beanInfo = Introspector.getBeanInfo(object.getClass());
@@ -99,8 +98,7 @@ public class ResourcePropertyResolver {
 
   private static JsonNode getJsonNodeFromCollection(Collection<?> collection) throws CloudFormationException {
     if (collection == null) return null;
-    ObjectMapper mapper = new ObjectMapper();
-    ArrayNode jsonNode = mapper.createArrayNode();
+    ArrayNode jsonNode = JsonHelper.createArrayNode();
     for (Object object: collection) {
       if (object == null) {
         jsonNode.add((JsonNode) null); // TODO: really?

@@ -16,6 +16,7 @@
 package com.eucalyptus.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -23,6 +24,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -44,13 +46,33 @@ public class Json {
   private static final Function1<String,Supplier<IOException>> missingExceptionSupplierFunc =
       fieldName -> () -> new IOException( "Missing required value " + fieldName );
 
-
+  public static JsonNode parse( final InputStream jsonStream ) throws IOException {
+    if ( jsonStream == null ) throw new IOException( "Null" );
+    final JsonParser parser = reader.getFactory( ).createJsonParser( jsonStream );
+    return parse( parser );
+  }
 
   public static JsonNode parse( final String jsonText ) throws IOException {
     if ( jsonText == null ) throw new IOException( "Null" );
-    return reader.readTree( new StringReader( jsonText ) {
+    final JsonParser parser = reader.getFactory( ).createJsonParser( new StringReader( jsonText ) {
       @Override public String toString() { return "json"; } // overridden for better source in error message
     } );
+    return parse( parser );
+  }
+
+  public static JsonNode parse( final JsonParser parser ) throws IOException {
+    if ( parser == null ) throw new IOException( "Null" );
+    final JsonNode node = reader.readTree( parser );
+    boolean trailingContent;
+    try {
+      trailingContent = parser.nextToken( ) != null;
+    } catch ( IOException e ) {
+      trailingContent = true;
+    }
+    if ( trailingContent ) {
+      throw new IOException( "Unexpected trailing content at " + parser.getCurrentLocation( ) );
+    }
+    return node;
   }
 
   public static JsonNode parseObject( final String jsonText ) throws IOException {
