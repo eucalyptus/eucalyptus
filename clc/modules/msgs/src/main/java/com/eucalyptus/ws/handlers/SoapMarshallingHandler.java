@@ -81,12 +81,13 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.ImmutableMap;
 
 @ChannelHandler.Sharable
@@ -96,10 +97,26 @@ public class SoapMarshallingHandler extends MessageStackHandler implements Excep
   @Override
   public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
-      MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      String content = httpMessage instanceof MappingHttpRequest ?
-          ( (MappingHttpRequest) httpMessage ).getContentAsString( ) :
-          httpMessage.getContent( ).toString( StandardCharsets.UTF_8 );
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
+      final String content;
+      final boolean request;
+      if ( httpMessage instanceof MappingHttpRequest ) {
+        MappingHttpRequest mappingHttpRequest = (MappingHttpRequest) httpMessage;
+        content = mappingHttpRequest.getContentAsString( );
+        request = true;
+      } else {
+        MappingHttpResponse mappingHttpResponse = (MappingHttpResponse) httpMessage;
+        content = httpMessage.getContent( ).toString( StandardCharsets.UTF_8 );
+        request = false;
+        if ( content.isEmpty( ) ) {
+          httpMessage.setMessageString( "" );
+          httpMessage.setSoapEnvelope( Binding.createFault(
+              mappingHttpResponse.getStatus( ).getCode( ) < 500 ? "soapenv:Client" : "soapenv:Server",
+              "No content",
+              mappingHttpResponse.getStatus( ).toString( ) ) );
+          return;
+        }
+      }
       httpMessage.setMessageString( content );
       HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
@@ -114,9 +131,14 @@ public class SoapMarshallingHandler extends MessageStackHandler implements Excep
         }
         env = ( SOAPEnvelope ) soapBuilder.getDocumentElement( );
       } catch( Exception ex ) {
-        LOG.error( "Failed to marshall response: " + content );
-        LOG.error( ex, ex );
-        throw new WebServicesException( "Failed to marshall response: " + content, ex );
+        if ( request ) {
+          throw new BindingException( "Invalid request : " + ex.getMessage( ), ex );
+        } else {
+          env = Binding.createFault(
+              "soapenv:Server",
+              "Error parsing response",
+              content );
+        }
       } finally {
         HoldMe.canHas.unlock( );
       }
