@@ -35,7 +35,12 @@ public class ResourceInfoHelper {
   public static void setResourceAttributesJson(ResourceInfo resourceInfo, String json) throws CloudFormationException {
     JsonNode attributeNode = JsonHelper.getJsonNodeFromString(json);
     for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
-      resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).asText());
+      if (resourceInfo.getAttributeNames().contains(attributeName)) {
+        resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).asText());
+      } else {
+        LOG.warn("Attempting to set non-existent attribute '" + attributeName + "' on resource " + resourceInfo.getLogicalResourceId() + " (" + resourceInfo.getType() + "). " +
+          "Perhaps this attribute previously existed?  Ignoring this request.");
+      }
     }
   }
 
@@ -44,7 +49,11 @@ public class ResourceInfoHelper {
     ObjectNode attributesNode = JsonHelper.createObjectNode();
     if (attributeNames != null) {
       for (String attributeName: attributeNames) {
-        attributesNode.put(attributeName, resourceInfo.getResourceAttributeJson(attributeName));
+        String resourceAttributeJson = resourceInfo.getResourceAttributeJson(attributeName);
+        if (resourceAttributeJson == null) {
+          continue; // no real point in setting a value to null (which is default)
+        }
+        attributesNode.put(attributeName, resourceAttributeJson);
       }
     }
     return JsonHelper.getStringFromJsonNode(attributesNode);
