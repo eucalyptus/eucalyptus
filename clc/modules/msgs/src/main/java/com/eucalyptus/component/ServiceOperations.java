@@ -65,25 +65,46 @@ package com.eucalyptus.component;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Timers;
+import com.eucalyptus.util.Wrapper;
+import com.eucalyptus.util.Wrappers;
+import com.eucalyptus.util.async.AsyncExceptions;
+import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
+import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.util.async.FailedRequestException;
+import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.ws.EucalytpusWebServiceStatusException;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.RequestQueue;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.google.common.net.HostAndPort;
+import com.google.common.net.HttpHeaders;
+import com.google.common.net.InetAddresses;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
+@SuppressWarnings( "Guava" )
 public class ServiceOperations {
   private static Logger                                                  LOG               = Logger.getLogger( ServiceOperations.class );
   private static final Map<Class<? extends BaseMessage>, Function<?, ?>> serviceOperations = Maps.newHashMap( );
@@ -94,7 +115,11 @@ public class ServiceOperations {
   }
 
   public static boolean isUserOperation( final BaseMessage msg ) {
-    return serviceOperations.containsKey( msg.getClass( ) ) ? Ats.from( serviceOperations.get( msg.getClass( ) ) ).get( ServiceOperation.class ).user( ) : false;
+    return serviceOperations.containsKey( msg.getClass( ) ) ?
+        Ats.from(
+            Wrappers.unwrap( Function.class, serviceOperations.get( msg.getClass( ) ) )
+        ).get( ServiceOperation.class ).user( ) :
+        false;
   }
 
 
@@ -109,14 +134,15 @@ public class ServiceOperations {
     public boolean processClass( final Class candidate ) throws Exception {
       if ( Ats.from( candidate ).has( ServiceOperation.class ) && Function.class.isAssignableFrom( candidate ) ) {
         final ServiceOperation opInfo = Ats.from( candidate ).get( ServiceOperation.class );
-        final Function<?, ?> op = ( Function<?, ?> ) Classes.newInstance( candidate );
+        final Function<? extends BaseMessage, ? extends BaseMessage> op =
+            ( Function<? extends BaseMessage, ? extends BaseMessage> ) Classes.newInstance( candidate );
         final List<Class> msgTypes = Classes.genericsToClasses( op );
         LOG.info( "Registered @ServiceOperation:       " + msgTypes.get( 0 ).getSimpleName( )
                   + ","
                   + msgTypes.get( 1 ).getSimpleName( )
                   + " => "
                   + candidate );
-        serviceOperations.put( msgTypes.get( 0 ), op );
+        serviceOperations.put( msgTypes.get( 0 ), perhapsWrap( op ) );
         return true;
       } else {
         return false;
@@ -186,4 +212,86 @@ public class ServiceOperations {
     }
   }
 
+  private static <F extends BaseMessage, T extends BaseMessage> Function<F, T> perhapsWrap( final Function<F, T> op ) {
+    final ServiceOperation opInfo = Ats.from( op ).get( ServiceOperation.class );
+    if ( opInfo.hostDispatch( ) ) {
+      return new HostDispatchFunction<>( op );
+    }
+    return op;
+  }
+
+  private static <T extends BaseMessage> T send(
+      final ServiceConfiguration configuration,
+      final BaseMessage request
+  ) throws Throwable {
+    try {
+      return AsyncRequests.sendSyncWithCurrentIdentity( configuration, request );
+    } catch ( final Exception e ) {
+      final FailedRequestException failedRequestException = Exceptions.findCause( e, FailedRequestException.class );
+      if ( failedRequestException != null ) {
+        if ( request.getReply( ).getClass( ).isInstance( failedRequestException.getRequest( ) ) ) {
+          return failedRequestException.getRequest( ); // if it is a (failure) response then return it
+        }
+        throw e.getCause( ) == null ? e : e.getCause( );
+      } else {
+        final Optional<AsyncWebServiceError> errorOptional = AsyncExceptions.asWebServiceError( e );
+        if ( errorOptional.isPresent( ) ) {
+          final AsyncExceptions.AsyncWebServiceError serviceError = errorOptional.get( );
+          throw new EucalytpusWebServiceStatusException(
+              serviceError.getCode( ),
+              serviceError.getHttpErrorCode( ),
+              serviceError.getMessage( )
+          );
+        }
+        throw e;
+      }
+    }
+  }
+
+  private static class HostDispatchFunction<F, T extends BaseMessage> implements Function<F, T>, Wrapper<Function<F, T>> {
+    private final Function<F, T> op;
+
+    private HostDispatchFunction( final Function<F, T> op ) {
+      this.op = op;
+    }
+
+    @Override
+    public Function<F, T> unwrap() {
+      return op;
+    }
+
+    @Nullable
+    @Override
+    public T apply( @Nullable final F f ) {
+      if ( f instanceof BaseMessage ) try {
+        final BaseMessage baseMessage = (BaseMessage) f;
+        final ComponentMessage componentMessage =
+            Ats.inClassHierarchy( baseMessage.getClass( ) ).get( ComponentMessage.class );
+        final ComponentId componentId = ComponentIds.lookup( componentMessage.value( ) );
+        final Context context = Contexts.lookup( ( (BaseMessage) f ).getCorrelationId( ) );
+        final MappingHttpRequest request = context.getHttpRequest( );
+        final String hostHeader = request.getHeader( HttpHeaders.HOST );
+        if ( hostHeader != null && componentId.isAlwaysLocal( ) ) {
+          final String host = HostAndPort.fromString( hostHeader ).getHostText( );
+          if ( !InetAddresses.isInetAddress( host ) &&
+              !Hosts.isCoordinator( ) &&
+              DomainNames.isExternalSubdomain( Name.fromString( host, Name.root ) ) ) {
+            try {
+              final BaseMessage backendRequest = BaseMessages.deepCopy( baseMessage, baseMessage.getClass( ) );
+              final BaseMessage backendResponse = send(
+                  ServiceConfigurations.createEphemeral( componentId, Hosts.getCoordinator( ).getBindAddress( ) ),
+                  backendRequest );
+              final T response = BaseMessages.deepCopy( backendResponse, (Class<T>)baseMessage.getReply( ).getClass( ) );
+              response.setCorrelationId( request.getCorrelationId( ) );
+              return response;
+            } catch ( final Throwable e ) {
+              throw Exceptions.toUndeclared( e );
+            }
+          }
+        }
+      } catch ( NoSuchContextException | IllegalArgumentException | TextParseException ignore ) {
+      }
+      return op.apply( f );
+    }
+  }
 }

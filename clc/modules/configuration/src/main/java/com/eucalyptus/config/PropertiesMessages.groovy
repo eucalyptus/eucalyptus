@@ -77,6 +77,10 @@ public class Property extends EucalyptusData {
   String description;
   String defaultValue;
   Boolean readOnly;
+
+  public Property( ) {
+  }
+
   public Property( String name, String value, String description,  String defaultValue, Boolean readOnly ) {
     super( );
     this.name = name;
