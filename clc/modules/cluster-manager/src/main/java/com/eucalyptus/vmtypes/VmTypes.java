@@ -63,6 +63,7 @@
 package com.eucalyptus.vmtypes;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_3_0;
+
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -128,6 +129,11 @@ public class VmTypes {
   @ConfigurableField( description = "Format first ephemeral disk by defaut with ext3", initial = "true",
       changeListener = PropertyChangeListeners.IsBoolean.class)
   public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
+
+  @ConfigurableField( description = "Format swap disk by defaut. The properti will be depricated in next major release.",
+      initial = "false", changeListener = PropertyChangeListeners.IsBoolean.class)
+  public static Boolean        FORMAT_SWAP = false;
+
   @Deprecated
   //GRZE: this and all its references must be removed to complete the vm type support
   protected static final Long  SWAP_SIZE_BYTES          = 512 * 1024l * 1024l; // swap is hardcoded at 512MB for now
@@ -611,7 +617,7 @@ public class VmTypes {
     public VmTypeInfo apply( VmType arg0 ) {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
         {
-          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES );
+          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES, VmTypes.FORMAT_SWAP ? "swap" : "none" );
         }
       };
     }
