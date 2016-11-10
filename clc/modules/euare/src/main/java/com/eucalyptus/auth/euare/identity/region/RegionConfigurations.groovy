@@ -26,14 +26,14 @@ import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
 import com.eucalyptus.configurable.PropertyChangeListeners
 import com.eucalyptus.records.Logs
-import com.eucalyptus.util.UpperCamelPropertyNamingStrategy
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.google.common.base.Objects
 import com.google.common.base.Optional
 import com.google.common.base.Strings
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
-import org.codehaus.jackson.JsonProcessingException
-import org.codehaus.jackson.map.ObjectMapper
 import org.springframework.context.MessageSource
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.BeanPropertyBindingResult
@@ -101,7 +101,7 @@ class RegionConfigurations {
 
   static RegionConfiguration parse( final String configuration ) throws RegionConfigurationException {
     final ObjectMapper mapper = new ObjectMapper( )
-    mapper.setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) )
+    mapper.setPropertyNamingStrategy(PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE )
     final RegionConfiguration regionConfiguration
     try {
       regionConfiguration = mapper.readValue( new StringReader( configuration ){

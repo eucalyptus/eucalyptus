@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.math.BigDecimal;
+import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.FieldPosition;
@@ -31,55 +31,26 @@ import java.text.ParseException;
 import java.text.ParsePosition;
 import java.util.Date;
 import java.util.Locale;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.DeserializationContext;
-import org.codehaus.jackson.map.JsonDeserializer;
-import org.codehaus.jackson.map.JsonSerializer;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.SerializerProvider;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
-import org.codehaus.jackson.map.deser.DateDeserializer;
-import org.codehaus.jackson.map.module.SimpleModule;
-import org.codehaus.jackson.Version;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskStatus;
-import com.eucalyptus.simpleworkflow.common.model.ActivityTaskTimeoutType;
-import com.eucalyptus.simpleworkflow.common.model.CancelTimerFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.CancelWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.ChildPolicy;
-import com.eucalyptus.simpleworkflow.common.model.CloseStatus;
-import com.eucalyptus.simpleworkflow.common.model.CloseStatusFilter;
-import com.eucalyptus.simpleworkflow.common.model.CompleteWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.ContinueAsNewWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.Decision;
-import com.eucalyptus.simpleworkflow.common.model.DecisionTaskTimeoutType;
-import com.eucalyptus.simpleworkflow.common.model.DecisionType;
-import com.eucalyptus.simpleworkflow.common.model.EventType;
-import com.eucalyptus.simpleworkflow.common.model.ExecutionStatus;
-import com.eucalyptus.simpleworkflow.common.model.FailWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.LambdaFunctionTimeoutType;
-import com.eucalyptus.simpleworkflow.common.model.RecordMarkerFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.RegistrationStatus;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelActivityTaskFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.RequestCancelExternalWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.ScheduleActivityTaskFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.SignalExternalWorkflowExecutionFailedCause;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
-import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionDecisionAttributes;
-import com.eucalyptus.simpleworkflow.common.model.StartChildWorkflowExecutionFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.StartTimerFailedCause;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCancelRequestedCause;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionCount;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionInfo;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTerminatedCause;
-import com.eucalyptus.simpleworkflow.common.model.WorkflowExecutionTimeoutType;
 import com.eucalyptus.util.Exceptions;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.deser.std.DateDeserializers;
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 
@@ -90,31 +61,22 @@ public class SwfJsonUtils {
 
   private static final ObjectMapper mapper = new ObjectMapper( );
   static {
-    final SimpleModule module = new SimpleModule( "SwfModule", new Version(1, 0, 0, null) )
+    final SimpleModule module = new SimpleModule( "SwfModule", new Version(1, 0, 0, null, null, null) )
               .addSerializer( Date.class, new EpochSecondsDateSerializer( )  )
               .addDeserializer( Date.class, new EpochSecondsDateDeserializer( ) );
     mapper.registerModule( module );
     mapper.setDateFormat( new EpochSecondsDateFormat() );
-    mapper.getSerializationConfig().addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( Decision.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( CloseStatusFilter.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( WorkflowExecutionCount.class, BindingMixIn.class );
-    mapper.getSerializationConfig().addMixInAnnotations( WorkflowExecutionInfo.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowEventAttributes.class, BindingMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( ContinueAsNewWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( StartChildWorkflowExecutionDecisionAttributes.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( Decision.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( ActivityTaskStatus.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( CloseStatusFilter.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowExecutionCount.class, BindingMixIn.class );
-    mapper.getDeserializationConfig().addMixInAnnotations( WorkflowExecutionInfo.class, BindingMixIn.class );
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
-    mapper.getSerializationConfig().setSerializationInclusion( JsonSerialize.Inclusion.NON_NULL );
+    mapper.addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class );
+    mapper.disable( SerializationFeature.FAIL_ON_EMPTY_BEANS );
+    mapper.disable( MapperFeature.AUTO_DETECT_IS_GETTERS );
+    mapper.setVisibilityChecker(new VisibilityChecker.Std(VisibilityChecker.Std.class.getAnnotation(JsonAutoDetect.class)){
+      private static final long serialVersionUID = 1L;
+      @Override
+      public boolean isSetterVisible( final Method m ) {
+        return !( m.getParameterCount( ) == 1 && m.getParameterTypes( )[ 0 ].isEnum( ) ) && super.isSetterVisible( m );
+      }
+    });
+    mapper.setSerializationInclusion( JsonInclude.Include.NON_NULL );
   }
 
   public static String writeObjectAsString( final Object object ) {
@@ -132,9 +94,20 @@ public class SwfJsonUtils {
   }
 
   public static <T> T readObject( final String in, final Class<T> type ) throws IOException {
-    return mapper.readValue( new StringReader( in ){
+    final JsonParser parser = mapper.getFactory( ).createJsonParser( new StringReader( in ) {
       @Override public String toString() { return "message"; } // overridden for better source in error message
-    }, type );
+    } );
+    final T result = mapper.readValue( parser, type );
+    boolean trailingContent;
+    try {
+      trailingContent = parser.nextToken( ) != null;
+    } catch ( IOException e ) {
+      trailingContent = true;
+    }
+    if ( trailingContent ) {
+      throw new IOException( "Unexpected trailing content at " + parser.getCurrentLocation( ) );
+    }
+    return result;
   }
 
   // TODO:STEVE: add unit test to ensure we don't start using unexpected properties from BaseMessage
@@ -143,35 +116,6 @@ public class SwfJsonUtils {
       "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
       "callerContext" } )
   private interface BindingMixIn {
-    // ignore setter with enum parameters, method with string parameter will be used
-    @JsonIgnore void setCause(CancelTimerFailedCause cause);
-    @JsonIgnore void setCause(CancelWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(CompleteWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(ContinueAsNewWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(FailWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(RecordMarkerFailedCause cause);
-    @JsonIgnore void setCause(RequestCancelActivityTaskFailedCause cause);
-    @JsonIgnore void setCause(RequestCancelExternalWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(ScheduleActivityTaskFailedCause cause);
-    @JsonIgnore void setCause(SignalExternalWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(StartChildWorkflowExecutionFailedCause cause);
-    @JsonIgnore void setCause(StartTimerFailedCause cause);
-    @JsonIgnore void setCause(WorkflowExecutionCancelRequestedCause cause);
-    @JsonIgnore void setCause(WorkflowExecutionTerminatedCause cause);
-    @JsonIgnore void setChildPolicy(ChildPolicy childPolicy);
-    @JsonIgnore void setDecisionType(DecisionType decisionType);
-    @JsonIgnore void setDefaultChildPolicy(ChildPolicy childPolicy);
-    @JsonIgnore void setEventType(EventType eventType);
-    @JsonIgnore void setExecutionStatus(ExecutionStatus executionStatus);
-    @JsonIgnore void setRegistrationStatus(RegistrationStatus registrationStatus);
-    @JsonIgnore void setStatus(CloseStatus status);
-    @JsonIgnore void setStatus(RegistrationStatus status);
-    @JsonIgnore void setTimeoutType(ActivityTaskTimeoutType timeoutType);
-    @JsonIgnore void setTimeoutType(DecisionTaskTimeoutType timeoutType);
-    @JsonIgnore void setTimeoutType(WorkflowExecutionTimeoutType timeoutType);
-    @JsonIgnore void setTimeoutType(LambdaFunctionTimeoutType timeoutType);
-    @JsonIgnore Boolean isCancelRequested( );
-    @JsonIgnore Boolean isTruncated( );
   }
 
   private static final class EpochSecondsDateDeserializer extends JsonDeserializer<Date> {
@@ -186,7 +130,7 @@ public class SwfJsonUtils {
         case VALUE_NUMBER_INT:
           return new Date( jsonParser.getLongValue( ) * 1000L );
         default:
-          return new DateDeserializer( ).deserialize( jsonParser, deserializationContext );
+          return new DateDeserializers.DateDeserializer( ).deserialize( jsonParser, deserializationContext );
       }
     }
   }
@@ -220,7 +164,7 @@ public class SwfJsonUtils {
         Number number = DecimalFormat.getInstance( new Locale( "en" ) ).parse( source );
         pos.setIndex( source.length( ) ) ;
         return new Date( (long)(number.doubleValue() * 1000d) );
-      } catch ( ParseException e ) {
+      } catch ( ParseException ignore ) {
       }
       return null;
     }
