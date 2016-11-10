@@ -78,17 +78,17 @@ import com.eucalyptus.auth.type.RestrictedType.UserRestrictedType;
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements UserRestrictedType {
   @Transient
   private static final long serialVersionUID = 1L;
-  
+
   @Column( name = "metadata_user_id" )
   protected String          ownerUserId;
   @Column( name = "metadata_user_name" )
   protected String          ownerUserName;
-  
+
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
    */
   protected UserMetadata( ) {}
-  
+
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
    */
@@ -96,7 +96,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     super( owner );
     this.setOwner( owner );
   }
-  
+
   /**
    * GRZE:NOTE: Should only /ever/ be used by sub classes.
    */
@@ -104,7 +104,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
     super( owner, displayName );
     this.setOwner( owner );
   }
-  
+
   @Override
   public void setOwner( final OwnerFullName owner ) {
     super.ownerFullNameCached = null;
@@ -116,7 +116,7 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
       : null );
     super.setOwner( owner );
   }
-  
+
   @Override
   public OwnerFullName getOwner( ) {
     if ( super.ownerFullNameCached != null ) {
@@ -128,14 +128,14 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
       } else if ( Principals.systemFullName( ).getUserId( ).equals( this.getOwnerUserId( ) ) ) {
         tempOwner = Principals.systemFullName( );
       } else {
-        tempOwner = UserFullName.getInstance( this.getOwnerUserId( ) );
+        tempOwner = UserFullName.getInstanceForAccount( this.getOwnerAccountNumber( ), this.getOwnerUserId( ) );
       }
       return ( super.ownerFullNameCached = tempOwner );
     } else {
       return super.getOwner( );
     }
   }
-  
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -145,25 +145,25 @@ public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMet
       : this.ownerUserId.hashCode( ) );
     return result;
   }
-  
+
   @Override
   public String getOwnerUserId( ) {
     return this.ownerUserId;
   }
-  
+
   public void setOwnerUserId( final String ownerUserId ) {
     this.ownerUserId = ownerUserId;
   }
-  
+
   @Override
   public String getOwnerUserName( ) {
     return this.ownerUserName;
   }
-  
+
   public void setOwnerUserName( final String ownerUserName ) {
     this.ownerUserName = ownerUserName;
   }
-  
+
   @PrePersist
   @PreUpdate
   public void verifyComplete( ) {
