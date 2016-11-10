@@ -252,7 +252,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (action.properties.getLaunchConfigurationName() == null) {
           throw new ValidationErrorException("LaunchConfiguration required (as InstanceId not supported)");
         }
-        if (action.properties.getAvailabilityZones() != null) {
+        if (action.properties.getAvailabilityZones() != null && !action.properties.getAvailabilityZones().isEmpty()) {
           createAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(action.properties.getAvailabilityZones()));
         }
         createAutoScalingGroupType.setDefaultCooldown(action.properties.getCooldown());
@@ -585,7 +585,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         if (newAction.properties.getLaunchConfigurationName() == null) {
           throw new ValidationErrorException("LaunchConfiguration required (as InstanceId not supported)");
         }
-        if (newAction.properties.getAvailabilityZones() != null) {
+        if (newAction.properties.getAvailabilityZones() != null && !newAction.properties.getAvailabilityZones().isEmpty()) {
           updateAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(newAction.properties.getAvailabilityZones()));
         }
         if (newAction.info.getUpdatePolicyJson() != null) {
