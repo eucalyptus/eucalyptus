@@ -29,11 +29,10 @@ import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.apache.http.NoHttpResponseException;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
@@ -58,24 +57,28 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.UpperCamelPropertyNamingStrategy;
+import com.eucalyptus.util.Internets;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.AbstractInvocationHandler;
 
 /**
  *
  */
+@SuppressWarnings( { "Guava", "WeakerAccess" } )
 public class Config {
   private static final ObjectMapper mapper = new ObjectMapper( )
-      .setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) );
-  private static final com.fasterxml.jackson.databind.ObjectMapper workerObjectMapper = buildWorkerObjectMapper();
+      .setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
+  private static final ObjectMapper workerObjectMapper = buildWorkerObjectMapper();
 
   /**
    * Parse a JSON format string for AWS SDK for Java ClientConfiguration.
@@ -113,10 +116,10 @@ public class Config {
       @Override
       public void afterResponse(Request<?> arg0, Response<?> arg1) {
       }} );
-    
+
     return client;
   }
-  
+
   public static AmazonSimpleWorkflow buildClient( final Supplier<User> user, final String text ) throws AuthException {
     final AWSCredentialsProvider credentialsProvider = new SecurityTokenAWSCredentialsProvider( user );
     final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
@@ -125,6 +128,17 @@ public class Config {
     );
     client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
     client.addRequestHandler( new RequestHandler2( ) {
+      private volatile String endpointHost;
+      private final Supplier<Boolean> failbackChecker = Suppliers.memoizeWithExpiration( () -> {
+        final String currentEndpointHost = endpointHost;
+        if ( currentEndpointHost!=null &&
+            !Internets.testLocal( currentEndpointHost ) &&
+            Topology.isEnabledLocally( SimpleWorkflow.class ) ) {
+          resetEndpoint( );
+        }
+        return true;
+      }, 15, TimeUnit.SECONDS );
+
       @Override
       public void beforeRequest( final Request<?> request ) {
         // Add nonce to ensure unique request signature
@@ -132,7 +146,11 @@ public class Config {
       }
 
       @Override
-      public void afterResponse( final Request<?> request, final Response<?> response ) { }
+      public void afterResponse( final Request<?> request, final Response<?> response ) {
+        // Check and failover (failback) to local swf service if available
+        endpointHost = request.getEndpoint( ).getHost( );
+        failbackChecker.get( );
+      }
 
       @Override
       public void afterError( final Request<?> request, final Response<?> response, final Exception e ) {
@@ -146,11 +164,7 @@ public class Config {
           resetEndpoint = true;
         }
         if ( resetEndpoint ) {
-          try {
-            client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
-          } catch ( final Exception e2 ) {
-            // retry on next failure
-          }
+          resetEndpoint( );
         }
 
         if ( e instanceof AmazonServiceException ) {
@@ -158,6 +172,14 @@ public class Config {
           if ( status == 403 ) {
             credentialsProvider.refresh( );
           }
+        }
+      }
+
+      private void resetEndpoint( ) {
+        try {
+          client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
+        } catch ( final Exception e ) {
+          // retry on next failure or failback attempt
         }
       }
     } );
@@ -170,12 +192,12 @@ public class Config {
       final String domain,
       final String taskList,
       final String text ) {
-    
+
     final List<Class<?>> workflowImpl =  Lists.newArrayList(WorkflowRegistry.lookupWorkflows( componentIdClass ));
     return buildWorkflowWorker(workflowImpl.toArray(new Class<?>[workflowImpl.size()]),
         client, domain, taskList, text);
   }
-  
+
   public static WorkflowWorker buildWorkflowWorker(
       final Class<?>[] workflowImpl,
       final AmazonSimpleWorkflow client,
@@ -210,19 +232,19 @@ public class Config {
       final String domain,
       final String taskList,
       final String text ) {
-    
-    final List<Class<?>> activitiesImpl =  
+
+    final List<Class<?>> activitiesImpl =
         Lists.newArrayList(WorkflowRegistry.lookupActivities( componentIdClass ));
-    return buildActivityWorker(activitiesImpl.toArray(new Class<?>[activitiesImpl.size()]), 
+    return buildActivityWorker(activitiesImpl.toArray(new Class<?>[activitiesImpl.size()]),
         client,  domain, taskList, text);
   }
-  
+
   public static ActivityWorker buildActivityWorker(
       final Class<?>[] activitiesImpl,
       final AmazonSimpleWorkflow client,
       final String domain,
       final String taskList,
-      final String text 
+      final String text
       ) {
     final ActivityWorker activityWorker = configure( new ActivityWorker( client, domain, taskList), text );
     activityWorker.setDataConverter( new JsonDataConverter( workerObjectMapper ) );
@@ -248,7 +270,7 @@ public class Config {
     try {
       return Strings.isNullOrEmpty( text ) ?
           worker :
-          mapper.updatingReader( worker ).<T>readValue( source( text ) );
+          mapper.readerForUpdating( worker ).<T>readValue( source( text ) );
     } catch ( IOException e ) {
       throw new IllegalArgumentException( "Invalid configuration: " + e.getMessage( ), e );
     }
@@ -259,7 +281,9 @@ public class Config {
                                                   final WorkerBase worker ) {
     if ( logPackage != null ) {
       final Logger logger = Logger.getLogger( logPackage.getName() );
+      //noinspection Convert2Lambda
       worker.setUncaughtExceptionHandler( new Thread.UncaughtExceptionHandler() {
+        @SuppressWarnings( { "ThrowableResultOfMethodCallIgnored", "ConstantConditions" } )
         @Override
         public void uncaughtException( final Thread t, final Throwable e ) {
           if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
@@ -338,9 +362,8 @@ public class Config {
     } );
   }
 
-  private static com.fasterxml.jackson.databind.ObjectMapper buildWorkerObjectMapper( ) {
-    final com.fasterxml.jackson.databind.ObjectMapper workerObjectMapper =
-        new com.fasterxml.jackson.databind.ObjectMapper(  );
+  private static ObjectMapper buildWorkerObjectMapper( ) {
+    final ObjectMapper workerObjectMapper = new ObjectMapper(  );
     workerObjectMapper.setAnnotationIntrospector(
         new JacksonAnnotationIntrospector( ) {
           private static final long serialVersionUID = 1L;
@@ -352,7 +375,7 @@ public class Config {
     );
     workerObjectMapper.configure( DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false );
     workerObjectMapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
-    workerObjectMapper.enableDefaultTyping( com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.NON_FINAL );
+    workerObjectMapper.enableDefaultTyping( ObjectMapper.DefaultTyping.NON_FINAL );
     return workerObjectMapper;
   }
 

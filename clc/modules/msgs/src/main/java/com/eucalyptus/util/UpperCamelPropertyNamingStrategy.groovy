@@ -27,8 +27,10 @@ import org.codehaus.jackson.map.introspect.AnnotatedField
 import org.codehaus.jackson.map.introspect.AnnotatedMethod
 
 /**
+ * @deprecated use jackson 2.x
  * @see com.fasterxml.jackson.databind.PropertyNamingStrategy#PASCAL_CASE_TO_CAMEL_CASE
  */
+@Deprecated
 @CompileStatic
 class UpperCamelPropertyNamingStrategy extends PropertyNamingStrategy {
   @Override
