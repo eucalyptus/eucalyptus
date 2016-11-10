@@ -19,13 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.ws;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nonnull;
-import org.codehaus.jackson.JsonProcessingException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -49,6 +47,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;

@@ -20,9 +20,9 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.io.IOException;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  *
@@ -31,9 +31,8 @@ public class BaseMessages {
 
   private static final ObjectMapper mapper = new ObjectMapper( );
   static {
-    mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
+    mapper.addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
+    mapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
   }
 
   @SuppressWarnings( "unchecked" )
@@ -45,9 +44,9 @@ public class BaseMessages {
       final T message,
       final Class<R> resultType
   ) throws IOException {
-    return (R) mapper.readValue( mapper.valueToTree( message ), resultType );
+    return (R) mapper.treeToValue( mapper.valueToTree( message ), resultType );
   }
-  
+
   @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
   private static final class BaseMessageMixIn { }
 }

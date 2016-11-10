@@ -20,9 +20,9 @@
 package com.eucalyptus.simpleworkflow.common.model;
 
 
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonProperty;
 import com.eucalyptus.ws.WebServiceError;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  *
