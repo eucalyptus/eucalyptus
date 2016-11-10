@@ -87,7 +87,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
         for ( VmType arg0 : VmTypes.list( ) ) {
           getInstanceTypes( ).add( new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
             {
-              this.setSwap( "sda2", 512 * 1024l * 1024l );
+              this.setSwap( "sda2", 512 * 1024l * 1024l, VmTypes.FORMAT_SWAP ? "swap" : "none" );
             }
           } );
         }

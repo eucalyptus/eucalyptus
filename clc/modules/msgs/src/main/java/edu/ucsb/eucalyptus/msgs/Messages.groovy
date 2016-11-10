@@ -313,8 +313,8 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
     this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, type : "ramdisk" ) );
   }
 
-  protected void setSwap( String deviceName, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "swap", format : "swap" ) );
+  protected void setSwap( String deviceName, Long sizeBytes, String formatName ) {
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes, type : "swap", format : formatName ) );
   }
 
   public void setEphemeral( Integer index, String deviceName, Long sizeBytes, String formatName ) {
