@@ -27,7 +27,6 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import org.apache.log4j.Logger;
 
 /**
  * Created by ethomas on 7/30/14.
@@ -37,15 +36,9 @@ import org.apache.log4j.Logger;
 @DependsLocal(CloudFormation.class)
 public class CloudFormationBootstrapper extends Bootstrapper.Simple {
 
-
-  private static final Logger LOG = Logger.getLogger(CloudFormationBootstrapper.class);
-
   @Override
   public boolean check() throws Exception {
-    if (!Topology.isEnabled(SimpleWorkflow.class)) {
-      throw new Exception("SimpleWorkflow must be enabled/registered to use Eucalyptus SWF");
-    }
-    return true;
+    return Topology.isEnabled( SimpleWorkflow.class );
   }
 
 }
