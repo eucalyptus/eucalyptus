@@ -5167,12 +5167,13 @@ int delete_mido_vpc_natgateway(mido_config *mido, mido_vpc_subnet *vpcsubnet, mi
  * Initializes the mido_config data structure
  * @param mido [in] mido_config data structure of interest
  * @param eucanetd_config [in] data structure holding information about eucanetd
+ * @param gni [in] pointer to the Global Network Information structure
  * @return 0 on success. 1 on failure.
  */
-int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
+int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config, globalNetworkInfo *gni) {
     int ret = 0;
 
-    if (!mido || !eucanetd_config ||
+    if (!mido || !eucanetd_config || !gni ||
             !eucanetd_config->eucahome ||
             !strlen(eucanetd_config->midogwhosts) ||
             !strlen(eucanetd_config->midopubnw) ||
@@ -5197,6 +5198,7 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
 
     mido->disable_l2_isolation = eucanetd_config->disable_l2_isolation;
 
+/*
     char *toksA[32], *toksB[3];
     int numtoksA = 0, numtoksB = 0, i = 0, idx = 0;
 
@@ -5223,6 +5225,26 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config) {
 
     mido->ext_pubnw = strdup(eucanetd_config->midopubnw);
     mido->ext_pubgwip = strdup(eucanetd_config->midopubgwip);
+*/
+
+    for (int i = 0; i < gni->max_midogws; i++) {
+        EUCA_FREE(mido->ext_rthostnamearr[i]);
+        EUCA_FREE(mido->ext_rthostaddrarr[i]);
+        EUCA_FREE(mido->ext_rthostifacearr[i]);
+        mido->ext_rthostnamearr[i] = strdup(gni->midogws[i].host);
+        mido->ext_rthostaddrarr[i] = strdup(gni->midogws[i].ext_ip);
+        mido->ext_rthostifacearr[i] = strdup(gni->midogws[i].ext_dev);
+        EUCA_FREE(mido->ext_pubnw);
+        EUCA_FREE(mido->ext_pubgwip);
+        mido->ext_pubnw = strdup(gni->midogws[i].ext_cidr);
+        mido->ext_pubgwip = strdup(gni->midogws[i].peer_ip);
+    }
+    mido->ext_rthostarrmax = gni->max_midogws;
+
+    for (int i = 0; i < mido->ext_rthostarrmax; i++) {
+        LOGTRACE("parsed mido GW host information: GW id=%d: %s/%s/%s\n",
+                i, mido->ext_rthostnamearr[i], mido->ext_rthostaddrarr[i], mido->ext_rthostifacearr[i]);
+    }
 
     char nw[NETWORK_ADDR_LEN] = { 0 };
     char sn[NETWORK_ADDR_LEN] = { 0 };

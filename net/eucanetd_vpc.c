@@ -164,7 +164,7 @@ mido_config *pMidoConfig = NULL;
 
 //! @{
 //! @name MIDONET VPC Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_init(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
@@ -222,9 +222,10 @@ struct driver_handler_t midoVpcDriverHandler = {
  * - The pConfig parameter must not be NULL
  *
  * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
  * @return 0 on success. Integer number on failure.
  */
-static int network_driver_init(eucanetdConfig *pConfig) {
+static int network_driver_init(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
 
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
@@ -244,7 +245,7 @@ static int network_driver_init(eucanetdConfig *pConfig) {
         pMidoConfig = EUCA_ZALLOC_C(1, sizeof (mido_config));
     }
     pMidoConfig->config = pConfig;
-    rc = initialize_mido(pMidoConfig, pConfig);
+    rc = initialize_mido(pMidoConfig, pConfig, pGni);
     if (rc) {
         LOGERROR("could not initialize mido: please ensure that all required config options for VPCMIDO mode are set\n");
         free_mido_config(pMidoConfig);
@@ -562,7 +563,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
             LOGERROR("failed to (re)initialize config options: VPCMIDO driver not initialized\n");
             return (EUCANETD_RUN_ERROR_API);
         }
-        rc = network_driver_init(pConfig);
+        rc = network_driver_init(pConfig, pGni);
         if (rc) {
             LOGERROR("failed to (re)initialize config options\n");
             return (EUCANETD_RUN_ERROR_API);

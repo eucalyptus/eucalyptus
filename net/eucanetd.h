@@ -243,7 +243,7 @@ typedef struct eucanetdConfig_t {
 //! Network Driver API
 typedef struct driver_handler_t {
     char name[CHAR_BUFFER_SIZE];                                                         //!< The name of the given network driver (e.g. EDGE, VPCMIDO, etc.)
-    int (*init) (eucanetdConfig *pConfig);                                               //!< The driver initialization interface
+    int (*init) (eucanetdConfig *pConfig, globalNetworkInfo *pGni);                      //!< The driver initialization interface
     int (*upgrade) (eucanetdConfig *pConfig, globalNetworkInfo *pGni);                   //!< This is optional when upgrade tasks are required.
     int (*cleanup) (eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean doFlush);  //!< The driver cleanup interface
     int (*system_flush) (eucanetdConfig *pConfig, globalNetworkInfo *pGni);              //!< Responsible for the flushing of all euca networking artifacts

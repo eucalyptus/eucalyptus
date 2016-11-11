@@ -868,4 +868,48 @@ euca_netmode euca_netmode_atoi(const char *psNetMode) {
     return (NM_INVALID);
 }
 
-
+/**
+ * Gets the IP address that corresponds to the given hostname. The IP address is
+ * determined through system name resolution. If an IP address is detected in the
+ * input hostname, no action is taken. The resulting IP address is returned in ipout
+ * is allocated using malloc(), and the caller is responsible to release this memory.
+ * @param hostname [in] the host/IP of interest
+ * @param ipout [out] optional pointer to a string that will contain the resulting
+ * IP address
+ * @return hex representation of the resulting IP address. 0 can be returned on
+ * error or if hostname corresponds to 0.0.0.0
+ */
+u32 euca_getaddr(const char *hostname, char **ipout) {
+    struct addrinfo hints = { 0 };
+    struct addrinfo *ainfo = NULL;
+    struct addrinfo *p = NULL;
+    struct sockaddr_in *sa = NULL;
+    char res[INET_ADDR_LEN] = { 0 };
+    int rc = 0;
+    
+    if (ISDOTIP(hostname)) {
+        snprintf(res, INET_ADDR_LEN, "%s", hostname);
+    } else {
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        
+        rc = getaddrinfo(hostname, NULL, &hints, &ainfo);
+        if (rc) {
+            LOGWARN("Failed to resolve %s: %s\n", hostname, gai_strerror(rc));
+            return (0);
+        }
+        
+        for (p = ainfo; p != NULL; p = p->ai_next) {
+            sa = (struct sockaddr_in *) p->ai_addr;
+            snprintf(res, INET_ADDR_LEN, "%s", inet_ntoa(sa->sin_addr));
+            // Use the first entry of the results
+            break;
+        }
+        freeaddrinfo(ainfo);
+    }
+    
+    if (ipout) {
+        *ipout = strdup(res);
+    }
+    return (dot2hex(res));
+}

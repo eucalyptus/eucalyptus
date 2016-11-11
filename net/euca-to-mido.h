@@ -385,7 +385,7 @@ int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
 
 enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target);
 
-int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config);
+int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config, globalNetworkInfo *gni);
 int reinitialize_mido(mido_config *mido);
 int validate_mido(mido_config *mido);
 

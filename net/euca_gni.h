@@ -61,7 +61,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-enum { GNI_ITERATE_PRINT, GNI_ITERATE_FREE };
+typedef enum gni_iterate_mode_t {
+    GNI_ITERATE_PRINT,
+    GNI_ITERATE_FREE
+} gni_iterate_mode;
 
 enum gni_populate_mode_t {
     GNI_POPULATE_ALL,
@@ -100,9 +103,30 @@ typedef struct gni_instance_t gni_instance;
 typedef struct gni_secgroup_t gni_secgroup;
 
 //! GNI element name structure
-typedef struct gni_name_t {
+typedef struct gni_name_32_t {
+    char name[32];
+} gni_name_32;
+
+typedef struct gni_name_256_t {
+    char name[256];
+} gni_name_256;
+
+typedef struct gni_name_1024_t {
     char name[1024];                   //!< GNI element name string
-} gni_name;
+} gni_name_1024;
+
+//! GNI Mido Gateway
+typedef struct gni_mido_gateway_t {
+    char host[HOSTNAME_LEN];
+    char ext_ip[NETWORK_ADDR_LEN];
+    char ext_dev[IF_NAME_LEN];
+    char ext_cidr[NETWORK_ADDR_LEN];
+    char peer_ip[NETWORK_ADDR_LEN];
+    u32 peer_asn;
+    u32 asn;
+    char **ad_routes;
+    int max_ad_routes;
+} gni_mido_gateway;
 
 //! GNI SG Rule
 typedef struct gni_rule_t {
@@ -115,7 +139,7 @@ typedef struct gni_rule_t {
     u32 cidrNetaddr;
     char cidr[NETWORK_ADDR_LEN];
     char groupId[SECURITY_GROUP_ID_LEN];
-    char groupOwnerId[16];
+    char groupOwnerId[OWNER_ID_LEN];
 } gni_rule;
 
 //! GNI Network ACL entry
@@ -134,35 +158,33 @@ typedef struct gni_acl_entry_t {
 
 //! GNI Instance Information structure
 struct gni_instance_t {
-    char name[INTERFACE_ID_LEN];       //!< Instance ID string
-    char ifname[INTERFACE_ID_LEN];     //!< Interface ID string
+    char name[INTERFACE_ID_LEN];              //!< Instance ID string
+    char ifname[INTERFACE_ID_LEN];            //!< Interface ID string
     char attachmentId[ENI_ATTACHMENT_ID_LEN]; //!< Attachment ID string
-    char accountId[128];               //!< Instance Account ID string
-    u8 macAddress[ENET_BUF_SIZE];      //!< Associated MAC address
-    u32 publicIp;                      //!< Assigned public IP address
-    u32 privateIp;                     //!< Assigned private IP address
-    char vpc[16];                      //!< VPC ID associated with this interface
-    char subnet[16];                   //!< subnet ID associated with this interface
+    char accountId[OWNER_ID_LEN];             //!< Instance Account ID string
+    u8 macAddress[ENET_BUF_SIZE];             //!< Associated MAC address
+    u32 publicIp;                             //!< Assigned public IP address
+    u32 privateIp;                            //!< Assigned private IP address
+    char vpc[VPC_ID_LEN];                     //!< VPC ID associated with this interface
+    char subnet[VPC_SUBNET_ID_LEN];           //!< subnet ID associated with this interface
     char node[HOSTNAME_LEN];
-    char nodehostname[HOSTNAME_LEN];
-    boolean srcdstcheck;               //!< Source/Destination Check flag (only for interfaces)
-    int deviceidx;                     //!< NIC device index (only for interfaces)
-    gni_name instance_name;            //!< Instance name associated
-    gni_name *secgroup_names;          //!< List of associated security group names
-    int max_secgroup_names;            //!< Number of security group names in the list
+    boolean srcdstcheck;                      //!< Source/Destination Check flag (only for interfaces)
+    int deviceidx;                            //!< NIC device index (only for interfaces)
+    gni_name_32 instance_name;                //!< Instance name associated
+    gni_name_32 *secgroup_names;              //!< List of associated security group names
+    int max_secgroup_names;                   //!< Number of security group names in the list
     gni_instance **interfaces;
     int max_interfaces;
     gni_secgroup **gnisgs;
-    void *mido_present;                //!< mido datastructure that implements this gni_instance
+    void *mido_present;                       //!< mido datastructure that implements this gni_instance
     void *mido_vpc;
     void *mido_vpcsubnet;
 };
 
 //! GNI Security Group Information structure
 struct gni_secgroup_t {
-    char accountId[128];               //!< Security Group Account ID string
+    char accountId[OWNER_ID_LEN];      //!< Security Group Account ID string
     char name[SECURITY_GROUP_ID_LEN];  //!< Security Group Name string (i.e. sg-xxxxxxxx)
-    char chainname[32];                //!< Associated chain name TODO: Really needed?
     gni_rule *ingress_rules;
     int max_ingress_rules;
     gni_rule *egress_rules;
@@ -184,24 +206,26 @@ typedef struct gni_subnet_t {
 //! GNI Node Information Structure
 typedef struct gni_node_t {
     char name[HOSTNAME_LEN];           //!< The Node name
-    gni_name *instance_names;          //!< A list of associated instance names
+    gni_name_32 *instance_names;       //!< A list of associated instance names
     int max_instance_names;            //!< Number of instance names in the list
 } gni_node;
 
 //! GNI Cluster Information Structure
 typedef struct gni_cluster_t {
-    char name[HOSTNAME_LEN];           //!< The Cluster name
-    u32 enabledCCIp;                   //!< The enabled CC IP address
+    char name[HOSTNAME_LEN];            //!< The Cluster name
+    u32 enabledCCIp;                    //!< The enabled CC IP address
     char macPrefix[ENET_MACPREFIX_LEN]; //!< The MAC address prefix to use for instances
-    gni_subnet private_subnet;         //!< Cluster Subnet Information
-    u32 *private_ips;                  //!< List of private IPs associated with this cluster
-    int max_private_ips;               //!< Number of private IPs in the list
-    gni_node *nodes;                   //!< List of associated nodes information
-    int max_nodes;                     //!< Number of nodes in the lsit
+    gni_subnet private_subnet;          //!< Cluster Subnet Information
+    char **private_ips_str;
+    int max_private_ips_str;
+    u32 *private_ips;                   //!< List of private IPs associated with this cluster
+    int max_private_ips;                //!< Number of private IPs in the list
+    gni_node *nodes;                    //!< List of associated nodes information
+    int max_nodes;                      //!< Number of nodes in the lsit
 } gni_cluster;
 
 typedef struct gni_network_acl_t {
-    char accountId[128];
+    char accountId[OWNER_ID_LEN];
     char name[NETWORK_ACL_ID_LEN];
     gni_acl_entry *ingress;
     int max_ingress;
@@ -211,7 +235,7 @@ typedef struct gni_network_acl_t {
 } gni_network_acl;
 
 typedef struct gni_dhcp_os_t {
-    char accountId[128];
+    char accountId[OWNER_ID_LEN];
     char name[DHCP_OS_ID_LEN];
     u32 *dns;
     int max_dns;
@@ -219,49 +243,49 @@ typedef struct gni_dhcp_os_t {
     int max_ntp;
     u32 *netbios_ns;
     int max_netbios_ns;
-    gni_name *domains;
+    gni_name_256 *domains;
     int max_domains;
     int netbios_type;
     int changed;
 } gni_dhcp_os;
 
 typedef struct gni_route_entry_t {
-    char destCidr[16];
-    char target[32];
+    char destCidr[NETWORK_ADDR_LEN];
+    char target[LID_LEN];
     int applied;
 } gni_route_entry;
 
 typedef struct gni_route_table_t {
-    char name[16];
-    char accountId[128];
+    char name[RTB_ID_LEN];
+    char accountId[OWNER_ID_LEN];
     gni_route_entry *entries;
     int max_entries;
     int changed;
 } gni_route_table;
 
 typedef struct gni_internet_gateway_t {
-    char name[16];
-    char accountId[128];
+    char name[INETG_ID_LEN];
+    char accountId[OWNER_ID_LEN];
 } gni_internet_gateway;
 
 typedef struct gni_nat_gateway_t {
-    char name[32];
-    char accountId[128];
+    char name[NATG_ID_LEN];
+    char accountId[OWNER_ID_LEN];
     u8 macAddress[ENET_BUF_SIZE];
     u32 publicIp;
     u32 privateIp;
-    char vpc[16];
-    char subnet[16];
+    char vpc[VPC_ID_LEN];
+    char subnet[VPC_SUBNET_ID_LEN];
     void *mido_present;
 } gni_nat_gateway;
 
 typedef struct gni_vpcsubnet_t {
-    char name[16];
-    char accountId[128];
-    char cidr[24];
+    char name[VPC_SUBNET_ID_LEN];
+    char accountId[OWNER_ID_LEN];
+    char cidr[NETWORK_ADDR_LEN];
     char cluster_name[HOSTNAME_LEN];
-    char networkAcl_name[16];
-    char routeTable_name[16];
+    char networkAcl_name[NETWORK_ACL_ID_LEN];
+    char routeTable_name[RTB_ID_LEN];
     gni_instance **interfaces;
     gni_route_table *routeTable;
     gni_network_acl *networkAcl;
@@ -270,10 +294,10 @@ typedef struct gni_vpcsubnet_t {
 } gni_vpcsubnet;
 
 typedef struct gni_vpc_t {
-    char name[16];
-    char accountId[128];
-    char cidr[24];
-    char dhcpOptionSet_name[16];
+    char name[VPC_ID_LEN];
+    char accountId[OWNER_ID_LEN];
+    char cidr[NETWORK_ADDR_LEN];
+    char dhcpOptionSet_name[DHCP_OS_ID_LEN];
     gni_dhcp_os *dhcpOptionSet;
     gni_vpcsubnet *subnets;
     int max_subnets;
@@ -283,7 +307,7 @@ typedef struct gni_vpc_t {
     int max_routeTables;
     gni_nat_gateway *natGateways;
     int max_natGateways;
-    gni_name *internetGatewayNames;
+    gni_name_32 *internetGatewayNames;
     int max_internetGatewayNames;
     gni_instance **interfaces;
     int max_interfaces;
@@ -304,8 +328,8 @@ typedef struct gni_hostname_info_t {
 typedef struct globalNetworkInfo_t {
     boolean init;                           //!< has the structure been initialized successfully?
     char networkInfo[MAX_NETWORK_INFO_LEN]; //!< XML content used to build this structure
-    char version[32];                       //!< latest version ID of the document
-    char appliedVersion[32];                //!< latest known applied version ID of the document
+    char version[GNI_VERSION_LEN];          //!< latest version ID of the document
+    char appliedVersion[GNI_VERSION_LEN];   //!< latest known applied version ID of the document
     char sMode[NETMODE_LEN];                //!< The network mode string passed in the GNI
     euca_netmode nmCode;                    //!< The network mode code (see euca_netmode_t)
     u32 enabledCLCIp;                       //!< IP address of the enabled CLC
@@ -315,9 +339,13 @@ typedef struct globalNetworkInfo_t {
     char instanceDNSDomain[HOSTNAME_LEN];   //!< The DNS domain name to use for the instances
     u32 *instanceDNSServers;                //!< List of DNS servers
     int max_instanceDNSServers;             //!< Number of DNS servers in the list
-    u32 publicGateway;                      //!< Public network default gateway
+    // u32 publicGateway;                      //!< Public network default gateway
     u32 *public_ips;                        //!< List of associated public IPs
     int max_public_ips;                     //!< Number of associated public IPs in the list
+    char **public_ips_str;
+    int max_public_ips_str;
+    gni_mido_gateway *midogws;
+    int max_midogws;
     gni_subnet *subnets;                    //!< List of global subnet information
     int max_subnets;                        //!< Number of global subnets in the list
     gni_cluster *clusters;                  //!< List of clusters information
@@ -352,8 +380,8 @@ typedef struct globalNetworkInfo_t {
 globalNetworkInfo *gni_init(void);
 int gni_free(globalNetworkInfo *gni);
 int gni_clear(globalNetworkInfo *gni);
-int gni_print(globalNetworkInfo *gni);
-int gni_iterate(globalNetworkInfo *gni, int mode);
+int gni_print(globalNetworkInfo *gni, log_level_e llevel);
+int gni_iterate(globalNetworkInfo *gni, gni_iterate_mode mode, log_level_e llevel);
 int gni_populate(globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
 int gni_populate_v(int mode, globalNetworkInfo *gni, gni_hostname_info *host_info, char *xmlpath);
 int gni_populate_xpathnodes(xmlDocPtr doc, xmlNode **gni_nodes);
@@ -385,6 +413,7 @@ int gni_instance_clear(gni_instance *instance);
 int gni_secgroup_clear(gni_secgroup *secgroup);
 int gni_vpc_clear(gni_vpc *vpc);
 int gni_dhcpos_clear(gni_dhcp_os *dhcpos);
+int gni_midogw_clear(gni_mido_gateway *midogw);
 
 int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);

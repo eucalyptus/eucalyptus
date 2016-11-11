@@ -161,7 +161,7 @@ static int edgeMaintCount = 0;
 
  //! @{
  //! @name EDGE Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_init(eucanetdConfig *pEucanetdConfig, globalNetworkInfo *pGni);
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
@@ -215,6 +215,7 @@ struct driver_handler_t edgeDriverHandler = {
 /**
  * Initialize EDGE network driver.
  * @param pEucanetdConfig [in] a pointer to eucanetd configuration structure
+ * @param pGni [in] a pointer to the Global Network Information structure
  * @return 0 on success or 1 on any failure
  * 
  * @pre \li The core application configuration must be completed prior calling
@@ -225,7 +226,7 @@ struct driver_handler_t edgeDriverHandler = {
  *       the driver is non-deterministic. If the driver was previously initialized,
  *       this will result into a no-op.
  */
-static int network_driver_init(eucanetdConfig *pEucanetdConfig) {
+static int network_driver_init(eucanetdConfig *pEucanetdConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());

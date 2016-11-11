@@ -257,7 +257,7 @@ static void eucanetd_install_signal_handlers(void);
 static int eucanetd_daemonize(void);
 static int eucanetd_fetch_latest_local_config(void);
 static int eucanetd_initialize(void);
-static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig);
+static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int eucanetd_cleanup(void);
 static int eucanetd_read_config_bootstrap(void);
 static int eucanetd_setlog_bootstrap(void);
@@ -511,7 +511,7 @@ int main(int argc, char **argv) {
 
         // Initialize our network driver
         if (!rc) {
-            rc = eucanetd_initialize_network_drivers(config);
+            rc = eucanetd_initialize_network_drivers(config, pGni);
             if (rc) {
                 LOGFATAL("Failed to initialize network driver: eucanetd going down\n");
                 exit(1);
@@ -701,7 +701,7 @@ int main(int argc, char **argv) {
                 if (!strlen(pGni->version) || (str2file(pGni->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
                     LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
                 } else {
-                    snprintf(config->lastAppliedVersion, 32, "%s", pGni->version);
+                    snprintf(config->lastAppliedVersion, GNI_VERSION_LEN, "%s", pGni->version);
                 }
             }
         }
@@ -977,10 +977,11 @@ static int eucanetd_initialize(void) {
  * Initialize the network drivers. When implementing a new network driver, simply set
  * the global 'pDriverHandler' variable to your new driver callback structure.
  * @param pConfig [in] a pointer to the eucanetd configuration structure
+ * @param pGni [in] a pointer to our global network information structure
  * @return On success, the proper driver handler is selected and the driver initialization
  * routine has been called. On failure, the state of the driver is left undetermined.
  */
-static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig) {
+static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     // Make sure our given parameter is valid
     if (pConfig) {
         LOGINFO("Loading '%s' mode driver.\n", pConfig->netMode);
@@ -995,7 +996,7 @@ static int eucanetd_initialize_network_drivers(eucanetdConfig *pConfig) {
 
         // If we have an init function. Lets call it now
         if (pDriverHandler->init) {
-            if (pDriverHandler->init(pConfig) != 0) {
+            if (pDriverHandler->init(pConfig, pGni) != 0) {
                 LOGERROR("Failed to initialize '%s' driver!\n", pConfig->netMode);
                 return (1);
             }
@@ -1187,8 +1188,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
         }
         return (1);
     }
-    rc = gni_print(pGni);
-    //rc = gni_hostnames_print(host_info);
+    gni_print(pGni, EUCA_LOG_TRACE);
 
     // setup and read local NC eucalyptus.conf file
     snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
@@ -1523,7 +1523,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
         LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
-        gni_print(pGni);
+        gni_print(pGni, EUCA_LOG_TRACE);
 
         // regardless, if the last successfully applied version matches the current GNI version, skip the update
         if ((strlen(pGni->version) && strlen(config->lastAppliedVersion))) {
@@ -1614,7 +1614,7 @@ static int eucanetd_read_latest_network(globalNetworkInfo *pGni, boolean *update
  *
  * @return Returns the proper role associated with this service
  */
-static int eucanetd_detect_peer(globalNetworkInfo * pGni)
+static int eucanetd_detect_peer(globalNetworkInfo *pGni)
 {
     gni_node *pNode = NULL;
     gni_cluster *pCluster = NULL;

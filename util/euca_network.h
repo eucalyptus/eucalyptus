@@ -88,7 +88,10 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -258,6 +261,8 @@ char *euca_intfc2mac(const char *psDevName);
 //! @name APIs to manipulate network mode names
 euca_netmode euca_netmode_atoi(const char *psNetMode);
 //! @}
+
+u32 euca_getaddr(const char *hostname, char **ipout);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
