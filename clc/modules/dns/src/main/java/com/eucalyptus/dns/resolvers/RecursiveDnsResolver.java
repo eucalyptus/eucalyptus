@@ -200,36 +200,24 @@ public class RecursiveDnsResolver extends DnsResolver {
         }
       }
     }
-   
-    for ( Record queriedRec : queriedrrs ) {
-      SetResponse sr = cache.lookupRecords( queriedRec.getName( ),
-        queriedRec.getType( ),
-        Credibility.ANY );
-      if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
-        for ( RRset result : sr.answers( ) ) {
-          Iterator rrs = result.rrs( false );
-          if ( rrs != null ) {
-            for ( Object record : ImmutableSet.copyOf( rrs ) ) {
-              if(iamAuthority && DomainNames.isExternalSubdomain(((Record)record).getName())){
-                final Name resolvedName = ((Record)record).getName();
-                try{
-                  final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( resolvedName );
-                  final InetAddress publicIp = InstanceDomainNames.toInetAddress( resolvedName.relativize( instanceDomain ) );
-                  final VmInstance vm = VmInstances.lookupByPublicIp( publicIp.getHostAddress( ) );
-                  final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
-                  final Record privateARecord = DomainNameRecords.addressRecord( resolvedName, instanceAddress );
-                  answer.add(privateARecord);
-                }catch(final Exception ex) {
-                  answer.add((Record) record);
-                  continue;
-                }
-              }else{
-                answer.add( ( Record ) record );
-              }
+
+    for ( Record record : ImmutableSet.copyOf( queriedrrs ) ) {
+        if ( iamAuthority && DomainNames.isExternalSubdomain( record.getName() )){
+            final Name resolvedName = record.getName();
+            try {
+              final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( resolvedName );
+              final InetAddress publicIp = InstanceDomainNames.toInetAddress( resolvedName.relativize( instanceDomain ) );
+              final VmInstance vm = VmInstances.lookupByPublicIp( publicIp.getHostAddress( ) );
+              final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+              final Record privateARecord = DomainNameRecords.addressRecord( resolvedName, instanceAddress );
+              answer.add(privateARecord);
+            } catch(final Exception ex) {
+              answer.add( record );
+              continue;
             }
-          }
+        } else {
+            answer.add( record );
         }
-      }
     }
     
     if((aLookup.getResult() == Lookup.SUCCESSFUL 
