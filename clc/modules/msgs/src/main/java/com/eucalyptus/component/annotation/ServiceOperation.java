@@ -32,4 +32,16 @@ public @interface ServiceOperation {
    * Operation is invokable by a user.
    */
   boolean user( ) default false;
+
+  /**
+   * Operation dispatched to coordinator when consumed using hostname.
+   *
+   * This can be used for correct operation of stateful services when
+   * consumed via ufs hosts.
+   *
+   * Only valid for local services.
+   *
+   * @see com.eucalyptus.component.ComponentId#isAlwaysLocal()
+   */
+  boolean hostDispatch( ) default false;
 }

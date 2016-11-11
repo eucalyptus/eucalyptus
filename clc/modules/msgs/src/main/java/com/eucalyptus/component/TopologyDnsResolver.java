@@ -68,14 +68,12 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 
-import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -87,9 +85,7 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -292,14 +288,8 @@ public class TopologyDnsResolver extends DnsResolver {
       final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
       final ComponentId componentId = ComponentIds.lookup( compIdType );
       final List<ServiceConfiguration> configs = Lists.newArrayList( );
-      final Optional<Set<String>> adminServiceName = componentId.getAdminServiceNames( );
-      final Host coordinator = Hosts.getCoordinator( );
       Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE;
-      if ( coordinator != null && adminServiceName.isPresent( ) &&
-          adminServiceName.get( ).contains( name.getLabelString( 0 ) ) ) {
-        configFilter = Predicates.alwaysTrue( );
-        configs.add( ServiceConfigurations.createEphemeral( componentId, coordinator.getBindAddress( ) ) );
-      } else if ( componentId.isPartitioned( ) ) {
+      if ( componentId.isPartitioned( ) ) {
         final String partitionName = name.getLabelString( 1 );
         final Partition partition = Partitions.lookupByName( partitionName );
         if ( componentId.isManyToOnePartition( ) ) {

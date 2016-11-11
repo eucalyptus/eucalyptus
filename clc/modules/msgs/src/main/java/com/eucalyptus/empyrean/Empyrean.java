@@ -65,7 +65,6 @@ package com.eucalyptus.empyrean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
-import com.eucalyptus.component.annotation.AdminServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
@@ -75,8 +74,7 @@ import com.eucalyptus.component.annotation.ServiceNames;
 @Partition( Empyrean.class )
 @GenerateKeys
 @AdminService
-@AdminServiceName( { "bootstrap", "bootstrap-admin" } )
-@ServiceNames( { "bootstrap-public", "bootstrap", "bootstrap-admin" } )
+@ServiceNames( { "bootstrap", "bootstrap-admin" } )
 @PolicyVendor("euserv")
 @FaultLogPrefix( "cloud" )
 public class Empyrean extends ComponentId {
