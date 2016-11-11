@@ -62,7 +62,7 @@
 
 package com.eucalyptus.util.async;
 
-import org.apache.log4j.Logger;
+import java.util.concurrent.ExecutionException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -90,7 +90,7 @@ public class AsyncRequests {
         {
           this.setRequest( msg );
         }
-        
+
         @Override
         public void fire( B msg ) {
           Logs.extreme( ).debug( msg.toSimpleString( ) );
@@ -131,7 +131,7 @@ public class AsyncRequests {
           {
             this.setRequest( msg );
           }
-          
+
           @Override
           public void fire( B msg ) {
             Logs.extreme( ).debug( msg.toSimpleString( ) );
@@ -141,10 +141,15 @@ public class AsyncRequests {
       } catch ( InterruptedException ex ) {
         Thread.currentThread( ).interrupt( );
         throw ex;
+      } catch ( ExecutionException e ) {
+        if ( e.getCause( ) instanceof Exception ) {
+          throw (Exception) e.getCause( );
+        }
+        throw e;
       }
     }
   }
-  
+
   public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
     return new AsyncRequest<A,B>( msgCallback ) {
       {
@@ -152,5 +157,5 @@ public class AsyncRequests {
       }
     };
   }
-  
+
 }
