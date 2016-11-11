@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2016 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,28 +12,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.util;
 
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
- * Function that is compatible with both Java 8 and Guava.
+ * Predicate that is compatible with both Java 8 and Guava.
  */
-public interface CompatFunction<F, T> extends Function<F, T>, com.google.common.base.Function<F,T> {
+public interface CompatPredicate<T> extends Predicate<T>, com.google.common.base.Predicate<T> {
 
-  static <F, T> CompatFunction<F, T> of( final Function<F, T> func ) {
-    //noinspection TrivialMethodReference
-    return func::apply;
-  }
-
-  @SuppressWarnings( "Guava" )
-  static <F, T> CompatFunction<F, T> of( final com.google.common.base.Function<F, T> func ) {
-    //noinspection TrivialMethodReference
-    return func::apply;
+  @Override
+  default boolean test( T t ) {
+    return apply( t );
   }
 }
