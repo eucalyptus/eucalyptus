@@ -80,11 +80,11 @@ import com.google.common.collect.Iterables;
 @ComponentNamed
 public class PropertiesManager {
   private static Logger LOG = Logger.getLogger( PropertiesManager.class );
-  
-  @ServiceOperation
+
+  @ServiceOperation( hostDispatch = true )
   public enum ModifyProperty implements Function<ModifyPropertyValueType, ModifyPropertyValueResponseType> {
     INSTANCE;
-    
+
     @Override
     public ModifyPropertyValueResponseType apply( final ModifyPropertyValueType input ) {
       try {
@@ -93,14 +93,14 @@ public class PropertiesManager {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
-  }
-  
 
-  @ServiceOperation
+  }
+
+
+  @ServiceOperation( hostDispatch = true )
   public enum DescribeProperties implements Function<DescribePropertiesType, DescribePropertiesResponseType> {
     INSTANCE;
-    
+
     @Override
     public DescribePropertiesResponseType apply( final DescribePropertiesType input ) {
       try {
@@ -109,10 +109,10 @@ public class PropertiesManager {
         throw Exceptions.toUndeclared( ex );
       }
     }
-    
+
   }
-  
-  
+
+
   public static DescribePropertiesResponseType describeProperties( final DescribePropertiesType request ) throws EucalyptusCloudException {
     DescribePropertiesResponseType reply = request.getReply( );
     List<Property> props = reply.getProperties( );

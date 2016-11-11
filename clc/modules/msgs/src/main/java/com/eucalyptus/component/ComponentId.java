@@ -63,8 +63,6 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,7 +81,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
-import com.eucalyptus.component.annotation.AdminServiceName;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.ComponentDatabase;
@@ -111,7 +108,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -496,16 +492,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
 
-  public Optional<Set<String>> getAdminServiceNames( ) {
-    if ( this.ats.has( AdminServiceName.class ) ) {
-      final String[] names = this.ats.get( AdminServiceName.class ).value( );
-      if ( names.length > 0 ) {
-        return Optional.of( ImmutableSortedSet.orderedBy( String.CASE_INSENSITIVE_ORDER ).add( names ).build( ) );
-      }
-    }
-    return Optional.absent( );
-  }
-
   /**
    * Get any additional DNS host labels for this component.
    */
@@ -515,8 +501,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       names = ImmutableSet.copyOf( this.ats.get( ServiceNames.class ).value( ) );
     } else if ( this.ats.has( AwsServiceName.class ) ) {
       names = Collections.singleton( getAwsServiceName( ) );
-    } else if ( this.ats.has( AdminServiceName.class ) ) {
-      names = getAdminServiceNames( ).or( Sets::newHashSet );
     }
     return names;
   }

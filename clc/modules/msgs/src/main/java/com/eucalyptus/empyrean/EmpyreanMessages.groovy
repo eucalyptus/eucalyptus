@@ -140,6 +140,9 @@ public class ServiceAccount extends EucalyptusData {
   String accountNumber
   String accountCanonicalId
 
+  public ServiceAccount(){
+  }
+
   public ServiceAccount(String name, String number, String canonicalId) {
     this.accountName = name
     this.accountNumber = number

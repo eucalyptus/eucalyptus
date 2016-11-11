@@ -117,7 +117,7 @@ import com.google.common.io.BaseEncoding;
 public class EmpyreanService {
   private static Logger LOG = Logger.getLogger( EmpyreanService.class );
 
-  @ServiceOperation
+  @ServiceOperation( hostDispatch = true )
   public enum ModifyService implements Function<ModifyServiceType, ModifyServiceResponseType> {
     INSTANCE;
 
@@ -132,7 +132,7 @@ public class EmpyreanService {
 
   }
 
-  @ServiceOperation
+  @ServiceOperation( hostDispatch = true )
   public enum StartService implements Function<StartServiceType, StartServiceResponseType> {
     INSTANCE;
 
@@ -147,7 +147,7 @@ public class EmpyreanService {
 
   }
 
-  @ServiceOperation
+  @ServiceOperation( hostDispatch = true )
   public enum StopService implements Function<StopServiceType, StopServiceResponseType> {
     INSTANCE;
 
@@ -162,7 +162,7 @@ public class EmpyreanService {
 
   }
 
-  @ServiceOperation
+  @ServiceOperation( hostDispatch = true )
   public enum EnableService implements Function<EnableServiceType, EnableServiceResponseType> {
     INSTANCE;
 
@@ -177,7 +177,7 @@ public class EmpyreanService {
 
   }
 
-  @ServiceOperation
+  @ServiceOperation( hostDispatch = true )
   public enum DisableService implements Function<DisableServiceType, DisableServiceResponseType> {
     INSTANCE;
 
@@ -639,7 +639,7 @@ public class EmpyreanService {
     }
   }
 
-  @ServiceOperation(user=true)
+  @ServiceOperation( user = true, hostDispatch = true )
   public enum DescribeService implements Function<DescribeServicesType, DescribeServicesResponseType> {
     INSTANCE;
 
@@ -744,7 +744,7 @@ public class EmpyreanService {
     return reply;
   }
 
-  @ServiceOperation(user=true)
+  @ServiceOperation( user = true, hostDispatch = true )
   public enum DescribeServiceCertificates implements Function<DescribeServiceCertificatesType, DescribeServiceCertificatesResponseType> {
     INSTANCE;
 

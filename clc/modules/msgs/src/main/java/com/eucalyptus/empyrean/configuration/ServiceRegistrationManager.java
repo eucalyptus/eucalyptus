@@ -1,42 +1,42 @@
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see http://www.gnu.org/licenses/.
- * 
+ *
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- * 
+ *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- * 
+ *
  * Software License Agreement (BSD License)
- * 
+ *
  * Copyright (c) 2008, Regents of the University of California
  * All rights reserved.
- * 
+ *
  * Redistribution and use of this software in source and binary forms,
  * with or without modification, are permitted provided that the
  * following conditions are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright
  * notice, this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer
  * in the documentation and/or other materials provided with the
  * distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -101,11 +101,11 @@ import com.google.common.collect.Lists;
  */
 public class ServiceRegistrationManager {
   private static Logger LOG = Logger.getLogger( ServiceRegistrationManager.class );
-  
-  @ServiceOperation
+
+  @ServiceOperation( hostDispatch = true )
   public enum RegisterService implements Function<RegisterServiceType, RegisterServiceResponseType> {
     INSTANCE;
-    
+
     public static Collection<Future<ServiceConfiguration>> register( String partition,
                                                                      String name,
                                                                      String hostName,
@@ -131,7 +131,7 @@ public class ServiceRegistrationManager {
       }
       return registered;
     }
-    
+
     @Override
     public RegisterServiceResponseType apply( final RegisterServiceType request ) {
       final RegisterServiceResponseType reply = request.getReply( );
@@ -177,11 +177,11 @@ public class ServiceRegistrationManager {
       return reply;
     }
   }
-  
-  @ServiceOperation
+
+  @ServiceOperation( hostDispatch = true )
   public enum DeregisterService implements Function<DeregisterServiceType, DeregisterServiceResponseType> {
     INSTANCE;
-    
+
     private static Collection<Future<ServiceConfiguration>> deregister( ComponentId componentId, String name ) throws EucalyptusCloudException {
       final List<Future<ServiceConfiguration>> deregistered = Lists.newArrayList( );
       try {
@@ -210,7 +210,7 @@ public class ServiceRegistrationManager {
       }
       return deregistered;
     }
-    
+
     @Override
     public DeregisterServiceResponseType apply( final DeregisterServiceType request ) {
       final DeregisterServiceResponseType reply = request.getReply( );
@@ -250,11 +250,11 @@ public class ServiceRegistrationManager {
       return reply;
     }
   }
-  
-  @ServiceOperation
+
+  @ServiceOperation( hostDispatch = true )
   public enum DescribeAvailableComponents implements Function<DescribeAvailableServiceTypesType, DescribeAvailableServiceTypesResponseType> {
     INSTANCE;
-    
+
     @Override
     public DescribeAvailableServiceTypesResponseType apply( final DescribeAvailableServiceTypesType input ) {
       try {
@@ -286,7 +286,7 @@ public class ServiceRegistrationManager {
           compInfo.setDescription( description );
           compInfo.setHasCredentials( componentId.hasCredentials( ) );
           //GRZE:YAWN: this above should be a component specific (read: @annotated) value and not a cobbled together generic string.
-          
+
           /**
            * Info about its registration requirements
            */
@@ -294,7 +294,7 @@ public class ServiceRegistrationManager {
           compInfo.setPartitioned( componentId.isPartitioned( ) );
           compInfo.setPublicApiService( componentId.isPublicService( ) );
           compInfo.setRequiresName( componentId.isPartitioned( ) );//GRZE: this condition will change going forward; they are not equivalent notions.
-          
+
           /**
            * Info about service groups
            */
@@ -315,5 +315,5 @@ public class ServiceRegistrationManager {
       }
     }
   }
-  
+
 }
