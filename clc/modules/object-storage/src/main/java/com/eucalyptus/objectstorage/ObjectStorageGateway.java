@@ -2214,7 +2214,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         response.setVary(null);
       }
     } else { // end if matching CORS rule
-      LOG.debug("Has origin but no matching CORS rule, therefore no CORS info stored");
+      LOG.trace("Has origin but no matching CORS rule, therefore no CORS info stored");
     }
   }
 
