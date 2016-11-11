@@ -63,6 +63,7 @@
 package com.eucalyptus.util.async;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
@@ -76,10 +77,10 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Callbacks {
   private static Logger LOG = Logger.getLogger( Callbacks.class );
-  
+
   public static Callback forCallable( final Callable callable ) {
     return new Callback( ) {
-      
+
       @Override
       public void fire( final Object t ) {
         try {
@@ -90,10 +91,10 @@ public class Callbacks {
       }
     };
   }
-  
+
   public static Callback forRunnable( final Runnable runnable ) {
     return new Callback( ) {
-      
+
       @Override
       public void fire( final Object t ) {
         try {
@@ -104,7 +105,7 @@ public class Callbacks {
       }
     };
   }
-  
+
   public static <T> Callback<T> noop( ) {
     return new NoopCallback<T>( );
   }
@@ -112,7 +113,7 @@ public class Callbacks {
   public static <R> Callback.Failure<R> noopFailure() {
     return new NoopFailure<R>();
   }
-  
+
   private static final class NoopCallback<T> implements Callback<T> {
     @Override
     public final void fire( final T t ) {}
@@ -122,18 +123,18 @@ public class Callbacks {
     @Override
     public void fireException( final Throwable t ) {}
   }
-  
+
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {
     private final Callback<R> callback;
     private final Future<R>   future;
     private final Logger      log;
-    
+
     private BasicCallbackProcessor( final Future<R> future, final Callback<R> callback ) {
       this.callback = callback;
       this.future = future;
       this.log = Logger.getLogger( this.callback.getClass( ) );
     }
-    
+
     @Override
     public void run( ) {
       R reply = null;
@@ -148,10 +149,10 @@ public class Callbacks {
         }
       } catch ( final Throwable e ) {
         EventRecord.here( this.getClass( ), EventType.FUTURE, "FAILED", "get()", e.getMessage( ) ).exhaust( );
-        this.doFail( e );
+        this.doFail( e instanceof ExecutionException ? e.getCause( ) : e );
       }
     }
-    
+
     private final void doFail( Throwable failure ) {
       EventRecord.here( BasicCallbackProcessor.class, EventType.CALLBACK, this.callback.getClass( ).toString( ),
                         "fireException(" + failure.getClass( ).getSimpleName( ) + ")" ).exhaust( );
@@ -162,14 +163,14 @@ public class Callbacks {
         ( ( Callback.Completion ) this.callback ).fireException( failure );
       }
     }
-    
+
     @Override
     public String toString( ) {
       return String.format( "BasicCallbackProcessor:callback=%s", this.callback.getClass( ).getName( ).replaceAll( "^(\\w.)*", "" ) );
     }
-    
+
   }
-  
+
   @SuppressWarnings( "unchecked" )
   public static Runnable addListenerHandler( final CheckedListenableFuture<?> future, final Callback<?> listener ) {
     Runnable r;
@@ -177,5 +178,5 @@ public class Callbacks {
                         Threads.lookup( Empyrean.class, Callbacks.class, BasicCallbackProcessor.class.getSimpleName( ) ) );
     return r;
   }
-  
+
 }
