@@ -46,8 +46,7 @@ public class S3TagProvider implements TagProvider {
       @Nonnull final User user
   ) {
     final Set<String> tagKeys = Sets.newHashSet( );
-    try {
-      final EucaS3Client client = EucaS3ClientFactory.getEucaS3Client( user );
+    try ( final EucaS3Client client = EucaS3ClientFactory.getEucaS3Client( user ) ) {
       for ( final Bucket bucket : client.listBuckets( ) ) try {
         final BucketTaggingConfiguration taggingConfiguration =
             client.getBucketTaggingConfiguration( bucket.getName( ) );
