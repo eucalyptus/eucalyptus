@@ -156,7 +156,7 @@ public class UpdateStackWorkflowImpl implements UpdateStackWorkflow {
           } else if (UpdateType.NEEDS_REPLACEMENT.toString().equals(result)) {
             updatePromise = resourceAction.getUpdatePromise(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, workflowOperations, resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
           } else if (UpdateType.UNSUPPORTED.toString().equals(result)) {
-            throw new ValidationErrorException("Update is not supported for " + resourceType);
+            updatePromise = activities.failUpdateUnsupportedResource(resourceId, stackId, accountId, effectiveUserId, "Update is not supported for " + resourceType, updatedResourceVersion);
           }
           waitFor(updatePromise) {
             activities.finalizeUpdateResource(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
