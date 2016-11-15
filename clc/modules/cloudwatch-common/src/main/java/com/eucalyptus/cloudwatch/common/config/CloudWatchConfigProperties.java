@@ -21,16 +21,17 @@ package com.eucalyptus.cloudwatch.common.config;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 
 @ConfigurableClass( root = "cloudwatch", description = "Parameters controlling cloud watch and reporting")
 public class CloudWatchConfigProperties {
-  @ConfigurableField(initial = "false", description = "Set this to true to stop cloud watch alarm evaluation and new alarm/metric data entry")
-  public static volatile Boolean DISABLE_CLOUDWATCH_SERVICE = false;
+  @ConfigurableField(initial = "true", description = "Set this to false to stop cloud watch alarm evaluation and new alarm/metric data entry", changeListener = PropertyChangeListeners.IsBoolean.class)
+  public static volatile Boolean ENABLE_CLOUDWATCH_SERVICE = true;
 
   @ConfigurableField(initial = "1000", description = "Size of the reporting data set that stores cloud watch queues performance info (debug only prop)")
   public static volatile int CLOUDWATCH_MONITORING_HISTORY_SIZE = 1000;
 
   public static Boolean isDisabledCloudWatchService() {
-    return DISABLE_CLOUDWATCH_SERVICE;
+    return !ENABLE_CLOUDWATCH_SERVICE;
   }
 }
