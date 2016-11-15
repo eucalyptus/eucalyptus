@@ -22,19 +22,21 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.portal.common.Tag;
 import com.eucalyptus.portal.config.TagServiceConfiguration;
 import com.eucalyptus.ws.server.QueryPipeline;
+import com.eucalyptus.ws.util.HmacUtils;
 
 /**
  *
  */
 @SuppressWarnings( "unused" )
 @ComponentPart( Tag.class )
-public class TagServiceQueryPipeline  extends QueryPipeline {
+public class TagServiceQueryPipeline extends QueryPipeline {
 
   public TagServiceQueryPipeline( ) {
     super(
         "tagservice-query",
         TagServiceConfiguration.SERVICE_PATH,
-        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ) );
+        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ),
+        EnumSet.of( HmacUtils.SignatureVersion.SignatureV4 ) ) ;
   }
 
   @Override
