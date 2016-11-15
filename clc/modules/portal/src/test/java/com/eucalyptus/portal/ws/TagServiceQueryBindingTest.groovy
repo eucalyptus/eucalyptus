@@ -54,6 +54,6 @@ class TagServiceQueryBindingTest extends QueryJsonBindingTestSupport {
                 'Name'
             ]
         )
-    ), '''{"result":{"keys":["Name"]}}''' )
+    ), '''{"keys":["Name"]}''' )
   }
 }

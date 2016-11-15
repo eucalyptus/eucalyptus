@@ -19,6 +19,7 @@ package com.eucalyptus.portal.common.model
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.portal.common.Tag
 import com.eucalyptus.ws.WebServiceError
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
@@ -38,10 +39,6 @@ class TagMessage extends PortalBaseMessage {
   }
 }
 
-class ResponseMetadata extends EucalyptusData {
-  String requestId
-}
-
 class GetTagKeysType extends TagMessage {
 }
 
@@ -50,6 +47,7 @@ class GetTagKeysResult extends EucalyptusData {
 }
 
 class GetTagKeysResponseType extends TagMessage {
+  @JsonUnwrapped
   GetTagKeysResult result = new GetTagKeysResult()
 }
 
