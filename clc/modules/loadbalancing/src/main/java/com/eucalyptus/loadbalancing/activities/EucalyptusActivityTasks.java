@@ -199,12 +199,12 @@ public class EucalyptusActivityTasks {
 	  private SystemActivityContextSupport( final Class<TC> componentIdClass ) {
 			super( componentIdClass );
 		}
-		
+
 		private SystemActivityContextSupport( final Class<TC> componentIdClass, final boolean useELBSystemAccount ) {
       super( componentIdClass );
       this.useELBSystemAccount = useELBSystemAccount;
 		}
-    
+
 		@Override
 		final String getUserId() {
 			return null;
@@ -260,29 +260,29 @@ public class EucalyptusActivityTasks {
 		  super( Euare.class, useELBSystemAccount );
 		}
 	}
-	
+
 	private class EuareUserActivity extends UserActivityContextSupport<EuareMessage, Euare> {
 	  private EuareUserActivity(final AccountFullName accountFullName){
 	    super( Euare.class, accountFullName );
 	  }
 	}
-	
+
 	private class AutoScalingSystemActivity extends SystemActivityContextSupport<AutoScalingMessage, AutoScaling>{
 		private AutoScalingSystemActivity(final boolean useELBSystemAccount){
 		  super( AutoScaling.class, useELBSystemAccount );
 		}
 	}
-	
+
 	private class CloudWatchUserActivity extends UserActivityContextSupport<CloudWatchMessage, CloudWatch>{
 		private CloudWatchUserActivity(final String userId){
 			super( CloudWatch.class, userId );
 		}
 	}
-	
+
 	private class EmpyreanSystemActivity extends SystemActivityContextSupport<EmpyreanMessage, Empyrean>{
 		private EmpyreanSystemActivity() { super( Empyrean.class, false ); }
 	}
-	
+
 	private class ComputeSystemActivity extends SystemActivityContextSupport<ComputeMessage, Compute>{
 		private ComputeSystemActivity() { super( Compute.class ); }
 		private ComputeSystemActivity(final boolean useELBSystemAccount) { super( Compute.class , useELBSystemAccount); }
@@ -321,13 +321,13 @@ public class EucalyptusActivityTasks {
 		final EucalyptusDescribeInstanceTask describeTask = new EucalyptusDescribeInstanceTask(instances);
 		return resultOf( describeTask, new ComputeUserActivity( AccountFullName.getInstance( accountNumber )), "failed to describe the instances" );
 	}
-	
+
 	public List<ServiceStatusType> describeServices(final String componentType){
 		//LOG.info("calling describe-services -T "+componentType);
 		final EucalyptusDescribeServicesTask serviceTask = new EucalyptusDescribeServicesTask(componentType);
 		return resultOf( serviceTask, new EmpyreanSystemActivity(), "failed to describe services" );
 	}
-	
+
   public List<ClusterInfoType> describeAvailabilityZonesWithVerbose(){
     return resultOf(
         new EucalyptusDescribeAvailabilityZonesTask(true),
@@ -335,7 +335,7 @@ public class EucalyptusActivityTasks {
         "failed to describe the availability zones"
     );
   }
-  
+
   public List<ClusterInfoType> describeAvailabilityZones() {
     return describeAvailabilityZonesImpl(true);
   }
@@ -384,11 +384,11 @@ public class EucalyptusActivityTasks {
 	public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum ){
 	  this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new ComputeSystemActivity());
 	}
-	
+
   public void authorizeSystemSecurityGroup( String groupNameOrId, String protocol, int portNum, boolean useELBSystemAccount ){
     this.authorizeSystemSecurityGroupImpl( groupNameOrId, protocol, portNum,  new ComputeSystemActivity(useELBSystemAccount));
   }
-  
+
   private void authorizeSystemSecurityGroupImpl( String groupNameOrId, String protocol, int portNum, ComputeSystemActivity context){
     final EucalyptusAuthorizeIngressRuleTask task = new EucalyptusAuthorizeIngressRuleTask(groupNameOrId, protocol, portNum);
     checkResult(
@@ -397,11 +397,11 @@ public class EucalyptusActivityTasks {
         String.format("failed to authorize:%s, %s, %d ", groupNameOrId, protocol, portNum)
     );
   }
-  
+
   public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum) {
     revokeSystemSecurityGroupImpl(groupName, protocol, portNum, true);
   }
-	
+
   public void revokeSystemSecurityGroup( String groupName, String protocol, int portNum, boolean useELBSystemAccount ){
     revokeSystemSecurityGroupImpl(groupName, protocol, portNum, useELBSystemAccount);
   }
@@ -441,8 +441,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	public List<Bucket> listBuckets(final AccountFullName account) {
-		try{
-			final EucaS3Client s3c = getS3Client(account);
+		try ( final EucaS3Client s3c = getS3Client(account) ) {
 			return s3c.listBuckets();
 		} catch (final AuthException e) {
 			LOG.error("Failed to create s3 client for listing buckets");
@@ -451,8 +450,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	public boolean bucketExists(final AccountFullName account, final String bucketName) {
-		try{
-			final EucaS3Client s3c = getS3Client(account);
+		try ( final EucaS3Client s3c = getS3Client(account) ) {
 			s3c.getBucketAcl(bucketName);
 			return true;
 		} catch (final AuthException e) {
@@ -474,7 +472,7 @@ public class EucalyptusActivityTasks {
     createLaunchConfigurationImpl(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds,
         keyName, userData, associatePublicIp, true);
   }
-	
+
 
   public void createLaunchConfiguration(
     final String imageId,
@@ -489,7 +487,7 @@ public class EucalyptusActivityTasks {
     createLaunchConfigurationImpl(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds,
         keyName, userData, associatePublicIp, useELBSystemAccount);
   }
-  
+
 	private void createLaunchConfigurationImpl(
 		final String imageId,
 		final String instanceType,
@@ -501,7 +499,7 @@ public class EucalyptusActivityTasks {
 		final Boolean associatePublicIp,
 		final boolean useELBSystemAccount
 	){
-		final AutoScalingCreateLaunchConfigTask task = 
+		final AutoScalingCreateLaunchConfigTask task =
 				new AutoScalingCreateLaunchConfigTask(imageId, instanceType, instanceProfileName, launchConfigName, securityGroupNamesOrIds, keyName, userData, associatePublicIp);
 		checkResult(
 				task,
@@ -509,7 +507,7 @@ public class EucalyptusActivityTasks {
 				"failed to create launch configuration"
 		);
 	}
-	
+
 	public void createAutoScalingGroup(final String groupName, final List<String> availabilityZones, final String vpcZoneIdentifier,
 	    final int capacity, final String launchConfigName, final String tagKey, final String tagValue){
 	  createAutoScalingGroupImpl(groupName, availabilityZones, vpcZoneIdentifier, capacity, launchConfigName, tagKey, tagValue, true);
@@ -530,15 +528,15 @@ public class EucalyptusActivityTasks {
 	}
 
 	public void createOrUpdateAutoscalingTags(final String tagKey,
-      final String tagValue, final String asgName){ 
+      final String tagValue, final String asgName){
 	  createOrUpdateAutoscalingTagsImpl(tagKey, tagValue, asgName, true);
 	}
-	
+
 	public void createOrUpdateAutoscalingTags(final String tagKey,
       final String tagValue, final String asgName, final boolean useELBSystemAccount){
 	  createOrUpdateAutoscalingTagsImpl(tagKey, tagValue, asgName, useELBSystemAccount);
 	}
-	
+
   public void createOrUpdateAutoscalingTagsImpl(final String tagKey,
       final String tagValue, final String asgName, final boolean useELBSystemAccount) {
     final AutoscalingCreateOrUpdateTagsTask task = new AutoscalingCreateOrUpdateTagsTask(
@@ -563,7 +561,7 @@ public class EucalyptusActivityTasks {
         "failed to describe launch configuration"
         );
   }
-	
+
   public void deleteLaunchConfiguration(final String launchConfigName){
     deleteLaunchConfigurationImpl(launchConfigName, true);
   }
@@ -577,7 +575,7 @@ public class EucalyptusActivityTasks {
 				"failed to delete launch configuration"
 		);
 	}
-	
+
   public void deleteAutoScalingGroup(final String groupName, final boolean terminateInstances){
     deleteAutoScalingGroupImpl(groupName, terminateInstances, true);
   }
@@ -591,7 +589,7 @@ public class EucalyptusActivityTasks {
 				"failed to delete autoscaling group"
 		);
 	}
-	
+
 	public DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsWithVerbose(final List<String> groupNames){
 	  final List<String> namesWithVerbose = Lists.newArrayList();
 	  namesWithVerbose.addAll(groupNames);
@@ -624,7 +622,7 @@ public class EucalyptusActivityTasks {
 	}
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName, final boolean useELBSystemAccount){
 	  updateAutoScalingGroupImpl(groupName, zones, capacity, launchConfigName, useELBSystemAccount);
-	}   
+	}
 	private void updateAutoScalingGroupImpl(final String groupName, final List<String> zones, final Integer capacity, final String launchConfigName, final boolean useELBSystemAccount){
 	  checkResult(
 	      new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName),
@@ -632,7 +630,7 @@ public class EucalyptusActivityTasks {
 	      "failed to update autoscaling group"
 	      );
 	}
-	
+
 	public List<RoleType> listRoles(final String pathPrefix){
 		return resultOf(
 				new EuareListRolesTask(pathPrefix),
@@ -640,7 +638,7 @@ public class EucalyptusActivityTasks {
 				"failed to list IAM roles"
 		);
 	}
-	
+
 	public RoleType createRole(final String roleName, final String path, final String assumeRolePolicy){
 		return resultOf(
 				new EuareCreateRoleTask(roleName, path, assumeRolePolicy),
@@ -766,7 +764,7 @@ public class EucalyptusActivityTasks {
 				"failed to delete IAM role"
 		);
 	}
-	
+
 	public List<InstanceProfileType> listInstanceProfiles(String pathPrefix){
 		return resultOf(
 				new EuareListInstanceProfilesTask(pathPrefix),
@@ -774,7 +772,7 @@ public class EucalyptusActivityTasks {
 				"failed to list IAM instance profile"
 		);
 	}
-	
+
 	public InstanceProfileType createInstanceProfile(String profileName, String path){
 		return resultOf(
 				new EuareCreateInstanceProfileTask(profileName, path),
@@ -782,7 +780,7 @@ public class EucalyptusActivityTasks {
 				"failed to create IAM instance profile"
 		);
 	}
-	
+
   public void deleteInstanceProfile(String profileName){
     deleteInstanceProfileImpl(profileName, true);
   }
@@ -796,7 +794,7 @@ public class EucalyptusActivityTasks {
 				"failed to delete IAM instance profile"
 		);
 	}
-	
+
 	public void addRoleToInstanceProfile(String instanceProfileName, String roleName){
 		checkResult(
 				new EuareAddRoleToInstanceProfileTask(instanceProfileName, roleName),
@@ -818,7 +816,7 @@ public class EucalyptusActivityTasks {
 	      "failed to remove role from the instance profile"
 	      );
 	}
-	
+
 	public List<String> listRolePolicies(final String roleName){
 		return resultOf(
 				new EuareListRolePoliciesTask(roleName),
@@ -826,7 +824,7 @@ public class EucalyptusActivityTasks {
 				"failed to list role's policies"
 		);
 	}
-	
+
 	public GetRolePolicyResult getRolePolicy(String roleName, String policyName){
 		return resultOf(
 				new EuareGetRolePolicyTask(roleName, policyName),
@@ -834,7 +832,7 @@ public class EucalyptusActivityTasks {
 				"failed to get role's policy"
 		);
 	}
-	
+
 	public void putRolePolicy(String roleName, String policyName, String policyDocument){
 	  putRolePolicyImpl(roleName, policyName, policyDocument, true);
 	}
@@ -842,7 +840,7 @@ public class EucalyptusActivityTasks {
 	public void putRolePolicy(String roleName, String policyName, String policyDocument, boolean useELBSystemAccount){
     putRolePolicyImpl(roleName, policyName, policyDocument, useELBSystemAccount);
 	}
-	
+
 	private void putRolePolicyImpl(String roleName, String policyName, String policyDocument, boolean useELBSystemAccount){
 		checkResult(
 				new EuarePutRolePolicyTask(roleName, policyName, policyDocument),
@@ -864,7 +862,7 @@ public class EucalyptusActivityTasks {
 	      "failed to delete role's policy"
 	      );
 	}
-	
+
 	public List<ImageDetails> describeImages(final List<String> imageIds){
 		return resultOf(
 				new EucaDescribeImagesTask(imageIds),
@@ -872,7 +870,7 @@ public class EucalyptusActivityTasks {
 				"failed to describe images"
 		);
 	}
-	
+
 	public List<VmTypeDetails> describeInstanceTypes(final List<String> instanceTypes) {
 	  return resultOf(
 	      new EucaDescribeInstanceTypesTask(instanceTypes),
@@ -880,7 +878,7 @@ public class EucalyptusActivityTasks {
 	      "failed to describe instance types"
 	      );
 	}
-	
+
 	public List<ImageDetails> describeImagesWithVerbose(final List<String> imageIds){
 	  final List<String> idsWithVerbose = Lists.newArrayList(imageIds);
 	  idsWithVerbose.add("verbose");
@@ -890,7 +888,7 @@ public class EucalyptusActivityTasks {
         "failed to describe images"
     );
   }
-	
+
 	public void createTags(final String tagKey, final String tagValue, final List<String> resources){
 		checkResult(
 				new EucaCreateTagsTask(tagKey, tagValue, resources),
@@ -898,7 +896,7 @@ public class EucalyptusActivityTasks {
 				"failed to create tags"
 		);
 	}
-	
+
 	public void deleteTags(final String tagKey, final String tagValue, final List<String> resources){
 		checkResult(
 				new EucaDeleteTagsTask(tagKey, tagValue, resources),
@@ -1123,7 +1121,7 @@ public class EucalyptusActivityTasks {
 		private EucaDescribeImagesTask(final List<String> imageIds){
 			this.imageIds = imageIds;
 		}
-		
+
 		DescribeImagesType getRequest(){
 			final DescribeImagesType req = new DescribeImagesType();
 			if(this.imageIds!=null && this.imageIds.size()>0){
@@ -1138,17 +1136,17 @@ public class EucalyptusActivityTasks {
 			return resp.getImagesSet();
 		}
 	}
-	
+
 	private class EucaDescribeInstanceTypesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<VmTypeDetails>> {
 	  private List<String> instanceTypes = Lists.newArrayList();
-	  
+
 	  private EucaDescribeInstanceTypesTask() {
 	  }
-	  
+
 	  private EucaDescribeInstanceTypesTask(final List<String> instanceTypes) {
 	    this.instanceTypes.addAll(instanceTypes);
 	  }
-	  
+
     @Override
     List<VmTypeDetails> extractResult(ComputeMessage response) {
       final DescribeInstanceTypesResponseType resp = (DescribeInstanceTypesResponseType) response;
@@ -1181,13 +1179,13 @@ public class EucalyptusActivityTasks {
 		private String tagKey = null;
 		private String tagValue = null;
 		private List<String> resources = null;
-		
+
 		private EucaDeleteTagsTask(final String tagKey, final String tagValue, final List<String> resources){
 			this.tagKey = tagKey;
 			this.tagValue = tagValue;
 			this.resources = resources;
 		}
-		
+
 		DeleteTagsType getRequest(){
 			final DeleteTagsType req = new DeleteTagsType();
 			req.setResourcesSet(Lists.newArrayList(this.resources));
@@ -1198,7 +1196,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class EucaCreateTagsTask extends EucalyptusActivityTask<ComputeMessage, Compute>{
 		private String tagKey = null;
 		private String tagValue = null;
@@ -1242,7 +1240,7 @@ public class EucalyptusActivityTasks {
 			return resp.getSecurityGroupInfo( );
 		}
 	}
-	
+
 	private class EucaCreateVpcTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
 		private String cidr = null;
 		private EucaCreateVpcTask( final String cidr) {
@@ -1802,7 +1800,7 @@ public class EucalyptusActivityTasks {
 	  private EuareGetServerCertificateTask(final String certName){
 	    this.certName = certName;
 	  }
-	  
+
 	  GetServerCertificateType getRequest( ){
 	    final GetServerCertificateType req = new GetServerCertificateType();
 	    req.setServerCertificateName(this.certName);
@@ -1817,29 +1815,29 @@ public class EucalyptusActivityTasks {
 			return null;
     }
 	}
-	
+
 	private class EuareDeleteInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
 		private String profileName =null;
 		private EuareDeleteInstanceProfileTask(String profileName){
 			this.profileName = profileName;
 		}
-		
+
 		DeleteInstanceProfileType getRequest(){
 			final DeleteInstanceProfileType req = new DeleteInstanceProfileType();
 			req.setInstanceProfileName(this.profileName);
 			return req;
 		}
 	}
-	
+
 	private class EuareAddRoleToInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
 		private String instanceProfileName = null;
 		private String roleName = null;
-		
+
 		private EuareAddRoleToInstanceProfileTask(final String instanceProfileName, final String roleName){
 			this.instanceProfileName = instanceProfileName;
 			this.roleName = roleName;
 		}
-		
+
 		AddRoleToInstanceProfileType getRequest(){
 			final AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
 			req.setRoleName(this.roleName);
@@ -1847,16 +1845,16 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class EuareRemoveRoleFromInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
 	  private String instanceProfileName = null;
 	  private String roleName = null;
-	  
+
 	  private EuareRemoveRoleFromInstanceProfileTask(final String instanceProfileName, final String roleName){
 	    this.instanceProfileName = instanceProfileName;
 	    this.roleName = roleName;
 	  }
-	  
+
 	  RemoveRoleFromInstanceProfileType getRequest(){
 	    final RemoveRoleFromInstanceProfileType req = new RemoveRoleFromInstanceProfileType();
 	    req.setRoleName(this.roleName);
@@ -1864,19 +1862,19 @@ public class EucalyptusActivityTasks {
 	    return req;
 	  }
 	}
-	
+
 	private class EuareListInstanceProfilesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<InstanceProfileType>> {
 		private String pathPrefix = null;
 		private EuareListInstanceProfilesTask(final String pathPrefix){
 			this.pathPrefix = pathPrefix;
 		}
-		
+
 		ListInstanceProfilesType getRequest(){
 			final ListInstanceProfilesType req = new ListInstanceProfilesType();
 			req.setPathPrefix(this.pathPrefix);
 			return req;
 		}
-		
+
 		@Override
 		List<InstanceProfileType> extractResult(EuareMessage response) {
 			ListInstanceProfilesResponseType resp = (ListInstanceProfilesResponseType) response;
@@ -1887,7 +1885,7 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
+
 	private class EuareCreateInstanceProfileTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, InstanceProfileType>{
 		private String profileName = null;
 		private String path = null;
@@ -1895,14 +1893,14 @@ public class EucalyptusActivityTasks {
 			this.profileName = profileName;
 			this.path = path;
 		}
-		
+
 		CreateInstanceProfileType getRequest(){
 			final CreateInstanceProfileType req = new CreateInstanceProfileType();
 			req.setInstanceProfileName(this.profileName);
 			req.setPath(this.path);
 			return req;
 		}
-		
+
 		@Override
 		InstanceProfileType extractResult(EuareMessage response) {
 			final CreateInstanceProfileResponseType resp = (CreateInstanceProfileResponseType) response;
@@ -1913,7 +1911,7 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
+
 	private class EuareDeleteRoleTask extends EucalyptusActivityTask<EuareMessage, Euare> {
 		private String roleName = null;
 		private EuareDeleteRoleTask(String roleName){
@@ -1925,7 +1923,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class EuareCreateRoleTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, RoleType> {
 		String roleName = null;
 		String path = null;
@@ -1944,7 +1942,7 @@ public class EucalyptusActivityTasks {
 			req.setAssumeRolePolicyDocument(this.assumeRolePolicy);
 			return req;
 		}
-		
+
 		@Override
 		RoleType extractResult( EuareMessage response) {
 			CreateRoleResponseType resp = (CreateRoleResponseType) response;
@@ -1952,23 +1950,23 @@ public class EucalyptusActivityTasks {
 				return resp.getCreateRoleResult().getRole();
 			}catch(Exception ex){
 				return null;
-			}			
+			}
 		}
 	}
-	
+
 	private class EuareListRolesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<RoleType>> {
 		private String pathPrefix = null;
 
 		private EuareListRolesTask(String pathPrefix){
 			this.pathPrefix = pathPrefix;
 		}
-		
+
 		ListRolesType getRequest(){
 			final ListRolesType req = new ListRolesType();
 			req.setPathPrefix(this.pathPrefix);
 			return req;
 		}
-		
+
 		@Override
 		List<RoleType> extractResult(EuareMessage response) {
 			ListRolesResponseType resp = (ListRolesResponseType) response;
@@ -1979,29 +1977,29 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
+
 	private class EuarePutRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
 		private String roleName = null;
 		private String policyName = null;
 		private String policyDocument = null;
-		
+
 		private EuarePutRolePolicyTask(String roleName, String policyName, String policyDocument){
 			this.roleName = roleName;
 			this.policyName = policyName;
 			this.policyDocument = policyDocument;
 		}
-		
+
 		PutRolePolicyType getRequest(){
-			final PutRolePolicyType req = 
+			final PutRolePolicyType req =
 					new PutRolePolicyType();
 			req.setRoleName(this.roleName);
 			req.setPolicyName(this.policyName);
 			req.setPolicyDocument(this.policyDocument);
-			
+
 			return req;
 		}
 	}
-	
+
 	private class EuareListRolePoliciesTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, List<String>> {
 		private String roleName = null;
 		private EuareListRolePoliciesTask(final String roleName){
@@ -2024,16 +2022,16 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
+
 	private class EuareGetRolePolicyTask extends EucalyptusActivityTaskWithResult<EuareMessage, Euare, GetRolePolicyResult> {
 		private String roleName = null;
 		private String policyName = null;
-		
+
 		private EuareGetRolePolicyTask(final String roleName, final String policyName){
 			this.roleName = roleName;
 			this.policyName = policyName;
 		}
-		
+
 		GetRolePolicyType getRequest(){
 			final GetRolePolicyType req = new GetRolePolicyType();
 			req.setRoleName(this.roleName);
@@ -2051,16 +2049,16 @@ public class EucalyptusActivityTasks {
 		  }
 		}
 	}
-	
+
 	private class EuareDeleteRolePolicyTask extends EucalyptusActivityTask<EuareMessage, Euare> {
 		private String roleName= null;
 		private String policyName = null;
-		
+
 		private EuareDeleteRolePolicyTask(final String roleName, final String policyName){
 			this.roleName = roleName;
 			this.policyName = policyName;
 		}
-		
+
 		DeleteRolePolicyType getRequest(){
 			final DeleteRolePolicyType req = new DeleteRolePolicyType();
 			req.setRoleName(this.roleName);
@@ -2068,25 +2066,25 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private List<String> availabilityZones = null;
 		private Integer capacity = null;
 		private String launchConfigName = null;
-		
-		private AutoScalingUpdateGroupTask(final String groupName, final List<String> zones, 
+
+		private AutoScalingUpdateGroupTask(final String groupName, final List<String> zones,
 				final Integer capacity, final String launchConfig){
 			this.groupName = groupName;
 			this.availabilityZones = zones;
 			this.capacity = capacity;
 			this.launchConfigName = launchConfig;
 		}
-		
+
 		UpdateAutoScalingGroupType getRequest(){
 			final UpdateAutoScalingGroupType req = new UpdateAutoScalingGroupType();
 			req.setAutoScalingGroupName( this.groupName );
-			
+
 			if(this.availabilityZones!=null && this.availabilityZones.size()>0){
 				AvailabilityZones zones = new AvailabilityZones();
 				zones.setMember(Lists.<String>newArrayList());
@@ -2104,13 +2102,13 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTaskWithResult<AutoScalingMessage, AutoScaling, DescribeAutoScalingGroupsResponseType> {
 		private List<String> groupNames = null;
 		private AutoScalingDescribeGroupsTask(final List<String> groupNames){
 			this.groupNames = groupNames;
 		}
-		
+
 		DescribeAutoScalingGroupsType getRequest( ){
 			final DescribeAutoScalingGroupsType req = new DescribeAutoScalingGroupsType();
 			final AutoScalingGroupNames names = new AutoScalingGroupNames();
@@ -2125,7 +2123,7 @@ public class EucalyptusActivityTasks {
 			return (DescribeAutoScalingGroupsResponseType) response;
 		}
 	}
-	
+
 	private class AutoScalingCreateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private List<String> availabilityZones = null;
@@ -2134,7 +2132,7 @@ public class EucalyptusActivityTasks {
 		private String launchConfigName = null;
 		private String tagKey = null;
 		private String tagValue = null;
-		
+
 		private AutoScalingCreateGroupTask(final String groupName, final List<String> zones, final String vpcZoneIdentifier,
 				final int capacity, final String launchConfig, final String tagKey, final String tagValue){
 			this.groupName = groupName;
@@ -2145,7 +2143,7 @@ public class EucalyptusActivityTasks {
 			this.tagKey = tagKey;
 			this.tagValue = tagValue;
 		}
-		
+
 		CreateAutoScalingGroupType getRequest(){
 			final CreateAutoScalingGroupType req = new CreateAutoScalingGroupType();
 			req.setAutoScalingGroupName(this.groupName);
@@ -2203,7 +2201,7 @@ public class EucalyptusActivityTasks {
 			this.groupName = groupName;
 			this.terminateInstances = terminateInstances;
 		}
-		
+
 		DeleteAutoScalingGroupType getRequest(){
 			final DeleteAutoScalingGroupType req = new DeleteAutoScalingGroupType();
 			req.setAutoScalingGroupName(this.groupName);
@@ -2211,13 +2209,13 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class AutoScalingDeleteLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String launchConfigName = null;
 		private AutoScalingDeleteLaunchConfigTask(final String launchConfigName){
 			this.launchConfigName = launchConfigName;
 		}
-		
+
 		DeleteLaunchConfigurationType getRequest(){
 			final DeleteLaunchConfigurationType req = new DeleteLaunchConfigurationType();
 			req.setLaunchConfigurationName(this.launchConfigName);
@@ -2230,7 +2228,7 @@ public class EucalyptusActivityTasks {
 		private AutoScalingDescribeLaunchConfigsTask(final String launchConfigName){
 			this.launchConfigName = launchConfigName;
 		}
-		
+
 		DescribeLaunchConfigurationsType getRequest(){
 			final DescribeLaunchConfigurationsType req = new DescribeLaunchConfigurationsType();
 			final LaunchConfigurationNames names = new LaunchConfigurationNames();
@@ -2238,7 +2236,7 @@ public class EucalyptusActivityTasks {
 			req.setLaunchConfigurationNames(names);
 			return req;
 		}
-		
+
 		@Override
 		LaunchConfigurationType extractResult( AutoScalingMessage response) {
 			final DescribeLaunchConfigurationsResponseType resp = (DescribeLaunchConfigurationsResponseType) response;
@@ -2250,7 +2248,7 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
-	
+
 	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private final String imageId;
 		private final String instanceType;
@@ -2268,11 +2266,11 @@ public class EucalyptusActivityTasks {
 			this.instanceProfileName = instanceProfileName;
 			this.launchConfigName = launchConfigName;
 			this.securityGroupNamesOrIds = securityGroupNamesOrIds;
-			this.keyName = keyName; 
+			this.keyName = keyName;
 			this.userData = userData;
 			this.associatePublicIp = associatePublicIp;
 		}
-		
+
 		CreateLaunchConfigurationType getRequest(){
 			final CreateLaunchConfigurationType req = new CreateLaunchConfigurationType();
 			req.setImageId(this.imageId);
@@ -2297,7 +2295,7 @@ public class EucalyptusActivityTasks {
 			this.namespace = namespace;
 			this.metricData = data;
 		}
-		
+
 		PutMetricDataType getRequest(){
 			final PutMetricDataType request = new PutMetricDataType();
 			request.setNamespace(this.namespace);
@@ -2306,13 +2304,13 @@ public class EucalyptusActivityTasks {
 		}
 	}
 
-	
+
 	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<ClusterInfoType>> {
 		private boolean verbose = false;
 		private EucalyptusDescribeAvailabilityZonesTask(boolean verbose){
 			this.verbose = verbose;
 		}
-		
+
 		DescribeAvailabilityZonesType getRequest(){
 			final DescribeAvailabilityZonesType req = new DescribeAvailabilityZonesType();
 			if(this.verbose){
@@ -2320,7 +2318,7 @@ public class EucalyptusActivityTasks {
 			}
 			return req;
 		}
-		
+
 		@Override
 		List<ClusterInfoType> extractResult(ComputeMessage response) {
 			final DescribeAvailabilityZonesResponseType resp = (DescribeAvailabilityZonesResponseType) response;
@@ -2333,32 +2331,32 @@ public class EucalyptusActivityTasks {
 		private EucalyptusDescribeServicesTask(final String componentType){
 			this.componentType = componentType;
 		}
-		
+
 		DescribeServicesType getRequest(){
 			final DescribeServicesType req = new DescribeServicesType();
 		    req.setByServiceType(this.componentType);
 		    return req;
 		}
-		
+
 		@Override
 		List<ServiceStatusType> extractResult(EmpyreanMessage response) {
 			final DescribeServicesResponseType resp = (DescribeServicesResponseType) response;
 			return resp.getServiceStatuses();
 		}
 	}
-		
+
 	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute,List<RunningInstancesItemType>> {
 		private final List<String> instanceIds;
 		private boolean verbose = false;
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId){
 			this.instanceIds = instanceId;
 		}
-		
+
 		private EucalyptusDescribeInstanceTask(final List<String> instanceId, final boolean verbose){
       this.instanceIds = instanceId;
       this.verbose = verbose;
     }
-		
+
 		DescribeInstancesType getRequest(){
 			final DescribeInstancesType req = new DescribeInstancesType();
 			if( this.verbose ) {
@@ -2367,7 +2365,7 @@ public class EucalyptusActivityTasks {
 			req.getFilterSet( ).add( filter( "instance-id", this.instanceIds ) );
 			return req;
 		}
-		
+
 		@Override
 		List<RunningInstancesItemType> extractResult( ComputeMessage response) {
 			final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
@@ -2385,7 +2383,7 @@ public class EucalyptusActivityTasks {
 					null;
 		}
 	}
-	
+
 	//SPARK: TODO: SYSTEM, STATIC MODE?
 	private class EucalyptusCreateGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, String> {
 		private String groupName = null;
@@ -2407,12 +2405,12 @@ public class EucalyptusActivityTasks {
 			return resp.getGroupId();
 		}
 	}
-	
+
 	private class EucalyptusAuthorizeIngressRuleTask extends EucalyptusActivityTask<ComputeMessage, Compute> {
 		String groupNameOrId=null;
 		String protocol = null;
 		int portNum = 1;
-		
+
 		EucalyptusAuthorizeIngressRuleTask(String groupNameOrId, String protocol, int portNum){
 			this.groupNameOrId = groupNameOrId;
 			this.protocol=protocol;
@@ -2567,7 +2565,7 @@ public class EucalyptusActivityTasks {
 			return req;
 		}
 	}
-	
+
 	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>>{
 		@Nullable private List<String> groupIds = null;
 		@Nullable private List<String> groupNames = null;
@@ -2595,7 +2593,7 @@ public class EucalyptusActivityTasks {
 			}
 			return req;
 		}
-		
+
 		@Override
 		List<SecurityGroupItemType> extractResult(ComputeMessage response) {
 			final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
@@ -2670,7 +2668,7 @@ public class EucalyptusActivityTasks {
 			}
 			return Futures.predestinedFuture( false );
 		}
-	
+
 		/**
 		 * Build the request message
 		 */
