@@ -871,8 +871,8 @@ euca_netmode euca_netmode_atoi(const char *psNetMode) {
 /**
  * Gets the IP address that corresponds to the given hostname. The IP address is
  * determined through system name resolution. If an IP address is detected in the
- * input hostname, no action is taken. The resulting IP address is returned in ipout
- * is allocated using malloc(), and the caller is responsible to release this memory.
+ * input hostname, no action is taken. The resulting IP address is returned in ipout,
+ * which is allocated using malloc(), and the caller is responsible to release this memory.
  * @param hostname [in] the host/IP of interest
  * @param ipout [out] optional pointer to a string that will contain the resulting
  * IP address

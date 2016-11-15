@@ -4001,6 +4001,24 @@ char *midonet_api_get_version(char **version) {
 }
 
 /**
+ * Gets the MidoNet API uribase.
+ * @param [out] optional pointer to a string to hold a string representation of
+ * detected MidoNet API uribase. Caller is responsible to release the memory allocated.
+ * @return pointer to a statically allocated string with representation of
+ * detected MidoNet API uribase.
+ */
+char *midonet_api_get_uribase(char **uribase) {
+    if (uribase) {
+        if (!strlen(midonet_api_uribase)) {
+            *uribase = strdup("unknown");
+        } else {
+            *uribase = strdup(midonet_api_uribase);
+        }
+    }
+    return (midonet_api_uribase);
+}
+
+/**
  * Cleanup possibly open libcurl easy_handles used by midonet-api
  * @param handles [in] pointer to mido_libcurl_handles structure
  * @return 0 on success. Positive integer otherwise.
@@ -5460,7 +5478,22 @@ midonet_api_host *mido_get_host(char *name, char *uuid) {
 
 /**
  * Retrieves a midonet object that represents the host in the argument from midocache.
- * @param ip [in] IP address the MidoNet host of interest.
+ * @param hostname [in] hostname of the MidoNet host of interest.
+ * @return pointer to the data structure that represents the host, when found. NULL otherwise.
+ */
+midonet_api_host *mido_get_host_byname(char *hostname) {
+    char *ip = NULL;
+    midonet_api_host *res = NULL;
+    if (euca_getaddr(hostname, &ip)) {
+        res = mido_get_host_byip(ip);
+    }
+    EUCA_FREE(ip);
+    return (res);
+}
+
+/**
+ * Retrieves a midonet object that represents the host in the argument from midocache.
+ * @param ip [in] IP address of the MidoNet host of interest.
  * @return pointer to the data structure that represents the host, when found. NULL otherwise.
  */
 midonet_api_host *mido_get_host_byip(char *ip) {

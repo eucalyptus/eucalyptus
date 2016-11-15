@@ -2327,7 +2327,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->PublicNetworkCidr, HOSTNAME_LEN, "%s", results[i]);
                 external_cidr = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
@@ -2337,14 +2336,12 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->PublicGatewayIP, HOSTNAME_LEN, "%s", results[i]);
                 peer_ip = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
 
-            char gwtoks[6][2048];
-            int good = 1, max_gws = 0;
+            int max_gws = 0;
             xmlNodeSet gwnodeset = {0};
 
             snprintf(expression, 2048, "./property[@name='gateways']/gateway");
@@ -2362,8 +2359,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    bzero(gwtoks[j], 2048);
-                    snprintf(gwtoks[j], 2048, "%s", results[i]);
                     snprintf(midogw->host, HOSTNAME_LEN, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
@@ -2373,8 +2368,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    euca_strncat(gwtoks[j], ",", 2048);
-                    euca_strncat(gwtoks[j], results[i], 2048);
                     snprintf(midogw->ext_ip, INET_ADDR_LEN, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
@@ -2384,8 +2377,6 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    euca_strncat(gwtoks[j], ",", 2048);
-                    euca_strncat(gwtoks[j], results[i], 2048);
                     snprintf(midogw->ext_dev, IF_NAME_LEN, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
@@ -2399,8 +2390,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 }
                 /* pre-4.3 Mido Gateway (end)*/
                 
-                /* pre-4.3 Mido Gateway values are overwritten if pos-4.3 values are present*/
-
+                /* pre-4.3 Mido Gateway values are overwritten if 4.4 values are present*/
                 snprintf(expression, 2048, "./property[@name='ip']/value");
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
@@ -2472,13 +2462,8 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             EUCA_FREE(external_cidr);
             EUCA_FREE(peer_ip);
 
-            if (!good || max_gws <= 0) {
+            if (max_gws <= 0) {
                 LOGERROR("Invalid mido gateway(s) detected. Check network configuration.\n");
-            } else {
-                for (i = 0; i < max_gws; i++) {
-                    euca_strncat(gni->GatewayHosts, gwtoks[i], HOSTNAME_LEN * 3 * 33);
-                    euca_strncat(gni->GatewayHosts, " ", HOSTNAME_LEN * 3 * 33);
-                }
             }
         } else {
             LOGTRACE("mido section not found in GNI\n");
@@ -6014,7 +5999,7 @@ int cmpipaddr(const void *p1, const void *p2) {
 }
 
 /**
- * Compares two globalNetworkInfo structures in the argument and search for
+ * Compares two globalNetworkInfo structures an and b and search for
  * VPCMIDO configuration changes.
  * @param a [in] globalNetworkInfo structure of interest.
  * @param b [in] globalNetworkInfo structure of interest.
@@ -6040,27 +6025,32 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
         for (int i = 0; i < a->max_instanceDNSServers; i++) {
             if (a->instanceDNSServers[i] != b->instanceDNSServers[i]) {
                 ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+                break;
             }
         }
     }
     if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
-        if (strcmp(a->PublicNetworkCidr, b->PublicNetworkCidr)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR;
-        }
-        if (strcmp(a->PublicGatewayIP, b->PublicGatewayIP)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP;
-        }
-        if (strcmp(a->GatewayHosts, b->GatewayHosts)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS;
+        if (a->max_midogws != b->max_midogws) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+        } else {
+            for (int i = 0; i < a->max_midogws; i++) {
+                if (cmp_gni_mido_gateway(&(a->midogws[i]), &(b->midogws[i]))) {
+                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+                    break;
+                }
+            }
         }
     } else {
         ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
+    }
+    if (ret) {
+        LOGINFO("12915: vpcmido config diff detected %x\n", ret);
     }
     return (ret);
 }
 
 /**
- * Compares two gni_vpc structures in the argument.
+ * Compares two gni_vpc structures a and b.
  *
  * @param a [in] gni_vpc structure of interest.
  * @param b [in] gni_vpc structure of interest.
@@ -6090,7 +6080,7 @@ int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
 }
 
 /**
- * Compares two gni_vpcsubnet structures in the argument.
+ * Compares two gni_vpcsubnet structures a and b.
  *
  * @param a [in] gni_vpcsubnet structure of interest.
  * @param b [in] gni_vpcsubnet structure of interest.
@@ -6115,7 +6105,7 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
 }
 
 /**
- * Compares two gni_nat_gateway structures in the argument.
+ * Compares two gni_nat_gateway structures a and b.
  *
  * @param a [in] gni_nat_gateway structure of interest.
  * @param b [in] gni_nat_gateway structure of interest.
@@ -6135,7 +6125,7 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
 }
 
 /**
- * Compares two gni_route_table structures in the argument.
+ * Compares two gni_route_table structures a and b.
  *
  * @param a [in] gni_route_table structure of interest. Check for route entries
  *            applied flags.
@@ -6168,7 +6158,7 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
 }
 
 /**
- * Compares two gni_secgroup structures in the argument.
+ * Compares two gni_secgroup structures a and b.
  *
  * @param a [in] gni_secgroup structure of interest.
  * @param b [in] gni_secgroup structure of interest.
@@ -6338,7 +6328,7 @@ int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sd
 }
 
 /**
- * Compares gni_instance structures and b.
+ * Compares gni_instance structures a and b.
  *
  * @param a [in] gni_instance structure of interest.
  * @param b [in] gni_instance structure of interest.
@@ -6366,6 +6356,60 @@ int cmp_gni_instance(gni_instance *a, gni_instance *b) {
         } else {
             for (int i = 0; i < a->max_secgroup_names; i++) {
                 if (strcmp(a->secgroup_names[i].name, b->secgroup_names[i].name)) {
+                    abmatch = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Compares gni_mido_gateway structures a and b.
+ *
+ * @param a [in] gni_instance structure of interest.
+ * @param b [in] gni_instance structure of interest.
+ * @return 0 if name and other properties of a and b match. Non-zero otherwise.
+ */
+int cmp_gni_mido_gateway(gni_mido_gateway *a, gni_mido_gateway *b) {
+    int abmatch = 1;
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->host, b->host)) {
+        abmatch = 0;
+    } else {
+        if (a->asn != b->asn) {
+            abmatch = 0;
+        }
+        if (a->peer_asn != b->peer_asn) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_ip, b->ext_ip)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_dev, b->ext_dev)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_cidr, b->ext_cidr)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->peer_ip, b->peer_ip)) {
+            abmatch = 0;
+        }
+        if (a->max_ad_routes != b->max_ad_routes) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_ad_routes; i++) {
+                if (strcmp(a->ad_routes[i], b->ad_routes[i])) {
                     abmatch = 0;
                     break;
                 }

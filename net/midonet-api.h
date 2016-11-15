@@ -553,6 +553,7 @@ int mido_unlink_host_port(midoname *host, midoname *port);
 
 int mido_get_hosts(midoname ***outnames, int *outnames_max);
 midonet_api_host *mido_get_host(char *name, char *uuid);
+midonet_api_host *mido_get_host_byname(char *hostname);
 midonet_api_host *mido_get_host_byip(char *ip);
 int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max);
 int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
@@ -607,6 +608,7 @@ char *mido_jsonize(char *tenant, va_list * al);
 void midonet_api_init(void);
 void midonet_api_cleanup(void);
 char *midonet_api_get_version(char **version);
+char *midonet_api_get_uribase(char **uribase);
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
 int mido_libcurl_init(mido_libcurl_handles *handles);
 int mido_libcurl_cleanup(mido_libcurl_handles *handles);

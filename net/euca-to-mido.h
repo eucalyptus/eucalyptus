@@ -308,8 +308,6 @@ typedef struct mido_core_t {
     midonet_api_host *eucanetdhost;
     int population_failed;
 
-    midoname *gwhosts[32];
-    midoname *gwports[32];
     mido_gw *gws;
     int max_gws;
     int max_gws_deprecate;
@@ -340,14 +338,6 @@ typedef struct mido_md_t {
 typedef struct mido_config_t {
     eucanetdConfig *config;
     u32 euca_version;
-
-    char *ext_rthostnamearr[32];
-    char *ext_rthostaddrarr[32];
-    char *ext_rthostifacearr[32];
-    int ext_rthostarrmax;
-
-    char *ext_pubnw;
-    char *ext_pubgwip;
 
     gni_mido_gateway *gni_gws;
     int max_gni_gws;

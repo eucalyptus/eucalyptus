@@ -1242,10 +1242,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->polling_frequency = atoi(cvals[EUCANETD_CVAL_POLLING_FREQUENCY]);
 
-    cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = strdup(pGni->GatewayHosts);
-    cvals[EUCANETD_CVAL_MIDO_PUBNW] = strdup(pGni->PublicNetworkCidr);
-    cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = strdup(pGni->PublicGatewayIP);
-
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
         config->disable_l2_isolation = 1;
     } else {
@@ -1323,12 +1319,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
 
     // mido config opts
     if (IS_NETMODE_VPCMIDO(config)) {
-        if (cvals[EUCANETD_CVAL_MIDO_GWHOSTS])
-            snprintf(config->midogwhosts, sizeof (config->midogwhosts), "%s", cvals[EUCANETD_CVAL_MIDO_GWHOSTS]);
-        if (cvals[EUCANETD_CVAL_MIDO_PUBNW])
-            snprintf(config->midopubnw, sizeof (config->midopubnw), "%s", cvals[EUCANETD_CVAL_MIDO_PUBNW]);
-        if (cvals[EUCANETD_CVAL_MIDO_PUBGWIP])
-            snprintf(config->midopubgwip, sizeof (config->midopubgwip), "%s", cvals[EUCANETD_CVAL_MIDO_PUBGWIP]);
         if (cvals[EUCANETD_CVAL_MIDO_INTRTCIDR])
             snprintf(config->mido_intrtcidr, NETWORK_ADDR_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_INTRTCIDR]);
         if (cvals[EUCANETD_CVAL_MIDO_INTMDCIDR])

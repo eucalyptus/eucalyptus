@@ -87,9 +87,7 @@ enum gni_vpcmido_config_diff_t {
     GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP       = 0x00000001,
     GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN  = 0x00000002,
     GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS = 0x00000004,
-    GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR  = 0x00000008,
-    GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP    = 0x00000010,
-    GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS       = 0x00000020,
+    GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS       = 0x00000008,
     GNI_VPCMIDO_CONFIG_DIFF_OTHER              = 0x80000000,
 };
 
@@ -333,9 +331,6 @@ typedef struct globalNetworkInfo_t {
     char sMode[NETMODE_LEN];                //!< The network mode string passed in the GNI
     euca_netmode nmCode;                    //!< The network mode code (see euca_netmode_t)
     u32 enabledCLCIp;                       //!< IP address of the enabled CLC
-    char GatewayHosts[HOSTNAME_LEN*3*33];
-    char PublicNetworkCidr[HOSTNAME_LEN];
-    char PublicGatewayIP[HOSTNAME_LEN];
     char instanceDNSDomain[HOSTNAME_LEN];   //!< The DNS domain name to use for the instances
     u32 *instanceDNSServers;                //!< List of DNS servers
     int max_instanceDNSServers;             //!< Number of DNS servers in the list
@@ -504,6 +499,7 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b);
 int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff);
 int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff);
 int cmp_gni_instance(gni_instance *a, gni_instance *b);
+int cmp_gni_mido_gateway(gni_mido_gateway *a, gni_mido_gateway *b);
 
 int ruleconvert(char *rulebuf, char *outrule);
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);
