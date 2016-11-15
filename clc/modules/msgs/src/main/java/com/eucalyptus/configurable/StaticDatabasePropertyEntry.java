@@ -320,6 +320,34 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_4_0, value = Empyrean.class )
+  public enum StaticPropertyEntryInvertPropertyCloudWatchUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_FIELD_NAME = "com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties.disable_cloudwatch_service";
+      final String CLOUDWATCH_ENABLE_CLOUDWATCH_SERVICE_FIELD_NAME = "com.eucalyptus.cloudwatch.common.config.CloudWatchConfigProperties.enable_cloudwatch_service";
+      final String CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME = "cloudwatch.disable_cloudwatch_service";
+      final String CLOUDWATCH_ENABLE_CLOUDWATCH_SERVICE_PROP_NAME = "cloudwatch.enable_cloudwatch_service";
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        List<StaticDatabasePropertyEntry> entities = Entities.criteriaQuery(StaticDatabasePropertyEntry.class)
+          .whereEqual(StaticDatabasePropertyEntry_.fieldName, CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_FIELD_NAME)
+          .whereEqual(StaticDatabasePropertyEntry_.propName, CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME)
+          .list();
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          entry.setFieldName(CLOUDWATCH_ENABLE_CLOUDWATCH_SERVICE_FIELD_NAME);
+          entry.setPropName(CLOUDWATCH_ENABLE_CLOUDWATCH_SERVICE_PROP_NAME);
+          entry.setValue(Boolean.toString(!Boolean.valueOf(entry.getValue())));
+          LOG.debug( "Upgrading: Changing property " + CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_PROP_NAME + " field name'"+CLOUDWATCH_DISABLE_CLOUDWATCH_SERVICE_FIELD_NAME+"' to '"+CLOUDWATCH_ENABLE_CLOUDWATCH_SERVICE_FIELD_NAME+"'");
+        }
+        db.commit( );
+        return true;
+      }
+    }
+  }
+
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade40 implements Predicate<Class> {
     INSTANCE;
