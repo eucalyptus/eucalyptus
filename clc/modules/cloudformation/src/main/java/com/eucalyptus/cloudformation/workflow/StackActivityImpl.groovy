@@ -261,6 +261,7 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity.setResourceStatus(Status.CREATE_FAILED);
       stackResourceEntity.setResourceStatusReason("Resource creation cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      StackEventEntityManager.addStackEvent(stackResourceEntity);
     }
     return failedResources.isEmpty() ? "" : "The following resource(s) failed to create: " + failedResources + ".";
   }
@@ -281,6 +282,7 @@ public class StackActivityImpl implements StackActivity {
       stackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
       stackResourceEntity.setResourceStatusReason("Resource update cancelled");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
+      StackEventEntityManager.addStackEvent(stackResourceEntity);
     }
     return failedResources.isEmpty() ? "" : "The following resource(s) failed to update: " + failedResources + ".";
   }
@@ -891,6 +893,20 @@ public class StackActivityImpl implements StackActivity {
       throw new ResourceFailureException(rootCause.getClass().getName() + ":" + rootCause.getMessage());
     }
     return true;
+  }
+
+  @Override
+  public String failUpdateUnsupportedResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int updatedResourceVersion) {
+    VersionedStackEntity nextStackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, updatedResourceVersion);
+    StackResourceEntity nextStackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
+    ResourceInfo nextResourceInfo = StackResourceEntityManager.getResourceInfo(nextStackResourceEntity);
+
+    nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
+    nextStackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
+    nextStackResourceEntity.setResourceStatusReason(errorMessage);
+    StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
+    StackEventEntityManager.addStackEvent(nextStackResourceEntity);
+    throw new ValidationErrorException(errorMessage);
   }
 
   @Override

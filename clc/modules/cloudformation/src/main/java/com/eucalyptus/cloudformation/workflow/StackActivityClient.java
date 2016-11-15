@@ -130,6 +130,8 @@ public interface StackActivityClient {
   @Activity(name = "StackActivity.finalizeUpdateCleanupResource")
   Promise<String> finalizeUpdateCleanupResource(String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
 
+  @Activity(name = "StackActivity.failUpdateUnsupportedResource")
+  Promise<String> failUpdateUnsupportedResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int updatedResourceVersion);
 
   @Activity(name = "StackActivity.initUpdateRollbackResource")
   Promise<String> initUpdateRollbackResource(String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);

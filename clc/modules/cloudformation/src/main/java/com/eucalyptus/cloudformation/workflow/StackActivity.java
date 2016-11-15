@@ -71,6 +71,7 @@ public interface StackActivity {
 
   public String finalizeUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion);
   public String failUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion, String errorMessage);
+  public String failUpdateUnsupportedResource(String resourceId, String stackId, String accountId, String effectiveUserId, String errorMessage, int updatedResourceVersion);
 
 
   public String finalizeUpdateRollbackCleanupStack(String stackId, String accountId, String statusMessage, int rolledBackStackVersion);
