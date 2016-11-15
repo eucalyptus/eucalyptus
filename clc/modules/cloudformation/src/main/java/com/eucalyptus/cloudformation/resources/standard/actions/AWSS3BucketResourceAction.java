@@ -520,10 +520,10 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
       allTags.addAll(systemTags);
       allTags.addAll(nonSystemTags);
       s3c.setBucketTaggingConfiguration( bucketName, convertTags( allTags ) );
-
     } else { // add as admin
-      EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(AccountFullName.getInstance(user.getAccountNumber())));
-      s3cAdmin.setBucketTaggingConfiguration( bucketName, newAction.convertTags( systemTags ));
+      try ( EucaS3Client s3cAdmin = EucaS3ClientFactory.getEucaS3Client(new SecurityTokenAWSCredentialsProvider(AccountFullName.getInstance(user.getAccountNumber()))) ) {
+        s3cAdmin.setBucketTaggingConfiguration( bucketName, AWSS3BucketResourceAction.convertTags( systemTags ));
+      }
     }
   }
 }
