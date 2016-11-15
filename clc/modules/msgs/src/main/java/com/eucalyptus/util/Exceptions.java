@@ -105,12 +105,12 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Exceptions {
-  
+
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
   private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
-  
+
   public static WebServicesException notFound( String message, Throwable... t ) {
     if ( Logs.isExtrrreeeme( ) && t != null
          && t.length > 0 ) {
@@ -120,7 +120,7 @@ public class Exceptions {
       return new ServiceDispatchException( message );
     }
   }
-  
+
   enum ToString implements Function<Object, String> {
     INSTANCE;
     @Override
@@ -130,16 +130,16 @@ public class Exceptions {
                         : o.toString( ) );
     }
   };
-  
+
   private static <T> Function<T, String> toStringFunction( ) {
     return ( Function<T, String> ) ToString.INSTANCE;
   }
-  
+
   public static <T> Predicate<StackTraceElement> stackTraceElementFilter( final List<String> patterns ) {
     Function<StackTraceElement, String> toString = toStringFunction( );
     return Predicates.compose( makeSteFilter( patterns ), toString );
   }
-  
+
   private static Predicate<String> makeSteFilter( final List<String> patterns ) {
     Predicate<String> filter = Predicates.alwaysTrue( );
     for ( String f : patterns ) {
@@ -147,18 +147,18 @@ public class Exceptions {
     }
     return filter;
   }
-  
+
   enum FilterCauses implements Predicate<Throwable> {
     INSTANCE;
     private static final Set<Class<? extends Exception>> filtered = Sets.newHashSet( UndeclaredThrowableException.class, RuntimeException.class,
                                                                                      ExecutionException.class );
-    
+
     @Override
     public boolean apply( Throwable input ) {
       return !filtered.contains( input.getClass( ) );
     }
   }
-  
+
   enum ExceptionCauses implements Function<Throwable, List<Throwable>> {
     INSTANCE;
     @Override
@@ -172,21 +172,21 @@ public class Exceptions {
       }
     }
   }
-  
+
   public static <T extends Throwable> T maybeInterrupted( T t ) {
     if ( t instanceof InterruptedException ) {
       Thread.currentThread( ).interrupt( );
     }
     return t;
   }
-  
+
   public static List<Throwable> causes( Throwable ex ) {
     return ExceptionCauses.INSTANCE.apply( ex );
   }
-  
+
   /**
    * Convert this exception and all underlying causes, along with stack traces, into a string.
-   * 
+   *
    * @param <T>
    * @param message
    * @param ex
@@ -196,7 +196,7 @@ public class Exceptions {
     return message + "\n"
            + string( ex );
   }
-  
+
   /**
    * {@inheritDoc #string(String, Throwable)}
    */
@@ -217,7 +217,7 @@ public class Exceptions {
     p.close( );
     return os.toString( );
   }
-  
+
   public static <T extends Throwable> String causeString( T ex ) {
     return Joiner.on( "\nCaused by: " ).join( Exceptions.causes( ex ) );
   }
@@ -259,7 +259,7 @@ public class Exceptions {
       return new RuntimeException( message, ex );
     }
   }
-  
+
   /** * {@inheritDoc #toUndeclared(String, Throwable)} * * @param cause * @return */
   public static RuntimeException toUndeclared( Throwable cause ) {
     return toUndeclared( cause.getMessage( ), cause );
@@ -357,51 +357,51 @@ public class Exceptions {
                                 .toArray( steArrayType ) );
     return ex;
   }
-  
+
   public static Collection<StackTraceElement> filterStackTraceElements( Throwable ex ) {
     return Exceptions.filterStackTraceElements( ex, DEFAULT_FILTER_MATCHES );
   }
-  
+
   private static Collection<StackTraceElement> filterStackTraceElements( Throwable ex, List<String> patterns ) {
     Predicate<StackTraceElement> filter = stackTraceElementFilter( patterns );
     return Collections2.filter( Arrays.asList( ex.getStackTrace( ) ), filter );
   }
-  
+
   public static RuntimeException trace( String message ) {
     return trace( new RuntimeException( message ) );
   }
-  
+
   public static <T extends Throwable> T trace( T t ) {
     return trace( MoreObjects.firstNonNull( t.getMessage( ), t.toString( ) ), t );
   }
-  
+
   public static <T extends Throwable> T trace( String message, T t ) {
     Throwable filtered = new RuntimeException( t.getMessage( ) );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
-    LOG.info( message );
+    LOG.debug( message );
     LOG.trace( message, filtered );
     return t;
   }
-  
+
   public static RuntimeException error( String message ) {
     return error( new RuntimeException( message ) );
   }
-  
+
   public static <T extends Throwable> T error( T t ) {
     return error( t.getMessage( ), t );
   }
-  
+
   public static <T extends Throwable> T error( String message, T t ) {
     Throwable filtered = new RuntimeException( message );
     filtered.setStackTrace( Exceptions.filterStackTraceElements( t ).toArray( steArrayType ) );
     LOG.error( message, filtered );
     return t;
   }
-  
+
   public static <T extends Throwable> boolean isCausedBy( Throwable ex, final Class<T> class1 ) {
     return findCause( ex, class1 ) != null;
   }
-  
+
   /**
    * Unwrap generic exceptions to find the underlying cause. A new instance of Exception is returned
    * which contains a subset of the exception and its causes which excludes each of RuntimeException
@@ -410,7 +410,7 @@ public class Exceptions {
   public static Throwable unwrapCause( Throwable ex ) {
     return Iterables.find( causes( ex ), FilterCauses.INSTANCE, ex );
   }
-  
+
   @SuppressWarnings( "unchecked" )
   public static <T extends Throwable> T findCause( Throwable ex, final Class<T> class1 ) {
     try {
@@ -419,7 +419,7 @@ public class Exceptions {
       return null;
     }
   }
-  
+
   @SuppressWarnings( "unchecked" )
   /*
    * This is not supper efficient method so use it carefully
@@ -454,7 +454,7 @@ public class Exceptions {
       return new NoSuchElementException( message );
     }
   }
-  
+
   private static final LoadingCache<Class, ErrorMessageBuilder> builders = CacheBuilder.newBuilder().build(
     new CacheLoader<Class, ErrorMessageBuilder>( ) {
       @Override
@@ -462,36 +462,36 @@ public class Exceptions {
         return new ErrorMessageBuilder( input );
       }
     });
-  
+
   public static ErrorMessageBuilder builder( Class<?> type ) {
     return builders.getUnchecked( type );
   }
-  
+
   public static class ErrorMessageBuilder {
     private Class              type;
     private LoadingCache<Class, String> map;
-    
+
     public ErrorMessageBuilder( Class input ) {
       this.type = input;
       this.map = classErrorMessages.get( this.type );
     }
-    
-    private boolean hasMessage( Class<? extends Throwable> ex ) { 
+
+    private boolean hasMessage( Class<? extends Throwable> ex ) {
       if ( this.map != null ) {
         return this.map.getUnchecked( ex ) != null;
       } else {
         return false;
       }
     }
-    
+
     private String getMessage( Class<? extends Throwable> ex ) {
       return classErrorMessages.get( this.type ).getUnchecked( ex );
     }
-    
+
     public ExceptionBuilder exception( Throwable ex ) {
       return new ExceptionBuilder( ).exception( ex.getClass( ) );
     }
-    
+
     public class ExceptionBuilder {
       private String                     extraMessage;
       private Object[]                   fArgs;
@@ -499,23 +499,23 @@ public class Exceptions {
       private Class<? extends Throwable> ex;
       private String                     unknownMessage;
       private String                     fstring;
-      
+
       public ExceptionBuilder exception( Class<? extends Throwable> ex ) {
         this.ex = ex;
         return this;
       }
-      
+
       public ExceptionBuilder message( String message, Object[] formatArgs ) {
         this.message = message;
         this.fArgs = formatArgs;
         return this;
       }
-      
+
       public ExceptionBuilder append( String appendedMessage ) {
         this.extraMessage = appendedMessage;
         return this;
       }
-      
+
       /**
        * @param unknownExceptionMessage
        * @return
@@ -524,7 +524,7 @@ public class Exceptions {
         this.unknownMessage = unknownExceptionMessage;
         return this;
       }
-      
+
       public String build( ) {
         if ( ErrorMessageBuilder.this.hasMessage( this.ex ) ) {
           try {
@@ -537,14 +537,14 @@ public class Exceptions {
           return this.unknownMessage;
         }
       }
-      
+
       public ExceptionBuilder context( String format, Object... formatArgs ) {
         this.fstring = format;
         this.fArgs = formatArgs;
         return this;
       }
     }
-    
+
   }
 
   public static Function<Throwable,String> message() {
@@ -569,15 +569,15 @@ public class Exceptions {
   public @interface ErrorMessages {
     Class<?> value( );
   }
-  
+
   private static final Map<Class, LoadingCache<Class, String>> classErrorMessages = Maps.newConcurrentMap( );
-  
+
   @Discovery( value = { Function.class },
               annotations = { ErrorMessages.class },
               priority = -0.1d )
   public enum ErrorMessageDiscovery implements Predicate<Class> {
     INSTANCE;
-    
+
     @SuppressWarnings( { "unchecked",
         "rawtypes" } )
     @Override
@@ -602,7 +602,7 @@ public class Exceptions {
         return false;
       }
     }
-    
+
   }
-  
+
 }
