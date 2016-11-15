@@ -147,7 +147,7 @@ int do_delete_meta_nslinks(mido_config *mido) {
         snprintf(devpath, EUCA_MAX_PATH, "/sys/class/net/vn2_%s/", sid);
         if (!check_directory(devpath)) {
             snprintf(cmd, EUCA_MAX_PATH, "ip link del vn2_%s", sid);
-            rc = se_add(&cmds, cmd, NULL, ignore_exit);
+            se_add(&cmds, cmd, NULL, ignore_exit);
         }
     }
 
@@ -2191,12 +2191,20 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         }
 
         // do instance/interface public/elastic IP connection
-        if (vpcif->population_failed || vpcif->pubip_changed) {
+        if (vpcif->population_failed || vpcif->pubip_changed || !vpcif->population_failed) {
             // Do not run connect for private interfaces
             if (gniif->publicIp != 0) {
                 rc = connect_mido_vpc_instance_elip(mido, vpc, vpcsubnet, vpcif);
                 if (rc) {
                     LOGERROR("failed to setup public/elastic IP for %s\n", gniif->name);
+                    ret++;
+                }
+            } else {
+                // Create private ip-address-group IP
+                rc = mido_create_ipaddrgroup_ip(vpcif->iag_post, vpcif->midos[INST_ELIP_POST_IPADDRGROUP],
+                        hex2dot_s(vpcif->gniInst->privateIp), &(vpcif->midos[INST_ELIP_POST_IPADDRGROUP_IP]));
+                if (rc) {
+                    LOGERROR("Failed to add %s as member of ipag\n", hex2dot_s(vpcif->gniInst->privateIp));
                     ret++;
                 }
             }
@@ -3060,6 +3068,38 @@ void print_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
     LOGTRACE("PRINT VPCSECGROUP: name=%s gnipresent=%d\n", vpcsecgroup->name, vpcsecgroup->gnipresent);
     for (i = 0; i < VPCSG_END; i++) {
         mido_print_midoname(vpcsecgroup->midos[i]);
+    }
+}
+
+/**
+ * Logs the state of a Mido Gateway.
+ * @param gw [in] data structure holding information about the Mido Gateway of interest
+ * @param llevel [in] log level to be used.
+ */
+void print_mido_gw(mido_gw *gw, log_level_e llevel) {
+    if (!gw) {
+        return;
+    }
+    EUCALOG(llevel, "PRINT MIDO GW:\n");
+    EUCALOG(llevel, "\tGateway Host: %s\n", gw->host->obj->name);
+    EUCALOG(llevel, "\tport        : %s\n", gw->port->name);
+    EUCALOG(llevel, "\text IP      : %s\n", gw->ext_ip);
+    EUCALOG(llevel, "\text CIDR    : %s\n", gw->ext_cidr);
+    EUCALOG(llevel, "\text DEV     : %s\n", gw->ext_dev);
+    EUCALOG(llevel, "\tpeer IP     : %s\n", gw->peer_ip);
+    if (gw->asn) {
+        EUCALOG(llevel, "\t  ASN       : %d\n", gw->asn);
+        EUCALOG(llevel, "\t  peer ASN  : %d\n", gw->peer_asn);
+        if (gw->bgp_v1) {
+            EUCALOG(llevel, "\t  BGPv1     : %s\n", gw->bgp_v1->name);
+        }
+        if (gw->bgp_peer_v5) {
+            EUCALOG(llevel, "\t  BGPv5     : %s\n", gw->bgp_peer_v5->name);
+        }
+        for (int i = 0; i < gw->max_routes; i++) {
+            mido_gw_ad_route *ar = &(gw->routes[i]);
+            EUCALOG(llevel, "\t\t %s %s\n", ar->cidr, ar->route->name);
+        }
     }
 }
 
@@ -4071,7 +4111,7 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
 int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
     char *version = NULL;
     int ret = 0;
-    midonet_api_get_version(&version);
+    version = midonet_api_get_version(NULL);
     if (version && strlen(version)) {
         if (!strcmp(version, "v1.9")) {
             ret = parse_mido_secgroup_rule_v1(mido, rule, parsed_rule);
@@ -4079,7 +4119,6 @@ int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chai
             ret = parse_mido_secgroup_rule_v5(mido, rule, parsed_rule);
         }
     }
-    EUCA_FREE(version);
     return (ret);
 }
 
@@ -4496,9 +4535,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         }
     }
 
-    if (vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] && vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]) {
-        found = 1;
-    } else {
+    if (!vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP] || !vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]) {
         LOGWARN("Unable to populate vpcinstance %s IPADDRGROUP\n", vpcinstance->name);
     }
 
@@ -4611,7 +4648,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     if (mido->config->enable_mido_md) {
         for (i = INST_MD_DNAT; i < INST_END; i++) {
             if (vpcinstance->midos[i] == NULL) {
-                LOGWARN("VPC instance population failed to populate resource at idx %d\n", i);
+                LOGWARN("VPC instance %s population failed to populate resource at idx %d\n", vpcinstance->name, i);
                 vpcinstance->population_failed = 1;
             }
         }
@@ -4735,14 +4772,14 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     boolean found2 = FALSE;
 
     LOGTRACE("populating %s\n", natgateway->name);
-    if (!mido || !vpc || !vpcsubnet || !natgateway) {
+    if (!mido || !mido->midocore || !vpc || !vpcsubnet || !natgateway) {
         LOGDEBUG("Invalid argument: cannot populate with NULL information.\n");
         return (1);
     }
-    if (mido->midocore && mido->midocore->eucabr) {
+    if (mido->midocore->eucabr) {
         natgateway->midos[NATG_EUCABR] = mido->midocore->eucabr->obj;
     }
-    if (mido->midocore && mido->midocore->eucart) {
+    if (mido->midocore->eucart) {
         natgateway->midos[NATG_EUCART] = mido->midocore->eucart->obj;
     }
     if (vpcsubnet && vpcsubnet->subnetbr) {
@@ -4754,7 +4791,9 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     if (router != NULL) {
         LOGTRACE("Found router %s\n", router->obj->name);
         // Search for NATG_RT_UPLINK
-        if (mido->midocore && mido->midocore->midos[CORE_EUCABR] && mido->midocore->midos[CORE_EUCABR]->init) {
+        if (mido->midocore->midos[CORE_EUCABR] &&
+                mido->midocore->midos[CORE_EUCABR]->init &&
+                vpcsubnet && vpcsubnet->subnetbr) {
             midoname **rtports = router->ports;
             int max_rtports = router->max_ports;
             midoname **eucabrports = mido->midocore->eucabr->ports;
@@ -5186,6 +5225,9 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config, globalNe
         return (1);
     }
 
+    mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
+    mido->midomd = EUCA_ZALLOC_C(1, sizeof (mido_md));
+
     mido->rt_ids = EUCA_ZALLOC_C(mido->config->mido_max_rtid, sizeof (boolean));
     mido->eni_ids = EUCA_ZALLOC_C(mido->config->mido_max_eniid, sizeof (boolean));
 
@@ -5226,6 +5268,12 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config, globalNe
     mido->ext_pubnw = strdup(eucanetd_config->midopubnw);
     mido->ext_pubgwip = strdup(eucanetd_config->midopubgwip);
 */
+
+    mido->gni_gws = EUCA_ZALLOC_C(gni->max_midogws, sizeof (gni_mido_gateway));
+    for (int i = 0; i < gni->max_midogws; i++) {
+        gni_midogw_dup(&(mido->gni_gws[i]), &(gni->midogws[i]));
+    }
+    mido->max_gni_gws = gni->max_midogws;
 
     for (int i = 0; i < gni->max_midogws; i++) {
         EUCA_FREE(mido->ext_rthostnamearr[i]);
@@ -5286,8 +5334,6 @@ int initialize_mido(mido_config *mido, eucanetdConfig *eucanetd_config, globalNe
     mido->mdconfig.md_http = mido->mdconfig.md_veth_host;
     mido->mdconfig.md_dns = mido->mdconfig.md_veth_host - 1;
 
-    mido->midocore = EUCA_ZALLOC_C(1, sizeof (mido_core));
-    mido->midomd = EUCA_ZALLOC_C(1, sizeof (mido_md));
     LOGDEBUG("mido initialized: mido->ext_pubnw=%s mido->ext_pubgwip=%s int_rtcidr=%s intmdcidr=%s extmdcidr=%s mdcidr=%s\n",
             SP(mido->ext_pubnw), SP(mido->ext_pubgwip), SP(eucanetd_config->mido_intrtcidr),
             SP(eucanetd_config->mido_intmdcidr), SP(eucanetd_config->mido_extmdcidr), SP(eucanetd_config->mido_mdcidr));
@@ -5344,7 +5390,7 @@ int validate_mido(mido_config *mido) {
             LOGERROR("Invalid MIDO_MAX_RTID - %d\n", mido->config->mido_max_rtid);
             ret = EUCA_ERROR;
         }
-        if (mido->config->mido_max_rtid > 16777215) {
+        if (mido->config->mido_max_eniid > 16777215) {
             LOGERROR("Invalid MIDO_MAX_ENIID - %d\n", mido->config->mido_max_eniid);
             ret = EUCA_ERROR;
         }
@@ -5452,7 +5498,7 @@ int check_mido_tunnelzone() {
 
 /**
  * Searches for BGP configuration in midocore, and returns a string containing midonet-cli
- * commands to recover the BGP configuration. Compatible with MN1.9.
+ * commands to recover the BGP configuration.
  * @param mido [in] data structure that holds MidoNet configuration
  * @return string containing midonet-cli commands to recover the found BGP configuration.
  * NULL if BGP is not found.
@@ -5460,7 +5506,7 @@ int check_mido_tunnelzone() {
 char *discover_mido_bgps(mido_config *mido) {
     char *version = NULL;
     char *ret = NULL;
-    midonet_api_get_version(&version);
+    version = midonet_api_get_version(NULL);
     if (version && strlen(version)) {
         if (!strcmp(version, "v1.9")) {
             ret = discover_mido_bgps_v1(mido);
@@ -5468,7 +5514,6 @@ char *discover_mido_bgps(mido_config *mido) {
             ret = discover_mido_bgps_v5(mido);
         }
     }
-    EUCA_FREE(version);
     return (ret);
 }
 
@@ -5503,7 +5548,7 @@ char *discover_mido_bgps_v1(mido_config *mido) {
     res = EUCA_ZALLOC_C(2048, sizeof (char));
     resptr = &(res[0]);
     mido_core *midocore = mido->midocore;
-    for (int i = 0; i < midocore->max_gws; i++) {
+    for (int i = 0; i < midocore->max_gws_deprecate; i++) {
         mido_getel_midoname(midocore->gwports[i], "interfaceName", &interfaceName);
         mido_getel_midoname(midocore->gwports[i], "networkAddress", &networkAddress);
         mido_getel_midoname(midocore->gwports[i], "networkLength", &networkLength);
@@ -5602,7 +5647,7 @@ char *discover_mido_bgps_v5(mido_config *mido) {
     res = EUCA_ZALLOC_C(2048, sizeof (char));
     resptr = &(res[0]);
     mido_core *midocore = mido->midocore;
-    for (int i = 0; i < midocore->max_gws; i++) {
+    for (int i = 0; i < midocore->max_gws_deprecate; i++) {
         mido_getel_midoname(midocore->gwports[i], "interfaceName", &interfaceName);
         mido_getel_midoname(midocore->gwports[i], "networkAddress", &networkAddress);
         mido_getel_midoname(midocore->gwports[i], "networkLength", &networkLength);
@@ -5619,8 +5664,8 @@ char *discover_mido_bgps_v5(mido_config *mido) {
         }
         resptr = &(res[strlen(res)]);
         snprintf(resptr, 1024, "GW[%d] if %s %s %s/%s %s\n", i, interfaceName, portAddress, networkAddress, networkLength, portMac);
-        resptr = &(res[strlen(res)]);
-        snprintf(resptr, 1024, "router name eucart add route src 0.0.0.0/0 dst %s/%s port GW[%d] type normal\n", networkAddress, networkLength, i);
+        //resptr = &(res[strlen(res)]);
+        //snprintf(resptr, 1024, "router name eucart add route src 0.0.0.0/0 dst %s/%s port GW[%d] type normal\n", networkAddress, networkLength, i);
         EUCA_FREE(interfaceName);
         EUCA_FREE(networkAddress);
         EUCA_FREE(networkLength);
@@ -5639,8 +5684,8 @@ char *discover_mido_bgps_v5(mido_config *mido) {
     rc = mido_get_bgps(midocore->eucart->obj, &bgps, &max_bgps);
     for (int i = 0; i < max_bgps; i++) {
         mido_getel_midoname(bgps[i], "address", &peerAddr);
-        mido_getel_midoname(bgps[0], "asNumber", &peerAS);
-        if (!peerAS || !peerAS) {
+        mido_getel_midoname(bgps[i], "asNumber", &peerAS);
+        if (!peerAddr || !peerAS) {
             LOGWARN("failed to retrieve bgp information\n");
             continue;
         }
@@ -5669,6 +5714,209 @@ char *discover_mido_bgps_v5(mido_config *mido) {
     }
     EUCA_FREE(bgp_routes);
     return (res);
+}
+
+/**
+ * Populates an euca VPCMIDO gateway BGP configuration.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param port [in] data structure that holds MN port bound to VPCMIDO gateway.
+ * @param gw [in] data structure that holds the euca VPCMIDO gateway model of interest.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_gw_bgp(mido_config *mido, midoname *port, mido_gw *gw) {
+    char *version = NULL;
+    int ret = 0;
+    version = midonet_api_get_version(NULL);
+    if (version && strlen(version)) {
+        if (!strcmp(version, "v1.9")) {
+            ret = populate_mido_gw_bgp_v1(mido, port, gw);
+        } else if (!strcmp(version, "v5.0")) {
+            ret = populate_mido_gw_bgp_v5(mido, port, gw);
+        }
+    }
+    return (ret);
+}
+
+/**
+ * Populates an euca VPCMIDO gateway BGP configuration. Compatible with MN1.9.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param port [in] data structure that holds MN port bound to VPCMIDO gateway.
+ * @param gw [in] data structure that holds the euca VPCMIDO gateway model of interest.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw) {
+    int rc = 0;
+    midoname **bgps = NULL;
+    int max_bgps = 0;
+    midoname **bgp_routes = NULL;
+    int max_bgp_routes = 0;
+    char *localAS = NULL;
+    char *peerAddr = NULL;
+    char *peerAS = NULL;
+    char *nwPrefix = NULL;
+    char *prefixLength = NULL;
+
+    if (!mido || !port || !gw) {
+        LOGWARN("Invalid argument: cannot populate BGP from NULL\n");
+        return (1);
+    }
+    bgps = NULL;
+    gw->port = port;
+    rc = mido_get_bgps(port, &bgps, &max_bgps);
+    if (!rc && bgps && max_bgps) {
+        if (max_bgps > 1) {
+            LOGWARN("Unexpected number (%d) of bgps found on port %s\n", max_bgps, port->uuid);
+            LOGINFO("Deleting bgps from port %s\n", port->uuid);
+            // uri=http://127.0.0.1:8080/midonet-api/bgps/6ad9b5b5-9fcf-458f-90d8-a7a7bc82e023, method=DELETE
+        } else {
+            gw->bgp_v1 = bgps[0];
+            mido_getel_midoname(bgps[0], "localAS", &localAS);
+            mido_getel_midoname(bgps[0], "peerAddr", &peerAddr);
+            mido_getel_midoname(bgps[0], "peerAS", &peerAS);
+            if (!localAS || !peerAS || !peerAS) {
+                LOGWARN("failed to retrieve bgp information from port %s\n", port->uuid);
+            } else {
+                gw->asn = atoi(localAS);
+                gw->peer_asn = atoi(peerAS);
+                snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", peerAddr);
+
+                rc = mido_get_bgp_routes(bgps[0], &bgp_routes, &max_bgp_routes);
+                if (!rc && bgp_routes && max_bgp_routes) {
+                    gw->routes = EUCA_ZALLOC_C(max_bgp_routes, sizeof (mido_gw_ad_route));
+                    int bgp_route_idx = 0;
+                    for (int j = 0; j < max_bgp_routes; j++) {
+                        mido_getel_midoname(bgp_routes[j], "nwPrefix", &nwPrefix);
+                        mido_getel_midoname(bgp_routes[j], "prefixLength", &prefixLength);
+                        if (!nwPrefix || !prefixLength) {
+                            LOGWARN("failed to retrieve bgp ad routes from %s\n", bgps[0]->uuid);
+                            continue;
+                        } else {
+                            snprintf(gw->routes[bgp_route_idx].cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
+                            gw->routes[bgp_route_idx].route = bgp_routes[j];
+                            bgp_route_idx++;
+                        }
+                        EUCA_FREE(nwPrefix);
+                        EUCA_FREE(prefixLength);
+                    }
+                    gw->max_routes = bgp_route_idx;
+                }
+                EUCA_FREE(bgp_routes);
+            }
+            EUCA_FREE(localAS);
+            EUCA_FREE(peerAddr);
+            EUCA_FREE(peerAS);
+        }
+    }
+    EUCA_FREE(bgps);
+    return (0);
+}
+
+/**
+ * Populates an euca VPCMIDO gateway BGP configuration. Compatible with MN5.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param port [in] data structure that holds MN port bound to VPCMIDO gateway.
+ * @param gw [in] data structure that holds the euca VPCMIDO gateway model of interest.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
+    int rc = 0;
+    midoname **bgps = NULL;
+    int max_bgps = 0;
+    midoname **bgp_routes = NULL;
+    int max_bgp_routes = 0;
+    char *localAS = NULL;
+    char *peerAddr = NULL;
+    char *peerAS = NULL;
+    char *nwPrefix = NULL;
+    char *prefixLength = NULL;
+
+    if (!mido || !mido->midocore || !mido->midocore->eucart || !port || !gw) {
+        LOGWARN("Invalid argument: cannot populate BGP from NULL\n");
+        return (1);
+    }
+    gw->port = port;
+    mido_core *midocore = mido->midocore;
+    if (midocore->eucart) {
+        mido_getel_midoname(midocore->eucart->obj, "asNumber", &localAS);
+        if (localAS && strlen(localAS) && strcmp(localAS, "0")) {
+            gw->asn = atoi(localAS);
+        }
+        EUCA_FREE(localAS);
+    }
+    bgps = NULL;
+    rc = mido_get_bgps(midocore->eucart->obj, &bgps, &max_bgps);
+    boolean found = FALSE;
+    for (int i = 0; i < max_bgps && !found; i++) {
+        mido_getel_midoname(bgps[i], "address", &peerAddr);
+        mido_getel_midoname(bgps[i], "asNumber", &peerAS);
+        if (!peerAS || !peerAS) {
+            LOGWARN("failed to retrieve bgp information\n");
+        } else {
+            if (!strcmp(peerAddr, gw->peer_ip)) {
+                found = TRUE;
+                gw->bgp_peer_v5 = bgps[i];
+                gw->peer_asn = atoi(peerAS);
+                
+                rc = mido_get_bgp_routes(midocore->eucart->obj, &bgp_routes, &max_bgp_routes);
+                if (!rc && bgp_routes && max_bgp_routes) {
+                    gw->routes = EUCA_ZALLOC_C(max_bgp_routes, sizeof (mido_gw_ad_route));
+                    int bgp_route_idx = 0;
+                    for (int j = 0; j < max_bgp_routes; j++) {
+                        mido_getel_midoname(bgp_routes[j], "subnetAddress", &nwPrefix);
+                        mido_getel_midoname(bgp_routes[j], "subnetLength", &prefixLength);
+                        if (!nwPrefix || !prefixLength) {
+                            LOGWARN("failed to retrieve bgp ad routes\n");
+                            continue;
+                        } else {
+                            snprintf(gw->routes[bgp_route_idx].cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
+                            gw->routes[bgp_route_idx].route = bgp_routes[j];
+                            bgp_route_idx++;
+                        }
+                        EUCA_FREE(nwPrefix);
+                        EUCA_FREE(prefixLength);
+                    }
+                    gw->max_routes = bgp_route_idx;
+                } else {
+                    LOGWARN("no bgp routes found\n");
+                }
+                EUCA_FREE(bgp_routes);
+            }
+        }
+        EUCA_FREE(peerAddr);
+        EUCA_FREE(peerAS);
+    }
+    EUCA_FREE(bgps);
+    return (0);
+}
+
+/**
+ * Populates an euca VPCMIDO gateway model.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param port [in] data structure that holds MN port bound to VPCMIDO gateway.
+ * @param gw [in] data structure that holds the euca VPCMIDO gateway model of interest.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_gw(mido_config *mido, midoname *port, mido_gw *gw) {
+    int ret = 0;
+    if (!mido || !mido->midocore || !port || !port->port || !gw) {
+        LOGWARN("Invalid argument: cannot populate gw from NULL\n");
+        return (1);
+    }
+    snprintf(gw->ext_dev, IF_NAME_LEN, "%s", port->port->ifname);
+    snprintf(gw->ext_cidr, NETWORK_ADDR_LEN, "%s/%s", port->port->netaddr, port->port->netlen);
+    snprintf(gw->ext_ip, NETWORK_ADDR_LEN, "%s", port->port->portaddr);
+    for (int i = 0; i < mido->midocore->eucart->max_routes; i++) {
+        if (mido->midocore->eucart->routes[i] &&
+                mido->midocore->eucart->routes[i]->route->nexthopgateway &&
+                !strcmp(mido->midocore->eucart->routes[i]->route->dstlen, "0") &&
+                !strcmp(mido->midocore->eucart->routes[i]->route->dstnet, "0.0.0.0") &&
+                !strcmp(mido->midocore->eucart->routes[i]->route->nexthopport, port->uuid)) {
+            snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", mido->midocore->eucart->routes[i]->route->nexthopgateway);
+            break;
+        }
+    }
+    populate_mido_gw_bgp(mido, port, gw);
+    return (ret);
 }
 
 /**
@@ -5964,6 +6212,20 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
         LOGINFO("\t\teucart-eucabr link not found.\n");
     }
 
+    for (i = 0; i < max_rtports; i++) {
+        // look for ports bound to a host
+        if (rtports[i]->port->hostid && strlen(rtports[i]->port->hostid)) {
+            midocore->gws = EUCA_REALLOC_C(midocore->gws,midocore->max_gws + 1, sizeof (mido_gw));
+            mido_gw *gw = &(midocore->gws[midocore->max_gws]);
+            (midocore->max_gws)++;
+            memset(gw, 0, sizeof (mido_gw));
+            gw->port = rtports[i];
+            gw->host = mido_get_host(NULL, rtports[i]->port->hostid);
+            populate_mido_gw(mido, rtports[i], gw);
+            print_mido_gw(gw, EUCA_LOG_INFO); //12915
+        }
+    }
+
     // search for mido GW ports
     for (j = 0; j < max_rtports; j++) {
         if (rtports[j] == NULL) {
@@ -5977,8 +6239,8 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
                         midocore->population_failed = 1;
                     }
                     midocore->gwports[k] = rtports[j];
-                    if (midocore->max_gws < k) {
-                        midocore->max_gws = k;
+                    if (midocore->max_gws_deprecate < k) {
+                        midocore->max_gws_deprecate = k;
                     }
                 }
             }
@@ -5993,14 +6255,14 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
             if (!strcmp(hosts[i]->name, mido->ext_rthostnamearr[k])) {
                 LOGTRACE("Found gw host %s\n", hosts[i]->name);
                 midocore->gwhosts[k] = hosts[i];
-                if (midocore->max_gws < k) {
-                    LOGWARN("Unexpected number of gwhosts(%d) - > number of gwports(%d).\n", k, midocore->max_gws);
-                    midocore->max_gws = k;
+                if (midocore->max_gws_deprecate < k) {
+                    LOGWARN("Unexpected number of gwhosts(%d) - > number of gwports(%d).\n", k, midocore->max_gws_deprecate);
+                    midocore->max_gws_deprecate = k;
                 }
             }
         }
     }
-    (midocore->max_gws)++;
+    (midocore->max_gws_deprecate)++;
     EUCA_FREE(hosts);
     for (i = 0; i < mido->ext_rthostarrmax; i++) {
         if (!midocore->gwports[i] || !midocore->gwhosts[i] ||
@@ -6008,6 +6270,8 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
             LOGINFO("\t\tGateway host(s)/port(s) not found\n");
         } else {
             LOGTRACE("\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i]->name,
+                    midocore->gwhosts[i]->init, midocore->gwports[i]->name, midocore->gwports[i]->init);
+            LOGINFO("12915:\tgwhost[%s]: %d gwport[%s]: %d\n", midocore->gwhosts[i]->name,
                     midocore->gwhosts[i]->init, midocore->gwports[i]->name, midocore->gwports[i]->init);
         }
     }
@@ -6533,12 +6797,12 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpc
 }
 
 /**
- * Clear data from the given mido_config data structure
+ * Clear data from the given mido_config data structure and release non-core resources
  * @param mido [in] mido_config data structure of interest
  * @return always 0.
  */
 int clear_mido_config(mido_config *mido) {
-    return (free_mido_config_v(mido, 0));
+    return (free_mido_config_v(mido, VPCMIDO_CONFIG_CLEAR));
 }
 
 /**
@@ -6547,25 +6811,31 @@ int clear_mido_config(mido_config *mido) {
  * @return always 0.
  */
 int free_mido_config(mido_config *mido) {
-    return (free_mido_config_v(mido, 1));
+    return (free_mido_config_v(mido, VPCMIDO_CONFIG_FREE));
 }
 
 
 /**
  * Clear data from the given mido_config data structure and release allocated memory
  * @param mido [in] mido_config data structure of interest
- * @param mode [in] set to 0 to clear non-core parameters. set to 1 to fully clear
- * mido_config
+ * @param mode [in] set to VPCMIDO_CONFIG_CLEAR to clear and release non-core parameters.
+ * Set to VPCMIDO_CONFIG_FREE to fully clear mido_config
  * @return always 0.
  */
-int free_mido_config_v(mido_config *mido, int mode) {
+int free_mido_config_v(mido_config *mido, vpcmido_config_op mode) {
     int ret = 0, i = 0;
 
-    if (!mido)
+    if (!mido) {
         return (0);
+    }
 
-    if (mode == 1) {
+    if (mode == VPCMIDO_CONFIG_FREE) {
         EUCA_FREE(mido->eucahome);
+
+        for (i = 0; i < mido->max_gni_gws; i++) {
+            gni_midogw_clear(&(mido->gni_gws[i]));
+        }
+        EUCA_FREE(mido->gni_gws);
 
         EUCA_FREE(mido->ext_pubnw);
         EUCA_FREE(mido->ext_pubgwip);
@@ -6578,16 +6848,16 @@ int free_mido_config_v(mido_config *mido, int mode) {
     }
 
     free_mido_core(mido->midocore);
-    if (mode == 1) {
+    if (mode == VPCMIDO_CONFIG_FREE) {
         EUCA_FREE(mido->midocore);
     }
 
     free_mido_md(mido->midomd);
-    if (mode == 1) {
+    if (mode == VPCMIDO_CONFIG_FREE) {
         EUCA_FREE(mido->midomd);
     }
     
-    if (mode == 1) {
+    if (mode == VPCMIDO_CONFIG_FREE) {
         EUCA_FREE(mido->rt_ids);
         EUCA_FREE(mido->eni_ids);
     }
@@ -6604,7 +6874,7 @@ int free_mido_config_v(mido_config *mido, int mode) {
     EUCA_FREE(mido->vpcsecgroups);
     mido->max_vpcsecgroups = 0;
 
-    if (mode == 1) {
+    if (mode == VPCMIDO_CONFIG_FREE) {
         memset(mido, 0, sizeof (mido_config));
     }
 
@@ -6622,6 +6892,10 @@ int free_mido_core(mido_core *midocore) {
     if (!midocore)
         return (0);
 
+    for (int i = 0; i < midocore->max_gws_deprecate; i++) {
+        EUCA_FREE(midocore->gws[i].routes);
+    }
+    EUCA_FREE(midocore->gws);
     memset(midocore, 0, sizeof (mido_core));
 
     return (ret);
@@ -7153,7 +7427,7 @@ int delete_mido_core(mido_config *mido, mido_core *midocore) {
     midocore->midos[CORE_METADATA_IPADDRGROUP] = NULL;
 
     // delete the host/port links
-    for (i = 0; i < midocore->max_gws; i++) {
+    for (i = 0; i < midocore->max_gws_deprecate; i++) {
         if ((midocore->gwhosts[i]->init == 0) || (midocore->gwports[i]->init == 0)) {
             continue;
         }

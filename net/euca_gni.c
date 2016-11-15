@@ -4713,6 +4713,31 @@ int gni_midogw_clear(gni_mido_gateway *midogw) {
 }
 
 /**
+ * Copies the contents of gni_mido_gateway structure src to dst.
+ * @param dst [in] pointer to gni_mido_gateway structure where data from src will be copied
+ * @param src [in] pointer to gni_mido_gateway structure with data to be copied
+ * @return 0 on success. 1 on failure.
+ */
+int gni_midogw_dup(gni_mido_gateway *dst, gni_mido_gateway *src) {
+    if (!src || !dst) {
+        LOGWARN("Invalid argument: cannot copy to/from NULL gni_mido_gateway\n");
+        return (1);
+    }
+    dst->asn = src->asn;
+    dst->peer_asn = src->asn;
+    snprintf(dst->ext_cidr, NETWORK_ADDR_LEN, "%s", src->ext_cidr);
+    snprintf(dst->ext_dev, IF_NAME_LEN, "%s", src->ext_dev);
+    snprintf(dst->ext_ip, NETWORK_ADDR_LEN, "%s", src->ext_ip);
+    snprintf(dst->peer_ip, NETWORK_ADDR_LEN, "%s", src->peer_ip);
+    snprintf(dst->host, HOSTNAME_LEN, "%s", src->host);
+    for (int i = 0; i < src->max_ad_routes; i++) {
+        dst->ad_routes[i] = strdup(src->ad_routes[i]);
+    }
+    dst->max_ad_routes = src->max_ad_routes;
+    return (0);
+}
+
+/**
  * Searches and returns the VPC that matches the name in the argument, if found.
  * @param gni [in] globalNetworkInfo structure that holds the network state to search.
  * @param name [in] name of the VPC of interest.

@@ -247,6 +247,7 @@ typedef struct midoname_rule_extras_t {
 } midoname_rule_extras;
 
 typedef struct midoname_port_extras_t {
+    char *type;
     char *hostid;
     char *peerid;
     char *ifname;
@@ -605,7 +606,7 @@ char *mido_jsonize(char *tenant, va_list * al);
 
 void midonet_api_init(void);
 void midonet_api_cleanup(void);
-void midonet_api_get_version(char **version);
+char *midonet_api_get_version(char **version);
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
 int mido_libcurl_init(mido_libcurl_handles *handles);
 int mido_libcurl_cleanup(mido_libcurl_handles *handles);

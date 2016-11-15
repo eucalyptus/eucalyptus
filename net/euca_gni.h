@@ -414,6 +414,7 @@ int gni_secgroup_clear(gni_secgroup *secgroup);
 int gni_vpc_clear(gni_vpc *vpc);
 int gni_dhcpos_clear(gni_dhcp_os *dhcpos);
 int gni_midogw_clear(gni_mido_gateway *midogw);
+int gni_midogw_dup(gni_mido_gateway *dst, gni_mido_gateway *src);
 
 int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);

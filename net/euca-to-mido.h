@@ -56,6 +56,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef enum vpcmido_config_op_t {
+    VPCMIDO_CONFIG_CLEAR,
+    VPCMIDO_CONFIG_FREE
+} vpcmido_config_op;
+
 enum vpcmido_nginx_t {
     VPCMIDO_NGINX_START,
     VPCMIDO_NGINX_STOP
@@ -272,6 +277,27 @@ struct mido_vpc_t {
     int gnipresent;
 };
 
+typedef struct mido_gw_ad_route_t {
+    midoname *route;
+    char cidr[NETWORK_ADDR_LEN];
+} mido_gw_ad_route;
+
+typedef struct mido_gw_t {
+    midonet_api_host *host;
+    midoname *port;
+    midoname *bgp_v1;
+    midoname *bgp_peer_v5;
+
+    char ext_ip[NETWORK_ADDR_LEN];
+    char ext_dev[IF_NAME_LEN];
+    char ext_cidr[NETWORK_ADDR_LEN];
+    char peer_ip[NETWORK_ADDR_LEN];
+    u32 peer_asn;
+    u32 asn;
+    mido_gw_ad_route *routes;
+    int max_routes;
+} mido_gw;
+
 typedef struct mido_core_t {
     midoname *midos[CORE_END];
     midonet_api_ipaddrgroup *eucaver_iag;
@@ -284,7 +310,9 @@ typedef struct mido_core_t {
 
     midoname *gwhosts[32];
     midoname *gwports[32];
+    mido_gw *gws;
     int max_gws;
+    int max_gws_deprecate;
 } mido_core;
 
 typedef struct mido_md_config_t {
@@ -320,6 +348,10 @@ typedef struct mido_config_t {
 
     char *ext_pubnw;
     char *ext_pubgwip;
+
+    gni_mido_gateway *gni_gws;
+    int max_gni_gws;
+
     char *eucahome;
     u32 int_rtnw;
     u32 int_rtaddr;
@@ -396,6 +428,10 @@ char *discover_mido_bgps(mido_config *mido);
 char *discover_mido_bgps_v1(mido_config *mido);
 char *discover_mido_bgps_v5(mido_config *mido);
 
+int populate_mido_gw_bgp(mido_config *mido, midoname *port, mido_gw *gw);
+int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw);
+int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw);
+
 int populate_mido_core(mido_config *mido, mido_core *midocore);
 int create_mido_core(mido_config *mido, mido_core *midocore);
 int delete_mido_core(mido_config *mido, mido_core *midocore);
@@ -409,6 +445,8 @@ int connect_mido_md_ext_veth(mido_config *mido);
 int disconnect_mido_md_ext_veth(mido_config *mido);
 int create_mido_md_egress_rules(mido_config *mido, midonet_api_chain *chain);
 int parse_mido_md_egress_rules(mido_config *mido, mido_parsed_chain_rule ***parsedrules, int *max_parsedrules);
+
+int populate_mido_gw(mido_config *mido, midoname *port, mido_gw *gw);
 
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
@@ -472,7 +510,7 @@ int disconnect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_i
 
 int clear_mido_config(mido_config *mido);
 
-int free_mido_config_v(mido_config *mido, int mode);
+int free_mido_config_v(mido_config *mido, vpcmido_config_op mode);
 int free_mido_config(mido_config *mido);
 int free_mido_core(mido_core *midocore);
 int free_mido_md(mido_md *midomd);
@@ -486,6 +524,7 @@ void print_mido_vpc(mido_vpc *vpc);
 void print_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet);
 void print_mido_vpc_instance(mido_vpc_instance *vpcinstance);
 void print_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup);
+void print_mido_gw(mido_gw *gw, log_level_e llevel);
 
 int do_midonet_maint(mido_config *mido);
 int do_midonet_populate(mido_config *mido);

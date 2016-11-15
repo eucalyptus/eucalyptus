@@ -1022,11 +1022,10 @@ static int eucanetd_cleanup(void) {
         ipt_handler_close(config->ipt);
         ips_handler_close(config->ips);
         ebt_handler_close(config->ebt);
+        config->polling_frequency = 5;
+        config->init = 1;    
     }
 
-    config->polling_frequency = 5;
-    config->init = 1;
-    
     return (0);
 }
 

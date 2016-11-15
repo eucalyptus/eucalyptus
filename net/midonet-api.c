@@ -506,6 +506,7 @@ void mido_free_midoname(midoname *name) {
         EUCA_FREE(name->rule);
     }
     if (name->port) {
+        EUCA_FREE(name->port->type);
         EUCA_FREE(name->port->hostid);
         EUCA_FREE(name->port->peerid);
         EUCA_FREE(name->port->ifname);
@@ -3696,6 +3697,7 @@ int mido_update_midoname(midoname *name) {
 
         } else if (!strcmp(name->resource_type, "ports")) {
             if (name->port) {
+                EUCA_FREE(name->port->type);
                 EUCA_FREE(name->port->hostid);
                 EUCA_FREE(name->port->peerid);
                 EUCA_FREE(name->port->ifname);
@@ -3705,6 +3707,10 @@ int mido_update_midoname(midoname *name) {
                 EUCA_FREE(name->port->portmac);
             } else {
                 name->port = EUCA_ZALLOC_C(1, sizeof (midoname_port_extras));
+            }
+            json_object_object_get_ex(jobj, "type", &el);
+            if (el) {
+                name->port->type = strdup(json_object_get_string(el));
             }
             json_object_object_get_ex(jobj, "hostId", &el);
             if (el) {
@@ -3978,10 +3984,12 @@ void midonet_api_cleanup(void) {
 
 /**
  * Gets the MidoNet API version.
- * @param [out] version string representation of detected MidoNet API version.
- * Caller is responsible to release the memory allocated.
+ * @param [out] optional pointer to a string to hold a string representation of
+ * detected MidoNet API version. Caller is responsible to release the memory allocated.
+ * @return pointer to a statically allocated string with representation of
+ * detected MidoNet API version.
  */
-void midonet_api_get_version(char **version) {
+char *midonet_api_get_version(char **version) {
     if (version) {
         if (!strlen(midonet_api_version)) {
             *version = strdup("unknown");
@@ -3989,6 +3997,7 @@ void midonet_api_get_version(char **version) {
             *version = strdup(midonet_api_version);
         }
     }
+    return (midonet_api_version);
 }
 
 /**
@@ -4584,7 +4593,7 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
     }
     // get the router information from midocache
     if (rt == NULL) {
-        LOGWARN("Unable to find router %s in midocache.\n", rt->obj->name);
+        LOGWARN("Unable to create route for NULL router.\n");
         return (1);
     } else {
         routes = rt->routes;
