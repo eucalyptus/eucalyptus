@@ -199,6 +199,7 @@
 		<mkdir dir="${DESTDIR}${euca.conf.dir}" />
 		<chmod dir="${DESTDIR}${euca.conf.dir}" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/" />
+		<chmod dir="${DESTDIR}${euca.var.dir}" perm="0755" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/db" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
 		<mkdir dir="${DESTDIR}${euca.log.dir}" />
