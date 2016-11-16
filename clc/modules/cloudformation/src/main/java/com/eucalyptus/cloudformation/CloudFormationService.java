@@ -356,7 +356,7 @@ public class CloudFormationService {
       }
 
       final String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
-      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues, userId);
+      final Template template = new TemplateParser().parse(templateText, parameters, capabilities, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
 
 
       final Supplier<StackEntity> allocator = new Supplier<StackEntity>() {
@@ -918,7 +918,7 @@ public class CloudFormationService {
       ArrayList<String> notificationArns = Lists.newArrayList();
       pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
-      final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId);
+      final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setGetTemplateSummaryResult(getTemplateSummaryResult);
     } catch (Exception ex) {
       handleException(ex);
@@ -1259,8 +1259,9 @@ public class CloudFormationService {
       List<String> previousCapabilities = StackEntityHelper.jsonToCapabilities(previousStackEntity.getCapabilitiesJson());
       PseudoParameterValues previousPseudoParameterValues = getPseudoParameterValues(previousStackEntity);
 
-      final Template previousTemplate = new TemplateParser().parse(previousTemplateText, previousParameters, previousCapabilities, previousPseudoParameterValues, userId);
-      final Template nextTemplate = new TemplateParser().parse(nextTemplateText, nextParameters, nextCapabilities, nextPseudoParameterValues, userId);
+      // don't enforce resource properties on previous template
+      final Template previousTemplate = new TemplateParser().parse(previousTemplateText, previousParameters, previousCapabilities, previousPseudoParameterValues, userId, false);
+      final Template nextTemplate = new TemplateParser().parse(nextTemplateText, nextParameters, nextCapabilities, nextPseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
 
       // see if any of the resources has changed types (this is a no-no)
 
@@ -1589,7 +1590,7 @@ public class CloudFormationService {
       ArrayList<String> notificationArns = Lists.newArrayList();
       pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
-      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId);
+      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
       handleException(ex);
