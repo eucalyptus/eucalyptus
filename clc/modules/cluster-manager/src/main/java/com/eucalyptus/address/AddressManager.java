@@ -114,7 +114,7 @@ import com.eucalyptus.compute.common.backend.ReleaseAddressType;
 
 @ComponentNamed
 public class AddressManager {
-  
+
   private static final Logger LOG = Logger.getLogger( AddressManager.class );
 
   private final InternetGateways internetGateways;
@@ -382,29 +382,32 @@ public class AddressManager {
           Logs.extreme( ).debug( e, e );
         }
       } else { // VPC
-        final NetworkInterface networkInterface =
+        final NetworkInterface networkInterface = address.getNetworkInterfaceId( ) == null ?
+            null :
             RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
-        if ( NetworkInterface.Type.NatGateway == networkInterface.getType( ) ) {
-          throw new ClientComputeException(
-              "InvalidIPAddress.InUse",
-              "Address ("+address.getName( )+") in use for NAT gateway interface ("+address.getNetworkInterfaceId( )+")" );
-        }
-        try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
-          final NetworkInterface eni = Entities.merge( networkInterface );
-          if ( addresses.unassign( address, associationId ) ) {
-            eni.disassociate( );
-            if ( eni.isAttached( ) ) {
-              final VmInstance vm = eni.getAttachment( ).getInstance( );
-              PublicAddresses.markDirty( address.getAddress( ), vm.getPartition( ) );
-              if ( eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
-                VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
-                if ( !vm.isUsePrivateAddressing( ) &&
-                    ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-                  NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+        if ( networkInterface != null ) {
+          if ( NetworkInterface.Type.NatGateway == networkInterface.getType( ) ) {
+            throw new ClientComputeException(
+                "InvalidIPAddress.InUse",
+                "Address ("+address.getName( )+") in use for NAT gateway interface ("+address.getNetworkInterfaceId( )+")" );
+          }
+          try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
+            final NetworkInterface eni = Entities.merge( networkInterface );
+            if ( addresses.unassign( address, associationId ) ) {
+              eni.disassociate( );
+              if ( eni.isAttached( ) ) {
+                final VmInstance vm = eni.getAttachment( ).getInstance( );
+                PublicAddresses.markDirty( address.getAddress( ), vm.getPartition( ) );
+                if ( eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
+                  VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
+                  if ( !vm.isUsePrivateAddressing( ) &&
+                      ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+                    NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+                  }
                 }
               }
+              tx.commit( );
             }
-            tx.commit( );
           }
         }
       }
