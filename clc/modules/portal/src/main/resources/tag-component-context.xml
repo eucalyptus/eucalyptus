@@ -37,4 +37,8 @@
 
   <int:service-activator input-channel="tag-error" ref="tagServiceErrorHandler"/>
 
+  <bean id="tagClient" class="com.eucalyptus.util.async.AsyncProxy" factory-method="client">
+    <constructor-arg value="com.eucalyptus.portal.common.TagClient"/>
+  </bean>
+
 </beans>
