@@ -768,6 +768,27 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void configureCloudformationStrictResourcePropertyEnforcement( ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.criteriaQuery(StaticDatabasePropertyEntry.class).
+            whereEqual(StaticDatabasePropertyEntry_.propName, "cloudformation.enforce_strict_resource_properties")
+            .uniqueResult();
+          LOG.info( "Found existing 'cloudformation.enforce_strict_resource_properties' property, leaving alone.");
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Creating property 'cloudformation.enforce_strict_resource_properties' with value 'false')");
+          Entities.persist( new StaticDatabasePropertyEntry(
+            "com.eucalyptus.cloudformation.config.CloudFormationProperties.enforce_strict_resource_properties",
+            "cloudformation.enforce_strict_resource_properties",
+            "false"
+          ) );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
     @Override
     public boolean apply( final Class arg0 ) {
       deleteRemovedProperties( ImmutableList.of(
@@ -791,6 +812,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
               "com.eucalyptus.vm.dns.RecursiveDnsResolver.enabled" )
       ) );
 
+      configureCloudformationStrictResourcePropertyEnforcement();
       return true;
     }
   }

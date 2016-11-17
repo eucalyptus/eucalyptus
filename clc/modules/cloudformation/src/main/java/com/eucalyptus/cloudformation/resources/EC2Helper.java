@@ -58,7 +58,7 @@ public class EC2Helper {
         instanceResourceAction.setStackEntity(stackEntity);
         instanceResourceInfo.setEffectiveUserId(effectiveUserId);
         instanceResourceAction.setResourceInfo(instanceResourceInfo);
-        ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()));
+        ResourcePropertyResolver.populateResourceProperties(instanceResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(instanceResourceInfo.getPropertiesJson()), false);
         instanceResourceAction.refreshAttributes();
         instanceStackResourceEntity = StackResourceEntityManager.updateResourceInfo(instanceStackResourceEntity, instanceResourceInfo);
         StackResourceEntityManager.updateStackResource(instanceStackResourceEntity);

@@ -21,6 +21,7 @@ package com.eucalyptus.cloudformation.config;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 
 /**
@@ -28,6 +29,12 @@ import com.eucalyptus.simpleworkflow.common.client.Config;
  */
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationProperties {
+
+  @ConfigurableField(
+    initial = "true",
+    description = "Set 'true' to only allow 'known' properties in Resources",
+    changeListener = PropertyChangeListeners.IsBoolean.class )
+  public static volatile Boolean ENFORCE_STRICT_RESOURCE_PROPERTIES = true;
 
   @ConfigurableField(
       initial = "CloudFormationDomain",

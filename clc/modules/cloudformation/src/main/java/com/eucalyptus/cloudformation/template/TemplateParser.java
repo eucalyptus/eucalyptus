@@ -81,6 +81,7 @@ public class TemplateParser {
   };
 
   private enum ResourceKey {
+    Type,
     Properties,
     DeletionPolicy,
     Description,
@@ -113,7 +114,7 @@ public class TemplateParser {
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
 
-  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
+  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
     JsonNode templateJsonNode;
@@ -127,7 +128,7 @@ public class TemplateParser {
     }
     template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
-    buildResourceMap(template, templateJsonNode);
+    buildResourceMap(template, templateJsonNode, enforceStrictResourceProperties);
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseMetadata(template, templateJsonNode);
@@ -162,8 +163,8 @@ public class TemplateParser {
     template.setMetadataJSON(JsonHelper.getStringFromJsonNode(metadataResourcesJsonNode));
   }
 
-  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
-    GetTemplateSummaryResult getTemplateSummaryResult = getTemplateSummary(templateBody, userParameters, pseudoParameterValues, effectiveUserId);
+  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
+    GetTemplateSummaryResult getTemplateSummaryResult = getTemplateSummary(templateBody, userParameters, pseudoParameterValues, effectiveUserId, enforceStrictResourceProperties);
     ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
     validateTemplateResult.setDescription(getTemplateSummaryResult.getDescription());
     validateTemplateResult.setCapabilities(getTemplateSummaryResult.getCapabilities());
@@ -185,7 +186,7 @@ public class TemplateParser {
     return validateTemplateResult;
   }
 
-  public GetTemplateSummaryResult getTemplateSummary(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId) throws CloudFormationException {
+  public GetTemplateSummaryResult getTemplateSummary(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
     JsonNode templateJsonNode;
@@ -199,7 +200,7 @@ public class TemplateParser {
     }
     template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
-    buildResourceMap(template, templateJsonNode);
+    buildResourceMap(template, templateJsonNode, enforceStrictResourceProperties);
     parseValidTopLevelKeys(templateJsonNode);
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
@@ -868,22 +869,22 @@ public class TemplateParser {
         resourceReferences, unresolvedConditionDependencies);
     }
   }
-  private void buildResourceMap(Template template, JsonNode templateJsonNode) throws CloudFormationException {
+  private void buildResourceMap(Template template, JsonNode templateJsonNode, boolean enforceStrictResourceProperties) throws CloudFormationException {
     // This is only done before everything else because Fn::GetAtt needs resource info to determine if it is a
     // "good" fit, which is done at "compile time"...
     JsonNode resourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
     if (resourcesJsonNode == null || resourcesJsonNode.size() == 0) {
       throw new ValidationErrorException("At least one " + TemplateSection.Resources + " member must be defined.");
     }
-    List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
+    List<String> resourceNames = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
     Map<String, String> pseudoParameterMap = template.getPseudoParameterMap();
     String accountId = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(AWS_ACCOUNT_ID)).asText();
-    for (String resourceKey: resourceKeys) {
-      JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);
+    for (String resourceName: resourceNames) {
+      JsonNode resourceJsonNode = resourcesJsonNode.get(resourceName);
       if (!(resourceJsonNode.isObject())) {
         throw new ValidationErrorException("Template format error: Any Resources member must be a JSON object.");
       }
-      String type = JsonHelper.getString(resourceJsonNode, "Type");
+      String type = JsonHelper.getString(resourceJsonNode, ResourceKey.Type.toString());
       if (type == null) {
         throw new ValidationErrorException("Type is a required property of Resource");
       }
@@ -892,7 +893,17 @@ public class TemplateParser {
         throw new ValidationErrorException("Unknown resource type " + type);
       }
       resourceInfo.setAccountId(accountId);
-      template.getResourceInfoMap().put(resourceKey, resourceInfo);
+
+      template.getResourceInfoMap().put(resourceName, resourceInfo);
+
+      Set<String> tempResourceKeys = Sets.newHashSet(resourceJsonNode.fieldNames());
+      for (ResourceKey resourceKey: ResourceKey.values()) {
+        tempResourceKeys.remove(resourceKey.toString());
+      }
+      if (!tempResourceKeys.isEmpty() && enforceStrictResourceProperties) {
+        throw new ValidationErrorException("Invalid resource property or properties " + tempResourceKeys);
+      }
+
     }
   }
 
