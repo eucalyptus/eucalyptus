@@ -2140,7 +2140,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         if (!vpcif->population_failed && !vpcif->host_changed) {
             LOGTRACE("\t\t%s host did not change\n", gniif->name);
         } else {
-            gni_instance_node = mido_get_host_byip(gniif->node);
+            gni_instance_node = mido_get_host_byname(gniif->node);
             if (!gni_instance_node) {
                 LOGERROR("\thost %s for %s not found: check midonet and/or midolman health\n", gniif->node, gniif->name);
                 continue;
@@ -5488,7 +5488,10 @@ char *discover_mido_bgps_v1(mido_config *mido) {
     char *resptr = &(res[0]);
     mido_core *midocore = mido->midocore;
     for (int i = 0; i < midocore->max_gws; i++) {
-        mido_gw *gw = &(midocore->gws[i]);
+        mido_gw *gw = midocore->gws[i];
+        if (!gw) {
+            continue;
+        }
         if (gw->asn) {
             if (!mna_defined) {
                 mna_defined = TRUE;
@@ -5530,7 +5533,10 @@ char *discover_mido_bgps_v5(mido_config *mido) {
     char *resptr = &(res[0]);
     mido_core *midocore = mido->midocore;
     for (int i = 0; i < midocore->max_gws; i++) {
-        mido_gw *gw = &(midocore->gws[i]);
+        mido_gw *gw = midocore->gws[i];
+        if (!gw) {
+            continue;
+        }
         if (gw->asn) {
             if (!mna_defined) {
                 mna_defined = TRUE;
@@ -5608,8 +5614,6 @@ int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw) {
     if (!rc && bgps && max_bgps) {
         if (max_bgps > 1) {
             LOGWARN("Unexpected number (%d) of bgps found on port %s\n", max_bgps, port->uuid);
-            LOGINFO("Deleting bgps from port %s\n", port->uuid);
-            // uri=http://127.0.0.1:8080/midonet-api/bgps/6ad9b5b5-9fcf-458f-90d8-a7a7bc82e023, method=DELETE
         } else {
             gw->bgp_v1 = bgps[0];
             mido_getel_midoname(bgps[0], "localAS", &localAS);
@@ -5740,24 +5744,127 @@ int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
  */
 int populate_mido_gw(mido_config *mido, midoname *port, mido_gw *gw) {
     int ret = 0;
-    if (!mido || !mido->midocore || !port || !port->port || !gw) {
+    if (!mido || !mido->midocore || !mido->midocore->eucart || !port || !port->port ||
+            !port->port->ifname || !port->port->netaddr || !port->port->netlen ||
+            !port->port->portaddr || !gw || !gw->host) {
         LOGWARN("Invalid argument: cannot populate gw from NULL\n");
         return (1);
     }
     snprintf(gw->ext_dev, IF_NAME_LEN, "%s", port->port->ifname);
     snprintf(gw->ext_cidr, NETWORK_ADDR_LEN, "%s/%s", port->port->netaddr, port->port->netlen);
     snprintf(gw->ext_ip, NETWORK_ADDR_LEN, "%s", port->port->portaddr);
-    for (int i = 0; i < mido->midocore->eucart->max_routes; i++) {
-        if (mido->midocore->eucart->routes[i] &&
-                mido->midocore->eucart->routes[i]->route->nexthopgateway &&
-                !strcmp(mido->midocore->eucart->routes[i]->route->dstlen, "0") &&
-                !strcmp(mido->midocore->eucart->routes[i]->route->dstnet, "0.0.0.0") &&
-                !strcmp(mido->midocore->eucart->routes[i]->route->nexthopport, port->uuid)) {
-            snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", mido->midocore->eucart->routes[i]->route->nexthopgateway);
-            break;
+    midonet_api_router *eucart = mido->midocore->eucart;
+    for (int i = 0; i < eucart->max_routes && (!gw->def_route || !gw->ext_cidr_route || !gw->peer_ip_route); i++) {
+        if (!eucart->routes[i]) {
+            continue;
+        }
+        if (strcmp(eucart->routes[i]->route->nexthopport, port->uuid)) {
+            continue;
+        }
+        // default route
+        if (eucart->routes[i]->route->nexthopgateway &&
+                !strcmp(eucart->routes[i]->route->dstlen, "0") &&
+                !strcmp(eucart->routes[i]->route->dstnet, "0.0.0.0")) {
+            snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", eucart->routes[i]->route->nexthopgateway);
+            gw->def_route = eucart->routes[i];
+            LOGTRACE("gw %s found default route via %s\n", gw->host->obj->name, eucart->routes[i]->route->nexthopgateway);
+            continue;
+        }
+        if (eucart->routes[i]->route->nexthopgateway) {
+            continue;
+        }
+        // peer_ip route
+        if (!strcmp(eucart->routes[i]->route->dstlen, "32") &&
+                strcmp(eucart->routes[i]->route->dstnet, port->port->portaddr)) {
+            gw->peer_ip_route = eucart->routes[i];
+            LOGTRACE("gw %s found peer_ip route via %s\n", gw->host->obj->name, port->name);
+            continue;
+        }
+        // ext_cidr route
+        if (!strcmp(eucart->routes[i]->route->dstlen, port->port->netlen) &&
+                !strcmp(eucart->routes[i]->route->dstnet, port->port->netaddr)) {
+            gw->ext_cidr_route = eucart->routes[i];
+            LOGTRACE("gw %s found ext_cidr route via %s\n", gw->host->obj->name, port->name);
+            continue;
         }
     }
+    // peer_ip
+    if (gw->peer_ip_route) {
+        snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", gw->peer_ip_route->route->dstnet);
+    } else if (gw->def_route) {
+        snprintf(gw->peer_ip, NETWORK_ADDR_LEN, "%s", gw->def_route->route->nexthopgateway);
+    }
     populate_mido_gw_bgp(mido, port, gw);
+    return (ret);
+}
+
+/**
+ * Creates MidoNet objects that are needed to implement VPCMIDO gateway.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param gw [in] data structure that holds information about the gateway of interest
+ * @param gni_gw [in] dat structure that holds information about paramters of the gateway
+ * of interest, as described in GNI.
+ * @return 0 on success. 1 otherwise.
+ */
+int create_mido_gw(mido_config *mido, mido_gw *gw, gni_mido_gateway *gni_gw) {
+    char ext_net[32];
+    char ext_len[32];
+    int rc = 0;
+    int ret = 0;
+
+    if (!mido || !mido->midocore || !gw || !gni_gw) {
+        LOGWARN("Invalid argument: cannot create mido gateway from NULL\n");
+        return (1);
+    }
+
+    mido_core *midocore = mido->midocore;
+    cidr_split(gni_gw->ext_cidr, ext_net, ext_len, NULL, NULL, NULL);
+    rc = mido_create_router_port(midocore->eucart, midocore->midos[CORE_EUCART], gni_gw->ext_ip,
+            ext_net, ext_len, NULL, &(gw->port));
+    if (rc) {
+        LOGERROR("cannot create router port: check midonet health\n");
+        ret++;
+    }
+
+    if (gw->port->init) {
+        // exterior port GW IP
+        rc = mido_create_route(midocore->eucart, midocore->midos[CORE_EUCART], gw->port,
+                "0.0.0.0", "0", ext_net, ext_len, "UNSET", "0", NULL);
+        rc = rc << 1;
+        rc |= mido_create_route(midocore->eucart, midocore->midos[CORE_EUCART], gw->port,
+                "0.0.0.0", "0", gni_gw->peer_ip, "32", "UNSET", "0", NULL);
+        if (rc) {
+            LOGERROR("cannot create router route(%x): check midonet health\n", rc);
+            ret++;
+        }
+
+        // exterior port default GW
+        rc = mido_create_route(midocore->eucart, midocore->midos[CORE_EUCART], gw->port,
+                "0.0.0.0", "0", "0.0.0.0", "0", gni_gw->peer_ip, "0", NULL);
+        if (rc) {
+            LOGERROR("cannot create router route: check midonet health\n");
+            ret++;
+        }
+
+        // link exterior port
+        midonet_api_host *gwhost = mido_get_host_byname(gni_gw->host);
+        if (gwhost) {
+            rc = mido_link_host_port(gwhost->obj, gni_gw->ext_dev, midocore->midos[CORE_EUCART], gw->port);
+            if (rc) {
+                LOGERROR("cannot link router port to host interface: check midonet health\n");
+                ret++;
+            }
+        } else {
+            LOGERROR("cannot find gw host %s in midonet\n", gni_gw->host);
+        }
+
+        rc = mido_create_portgroup_port(midocore->midos[CORE_GWPORTGROUP],
+                gw->port, NULL);
+        if (rc) {
+            LOGWARN("cannot add portgroup port: check midonet health\n");
+            ret++;
+        }
+    }
     return (ret);
 }
 
@@ -6057,10 +6164,8 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
     for (i = 0; i < max_rtports; i++) {
         // look for ports bound to a host
         if (rtports[i]->port->hostid && strlen(rtports[i]->port->hostid)) {
-            midocore->gws = EUCA_REALLOC_C(midocore->gws,midocore->max_gws + 1, sizeof (mido_gw));
-            mido_gw *gw = &(midocore->gws[midocore->max_gws]);
-            (midocore->max_gws)++;
-            memset(gw, 0, sizeof (mido_gw));
+            mido_gw *gw = EUCA_ZALLOC_C(1, sizeof (mido_gw));
+            midocore->gws = EUCA_APPEND_PTRARR(midocore->gws, &(midocore->max_gws), gw);
             gw->port = rtports[i];
             gw->host = mido_get_host(NULL, rtports[i]->port->hostid);
             populate_mido_gw(mido, rtports[i], gw);
@@ -6676,7 +6781,10 @@ int free_mido_core(mido_core *midocore) {
         return (0);
 
     for (int i = 0; i < midocore->max_gws; i++) {
-        EUCA_FREE(midocore->gws[i].routes);
+        if (midocore->gws[i]) {
+            EUCA_FREE(midocore->gws[i]->routes);
+            EUCA_FREE(midocore->gws[i]);
+        }
     }
     EUCA_FREE(midocore->gws);
     memset(midocore, 0, sizeof (mido_core));
@@ -7193,6 +7301,114 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 }
 
 /**
+ * Check populated mido gateway constructs and tag all gateways both in GNI and MN.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @return 0 on success. 1 otherwise.
+ */
+int tag_mido_gws(mido_config *mido, mido_core *midocore) {
+    if (!mido || !midocore || !midocore->eucart) {
+        LOGWARN("Invalid argument: cannot delete gw not in gni with NULL config\n");
+        return (1);
+    }
+
+    // for each gw in GNI, search for corresponding constructs in MN
+    for (int i = 0; i < mido->max_gni_gws; i++) {
+        gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
+        midonet_api_host *gni_gwhost = mido_get_host_byname(gni_gw->host);
+        for (int j = 0; j < midocore->max_gws; j++) {
+            mido_gw *gw = midocore->gws[j];
+            if (!gw) {
+                continue;
+            }
+            if (gni_gwhost && (gni_gwhost == gw->host) &&
+                    !strcmp(gni_gw->ext_dev, gw->ext_dev)) {
+                gw->gni_gw = gni_gw;
+                gni_gw->mido_present = (mido_gw *) gw;
+                break;
+            }
+        }
+    }
+    return (0);
+}
+
+/**
+ * Check populated mido gateway constructs and delete everything not in GNI.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @return 0 on success. 1 otherwise.
+ */
+int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore) {
+    if (!mido || !midocore || !midocore->eucart) {
+        LOGWARN("Invalid argument: cannot delete gw not in gni with NULL config\n");
+        return (1);
+    }
+    
+    int del_flags = 0;
+    boolean config_bgp = FALSE;
+    for (int i = 0; i < mido->max_gni_gws; i++) {
+        gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
+        LOGINFO("12915: asn %d peer_asn %d\n", gni_gw->asn, gni_gw->peer_asn);
+        if (gni_gw->asn && gni_gw->peer_asn) {
+            LOGINFO("12915: BGP info detected in GNI\n");
+            config_bgp = TRUE;
+        } else {
+            LOGINFO("12915: BGP info not detected in GNI\n");
+        }
+    }
+
+    // delete gw populated from MN not in GNI
+    for (int i = 0; i < midocore->max_gws; i++) {
+        mido_gw *gw = midocore->gws[i];
+        if (!gw) {
+            continue;
+        }
+        char *gwname = hex2dot_s(euca_getaddr(gw->host->obj->name, NULL));
+        // if host/ext_dev not in GNI, delete from MN
+        if (!gw->gni_gw) {
+            LOGINFO("12915: gw %s/%s in gni N - delete\n", gwname, gw->ext_dev);
+            del_flags |= DELETE_MIDO_GW_FLAG_PORT;
+            delete_mido_gw(mido, midocore, i, del_flags);
+        } else {
+            LOGINFO("12915: gw %s/%s in gni Y\n", gwname, gw->ext_dev);
+            // if ext_ip or ext_cidr config changed, delete port
+            if (strcmp(gw->ext_ip, gw->gni_gw->ext_ip) || strcmp(gw->ext_cidr, gw->gni_gw->ext_cidr)) {
+                LOGINFO("12915: gw %s/%s changes in ext_ip/ext_cidr detected\n", gwname, gw->ext_dev);
+                del_flags |= DELETE_MIDO_GW_FLAG_PORT;
+                delete_mido_gw(mido, midocore, i, del_flags);
+            }
+            
+        }
+    }
+
+    return (0);
+}
+
+/**
+ * Deletes mido gateway constructs from MN.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @param entry [in] entry of the gateway to be deleted
+ * @return 0 on success. 1 otherwise.
+ */
+int delete_mido_gw(mido_config *mido, mido_core *midocore, int entry, int flags) {
+    int rc = 0;
+    if (!mido || !midocore || !midocore->eucart || (entry >= midocore->max_gws) ||
+            !midocore->gws[entry] || !midocore->gws[entry]->port) {
+        LOGWARN("Invalid argument: cannot delete gateway entry with NULL config\n");
+        return (1);
+    }
+
+    if ((flags & DELETE_MIDO_GW_FLAG_PORT) == DELETE_MIDO_GW_FLAG_PORT) {
+        rc = mido_delete_router_port(midocore->eucart, midocore->gws[entry]->port);
+        EUCA_FREE(midocore->gws[entry]->routes);
+        EUCA_FREE(midocore->gws[entry]);
+        return (rc);
+    }
+    return (0);
+}
+
+/**
  * Removes MidoNet objects that are needed to implement euca VPC core.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
@@ -7370,7 +7586,7 @@ int disable_mido_md(mido_config *mido) {
  */
 int create_mido_core(mido_config *mido, mido_core *midocore) {
     int ret = 0, rc = 0, i = 0;
-    char nw[32], sn[32], gw[32], *tmpstr = NULL, pubnw[32], pubnm[32];
+    char nw[32], sn[32], gw[32], *tmpstr = NULL;
 
     tmpstr = hex2dot(mido->int_rtnw);
     snprintf(nw, 32, "%s", tmpstr);
@@ -7428,68 +7644,30 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         ret++;
     }
 
+    // Tag gateway constructs
+    tag_mido_gws(mido, midocore);
+
+    // Delete gateway constructs not in GNI
+    rc = delete_mido_gws_notingni(mido, midocore);
+    if (rc) {
+        LOGWARN("failed to delete mido gateway constructs not in GNI.\n");
+    }
+
+    // Create gateway(s)
     for (i = 0; i < mido->max_gni_gws; i++) {
         gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
-        mido_gw *gw = NULL;
-        boolean found = FALSE;
-        for (int j = 0; j < midocore->max_gws && !found; j++) {
-            gw = &(midocore->gws[j]);
-            if (!strcmp(gni_gw->ext_ip, gw->ext_ip)) {
-                found = TRUE;
-            }
-        }
-        if (!found) {
-            midocore->gws = EUCA_REALLOC_C(midocore->gws, midocore->max_gws + 1, sizeof (mido_gw));
-            gw = &(midocore->gws[midocore->max_gws]);
-            memset(gw, 0, sizeof (mido_gw));
-            (midocore->max_gws)++;
+        mido_gw *gw = (mido_gw *) gni_gw->mido_present;
+        if (!gw) {
+            gw = EUCA_ZALLOC_C(1, sizeof (mido_gw));
+            midocore->gws = EUCA_APPEND_PTRARR(midocore->gws, &(midocore->max_gws), gw);
+            gni_gw->mido_present = (mido_gw *) gw;
         }
 
-        cidr_split(gni_gw->ext_cidr, pubnw, pubnm, NULL, NULL, NULL);
-        rc = mido_create_router_port(midocore->eucart, midocore->midos[CORE_EUCART], gni_gw->ext_ip,
-                pubnw, pubnm, NULL, &(gw->port));
+        rc = create_mido_gw(mido, gw, gni_gw);
         if (rc) {
-            LOGERROR("cannot create router port: check midonet health\n");
+            LOGERROR("failed to create gateway %s\n", hex2dot_s(euca_getaddr(gni_gw->host, NULL)));
             ret++;
         }
-
-        if (gw->port->init) {
-            // exterior port GW IP
-            rc = mido_create_route(midocore->eucart, midocore->midos[CORE_EUCART], gw->port,
-                    "0.0.0.0", "0", pubnw, pubnm, "UNSET", "0", NULL);
-            if (rc) {
-                LOGERROR("cannot create router route: check midonet health\n");
-                ret++;
-            }
-
-            // exterior port default GW
-            rc = mido_create_route(midocore->eucart, midocore->midos[CORE_EUCART], gw->port,
-                    "0.0.0.0", "0", "0.0.0.0", "0", gni_gw->peer_ip, "0", NULL);
-            if (rc) {
-                LOGERROR("cannot create router route: check midonet health\n");
-                ret++;
-            }
-
-            // link exterior port
-            midonet_api_host *gwhost = mido_get_host_byname(gni_gw->host);
-            if (gwhost) {
-                rc = mido_link_host_port(gwhost->obj, gni_gw->ext_dev, midocore->midos[CORE_EUCART], gw->port);
-                if (rc) {
-                    LOGERROR("cannot link router port to host interface: check midonet health\n");
-                    ret++;
-                }
-            } else {
-                LOGERROR("cannot find gw host %s in midonet\n", gni_gw->host);
-            }
-
-            rc = mido_create_portgroup_port(midocore->midos[CORE_GWPORTGROUP],
-                    gw->port, NULL);
-            if (rc) {
-                LOGWARN("cannot add portgroup port: check midonet health\n");
-                ret++;
-            }
-        }
-        
     }
 
     midocore->eucabr = mido_create_bridge(VPCMIDO_TENANT, VPCMIDO_COREBR, &(midocore->midos[CORE_EUCABR]));
@@ -8747,6 +8925,39 @@ enum vpc_route_entry_target_t parse_mido_route_entry_target(const char *target) 
     // todo: other network devices
     return (VPC_TARGET_INVALID);
 }
+
+/**
+ * Compare data describing gateways. gnigw holds information extracted from GNI, while
+ * midogw holds information populated from MN. Gateway host is assumed to match.
+ * BGP parameters are also ignored.
+ * @param gnigw [in] gateway information extracted from GNI
+ * @param midogw [in] gateway information populated from MN
+ * @return 0 if all parameters match. 
+ */
+int cmp_gnigw_midogw(gni_mido_gateway *gnigw, mido_gw *midogw) {
+    int match = 1;
+    if (!gnigw && !midogw) {
+        return (match);
+    }
+    if (!gnigw || !midogw) {
+        match = 0;
+        return (match);
+    }
+    if (match && strcmp(gnigw->ext_ip, midogw->ext_ip)) {
+        match = 0;
+    }
+    if (match && strcmp(gnigw->ext_dev, midogw->ext_dev)) {
+        match = 0;
+    }
+    if (match && strcmp(gnigw->ext_cidr, midogw->ext_cidr)) {
+        match = 0;
+    }
+    if (match && strcmp(gnigw->peer_ip, midogw->peer_ip)) {
+        match = 0;
+    }
+    return (match);
+}
+
 
 /*  LocalWords:  sgrulepos
  */

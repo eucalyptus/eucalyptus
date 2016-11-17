@@ -148,7 +148,7 @@ static boolean gInitialized = FALSE;
 static boolean gTunnelZoneOk = FALSE;
 
 //! Midonet pluggin specific configuration
-mido_config *pMidoConfig = NULL;
+static mido_config *pMidoConfig = NULL;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -228,7 +228,7 @@ struct driver_handler_t midoVpcDriverHandler = {
 static int network_driver_init(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
 
-    LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
+    LOGDEBUG("Initializing '%s' network driver.\n", DRIVER_NAME());
 
     // Make sure our given pointer is valid
     if (!pConfig) {
@@ -555,10 +555,12 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         return (ret);
     }
 
-    if (!IS_INITIALIZED() || (pGni && pGniApplied && cmp_gni_vpcmido_config(pGni, pGniApplied))) {
+    int config_changed = cmp_gni_vpcmido_config(pGni, pGniApplied);
+    if (!IS_INITIALIZED() || (pGni && pGniApplied && config_changed)) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
             free_mido_config(pMidoConfig);
+            gInitialized = FALSE;
         } else {
             LOGERROR("failed to (re)initialize config options: VPCMIDO driver not initialized\n");
             return (EUCANETD_RUN_ERROR_API);

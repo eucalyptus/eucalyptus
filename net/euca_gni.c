@@ -2341,6 +2341,16 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             }
             EUCA_FREE(results);
 
+            u32 asn = 0;
+            snprintf(expression, 2048, "./property[@name='bgpAsn']/value");
+            rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                asn = (u32) atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
             int max_gws = 0;
             xmlNodeSet gwnodeset = {0};
 
@@ -2418,6 +2428,15 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 }
                 EUCA_FREE(results);
 
+                snprintf(expression, 2048, "./property[@name='externalDevice']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->ext_dev, IF_NAME_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
                 // static router
                 snprintf(expression, 2048, "./property[@name='externalRouterIp']/value");
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
@@ -2443,6 +2462,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
                     midogw->peer_asn = (u32) atoi(results[i]);
+                    midogw->asn = asn;
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
@@ -4709,12 +4729,14 @@ int gni_midogw_dup(gni_mido_gateway *dst, gni_mido_gateway *src) {
         return (1);
     }
     dst->asn = src->asn;
-    dst->peer_asn = src->asn;
+    dst->peer_asn = src->peer_asn;
     snprintf(dst->ext_cidr, NETWORK_ADDR_LEN, "%s", src->ext_cidr);
     snprintf(dst->ext_dev, IF_NAME_LEN, "%s", src->ext_dev);
     snprintf(dst->ext_ip, NETWORK_ADDR_LEN, "%s", src->ext_ip);
     snprintf(dst->peer_ip, NETWORK_ADDR_LEN, "%s", src->peer_ip);
     snprintf(dst->host, HOSTNAME_LEN, "%s", src->host);
+    dst->ad_routes = EUCA_REALLOC_C(dst->ad_routes, src->max_ad_routes, sizeof (char *));
+    memset(dst->ad_routes, 0, src->max_ad_routes * sizeof (char *));
     for (int i = 0; i < src->max_ad_routes; i++) {
         dst->ad_routes[i] = strdup(src->ad_routes[i]);
     }
@@ -6044,7 +6066,7 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
         ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
     }
     if (ret) {
-        LOGINFO("12915: vpcmido config diff detected %x\n", ret);
+        LOGINFO("12915: vpcmido config diff detected (%08x)\n", ret);
     }
     return (ret);
 }

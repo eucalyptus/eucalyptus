@@ -124,6 +124,7 @@ typedef struct gni_mido_gateway_t {
     u32 asn;
     char **ad_routes;
     int max_ad_routes;
+    void *mido_present;
 } gni_mido_gateway;
 
 //! GNI SG Rule
