@@ -63,6 +63,6 @@ class PortalServiceQueryBindingTest extends QueryJsonBindingTestSupport {
                 userBillingAccess: true
             )
         )
-    ), '''{"result":{"accountSettings":{"userBillingAccess":true}}}''' )
+    ), '''{"accountSettings":{"userBillingAccess":true}}''' )
   }
 }

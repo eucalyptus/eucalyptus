@@ -16,6 +16,7 @@
 package com.eucalyptus.portal;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+import java.util.Set;
 import java.util.function.Function;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -24,8 +25,10 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.portal.common.TagClient;
 import com.eucalyptus.portal.common.model.AccountSettings;
 import com.eucalyptus.portal.common.model.BillingSettings;
+import com.eucalyptus.portal.common.model.GetTagKeysType;
 import com.eucalyptus.portal.common.model.ModifyAccountResponseType;
 import com.eucalyptus.portal.common.model.ModifyAccountType;
 import com.eucalyptus.portal.common.model.ModifyBillingResponseType;
@@ -38,6 +41,9 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -50,14 +56,17 @@ public class PortalService {
 
   private final BillingAccounts billingAccounts;
   private final BillingInfos billingInfos;
+  private final TagClient tagClient;
 
   @Inject
   public PortalService(
       final BillingAccounts billingAccounts,
-      final BillingInfos billingInfos
+      final BillingInfos billingInfos,
+      final TagClient tagClient
   ) {
     this.billingAccounts = billingAccounts;
     this.billingInfos = billingInfos;
+    this.tagClient = tagClient;
   }
 
   public ModifyAccountResponseType modifyAccount( final ModifyAccountType request ) throws PortalServiceException {
@@ -161,10 +170,20 @@ public class PortalService {
     } catch ( Exception e ) {
       throw handleException( e );
     }
+    try {
+      final Set<String> inactiveTagKeys = Sets.newTreeSet( );
+      inactiveTagKeys.addAll( tagClient.getTagKeys( new GetTagKeysType( ).markPrivileged( ) ).getResult( ).getKeys( ) );
+      inactiveTagKeys.removeAll( response.getResult( ).getBillingSettings( ).getActiveCostAllocationTags( ) );
+      response.getResult( ).getBillingMetadata( ).setInactiveCostAllocationTags(
+          Lists.newArrayList( Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( inactiveTagKeys ) )
+      );
+    } catch ( Exception e ) {
+      logger.error( "Error loading tag keys", e );
+    }
     return response;
   }
 
-  private static Context checkAuthorized( ) throws PortalServiceException {
+  protected static Context checkAuthorized( ) throws PortalServiceException {
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
     if ( !Permissions.isAuthorized(

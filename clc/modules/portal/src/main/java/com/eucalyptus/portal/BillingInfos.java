@@ -23,6 +23,7 @@ import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 /**
  *
@@ -58,7 +59,9 @@ public interface BillingInfos {
           new BillingSettings( )
               .withReportBucket( info.getBillingReportsBucket( ) )
               .withDetailedBillingEnabled( Optional.of( info.getDetailedBillingEnabled( ) ).or( Boolean.FALSE ) )
-              .withActiveCostAllocationTags( info.getActiveCostAllocationTags( ) );
+              .withActiveCostAllocationTags(
+                  Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( info.getActiveCostAllocationTags( ) )
+              );
     }
   }
 }
