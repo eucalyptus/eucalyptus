@@ -64,13 +64,16 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
+import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication;
 import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.S3Authenticator;
+import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.server.MessageStatistics;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 
 import java.util.HashMap;
 import java.util.List;
@@ -89,16 +92,27 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
   @Override
   public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent channelEvent) throws Exception {
     if (channelEvent instanceof MessageEvent) {
+      Callable<Long> stat = MessageStatistics.startUpstream(ctx.getChannel(), this);
+
       try {
-        Callable<Long> stat = MessageStatistics.startUpstream(ctx.getChannel(), this);
         MessageEvent event = (MessageEvent) channelEvent;
-        if (event.getMessage() instanceof MappingHttpRequest)
-          handle((MappingHttpRequest) event.getMessage());
-        stat.call();
-        ctx.sendUpstream(channelEvent);
+
+        // Handle V4 streaming requests
+        if (event.getMessage() instanceof StreamingHttpRequest) {
+          StreamingHttpRequest request = (StreamingHttpRequest) event.getMessage();
+          authenticate(request);
+          for (HttpChunk chunk : request.httpChunks)
+            ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), chunk, event.getRemoteAddress()));
+        } else {
+          if (event.getMessage() instanceof MappingHttpRequest)
+            authenticate((MappingHttpRequest) event.getMessage());
+          ctx.sendUpstream(channelEvent);
+        }
       } catch (Throwable e) {
         LOG.error(e, e);
         Channels.fireExceptionCaught(ctx, e);
+      } finally {
+        stat.call();
       }
     } else {
       ctx.sendUpstream(channelEvent);
@@ -115,11 +129,25 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
    * @throws InternalErrorException         if something unexpected occurs
    * @throws MissingSecurityHeaderException is the auth header is invalid
    */
-  private void handle(MappingHttpRequest request) throws S3Exception {
+  private void authenticate(MappingHttpRequest request) throws S3Exception {
     removeDuplicateHeaderValues(request);
     joinDuplicateHeaders(request);
     Map<String, String> lowercaseParams = lowercaseKeys(request.getParameters());
     S3Authenticator.of(request, lowercaseParams).authenticate(request, lowercaseParams);
+  }
+
+  /**
+   * Authenticate streaming V4 chunks.
+   */
+  private void authenticate(StreamingHttpRequest request) throws S3Exception {
+    removeDuplicateHeaderValues(request.initialRequest);
+    joinDuplicateHeaders(request.initialRequest);
+    Map<String, String> lowercaseParams = lowercaseKeys(request.initialRequest.getParameters());
+
+    if (request.awsChunks.isEmpty())
+      S3Authenticator.of(request.initialRequest, lowercaseParams).authenticate(request.initialRequest, lowercaseParams);
+    else
+      S3Authentication.authenticateV4Streaming(request.initialRequest, lowercaseParams, request.awsChunks);
   }
 
   /**

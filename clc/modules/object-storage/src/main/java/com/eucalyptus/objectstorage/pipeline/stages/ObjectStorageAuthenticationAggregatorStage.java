@@ -60,53 +60,31 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.handlers;
+package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.crypto.util.SecurityParameter;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.OSGChannelWriter;
-import com.eucalyptus.objectstorage.OSGMessageResponse;
-import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationAggregator;
 import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.Strings;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import com.eucalyptus.ws.stages.UnrollableStage;
+import org.jboss.netty.channel.ChannelPipeline;
 
 /**
- * Aggregates chunked data if needed prior to authentication.
+ * Aggregates HTTP Chunks for non-streaming sigv4 requests.
  */
-public class ObjectStorageAuthAggregatorHandler extends HttpChunkAggregator {
-  private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
+public class ObjectStorageAuthenticationAggregatorStage implements UnrollableStage {
+  private final static String NAME = "objectstorage-authentication-aggregator";
 
-  /**
-   * A request that is to be continued
-   */
-  private boolean continuableRequest;
-
-  public ObjectStorageAuthAggregatorHandler() {
-    super(DEFAULT_MAX_CONTENT_LENGTH);
+  @Override
+  public void unrollStage(ChannelPipeline pipeline) {
+    pipeline.addLast(NAME, new ObjectStorageAuthenticationAggregator(StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX));
   }
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    if (event.getMessage() instanceof MappingHttpRequest) {
-      MappingHttpRequest request = (MappingHttpRequest) event.getMessage();
-      String authHeader = request.getHeader(SecurityParameter.Authorization.toString());
+  public String getName() {
+    return NAME;
+  }
 
-      // Continue unchunked, V4 continuable requests
-      if (!Strings.isNullOrEmpty(authHeader) && authHeader.startsWith(S3V4Authentication.AWS_V4_AUTH_TYPE) && HttpHeaders
-          .is100ContinueExpected(request)) {
-        continuableRequest = true;
-        OSGChannelWriter.writeResponse(ctx.getChannel(), OSGMessageResponse.Continue);
-      }
-    }
-
-    // Aggregate continuable requests
-    if (continuableRequest)
-      super.messageReceived(ctx, event);
-    else
-      ctx.sendUpstream(event);
+  @Override
+  public int compareTo(UnrollableStage o) {
+    return getName().compareTo(o.getName());
   }
 }
