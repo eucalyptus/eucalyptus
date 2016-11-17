@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
 import java.beans.BeanInfo;
@@ -43,6 +44,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 public class ResourcePropertyResolver {
   private static final Logger LOG = Logger.getLogger(ResourcePropertyResolver.class);
@@ -126,7 +128,7 @@ public class ResourcePropertyResolver {
   }
 
 
-  public static void populateResourceProperties(Object object, JsonNode jsonNode) throws CloudFormationException {
+  public static void populateResourceProperties(Object object, JsonNode jsonNode, boolean enforceStrictProperties) throws CloudFormationException {
     if (jsonNode == null) return; // TODO: consider this case
     BeanInfo beanInfo = null;
     try {
@@ -139,7 +141,7 @@ public class ResourcePropertyResolver {
     for (PropertyDescriptor propertyDescriptor:beanInfo.getPropertyDescriptors()) {
       propertyDescriptorMap.put(propertyDescriptor.getName(), propertyDescriptor);
     }
-
+    Set<String> unprocessedFieldNames = Sets.newHashSet(jsonNode.fieldNames());
     for (Field field: object.getClass().getDeclaredFields()) {
       Property property = field.getAnnotation(Property.class);
       if (property == null) continue;
@@ -151,6 +153,8 @@ public class ResourcePropertyResolver {
       }
       if (!jsonNode.has(name)) continue; // no value to populate...
       JsonNode valueNode = jsonNode.get(name);
+      // once here, trying to set a field, remove from propertyFields
+      unprocessedFieldNames.remove(name);
       LOG.debug("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
       if (field.getType().equals(String.class)) {
         if (!valueNode.isValueNode()) {
@@ -255,7 +259,7 @@ public class ResourcePropertyResolver {
             throw new InternalFailureException("Class " + object.getClass() + " has a Collection type " + field.getName() + " that must be " +
               "non-null ResourcePropertyResolver.populateResourceProperties can be called");
           }
-          populateList((Collection<?>) getField(propertyDescriptorMap, field, object), valueNode, collectionType, field.getName());
+          populateList((Collection<?>) getField(propertyDescriptorMap, field, object), valueNode, collectionType, field.getName(), enforceStrictProperties);
         } else {
           LOG.error("Class " + object.getClass() + " has a Collection type " + field.getName() + " which is a non-parameterized type.  This " +
             "is not supported for ResourcePropertyResolver.populateResourceProperties");
@@ -271,8 +275,11 @@ public class ResourcePropertyResolver {
             throw new InternalFailureException(ex.getMessage());
           }
         }
-        populateResourceProperties(getField(propertyDescriptorMap, field, object), valueNode);
+        populateResourceProperties(getField(propertyDescriptorMap, field, object), valueNode, enforceStrictProperties);
       }
+    }
+    if (!unprocessedFieldNames.isEmpty() && enforceStrictProperties) {
+      throw new ValidationErrorException("Encountered unsupported property or properties "  + unprocessedFieldNames);
     }
   }
 
@@ -307,7 +314,7 @@ public class ResourcePropertyResolver {
   }
 
   private static void populateList(Collection<?> collection, JsonNode valueNode,
-                                      Type collectionType, String fieldName) throws CloudFormationException {
+                                   Type collectionType, String fieldName, boolean enforceStrictProperties) throws CloudFormationException {
     for (int i=0;i<valueNode.size();i++) {
       Class<?> collectionTypeClass = (Class) collectionType;
       JsonNode itemNode = valueNode.get(i);
@@ -376,7 +383,7 @@ public class ResourcePropertyResolver {
             LOG.error("Class " + collectionTypeClass.getCanonicalName() + " may not have a public no-arg constructor.  This is needed for ResourcePropertyResolver.populateResourceProperties()");
             throw new InternalFailureException(ex.getMessage());
           }
-          populateList((Collection<?>) newObject, itemNode, innerCollectionType, fieldName);
+          populateList((Collection<?>) newObject, itemNode, innerCollectionType, fieldName, enforceStrictProperties);
           addToCollection(collection, collectionTypeClass, newObject);
         } else {
           LOG.error("Class " + collectionTypeClass.getCanonicalName() + " has a Collection type which is a non-parameterized type.  This " +
@@ -389,10 +396,10 @@ public class ResourcePropertyResolver {
         try {
           newObject = collectionTypeClass.newInstance();
         } catch (IllegalAccessException | InstantiationException ex) {
-          LOG.error("Class " + collectionTypeClass + " may not have a public no-arg constructor.  This is needed for Reso/**/urceData.populateFields()");
+          LOG.error("Class " + collectionTypeClass + " may not have a public no-arg constructor.  This is needed for ResourceData.populateFields()");
           throw new InternalFailureException(ex.getMessage());
         }
-        populateResourceProperties(newObject, itemNode);
+        populateResourceProperties(newObject, itemNode, enforceStrictProperties);
         addToCollection(collection, collectionTypeClass, newObject);
       }
     }

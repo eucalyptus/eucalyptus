@@ -28,6 +28,7 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.ValidationErrorException
+import com.eucalyptus.cloudformation.config.CloudFormationProperties
 import com.eucalyptus.cloudformation.entity.SignalEntityManager
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
@@ -371,7 +372,8 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setStackEntity(stackEntity);
       resourceInfo.setEffectiveUserId(effectiveUserId);
       resourceAction.setResourceInfo(resourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+      // Note we do strict checking for properties here as it is our first look during create
+      ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       if (!(resourceAction instanceof StepBasedResourceAction)) {
         throw new ClassCastException("Calling performCreateStep against a resource action that does not extend StepBasedResourceAction: " + resourceAction.getClass().getName());
       }
@@ -417,7 +419,8 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setResourceInfo(resourceInfo);
       boolean errorWithProperties = false;
       try {
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+        // TODO: consider the strict property case.  It seems unnecessary here.
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), false);
       } catch (Exception ex) {
         errorWithProperties = true;
       }
@@ -455,7 +458,8 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, createdResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+    // TODO: consider the strict property case.  It seems unnecessary here. (done in perform create steps)
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), false);
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
@@ -788,12 +792,14 @@ public class StackActivityImpl implements StackActivity {
     previousResourceAction.setStackEntity(previousStackEntity); // NOTE: stack entity has been changed with new values but nothing (yet) is used from it
     previousResourceInfo.setEffectiveUserId(effectiveUserId);
     previousResourceAction.setResourceInfo(previousResourceInfo);
-    ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
+    // TODO: consider the strict property case.  Previous stack may be non-strict, so no.
+    ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()), false);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(nextResourceInfo.getType());
     resourceAction.setStackEntity(nextStackEntity);
     nextResourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(nextResourceInfo);
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+    // Note: here we do strict properties, as it is our first look at the new resource.
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()), CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
     UpdateType updateType = previousResourceAction.getUpdateType(resourceAction, stackTagsChanged);
     if (updateType == UpdateType.NO_INTERRUPTION || updateType == UpdateType.SOME_INTERRUPTION) {
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_IN_PROGRESS);
@@ -828,7 +834,8 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, updatedResourceVersion);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
-    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+    // TODO: consider the strict property case.  We checked it during init
+    ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), false);
     resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
@@ -858,7 +865,8 @@ public class StackActivityImpl implements StackActivity {
       nextResourceAction.setStackEntity(nextStackEntity);
       nextResourceInfo.setEffectiveUserId(effectiveUserId);
       nextResourceAction.setResourceInfo(nextResourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(nextResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()));
+      // TODO: consider the strict property case.  We already did it during initUpdateResource
+      ResourcePropertyResolver.populateResourceProperties(nextResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(nextResourceInfo.getPropertiesJson()), false);
       if (!(nextResourceAction instanceof StepBasedResourceAction)) {
         throw new ClassCastException("Calling performUpdateStep against a resource action that does not extend StepBasedResourceAction: " + nextResourceAction.getClass().getName());
       }
@@ -866,7 +874,8 @@ public class StackActivityImpl implements StackActivity {
       previousResourceAction.setStackEntity(previousStackEntity);
       previousResourceInfo.setEffectiveUserId(effectiveUserId);
       previousResourceAction.setResourceInfo(previousResourceInfo);
-      ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()));
+      // TODO: consider the strict property case.  We don't check on previous stacks, as they are grandfathered.
+      ResourcePropertyResolver.populateResourceProperties(previousResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(previousResourceInfo.getPropertiesJson()), false);
       if (!(previousResourceAction instanceof StepBasedResourceAction)) {
         throw new ClassCastException("Calling performUpdateStep against a resource action that does not extend StepBasedResourceAction: " + previousResourceAction.getClass().getName());
       }
@@ -1061,7 +1070,8 @@ public class StackActivityImpl implements StackActivity {
 
     boolean errorWithProperties = false;
     try {
-      ResourcePropertyResolver.populateResourceProperties(rolledbackResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(rolledbackResourceInfo.getPropertiesJson()));
+      // TODO: consider the strict property case.  This is kind of like delete, we've already validated strict or we are grandfathered
+      ResourcePropertyResolver.populateResourceProperties(rolledbackResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(rolledbackResourceInfo.getPropertiesJson()), false);
     } catch (Exception ex) {
       errorWithProperties = true;
     }
@@ -1071,7 +1081,8 @@ public class StackActivityImpl implements StackActivity {
     updatedResourceInfo.setEffectiveUserId(effectiveUserId);
     updatedResourceAction.setResourceInfo(updatedResourceInfo);
     try {
-      ResourcePropertyResolver.populateResourceProperties(updatedResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(updatedResourceInfo.getPropertiesJson()));
+      // TODO: consider the strict property case.  This is kind of like delete, we've already validated strict
+      ResourcePropertyResolver.populateResourceProperties(updatedResourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(updatedResourceInfo.getPropertiesJson()), false);
     } catch (Exception ex) {
       errorWithProperties = true;
     }
@@ -1285,7 +1296,8 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setResourceInfo(resourceInfo);
       boolean errorWithProperties = false;
       try {
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+        // TODO: consider the strict property case.  This is kind of like delete, I think, so I think we've already validated strict
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), false);
       } catch (Exception ex) {
         errorWithProperties = true;
       }
@@ -1352,7 +1364,8 @@ public class StackActivityImpl implements StackActivity {
       resourceAction.setResourceInfo(resourceInfo);
       boolean errorWithProperties = false;
       try {
-        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
+        // TODO: consider the strict property case.  This is kind of like delete, we've already validated strict, I think.
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()), false);
       } catch (Exception ex) {
         errorWithProperties = true;
       }
