@@ -22,6 +22,7 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.portal.config.PortalServiceConfiguration;
 import com.eucalyptus.ws.server.QueryPipeline;
+import com.eucalyptus.ws.util.HmacUtils;
 
 /**
  *
@@ -34,7 +35,8 @@ public class PortalServiceQueryPipeline extends QueryPipeline {
     super(
         "portalservice-query",
         PortalServiceConfiguration.SERVICE_PATH,
-        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ) );
+        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ),
+        EnumSet.of( HmacUtils.SignatureVersion.SignatureV4 ) );
   }
 
   @Override

@@ -19,6 +19,7 @@ package com.eucalyptus.portal.common.model
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.portal.common.Portal
 import com.eucalyptus.ws.WebServiceError
+import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
@@ -56,6 +57,7 @@ class ModifyAccountResult extends EucalyptusData {
 }
 
 class ModifyAccountResponseType extends PortalMessage {
+  @JsonUnwrapped
   ModifyAccountResult result = new ModifyAccountResult( )
 }
 
@@ -67,6 +69,7 @@ class ViewAccountResult extends EucalyptusData {
 }
 
 class ViewAccountResponseType extends PortalMessage {
+  @JsonUnwrapped
   ViewAccountResult result = new ViewAccountResult( )
 }
 
@@ -81,6 +84,7 @@ class ModifyBillingResult extends EucalyptusData {
 }
 
 class ModifyBillingResponseType extends PortalMessage {
+  @JsonUnwrapped
   ModifyBillingResult result = new ModifyBillingResult( )
 }
 
@@ -108,11 +112,22 @@ class BillingSettings extends EucalyptusData {
   }
 }
 
+class BillingMetadata extends EucalyptusData {
+  ArrayList<String> inactiveCostAllocationTags = Lists.newArrayList( )
+
+  BillingMetadata withInactiveCostAllocationTags( Iterable<String> inactiveCostAllocationTags ) {
+    this.inactiveCostAllocationTags = Lists.newArrayList( inactiveCostAllocationTags )
+    this
+  }
+}
+
 class ViewBillingResult extends EucalyptusData {
   BillingSettings billingSettings = new BillingSettings( )
+  BillingMetadata billingMetadata = new BillingMetadata( )
 }
 
 class ViewBillingResponseType extends PortalMessage {
+  @JsonUnwrapped
   ViewBillingResult result = new ViewBillingResult( )
 }
 
