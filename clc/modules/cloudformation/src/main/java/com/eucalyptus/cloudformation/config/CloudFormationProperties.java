@@ -31,10 +31,10 @@ import com.eucalyptus.simpleworkflow.common.client.Config;
 public class CloudFormationProperties {
 
   @ConfigurableField(
-    initial = "false",
+    initial = "true",
     description = "Set 'true' to only allow 'known' properties in Resources",
     changeListener = PropertyChangeListeners.IsBoolean.class )
-  public static volatile Boolean ENFORCE_STRICT_RESOURCE_PROPERTIES = false;
+  public static volatile Boolean ENFORCE_STRICT_RESOURCE_PROPERTIES = true;
 
   @ConfigurableField(
       initial = "CloudFormationDomain",
