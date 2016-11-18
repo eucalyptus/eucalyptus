@@ -72,6 +72,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Principal.PrincipalType;
+import com.eucalyptus.auth.tokens.RoleSecurityTokenAttributes;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
@@ -82,7 +84,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class Principals {
-  
+
   private static final String  SYSTEM_ID      = AccountIdentifiers.SYSTEM_ACCOUNT;
   private static final String  NOBODY_ID      = AccountIdentifiers.NOBODY_ACCOUNT;
 
@@ -92,27 +94,27 @@ public class Principals {
                                                                                         public Boolean isActive( ) {
                                                                                           return true;
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public X509Certificate getX509Certificate( ) {
                                                                                           return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public Date getCreateDate( ) {
                                                                                           return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( ).getNotBefore( );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public UserPrincipal getPrincipal( ) throws AuthException {
                                                                                           return Principals.systemUser( );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public String getCertificateId( ) {
                                                                                           return SYSTEM_ID;
@@ -135,13 +137,13 @@ public class Principals {
                                                 public String getUserId( ) {
                                                   return AccountIdentifiers.SYSTEM_ACCOUNT;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getName( ) {
                                                   return AccountIdentifiers.SYSTEM_ACCOUNT;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getPath( ) {
@@ -152,34 +154,34 @@ public class Principals {
                                                 public boolean isEnabled( ) {
                                                   return true;
                                                 }
-                                                
+
                                                 @Override
                                                 public String getToken( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Override
                                                 public String getPassword( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Override
                                                 public Long getPasswordExpires( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public List<AccessKey> getKeys( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public List<Certificate> getCertificates( ) {
                                                   return certs;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getAccountNumber( ) {
@@ -229,35 +231,35 @@ public class Principals {
                                                   return null;
                                                 }
                                               };
-                                                                                           
+
   private static final SystemUser NOBODY_USER = new SystemUser( ) {
                                                 private final Certificate       cert  = new Certificate( ) {
-                                                                                        
+
                                                                                         @Override
                                                                                         public Boolean isActive( ) {
                                                                                           return true;
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public String getPem( ) {
                                                                                           return B64.url.encString( PEMFiles.getBytes( getX509Certificate( ) ) );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public X509Certificate getX509Certificate( ) {
                                                                                           return SystemCredentials.lookup( Eucalyptus.class ).getCertificate( );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public Date getCreateDate( ) {
                                                                                           return null;
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public UserPrincipal getPrincipal( ) throws AuthException {
                                                                                           return Principals.nobodyUser( );
                                                                                         }
-                                                                                        
+
                                                                                         @Override
                                                                                         public String getCertificateId( ) {
                                                                                           return Principals.NOBODY_ID;
@@ -280,13 +282,13 @@ public class Principals {
                                                 public String getUserId( ) {
                                                   return AccountIdentifiers.NOBODY_ACCOUNT;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getName( ) {
                                                   return AccountIdentifiers.NOBODY_ACCOUNT;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getPath( ) {
@@ -297,22 +299,22 @@ public class Principals {
                                                 public boolean isEnabled( ) {
                                                   return true;
                                                 }
-                                                
+
                                                 @Override
                                                 public String getToken( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Override
                                                 public String getPassword( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Override
                                                 public Long getPasswordExpires( ) {
                                                   return null;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public List<AccessKey> getKeys( ) {
@@ -324,7 +326,7 @@ public class Principals {
                                                 public List<Certificate> getCertificates( ) {
                                                   return certs;
                                                 }
-                                                
+
                                                 @Nonnull
                                                 @Override
                                                 public String getAccountNumber() {
@@ -375,15 +377,15 @@ public class Principals {
                                                 }
                                               };
 
-  private static final AccountIdentifiers NOBODY_ACCOUNT = 
-      new SystemAccount( 
-          AccountIdentifiers.NOBODY_ACCOUNT_ID, 
+  private static final AccountIdentifiers NOBODY_ACCOUNT =
+      new SystemAccount(
+          AccountIdentifiers.NOBODY_ACCOUNT_ID,
           AccountIdentifiers.NOBODY_ACCOUNT,
           AccountIdentifiers.NOBODY_CANONICAL_ID
           );
-  private static final AccountIdentifiers SYSTEM_ACCOUNT = 
-      new SystemAccount( 
-          AccountIdentifiers.SYSTEM_ACCOUNT_ID, 
+  private static final AccountIdentifiers SYSTEM_ACCOUNT =
+      new SystemAccount(
+          AccountIdentifiers.SYSTEM_ACCOUNT_ID,
           AccountIdentifiers.SYSTEM_ACCOUNT,
           AccountIdentifiers.SYSTEM_CANONICAL_ID
           );
@@ -400,26 +402,26 @@ public class Principals {
   public static SystemUser systemUser( ) {
     return SYSTEM_USER;
   }
-  
+
   public static SystemUser nobodyUser( ) {
     return NOBODY_USER;
   }
-    
+
   public static AccountIdentifiers nobodyAccount( ) {
     return NOBODY_ACCOUNT;
   }
-  
+
   public static AccountIdentifiers systemAccount( ) {
     return SYSTEM_ACCOUNT;
   }
-  
+
   private static final UserFullName SYSTEM_USER_ERN = UserFullName.getInstance( systemUser( ) );
   private static final UserFullName NOBODY_USER_ERN = UserFullName.getInstance( nobodyUser( ) );
-  
+
   public static OwnerFullName nobodyFullName( ) {
     return NOBODY_USER_ERN;
   }
-  
+
   public static OwnerFullName systemFullName( ) {
     return SYSTEM_USER_ERN;
   }
@@ -455,6 +457,33 @@ public class Principals {
     return user1 != null && user2 != null &&
         !Strings.isNullOrEmpty( user1.getUserId() ) && !Strings.isNullOrEmpty( user2.getUserId() ) &&
         user1.getUserId().equals( user2.getUserId() );
+  }
+
+  /**
+   * Get an immutable Set of TypedPrincipals for the given principal.
+   *
+   * @param userPrincipal The principal
+   * @return The set of principals
+   * @throws AuthException If an error occurs
+   */
+  @Nonnull
+  public static Set<TypedPrincipal> typedSet( @Nonnull final UserPrincipal userPrincipal ) throws AuthException {
+    if ( userPrincipal instanceof HasRole && ((HasRole) userPrincipal).getRole( ) != null ) {
+      final Role role = ((HasRole) userPrincipal).getRole( );
+      final RoleSecurityTokenAttributes attributes =
+          RoleSecurityTokenAttributes.forUser( userPrincipal )
+              .or( RoleSecurityTokenAttributes.basic( "eucalyptus" ) );
+      return ImmutableSet.of(
+          TypedPrincipal.of( PrincipalType.AWS, Accounts.getAssumedRoleArn( role, attributes.getSessionName( ) ) ),
+          TypedPrincipal.of( PrincipalType.AWS, Accounts.getRoleArn( role ) ),
+          TypedPrincipal.of( PrincipalType.AWS, Accounts.getAccountArn( userPrincipal.getAccountNumber( ) ) )
+      );
+    } else {
+      return ImmutableSet.of(
+          TypedPrincipal.of( PrincipalType.AWS, Accounts.getUserArn( userPrincipal ) ),
+          TypedPrincipal.of( PrincipalType.AWS, Accounts.getAccountArn( userPrincipal.getAccountNumber( ) ) )
+      );
+    }
   }
 
   public interface SystemUser extends UserPrincipal {

@@ -63,9 +63,9 @@
 package com.eucalyptus.auth;
 
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch;
-import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -76,6 +76,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Contexts;
@@ -84,9 +85,9 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Maps;
 
 public class Permissions {
-  
+
 	private static Logger LOG = Logger.getLogger( Permissions.class );
-  
+
 	private static PolicyEngine policyEngine;
 
 	public static void setPolicyEngine( PolicyEngine engine ) {
@@ -189,8 +190,7 @@ public class Permissions {
 	}
 
 	public static boolean isAuthorized(
-		final PrincipalType principalType,
-		final String principalName,
+		final Set<TypedPrincipal> principals,
 		final PolicyVersion resourcePolicy,
 		final String resourceType,
 		final String resourceName,
@@ -201,7 +201,7 @@ public class Permissions {
 		final Map<String,String> evaluatedKeys
 	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, policies, principalType, principalName );
+		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, policies, principals );
 		try {
 			final Map<Contract.Type, Contract> contracts = newHashMap();
 			policyEngine.evaluateAuthorization( context, resourcePolicy, resourceAccountNumber, resourceName, contracts );

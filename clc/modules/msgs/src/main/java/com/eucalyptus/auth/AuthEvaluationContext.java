@@ -20,8 +20,9 @@
 package com.eucalyptus.auth;
 
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
-import com.eucalyptus.auth.principal.Principal;
+import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 
 /**
@@ -36,9 +37,7 @@ public interface AuthEvaluationContext {
   User getRequestUser();
   Map<String,String> getEvaluatedKeys();
   @Nullable
-  Principal.PrincipalType getPrincipalType();
-  @Nullable
-  String getPrincipalName();
+  Set<TypedPrincipal> getPrincipals( );
   String describe( String resourceAccountNumber, String resourceName );
   String describe( String resourceName, Long quantity );
 }

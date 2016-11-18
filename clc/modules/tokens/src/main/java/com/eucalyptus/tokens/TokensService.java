@@ -564,7 +564,7 @@ public class TokensService {
 
   private static String assumedRoleArn( final BaseRole role,
                                         final String roleSessionName ) throws AuthException {
-    return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
+    return Accounts.getAssumedRoleArn( role, roleSessionName );
   }
 
   private static BaseRole lookupRole( final String roleArnStringWithAlias ) throws TokensException {
