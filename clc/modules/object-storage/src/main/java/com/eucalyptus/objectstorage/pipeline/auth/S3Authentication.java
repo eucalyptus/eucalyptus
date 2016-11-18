@@ -34,9 +34,12 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
+import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -44,8 +47,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import javax.security.auth.login.LoginException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 
 import static com.eucalyptus.objectstorage.pipeline.auth.S3V2Authentication.AWS_V2_AUTH_TYPE;
 
@@ -164,6 +166,24 @@ public final class S3Authentication {
 
       // Handle anonymous request
       return S3Authenticator.ANONYMOUS;
+    }
+  }
+
+  public static void authenticateV4Streaming(MappingHttpRequest request, Map<String, String> lowercaseParams, List<AwsChunk> chunks)
+      throws S3Exception {
+    Map<V4AuthComponent, String> authComponents = S3V4Authentication.getV4AuthComponents(request.getHeader(HttpHeaders.Names
+        .AUTHORIZATION));
+    String dateStr = getDateFromHeaders(request);
+    Date date = parseDateAndAssertNotExpired(dateStr);
+    SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, authComponents.get(V4AuthComponent.Credential));
+    String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
+    String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
+    String seedSignature = authComponents.get(V4AuthComponent.Signature);
+
+    for (AwsChunk chunk : chunks) {
+      String previousSignature = chunk.previousSignature == null ? seedSignature : chunk.previousSignature;
+      S3V4Authentication.loginChunk(request, date, credential, signedHeaders, chunk.chunkSignature, securityToken, previousSignature,
+          chunk.getPayload());
     }
   }
 

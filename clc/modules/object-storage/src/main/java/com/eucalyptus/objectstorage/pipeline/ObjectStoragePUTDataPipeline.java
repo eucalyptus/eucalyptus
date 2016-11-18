@@ -63,7 +63,6 @@
 package com.eucalyptus.objectstorage.pipeline;
 
 import com.eucalyptus.objectstorage.pipeline.stages.*;
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
@@ -79,7 +78,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
  */
 @ComponentPart(ObjectStorage.class)
 public class ObjectStoragePUTDataPipeline extends ObjectStorageRESTPipeline {
-  private final UnrollableStage authAggregator = new ObjectStorageAuthAggregatorStage();
+  private final UnrollableStage authAggregator = new ObjectStorageAuthenticationAggregatorStage();
   private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
   private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
   private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage();

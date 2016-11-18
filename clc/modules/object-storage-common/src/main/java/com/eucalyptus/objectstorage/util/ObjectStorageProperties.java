@@ -319,7 +319,18 @@ public class ObjectStorageProperties {
 
   public enum SubResource {
     // Per the S3 Dev guide, these must be included in the canonicalized resource:
-    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging, delete
+    acl(true), lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent(true), uploadId, uploads, versionId, versioning, versions, website, cors, tagging, delete;
+
+    /** Indicates whether the SubResource is of this <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectAndSoubResource.html">type</a> */
+    public final boolean isObjectSubResource;
+
+    SubResource(){
+      isObjectSubResource = false;
+    }
+
+    SubResource(boolean isObjectSubResource) {
+      this.isObjectSubResource = isObjectSubResource;
+    }
   }
 
   public enum ExtendedGetHeaders {
