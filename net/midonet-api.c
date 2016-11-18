@@ -4715,6 +4715,218 @@ int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max) {
 }
 
 /**
+ * Creates a bgp end-point on the device (port MN v1.9, or router MN v5.0) dev using
+ * the parameters in the argument.
+ * @param dev [in] device to create the bgp end-point
+ * @param localAS [in] the local ASN
+ * @param peerAS [in] the remote/peer ASN
+ * @param peerAddr [in] the remote/peer BGP router IP
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp(midoname *dev, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname) {
+    if (!strcmp(midonet_api_version, "v1.9")) {
+        return (mido_create_bgp_v1(dev, localAS, peerAS, peerAddr, outname));
+    } else if (!strcmp(midonet_api_version, "v5.0")) {
+        return (mido_create_bgp_v5(dev, localAS, peerAS, peerAddr, outname));
+    } else {
+        return (1);
+    }
+}
+
+/**
+ * Creates a bgp end-point on port using the parameters in the argument (MN1.9).
+ * @param port [in] device to create the bgp end-point
+ * @param localAS [in] the local ASN
+ * @param peerAS [in] the remote/peer ASN
+ * @param peerAddr [in] the remote/peer BGP router IP
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp_v1(midoname *port, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname) {
+    int rc = 0, found = 0, ret = 0;
+    midoname myname;
+
+    midoname *out = NULL;
+    
+    if (port == NULL)  {
+        LOGWARN("Invalid argument: cannot create bgp for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    midoname **bgps = NULL;
+    int max_bgps = 0;
+    mido_get_bgps(port, &bgps, &max_bgps);
+    found = 0;
+    for (int i = 0; i < max_bgps && !found; i++) {
+        char *las = NULL;
+        char *pas = NULL;
+        char *paddr = NULL;
+        mido_getel_midoname(bgps[i], "localAS", &las);
+        mido_getel_midoname(bgps[i], "peerAddr", &paddr);
+        mido_getel_midoname(bgps[i], "peerAS", &pas);
+        if (las && pas && paddr) {
+            if ((localAS == atoi(las)) && (peerAS == atoi(pas)) && !strcmp(peerAddr, paddr)) {
+                found = 1;
+                out = bgps[i];
+            }
+        }
+        EUCA_FREE(las);
+        EUCA_FREE(pas);
+        EUCA_FREE(paddr);
+    }
+    EUCA_FREE(bgps);
+    if (found) {
+        LOGINFO("12915: bgp already in mido - abort create\n");
+        if (outname) {
+            *outname = out;
+        }
+        return (0);
+    }
+
+    if (!found) {
+        memset(&myname, 0, sizeof (midoname));
+        myname.tenant = strdup(VPCMIDO_TENANT);
+        myname.resource_type = strdup("bgps");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_BGP_JSON]);
+
+        char sLocalAS[16];
+        char sPeerAS[16];
+        snprintf(sLocalAS, 16, "%u", localAS);
+        snprintf(sPeerAS, 16, "%u", peerAS);
+        rc = mido_create_resource(port, 1, &myname, &out, "localAS", sLocalAS,
+                "peerAS", sPeerAS, "peerAddr", peerAddr, NULL);
+
+        if (rc == 0) {
+            if (outname) {
+                *outname = out;
+            }
+            ret = 0;
+        } else if (rc < 0) {
+            ret = 0;
+        } else {
+            ret = 1;
+        }
+        mido_free_midoname(&myname);
+    }
+
+    return (ret);
+}
+
+/**
+ * Creates a bgp end-point on router using the parameters in the argument (MN5.0).
+ * @param router [in] router to create the bgp end-point
+ * @param localAS [in] the local ASN - will overwrite router's ASN
+ * @param peerAS [in] the remote/peer ASN
+ * @param peerAddr [in] the remote/peer BGP router IP
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp_v5(midoname *router, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname) {
+    int rc = 0, found = 0, ret = 0;
+    midoname myname;
+    boolean do_bgp_peer = TRUE;
+    boolean do_router_asn = TRUE;
+
+    midoname *out = NULL;
+    
+    if (router == NULL)  {
+        LOGWARN("Invalid argument: cannot create bgp for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    midoname **bgps = NULL;
+    int max_bgps = 0;
+    mido_get_bgps(router, &bgps, &max_bgps);
+    found = 0;
+    for (int i = 0; i < max_bgps && !found; i++) {
+        char *pas = NULL;
+        char *paddr = NULL;
+        mido_getel_midoname(bgps[i], "address", &paddr);
+        mido_getel_midoname(bgps[i], "asNumber", &pas);
+        if (pas && paddr) {
+            if ((peerAS == atoi(pas)) && !strcmp(peerAddr, paddr)) {
+                do_bgp_peer = FALSE;
+                found = 1;
+                out = bgps[i];
+            }
+        }
+        EUCA_FREE(pas);
+        EUCA_FREE(paddr);
+    }
+    EUCA_FREE(bgps);
+    if (found) {
+        char *las = NULL;
+        mido_getel_midoname(router, "asNumber", &las);
+        if (localAS == atoi(las)) {
+            do_router_asn = FALSE;
+            LOGINFO("12915: bgp already in mido - abort create\n");
+        } else {
+            found = 0;
+        }
+        EUCA_FREE(las);
+    }
+    if (!do_router_asn && !do_bgp_peer) {
+        if (outname) {
+            *outname = out;
+        }
+        return (0);
+    }
+
+    if (!found) {
+        if (do_router_asn) {
+            char sLocalAS[16];
+            snprintf(sLocalAS, 16, "%u", localAS);
+            rc = mido_update_router(router, "id", router->uuid, "name", router->name,
+                    "tenantId", router->tenant, "asNumber", sLocalAS, NULL);
+            if ((rc != 0) && (rc != -1)) {
+                LOGERROR("failed to update router asNumber\n");
+                ret++;
+            }
+        }
+        
+        memset(&myname, 0, sizeof (midoname));
+        myname.tenant = strdup(VPCMIDO_TENANT);
+        myname.resource_type = strdup("bgp_peers");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_BGP_PEER_JSON]);
+
+        char sPeerAS[16];
+        snprintf(sPeerAS, 16, "%u", peerAS);
+        rc = mido_create_resource(router, 1, &myname, &out, "asNumber", sPeerAS,
+                "address", peerAddr, NULL);
+
+        if (rc == 0) {
+            if (outname) {
+                *outname = out;
+            }
+            ret += 0;
+        } else if (rc < 0) {
+            ret += 0;
+        } else {
+            ret += 1;
+        }
+        mido_free_midoname(&myname);
+    }
+
+    return (ret);
+}
+
+/**
  * Retrieves an array of pointers to midonet object representing bgps.
  * This call does not update and/or access midocache.
  * @param dev [in] device (router port MN1.9 or router MN5) of interest.
@@ -4760,6 +4972,182 @@ int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max) 
             midonet_api_mtypes[APPLICATION_COLLECTION_BGP_PEER_JSON],
             midonet_api_mtypes[APPLICATION_BGP_PEER_JSON],
             outnames, outnames_max));
+}
+
+/**
+ * Creates a bgp route on dev (bgp MN v1.9, or router MN v5.0) using
+ * the parameters in the argument.
+ * @param dev [in] device to create the bgp route
+ * @param nwPrefix [in] the network address to advertise
+ * @param prefixLength [in] the length of the network to advertise
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp route creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp route will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp_route(midoname *dev, char *nwPrefix, char *prefixLength, midoname **outname) {
+    if (!strcmp(midonet_api_version, "v1.9")) {
+        return (mido_create_bgp_route_v1(dev, nwPrefix, prefixLength, outname));
+    } else if (!strcmp(midonet_api_version, "v5.0")) {
+        return (mido_create_bgp_route_v5(dev, nwPrefix, prefixLength, outname));
+    } else {
+        return (1);
+    }
+}
+
+/**
+ * Creates a bgp route on bgp using the parameters in the argument (MN1.9).
+ * @param bgp [in] bgp to create the bgp route
+ * @param nwPrefix [in] the network address to advertise
+ * @param prefixLength [in] the length of the network to advertise
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp route creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp route will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp_route_v1(midoname *bgp, char *nwPrefix, char *prefixLength, midoname **outname) {
+    int rc = 0, found = 0, ret = 0;
+    midoname myname;
+
+    midoname *out = NULL;
+    
+    if (bgp == NULL)  {
+        LOGWARN("Invalid argument: cannot create bgp route for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    midoname **bgp_routes = NULL;
+    int max_bgp_routes = 0;
+    mido_get_bgp_routes(bgp, &bgp_routes, &max_bgp_routes);
+    found = 0;
+    for (int i = 0; i < max_bgp_routes && !found; i++) {
+        char *nw = NULL;
+        char *len = NULL;
+        mido_getel_midoname(bgp_routes[i], "nwPrefix", &nw);
+        mido_getel_midoname(bgp_routes[i], "prefixLength", &len);
+        if (nw && len) {
+            if (!strcmp(nw, nwPrefix) && !strcmp(len, prefixLength)) {
+                found = 1;
+                out = bgp_routes[i];
+            }
+        }
+        EUCA_FREE(nw);
+        EUCA_FREE(len);
+    }
+    EUCA_FREE(bgp_routes);
+    if (found) {
+        LOGINFO("12915: bgp route already in mido - abort create\n");
+        if (outname) {
+            *outname = out;
+        }
+        return (0);
+    }
+
+    if (!found) {
+        memset(&myname, 0, sizeof (midoname));
+        myname.tenant = strdup(VPCMIDO_TENANT);
+        myname.resource_type = strdup("ad_routes");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_AD_ROUTE_JSON]);
+
+        rc = mido_create_resource(bgp, 1, &myname, &out, "nwPrefix", nwPrefix,
+                "prefixLength", prefixLength, NULL);
+
+        if (rc == 0) {
+            if (outname) {
+                *outname = out;
+            }
+            ret = 0;
+        } else if (rc < 0) {
+            ret = 0;
+        } else {
+            ret = 1;
+        }
+        mido_free_midoname(&myname);
+    }
+
+    return (ret);
+}
+
+/**
+ * Creates a bgp route on router using the parameters in the argument (MN5.0).
+ * @param router [in] router to create the bgp route
+ * @param nwPrefix [in] the network address to advertise
+ * @param prefixLength [in] the length of the network to advertise
+ * @param outname [i/o] pointer to an extant MidoNet object (parameters will be checked
+ * to avoid duplicate bgp route creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created bgp route will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the route is successfully created/found. 1 otherwise.
+ */
+int mido_create_bgp_route_v5(midoname *router, char *nwPrefix, char *prefixLength, midoname **outname) {
+    int rc = 0, found = 0, ret = 0;
+    midoname myname;
+
+    midoname *out = NULL;
+    
+    if (router == NULL)  {
+        LOGWARN("Invalid argument: cannot create bgp network for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    midoname **bgp_routes = NULL;
+    int max_bgp_routes = 0;
+    mido_get_bgp_routes(router, &bgp_routes, &max_bgp_routes);
+    found = 0;
+    for (int i = 0; i < max_bgp_routes && !found; i++) {
+        char *nw = NULL;
+        char *len = NULL;
+        mido_getel_midoname(bgp_routes[i], "subnetAddress", &nw);
+        mido_getel_midoname(bgp_routes[i], "subnetLength", &len);
+        if (nw && len) {
+            if (!strcmp(nw, nwPrefix) && !strcmp(len, prefixLength)) {
+                found = 1;
+                out = bgp_routes[i];
+            }
+        }
+        EUCA_FREE(nw);
+        EUCA_FREE(len);
+    }
+    EUCA_FREE(bgp_routes);
+    if (found) {
+        LOGINFO("12915: bgp network already in mido - abort create\n");
+        if (outname) {
+            *outname = out;
+        }
+        return (0);
+    }
+
+    if (!found) {
+        memset(&myname, 0, sizeof (midoname));
+        myname.tenant = strdup(VPCMIDO_TENANT);
+        myname.resource_type = strdup("bgp_networks");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_BGP_NETWORK_JSON]);
+
+        rc = mido_create_resource(router, 1, &myname, &out, "subnetAddress", nwPrefix,
+                "subnetLength", prefixLength, NULL);
+
+        if (rc == 0) {
+            if (outname) {
+                *outname = out;
+            }
+            ret = 0;
+        } else if (rc < 0) {
+            ret = 0;
+        } else {
+            ret = 1;
+        }
+        mido_free_midoname(&myname);
+    }
+
+    return (ret);
 }
 
 /**

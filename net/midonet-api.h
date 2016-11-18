@@ -499,9 +499,15 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
 int mido_delete_route(midonet_api_router *router, midoname *name);
 int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max);
 
+int mido_create_bgp(midoname *dev, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
+int mido_create_bgp_v1(midoname *port, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
+int mido_create_bgp_v5(midoname *router, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
 int mido_get_bgps(midoname *dev, midoname ***outnames, int *outnames_max);
 int mido_get_bgps_v1(midoname *port, midoname ***outnames, int *outnames_max);
 int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max);
+int mido_create_bgp_route(midoname *dev, char *nwPrefix, char *prefixLength, midoname **outname);
+int mido_create_bgp_route_v1(midoname *bgp, char *nwPrefix, char *prefixLength, midoname **outname);
+int mido_create_bgp_route_v5(midoname *router, char *nwPrefix, char *prefixLength, midoname **outname);
 int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max);

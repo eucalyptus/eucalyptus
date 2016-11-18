@@ -5556,7 +5556,7 @@ char *discover_mido_bgps_v5(mido_config *mido) {
             for (int j = 0; j < gw->max_routes; j++) {
                 mido_gw_ad_route *ar = &(gw->routes[j]);
                 resptr = &(res[strlen(res)]);
-                snprintf(resptr, 1024, "router name eucart add bgp-network net %s\n",
+                snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-network net %s\n",
                         ar->cidr);
             }
         }
@@ -5865,6 +5865,123 @@ int create_mido_gw(mido_config *mido, mido_gw *gw, gni_mido_gateway *gni_gw) {
             ret++;
         }
     }
+    return (ret);
+}
+
+/**
+ * Creates MidoNet objects that are needed to configure VPCMIDO gateway(s) BGP.
+ * This function should only be called once base constructs of gateways are in place
+ * (i.e., create_mido_gw() for each gateway in GNI).
+ * No-op for gateways with BGP constructs in place (diff between MN and GNI not performed).
+ * Changes in configuration must be detected (and cleaned) before calling this function.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @return 0 on success. 1 otherwise.
+ */
+int create_mido_gws_bgp(mido_config *mido, mido_core *midocore) {
+    int ret = 0;
+    if (!mido || !mido->midocore) {
+        LOGWARN("Invalid argument: cannot create mido gateway BGP from NULL\n");
+        return (1);
+    }
+
+    boolean config_bgp = FALSE;
+    for (int i = 0; i < mido->max_gni_gws; i++) {
+        gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
+        if (gni_gw->asn && gni_gw->peer_asn) {
+            config_bgp = TRUE;
+            break;
+        }
+    }
+
+    if (config_bgp) {
+        char *version = NULL;
+        version = midonet_api_get_version(NULL);
+        if (version && strlen(version)) {
+            if (!strcmp(version, "v1.9")) {
+                ret = create_mido_gws_bgp_v1(mido, midocore);
+            } else if (!strcmp(version, "v5.0")) {
+                ret = create_mido_gws_bgp_v5(mido, midocore);
+            }
+        }
+    } else {
+        LOGINFO("12915: bgp config not detected in GNI\n");
+    }
+    return (ret);
+}
+
+/**
+ * Creates MidoNet objects that are needed to configure VPCMIDO gateway(s) BGP.
+ * For MN API v1.9
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @return 0 on success. 1 otherwise.
+ */
+int create_mido_gws_bgp_v1(mido_config *mido, mido_core *midocore) {
+    int rc = 0;
+    int ret = 0;
+    if (!mido || !mido->midocore) {
+        LOGWARN("Invalid argument: cannot create mido gateway BGP v1.9 from NULL\n");
+        return (1);
+    }
+
+    // All constructs in place assumed to be valid (if not, it should have been deleted)
+    for (int i = 0; i < midocore->max_gws; i++) {
+        mido_gw *gw = midocore->gws[i];
+        if (!gw) {
+            continue;
+        }
+        gni_mido_gateway *gni_gw = gw->gni_gw;
+        if (gw->port) {
+            // no-op if bgp config was detected in this port
+            if (!gw->bgp_v1) {
+                rc = mido_create_bgp_v1(gw->port, gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip, &(gw->bgp_v1));
+                if (rc) {
+                    LOGWARN("Failed to create bgp %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
+                    ret++;
+                }
+            }
+            // no-op if bgp ad-routes were detected in this bgp
+            if (gw->bgp_v1 && !gw->max_routes && !gw->routes) {
+                for (int j = 0; j < gni_gw->max_ad_routes; j++) {
+                    char nw[NETWORK_ADDR_LEN];
+                    char len[NETWORK_ADDR_LEN];
+                    cidr_split(gni_gw->ad_routes[j], nw, len, NULL, NULL, NULL);
+                    if (strlen(nw) && strlen(len)) {
+                        midoname *out = NULL;
+                        rc = mido_create_bgp_route_v1(gw->bgp_v1, nw, len, &out);
+                        if (rc) {
+                            LOGWARN("Failed to create bgp ad-route %s\n", gw->routes[j].cidr);
+                        } else {
+                            gw->routes = EUCA_REALLOC_C(gw->routes, gw->max_routes + 1, sizeof (mido_gw_ad_route));
+                            mido_gw_ad_route *adr = &(gw->routes[gw->max_routes]);
+                            memset(adr, 0, sizeof (mido_gw_ad_route));
+                            (gw->max_routes)++;
+                            snprintf(adr->cidr, NETWORK_ADDR_LEN, "%s", gni_gw->ad_routes[j]);
+                            adr->route = out;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return (ret);
+}
+
+/**
+ * Creates MidoNet objects that are needed to configure VPCMIDO gateway(s) BGP.
+ * For MN API v5.0
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
+ * @return 0 on success. 1 otherwise.
+ */
+int create_mido_gws_bgp_v5(mido_config *mido, mido_core *midocore) {
+    int ret = 0;
+    if (!mido || !mido->midocore) {
+        LOGWARN("Invalid argument: cannot create mido gateway BGP v5.0 from NULL\n");
+        return (1);
+    }
+
     return (ret);
 }
 
@@ -6726,6 +6843,9 @@ int free_mido_config_v(mido_config *mido, vpcmido_config_op mode) {
         return (0);
     }
 
+    for (i = 0; i < mido->max_gni_gws; i++) {
+        mido->gni_gws[i].mido_present = NULL;
+    }
     if (mode == VPCMIDO_CONFIG_FREE) {
         EUCA_FREE(mido->eucahome);
 
@@ -6788,6 +6908,7 @@ int free_mido_core(mido_core *midocore) {
     }
     EUCA_FREE(midocore->gws);
     memset(midocore, 0, sizeof (mido_core));
+    midocore->max_gws = 0;
 
     return (ret);
 }
@@ -7352,6 +7473,7 @@ int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore) {
         if (gni_gw->asn && gni_gw->peer_asn) {
             LOGINFO("12915: BGP info detected in GNI\n");
             config_bgp = TRUE;
+            break;
         } else {
             LOGINFO("12915: BGP info not detected in GNI\n");
         }
@@ -7668,6 +7790,14 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
             LOGERROR("failed to create gateway %s\n", hex2dot_s(euca_getaddr(gni_gw->host, NULL)));
             ret++;
         }
+        gw->gni_gw = gni_gw;
+    }
+
+    // Configure BGP
+    rc = create_mido_gws_bgp(mido, midocore);
+    if (rc) {
+        LOGERROR("failed to create gateway bgp\n");
+        ret++;
     }
 
     midocore->eucabr = mido_create_bridge(VPCMIDO_TENANT, VPCMIDO_COREBR, &(midocore->midos[CORE_EUCABR]));

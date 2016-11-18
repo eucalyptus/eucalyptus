@@ -453,6 +453,10 @@ int tag_mido_gws(mido_config *mido, mido_core *midocore);
 int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore);
 int delete_mido_gw(mido_config *mido, mido_core *midocore, int entry, int flags);
 
+int create_mido_gws_bgp(mido_config *mido, mido_core *midocore);
+int create_mido_gws_bgp_v1(mido_config *mido, mido_core *midocore);
+int create_mido_gws_bgp_v5(mido_config *mido, mido_core *midocore);
+
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc);
 int delete_mido_vpc(mido_config *mido, mido_vpc *vpc);
