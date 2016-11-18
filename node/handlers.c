@@ -2565,7 +2565,7 @@ static int init(void)
     if (nc_state.config_max_cores) {
         nc_state.cores_max = nc_state.config_max_cores;
         if (nc_state.cores_max > nc_state.phy_max_cores)
-            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %lld\n", nc_state.cores_max, nc_state.phy_max_cores);
+            LOGINFO("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %lld\n", nc_state.cores_max, nc_state.phy_max_cores);
     } else {
         nc_state.cores_max = nc_state.phy_max_cores;
     }
