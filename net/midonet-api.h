@@ -81,6 +81,9 @@
 
 #define MIDO_CACHE_THREAD_NAME_LEN             8
 
+#define MIDONET_API_V19                        "v1.9"
+#define MIDONET_API_V50                        "v5.0"
+
 #define APPLICATION_JSON_V5                               "application/vnd.org.midonet.Application-v5+json"
 #define APPLICATION_HOST_INTERFACE_PORT_V1                "application/vnd.org.midonet.HostInterfacePort-v1+json"
 #define APPLICATION_PORT_LINK_V1                          "application/vnd.org.midonet.PortLink-v1+json"
@@ -436,6 +439,8 @@ extern int http_posts;
 extern int http_puts;
 extern int http_deletes;
 
+extern char midonet_api_version[16];
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -614,6 +619,7 @@ char *mido_jsonize(char *tenant, va_list * al);
 void midonet_api_init(void);
 void midonet_api_cleanup(void);
 char *midonet_api_get_version(char **version);
+
 char *midonet_api_get_uribase(char **uribase);
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
 int mido_libcurl_init(mido_libcurl_handles *handles);
@@ -751,5 +757,33 @@ int compare_midonet_api_chain(const void *p1, const void *p2);
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             INLINE IMPLEMENTATION                          |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/**
+ * Check if MidoNet API matches version "v1.9"
+ * @return TRUE if detected MidoNet API version is "v1.9". FALSE otherwise.
+ */
+inline boolean is_midonet_api_v1(void) {
+    if (!strcmp(midonet_api_version, MIDONET_API_V19)) {
+        return (TRUE);
+    }
+    return (FALSE);
+}
+
+/**
+ * Check if MidoNet API matches version "v5.0"
+ * @return TRUE if detected MidoNet API version is "v5.0". FALSE otherwise.
+ */
+inline boolean is_midonet_api_v5(void) {
+    if (!strcmp(midonet_api_version, MIDONET_API_V50)) {
+        return (TRUE);
+    }
+    return (FALSE);
+}
 
 #endif /* ! _INCLUDE_MIDONET_API_H_ */

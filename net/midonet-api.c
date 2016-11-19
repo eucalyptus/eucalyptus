@@ -60,6 +60,7 @@
 #include "euca_gni.h"
 #include "midonet-api.h"
 #include "euca-to-mido.h"
+#include "eucalyptus-config.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -125,7 +126,7 @@ static int http_puts_prev = 0;
 static int http_deletes_prev = 0;
 
 static char midonet_api_uribase[1024] = {0};
-static char midonet_api_version[16] = {0};
+char midonet_api_version[16] = {0};
 static char midonet_api_mtypes[APPLICATION_MAX_INDEX][MIDO_MTYPE_MAX_LEN];
 
 static int mido_libcurl_initialized = 0;
@@ -3908,10 +3909,11 @@ void midonet_api_init(void) {
     
     // Check MidoNet API version - only API version v1.9 and v5.0 are supported
     if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
-        LOGWARN("\nUnsupported MidoNet API version (%s) detected.\n"
-                "Eucalyptus VPCMIDO mode has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
+        LOGWARN("Unsupported MidoNet API version (%s) detected.\n", midonet_api_version);
+        LOGINFO("Note:\n"
+                "Eucalyptus (%s) VPCMIDO mode has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
                 "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
-                midonet_api_version);
+                EUCA_VERSION);
     }
     
     // Initialize media_types array
@@ -3999,6 +4001,18 @@ char *midonet_api_get_version(char **version) {
     }
     return (midonet_api_version);
 }
+
+/**
+ * Check if MidoNet API matches version "v1.9"
+ * @return TRUE if detected MidoNet API version is "v1.9". FALSE otherwise.
+ */
+extern inline boolean is_midonet_api_v1(void);
+
+/**
+ * Check if MidoNet API matches version "v5.0"
+ * @return TRUE if detected MidoNet API version is "v5.0". FALSE otherwise.
+ */
+extern inline boolean is_midonet_api_v5(void);
 
 /**
  * Gets the MidoNet API uribase.
@@ -4728,9 +4742,9 @@ int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max) {
  * @return 0 if the route is successfully created/found. 1 otherwise.
  */
 int mido_create_bgp(midoname *dev, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname) {
-    if (!strcmp(midonet_api_version, "v1.9")) {
+    if (is_midonet_api_v1()) {
         return (mido_create_bgp_v1(dev, localAS, peerAS, peerAddr, outname));
-    } else if (!strcmp(midonet_api_version, "v5.0")) {
+    } else if (is_midonet_api_v5()) {
         return (mido_create_bgp_v5(dev, localAS, peerAS, peerAddr, outname));
     } else {
         return (1);
@@ -4935,9 +4949,9 @@ int mido_create_bgp_v5(midoname *router, u32 localAS, u32 peerAS, char *peerAddr
  * @return 0 on success. 1 otherwise.
  */
 int mido_get_bgps(midoname *dev, midoname ***outnames, int *outnames_max) {
-    if (!strcmp(midonet_api_version, "v1.9")) {
+    if (is_midonet_api_v1()) {
         return (mido_get_bgps_v1(dev, outnames, outnames_max));
-    } else if (!strcmp(midonet_api_version, "v5.0")) {
+    } else if (is_midonet_api_v5()) {
         return (mido_get_bgps_v5(dev, outnames, outnames_max));
     } else {
         return (1);
@@ -4987,9 +5001,9 @@ int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max) 
  * @return 0 if the route is successfully created/found. 1 otherwise.
  */
 int mido_create_bgp_route(midoname *dev, char *nwPrefix, char *prefixLength, midoname **outname) {
-    if (!strcmp(midonet_api_version, "v1.9")) {
+    if (is_midonet_api_v1()) {
         return (mido_create_bgp_route_v1(dev, nwPrefix, prefixLength, outname));
-    } else if (!strcmp(midonet_api_version, "v5.0")) {
+    } else if (is_midonet_api_v5()) {
         return (mido_create_bgp_route_v5(dev, nwPrefix, prefixLength, outname));
     } else {
         return (1);
@@ -5159,9 +5173,9 @@ int mido_create_bgp_route_v5(midoname *router, char *nwPrefix, char *prefixLengt
  * @return 0 on success. 1 otherwise.
  */
 int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max) {
-    if (!strcmp(midonet_api_version, "v1.9")) {
+    if (is_midonet_api_v1()) {
         return (mido_get_bgp_routes_v1(dev, outnames, outnames_max));
-    } else if (!strcmp(midonet_api_version, "v5.0")) {
+    } else if (is_midonet_api_v5()) {
         return (mido_get_bgp_routes_v5(dev, outnames, outnames_max));
     } else {
         return (1);

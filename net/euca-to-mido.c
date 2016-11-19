@@ -3093,11 +3093,18 @@ void print_mido_gw(mido_gw *gw, log_level_e llevel) {
         if (gw->bgp_v1) {
             EUCALOG(llevel, "\t  BGPv1     : %s\n", gw->bgp_v1->name);
         }
-        if (gw->bgp_peer_v5) {
-            EUCALOG(llevel, "\t  BGPv5     : %s\n", gw->bgp_peer_v5->name);
+        if (gw->bgp_peer) {
+            EUCALOG(llevel, "\t  BGPv5     : %s\n", gw->bgp_peer->name);
         }
-        for (int i = 0; i < gw->max_routes; i++) {
-            mido_gw_ad_route *ar = &(gw->routes[i]);
+        EUCALOG(llevel, "\t  ad-routes :\n");
+        for (int i = 0; i < gw->max_ad_routes; i++) {
+            mido_gw_ad_route *ar = gw->ad_routes[i];
+            if (!ar) continue;
+            EUCALOG(llevel, "\t\t %s %s\n", ar->cidr, ar->route->name);
+        }
+        for (int i = 0; i < gw->max_bgp_networks; i++) {
+            mido_gw_ad_route *ar = gw->bgp_networks[i];
+            if (!ar) continue;
             EUCALOG(llevel, "\t\t %s %s\n", ar->cidr, ar->route->name);
         }
     }
@@ -4109,15 +4116,12 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
  * @return  0 if the parse is successful. 1 otherwise.
  */
 int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
-    char *version = NULL;
     int ret = 0;
-    version = midonet_api_get_version(NULL);
-    if (version && strlen(version)) {
-        if (!strcmp(version, "v1.9")) {
-            ret = parse_mido_secgroup_rule_v1(mido, rule, parsed_rule);
-        } else if (!strcmp(version, "v5.0")) {
-            ret = parse_mido_secgroup_rule_v5(mido, rule, parsed_rule);
-        }
+
+    if (is_midonet_api_v1()) {
+        ret = parse_mido_secgroup_rule_v1(mido, rule, parsed_rule);
+    } else if (is_midonet_api_v5()) {
+        ret = parse_mido_secgroup_rule_v5(mido, rule, parsed_rule);
     }
     return (ret);
 }
@@ -5458,15 +5462,12 @@ int check_mido_tunnelzone() {
  * NULL if BGP is not found.
  */
 char *discover_mido_bgps(mido_config *mido) {
-    char *version = NULL;
     char *ret = NULL;
-    version = midonet_api_get_version(NULL);
-    if (version && strlen(version)) {
-        if (!strcmp(version, "v1.9")) {
-            ret = discover_mido_bgps_v1(mido);
-        } else if (!strcmp(version, "v5.0")) {
-            ret = discover_mido_bgps_v5(mido);
-        }
+
+    if (is_midonet_api_v1()) {
+        ret = discover_mido_bgps_v1(mido);
+    } else if (is_midonet_api_v5()) {
+        ret = discover_mido_bgps_v5(mido);
     }
     return (ret);
 }
@@ -5505,8 +5506,9 @@ char *discover_mido_bgps_v1(mido_config *mido) {
             resptr = &(res[strlen(res)]);
             snprintf(resptr, 1024, "BGP%d=$($MNA -e port $GWPORT%d add bgp local-AS %d peer-AS %d peer %s)\n",
                     i, i, gw->asn, gw->peer_asn, gw->peer_ip);
-            for (int j = 0; j < gw->max_routes; j++) {
-                mido_gw_ad_route *ar = &(gw->routes[j]);
+            for (int j = 0; j < gw->max_ad_routes; j++) {
+                mido_gw_ad_route *ar = gw->ad_routes[j];
+                if (!ar) continue;
                 resptr = &(res[strlen(res)]);
                 snprintf(resptr, 1024, "$MNA -e port $GWPORT%d bgp $BGP%d add route net %s\n",
                         i, i, ar->cidr);
@@ -5553,8 +5555,9 @@ char *discover_mido_bgps_v5(mido_config *mido) {
             resptr = &(res[strlen(res)]);
             snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-peer asn %d address %s\n",
                     gw->peer_asn, gw->peer_ip);
-            for (int j = 0; j < gw->max_routes; j++) {
-                mido_gw_ad_route *ar = &(gw->routes[j]);
+            for (int j = 0; j < gw->max_ad_routes; j++) {
+                mido_gw_ad_route *ar = gw->ad_routes[j];
+                if (!ar) continue;
                 resptr = &(res[strlen(res)]);
                 snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-network net %s\n",
                         ar->cidr);
@@ -5572,15 +5575,12 @@ char *discover_mido_bgps_v5(mido_config *mido) {
  * @return 0 on success. 1 on any failure.
  */
 int populate_mido_gw_bgp(mido_config *mido, midoname *port, mido_gw *gw) {
-    char *version = NULL;
     int ret = 0;
-    version = midonet_api_get_version(NULL);
-    if (version && strlen(version)) {
-        if (!strcmp(version, "v1.9")) {
-            ret = populate_mido_gw_bgp_v1(mido, port, gw);
-        } else if (!strcmp(version, "v5.0")) {
-            ret = populate_mido_gw_bgp_v5(mido, port, gw);
-        }
+
+    if (is_midonet_api_v1()) {
+        ret = populate_mido_gw_bgp_v1(mido, port, gw);
+    } else if (is_midonet_api_v5()) {
+        ret = populate_mido_gw_bgp_v5(mido, port, gw);
     }
     return (ret);
 }
@@ -5628,7 +5628,7 @@ int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw) {
 
                 rc = mido_get_bgp_routes(bgps[0], &bgp_routes, &max_bgp_routes);
                 if (!rc && bgp_routes && max_bgp_routes) {
-                    gw->routes = EUCA_ZALLOC_C(max_bgp_routes, sizeof (mido_gw_ad_route));
+                    gw->ad_routes = EUCA_ZALLOC_C(max_bgp_routes, sizeof (mido_gw_ad_route *));
                     int bgp_route_idx = 0;
                     for (int j = 0; j < max_bgp_routes; j++) {
                         mido_getel_midoname(bgp_routes[j], "nwPrefix", &nwPrefix);
@@ -5637,14 +5637,15 @@ int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw) {
                             LOGWARN("failed to retrieve bgp ad routes from %s\n", bgps[0]->uuid);
                             continue;
                         } else {
-                            snprintf(gw->routes[bgp_route_idx].cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
-                            gw->routes[bgp_route_idx].route = bgp_routes[j];
+                            gw->ad_routes[bgp_route_idx] = EUCA_ZALLOC_C(1, sizeof (mido_gw_ad_route));
+                            snprintf(gw->ad_routes[bgp_route_idx]->cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
+                            gw->ad_routes[bgp_route_idx]->route = bgp_routes[j];
                             bgp_route_idx++;
                         }
                         EUCA_FREE(nwPrefix);
                         EUCA_FREE(prefixLength);
                     }
-                    gw->max_routes = bgp_route_idx;
+                    gw->max_ad_routes = bgp_route_idx;
                 }
                 EUCA_FREE(bgp_routes);
             }
@@ -5665,16 +5666,11 @@ int populate_mido_gw_bgp_v1(mido_config *mido, midoname *port, mido_gw *gw) {
  * @return 0 on success. 1 on any failure.
  */
 int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
-    int rc = 0;
     midoname **bgps = NULL;
     int max_bgps = 0;
-    midoname **bgp_routes = NULL;
-    int max_bgp_routes = 0;
     char *localAS = NULL;
     char *peerAddr = NULL;
     char *peerAS = NULL;
-    char *nwPrefix = NULL;
-    char *prefixLength = NULL;
 
     if (!mido || !mido->midocore || !mido->midocore->eucart || !port || !gw) {
         LOGWARN("Invalid argument: cannot populate BGP from NULL\n");
@@ -5689,8 +5685,9 @@ int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
         }
         EUCA_FREE(localAS);
     }
-    bgps = NULL;
-    rc = mido_get_bgps(midocore->eucart->obj, &bgps, &max_bgps);
+
+    bgps = mido->midocore->bgp_peers;
+    max_bgps = mido->midocore->max_bgp_peers;
     boolean found = FALSE;
     for (int i = 0; i < max_bgps && !found; i++) {
         mido_getel_midoname(bgps[i], "address", &peerAddr);
@@ -5700,38 +5697,15 @@ int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
         } else {
             if (!strcmp(peerAddr, gw->peer_ip)) {
                 found = TRUE;
-                gw->bgp_peer_v5 = bgps[i];
+                gw->bgp_peer = bgps[i];
                 gw->peer_asn = atoi(peerAS);
-                
-                rc = mido_get_bgp_routes(midocore->eucart->obj, &bgp_routes, &max_bgp_routes);
-                if (!rc && bgp_routes && max_bgp_routes) {
-                    gw->routes = EUCA_ZALLOC_C(max_bgp_routes, sizeof (mido_gw_ad_route));
-                    int bgp_route_idx = 0;
-                    for (int j = 0; j < max_bgp_routes; j++) {
-                        mido_getel_midoname(bgp_routes[j], "subnetAddress", &nwPrefix);
-                        mido_getel_midoname(bgp_routes[j], "subnetLength", &prefixLength);
-                        if (!nwPrefix || !prefixLength) {
-                            LOGWARN("failed to retrieve bgp ad routes\n");
-                            continue;
-                        } else {
-                            snprintf(gw->routes[bgp_route_idx].cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
-                            gw->routes[bgp_route_idx].route = bgp_routes[j];
-                            bgp_route_idx++;
-                        }
-                        EUCA_FREE(nwPrefix);
-                        EUCA_FREE(prefixLength);
-                    }
-                    gw->max_routes = bgp_route_idx;
-                } else {
-                    LOGWARN("no bgp routes found\n");
-                }
-                EUCA_FREE(bgp_routes);
             }
         }
         EUCA_FREE(peerAddr);
         EUCA_FREE(peerAS);
     }
-    EUCA_FREE(bgps);
+    gw->bgp_networks = mido->midocore->bgp_networks;
+    gw->max_bgp_networks = mido->midocore->max_bgp_networks;
     return (0);
 }
 
@@ -5895,14 +5869,10 @@ int create_mido_gws_bgp(mido_config *mido, mido_core *midocore) {
     }
 
     if (config_bgp) {
-        char *version = NULL;
-        version = midonet_api_get_version(NULL);
-        if (version && strlen(version)) {
-            if (!strcmp(version, "v1.9")) {
-                ret = create_mido_gws_bgp_v1(mido, midocore);
-            } else if (!strcmp(version, "v5.0")) {
-                ret = create_mido_gws_bgp_v5(mido, midocore);
-            }
+        if (is_midonet_api_v1()) {
+            ret = create_mido_gws_bgp_v1(mido, midocore);
+        } else if (is_midonet_api_v5()) {
+            ret = create_mido_gws_bgp_v5(mido, midocore);
         }
     } else {
         LOGINFO("12915: bgp config not detected in GNI\n");
@@ -5935,6 +5905,7 @@ int create_mido_gws_bgp_v1(mido_config *mido, mido_core *midocore) {
         if (gw->port) {
             // no-op if bgp config was detected in this port
             if (!gw->bgp_v1) {
+                LOGINFO("12915: creating bgp %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
                 rc = mido_create_bgp_v1(gw->port, gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip, &(gw->bgp_v1));
                 if (rc) {
                     LOGWARN("Failed to create bgp %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
@@ -5942,21 +5913,20 @@ int create_mido_gws_bgp_v1(mido_config *mido, mido_core *midocore) {
                 }
             }
             // no-op if bgp ad-routes were detected in this bgp
-            if (gw->bgp_v1 && !gw->max_routes && !gw->routes) {
+            if (gw->bgp_v1 && !gw->max_ad_routes && !gw->ad_routes) {
                 for (int j = 0; j < gni_gw->max_ad_routes; j++) {
                     char nw[NETWORK_ADDR_LEN];
                     char len[NETWORK_ADDR_LEN];
                     cidr_split(gni_gw->ad_routes[j], nw, len, NULL, NULL, NULL);
                     if (strlen(nw) && strlen(len)) {
                         midoname *out = NULL;
+                        LOGINFO("12915: creating bgp ad-route %s\n", gw->ad_routes[j]->cidr);
                         rc = mido_create_bgp_route_v1(gw->bgp_v1, nw, len, &out);
                         if (rc) {
-                            LOGWARN("Failed to create bgp ad-route %s\n", gw->routes[j].cidr);
+                            LOGWARN("Failed to create bgp ad-route %s\n", gw->ad_routes[j]->cidr);
                         } else {
-                            gw->routes = EUCA_REALLOC_C(gw->routes, gw->max_routes + 1, sizeof (mido_gw_ad_route));
-                            mido_gw_ad_route *adr = &(gw->routes[gw->max_routes]);
-                            memset(adr, 0, sizeof (mido_gw_ad_route));
-                            (gw->max_routes)++;
+                            mido_gw_ad_route *adr = EUCA_ZALLOC_C(1, sizeof (mido_gw_ad_route));
+                            gw->ad_routes = EUCA_APPEND_PTRARR(gw->ad_routes, &(gw->max_ad_routes), adr);
                             snprintf(adr->cidr, NETWORK_ADDR_LEN, "%s", gni_gw->ad_routes[j]);
                             adr->route = out;
                         }
@@ -5976,11 +5946,80 @@ int create_mido_gws_bgp_v1(mido_config *mido, mido_core *midocore) {
  * @return 0 on success. 1 otherwise.
  */
 int create_mido_gws_bgp_v5(mido_config *mido, mido_core *midocore) {
+    int rc = 0;
     int ret = 0;
-    if (!mido || !mido->midocore) {
+    if (!mido || !mido->midocore || !midocore->eucart) {
         LOGWARN("Invalid argument: cannot create mido gateway BGP v5.0 from NULL\n");
         return (1);
     }
+
+    // All constructs in place assumed to be valid (if not, it should have been deleted)
+    for (int i = 0; i < midocore->max_gws; i++) {
+        mido_gw *gw = midocore->gws[i];
+        if (!gw) {
+            continue;
+        }
+        gni_mido_gateway *gni_gw = gw->gni_gw;
+        if (gw->port) {
+            // no-op if bgp config was detected in this port
+            if (!gw->bgp_peer) {
+                LOGINFO("12915: creating bgp-peer %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
+                rc = mido_create_bgp_v5(midocore->eucart->obj, gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip, &(gw->bgp_peer));
+                if (rc) {
+                    LOGWARN("Failed to create bgp-peer %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
+                    ret++;
+                } else {
+                    midocore->bgp_peers = EUCA_APPEND_PTRARR(midocore->bgp_peers,
+                            &(midocore->max_bgp_peers), gw->bgp_peer);
+                }
+            } else {
+                LOGINFO("12915: found bgp-peer %u->%u(%s)\n", gni_gw->asn, gni_gw->peer_asn, gni_gw->peer_ip);
+            }
+        }
+    }
+
+    char **cidrs = NULL;
+    int max_cidrs = 0;
+    for (int i = 0; i < mido->max_gni_gws; i++) {
+        gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
+        for (int j = 0; j < gni_gw->max_ad_routes; j++) {
+            euca_string_set_insert(&cidrs, &max_cidrs, gni_gw->ad_routes[j]);
+        }
+    }
+
+    for (int i = 0; i < max_cidrs; i++) {
+        boolean found = FALSE;
+        for (int j = 0; j < midocore->max_bgp_networks; j++) {
+            if (!strcmp(cidrs[i], midocore->bgp_networks[j]->cidr)) {
+                found = TRUE;
+            }
+        }
+        if (!found) {
+            LOGINFO("12915: creating bgp-network %s\n", cidrs[i]);
+            char nw[NETWORK_ADDR_LEN];
+            char len[NETWORK_ADDR_LEN];
+            cidr_split(cidrs[i], nw, len, NULL, NULL, NULL);
+            if (strlen(nw) && strlen(len)) {
+                midoname *out = NULL;
+                rc = mido_create_bgp_route_v5(midocore->eucart->obj, nw, len, &out);
+                if (rc) {
+                    LOGWARN("Failed to create bgp-network %s\n", cidrs[i]);
+                } else {
+                    mido_gw_ad_route *adr = EUCA_ZALLOC_C(1, sizeof (mido_gw_ad_route));
+                    midocore->bgp_networks = EUCA_APPEND_PTRARR(midocore->bgp_networks, &(midocore->max_bgp_networks), adr);
+                    snprintf(adr->cidr, NETWORK_ADDR_LEN, "%s", cidrs[i]);
+                    adr->route = out;
+                }
+            }
+        } else {
+            LOGINFO("12915: found bgp-network %s\n", cidrs[i]);
+        }
+    }
+
+    for (int i = 0; i < max_cidrs; i++) {
+        EUCA_FREE(cidrs[i]);
+    }
+    EUCA_FREE(cidrs);
 
     return (ret);
 }
@@ -6178,7 +6217,7 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
  * @return 0 on success. 1 on any failure.
  */
 int populate_mido_core(mido_config *mido, mido_core *midocore) {
-    int ret = 0, i = 0, j = 0;
+    int ret = 0, rc = 0, i = 0, j = 0;
     int found = 0;
     midoname **brports = NULL;
     int max_brports = 0;
@@ -6276,6 +6315,47 @@ int populate_mido_core(mido_config *mido, mido_core *midocore) {
     }
     if (!found) {
         LOGINFO("\t\teucart-eucabr link not found.\n");
+    }
+
+    // populate MN5 bgp-peers and bgp-networks
+    if (midocore->eucart && is_midonet_api_v5()) {
+        midoname **bgps = NULL;
+        int max_bgps = 0;
+        rc = mido_get_bgps(midocore->eucart->obj, &bgps, &max_bgps);
+        if (rc) {
+            LOGWARN("unable to retrieve eucart bgp-peers\n");
+            EUCA_FREE(bgps);
+        } else {
+            midocore->bgp_peers = bgps;
+            midocore->max_bgp_peers = max_bgps;
+        }
+
+        midoname **bgp_routes = NULL;
+        int max_bgp_routes = 0;
+        rc = mido_get_bgp_routes(midocore->eucart->obj, &bgp_routes, &max_bgp_routes);
+        if (rc) {
+            LOGWARN("unable to retrieve eucart bgp-networks\n");
+        } else {
+            for (int i = 0; i < max_bgp_routes; i++) {
+                char *nwPrefix = NULL;
+                char *prefixLength = NULL;
+                mido_getel_midoname(bgp_routes[i], "subnetAddress", &nwPrefix);
+                mido_getel_midoname(bgp_routes[i], "subnetLength", &prefixLength);
+                if (!nwPrefix || !prefixLength) {
+                    LOGWARN("failed to retrieve bgp ad route\n");
+                    continue;
+                } else {
+                    mido_gw_ad_route *adr = EUCA_ZALLOC_C(1, sizeof (mido_gw_ad_route));
+                    midocore->bgp_networks = EUCA_APPEND_PTRARR(midocore->bgp_networks,
+                            &(midocore->max_bgp_networks), adr);
+                    adr->route = bgp_routes[i];
+                    snprintf(adr->cidr, NETWORK_ADDR_LEN, "%s/%s", nwPrefix, prefixLength);
+                }
+                EUCA_FREE(nwPrefix);
+                EUCA_FREE(prefixLength);
+            }
+        }
+        EUCA_FREE(bgp_routes);
     }
 
     for (i = 0; i < max_rtports; i++) {
@@ -6902,13 +6982,16 @@ int free_mido_core(mido_core *midocore) {
 
     for (int i = 0; i < midocore->max_gws; i++) {
         if (midocore->gws[i]) {
-            EUCA_FREE(midocore->gws[i]->routes);
-            EUCA_FREE(midocore->gws[i]);
+            free_mido_gw(midocore->gws[i]);
         }
     }
     EUCA_FREE(midocore->gws);
+    EUCA_FREE(midocore->bgp_peers);
+    for (int i = 0; i < midocore->max_bgp_networks; i++) {
+        EUCA_FREE(midocore->bgp_networks[i]);
+    }
+    EUCA_FREE(midocore->bgp_networks);
     memset(midocore, 0, sizeof (mido_core));
-    midocore->max_gws = 0;
 
     return (ret);
 }
@@ -6927,6 +7010,22 @@ int free_mido_md(mido_md *midomd) {
     memset(midomd, 0, sizeof (mido_md));
 
     return (ret);
+}
+
+/**
+ * Release resources allocated for mido_gw gw data structure.
+ * @param gw [in] mido_gw data structure of interest.
+ * @return always 0.
+ */
+int free_mido_gw(mido_gw *gw) {
+    for (int i = 0; i < gw->max_ad_routes; i++) {
+        if (gw->ad_routes[i]) {
+            EUCA_FREE(gw->ad_routes[i]);
+        }
+    }
+    EUCA_FREE(gw->ad_routes);
+    EUCA_FREE(gw);
+    return (0);
 }
 
 /**
@@ -7465,7 +7564,7 @@ int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore) {
         return (1);
     }
     
-    int del_flags = 0;
+    int rc = 0;
     boolean config_bgp = FALSE;
     for (int i = 0; i < mido->max_gni_gws; i++) {
         gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
@@ -7485,24 +7584,127 @@ int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore) {
         if (!gw) {
             continue;
         }
+        boolean do_del_gw = FALSE;
         char *gwname = hex2dot_s(euca_getaddr(gw->host->obj->name, NULL));
         // if host/ext_dev not in GNI, delete from MN
         if (!gw->gni_gw) {
             LOGINFO("12915: gw %s/%s in gni N - delete\n", gwname, gw->ext_dev);
-            del_flags |= DELETE_MIDO_GW_FLAG_PORT;
-            delete_mido_gw(mido, midocore, i, del_flags);
+            do_del_gw = TRUE;
         } else {
             LOGINFO("12915: gw %s/%s in gni Y\n", gwname, gw->ext_dev);
             // if ext_ip or ext_cidr config changed, delete port
             if (strcmp(gw->ext_ip, gw->gni_gw->ext_ip) || strcmp(gw->ext_cidr, gw->gni_gw->ext_cidr)) {
                 LOGINFO("12915: gw %s/%s changes in ext_ip/ext_cidr detected\n", gwname, gw->ext_dev);
-                del_flags |= DELETE_MIDO_GW_FLAG_PORT;
-                delete_mido_gw(mido, midocore, i, del_flags);
+                do_del_gw = TRUE;
+            }
+            // if peer ip changed, delete port
+            if (strcmp(gw->peer_ip, gw->gni_gw->peer_ip)) {
+                LOGINFO("12915: gw %s/%s change in peer detected\n", gwname, gw->ext_dev);
+                do_del_gw = TRUE;
+            }
+            // if bgp parameters changed, delete port
+            if (config_bgp && ((gw->asn != gw->gni_gw->asn) ||
+                    (gw->peer_asn != gw->gni_gw->peer_asn))) {
+                LOGINFO("12915: gw %s/%s change in bgp detected\n", gwname, gw->ext_dev);
+                do_del_gw = TRUE;
+            }
+            // remove ad-routes not in GNI (MN1.9)
+            if (config_bgp && is_midonet_api_v1()) {
+                for (int j = 0; j < gw->max_ad_routes; j++) {
+                    if (!gw->ad_routes[j]) continue;
+                    boolean found = FALSE;
+                    for (int k = 0; k < gw->gni_gw->max_ad_routes && !found; k++) {
+                        if (!strcmp(gw->ad_routes[j]->cidr, gw->gni_gw->ad_routes[k])) {
+                            found = TRUE;
+                        }
+                    }
+                    if (found) {
+                        LOGINFO("12915: ad-route %s in GNI Y\n", gw->ad_routes[j]->cidr);
+                    } else {
+                        LOGINFO("12915: ad-route %s in GNI N - delete\n", gw->ad_routes[j]->cidr);
+                        rc = mido_delete_resource(NULL, gw->ad_routes[j]->route);
+                        if (!rc) {
+                            EUCA_FREE(gw->ad_routes[j]);
+                        }
+                    }
+                }
+                gw->ad_routes = compact_ptrarr(gw->ad_routes, &(gw->max_ad_routes));
             }
             
         }
+        if (do_del_gw) {
+            delete_mido_gw(mido, midocore, i);
+        }
     }
 
+    // MN5: delete bgp-peer(s) not populated
+    if (config_bgp && is_midonet_api_v5()) {
+        for (int i = 0; i < midocore->max_bgp_peers; i++) {
+            char *address = NULL;
+            char *asNumber = NULL;
+            midoname *bp = midocore->bgp_peers[i];
+            mido_getel_midoname(bp, "address", &address);
+            mido_getel_midoname(bp, "asNumber", &asNumber);
+            boolean found = FALSE;
+            for (int j = 0; j < midocore->max_gws && !found; j++) {
+                mido_gw *gw = midocore->gws[j];
+                if (!gw) continue;
+                if (gw->bgp_peer == bp) {
+                    found = TRUE;
+                }
+            }
+            if (!found) {
+                LOGINFO("12915: bgp-peer ip %s asn %s in GNI N - delete\n", SP(address), SP(asNumber));
+                rc = mido_delete_resource(NULL, bp);
+                if (!rc) {
+                    midocore->bgp_peers[i] = NULL;
+                }
+            } else {
+                LOGINFO("12915: bgp-peer ip %s asn %s in GNI Y\n", SP(address), SP(asNumber));
+            }
+            EUCA_FREE(address);
+            EUCA_FREE(asNumber);
+        }
+        midocore->bgp_peers = compact_ptrarr(midocore->bgp_peers, &(midocore->max_bgp_peers));
+    }
+    
+    // MN5: delete bgp-network(s) not in GNI
+    if (config_bgp && is_midonet_api_v5()) {
+        char **cidrs = NULL;
+        int max_cidrs = 0;
+        for (int i = 0; i < mido->max_gni_gws; i++) {
+            gni_mido_gateway *gni_gw = &(mido->gni_gws[i]);
+            for (int j = 0; j < gni_gw->max_ad_routes; j++) {
+                euca_string_set_insert(&cidrs, &max_cidrs, gni_gw->ad_routes[j]);
+            }
+        }
+        for (int i = 0; i < midocore->max_bgp_networks; i++) {
+            mido_gw_ad_route *adr = midocore->bgp_networks[i];
+            if (!adr) continue;
+            boolean found = FALSE;
+            for (int j = 0; j < max_cidrs && !found; j++) {
+                if (!strcmp(cidrs[j], adr->cidr)) {
+                    found = TRUE;
+                }
+            }
+            if (!found) {
+                LOGINFO("12915: ad-route %s in GNI N - delete\n", adr->cidr);
+                rc = mido_delete_resource(NULL, adr->route);
+                if (!rc) {
+                    midocore->bgp_networks[i] = NULL;
+                }
+            } else {
+                LOGINFO("12915: ad-route %s in GNI Y\n", adr->cidr);
+            }
+        }
+        midocore->bgp_networks = compact_ptrarr(midocore->bgp_networks, &(midocore->max_bgp_networks));
+
+        for (int i = 0; i < max_cidrs; i++) {
+            EUCA_FREE(cidrs[i]);
+        }
+        EUCA_FREE(cidrs);
+    }
+    
     return (0);
 }
 
@@ -7513,20 +7715,23 @@ int delete_mido_gws_notingni(mido_config *mido, mido_core *midocore) {
  * @param entry [in] entry of the gateway to be deleted
  * @return 0 on success. 1 otherwise.
  */
-int delete_mido_gw(mido_config *mido, mido_core *midocore, int entry, int flags) {
+int delete_mido_gw(mido_config *mido, mido_core *midocore, int entry) {
     int rc = 0;
+    int ret = 0;
     if (!mido || !midocore || !midocore->eucart || (entry >= midocore->max_gws) ||
             !midocore->gws[entry] || !midocore->gws[entry]->port) {
         LOGWARN("Invalid argument: cannot delete gateway entry with NULL config\n");
         return (1);
     }
 
-    if ((flags & DELETE_MIDO_GW_FLAG_PORT) == DELETE_MIDO_GW_FLAG_PORT) {
-        rc = mido_delete_router_port(midocore->eucart, midocore->gws[entry]->port);
-        EUCA_FREE(midocore->gws[entry]->routes);
-        EUCA_FREE(midocore->gws[entry]);
-        return (rc);
-    }
+    mido_gw *gw = midocore->gws[entry];
+
+    rc = mido_delete_router_port(midocore->eucart, gw->port);
+
+    free_mido_gw(midocore->gws[entry]);
+    midocore->gws[entry] = NULL;
+    ret += rc;
+
     return (0);
 }
 

@@ -123,6 +123,7 @@ int euca_string_set_insert(char ***set, int *max_set, char *value);
 void *zalloc_check(size_t nmemb, size_t size);
 void *realloc_check(void *ptr, size_t nmemb, size_t size);
 void *append_ptrarr(void *arr, int *max_arr, void *ptr);
+void *compact_ptrarr(void *arr, int *max_arr);
 
 int free_ptrarr(void *arr, int nmemb);
 

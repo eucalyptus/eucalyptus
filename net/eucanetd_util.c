@@ -1063,6 +1063,26 @@ void *append_ptrarr(void *arr, int *max_arr, void *ptr) {
 }
 
 /**
+ * Compacts the given pointer array arr removing NULL pointers. The array should
+ * have been malloc'd.
+ * @param arr [i/o] arr pointer to an array of pointers
+ * @param max_arr [i/o] max_arr the number of array entries (including NULL pointers).
+ * @return pointer to the re-allocated array.
+ */
+void *compact_ptrarr(void *arr, int *max_arr) {
+    void **parr = arr;
+    void **res = NULL;
+    int max_res = 0;
+    for (int i = 0; i < *max_arr; i++) {
+        if (!parr[i]) continue;
+        res = EUCA_APPEND_PTRARR(res, &max_res, parr[i]);
+    }
+    EUCA_FREE(arr);
+    *max_arr = max_res;
+    return (res);
+}
+
+/**
  * Releases memory allocated for an array of pointers. Each element of the array
  * is assumed to have also allocated memory, which will also be released.
  * @param arr [in] array of pointers of interest
