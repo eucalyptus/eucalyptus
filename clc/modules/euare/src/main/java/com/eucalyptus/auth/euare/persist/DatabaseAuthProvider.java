@@ -135,6 +135,8 @@ public class DatabaseAuthProvider implements AccountProvider {
       UserEntity user = DatabaseAuthUtils.getUnique( UserEntity.class, UserEntity_.userId, userId );
       db.commit( );
       return new DatabaseUserProxy( user );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find user by ID " + userId );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -149,6 +151,8 @@ public class DatabaseAuthProvider implements AccountProvider {
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity role = DatabaseAuthUtils.getUnique( RoleEntity.class, RoleEntity_.roleId, roleId );
       return new DatabaseRoleProxy( role );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find role by ID " + roleId );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
@@ -377,6 +381,8 @@ public class DatabaseAuthProvider implements AccountProvider {
       CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateHashId, certificateId );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to lookup cert " + certificateId );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
@@ -392,6 +398,8 @@ public class DatabaseAuthProvider implements AccountProvider {
       CertificateEntity certEntity = DatabaseAuthUtils.getUnique( CertificateEntity.class, CertificateEntity_.certificateId, certificateId );
       db.commit( );
       return new DatabaseCertificateProxy( certEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to lookup cert " + certificateId );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE, e );
@@ -413,7 +421,6 @@ public class DatabaseAuthProvider implements AccountProvider {
       }
       return new DatabaseAccountProxy( result.get( ) );
     } catch ( AuthException e ) {
-      Debugging.logError( LOG, e, "No matching account " + accountName );
       throw e;
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find account " + accountName );
@@ -430,9 +437,11 @@ public class DatabaseAuthProvider implements AccountProvider {
       AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.accountNumber, accountId );
       db.commit( );
       return new DatabaseAccountProxy( account );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find account " + accountId );
-      throw new AuthException( "Failed to find account", e );
+      throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
     }
   }
 
@@ -451,6 +460,8 @@ public class DatabaseAuthProvider implements AccountProvider {
         } else {
           throw new AuthException( AuthException.NO_SUCH_USER );
         }
+      } catch ( AuthException e ) {
+        throw e;
       } catch ( Exception e ) {
           Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
           throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -466,6 +477,8 @@ public class DatabaseAuthProvider implements AccountProvider {
       AccessKeyEntity keyEntity = DatabaseAuthUtils.getUnique( AccessKeyEntity.class, AccessKeyEntity_.accessKey, keyId );
       db.commit( );
       return new DatabaseAccessKeyProxy( keyEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find access key with ID " + keyId );
       throw new InvalidAccessKeyAuthException( "Failed to find access key", e );
@@ -506,7 +519,6 @@ public class DatabaseAuthProvider implements AccountProvider {
             return new DatabaseUserProxy(match);
         }
         catch ( AuthException e ) {
-            Debugging.logError( LOG, e, "Failed to find user by email address " + email );
             throw e;
         }
         catch ( Exception e ) {

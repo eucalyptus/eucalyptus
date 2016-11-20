@@ -403,6 +403,8 @@ public class DatabaseUserProxy implements EuareUser {
       checkKeyOwner( key );
       db.commit( );
       return new DatabaseAccessKeyProxy( key );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_KEY );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get access key " + keyId );
       throw new AuthException( AuthException.NO_SUCH_KEY );
@@ -475,6 +477,8 @@ public class DatabaseUserProxy implements EuareUser {
       checkCertOwner( cert );
       db.commit( );
       return new DatabaseCertificateProxy( cert );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_CERTIFICATE );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get signing certificate " + certificateId );
       throw new AuthException( AuthException.NO_SUCH_CERTIFICATE );

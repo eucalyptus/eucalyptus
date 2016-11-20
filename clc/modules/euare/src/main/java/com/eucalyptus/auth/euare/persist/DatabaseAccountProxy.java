@@ -581,6 +581,8 @@ public class DatabaseAccountProxy implements EuareAccount {
       GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
       db.commit( );
       return new DatabaseGroupProxy( group, Suppliers.ofInstance( getAccountNumber( ) ) );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_GROUP, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get group " + groupName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
@@ -597,6 +599,8 @@ public class DatabaseAccountProxy implements EuareAccount {
       final InstanceProfileEntity instanceProfileEntity =
           DatabaseAuthUtils.getUniqueInstanceProfile( instanceProfileName, accountName );
       return new DatabaseInstanceProfileProxy( instanceProfileEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get instance profile " + instanceProfileName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
@@ -612,6 +616,8 @@ public class DatabaseAccountProxy implements EuareAccount {
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
       return new DatabaseRoleProxy( roleEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_ROLE, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get role " + roleName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
@@ -628,6 +634,8 @@ public class DatabaseAccountProxy implements EuareAccount {
       UserEntity user = DatabaseAuthUtils.getUniqueUser( userName, accountName );
       db.commit( );
       return new DatabaseUserProxy( user );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_USER, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to find user: " + userName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
@@ -868,6 +876,8 @@ public class DatabaseAccountProxy implements EuareAccount {
     try ( final TransactionResource db = Entities.transactionFor( OpenIdProviderEntity.class ) ) {
       final OpenIdProviderEntity openidproviderEntity = DatabaseAuthUtils.getUniqueOpenIdConnectProvider( url, accountName );
       return new DatabaseOpenIdProviderProxy( openidproviderEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get openid provider " + url + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_OPENID_CONNECT_PROVIDER, e );
