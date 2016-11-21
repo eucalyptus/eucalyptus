@@ -64,5 +64,6 @@ rm -f "$EUCALYPTUS"/var/lib/eucalyptus/CC/*
 
 export AXIS2C_HOME  # https://eucalyptus.atlassian.net/browse/EUCA-12046
 export EUCALYPTUS
+export EUCALYPTUS_SERVICE=cluster # to allow service libraries to know who loaded them
 export LD_LIBRARY_PATH="$AXIS2C_HOME/lib:$AXIS2C_HOME/modules/rampart:$EUCALYPTUS/usr/lib/eucalyptus"
 exec /usr/sbin/httpd -f "$HTTPD_CONF" -DFOREGROUND
