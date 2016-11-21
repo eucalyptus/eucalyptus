@@ -6117,6 +6117,19 @@ int update_config(void)
             } else {
                 config->ncPollingFrequency = 6;
             }
+
+            tmpstr = configFileValue("INSTANCE_TIMEOUT");
+            if (tmpstr) {
+                if (atoi(tmpstr) > 29) {
+                    config->instanceTimeout = atoi(tmpstr);
+                } else {
+                    LOGWARN("INSTANCE_TIMEOUT set too low, resetting to minimum (30 seconds)\n");
+                    config->instanceTimeout = 30;
+                }
+                EUCA_FREE(tmpstr);
+            } else {
+                config->instanceTimeout = 300;
+            }
         }
     }
 
@@ -6496,6 +6509,7 @@ int init_config(void)
     LOGINFO("                     idleThreshold=%d\n", config->idleThresh);
     LOGINFO("                     wakeThreshold=%d\n", config->wakeThresh);
     LOGINFO("                     maxInstances=%d\n", config->ccMaxInstances);
+    LOGINFO("                     instanceTimeout=%d\n", config->instanceTimeout);
     sem_mypost(CONFIG);
 
     res = NULL;
@@ -7230,7 +7244,8 @@ void invalidate_instanceCache(void)
         //        }
         if ((instanceCache[i].cacheState == INSTVALID)) {            
             if ((time(NULL) - instanceCache[i].lastseen) > config->instanceTimeout) {
-                LOGDEBUG("invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache[i].instance.instanceId, (time(NULL) - instanceCache[i].lastseen));
+                LOGINFO("invalidating instance '%s' (last seen %ld seconds ago). Please, check your NCs for errors or set INSTANCE_TIMEOUT to a grater value\n",
+                instanceCache[i].instance.instanceId, (time(NULL) - instanceCache[i].lastseen));
                 do_invalidate = 1;
             } else if (!strlen(instanceCache[i].instance.instanceId)) {
                 LOGDEBUG("invalidating instance with invalid instanceId\n");
