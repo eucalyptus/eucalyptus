@@ -717,7 +717,7 @@ int init_eucafaults(const char *fileprefix)
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter, alphasort);
-                if (numfaults < 1) {
+                if (numfaults == 0) {
                     LOGDEBUG("No faults found in %s\n", faultdirs[i]);
                 } else if (numfaults < 0) {
                     LOGERROR("Failed to scan for faults %s\n", faultdirs[i]);
