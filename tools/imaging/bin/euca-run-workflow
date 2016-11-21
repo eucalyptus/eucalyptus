@@ -270,7 +270,7 @@ def _check_euca2ools(problems):
     return problems
 
 def _check_pv(problems):
-    _check_executable(problems, [PATHS['pv']], "pv")
+    _check_executable(problems, ['pv','-V'], "pv")
     return problems
 
 def _check_bundle_args(problems, args):
