@@ -128,6 +128,8 @@ configEntry configKeysNoRestartCC[] = {
     ,
     {"LOGFACILITY", ""}
     ,
+    {"INSTANCE_TIMEOUT", NULL}
+    ,
     {SENSOR_LIST_CONF_PARAM_NAME, SENSOR_LIST_CONF_PARAM_DEFAULT}
     ,
     {NULL, NULL}
