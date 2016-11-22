@@ -1238,6 +1238,10 @@ public class VpcManager {
             }
           }) ;
       invalidate( networkAclId );
+    } catch ( VpcMetadataNotFoundException e ) {
+      throw new ClientComputeException(
+          "InvalidNetworkAclEntry.NotFound",
+          "Entry not found for number " + request.getRuleNumber( ) + " in network acl " + networkAclId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1313,6 +1317,9 @@ public class VpcManager {
             }
           }) ;
       invalidate( routeTableId );
+    } catch ( VpcMetadataNotFoundException e ) {
+      throw new ClientComputeException(
+          "InvalidRoute.NotFound", "no route with destination-cidr-block "+cidr+" in route table " + routeTableId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
