@@ -555,3 +555,21 @@ public class AWSS3BucketResourceInfo extends ResourceInfo {
     return true;
   }
 }
+
+@ToString(includeNames=true)
+public class AWSSQSQueueResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String arn;
+  @AttributeJson
+  String queueName;
+  public AWSSQSQueueResourceInfo() {
+    setType("AWS::SQS::Queue");
+  }
+}
+
+@ToString(includeNames=true)
+public class AWSSQSQueuePolicyResourceInfo extends ResourceInfo {
+  public AWSSQSQueuePolicyResourceInfo() {
+    setType("AWS::SQS::QueuePolicy");
+  }
+}

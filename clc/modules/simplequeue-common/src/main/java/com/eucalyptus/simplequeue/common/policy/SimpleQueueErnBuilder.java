@@ -43,8 +43,7 @@ public class SimpleQueueErnBuilder extends ServiceErnBuilder {
                     final String resource ) throws JSONException {
     final Matcher matcher = RESOURCE_PATTERN.matcher( resource );
     if ( matcher.matches( ) ) {
-      final String id = resource.toLowerCase().trim();
-      return new SimpleQueueResourceName( region, account, id );
+      return new SimpleQueueResourceName( region, account, resource );
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );
   }
