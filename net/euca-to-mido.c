@@ -8716,6 +8716,7 @@ int do_midonet_delete_vpc_object(mido_config *mido, char *id, boolean checkonly)
             return (ret);
         }
         populate_mido_core(mido, mido->midocore);
+        populate_mido_md(mido);
         rc = do_midonet_populate_vpcs(mido);
         if (rc) {
             LOGERROR("failed to populate euca VPC models\n");
@@ -9340,7 +9341,8 @@ int do_midonet_tag_midonames(mido_config *mido) {
     for (int i = 0; i < CORE_END; i++) {
         if (mido->midocore->midos[i]) mido->midocore->midos[i]->tag = 1;
     }
-    for (int i = 0; i < MD_END; i++) {
+    for (int i = 0; mido->midomd && i < MD_END; i++) {
+        LOGINFO("%d %p\n", i, mido->midomd->midos[i]);
         if (mido->midomd->midos[i]) mido->midomd->midos[i]->tag = 1;
     }
     return (0);
