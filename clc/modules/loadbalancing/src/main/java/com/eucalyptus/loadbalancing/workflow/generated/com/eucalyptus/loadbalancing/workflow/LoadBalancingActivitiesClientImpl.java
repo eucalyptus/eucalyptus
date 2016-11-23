@@ -2343,6 +2343,34 @@ public class LoadBalancingActivitiesClientImpl extends ActivitiesClientBase impl
     }
 
     @Override
+    public final Promise<Void> checkServoElasticIp() {
+        return checkServoElasticIpImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> checkServoElasticIp(Promise<?>... waitFor) {
+        return checkServoElasticIpImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> checkServoElasticIp(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return checkServoElasticIpImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> checkServoElasticIpImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("LoadBalancingActivities.checkServoElasticIp");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
     public final Promise<Void> checkBackendInstances() {
         return checkBackendInstancesImpl((ActivitySchedulingOptions)null);
     }
