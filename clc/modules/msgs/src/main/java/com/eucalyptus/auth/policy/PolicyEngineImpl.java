@@ -270,17 +270,21 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
-        // Check resource authorizations
-        Decision decision = resourcePolicy == null || ( resourceAccountNumber != null && context.getRequestUser( ).isAccountAdmin( ) && context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber ) ) ?
-            Decision.ALLOW :
-            processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipals( ), keyEval, contractEval );
+        final boolean sameAccount = context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber );
+        // Check resource authorizations, ignore authorizations for own account
+        final Decision resourceDecision = resourcePolicy == null ?
+                Decision.DEFAULT :
+                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipals( excludeAccountPrincipal( resourceAccountNumber ) ), keyEval, contractEval );
         // Denied by explicit or default deny
-        if ( decision != Decision.ALLOW ) {
-          LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
+        if ( ( resourceDecision == Decision.DENY ) ||
+            ( !sameAccount && resourceDecision != Decision.ALLOW ) ) {
+          LOG.debug( "Request is rejected by resource authorization check, due to decision " + resourceDecision );
           throw new AuthException( AuthException.ACCESS_DENIED );
         } else {
-          decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
-          if ( Decision.ALLOW != decision ) {
+          final Decision decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
+          if ( Decision.DENY == decision ||
+              ( !sameAccount && decision != Decision.ALLOW ) ||
+              ( resourceDecision != Decision.ALLOW && decision != Decision.ALLOW ) ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
           }
         }
@@ -635,6 +639,16 @@ public class PolicyEngineImpl implements PolicyEngine {
         return userId;
     }
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
+  }
+
+  @SuppressWarnings( "Guava" )
+  private Predicate<TypedPrincipal> excludeAccountPrincipal( final String accountNumber ) throws AuthException {
+    if ( accountNumber == null ) {
+      return Predicates.alwaysTrue( );
+    } else {
+      final TypedPrincipal match = TypedPrincipal.of( Principal.PrincipalType.AWS, Accounts.getAccountArn( accountNumber ) );
+      return Predicates.not( Predicates.equalTo( match ) );
+    }
   }
 
   static class AuthEvaluationContextImpl implements AuthEvaluationContext {

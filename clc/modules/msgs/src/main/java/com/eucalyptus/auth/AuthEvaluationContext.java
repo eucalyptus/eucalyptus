@@ -24,6 +24,9 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 /**
  * Context for a policy evaluation.
@@ -31,6 +34,7 @@ import com.eucalyptus.auth.principal.User;
  * <p>The context can cache information between evaluations. A new context
  * should be created for each evaluation if caching is not desired.</p>
  */
+@SuppressWarnings( { "StaticPseudoFunctionalStyleMethod", "Guava" } )
 public interface AuthEvaluationContext {
   String getResourceType();
   String getAction();
@@ -38,6 +42,13 @@ public interface AuthEvaluationContext {
   Map<String,String> getEvaluatedKeys();
   @Nullable
   Set<TypedPrincipal> getPrincipals( );
+  @Nullable
+  default Set<TypedPrincipal> getPrincipals( final Predicate<TypedPrincipal> filter ) {
+    final Set<TypedPrincipal> principals = getPrincipals( );
+    return principals == null ?
+        null :
+        ImmutableSet.copyOf( Iterables.filter( principals, filter ) );
+  }
   String describe( String resourceAccountNumber, String resourceName );
   String describe( String resourceName, Long quantity );
 }

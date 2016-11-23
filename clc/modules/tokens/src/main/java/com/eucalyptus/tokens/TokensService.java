@@ -231,7 +231,7 @@ public class TokensService {
             .attrIfNotNull( RestrictedTypes.principalTypeContextKey, principalType )
             .attrIfNotNull( RestrictedTypes.principalNameContextKey, principalName )
             .build( ).doWithContext( () ->
-            RestrictedTypes.doPrivilegedWithoutOwner(
+            RestrictedTypes.doPrivileged(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final Exception e ) {
@@ -377,7 +377,7 @@ public class TokensService {
             .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), aud ) )
             .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), sub ) )
             .build( ).doWithContext( () ->
-            RestrictedTypes.doPrivilegedWithoutOwner(
+            RestrictedTypes.doPrivileged(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final AuthException e ) {
