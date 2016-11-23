@@ -9342,7 +9342,6 @@ int do_midonet_tag_midonames(mido_config *mido) {
         if (mido->midocore->midos[i]) mido->midocore->midos[i]->tag = 1;
     }
     for (int i = 0; mido->midomd && i < MD_END; i++) {
-        LOGINFO("%d %p\n", i, mido->midomd->midos[i]);
         if (mido->midomd->midos[i]) mido->midomd->midos[i]->tag = 1;
     }
     return (0);
