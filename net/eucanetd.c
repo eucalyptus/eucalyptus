@@ -157,10 +157,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"MIDO_MD_VETH_USE_NETNS", "N"}
     ,
-    {"MIDO_MD_254_EGRESS", "tcp:80"}
-    ,
-    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53 udp:5353 tcp:5353"}
-    ,
     {"MIDO_MAX_RTID", "10240"}
     ,
     {"MIDO_MAX_ENIID", "1048576"}
@@ -178,6 +174,12 @@ configEntry configKeysNoRestartEUCANETD[] = {
     {"DISABLE_L2_ISOLATION", "N"}
     ,
     {"MIDO_ENABLE_MIDOMD", "Y"}
+    ,
+    {"MIDO_MD_254_EGRESS", "tcp:80"}
+    ,
+    {"MIDO_MD_253_EGRESS", "udp:53 tcp:53 udp:5353 tcp:5353"}
+    ,
+    {"MIDO_API_URIBASE", ""}
     ,
     {"NC_PROXY", "N"}
     ,
@@ -212,6 +214,8 @@ const char *asPeerRoleName[] = {
     "NON-EUCA-HOST",
     "OUT-OF-BOUND",
 };
+
+int sig_rcvd = 0;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -312,13 +316,18 @@ int main(int argc, char **argv) {
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhHlfFmMuUCZv:V:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZv:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
             break;
         case 'l':
             config->flushmode = FLUSH_MIDO_LISTVPC;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->multieucanetd_safe = TRUE;
+            break;
+        case 'g':
+            config->flushmode = FLUSH_MIDO_LISTGATEWAYS;
             config->debug = EUCANETD_DEBUG_INFO;
             config->multieucanetd_safe = TRUE;
             break;
@@ -375,8 +384,7 @@ int main(int argc, char **argv) {
         case 'H':
             printf("EXPERIMENTAL OPTIONS (USE AT YOUR OWN RISK)\n"
                     "\t%-12s| list VPCMIDO objects\n"
-                    "\t%-12s| flush all but core objects that implement VPC models\n"
-                    "\t%-12s| flush all objects (including core) that implement VPC models\n"
+                    "\t%-12s| list VPCMIDO gateways (bgp status)\n"
                     "\t%-12s| detect duplicate objects in MidoNet\n"
                     "\t%-12s| detect and flush duplicate objects in MidoNet\n"
                     "\t%-12s| detect unconnected objects in MidoNet\n"
@@ -385,7 +393,7 @@ int main(int argc, char **argv) {
                     "\t%-12s| flush a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
                     "\t\tlowercase options are read-only, and work with eucanetd service running\n"
                     "\t\tuppercase options can only be executed with eucanetd service stopped\n"
-                    , "-l", "-C", "-Z", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
+                     , "-l", "-g", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
             exit (1);
             break;
         case 'h':
@@ -393,10 +401,15 @@ int main(int argc, char **argv) {
             printf("Eucalyptus version %s - eucanetd\n"
                     "USAGE: %s OPTIONS\n"
                     "\t%-12s| debug - run eucanetd in foreground, all output to terminal\n"
-                    "\t%-12s| flush - clear all eucanetd artifacts and exit\n"
-                    "\t%-12s| flush dynamic - clear only dynamic eucanetd artifacts and exit\n"
-                    "\t\toptions '-f' and '-F' do not work in VPCMIDO mode\n",
-                    EUCA_VERSION, argv[0], "-d", "-F", "-f");
+                    "\t%-12s| flush all EDGE eucanetd artifacts\n"
+                    "\t%-12s| flush only dynamic EDGE eucanetd artifacts\n"
+                    "\t%-12s| flush all but core objects that implement VPC models\n"
+                    "\t%-12s| flush all objects (including core) that implement VPC models\n"
+                    "\t\tNote: depending on the size of your cloud, flushing objects\n"
+                    "\t\tfrom MidoNet and subsequently reconstructing them can take\n"
+                    "\t\ta long time. For example, flushing 4,000 instances (or ENIs)\n"
+                    "\t\tcan take over 1 hour (and another hour to reconstruct)\n"
+                    , EUCA_VERSION, argv[0], "-d", "-F", "-f", "-C", "-Z");
             exit(1);
             break;
         }
@@ -413,7 +426,6 @@ int main(int argc, char **argv) {
         rc = eucanetd_dummy_udpsock();
         if (rc == -1) {
             LOGERROR("Cannot start eucanetd: another eucanetd might be running\n");
-            LOGERROR("\tCheck SELinux policies for eucanetd.\n")
             exit(1);
         }
     }
@@ -691,6 +703,8 @@ int main(int argc, char **argv) {
                 }
             } else {
                 update_version_file = TRUE;
+                snprintf(config->lastAppliedVersion, GNI_VERSION_LEN, "%s", pGni->version);
+                config->eucanetd_err = 0;
             }
             if (update_version_file) {
                 char versionFile[EUCA_MAX_PATH];
@@ -700,8 +714,10 @@ int main(int argc, char **argv) {
                 snprintf(versionFile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/global_network_info.version", config->eucahome);
                 if (!strlen(pGni->version) || (str2file(pGni->version, versionFile, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK) ) {
                     LOGWARN("failed to populate GNI version file '%s': check permissions and disk capacity\n", versionFile);
-                } else {
-                    snprintf(config->lastAppliedVersion, GNI_VERSION_LEN, "%s", pGni->version);
+                }
+                
+                if (config->eucanetd_first_update) {
+                    config->eucanetd_first_update = FALSE;
                 }
             }
         }
@@ -770,6 +786,7 @@ static void eucanetd_sigterm_handler(int signal) {
     LOGINFO("eucanetd caught SIGTERM signal.\n");
     gIsRunning = FALSE;
     gTermCaught = TRUE;
+    sig_rcvd = signal;
 }
 
 /**
@@ -780,6 +797,7 @@ static void eucanetd_sighup_handler(int signal) {
     LOGINFO("eucanetd caught a SIGHUP signal.\n");
     config->flushmode = FLUSH_NONE;
     gHupCaught = TRUE;
+    sig_rcvd = signal;
 }
 
 /**
@@ -789,15 +807,25 @@ static void eucanetd_sighup_handler(int signal) {
 static void eucanetd_sigusr1_handler(int signal) {
     LOGDEBUG("eucanetd caught a SIGUSR1 (%d) signal.\n", signal);
     gUsr1Caught = TRUE;
+    sig_rcvd = signal;
 }
 
 /**
- * Handles SIGUSR1 signal.
+ * Handles SIGUSR2 signal.
  * @param signal [in] received signal number.
  */
 static void eucanetd_sigusr2_handler(int signal) {
     LOGDEBUG("eucanetd caught a SIGUSR2 (%d) signal.\n", signal);
     gUsr2Caught = TRUE;
+    sig_rcvd = signal;
+}
+
+/**
+ * Emulates the reception of SIGUSR2.
+ */
+void eucanetd_emulate_sigusr2(void) {
+    gUsr2Caught = TRUE;
+    sig_rcvd = SIGUSR2;
 }
 
 /**
@@ -847,16 +875,17 @@ static void eucanetd_install_signal_handlers(void) {
  */
 static int eucanetd_fetch_latest_local_config(void) {
     int ret = 0;
+    char *cval = NULL;
+
     if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {
         // config modification time has changed
         if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
             // something has changed that can be read in
-            LOGINFO("configuration file has been modified, ingressing new options\n");
+            LOGINFO("ingressing new configuration options\n");
             eucanetd_initialize_logs();
 
             if (IS_NETMODE_VPCMIDO(config)) {
-                char *cval = configFileValue("MIDO_ENABLE_MIDOMD");
-                LOGINFO("config MIDO_ENABLE_MIDOMD = %s\n", cval);
+                cval = configFileValue("MIDO_ENABLE_MIDOMD");
                 if (!strcmp(cval, "Y")) {
                     if (!config->enable_mido_md) {
                         config->mido_md_config_changed = TRUE;
@@ -869,6 +898,32 @@ static int eucanetd_fetch_latest_local_config(void) {
                     config->enable_mido_md = FALSE;
                 }
                 EUCA_FREE(cval);
+
+                cval = configFileValue("MIDO_MD_254_EGRESS");
+                if (strcmp(cval, config->mido_md_254_egress)) {
+                    config->mido_md_egress_rules_changed = TRUE;
+                    snprintf(config->mido_md_254_egress, 256, "%s", cval);
+                }
+                EUCA_FREE(cval);
+                cval = configFileValue("MIDO_MD_253_EGRESS");
+                if (strcmp(cval, config->mido_md_253_egress)) {
+                    config->mido_md_egress_rules_changed = TRUE;
+                    snprintf(config->mido_md_253_egress, 256, "%s", cval);
+                }
+                EUCA_FREE(cval);
+
+                cval = configFileValue("MIDO_API_URIBASE");
+                LOGINFO("config MIDO_API_URIBASE = %s\n", cval);
+                if (strcmp(cval, config->mido_api_uribase)) {
+                    snprintf(config->mido_api_uribase, URI_LEN, "%s", cval);
+                    int uribaselen = strlen(config->mido_api_uribase);
+                    if (uribaselen && config->mido_api_uribase[uribaselen - 1] == '/') {
+                        config->mido_api_uribase[uribaselen - 1] = '\0';
+                    }
+                    pDriverHandler->cleanup(config, pGni, FALSE);
+                }
+                EUCA_FREE(cval);
+
                 // emulate HUP signal
                 gHupCaught = TRUE;
             }
@@ -965,7 +1020,7 @@ static int eucanetd_initialize(void) {
 
     config->euca_version = euca_version_dot2hex(EUCA_VERSION);
     config->euca_version_str = hex2dot(config->euca_version);
-    config->mido_md_config_changed = TRUE;
+    config->eucanetd_first_update = TRUE;
 
     config->polling_frequency = 5;
     config->init = 1;
@@ -1023,8 +1078,10 @@ static int eucanetd_cleanup(void) {
         ips_handler_close(config->ips);
         ebt_handler_close(config->ebt);
         config->polling_frequency = 5;
-        config->init = 1;    
+        config->init = 1;
+        atomic_file_free(&(config->global_network_info_file));
     }
+    EUCA_FREE(config);
 
     return (0);
 }
@@ -1209,9 +1266,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_NC_ROUTER_IP] = configFileValue("NC_ROUTER_IP");
     cvals[EUCANETD_CVAL_METADATA_USE_VM_PRIVATE] = configFileValue("METADATA_USE_VM_PRIVATE");
     cvals[EUCANETD_CVAL_METADATA_IP] = configFileValue("METADATA_IP");
-    //cvals[EUCANETD_CVAL_MIDO_GWHOSTS] = configFileValue("MIDOGWHOSTS");
-    //cvals[EUCANETD_CVAL_MIDO_PUBNW] = configFileValue("MIDOPUBNW");
-    //cvals[EUCANETD_CVAL_MIDO_PUBGWIP] = configFileValue("MIDOPUBGWIP");
     cvals[EUCANETD_CVAL_MIDO_INTRTCIDR] = configFileValue("MIDO_INTRT_CIDR");
     cvals[EUCANETD_CVAL_MIDO_INTMDCIDR] = configFileValue("MIDO_INTMD_CIDR");
     cvals[EUCANETD_CVAL_MIDO_EXTMDCIDR] = configFileValue("MIDO_EXTMD_CIDR");
@@ -1219,6 +1273,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_MIDO_MAX_RTID] = configFileValue("MIDO_MAX_RTID");
     cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
     cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
+    cvals[EUCANETD_CVAL_MIDO_API_URIBASE] = configFileValue("MIDO_API_URIBASE");
     cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS] = configFileValue("MIDO_MD_VETH_USE_NETNS");
     cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS] = configFileValue("MIDO_MD_254_EGRESS");
     cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS] = configFileValue("MIDO_MD_253_EGRESS");
@@ -1337,6 +1392,13 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             config->enable_mido_md = TRUE;
         } else {
             config->enable_mido_md = FALSE;
+        }
+        if ((cvals[EUCANETD_CVAL_MIDO_API_URIBASE]) && (strlen(cvals[EUCANETD_CVAL_MIDO_API_URIBASE]))) {
+            snprintf(config->mido_api_uribase, URI_LEN, "%s", cvals[EUCANETD_CVAL_MIDO_API_URIBASE]);
+            int uribaselen = strlen(config->mido_api_uribase);
+            if (uribaselen && config->mido_api_uribase[uribaselen - 1] == '/') {
+                config->mido_api_uribase[uribaselen - 1] = '\0';
+            }
         }
         if (!strcmp(cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS], "Y")) {
             config->mido_md_veth_use_netns = TRUE;

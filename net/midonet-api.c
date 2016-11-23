@@ -125,7 +125,7 @@ static int http_posts_prev = 0;
 static int http_puts_prev = 0;
 static int http_deletes_prev = 0;
 
-static char midonet_api_uribase[1024] = {0};
+static char midonet_api_uribase[URI_LEN] = {0};
 char midonet_api_version[16] = {0};
 static char midonet_api_mtypes[APPLICATION_MAX_INDEX][MIDO_MTYPE_MAX_LEN];
 
@@ -3904,18 +3904,6 @@ static size_t mem_reader(void *contents, size_t size, size_t nmemb, void *in_par
  * Initializes resources to be used in midonet-api calls
  */
 void midonet_api_init(void) {
-    mido_libcurl_init(&libcurl_handles);
-    mido_initialize_apiuribase();
-    
-    // Check MidoNet API version - only API version v1.9 and v5.0 are supported
-    if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
-        LOGWARN("Unsupported MidoNet API version (%s) detected.\n", midonet_api_version);
-        LOGINFO("Note:\n"
-                "Eucalyptus (%s) VPCMIDO mode has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
-                "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
-                EUCA_VERSION);
-    }
-    
     // Initialize media_types array
     for (int i = 0; i < APPLICATION_MAX_INDEX; i++) {
         midonet_api_mtypes[i][0] = '\0';
@@ -3965,6 +3953,19 @@ void midonet_api_init(void) {
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_ROUTE_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_TUNNEL_ZONE_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON_V1);
+
+    mido_libcurl_init(&libcurl_handles);
+    mido_initialize_apiuribase();
+    
+    // Check MidoNet API version - only API version v1.9 and v5.0 are supported
+    if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
+        LOGWARN("Unsupported MidoNet API version (%s) detected.\n", midonet_api_version);
+        LOGINFO("Note:\n"
+                "Eucalyptus (%s) has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
+                "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
+                EUCA_VERSION);
+    }
+    
     if (!strncmp(midonet_api_version, "v5.0", 16)) {
         snprintf(midonet_api_mtypes[APPLICATION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_JSON_V3);
         snprintf(midonet_api_mtypes[APPLICATION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BRIDGE_JSON_V4);
@@ -4800,7 +4801,7 @@ int mido_create_bgp_v1(midoname *port, u32 localAS, u32 peerAS, char *peerAddr, 
     }
     EUCA_FREE(bgps);
     if (found) {
-        LOGINFO("12915: bgp already in mido - abort create\n");
+        LOGTRACE("bgp already in mido - abort create\n");
         if (outname) {
             *outname = out;
         }
@@ -4889,7 +4890,7 @@ int mido_create_bgp_v5(midoname *router, u32 localAS, u32 peerAS, char *peerAddr
         mido_getel_midoname(router, "asNumber", &las);
         if (localAS == atoi(las)) {
             do_router_asn = FALSE;
-            LOGINFO("12915: bgp already in mido - abort create\n");
+            LOGTRACE("bgp already in mido - abort create\n");
         } else {
             found = 0;
         }
@@ -5055,7 +5056,7 @@ int mido_create_bgp_route_v1(midoname *bgp, char *nwPrefix, char *prefixLength, 
     }
     EUCA_FREE(bgp_routes);
     if (found) {
-        LOGINFO("12915: bgp route already in mido - abort create\n");
+        LOGTRACE("bgp route already in mido - abort create\n");
         if (outname) {
             *outname = out;
         }
@@ -5132,7 +5133,7 @@ int mido_create_bgp_route_v5(midoname *router, char *nwPrefix, char *prefixLengt
     }
     EUCA_FREE(bgp_routes);
     if (found) {
-        LOGINFO("12915: bgp network already in mido - abort create\n");
+        LOGTRACE("bgp network already in mido - abort create\n");
         if (outname) {
             *outname = out;
         }
@@ -6131,30 +6132,66 @@ int mido_check_state(void) {
 }
 
 /**
- * Invokes the MidoNet system-state API and extracts the MidoNet-API base uri.
+ * Retrieves the current MidoNet API base URL.
+ * @return the current MidoNet API base URL.
+ */
+char *mido_get_apiuribase(void) {
+    return (midonet_api_uribase);
+}
+
+/**
+ * Copies the contents of apiuribase to eucanetd VPCMIDO driver configuration.
+ * @param apiuribase [in] the MidoNet API base URL to be set.
+ */
+void mido_set_apiuribase(const char *apiuribase) {
+    if (apiuribase) {
+        euca_strncpy(midonet_api_uribase, apiuribase, URI_LEN);
+    }
+}
+
+/**
+ * Invokes the MidoNet system-state API and extracts the MidoNet-API base uri, and
+ * MidoNet-API version..
+ * 3 base urls are attempted: user provided apiruibase configuration, the default
+ * MN1.9 baseuri (localhost:8080), and the default MN5 baseuri (localhost:8181).
  * @return 0 on success. 1 otherwise.
  */
 int mido_initialize_apiuribase(void) {
     int rc = 1;
-    char url[EUCA_MAX_PATH];
+    char url[URI_LEN] = { 0 };
     char *outbuf = NULL;
-    
-    bzero(url, EUCA_MAX_PATH);
-    snprintf(url, EUCA_MAX_PATH, "http://localhost:8080/midonet-api/");
 
-    for (int i = 0; i < 30 && rc; i++) {
-        rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
-        if (rc) {
-            sleep(1);
+    if (strlen(midonet_api_uribase)) {
+        snprintf(url, URI_LEN, "%s/", midonet_api_uribase);
+        midonet_api_uribase[0] = '\0';
+        for (int i = 0; i < 30 && rc; i++) {
+            rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
+            if (rc) {
+                sleep(1);
+            }
+        }
+    } else {
+        midonet_api_uribase[0] = '\0';
+        for (int i = 0; i < 30 && rc; i++) {
+            snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8080);
+            rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
+            if (rc) {
+                snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8181);
+                rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
+                if (rc) {
+                    sleep(1);
+                }
+            }
         }
     }
+
     if (!rc && outbuf && strlen(outbuf)) {
         json_object *el = NULL;
         json_object *jobj = json_tokener_parse(outbuf);
         if (jobj) {
             json_object_object_get_ex(jobj, "uri", &el);
             if (el) {
-                snprintf(midonet_api_uribase, 1024, "%s", json_object_get_string(el));
+                snprintf(midonet_api_uribase, URI_LEN, "%s", json_object_get_string(el));
             }
             el = NULL;
             json_object_object_get_ex(jobj, "version", &el);
@@ -6164,12 +6201,14 @@ int mido_initialize_apiuribase(void) {
             json_object_put(jobj);
         }
     }
-    if (!strlen(midonet_api_uribase)) {
-        snprintf(midonet_api_uribase, 1024, "http://localhost:8080/midonet-api");
+
+    int uribaselen = strlen(midonet_api_uribase);
+    if (uribaselen) {
+        if (midonet_api_uribase[uribaselen - 1] == '/') {
+            midonet_api_uribase[uribaselen - 1] = '\0';
+        }
     } else {
-        if ((strlen(midonet_api_uribase) - 1) > 0) {
-            midonet_api_uribase[strlen(midonet_api_uribase) - 1] = '\0';
-        } 
+        rc++;
     }
     if (!strlen(midonet_api_version)) {
         snprintf(midonet_api_version, 16, "unknown");
@@ -6213,7 +6252,6 @@ int midoname_list_free(midoname_list *list) {
         j = j + MIDONAME_LIST_CAPACITY_STEP;
     }
     EUCA_FREE(list->mnames);
-    bzero(list, sizeof (midoname_list));
     EUCA_FREE(list);
     return (0);
 }
@@ -6299,16 +6337,28 @@ midoname_list *midonet_api_cache_midos_init(void) {
 }
 
 /**
- * Releases resources allocated for the midonet_api_cache data structure.
+ * Gets the pointer to the midonet-api cache midos list.
+ * @return pointer to the midonet-api cache midos list.
+ */
+midoname_list *midonet_api_cache_midos_get(void) {
+    return (midocache_midos);
+}
+
+/**
+ * Releases resources allocated for the midonet_api_cache cache data structure.
  * 
+ * @param [in] cache midonet_api_cache data structure of interest.
  * @return 0 on success. 1 on any failure.
  */
-int midonet_api_cache_flush(void) {
+int midonet_api_cache_flush(midonet_api_cache *cache) {
     int i;
 
-    midonet_api_cache *cache = midocache;
     if (cache == NULL) {
-        return 0;
+        if (midocache != NULL) {
+            cache = midocache;
+        } else {
+            return (0);
+        }
     }
     
     EUCA_FREE(cache->ports);
@@ -6351,12 +6401,14 @@ int midonet_api_cache_flush(void) {
     if (cache->iphostmap.entries) {
         EUCA_FREE(cache->iphostmap.entries);
     }
-    EUCA_FREE(cache);
 
-    midocache = NULL;
-    midoname_list_free(midocache_midos);
-    midocache_midos = NULL;
-    midonet_api_cache_midos_init();
+    if (midocache == cache) {
+        midocache = NULL;
+        midoname_list_free(midocache_midos);
+        midocache_midos = NULL;
+        midonet_api_cache_midos_init();
+    }
+    EUCA_FREE(cache);
     
     return (0);
 }
@@ -6394,7 +6446,7 @@ int midonet_api_cache_check(void) {
  */
 int midonet_api_cache_populate(void) {
     if ((midocache_midos != NULL) && (midocache_midos->released > MIDONAME_LIST_RELEASES_B4INVALIDATE)) {
-        midonet_api_cache_flush();
+        midonet_api_cache_flush(NULL);
     }
     if (midocache == NULL) {
         return (midonet_api_cache_refresh());
@@ -6434,17 +6486,22 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
 
     // Disable global midonet_api cache
     if (midocache != NULL) {
-        midonet_api_cache_flush();
+        midonet_api_cache_flush(NULL);
         EUCA_FREE(midocache);
         midocache = NULL;
     }
     cache = midonet_api_cache_init();
 
     int mnapiok = 0;
-    for (int x = 0; x < 30 && !mnapiok; x++) {
+    while (!mnapiok) {
         rc = mido_check_state();
         if (rc) {
-            sleep(1);
+            if (sig_rcvd) {
+                sig_rcvd = 0;
+                break;
+            } else {
+                sleep(1);
+            }
         } else {
             mnapiok = 1;
         }
@@ -6647,29 +6704,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode) {
     LOGTRACE("\tpgs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // get all tunnel-zones
-    l1names = NULL;
-    max_l1names = 0;
-    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &l1names, &max_l1names);
-    if (!rc && max_l1names) {
-        cache->tunnelzones = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_tunnelzone *));
-        midonet_api_tunnelzone *tunnelzone = NULL;
-        for (i = 0; i < max_l1names; i++) {
-            tunnelzone = EUCA_ZALLOC_C(1, sizeof (midonet_api_tunnelzone));
-            cache->tunnelzones[i] = tunnelzone;
-            tunnelzone->obj = l1names[i];
-            LOGEXTREME("Cached tunnel-zone %s\n", tunnelzone->obj->name);
-            rc = mido_get_tunnelzone_hosts(tunnelzone->obj, &(tunnelzone->hosts), &(tunnelzone->max_hosts));
-            for (j = 0; j < tunnelzone->max_hosts && !rc; j++) {
-                LOGEXTREME("\tCached host %s\n", tunnelzone->hosts[j]->uuid);
-            }
-        }
-        cache->max_tunnelzones = max_l1names;
-    } else {
-        if (rc) {
-            LOGWARN("Failed to retrieve mido tunnel-zones\n");
-        }
-    }
-    EUCA_FREE(l1names);
+    midonet_api_cache_refresh_tunnelzones(cache);
     LOGTRACE("\ttzs in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     // Enable midocache
@@ -6946,7 +6981,59 @@ void *midonet_api_cache_refresh_objects_main_thread(void *main_param) {
 }
 
 /**
- * Clears the current midocache hosts entries and reloads hosts from MidoNet.
+ * Clears the current midocache tunnelzone entries and reloads tunnelzones from MidoNet.
+ * @param cache [in] midonet_api_cache of interest (where tunnelzones will be [re]populated)
+ * @return 0 on success. 1 on any error.
+ */
+int midonet_api_cache_refresh_tunnelzones(midonet_api_cache *cache) {
+    int rc = 0;
+    midoname **l1names = NULL;
+    int max_l1names = 0;
+    midonet_api_cache *midocache_bak;
+
+    if (!cache) {
+        cache = midonet_api_cache_get();
+    }
+
+    // Flush cache->hosts
+    for (int i = 0; i < cache->max_tunnelzones; i++) {
+        midonet_api_tunnelzone_free(cache->tunnelzones[i]);
+    }
+    EUCA_FREE(cache->tunnelzones);
+
+    // disable midocache (load all tunnelzones from MidoNet)
+    midocache_bak = midocache;
+    midocache = NULL;
+
+    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &l1names, &max_l1names);
+    if (!rc && max_l1names) {
+        cache->tunnelzones = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_tunnelzone *));
+        midonet_api_tunnelzone *tunnelzone = NULL;
+        for (int i = 0; i < max_l1names; i++) {
+            tunnelzone = EUCA_ZALLOC_C(1, sizeof (midonet_api_tunnelzone));
+            cache->tunnelzones[i] = tunnelzone;
+            tunnelzone->obj = l1names[i];
+            LOGEXTREME("Cached tunnel-zone %s\n", tunnelzone->obj->name);
+            rc = mido_get_tunnelzone_hosts(tunnelzone->obj, &(tunnelzone->hosts), &(tunnelzone->max_hosts));
+            for (int j = 0; j < tunnelzone->max_hosts && !rc; j++) {
+                LOGEXTREME("\tCached tz host %s\n", tunnelzone->hosts[j]->uuid);
+            }
+        }
+        cache->max_tunnelzones = max_l1names;
+    } else {
+        if (rc) {
+            LOGWARN("Failed to retrieve mido tunnel-zones\n");
+        }
+    }
+    EUCA_FREE(l1names);
+
+    // recover midocache state
+    midocache = midocache_bak;
+    return (0);
+}
+
+/**
+ * Clears the current midocache host entries and reloads hosts from MidoNet.
  * @param cache [in] midonet_api_cache of interest (where hosts will be [re]populated)
  * @return 0 on success. 1 on any error.
  */
@@ -6956,9 +7043,10 @@ int midonet_api_cache_refresh_hosts(midonet_api_cache *cache) {
     int max_l1names = 0;
     midonet_api_cache *midocache_bak;
     
-    if (cache == NULL) {
-        return (1);
+    if (!cache) {
+        cache = midonet_api_cache_get();
     }
+
     // Flush cache->hosts
     for (int i = 0; i < cache->max_hosts; i++) {
         midonet_api_host_free(cache->hosts[i]);
@@ -7021,17 +7109,22 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
 
     // Disable global midonet_api cache
     if (midocache != NULL) {
-        midonet_api_cache_flush();
+        midonet_api_cache_flush(NULL);
         EUCA_FREE(midocache);
         midocache = NULL;
     }
     cache = midonet_api_cache_init();
 
     int mnapiok = 0;
-    for (int x = 0; x < 30 && !mnapiok; x++) {
+    while (!mnapiok) {
         rc = mido_check_state();
         if (rc) {
-            sleep(1);
+            if (sig_rcvd) {
+                sig_rcvd = 0;
+                break;
+            } else {
+                sleep(1);
+            }
         } else {
             mnapiok = 1;
         }
@@ -7191,29 +7284,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
     EUCA_FREE(l1names);
 
     // get all tunnel-zones
-    l1names = NULL;
-    max_l1names = 0;
-    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &l1names, &max_l1names);
-    if (!rc && max_l1names) {
-        cache->tunnelzones = EUCA_ZALLOC_C(max_l1names, sizeof (midonet_api_tunnelzone *));
-        midonet_api_tunnelzone *tunnelzone = NULL;
-        for (i = 0; i < max_l1names; i++) {
-            tunnelzone = EUCA_ZALLOC_C(1, sizeof (midonet_api_tunnelzone));
-            cache->tunnelzones[i] = tunnelzone;
-            tunnelzone->obj = l1names[i];
-            LOGEXTREME("Cached tunnel-zone %s\n", tunnelzone->obj->name);
-            rc = mido_get_tunnelzone_hosts(tunnelzone->obj, &(tunnelzone->hosts), &(tunnelzone->max_hosts));
-            for (j = 0; j < tunnelzone->max_hosts && !rc; j++) {
-                LOGEXTREME("\tCached host %s\n", tunnelzone->hosts[j]->uuid);
-            }
-        }
-        cache->max_tunnelzones = max_l1names;
-    } else {
-        if (rc) {
-            LOGWARN("Failed to retrieve mido tunnel-zones\n");
-        }
-    }
-    EUCA_FREE(l1names);
+    midonet_api_cache_refresh_tunnelzones(cache);
     LOGTRACE("\tetc in %.2f\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     pthread_join(pt[MIDO_CACHE_THREAD_ROUTER], NULL);
@@ -7249,9 +7320,10 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
     int rc = 0;
     midonet_api_cache *midocache_bak = NULL;
     
-    if (cache == NULL) {
-        return (1);
+    if (!cache) {
+        cache = midonet_api_cache_get();
     }
+
     // Disable midocache
     midocache_bak = midocache;
     midocache = NULL;
@@ -7267,7 +7339,7 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
         iphm->entries = NULL;
     }
     iphm->max_entries = 0;
-    LOGINFO("\tpopulating ip-to-midohost map table.\n");
+    LOGDEBUG("\tpopulating ip-to-midohost map table.\n");
     
     for (int i = 0; i < cache->max_hosts; i++) {
         iphm->entries = EUCA_REALLOC_C(iphm->entries, iphm->max_entries + cache->hosts[i]->max_addresses,
@@ -7285,6 +7357,42 @@ int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache) {
 
     // recover midocache state
     midocache = midocache_bak;
+    return (0);
+}
+
+/**
+ * Gets the number of hosts found in cache.
+ * @param cache [in] midonet_api_cache structure. If NULL, the system midonet_api_cache is used.
+ * @return the number of hosts found in cache.
+ */
+int midonet_api_cache_get_nhosts(midonet_api_cache *cache) {
+    if (!cache) {
+        cache = midocache;
+    }
+    if (cache) {
+        return (cache->max_hosts);
+    }
+    return (0);
+}
+
+/**
+ * Gets the number of Eucalyptus tunnel-zone hosts found in cache.
+ * @param cache [in] midonet_api_cache structure. If NULL, the system midonet_api_cache is used.
+ * @return the number of hosts found in cache.
+ */
+int midonet_api_cache_get_ntzhosts(midonet_api_cache *cache) {
+    if (!cache) {
+        cache = midocache;
+    }
+    if (cache) {
+        for (int i = 0; i < cache->max_tunnelzones; i++) {
+            midonet_api_tunnelzone *tz = cache->tunnelzones[i];
+            if (strstr(VPCMIDO_TUNNELZONE, tz->obj->name)) {
+                return (tz->max_hosts);
+            }
+        }
+        return (cache->max_hosts);
+    }
     return (0);
 }
 
@@ -8401,8 +8509,6 @@ int midonet_api_host_free(midonet_api_host *host) {
     if (host == NULL) {
         return (1);
     }
-    // host ports are released with bridge or router
-    //EUCA_FREE(host->ports);
     EUCA_FREE(host->addresses);
     bzero(host, sizeof (midonet_api_host));
     EUCA_FREE(host);

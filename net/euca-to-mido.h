@@ -369,6 +369,8 @@ typedef struct mido_config_t {
     mido_vpc_secgroup *vpcsecgroups;
     int max_vpcsecgroups;
 
+    boolean midotz_ok;
+
     int udpsock;
     boolean *rt_ids;
     boolean *eni_ids; 
@@ -421,7 +423,7 @@ int reinitialize_mido(mido_config *mido);
 int validate_mido(mido_config *mido);
 
 int clear_mido_gnitags(mido_config *mido);
-int check_mido_tunnelzone();
+int check_mido_tunnelzone(globalNetworkInfo *gni, char **msg, int *msg_len);
 
 char *discover_mido_bgps(mido_config *mido);
 char *discover_mido_bgps_v1(mido_config *mido);
@@ -556,6 +558,7 @@ int do_midonet_delete_natg(mido_config *mido, char *id, boolean checkonly);
 int do_midonet_delete_interface(mido_config *mido, char *id, boolean checkonly);
 int do_midonet_delete_securitygroup(mido_config *mido, char *id, boolean checkonly);
 int do_midonet_list(mido_config *mido);
+int do_midonet_list_gateways(mido_config *mido);
 int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly);
 
 void do_midonet_test(mido_config *mido);

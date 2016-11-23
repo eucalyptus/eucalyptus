@@ -1007,6 +1007,27 @@ int euca_string_set_insert(char ***set, int *max_set, char *value) {
 }
 
 /**
+ * Searches the given string (value) to the string list (set) in the argument.
+ * @param set [in] an array of pointers to strings. This array should
+ * not contain duplicates (i.e., a set data structure).
+ * @param max_set [in] number of entries in the set
+ * @param value [in] string of interest
+ * @return the string in the set if found. NULL otherwise.
+ */
+char *euca_string_set_get(char **set, int max_set, char *value) {
+    if (!set || !value) {
+        LOGWARN("Invalid argument: cannot process NULL string value or set.\n");
+        return (NULL);
+    }
+    for (int i = 0; i < max_set; i++) {
+        if (!strcmp(set[i], value)) {
+            return (set[i]);
+        }
+    }
+    return (NULL);
+}
+
+/**
  * Invokes calloc() and perform error checking.
  * @param nmemb [in] see calloc() man pages.
  * @param size [in] see calloc() man pages.
@@ -1158,3 +1179,39 @@ u32 euca_version_dot2hex(const char *ver) {
 
     return (a | b | c | d);
 }
+
+/**
+ * Produces output string according to format (printf() format) and copies to buf.
+ * At most (buf_len - 1) characters of the produced output are copied. The pointer
+ * buf is advanced to the end of the string, and buf_len adjusted accordingly.
+ * @param buf [i/o] pointer to a string where output will be stored. This pointer
+ * is updated to point to the end of the string.
+ * @param buf_len [i/o] Pointer to length of buffer, which should be free to use.
+ * This length is updated depending on the number of characters written to buf.
+ * @param format [in] format string
+ * @param ... [in] the variable argument part of the format
+ * @return the number of characters written to buf. Negative value on error.
+ */
+int euca_buffer_snprintf(char **buf, int *buf_len, const char *format, ...) {
+    int rc = 0;
+    va_list ap = { {0} };
+
+    if (!buf || !(*buf) || !buf_len || !format) {
+        return (0);
+    }
+
+    if (*buf_len > 0) {
+        va_start(ap, format);
+
+        rc = vsnprintf(*buf, *buf_len, format, ap);
+        if (rc > 0) {
+            *buf_len -= rc;
+            *buf = *buf + rc;
+        }
+
+        va_end(ap);
+    }
+
+    return (rc);
+}
+

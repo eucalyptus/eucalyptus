@@ -145,7 +145,6 @@ extern int midocache_invalid;
 
 //! Set to TRUE when driver is initialized
 static boolean gInitialized = FALSE;
-static boolean gTunnelZoneOk = FALSE;
 
 //! Midonet pluggin specific configuration
 static mido_config *pMidoConfig = NULL;
@@ -281,6 +280,7 @@ static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pG
     }
     midonet_api_cleanup();
     free_mido_config(pMidoConfig);
+    EUCA_FREE(pMidoConfig);
     gInitialized = FALSE;
     return (ret);
 }
@@ -459,6 +459,12 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
                     ret = 1;
                 }
                 break;
+            case FLUSH_MIDO_LISTGATEWAYS:
+                rc = do_midonet_delete_vpc_object(pMidoConfig, "list_gateways", TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                break;
             case FLUSH_MIDO_TEST:
                 do_midonet_delete_vpc_object(pMidoConfig, "test", TRUE);
                 break;
@@ -520,34 +526,11 @@ static int network_driver_system_maint(eucanetdConfig *pConfig, globalNetworkInf
 static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInfo *pGni, globalNetworkInfo *pGniApplied) {
     int rc = 0;
     u32 ret = EUCANETD_RUN_NO_API;
-    char versionFile[EUCA_MAX_PATH];
-    int check_tz_attempts = 30;
     struct timeval tv;
 
     eucanetd_timer(&tv);
     // Make sure midoname buffer is available
     midonet_api_cache_midos_init();
-
-    if (!gTunnelZoneOk) {
-        LOGDEBUG("Checking MidoNet tunnel-zone.\n");
-        rc = 1;
-    }
-    while (!gTunnelZoneOk) {
-        // Check tunnel-zone
-        rc = check_mido_tunnelzone();
-        if (rc) {
-            if ((--check_tz_attempts) > 0) {
-                sleep(3);
-            } else {
-                LOGERROR("Cannot proceed without a valid tunnel-zone.\n");
-                return (EUCANETD_RUN_ERROR_API);
-            }
-        } else {
-            gTunnelZoneOk = TRUE;
-        }
-    }
-
-    bzero(versionFile, EUCA_MAX_PATH);
 
     // Need a valid global network view
     if (!pConfig || !pGni) {
@@ -572,6 +555,11 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         }
         pGniApplied = NULL;
     }
+
+    if (config_changed & GNI_VPCMIDO_CONFIG_DIFF_MIDONODES) {
+        pMidoConfig->midotz_ok = FALSE;
+    }
+
     LOGTRACE("euca VPCMIDO system state: %s\n", midonet_api_system_changed == 0 ? "CLEAN" : "DIRTY");
     rc = do_midonet_update(pGni, pGniApplied, pMidoConfig);
 

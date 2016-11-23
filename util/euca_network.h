@@ -137,6 +137,9 @@
 //! TODO: Replace with the value here
 #define HOSTNAME_LEN                             256
 
+//! Defines the maximum supported length of uri
+#define URI_LEN                                  2048
+
 //! @{
 //! @name Various known IP address strings
 

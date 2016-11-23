@@ -60,6 +60,19 @@
 
 //! @}
 
+// eucanetd error codes
+#define EUCANETD_ERR_VPCMIDO_API                 20
+#define EUCANETD_ERR_VPCMIDO_CORE                30
+#define EUCANETD_ERR_VPCMIDO_MD                  40
+#define EUCANETD_ERR_VPCMIDO_TZ                  50
+#define EUCANETD_ERR_VPCMIDO_POPULATE            60
+#define EUCANETD_ERR_VPCMIDO_PASS1               70
+#define EUCANETD_ERR_VPCMIDO_PASS2               80
+#define EUCANETD_ERR_VPCMIDO_VPCS                90
+#define EUCANETD_ERR_VPCMIDO_SGS                100
+#define EUCANETD_ERR_VPCMIDO_ENIS               110
+#define EUCANETD_ERR_VPCMIDO_OTHER              255
+
 //! @{
 //! @name Various known network IP and usual bitmask
 
@@ -117,6 +130,7 @@ enum {
     EUCANETD_CVAL_MIDO_MAX_RTID,
     EUCANETD_CVAL_MIDO_MAX_ENIID,
     EUCANETD_CVAL_MIDO_ENABLE_MIDOMD,
+    EUCANETD_CVAL_MIDO_API_URIBASE,
     EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS,
     EUCANETD_CVAL_MIDO_MD_254_EGRESS,
     EUCANETD_CVAL_MIDO_MD_253_EGRESS,
@@ -138,6 +152,7 @@ enum {
     FLUSH_MIDO_UNCONNECTED,
     FLUSH_MIDO_VPC,
     FLUSH_MIDO_LISTVPC,
+    FLUSH_MIDO_LISTGATEWAYS,
     FLUSH_MIDO_TEST,
 };
 
@@ -197,6 +212,7 @@ typedef struct eucanetdConfig_t {
     char mido_mdcidr[NETWORK_ADDR_LEN];
     char mido_md_254_egress[256];
     char mido_md_253_egress[256];
+    char mido_api_uribase[URI_LEN];
     int mido_max_rtid;
     int mido_max_eniid;
 
@@ -215,10 +231,14 @@ typedef struct eucanetdConfig_t {
     u32 *my_ips;
     int max_my_ips;
 
+    int eucanetd_err;
+    boolean eucanetd_first_update;
+    
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
     boolean enable_mido_md;
     boolean mido_md_veth_use_netns;
     boolean mido_md_config_changed;
+    boolean mido_md_egress_rules_changed;
     boolean populate_mido_md;
     boolean validate_mido_config;
 
@@ -275,6 +295,8 @@ extern eucanetd_peer eucanetdPeer;
 //! Array of peer type strings
 extern const char *asPeerRoleName[];
 
+extern int sig_rcvd;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -282,6 +304,7 @@ extern const char *asPeerRoleName[];
 \*----------------------------------------------------------------------------*/
 int eucanetd_dummy_udpsock(void);
 int eucanetd_dummy_udpsock_close(void);
+void eucanetd_emulate_sigusr2(void);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

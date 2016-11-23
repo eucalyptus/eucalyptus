@@ -6054,19 +6054,28 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
     if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
         if (a->max_midogws != b->max_midogws) {
             ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
         } else {
             for (int i = 0; i < a->max_midogws; i++) {
                 if (cmp_gni_mido_gateway(&(a->midogws[i]), &(b->midogws[i]))) {
                     ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
-                    break;
+                    if (strcmp(a->midogws[i].host, b->midogws[i].host)) {
+                        ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+                    }
+                }
+            }
+        }
+        if (a->max_clusters != b->max_clusters) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+        } else {
+            for (int i = 0; i < a->max_clusters; i++) {
+                if (a->clusters[i].max_nodes != b->clusters[i].max_nodes) {
+                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
                 }
             }
         }
     } else {
         ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
-    }
-    if (ret) {
-        LOGINFO("12915: vpcmido config diff detected (%08x)\n", ret);
     }
     return (ret);
 }

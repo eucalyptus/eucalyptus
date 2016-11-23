@@ -74,12 +74,15 @@
 #define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
 
 #define MIDONAME_LIST_CAPACITY_STEP            1000
-#define MIDONAME_LIST_RELEASES_B4INVALIDATE    1000
+#define MIDONAME_LIST_RELEASES_B4INVALIDATE    36000
 
 #define MIDONET_API_RELOAD_THREADS             6
 #define MIDONET_API_USE_THREADS_THRESHOLD      100
 
 #define MIDO_CACHE_THREAD_NAME_LEN             8
+
+#define MIDONET_API_BASE_URL_8080              "http://127.0.0.1:8080/midonet-api"
+#define MIDONET_API_BASE_URL_8181              "http://127.0.0.1:8181/midonet-api"
 
 #define MIDONET_API_V19                        "v1.9"
 #define MIDONET_API_V50                        "v5.0"
@@ -477,6 +480,8 @@ int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
 int mido_check_state(void);
+char *mido_get_apiuribase(void);
+void mido_set_apiuribase(const char *apiuribase);
 int mido_initialize_apiuribase(void);
 
 int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
@@ -641,10 +646,11 @@ int midoname_list_get_midonames(midoname_list *list, midoname ***outnames, int m
 
 midonet_api_cache *midonet_api_cache_init(void);
 midoname_list *midonet_api_cache_midos_init(void);
+midoname_list *midonet_api_cache_midos_get(void);
 
 midonet_api_cache *midonet_api_cache_get(void);
 int midonet_api_cache_check(void);
-int midonet_api_cache_flush(void);
+int midonet_api_cache_flush(midonet_api_cache *cache);
 int midonet_api_cache_populate(void);
 int midonet_api_cache_refresh(void);
 int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode);
@@ -658,8 +664,11 @@ int midonet_api_cache_refresh_ipagips(midonet_api_cache *cache, int start, int e
 void *midonet_api_cache_refresh_objects_worker_thread(void *worker_param);
 void *midonet_api_cache_refresh_objects_main_thread(void *main_params);
 
+int midonet_api_cache_refresh_tunnelzones(midonet_api_cache *cache);
 int midonet_api_cache_refresh_hosts(midonet_api_cache *cache);
 int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache);
+int midonet_api_cache_get_nhosts(midonet_api_cache *cache);
+int midonet_api_cache_get_ntzhosts(midonet_api_cache *cache);
 
 midonet_api_tunnelzone *midonet_api_cache_lookup_tunnelzone(midoname *tzone);
 midonet_api_host *midonet_api_cache_lookup_host(midoname *name);
