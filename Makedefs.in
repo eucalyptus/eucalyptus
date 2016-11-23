@@ -91,6 +91,7 @@ sbindir		= ${prefix}/usr/sbin
 datarootdir	= ${usrdir}/share
 policiesdir     = ${datarootdir}/eucalyptus/policies
 libexecdir  = ${usrdir}/libexec
+libvirthooksdir  = /etc/libvirt/hooks
 
 # where we are going to install eucalyptus and where are the sources
 export EUCALYPTUS	= ${prefix}
