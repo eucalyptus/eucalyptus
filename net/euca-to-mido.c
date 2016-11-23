@@ -2802,7 +2802,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             // Check tunnel-zone
             rc = check_mido_tunnelzone(gni, &msg, &msg_len);
             if (rc) {
-                if (msg) {
+                if (strlen(msg)) {
                     LOGWARN("%s", buffer);
                     msg = NULL;
                 }
