@@ -744,9 +744,7 @@ public class SimpleQueueService {
         }
       }
       final QueueResolver resolver = new QueueResolver( queue );
-      return actionIsASharedQueueAction && !requestAccountMatchesQueueAccount ?
-          RestrictedTypes.doPrivilegedWithoutOwner( queue.getDisplayName( ), resolver ) :
-          RestrictedTypes.doPrivileged( queue.getDisplayName( ), resolver );
+      return RestrictedTypes.doPrivileged( queue.getDisplayName( ), resolver );
     } catch (AuthException ex) {
       throw new AccessDeniedException("Not authorized.");
     } catch (NoSuchElementException ex) {
