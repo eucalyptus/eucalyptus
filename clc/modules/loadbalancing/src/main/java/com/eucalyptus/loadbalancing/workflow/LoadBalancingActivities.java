@@ -172,6 +172,7 @@ public interface LoadBalancingActivities {
     // discover new servos, update the state of existing ones, or delete the terminated servo VMs
   void checkServoInstances() throws LoadBalancingActivityException;
   void checkServoInstanceDns() throws LoadBalancingActivityException;
+  void checkServoElasticIp() throws LoadBalancingActivityException;
   void checkBackendInstances() throws LoadBalancingActivityException;
   void cleanupSecurityGroups() throws LoadBalancingActivityException;
   void cleanupServoInstances() throws LoadBalancingActivityException;

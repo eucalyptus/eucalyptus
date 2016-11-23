@@ -2778,6 +2778,78 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
   }
 
+  @Override
+  public void checkServoElasticIp() throws LoadBalancingActivityException {
+    // EUCA-12956
+    if(! LoadBalancingWorkerProperties.useElasticIp()) {
+      return;
+    }
+
+    final List<LoadBalancerServoInstance> allInstances = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+      allInstances.addAll(
+              Entities.query(LoadBalancerServoInstance.named()));
+    }catch(final Exception ex){
+      throw new LoadBalancingActivityException("Failed to query servo instances in DB");
+    }
+
+    final Map<String, LoadBalancerServoInstance> inServiceInstances = allInstances.stream()
+            .filter( vm -> LoadBalancerServoInstance.STATE.InService.equals(vm.getState()) )
+            .filter( vm -> LoadBalancerServoInstance.DNS_STATE.Registered.equals(vm.getDnsState()) )
+            .collect( Collectors.toMap( LoadBalancerServoInstance::getInstanceId, vm -> vm) );
+
+    final Optional<Boolean> vpcTest = LoadBalancingSystemVpcs.isCloudVpc();
+    for(final String instanceId : inServiceInstances.keySet()) {
+      String ipAddr = null;
+      String privateIpAddr = null;
+      try {
+        if (vpcTest.isPresent() && vpcTest.get()) { /// in vpc mode
+          final List<Optional<String>> userVpcInterfaceAddresses =
+                  LoadBalancingSystemVpcs.getUserVpcInterfaceIps(instanceId);
+          if (userVpcInterfaceAddresses != null) {
+            final Optional<String> optPublicIp = userVpcInterfaceAddresses.get(0);
+            final Optional<String> optPrivateIp = userVpcInterfaceAddresses.get(1);
+            if (optPublicIp.isPresent())
+              ipAddr = optPublicIp.get();
+            if (optPrivateIp.isPresent())
+              privateIpAddr = optPrivateIp.get();
+          }
+        } else { /// in classic mode
+          final List<RunningInstancesItemType> result =
+                  EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(
+                          Lists.newArrayList(instanceId));
+          if (result != null && result.size() > 0) {
+            ipAddr = result.get(0).getIpAddress();
+            privateIpAddr = result.get(0).getPrivateIpAddress();
+          }
+        }
+      } catch (final Exception ex) {
+        LOG.warn("Failed to describe loadbalancer worker instances", ex);
+        continue;
+      }
+
+      // there's an external change in elastic or private IP
+      if((ipAddr != null && !ipAddr.equals(inServiceInstances.get(instanceId).getAddress())) ||
+              privateIpAddr!= null && !privateIpAddr.equals(inServiceInstances.get(instanceId).getPrivateIp())) {
+        try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+          final LoadBalancerServoInstance update =
+                  Entities.uniqueResult(LoadBalancerServoInstance.named(instanceId));
+          if (ipAddr!=null) {
+            update.setAddress(ipAddr);
+          }
+          if (privateIpAddr!=null) {
+            update.setPrivateIp(ipAddr);
+          }
+          db.commit();
+        }catch(final NoSuchElementException ex){
+          LOG.warn("Failed to find the servo instance named "+instanceId, ex);
+        }catch(final Exception ex){
+          LOG.warn("Failed to update servo instance's ip address", ex);
+        }
+      }
+    }
+  }
+
   /*
    * Note that the backend instance check does not affect the health check result of the instances.
    * the health check is left to the "ping" mechanism by the servo. the state update here is the mean
