@@ -3767,6 +3767,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 snprintf(mac, 32, "%s", macAddrs[i]);
                 LOGDEBUG("setting instance '%s' macAddr to CLC input value '%s'\n", instId, mac);
             } else {
+                EUCA_FREE(mac);
                 if ((rc = euca_inst2mac(gpEucaNet->sMacPrefix, instId, &mac)) == 0) {
                     foundnet = 1;
                     if (nidx == -1) {

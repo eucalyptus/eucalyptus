@@ -523,10 +523,6 @@ int euca_inst2mac(const char *psMacPrefix, const char *psInstanceId, char **psOu
     // Caller should have already freed the memory
     (*psOutMac) = NULL;
 
-    // The instance identifier should be of 10 characters (e.g. i-xxxxxxxx)
-    if (strlen(psInstanceId) != (INSTANCE_ID_LEN - 1)) {
-        return (EUCA_INVALID_ERROR);
-    }
     // Make sure the given instance identifier is valid and starts with an "i-"
     if ((p = strstr(psInstanceId, "i-")) == NULL) {
         return (EUCA_INVALID_ERROR);
