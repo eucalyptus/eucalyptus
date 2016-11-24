@@ -155,7 +155,7 @@ static boolean gInitialized = FALSE;
 
 //! @{
 //! @name TEMPLATE Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_init(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
@@ -213,9 +213,10 @@ struct driver_handler_t templateDriverHandler = {
  * - The pConfig parameter must not be NULL
  *
  * @param pConfig [in] a pointer to eucanetd system-wide configuration
+ * @param pGni [in] a pointer to the Global Network Information structure
  * @return 0 on success. Integer number on failure.
  */
-static int network_driver_init(eucanetdConfig *pConfig) {
+static int network_driver_init(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
 
     // Make sure our given pointer is valid

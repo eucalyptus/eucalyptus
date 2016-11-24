@@ -3028,7 +3028,7 @@ int find_interface_changes(char *gni_path) {
 
         if(!rc){
             LOGDEBUG("Updating lastVersion %s with appliedVersion %s\n", lastVersion, gni->appliedVersion);
-            euca_strncpy(lastVersion, gni->appliedVersion, 32);
+            euca_strncpy(lastVersion, gni->appliedVersion, GNI_VERSION_LEN);
         }
     }
 
