@@ -158,7 +158,7 @@ int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, c
         return (1);
     }
 
-    snprintf(hashtok, 16 + 128 + 1, "%s-%s", secgroup->accountId, secgroup->name);
+    snprintf(hashtok, OWNER_ID_LEN + SECURITY_GROUP_ID_LEN + 1, "%s-%s", secgroup->accountId, secgroup->name);
     hash_b64enc_string(hashtok, &chainhash);
     if (chainhash) {
         snprintf(chainname, 48, "EU_%s", chainhash);
@@ -2243,7 +2243,7 @@ int gni_populate_gnidata(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCon
     rc += evaluate_xpath_property(ctxptr, doc, NULL, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->version, 32, "%s", results[i]);
+        snprintf(gni->version, GNI_VERSION_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -2252,7 +2252,7 @@ int gni_populate_gnidata(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCon
     rc += evaluate_xpath_property(ctxptr, doc, NULL, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(gni->appliedVersion, 32, "%s", results[i]);
+        snprintf(gni->appliedVersion, GNI_VERSION_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -2313,26 +2313,21 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
     }
     EUCA_FREE(results);
 
-    snprintf(expression, 2048, "./property[@name='publicGateway']/value");
-    rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    for (i = 0; i < max_results; i++) {
-        LOGTRACE("after function: %d: %s\n", i, results[i]);
-        gni->publicGateway = dot2hex(results[i]);
-        EUCA_FREE(results[i]);
-    }
-    EUCA_FREE(results);
-
     if (IS_NETMODE_VPCMIDO(gni)) {
+        char *peer_ip = NULL;
+        char *external_cidr = NULL;
+
         snprintf(expression, 2048, "./property[@name='mido']");
         rc = evaluate_xpath_nodeset(ctxptr, doc, xmlnode, expression, &nodeset);
-        if (nodeset.nodeNr == 1) {
+        if (nodeset.nodeNr >= 1) {
             startnode = nodeset.nodeTab[0];
 
+            /* pre-4.3 Mido Gateway (start)*/
             snprintf(expression, 2048, "./property[@name='publicNetworkCidr']/value");
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->PublicNetworkCidr, HOSTNAME_LEN, "%s", results[i]);
+                external_cidr = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -2341,13 +2336,22 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->PublicGatewayIP, HOSTNAME_LEN, "%s", results[i]);
+                peer_ip = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
 
-            char gwtoks[6][2048];
-            int good = 1, max_gws = 0;
+            u32 asn = 0;
+            snprintf(expression, 2048, "./property[@name='bgpAsn']/value");
+            rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+            for (i = 0; i < max_results; i++) {
+                LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                asn = (u32) atoi(results[i]);
+                EUCA_FREE(results[i]);
+            }
+            EUCA_FREE(results);
+
+            int max_gws = 0;
             xmlNodeSet gwnodeset = {0};
 
             snprintf(expression, 2048, "./property[@name='gateways']/gateway");
@@ -2355,14 +2359,17 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             LOGTRACE("Found %d gateways\n", gwnodeset.nodeNr);
 
             max_gws = gwnodeset.nodeNr;
+            gni->midogws = EUCA_ZALLOC_C(max_gws, sizeof (gni_mido_gateway));
+            gni->max_midogws = max_gws;
             for (j = 0; j < max_gws; j++) {
+                gni_mido_gateway *midogw = &(gni->midogws[j]);
+
                 startnode = gwnodeset.nodeTab[j];
                 snprintf(expression, 2048, "./property[@name='gatewayHost']/value");
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    bzero(gwtoks[j], 2048);
-                    snprintf(gwtoks[j], 2048, "%s", results[i]);
+                    snprintf(midogw->host, HOSTNAME_LEN, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
@@ -2371,8 +2378,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    euca_strncat(gwtoks[j], ",", 2048);
-                    euca_strncat(gwtoks[j], results[i], 2048);
+                    snprintf(midogw->ext_ip, INET_ADDR_LEN, "%s", results[i]);
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
@@ -2381,21 +2387,103 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
                 for (i = 0; i < max_results; i++) {
                     LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-                    euca_strncat(gwtoks[j], ",", 2048);
-                    euca_strncat(gwtoks[j], results[i], 2048);
+                    snprintf(midogw->ext_dev, IF_NAME_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                if (external_cidr) {
+                    snprintf(midogw->ext_cidr, NETWORK_ADDR_LEN, "%s", external_cidr);
+                }
+                if (peer_ip) {
+                    snprintf(midogw->peer_ip, INET_ADDR_LEN, "%s", peer_ip);
+                }
+                /* pre-4.3 Mido Gateway (end)*/
+                
+                /* pre-4.3 Mido Gateway values are overwritten if 4.4 values are present*/
+                snprintf(expression, 2048, "./property[@name='ip']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->host, INET_ADDR_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                snprintf(expression, 2048, "./property[@name='externalCidr']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->ext_cidr, NETWORK_ADDR_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                snprintf(expression, 2048, "./property[@name='externalIp']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->ext_ip, INET_ADDR_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                snprintf(expression, 2048, "./property[@name='externalDevice']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->ext_dev, IF_NAME_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                // static router
+                snprintf(expression, 2048, "./property[@name='externalRouterIp']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->peer_ip, INET_ADDR_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+                
+                // BGP parameters
+                snprintf(expression, 2048, "./property[@name='bgpPeerIp']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    snprintf(midogw->peer_ip, INET_ADDR_LEN, "%s", results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+                
+                snprintf(expression, 2048, "./property[@name='bgpPeerAsn']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    midogw->peer_asn = (u32) atoi(results[i]);
+                    midogw->asn = asn;
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
+
+                snprintf(expression, 2048, "./property[@name='bgpAdRoutes']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                midogw->ad_routes = EUCA_ZALLOC_C(max_results, sizeof (char *));
+                midogw->max_ad_routes = max_results;
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    midogw->ad_routes[i] = strdup(results[i]);
                     EUCA_FREE(results[i]);
                 }
                 EUCA_FREE(results);
             }
             EUCA_FREE(gwnodeset.nodeTab);
+            EUCA_FREE(external_cidr);
+            EUCA_FREE(peer_ip);
 
-            if (!good || max_gws <= 0) {
+            if (max_gws <= 0) {
                 LOGERROR("Invalid mido gateway(s) detected. Check network configuration.\n");
-            } else {
-                for (i = 0; i < max_gws; i++) {
-                    euca_strncat(gni->GatewayHosts, gwtoks[i], HOSTNAME_LEN * 3 * 33);
-                    euca_strncat(gni->GatewayHosts, " ", HOSTNAME_LEN * 3 * 33);
-                }
             }
         } else {
             LOGTRACE("mido section not found in GNI\n");
@@ -2405,7 +2493,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
     snprintf(expression, 2048, "./property[@name='instanceDNSServers']/value");
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    gni->instanceDNSServers = EUCA_ZALLOC(max_results, sizeof (u32));
+    gni->instanceDNSServers = EUCA_ZALLOC_C(max_results, sizeof (u32));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
         gni->instanceDNSServers[i] = dot2hex(results[i]);
@@ -2416,10 +2504,16 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
     snprintf(expression, 2048, "./property[@name='publicIps']/value");
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
+    gni->public_ips_str = EUCA_ZALLOC_C(max_results, sizeof (char *));
+    gni->max_public_ips_str = max_results;
     if (results && max_results) {
+        // expand ips list only if/when necessary
+/*
         rc += gni_serialize_iprange_list(results, max_results, &(gni->public_ips), &(gni->max_public_ips));
+*/
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
+            gni->public_ips_str[i] = strdup(results[i]);
             EUCA_FREE(results[i]);
         }
     }
@@ -2434,10 +2528,16 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
         for (j = 0; j < gni->max_subnets; j++) {
             startnode = nodeset.nodeTab[j];
-            if (startnode && startnode->properties && startnode->properties->children &&
-                    startnode->properties->children->content) {
-                LOGTRACE("after function: %d: %s\n", j, startnode->properties->children->content);
-                gni->subnets[j].subnet = dot2hex((char *) startnode->properties->children->content);
+            if (startnode) {
+                // Get the subnet
+                snprintf(expression, 2048, "./property[@name='subnet']/value");
+                rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                for (i = 0; i < max_results; i++) {
+                    LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                    gni->subnets[j].subnet = dot2hex(results[i]);
+                    EUCA_FREE(results[i]);
+                }
+                EUCA_FREE(results);
 
                 // Get the netmask
                 snprintf(expression, 2048, "./property[@name='netmask']/value");
@@ -2475,10 +2575,13 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
         for (j = 0; j < gni->max_clusters; j++) {
             startnode = nodeset.nodeTab[j];
-            if (startnode && startnode->properties && startnode->properties->children &&
-                    startnode->properties->children->content) {
-                LOGTRACE("after function: %d: %s\n", j, startnode->properties->children->content);
-                snprintf(gni->clusters[j].name, HOSTNAME_LEN, "%s", (char *) startnode->properties->children->content);
+            if (startnode && startnode->properties) {
+                for (xmlAttr *prop = startnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gni->clusters[j].name, HOSTNAME_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
 
                 snprintf(expression, 2048, "./property[@name='enabledCCIp']/value");
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
@@ -2500,10 +2603,16 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
                 snprintf(expression, 2048, "./property[@name='privateIps']/value");
                 rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
+                gni->clusters[j].private_ips_str = EUCA_ZALLOC_C(max_results, sizeof (char *));
+                gni->clusters[j].max_private_ips_str = max_results;
                 if (results && max_results) {
+                    // expand ips list only if/when necessary
+/*
                     rc += gni_serialize_iprange_list(results, max_results, &(gni->clusters[j].private_ips), &(gni->clusters[j].max_private_ips));
+*/
                     for (i = 0; i < max_results; i++) {
                         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
+                        gni->clusters[j].private_ips_str[i] = strdup(results[i]);
                         EUCA_FREE(results[i]);
                     }
                 }
@@ -2515,10 +2624,15 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
                 rc += evaluate_xpath_nodeset(ctxptr, doc, startnode, expression, &snnodeset);
                 if (snnodeset.nodeNr > 0) {
                     snstartnode = snnodeset.nodeTab[0];
-                    if (snstartnode && snstartnode->properties && snstartnode->properties->children &&
-                            snstartnode->properties->children->content) {
-                        LOGTRACE("\t\tafter function: %d: %s\n", j, snstartnode->properties->children->content);
-                        gni->clusters[j].private_subnet.subnet = dot2hex((char *) snstartnode->properties->children->content);
+                    if (snstartnode) {
+                        snprintf(expression, 2048, "./property[@name='subnet']/value");
+                        rc += evaluate_xpath_property(ctxptr, doc, snstartnode, expression, &results, &max_results);
+                        for (i = 0; i < max_results; i++) {
+                            LOGTRACE("\t\tafter function: %d: %s\n", i, results[i]);
+                            gni->clusters[j].private_subnet.subnet = dot2hex(results[i]);
+                            EUCA_FREE(results[i]);
+                        }
+                        EUCA_FREE(results);
 
                         snprintf(expression, 2048, "./property[@name='netmask']/value");
                         rc += evaluate_xpath_property(ctxptr, doc, snstartnode, expression, &results, &max_results);
@@ -2551,18 +2665,21 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
 
                     for (k = 0; k < nnodeset.nodeNr; k++) {
                         nstartnode = nnodeset.nodeTab[k];
-                        if (nstartnode && nstartnode->properties && nstartnode->properties->children &&
-                                nstartnode->properties->children->content) {
-                            LOGTRACE("\t\tafter function: %d: %s\n", j, nstartnode->properties->children->content);
-                            snprintf(gni->clusters[j].nodes[k].name, HOSTNAME_LEN, "%s", (char *) nstartnode->properties->children->content);
+                        if (nstartnode && nstartnode->properties) {
+                            for (xmlAttr *prop = nstartnode->properties; prop != NULL; prop = prop->next) {
+                                if (!strcmp((char *) prop->name, "name")) {
+                                    snprintf(gni->clusters[j].nodes[k].name, HOSTNAME_LEN, "%s", (char *) prop->children->content);
+                                    break;
+                                }
+                            }
                         }
 
                         snprintf(expression, 2048, "./instanceIds/value");
                         rc += evaluate_xpath_property(ctxptr, doc, nstartnode, expression, &results, &max_results);
-                        gni->clusters[j].nodes[k].instance_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
+                        gni->clusters[j].nodes[k].instance_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name_32));
                         for (i = 0; i < max_results; i++) {
                             LOGTRACE("\t\t\tafter function: %d: %s\n", i, results[i]);
-                            snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
+                            snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 32, "%s", results[i]);
                             EUCA_FREE(results[i]);
 
                             char *nc = gni->clusters[j].nodes[k].name;
@@ -2692,7 +2809,7 @@ int gni_populate_interfaces(globalNetworkInfo *gni, gni_instance *instance, xmlN
                 //snprintf(gni->interfaces[gni->max_interfaces + i].instance_name.name, 1024, instance->name);
                 //gni_populate_instance_interface(&(gni->interfaces[gni->max_interfaces + i]), nodeset.nodeTab[i], ctxptr, doc);
                 gni->ifs[gni->max_ifs + i] = EUCA_ZALLOC_C(1, sizeof (gni_instance));
-                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 1024, instance->name);
+                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 256, instance->name);
                 gni_populate_instance_interface(gni->ifs[gni->max_ifs + i], nodeset.nodeTab[i], ctxptr, doc);
                 instance->interfaces[i] = gni->ifs[gni->max_ifs + i];
                 //gni_instance_interface_print(gni->ifs[gni->max_ifs + i]), EUCA_LOG_INFO);
@@ -2730,10 +2847,13 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
         return (1);
     }
 
-    if (xmlnode && xmlnode->properties && xmlnode->properties->children &&
-            xmlnode->properties->children->content) {
-        LOGTRACE("going to populate gni: %s\n", xmlnode->properties->children->content);
-        snprintf(instance->name, INTERFACE_ID_LEN, "%s", (char *) xmlnode->properties->children->content);
+    if (xmlnode && xmlnode->properties) {
+        for (xmlAttr *prop = xmlnode->properties; prop != NULL; prop = prop->next) {
+            if (!strcmp((char *) prop->name, "name")) {
+                snprintf(instance->name, INTERFACE_ID_LEN, "%s", (char *) prop->children->content);
+                break;
+            }
+        }
     }
 
     if ((instance->name == NULL) || (strlen(instance->name) == 0)) {
@@ -2749,7 +2869,7 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-        snprintf(instance->accountId, 128, "%s", results[i]);
+        snprintf(instance->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -2785,7 +2905,7 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-        snprintf(instance->vpc, 16, "%s", results[i]);
+        snprintf(instance->vpc, VPC_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -2794,18 +2914,18 @@ int gni_populate_instance_interface(gni_instance *instance, xmlNodePtr xmlnode, 
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-        snprintf(instance->subnet, 16, "%s", results[i]);
+        snprintf(instance->subnet, VPC_SUBNET_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
 
     snprintf(expression, 2048, "./securityGroups/value");
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    instance->secgroup_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
+    instance->secgroup_names = EUCA_ZALLOC_C(max_results, sizeof (gni_name_32));
     instance->gnisgs = EUCA_ZALLOC_C(max_results, sizeof (gni_secgroup *));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("\tafter function: %d: %s\n", i, results[i]);
-        snprintf(instance->secgroup_names[i].name, 1024, "%s", results[i]);
+        snprintf(instance->secgroup_names[i].name, 32, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     instance->max_secgroup_names = max_results;
@@ -2891,9 +3011,13 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
         if (nodeset.nodeTab[j]) {
             xmlNodePtr sgnode = nodeset.nodeTab[j];
             gni_secgroup *gsg = &(gni->secgroups[j]);
-            if (sgnode && sgnode->properties && sgnode->properties->children &&
-                    sgnode->properties->children->content) {
-                snprintf(gsg->name, SECURITY_GROUP_ID_LEN, "%s", (char *) sgnode->properties->children->content);
+            if (sgnode && sgnode->properties) {
+                for (xmlAttr *prop = sgnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gsg->name, HOSTNAME_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
             }
 
             // populate secgroup's instance_names
@@ -2929,7 +3053,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             rc += evaluate_xpath_property(ctxptr, doc, sgnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gni->secgroups[j].accountId, 128, "%s", results[i]);
+                snprintf(gni->secgroups[j].accountId, OWNER_ID_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -3019,7 +3143,7 @@ int gni_populate_rule(gni_rule *rule, xmlNodePtr xmlnode, xmlXPathContextPtr ctx
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(rule->groupOwnerId, 16, "%s", results[i]);
+        snprintf(rule->groupOwnerId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3114,12 +3238,15 @@ int gni_populate_vpcs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContex
         if (nodeset.nodeTab[j]) {
             xmlNodePtr vpcnode = nodeset.nodeTab[j];
             gni_vpc *gvpc = &(gni->vpcs[j]);
-            if (vpcnode && vpcnode->properties && vpcnode->properties->children &&
-                    vpcnode->properties->children->content) {
-                snprintf(gvpc->name, 16, "%s", (char *) vpcnode->properties->children->content);
+            if (vpcnode && vpcnode->properties) {
+                for (xmlAttr *prop = vpcnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gvpc->name, VPC_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
+                gni_populate_vpc(gvpc, vpcnode, ctxptr, doc);
             }
-
-            gni_populate_vpc(gvpc, vpcnode, ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
@@ -3154,7 +3281,7 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (int i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpc->accountId, 128, "%s", results[i]);
+        snprintf(vpc->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3163,7 +3290,7 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (int i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpc->cidr, 24, "%s", results[i]);
+        snprintf(vpc->cidr, NETWORK_ADDR_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3172,7 +3299,7 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (int i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpc->dhcpOptionSet_name, 16, "%s", results[i]);
+        snprintf(vpc->dhcpOptionSet_name, DHCP_OS_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3190,12 +3317,15 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
         if (nodeset.nodeTab[j]) {
             xmlNodePtr rtbnode = nodeset.nodeTab[j];
             gni_route_table *groutetb = &(vpc->routeTables[j]);
-            if (rtbnode && rtbnode->properties && rtbnode->properties->children &&
-                    rtbnode->properties->children->content) {
-                snprintf(groutetb->name, 16, "%s", (char *) rtbnode->properties->children->content);
+            if (rtbnode && rtbnode->properties) {
+                for (xmlAttr *prop = rtbnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(groutetb->name, RTB_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
+                gni_populate_routetable(vpc, groutetb, rtbnode, ctxptr, doc);
             }
-
-            gni_populate_routetable(vpc, groutetb, rtbnode, ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
@@ -3212,22 +3342,25 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
         if (nodeset.nodeTab[j]) {
             xmlNodePtr vpcsnnode = nodeset.nodeTab[j];
             gni_vpcsubnet *gvpcsn = &(vpc->subnets[j]);
-            if (vpcsnnode && vpcsnnode->properties && vpcsnnode->properties->children &&
-                    vpcsnnode->properties->children->content) {
-                snprintf(gvpcsn->name, 16, "%s", (char *) vpcsnnode->properties->children->content);
+            if (vpcsnnode && vpcsnnode->properties) {
+                for (xmlAttr *prop = vpcsnnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gvpcsn->name, VPC_SUBNET_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
+                gni_populate_vpcsubnet(vpc, gvpcsn, vpcsnnode, ctxptr, doc);
             }
-
-            gni_populate_vpcsubnet(vpc, gvpcsn, vpcsnnode, ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
 
     snprintf(expression, 2048, "./internetGateways/value");
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
-    vpc->internetGatewayNames = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
+    vpc->internetGatewayNames = EUCA_ZALLOC_C(max_results, sizeof (gni_name_32));
     for (int i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpc->internetGatewayNames[i].name, 16, "%s", results[i]);
+        snprintf(vpc->internetGatewayNames[i].name, 32, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     vpc->max_internetGatewayNames = max_results;
@@ -3246,12 +3379,15 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
         if (nodeset.nodeTab[j]) {
             xmlNodePtr ngnode = nodeset.nodeTab[j];
             gni_nat_gateway *gninatg = &(vpc->natGateways[j]);
-            if (ngnode && ngnode->properties && ngnode->properties->children &&
-                    ngnode->properties->children->content) {
-                snprintf(gninatg->name, 32, "%s", (char *) ngnode->properties->children->content);
+            if (ngnode && ngnode->properties) {
+                for (xmlAttr *prop = ngnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gninatg->name, NATG_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
+                gni_populate_natgateway(gninatg, ngnode, ctxptr, doc);
             }
-
-            gni_populate_natgateway(gninatg, ngnode, ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
@@ -3269,12 +3405,15 @@ int gni_populate_vpc(gni_vpc *vpc, xmlNodePtr xmlnode, xmlXPathContextPtr ctxptr
         if (nodeset.nodeTab[j]) {
             xmlNodePtr aclnode = nodeset.nodeTab[j];
             gni_network_acl *gniacl = &(vpc->networkAcls[j]);
-            if (aclnode && aclnode->properties && aclnode->properties->children &&
-                    aclnode->properties->children->content) {
-                snprintf(gniacl->name, NETWORK_ACL_ID_LEN, "%s", (char *) aclnode->properties->children->content);
+            if (aclnode && aclnode->properties) {
+                for (xmlAttr *prop = aclnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gniacl->name, NETWORK_ACL_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
+                gni_populate_networkacl(gniacl, aclnode, ctxptr, doc);
             }
-
-            gni_populate_networkacl(gniacl, aclnode, ctxptr, doc);
         }
     }
     EUCA_FREE(nodeset.nodeTab);
@@ -3310,7 +3449,7 @@ int gni_populate_routetable(gni_vpc *vpc, gni_route_table *routetable, xmlNodePt
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(routetable->accountId, 128, "%s", results[i]);
+        snprintf(routetable->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3363,7 +3502,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(route->destCidr, 16, "%s", results[i]);
+        snprintf(route->destCidr, NETWORK_ADDR_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3371,7 +3510,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(route->target, 32, "%s", results[i]);
+        snprintf(route->target, LID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3381,7 +3520,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
         rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            snprintf(route->target, 32, "%s", results[i]);
+            snprintf(route->target, LID_LEN, "%s", results[i]);
             EUCA_FREE(results[i]);
         }
         EUCA_FREE(results);
@@ -3392,7 +3531,7 @@ int gni_populate_route(gni_route_entry *route, xmlNodePtr xmlnode, xmlXPathConte
         rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            snprintf(route->target, 32, "%s", results[i]);
+            snprintf(route->target, LID_LEN, "%s", results[i]);
             EUCA_FREE(results[i]);
         }
         EUCA_FREE(results);
@@ -3429,7 +3568,7 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpcsubnet->accountId, 128, "%s", results[i]);
+        snprintf(vpcsubnet->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3438,7 +3577,7 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpcsubnet->cidr, 24, "%s", results[i]);
+        snprintf(vpcsubnet->cidr, NETWORK_ADDR_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3456,7 +3595,7 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpcsubnet->networkAcl_name, 16, "%s", results[i]);
+        snprintf(vpcsubnet->networkAcl_name, NETWORK_ACL_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3465,7 +3604,7 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(vpcsubnet->routeTable_name, 16, "%s", results[i]);
+        snprintf(vpcsubnet->routeTable_name, RTB_ID_LEN, "%s", results[i]);
         vpcsubnet->routeTable = gni_vpc_get_routeTable(vpc, results[i]);
         if (vpcsubnet->routeTable == NULL) {
             LOGWARN("Failed to find GNI %s for %s\n", results[i], vpcsubnet->name)
@@ -3504,7 +3643,7 @@ int gni_populate_natgateway(gni_nat_gateway *natg, xmlNodePtr xmlnode, xmlXPathC
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(natg->accountId, 128, "%s", results[i]);
+        snprintf(natg->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3540,7 +3679,7 @@ int gni_populate_natgateway(gni_nat_gateway *natg, xmlNodePtr xmlnode, xmlXPathC
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(natg->vpc, 16, "%s", results[i]);
+        snprintf(natg->vpc, VPC_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3549,7 +3688,7 @@ int gni_populate_natgateway(gni_nat_gateway *natg, xmlNodePtr xmlnode, xmlXPathC
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(natg->subnet, 16, "%s", results[i]);
+        snprintf(natg->subnet, VPC_SUBNET_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3584,7 +3723,7 @@ int gni_populate_networkacl(gni_network_acl *netacl, xmlNodePtr xmlnode, xmlXPat
     rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        snprintf(netacl->accountId, 128, "%s", results[i]);
+        snprintf(netacl->accountId, OWNER_ID_LEN, "%s", results[i]);
         EUCA_FREE(results[i]);
     }
     EUCA_FREE(results);
@@ -3650,9 +3789,13 @@ int gni_populate_aclentry(gni_acl_entry *aclentry, xmlNodePtr xmlnode, xmlXPathC
         return (1);
     }
 
-    if (xmlnode && xmlnode->properties && xmlnode->properties->children &&
-            xmlnode->properties->children->content) {
-        aclentry->number = atoi((char *) xmlnode->properties->children->content);
+    if (xmlnode && xmlnode->properties) {
+        for (xmlAttr *prop = xmlnode->properties; prop != NULL; prop = prop->next) {
+            if (!strcmp((char *) prop->name, "number")) {
+                aclentry->number = atoi((char *) prop->children->content);
+                break;
+            }
+        }
     }
 
     snprintf(expression, 2048, "./action");
@@ -3766,16 +3909,20 @@ int gni_populate_internetgateways(globalNetworkInfo *gni, xmlNodePtr xmlnode, xm
         if (nodeset.nodeTab[j]) {
             xmlNodePtr ignode = nodeset.nodeTab[j];
             gni_internet_gateway *gig = &(gni->vpcIgws[j]);
-            if (ignode && ignode->properties && ignode->properties->children &&
-                    ignode->properties->children->content) {
-                snprintf(gig->name, 16, "%s", (char *) ignode->properties->children->content);
+            if (ignode && ignode->properties) {
+                for (xmlAttr *prop = ignode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gig->name, INETG_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
             }
 
             snprintf(expression, 2048, "./ownerId");
             rc += evaluate_xpath_property(ctxptr, doc, ignode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gig->accountId, 128, "%s", results[i]);
+                snprintf(gig->accountId, OWNER_ID_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
@@ -3827,24 +3974,29 @@ int gni_populate_dhcpos(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCont
             gni_dhcp_os *gdh = &(gni->dhcpos[j]);
             if (dhnode && dhnode->properties && dhnode->properties->children &&
                     dhnode->properties->children->content) {
-                snprintf(gdh->name, DHCP_OS_ID_LEN, "%s", (char *) dhnode->properties->children->content);
+                for (xmlAttr *prop = dhnode->properties; prop != NULL; prop = prop->next) {
+                    if (!strcmp((char *) prop->name, "name")) {
+                        snprintf(gdh->name, DHCP_OS_ID_LEN, "%s", (char *) prop->children->content);
+                        break;
+                    }
+                }
             }
 
             snprintf(expression, 2048, "./ownerId");
             rc += evaluate_xpath_property(ctxptr, doc, dhnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gdh->accountId, 128, "%s", results[i]);
+                snprintf(gdh->accountId, OWNER_ID_LEN, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             EUCA_FREE(results);
 
             snprintf(expression, 2048, "./property[@name='domain-name']/value");
             rc += evaluate_xpath_property(ctxptr, doc, dhnode, expression, &results, &max_results);
-            gdh->domains = EUCA_ZALLOC_C(max_results, sizeof (gni_name));
+            gdh->domains = EUCA_ZALLOC_C(max_results, sizeof (gni_name_256));
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
-                snprintf(gdh->domains[i].name, 1024, "%s", results[i]);
+                snprintf(gdh->domains[i].name, 256, "%s", results[i]);
                 EUCA_FREE(results[i]);
             }
             gdh->max_domains = max_results;
@@ -3995,271 +4147,249 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 **outlist, int *out
  *
  * @param gni [in] a pointer to the global network information structure
  * @param mode [in] the iteration mode: GNI_ITERATE_PRINT or GNI_ITERATE_FREE
+ * @param llevel [in] log level to be used in mode GNI_ITERATE_PRINT
  *
  * @return Always return 0
  */
-int gni_iterate(globalNetworkInfo *gni, int mode)
-{
+int gni_iterate(globalNetworkInfo *gni, gni_iterate_mode mode, log_level_e llevel) {
     int i, j;
     char *strptra = NULL;
 
-    strptra = hex2dot(gni->enabledCLCIp);
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("enabledCLCIp: %s\n", SP(strptra));
-    EUCA_FREE(strptra);
+    switch (mode) {
+        case GNI_ITERATE_PRINT:
 
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("instanceDNSDomain: %s\n", gni->instanceDNSDomain);
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("instanceDNSServers: \n");
-    for (i = 0; i < gni->max_instanceDNSServers; i++) {
-        strptra = hex2dot(gni->instanceDNSServers[i]);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tdnsServer %d: %s\n", i, SP(strptra));
-        EUCA_FREE(strptra);
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->instanceDNSServers);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("publicIps: \n");
-    for (i = 0; i < gni->max_public_ips; i++) {
-        strptra = hex2dot(gni->public_ips[i]);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tip %d: %s\n", i, SP(strptra));
-        EUCA_FREE(strptra);
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->public_ips);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("subnets: \n");
-    for (i = 0; i < gni->max_subnets; i++) {
-
-        strptra = hex2dot(gni->subnets[i].subnet);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tsubnet %d: %s\n", i, SP(strptra));
-        EUCA_FREE(strptra);
-
-        strptra = hex2dot(gni->subnets[i].netmask);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tnetmask: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        strptra = hex2dot(gni->subnets[i].gateway);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tgateway: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->subnets);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("clusters: \n");
-    for (i = 0; i < gni->max_clusters; i++) {
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tcluster %d: %s\n", i, gni->clusters[i].name);
-        strptra = hex2dot(gni->clusters[i].enabledCCIp);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tenabledCCIp: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tmacPrefix: %s\n", gni->clusters[i].macPrefix);
-
-        strptra = hex2dot(gni->clusters[i].private_subnet.subnet);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tsubnet: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        strptra = hex2dot(gni->clusters[i].private_subnet.netmask);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\t\tnetmask: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        strptra = hex2dot(gni->clusters[i].private_subnet.gateway);
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\t\tgateway: %s\n", SP(strptra));
-        EUCA_FREE(strptra);
-
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tprivate_ips \n");
-        for (j = 0; j < gni->clusters[i].max_private_ips; j++) {
-            strptra = hex2dot(gni->clusters[i].private_ips[j]);
-            if (mode == GNI_ITERATE_PRINT)
-                LOGTRACE("\t\t\tip %d: %s\n", j, SP(strptra));
+            strptra = hex2dot(gni->enabledCLCIp);
+            EUCALOG(llevel, "enabledCLCIp: %s\n", SP(strptra));
             EUCA_FREE(strptra);
-        }
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\t\tnodes \n");
-        for (j = 0; j < gni->clusters[i].max_nodes; j++) {
-            if (mode == GNI_ITERATE_PRINT)
-                LOGTRACE("\t\t\tnode %d: %s\n", j, gni->clusters[i].nodes[j].name);
-            if (mode == GNI_ITERATE_FREE) {
-                gni_node_clear(&(gni->clusters[i].nodes[j]));
+
+            EUCALOG(llevel, "instanceDNSDomain: %s\n", gni->instanceDNSDomain);
+
+            EUCALOG(llevel, "instanceDNSServers: \n");
+            for (i = 0; i < gni->max_instanceDNSServers; i++) {
+                strptra = hex2dot(gni->instanceDNSServers[i]);
+                EUCALOG(llevel, "\tdnsServer %d: %s\n", i, SP(strptra));
+                EUCA_FREE(strptra);
             }
-        }
-        if (mode == GNI_ITERATE_FREE) {
-            EUCA_FREE(gni->clusters[i].nodes);
-            gni_cluster_clear(&(gni->clusters[i]));
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->clusters);
-    }
 
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("instances: \n");
-    for (i = 0; i < gni->max_instances; i++) {
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tid: %s\n", gni->instances[i]->name);
-        if (mode == GNI_ITERATE_FREE) {
-            gni_instance_clear(gni->instances[i]);
-            EUCA_FREE(gni->instances[i]);
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->instances);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("interfaces: \n");
-    for (i = 0; i < gni->max_ifs; i++) {
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tid: %s\n", gni->ifs[i]->name);
-        if (mode == GNI_ITERATE_FREE) {
-            gni_instance_clear(gni->ifs[i]);
-            EUCA_FREE(gni->ifs[i]);
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->ifs);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("secgroups: \n");
-    for (i = 0; i < gni->max_secgroups; i++) {
-        if (mode == GNI_ITERATE_PRINT)
-            LOGTRACE("\tname: %s\n", gni->secgroups[i].name);
-        if (mode == GNI_ITERATE_FREE) {
-            gni_secgroup_clear(&(gni->secgroups[i]));
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->secgroups);
-    }
-
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("vpcs: \n");
-    for (i = 0; i < gni->max_vpcs; i++) {
-        if (mode == GNI_ITERATE_PRINT) {
-            LOGTRACE("\tname: %s\n", gni->vpcs[i].name);
-            LOGTRACE("\taccountId: %s\n", gni->vpcs[i].accountId);
-            LOGTRACE("\tsubnets: \n");
-            for (j = 0; j < gni->vpcs[i].max_subnets; j++) {
-                LOGTRACE("\t\tname: %s\n", gni->vpcs[i].subnets[j].name);
-                LOGTRACE("\t\trouteTable: %s\n", gni->vpcs[i].subnets[j].routeTable_name);
+            EUCALOG(llevel, "publicIps: \n");
+            for (i = 0; i < gni->max_public_ips_str; i++) {
+                EUCALOG(llevel, "\tip %d: %s\n", i, gni->public_ips_str[i]);
             }
-        }
-        if (mode == GNI_ITERATE_FREE) {
-            gni_vpc_clear(&(gni->vpcs[i]));
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->vpcs);
-    }
 
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("Internet Gateways: \n");
-    for (i = 0; i < gni->max_vpcIgws; i++) {
-        if (mode == GNI_ITERATE_PRINT) {
-            LOGTRACE("\tname: %s\n", gni->vpcIgws[i].name);
-            LOGTRACE("\taccountId: %s\n", gni->vpcIgws[i].accountId);
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->vpcIgws);
-    }
+            EUCALOG(llevel, "subnets: \n");
+            for (i = 0; i < gni->max_subnets; i++) {
+                strptra = hex2dot(gni->subnets[i].subnet);
+                EUCALOG(llevel, "\tsubnet %d: %s\n", i, SP(strptra));
+                EUCA_FREE(strptra);
 
-    if (mode == GNI_ITERATE_PRINT)
-        LOGTRACE("DHCP Option Sets: \n");
-    for (i = 0; i < gni->max_dhcpos; i++) {
-        if (mode == GNI_ITERATE_PRINT) {
-            LOGTRACE("\tname: %s\n", gni->dhcpos[i].name);
-            LOGTRACE("\taccountId: %s\n", gni->dhcpos[i].accountId);
-            char *dhcpdstr = NULL;
-            char dhcpsstr[1024];
-            dhcpsstr[0] = '\0';
-            for (j = 0; j < gni->dhcpos[i].max_domains; j++) {
-                strncat(dhcpsstr, gni->dhcpos[i].domains[j].name, 512);
-                strncat(dhcpsstr, " ", 512);
+                strptra = hex2dot(gni->subnets[i].netmask);
+                EUCALOG(llevel, "\t\tnetmask: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
+
+                strptra = hex2dot(gni->subnets[i].gateway);
+                EUCALOG(llevel, "\t\tgateway: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
             }
-            if (gni->dhcpos[i].max_domains) {
-                LOGTRACE("\t\tdomains: %s\n", dhcpsstr);
-            }
-            dhcpsstr[0] = '\0';
-            for (j = 0; j < gni->dhcpos[i].max_dns; j++) {
-                dhcpdstr = hex2dot(gni->dhcpos[i].dns[j]);
-                strncat(dhcpsstr, dhcpdstr, 512);
-                strncat(dhcpsstr, ", ", 512);
-                EUCA_FREE(dhcpdstr);
-            }
-            if (gni->dhcpos[i].max_dns) {
-                if (strlen(dhcpsstr) > 2) {
-                    dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
+
+            EUCALOG(llevel, "clusters: \n");
+            for (i = 0; i < gni->max_clusters; i++) {
+                EUCALOG(llevel, "\tcluster %d: %s\n", i, gni->clusters[i].name);
+                strptra = hex2dot(gni->clusters[i].enabledCCIp);
+                EUCALOG(llevel, "\t\tenabledCCIp: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
+
+                EUCALOG(llevel, "\t\tmacPrefix: %s\n", gni->clusters[i].macPrefix);
+
+                strptra = hex2dot(gni->clusters[i].private_subnet.subnet);
+                EUCALOG(llevel, "\t\tsubnet: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
+
+                strptra = hex2dot(gni->clusters[i].private_subnet.netmask);
+                EUCALOG(llevel, "\t\t\tnetmask: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
+
+                strptra = hex2dot(gni->clusters[i].private_subnet.gateway);
+                EUCALOG(llevel, "\t\t\tgateway: %s\n", SP(strptra));
+                EUCA_FREE(strptra);
+
+                EUCALOG(llevel, "\t\tprivate_ips \n");
+                for (j = 0; j < gni->clusters[i].max_private_ips_str; j++) {
+                    EUCALOG(llevel, "\t\t\tip %d: %s\n", j, gni->clusters[i].private_ips_str[j]);
+                    EUCA_FREE(strptra);
                 }
-                LOGTRACE("\t\tdns: %s\n", dhcpsstr);
-            }
-            dhcpsstr[0] = '\0';
-            for (j = 0; j < gni->dhcpos[i].max_ntp; j++) {
-                dhcpdstr = hex2dot(gni->dhcpos[i].ntp[j]);
-                strncat(dhcpsstr, dhcpdstr, 512);
-                strncat(dhcpsstr, ", ", 512);
-                EUCA_FREE(dhcpdstr);
-            }
-            if (gni->dhcpos[i].max_ntp) {
-                if (strlen(dhcpsstr) > 2) {
-                    dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
-                }
-                LOGTRACE("\t\tntp: %s\n", dhcpsstr);
-            }
-            for (j = 0; j < gni->dhcpos[i].max_netbios_ns; j++) {
-                dhcpdstr = hex2dot(gni->dhcpos[i].netbios_ns[j]);
-                strncat(dhcpsstr, dhcpdstr, 512);
-                strncat(dhcpsstr, ", ", 512);
-                EUCA_FREE(dhcpdstr);
-            }
-            if (gni->dhcpos[i].max_netbios_ns) {
-                if (strlen(dhcpsstr) > 2) {
-                    dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
-                }
-                LOGTRACE("\t\tnetbios_ns: %s\n", dhcpsstr);
-            }
-            if (gni->dhcpos[i].netbios_type) {
-                LOGTRACE("\t\tnetbios_type: %d\n", gni->dhcpos[i].netbios_type);
-            }
-        }
-        if (mode == GNI_ITERATE_FREE) {
-            gni_dhcpos_clear(&(gni->dhcpos[i]));
-        }
-    }
-    if (mode == GNI_ITERATE_FREE) {
-        EUCA_FREE(gni->dhcpos);
-    }
 
-    if (mode == GNI_ITERATE_FREE) {
-        //bzero(gni, sizeof (globalNetworkInfo));
-        gni->init = 1;
-        gni->networkInfo[0] = '\0';
-        char *version_addr = (char *) gni + (sizeof (gni->init) + sizeof (gni->networkInfo));
-        memset(version_addr, 0, sizeof (globalNetworkInfo) - sizeof (gni->init) - sizeof (gni->networkInfo));
-    }
+                EUCALOG(llevel, "\t\tnodes \n");
+                for (j = 0; j < gni->clusters[i].max_nodes; j++) {
+                    EUCALOG(llevel, "\t\t\tnode %d: %s\n", j, gni->clusters[i].nodes[j].name);
+                }
+            }
 
+            EUCALOG(llevel, "mido gateways: \n");
+            for (i = 0; i < gni->max_midogws; i++) {
+                EUCALOG(llevel, "\t%d: %s\n", i, gni->midogws[i].host);
+                EUCALOG(llevel, "\t\text CIDR: %s\n", gni->midogws[i].ext_cidr);
+                EUCALOG(llevel, "\t\text DEV : %s\n", gni->midogws[i].ext_dev);
+                EUCALOG(llevel, "\t\text IP  : %s\n", gni->midogws[i].ext_ip);
+                EUCALOG(llevel, "\t\tpeer IP : %s\n", gni->midogws[i].peer_ip);
+                EUCALOG(llevel, "\t\tASN     : %d\n", gni->midogws[i].asn);
+                EUCALOG(llevel, "\t\tpeer ASN: %d\n", gni->midogws[i].peer_asn);
+                for (j = 0; j < gni->midogws[i].max_ad_routes; j++) {
+                    EUCALOG(llevel, "\t\t\t%s\n", gni->midogws[i].ad_routes[j]);
+                }
+            }
+
+            EUCALOG(llevel, "instances: \n");
+            for (i = 0; i < gni->max_instances; i++) {
+                EUCALOG(llevel, "\tid: %s\n", gni->instances[i]->name);
+            }
+
+            EUCALOG(llevel, "interfaces: \n");
+            for (i = 0; i < gni->max_ifs; i++) {
+                EUCALOG(llevel, "\tid: %s\n", gni->ifs[i]->name);
+            }
+
+            EUCALOG(llevel, "secgroups: \n");
+            for (i = 0; i < gni->max_secgroups; i++) {
+                EUCALOG(llevel, "\tname: %s\n", gni->secgroups[i].name);
+            }
+
+            EUCALOG(llevel, "vpcs: \n");
+            for (i = 0; i < gni->max_vpcs; i++) {
+                EUCALOG(llevel, "\tname: %s\n", gni->vpcs[i].name);
+                EUCALOG(llevel, "\taccountId: %s\n", gni->vpcs[i].accountId);
+                EUCALOG(llevel, "\tsubnets: \n");
+                for (j = 0; j < gni->vpcs[i].max_subnets; j++) {
+                    EUCALOG(llevel, "\t\tname: %s\n", gni->vpcs[i].subnets[j].name);
+                    EUCALOG(llevel, "\t\trouteTable: %s\n", gni->vpcs[i].subnets[j].routeTable_name);
+                }
+            }
+
+            EUCALOG(llevel, "Internet Gateways: \n");
+            for (i = 0; i < gni->max_vpcIgws; i++) {
+                EUCALOG(llevel, "\tname: %s\n", gni->vpcIgws[i].name);
+                EUCALOG(llevel, "\taccountId: %s\n", gni->vpcIgws[i].accountId);
+            }
+
+            EUCALOG(llevel, "DHCP Option Sets: \n");
+            for (i = 0; i < gni->max_dhcpos; i++) {
+                EUCALOG(llevel, "\tname: %s\n", gni->dhcpos[i].name);
+                EUCALOG(llevel, "\taccountId: %s\n", gni->dhcpos[i].accountId);
+                char *dhcpdstr = NULL;
+                char dhcpsstr[1024];
+                dhcpsstr[0] = '\0';
+                for (j = 0; j < gni->dhcpos[i].max_domains; j++) {
+                    strncat(dhcpsstr, gni->dhcpos[i].domains[j].name, 512);
+                    strncat(dhcpsstr, " ", 512);
+                }
+                if (gni->dhcpos[i].max_domains) {
+                    EUCALOG(llevel, "\t\tdomains: %s\n", dhcpsstr);
+                }
+                dhcpsstr[0] = '\0';
+                for (j = 0; j < gni->dhcpos[i].max_dns; j++) {
+                    dhcpdstr = hex2dot(gni->dhcpos[i].dns[j]);
+                    strncat(dhcpsstr, dhcpdstr, 512);
+                    strncat(dhcpsstr, ", ", 512);
+                    EUCA_FREE(dhcpdstr);
+                }
+                if (gni->dhcpos[i].max_dns) {
+                    if (strlen(dhcpsstr) > 2) {
+                        dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
+                    }
+                    EUCALOG(llevel, "\t\tdns: %s\n", dhcpsstr);
+                }
+                dhcpsstr[0] = '\0';
+                for (j = 0; j < gni->dhcpos[i].max_ntp; j++) {
+                    dhcpdstr = hex2dot(gni->dhcpos[i].ntp[j]);
+                    strncat(dhcpsstr, dhcpdstr, 512);
+                    strncat(dhcpsstr, ", ", 512);
+                    EUCA_FREE(dhcpdstr);
+                }
+                if (gni->dhcpos[i].max_ntp) {
+                    if (strlen(dhcpsstr) > 2) {
+                        dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
+                    }
+                    EUCALOG(llevel, "\t\tntp: %s\n", dhcpsstr);
+                }
+                for (j = 0; j < gni->dhcpos[i].max_netbios_ns; j++) {
+                    dhcpdstr = hex2dot(gni->dhcpos[i].netbios_ns[j]);
+                    strncat(dhcpsstr, dhcpdstr, 512);
+                    strncat(dhcpsstr, ", ", 512);
+                    EUCA_FREE(dhcpdstr);
+                }
+                if (gni->dhcpos[i].max_netbios_ns) {
+                    if (strlen(dhcpsstr) > 2) {
+                        dhcpsstr[strlen(dhcpsstr) - 2] = '\0';
+                    }
+                    EUCALOG(llevel, "\t\tnetbios_ns: %s\n", dhcpsstr);
+                }
+                if (gni->dhcpos[i].netbios_type) {
+                    EUCALOG(llevel, "\t\tnetbios_type: %d\n", gni->dhcpos[i].netbios_type);
+                }
+            }
+            break;
+        case GNI_ITERATE_FREE:
+            EUCA_FREE(gni->instanceDNSServers);
+
+            for (i = 0; i < gni->max_midogws; i++) {
+                gni_midogw_clear(&(gni->midogws[i]));
+            }
+            EUCA_FREE(gni->midogws);
+
+            EUCA_FREE(gni->public_ips);
+            for (i = 0; i < gni->max_public_ips_str; i++) {
+                EUCA_FREE(gni->public_ips_str[i]);
+            }
+            EUCA_FREE(gni->public_ips_str);
+
+            EUCA_FREE(gni->subnets);
+
+            for (i = 0; i < gni->max_clusters; i++) {
+                for (j = 0; j < gni->clusters[i].max_nodes; j++) {
+                    gni_node_clear(&(gni->clusters[i].nodes[j]));
+                }
+                gni_cluster_clear(&(gni->clusters[i]));
+            }
+            EUCA_FREE(gni->clusters);
+
+            for (i = 0; i < gni->max_instances; i++) {
+                gni_instance_clear(gni->instances[i]);
+                EUCA_FREE(gni->instances[i]);
+            }
+            EUCA_FREE(gni->instances);
+
+            for (i = 0; i < gni->max_ifs; i++) {
+                gni_instance_clear(gni->ifs[i]);
+                EUCA_FREE(gni->ifs[i]);
+            }
+            EUCA_FREE(gni->ifs);
+
+            for (i = 0; i < gni->max_secgroups; i++) {
+                gni_secgroup_clear(&(gni->secgroups[i]));
+            }
+            EUCA_FREE(gni->secgroups);
+
+            for (i = 0; i < gni->max_vpcs; i++) {
+                gni_vpc_clear(&(gni->vpcs[i]));
+            }
+            EUCA_FREE(gni->vpcs);
+
+            EUCA_FREE(gni->vpcIgws);
+
+            for (i = 0; i < gni->max_dhcpos; i++) {
+                gni_dhcpos_clear(&(gni->dhcpos[i]));
+            }
+            EUCA_FREE(gni->dhcpos);
+
+            gni->init = 1;
+            gni->networkInfo[0] = '\0';
+            char *version_addr = (char *) &(gni->version);
+            memset(version_addr, 0, sizeof (globalNetworkInfo) - sizeof (gni->init) - sizeof (gni->networkInfo));
+
+            break;
+        default:
+            LOGWARN("Invalid argument: gni_iterate() invalid mode %d\n", mode);
+    }
+    
     return (0);
 }
 
@@ -4272,18 +4402,19 @@ int gni_iterate(globalNetworkInfo *gni, int mode)
  * @return the result of the gni_iterate() call
  */
 int gni_clear(globalNetworkInfo *gni) {
-    return (gni_iterate(gni, GNI_ITERATE_FREE));
+    return (gni_iterate(gni, GNI_ITERATE_FREE, log_level_get()));
 }
 
 /**
  * Logs the content of a given globalNetworkInfo structure
  *
  * @param gni [in] a pointer to the global network information structure
+ * @param llevel [in] log level to log
  *
  * @return the result of the gni_iterate() call
  */
-int gni_print(globalNetworkInfo *gni) {
-    return (gni_iterate(gni, GNI_ITERATE_PRINT));
+int gni_print(globalNetworkInfo *gni, log_level_e llevel) {
+    return (gni_iterate(gni, GNI_ITERATE_PRINT, llevel));
 }
 
 /**
@@ -4430,7 +4561,12 @@ int gni_cluster_clear(gni_cluster *cluster)
         return (0);
     }
 
+    for (int i = 0; i < cluster->max_private_ips_str; i++) {
+        EUCA_FREE(cluster->private_ips_str[i]);
+    }
+    EUCA_FREE(cluster->private_ips_str);
     EUCA_FREE(cluster->private_ips);
+    EUCA_FREE(cluster->nodes);
 
     bzero(cluster, sizeof (gni_cluster));
 
@@ -4473,7 +4609,6 @@ int gni_instance_clear(gni_instance *instance)
     }
 
     EUCA_FREE(instance->secgroup_names);
-    //EUCA_FREE(instance->interface_names);
     EUCA_FREE(instance->gnisgs);
     EUCA_FREE(instance->interfaces);
 
@@ -4506,7 +4641,8 @@ int gni_secgroup_clear(gni_secgroup *secgroup) {
 }
 
 /**
- * Zero out a VPC structure
+ * Clears a gni_vpc structure. This will free member's allocated memory and zero
+ * out the structure itself.
  *
  * @param vpc [in] a pointer to the GNI VPC structure to reset
  *
@@ -4541,8 +4677,9 @@ int gni_vpc_clear(gni_vpc *vpc) {
 }
 
 /**
- * Zero out a dhcp_os structure
- * @param dhcpos [in] a pointer to the GNI dhcp_os to reset
+ * Clears a gni_dhcp_ps structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ * @param dhcpos [in] a pointer to the gni_dhcp_os to reset
  * @return Always return 0
  */
 int gni_dhcpos_clear(gni_dhcp_os *dhcpos) {
@@ -4557,6 +4694,53 @@ int gni_dhcpos_clear(gni_dhcp_os *dhcpos) {
 
     memset(dhcpos, 0, sizeof (gni_dhcp_os));
 
+    return (0);
+}
+
+/**
+ * Clears a gni_mido_gateway structure. This will free member's allocated memory and zero
+ * out the structure itself.
+ * @param midogw [in] a pointer to the gni_mido_gateway to reset
+ * @return Always return 0
+ */
+int gni_midogw_clear(gni_mido_gateway *midogw) {
+    if (!midogw) {
+        return (0);
+    }
+    
+    for (int i = 0; i < midogw->max_ad_routes; i++) {
+        EUCA_FREE(midogw->ad_routes[i]);
+    }
+    EUCA_FREE(midogw->ad_routes);
+    
+    memset(midogw, 0, sizeof (gni_mido_gateway));
+    return (0);
+}
+
+/**
+ * Copies the contents of gni_mido_gateway structure src to dst.
+ * @param dst [in] pointer to gni_mido_gateway structure where data from src will be copied
+ * @param src [in] pointer to gni_mido_gateway structure with data to be copied
+ * @return 0 on success. 1 on failure.
+ */
+int gni_midogw_dup(gni_mido_gateway *dst, gni_mido_gateway *src) {
+    if (!src || !dst) {
+        LOGWARN("Invalid argument: cannot copy to/from NULL gni_mido_gateway\n");
+        return (1);
+    }
+    dst->asn = src->asn;
+    dst->peer_asn = src->peer_asn;
+    snprintf(dst->ext_cidr, NETWORK_ADDR_LEN, "%s", src->ext_cidr);
+    snprintf(dst->ext_dev, IF_NAME_LEN, "%s", src->ext_dev);
+    snprintf(dst->ext_ip, NETWORK_ADDR_LEN, "%s", src->ext_ip);
+    snprintf(dst->peer_ip, NETWORK_ADDR_LEN, "%s", src->peer_ip);
+    snprintf(dst->host, HOSTNAME_LEN, "%s", src->host);
+    dst->ad_routes = EUCA_REALLOC_C(dst->ad_routes, src->max_ad_routes, sizeof (char *));
+    memset(dst->ad_routes, 0, src->max_ad_routes * sizeof (char *));
+    for (int i = 0; i < src->max_ad_routes; i++) {
+        dst->ad_routes[i] = strdup(src->ad_routes[i]);
+    }
+    dst->max_ad_routes = src->max_ad_routes;
     return (0);
 }
 
@@ -4863,16 +5047,8 @@ int gni_validate(globalNetworkInfo *gni) {
     // We should have some public IPs set if not, we'll just warn the user
     // public IPs is irrelevant in VPCMIDO (see publicNetworkCidr in mido section)
     if (!IS_NETMODE_VPCMIDO(gni)) {
-        if (!gni->max_public_ips || !gni->public_ips) {
+        if (!gni->max_public_ips_str) {
             LOGTRACE("no public_ips set\n");
-        } else {
-            // Make sure none of the public IPs is 0.0.0.0
-            for (i = 0; i < gni->max_public_ips; i++) {
-                if (gni->public_ips[i] == 0) {
-                    LOGWARN("empty public_ip set at idx %d: cannot validate XML\n", i);
-                    return (1);
-                }
-            }
         }
     }
 
@@ -5076,17 +5252,9 @@ int gni_cluster_validate(gni_cluster *cluster, euca_netmode nmode) {
             return (1);
         }
         // Validate the list of private IPs. We must have some.
-        if (!cluster->max_private_ips || !cluster->private_ips) {
+        if (!cluster->max_private_ips_str) {
             LOGWARN("cluster %s: no private_ips\n", cluster->name);
             return (1);
-        } else {
-            // None of our private IPs should be 0.0.0.0
-            for (i = 0; i < cluster->max_private_ips; i++) {
-                if (cluster->private_ips[i] == 0) {
-                    LOGWARN("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
-                    return (1);
-                }
-            }
         }
     }
     // Do we have some nodes for this cluster?
@@ -5660,9 +5828,9 @@ void gni_vpc_print(gni_vpc *vpc, int loglevel) {
     char names[2048];
     names[0] = '\0';
     for (i = 0; i < vpc->max_internetGatewayNames; i++) {
-        gni_name *t = &(vpc->internetGatewayNames[i]);
-        strncat(names, t->name, 1024);
-        strncat(names, " ", 1024);
+        gni_name_32 *t = &(vpc->internetGatewayNames[i]);
+        strncat(names, t->name, 32);
+        strncat(names, " ", 2);
     }
     if (strlen(names)) {
         EUCALOG(loglevel, "\t\t%s\n", names);
@@ -5671,8 +5839,8 @@ void gni_vpc_print(gni_vpc *vpc, int loglevel) {
     names[0] = '\0';
     for (i = 0; i < vpc->max_interfaces; i++) {
         gni_instance *t = vpc->interfaces[i];
-        strncat(names, t->name, 1024);
-        strncat(names, " ", 1024);
+        strncat(names, t->name, INTERFACE_ID_LEN);
+        strncat(names, " ", 2);
     }
     if (strlen(names)) {
         EUCALOG(loglevel, "\t\t%s\n", names);
@@ -5853,7 +6021,7 @@ int cmpipaddr(const void *p1, const void *p2) {
 }
 
 /**
- * Compares two globalNetworkInfo structures in the argument and search for
+ * Compares two globalNetworkInfo structures an and b and search for
  * VPCMIDO configuration changes.
  * @param a [in] globalNetworkInfo structure of interest.
  * @param b [in] globalNetworkInfo structure of interest.
@@ -5879,18 +6047,32 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
         for (int i = 0; i < a->max_instanceDNSServers; i++) {
             if (a->instanceDNSServers[i] != b->instanceDNSServers[i]) {
                 ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+                break;
             }
         }
     }
     if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
-        if (strcmp(a->PublicNetworkCidr, b->PublicNetworkCidr)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICNETWORKCIDR;
+        if (a->max_midogws != b->max_midogws) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+        } else {
+            for (int i = 0; i < a->max_midogws; i++) {
+                if (cmp_gni_mido_gateway(&(a->midogws[i]), &(b->midogws[i]))) {
+                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+                    if (strcmp(a->midogws[i].host, b->midogws[i].host)) {
+                        ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+                    }
+                }
+            }
         }
-        if (strcmp(a->PublicGatewayIP, b->PublicGatewayIP)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_PUBLICGATEWAYIP;
-        }
-        if (strcmp(a->GatewayHosts, b->GatewayHosts)) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_GATEWAYHOSTS;
+        if (a->max_clusters != b->max_clusters) {
+            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+        } else {
+            for (int i = 0; i < a->max_clusters; i++) {
+                if (a->clusters[i].max_nodes != b->clusters[i].max_nodes) {
+                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+                }
+            }
         }
     } else {
         ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
@@ -5899,7 +6081,7 @@ int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
 }
 
 /**
- * Compares two gni_vpc structures in the argument.
+ * Compares two gni_vpc structures a and b.
  *
  * @param a [in] gni_vpc structure of interest.
  * @param b [in] gni_vpc structure of interest.
@@ -5929,7 +6111,7 @@ int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
 }
 
 /**
- * Compares two gni_vpcsubnet structures in the argument.
+ * Compares two gni_vpcsubnet structures a and b.
  *
  * @param a [in] gni_vpcsubnet structure of interest.
  * @param b [in] gni_vpcsubnet structure of interest.
@@ -5954,7 +6136,7 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
 }
 
 /**
- * Compares two gni_nat_gateway structures in the argument.
+ * Compares two gni_nat_gateway structures a and b.
  *
  * @param a [in] gni_nat_gateway structure of interest.
  * @param b [in] gni_nat_gateway structure of interest.
@@ -5974,7 +6156,7 @@ int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b) {
 }
 
 /**
- * Compares two gni_route_table structures in the argument.
+ * Compares two gni_route_table structures a and b.
  *
  * @param a [in] gni_route_table structure of interest. Check for route entries
  *            applied flags.
@@ -6007,7 +6189,7 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
 }
 
 /**
- * Compares two gni_secgroup structures in the argument.
+ * Compares two gni_secgroup structures a and b.
  *
  * @param a [in] gni_secgroup structure of interest.
  * @param b [in] gni_secgroup structure of interest.
@@ -6177,7 +6359,7 @@ int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sd
 }
 
 /**
- * Compares gni_instance structures and b.
+ * Compares gni_instance structures a and b.
  *
  * @param a [in] gni_instance structure of interest.
  * @param b [in] gni_instance structure of interest.
@@ -6205,6 +6387,60 @@ int cmp_gni_instance(gni_instance *a, gni_instance *b) {
         } else {
             for (int i = 0; i < a->max_secgroup_names; i++) {
                 if (strcmp(a->secgroup_names[i].name, b->secgroup_names[i].name)) {
+                    abmatch = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Compares gni_mido_gateway structures a and b.
+ *
+ * @param a [in] gni_instance structure of interest.
+ * @param b [in] gni_instance structure of interest.
+ * @return 0 if name and other properties of a and b match. Non-zero otherwise.
+ */
+int cmp_gni_mido_gateway(gni_mido_gateway *a, gni_mido_gateway *b) {
+    int abmatch = 1;
+    if (a == b) {
+        return (0);
+    }
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->host, b->host)) {
+        abmatch = 0;
+    } else {
+        if (a->asn != b->asn) {
+            abmatch = 0;
+        }
+        if (a->peer_asn != b->peer_asn) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_ip, b->ext_ip)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_dev, b->ext_dev)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->ext_cidr, b->ext_cidr)) {
+            abmatch = 0;
+        }
+        if (strcmp(a->peer_ip, b->peer_ip)) {
+            abmatch = 0;
+        }
+        if (a->max_ad_routes != b->max_ad_routes) {
+            abmatch = 0;
+        } else {
+            for (int i = 0; i < a->max_ad_routes; i++) {
+                if (strcmp(a->ad_routes[i], b->ad_routes[i])) {
                     abmatch = 0;
                     break;
                 }

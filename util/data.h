@@ -103,13 +103,24 @@
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
 
 #define KEY_STRING_SIZE                          4096   //! Buffer to hold RSA pub/private keys
-#define INSTANCE_ID_LEN                            11   //! Length of the instance ID string (i-xxxxxxxx\0)
-#define INTERFACE_ID_LEN                           13   //! Length of the instance ID string (eni-xxxxxxxx\0)
-#define SECURITY_GROUP_ID_LEN                      12   //! Length of the instance ID string (sg-xxxxxxxx\0)
-#define NETWORK_ACL_ID_LEN                         13   //! Length of the instance ID string (acl-xxxxxxxx\0)
-#define DHCP_OS_ID_LEN                             14   //! Length of the instance ID string (dopt-xxxxxxxx\0)
-#define ENI_ID_LEN                                 13   //! Length of the instance ID string (eni-xxxxxxxx\0)
-#define ENI_ATTACHMENT_ID_LEN                      21   //! Length of the eni attachment ID string (eni-attach-xxxxxxxx\0)
+
+#define LID_LEN                                    32        //! Length of an ID
+#define INSTANCE_ID_LEN                            LID_LEN   //! Length of instance ID string (i-xxxxxxxx\0)
+#define INTERFACE_ID_LEN                           LID_LEN   //! Length of network interface ID string (eni-xxxxxxxx\0)
+#define SECURITY_GROUP_ID_LEN                      LID_LEN   //! Length of security group ID string (sg-xxxxxxxx\0)
+#define NETWORK_ACL_ID_LEN                         LID_LEN   //! Length of network acl ID string (acl-xxxxxxxx\0)
+#define DHCP_OS_ID_LEN                             LID_LEN   //! Length of dhcp option sets ID string (dopt-xxxxxxxx\0)
+#define ENI_ID_LEN                                 LID_LEN   //! Length of eni ID string (eni-xxxxxxxx\0)
+#define ENI_ATTACHMENT_ID_LEN                      LID_LEN   //! Length of eni attachment ID string (eni-attach-xxxxxxxx\0)
+#define VPC_ID_LEN                                 LID_LEN   //! Length of vpc ID string (vpc-xxxxxxxx\0)
+#define VPC_SUBNET_ID_LEN                          LID_LEN   //! Length of vpc subnet ID string (subnet-xxxxxxxx\0)
+#define RTB_ID_LEN                                 LID_LEN   //! Length of vpc subnet route table ID string (rtb-xxxxxxxx\0)
+#define INETG_ID_LEN                               LID_LEN   //! Length of internet gateway ID string (igw-xxxxxxxx\0)
+#define NATG_ID_LEN                                LID_LEN   //! Length of nat gateway ID string (nat-xxxxxxxx\0)
+
+#define OWNER_ID_LEN                               16
+#define GNI_VERSION_LEN                            9
+
 //! @}
 
 //! @{
@@ -239,13 +250,13 @@ typedef struct bundleTask_t {
 //! Structure defining the public address type
 typedef struct publicAddressType_t {
     char uuid[48];                     //!< Unique User Identifier string field
-    char sourceAddress[32];            //!< Source address string field
-    char destAddress[32];              //!< Destination address field
+    char sourceAddress[LID_LEN];            //!< Source address string field
+    char destAddress[LID_LEN];              //!< Destination address field
 } publicAddressType;
 
 //! Structure defining the service information
 typedef struct serviceInfoType_t {
-    char type[32];                     //!< Service type string field
+    char type[LID_LEN];                     //!< Service type string field
     char name[256];                    //!< Service name string field
     char partition[256];               //!< Assigned partition name
     char uris[MAX_SERVICE_URIS][512];  //!< Service URI list
@@ -254,7 +265,7 @@ typedef struct serviceInfoType_t {
 
 //! Structure defining the service status
 typedef struct serviceStatusType_t {
-    char localState[32];               //!< Local service state string
+    char localState[LID_LEN];               //!< Local service state string
     int localEpoch;                    //!< Last status update local time in EPOCH
     char details[1024];                //!< Service status detail
     serviceInfoType serviceId;         //!< Service information
@@ -418,14 +429,14 @@ typedef struct ncInstance_t {
     char floppyFilePath[CHAR_BUFFER_SIZE];  //!< Floppy disk path name
     char hypervisorType[SMALL_CHAR_BUFFER_SIZE];    //!< Hypervisor type as a string
     hypervisorCapabilityType hypervisorCapability;  //!< What is the hypervisor capable of for this instance
-    int hypervisorBitness;             //!< Hypervisor bitness (32 / 64 bits supported)
+    int hypervisorBitness;             //!< Hypervisor bitness (LID_LEN / 64 bits supported)
     boolean combinePartitions;         //!< hypervisor works only with disks (all except Xen)
     boolean do_inject_key;             //!< whether or not NC injects SSH key into this instance (eucalyptus.conf option)
     //! @}
 
     //! @{
     //! @name passed into NC via runInstances for safekeeping
-    char userData[CHAR_BUFFER_SIZE * 32];   //!< user data to pass to the instance
+    char userData[CHAR_BUFFER_SIZE * LID_LEN];   //!< user data to pass to the instance
     char launchIndex[CHAR_BUFFER_SIZE]; //!< the launch index for this instance
     char platform[CHAR_BUFFER_SIZE];   //!< the platform used for this instance (typically 'windows' or 'linux')
     char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE]; //!< Network groups assigned to this instance.
