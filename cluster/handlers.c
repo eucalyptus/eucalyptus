@@ -7249,7 +7249,10 @@ void invalidate_instanceCache(void)
         //        }
         if ((instanceCache[i].cacheState == INSTVALID)) {            
             if ((time(NULL) - instanceCache[i].lastseen) > config->instanceTimeout) {
-                LOGINFO("invalidating instance '%s' (last seen %ld seconds ago). Please, check your NCs for errors or set INSTANCE_TIMEOUT to a grater value\n",
+                LOGINFO("invalidating instance '%s' (last seen %ld seconds ago). "
+                        "Ignore this message if the instance was recently terminated, "
+                        "otherwise, please, check your NCs for errors or set INSTANCE_TIMEOUT "
+                        "to a grater value.\n",
                 instanceCache[i].instance.instanceId, (time(NULL) - instanceCache[i].lastseen));
                 do_invalidate = 1;
             } else if (!strlen(instanceCache[i].instance.instanceId)) {
