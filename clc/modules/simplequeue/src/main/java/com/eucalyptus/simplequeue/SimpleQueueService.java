@@ -508,14 +508,14 @@ public class SimpleQueueService {
         ctx.getAccount(), SimpleQueuePolicySpec.SIMPLEQUEUE_LISTQUEUES, ctx.getAuthContext())) {
         throw new AccessDeniedException("Not authorized.");
       }
-      Collection<Queue> queues;
+      Collection<Queue.Key> queueKeys;
       if (ctx.isAdministrator() && "verbose".equals(request.getQueueNamePrefix())) {
-        queues = PersistenceFactory.getQueuePersistence().listQueues(null, null);
+        queueKeys = PersistenceFactory.getQueuePersistence().listQueues(null, null);
       } else
-        queues = PersistenceFactory.getQueuePersistence().listQueues(accountId, request.getQueueNamePrefix());
-      if (queues != null) {
-        for (Queue queue: queues) {
-          reply.getListQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(queue.getAccountId(), queue.getQueueName())));
+        queueKeys = PersistenceFactory.getQueuePersistence().listQueues(accountId, request.getQueueNamePrefix());
+      if (queueKeys != null) {
+        for (Queue.Key queueKey: queueKeys) {
+          reply.getListQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(queueKey.getAccountId(), queueKey.getQueueName())));
         }
       }
     } catch (Exception ex) {
@@ -688,7 +688,7 @@ public class SimpleQueueService {
       throw new MissingParameterException("ReceiptHandle is a required field");
     }
 
-    PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue, receiptHandle, visibilityTimeout);
+    PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue.getKey(), receiptHandle, visibilityTimeout);
   }
 
   public DeleteMessageResponseType deleteMessage(DeleteMessageType request) throws EucalyptusCloudException {
@@ -697,10 +697,10 @@ public class SimpleQueueService {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String receiptHandle = request.getReceiptHandle();
-      if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, receiptHandle)) {
+      if (PersistenceFactory.getMessagePersistence().deleteMessage(queue.getKey(), receiptHandle)) {
         if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
-          PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_MESSAGES_DELETED, 1.0, "Count");
+          PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), new Date(), Constants.NUMBER_OF_MESSAGES_DELETED, 1.0, "Count");
           CloudWatchClient.putMetricData(putMetricDataType);
         }
       }
@@ -715,7 +715,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue.getKey());
       PersistenceFactory.getQueuePersistence().deleteQueue(queue.getAccountId(), queue.getQueueName());
     } catch (Exception ex) {
       handleException(ex);
@@ -759,7 +759,7 @@ public class SimpleQueueService {
     try {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
-      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue);
+      PersistenceFactory.getMessagePersistence().deleteAllMessages(queue.getKey());
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -775,7 +775,7 @@ public class SimpleQueueService {
       if (queue.getAttributes() != null) {
         attributes.putAll(queue.getAttributes());
       }
-      attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue));
+      attributes.putAll(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue.getKey()));
       attributes.put(Constants.QUEUE_ARN, queue.getArn());
       Set<String> validAttributes = ImmutableSet.of(
         Constants.ALL, Constants.APPROXIMATE_NUMBER_OF_MESSAGES, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
@@ -975,16 +975,16 @@ public class SimpleQueueService {
       filterReceiveMessageAttributes(message, messageAttributeNames);
     }
     if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
-      PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-      CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, messages.size(), 1.0, 1.0, messages.size(), "Count");
+      PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+      CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), now, Constants.NUMBER_OF_MESSAGES_RECEIVED, messages.size(), 1.0, 1.0, messages.size(), "Count");
       CloudWatchClient.putMetricData(putMetricDataType);
     }
   }
 
   static void sendEmptyReceiveCW(Queue queue) throws AuthException {
     if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
-      PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-      CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_EMPTY_RECEIVES, 1.0, "Count");
+      PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+      CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), new Date(), Constants.NUMBER_OF_EMPTY_RECEIVES, 1.0, "Count");
       CloudWatchClient.putMetricData(putMetricDataType);
     }
   }
@@ -1281,9 +1281,9 @@ public class SimpleQueueService {
       }
       if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
         Date now = new Date();
-        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, 1.0, "Count");
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.SENT_MESSAGE_SIZE, (double) messageInfo.getMessageLength(), "Bytes");
+        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), now, Constants.NUMBER_OF_MESSAGES_SENT, 1.0, "Count");
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), now, Constants.SENT_MESSAGE_SIZE, (double) messageInfo.getMessageLength(), "Bytes");
         CloudWatchClient.putMetricData(putMetricDataType);
       }
     } catch (Exception ex) {
@@ -1398,7 +1398,7 @@ public class SimpleQueueService {
       int numSuccessfulRealDeletes = 0;
       for (DeleteMessageBatchRequestEntry batchRequestEntry: request.getDeleteMessageBatchRequestEntry()) {
         try {
-          if (PersistenceFactory.getMessagePersistence().deleteMessage(queue, batchRequestEntry.getReceiptHandle())) {
+          if (PersistenceFactory.getMessagePersistence().deleteMessage(queue.getKey(), batchRequestEntry.getReceiptHandle())) {
             // note: only send a CW metric if we actually delete a message.  We can still 'succeed' on a stale
             // receipt handle.
             numSuccessfulRealDeletes++;
@@ -1420,8 +1420,8 @@ public class SimpleQueueService {
         }
       }
       if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION && numSuccessfulRealDeletes > 0) {
-        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, new Date(), Constants.NUMBER_OF_MESSAGES_DELETED,
+        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), new Date(), Constants.NUMBER_OF_MESSAGES_DELETED,
           numSuccessfulRealDeletes, 1.0, 1.0, numSuccessfulRealDeletes, "Count");
         CloudWatchClient.putMetricData(putMetricDataType);
       }
@@ -1513,9 +1513,9 @@ public class SimpleQueueService {
         }
       }
       if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION && numSuccessfulMessages > 0) {
-        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, numSuccessfulMessages, 1.0, 1.0, numSuccessfulMessages, "Count");
-        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.SENT_MESSAGE_SIZE, numSuccessfulMessages, smallestSuccessfulMessageLength, largestSuccessfulMessageLength, totalSuccessfulMessagesLength, "Bytes");
+        PutMetricDataType putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue.getKey());
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), now, Constants.NUMBER_OF_MESSAGES_SENT, numSuccessfulMessages, 1.0, 1.0, numSuccessfulMessages, "Count");
+        CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue.getKey(), now, Constants.SENT_MESSAGE_SIZE, numSuccessfulMessages, smallestSuccessfulMessageLength, largestSuccessfulMessageLength, totalSuccessfulMessagesLength, "Bytes");
         CloudWatchClient.putMetricData(putMetricDataType);
       }
     } catch (Exception ex) {
@@ -1531,9 +1531,9 @@ public class SimpleQueueService {
       final Context ctx = Contexts.lookup();
       Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
       String queueArn = queue.getArn();
-      Collection<Queue> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(queue.getAccountId(), queueArn);
+      Collection<Queue.Key> sourceQueues = PersistenceFactory.getQueuePersistence().listDeadLetterSourceQueues(queue.getAccountId(), queueArn);
       if (sourceQueues != null) {
-        for (Queue sourceQueue: sourceQueues) {
+        for (Queue.Key sourceQueue: sourceQueues) {
           reply.getListDeadLetterSourceQueuesResult().getQueueUrl().add(getQueueUrlFromQueueUrlParts(new QueueUrlParts(sourceQueue.getAccountId(), sourceQueue.getQueueName())));
         }
       }

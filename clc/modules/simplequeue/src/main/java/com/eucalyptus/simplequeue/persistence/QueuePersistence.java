@@ -28,11 +28,11 @@ import java.util.Map;
 public interface QueuePersistence {
   Queue lookupQueue(String accountId, String queueName);
   Queue createQueue(String accountId, String queueName, Map<String, String> attributes) throws QueueAlreadyExistsException;
-  Collection<Queue> listQueues(String accountId, String queueNamePrefix);
-  Collection<Queue> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn);
+  Collection<Queue.Key> listQueues(String accountId, String queueNamePrefix);
+  Collection<Queue.Key> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn);
   Queue updateQueueAttributes(String accountId, String queueName, Map<String, String> attributes) throws QueueDoesNotExistException;
   void deleteQueue(String accountId, String queueName) throws QueueDoesNotExistException;
-  Collection<Queue> listActiveQueues(String partitionToken);
+  Collection<Queue.Key> listActiveQueues(String partitionToken);
 
   Collection<String> getPartitionTokens();
 }

@@ -54,39 +54,39 @@ public class CloudWatchActivitiesImpl implements CloudWatchActivities {
     if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       // send a cloudwatch statistic
       ServiceConfiguration cwConfiguration = Topology.lookup(CloudWatch.class);
-      for (Queue queue : PersistenceFactory.getQueuePersistence().listActiveQueues(partitionInfo)) {
+      for (Queue.Key queueKey : PersistenceFactory.getQueuePersistence().listActiveQueues(partitionInfo)) {
         PutMetricDataType putMetricDataType = null;
         try {
-          putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queue);
+          putMetricDataType = CloudWatchClient.getSQSPutMetricDataType(queueKey);
         } catch (AuthException e) {
-          LOG.warn("Unable to get account info for queue " + queue.getArn() + ", skipping metrics");
+          LOG.warn("Unable to get account info for queue " + queueKey.getArn() + ", skipping metrics");
           continue;
         }
         try {
           Date now = new Date();
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_AGE_OF_OLDEST_MESSAGE,
-            (double) PersistenceFactory.getMessagePersistence().getApproximateAgeOfOldestMessage(queue), "Seconds");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.APPROXIMATE_AGE_OF_OLDEST_MESSAGE,
+            (double) PersistenceFactory.getMessagePersistence().getApproximateAgeOfOldestMessage(queueKey), "Seconds");
 
-          Map<String, String> messageCounts = PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue);
+          Map<String, String> messageCounts = PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queueKey);
 
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED,
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED,
             (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED)), "Count");
 
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_VISIBLE,
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_VISIBLE,
             (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)), "Count");
 
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
             (double) Long.parseLong(messageCounts.get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE)), "Count");
 
           //Add empty values for num deleted/sent/received to mimic AWS
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_EMPTY_RECEIVES, 0.0, "Count");
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_DELETED, 0.0, "Count");
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, 0.0, "Count");
-          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queue, now, Constants.NUMBER_OF_MESSAGES_SENT, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.NUMBER_OF_EMPTY_RECEIVES, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.NUMBER_OF_MESSAGES_DELETED, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.NUMBER_OF_MESSAGES_RECEIVED, 0.0, "Count");
+          CloudWatchClient.addSQSMetricDatum(putMetricDataType, queueKey, now, Constants.NUMBER_OF_MESSAGES_SENT, 0.0, "Count");
 
           CloudWatchClient.putMetricData(putMetricDataType);
         } catch (Exception ex) {
-          LOG.warn("Unable to send metrics for " + queue.getArn() + ", Reason: " + ex.getMessage());
+          LOG.warn("Unable to send metrics for " + queueKey.getArn() + ", Reason: " + ex.getMessage());
         }
       }
     }

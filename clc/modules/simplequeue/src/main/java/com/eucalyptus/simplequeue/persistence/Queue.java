@@ -37,11 +37,55 @@ import java.util.Map;
  * Created by ethomas on 9/7/16.
  */
 public class Queue implements SimpleQueueMetadata.QueueMetadata {
+
+  public static class Key {
+    private String accountId;
+    private String queueName;
+
+    public String getAccountId() {
+      return accountId;
+    }
+
+    public String getQueueName() {
+      return queueName;
+    }
+
+    public Key(String accountId, String queueName) {
+      this.accountId = accountId;
+      this.queueName = queueName;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      Key key = (Key) o;
+
+      if (accountId != null ? !accountId.equals(key.accountId) : key.accountId != null) return false;
+      return queueName != null ? queueName.equals(key.queueName) : key.queueName == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+      int result = accountId != null ? accountId.hashCode() : 0;
+      result = 31 * result + (queueName != null ? queueName.hashCode() : 0);
+      return result;
+    }
+
+    public String getArn() {
+      return "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + getAccountId()
+        + ":" + getQueueName();
+    }
+
+  }
+
+
   private String accountId;
   private String queueName;
 
-  private String uniqueId;
-  private Integer version;
+  private String uniqueIdPerVersion;
 
 
   private Map<String, String> attributes = Maps.newTreeMap();
@@ -49,20 +93,16 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
   public Queue() {
   }
 
-  public String getUniqueId() {
-    return uniqueId;
+  public String getUniqueIdPerVersion() {
+    return uniqueIdPerVersion;
   }
 
-  public void setUniqueId(String uniqueId) {
-    this.uniqueId = uniqueId;
+  public void setUniqueIdPerVersion(String uniqueIdPerVersion) {
+    this.uniqueIdPerVersion = uniqueIdPerVersion;
   }
 
-  public Integer getVersion() {
-    return version;
-  }
-
-  public void setVersion(Integer version) {
-    this.version = version;
+  public Key getKey() {
+    return new Key(accountId, queueName);
   }
 
   public String getAccountId() {
@@ -159,7 +199,7 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
 
       @Override
       public String getPolicyVersionId() {
-        return getArn() + "/policy/" + getUniqueId() + "/" + getVersion();
+        return getArn() + "/policy/" + getUniqueIdPerVersion();
       }
 
       @Override
@@ -180,7 +220,7 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
             "  \"Id\": \""+getArn()+"/SQSDefaultPolicy\",\n" +
             "  \"Statement\": [\n" +
             "    {\n" +
-            "      \"Sid\": \"DefaultSid"+getVersion()+"\",\n" +
+            "      \"Sid\": \"DefaultSid"+getUniqueIdPerVersion()+"\",\n" +
             "      \"Effect\": \"Allow\",\n" +
             "      \"Principal\": {\n" +
             "        \"AWS\": \"arn:aws:iam::"+getAccountId()+":root\"\n" +
@@ -203,7 +243,20 @@ public class Queue implements SimpleQueueMetadata.QueueMetadata {
   }
 
   public String getArn() {
-    return "arn:aws:sqs:" + RegionConfigurations.getRegionNameOrDefault() + ":" + getAccountId()
-      + ":" + getQueueName();
+    return getKey().getArn();
+  }
+
+  public String getDeadLetterTargetArn() {
+    try {
+      JsonNode redrivePolicy = getRedrivePolicy();
+      if (redrivePolicy != null && redrivePolicy.isObject() &&
+        redrivePolicy.has(Constants.DEAD_LETTER_TARGET_ARN) &&
+        redrivePolicy.get(Constants.DEAD_LETTER_TARGET_ARN).isTextual()) {
+        return redrivePolicy.get(Constants.DEAD_LETTER_TARGET_ARN).asText();
+      }
+    } catch (SimpleQueueException ignore) {
+      ;
+    }
+    return null;
   }
 }

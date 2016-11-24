@@ -30,14 +30,14 @@ public interface MessagePersistence {
 
   void sendMessage(Queue queue, Message message, Map<String, String> sendAttributes) throws SimpleQueueException;
 
-  boolean deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException;
+  boolean deleteMessage(Queue.Key queueKey, String receiptHandle) throws SimpleQueueException;
 
-  void deleteAllMessages(Queue queue);
+  void deleteAllMessages(Queue.Key queueKey);
 
-  Map<String, String> getApproximateMessageCounts(Queue queue);
+  Map<String, String> getApproximateMessageCounts(Queue.Key queueKey);
 
-  void changeMessageVisibility(Queue queue, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException;
+  void changeMessageVisibility(Queue.Key queueKey, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException;
 
-  Long getApproximateAgeOfOldestMessage(Queue queue);
+  Long getApproximateAgeOfOldestMessage(Queue.Key queueKey);
 
 }

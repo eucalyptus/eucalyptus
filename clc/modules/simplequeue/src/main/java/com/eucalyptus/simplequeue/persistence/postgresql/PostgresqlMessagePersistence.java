@@ -320,7 +320,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public boolean deleteMessage(Queue queue, String receiptHandle) throws SimpleQueueException {
+  public boolean deleteMessage(Queue.Key queueKey, String receiptHandle) throws SimpleQueueException {
     boolean found = false;
     // receipt handle (currently) looks like accountId:queueName:message-id:<message-id>-<receive-count>
     StringTokenizer stok = new StringTokenizer(receiptHandle,":");
@@ -336,7 +336,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
     } catch (NumberFormatException e) {
       throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid receipt handle.");
     }
-    if (!receiptHandleAccountId.equals(queue.getAccountId()) || !receiptHandleQueueName.equals(queue.getQueueName())) {
+    if (!receiptHandleAccountId.equals(queueKey.getAccountId()) || !receiptHandleQueueName.equals(queueKey.getQueueName())) {
       throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid for this queue.");
     }
 
@@ -345,8 +345,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
 
       // No errors if no results
       List<MessageEntity> messageEntityList = Entities.criteriaQuery(MessageEntity.class)
-        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+        .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+        .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
         .whereEqual(MessageEntity_.messageId, messageId)
         .whereEqual(MessageEntity_.receiveCount, receiveCount)
         .list();
@@ -362,7 +362,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public void changeMessageVisibility(Queue queue, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException {
+  public void changeMessageVisibility(Queue.Key queueKey, String receiptHandle, Integer visibilityTimeout) throws SimpleQueueException {
     // receipt handle (currently) looks like accountId:queueName:message-id:<message-id>-<receive-count>
     StringTokenizer stok = new StringTokenizer(receiptHandle,":");
     if (stok.countTokens() != 4) {
@@ -377,7 +377,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
     } catch (NumberFormatException e) {
       throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid receipt handle.");
     }
-    if (!receiptHandleAccountId.equals(queue.getAccountId()) || !receiptHandleQueueName.equals(queue.getQueueName())) {
+    if (!receiptHandleAccountId.equals(queueKey.getAccountId()) || !receiptHandleQueueName.equals(queueKey.getQueueName())) {
       throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid for this queue.");
     }
 
@@ -386,8 +386,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       long now = SimpleQueueService.currentTimeSeconds();
       // No errors if no results
       List<MessageEntity> messageEntityList = Entities.criteriaQuery(MessageEntity.class)
-        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+        .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+        .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
         .whereEqual(MessageEntity_.messageId, messageId)
         .whereEqual(MessageEntity_.receiveCount, receiveCount)
         .list();
@@ -407,13 +407,13 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public Long getApproximateAgeOfOldestMessage(Queue queue) {
+  public Long getApproximateAgeOfOldestMessage(Queue.Key queueKey) {
     long now = SimpleQueueService.currentTimeSeconds();
     try ( TransactionResource db =
             Entities.transactionFor(MessageEntity.class) ) {
       List<MessageEntity> messageEntities = Entities.criteriaQuery(MessageEntity.class)
-        .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-        .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+        .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+        .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
         // messages with an expiration time of exactly now should expire, so we want the expiration
         // timestamp to be strictly greater than now
         .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
@@ -427,13 +427,13 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
 
 
   @Override
-  public void deleteAllMessages(Queue queue) {
+  public void deleteAllMessages(Queue.Key queueKey) {
     try ( TransactionResource db =
             Entities.transactionFor(MessageEntity.class) ) {
       Entities.delete(
         Entities.restriction( MessageEntity.class ).all(
-          Entities.restriction( MessageEntity.class ).equal( MessageEntity_.accountId, queue.getAccountId() ).build( ),
-          Entities.restriction( MessageEntity.class ).equal( MessageEntity_.queueName, queue.getQueueName() ).build( )
+          Entities.restriction( MessageEntity.class ).equal( MessageEntity_.accountId, queueKey.getAccountId() ).build( ),
+          Entities.restriction( MessageEntity.class ).equal( MessageEntity_.queueName, queueKey.getQueueName() ).build( )
         ).build()
       ).delete();
       db.commit();
@@ -441,7 +441,7 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
   }
 
   @Override
-  public Map<String, String> getApproximateMessageCounts(Queue queue) {
+  public Map<String, String> getApproximateMessageCounts(Queue.Key queueKey) {
     Map<String, String> result = Maps.newHashMap();
     long now = SimpleQueueService.currentTimeSeconds();
     // TODO: see if we can do this with a more efficient query
@@ -452,8 +452,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       // i.e. not seen yet and not visible yet
       result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED,
         Entities.count(MessageEntity.class)
-            .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-            .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+            .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+            .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
               // messages with an expiration time of exactly now should expire, so we want the expiration
               // timestamp to be strictly greater than now
             .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
@@ -467,8 +467,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       // ApproximateNumberOfMessagesNotVisible - returns the approximate number of messages that are not timed-out and not deleted. For more information, see Resources Required to Process Messages in the Amazon SQS Developer Guide.
       result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
         Entities.count(MessageEntity.class)
-          .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-          .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+          .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+          .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
             // messages with an expiration time of exactly now should expire, so we want the expiration
             // timestamp to be strictly greater than now
           .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))
@@ -482,8 +482,8 @@ public class PostgresqlMessagePersistence implements MessagePersistence {
       //      ApproximateNumberOfMessages - returns the approximate number of visible messages in a queue.      result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE,
       result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES,
         Entities.count(MessageEntity.class)
-          .whereEqual(MessageEntity_.accountId, queue.getAccountId())
-          .whereEqual(MessageEntity_.queueName, queue.getQueueName())
+          .whereEqual(MessageEntity_.accountId, queueKey.getAccountId())
+          .whereEqual(MessageEntity_.queueName, queueKey.getQueueName())
             // messages with an expiration time of exactly now should expire, so we want the expiration
             // timestamp to be strictly greater than now
           .where(Entities.restriction(MessageEntity.class).gt(MessageEntity_.expiredTimestampSecs, now))

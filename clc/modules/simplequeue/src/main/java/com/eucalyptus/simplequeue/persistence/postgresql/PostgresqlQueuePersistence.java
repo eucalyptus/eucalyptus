@@ -115,8 +115,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
     queue.setAccountId(queueEntity.getAccountId());
     queue.setQueueName(queueEntity.getQueueName());
     queue.getAttributes().putAll(convertJsonToAttributeMap(queueEntity.getAttributes()));
-    queue.setUniqueId(queueEntity.getNaturalId());
-    queue.setVersion(queueEntity.getVersion());
+    queue.setUniqueIdPerVersion(queueEntity.getNaturalId() + "/" + queueEntity.getVersion());
     return queue;
   }
 
@@ -143,7 +142,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
 
 
   @Override
-  public Collection<Queue> listQueues(String accountId, String queueNamePrefix) {
+  public Collection<Queue.Key> listQueues(String accountId, String queueNamePrefix) {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
       Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class);
@@ -156,41 +155,34 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
         );
       }
       List<QueueEntity> queueEntities = queryCriteria.list();
-      List<Queue> queues = Lists.newArrayList();
+      List<Queue.Key> queueKeys = Lists.newArrayList();
       if (queueEntities != null) {
         for (QueueEntity queueEntity: queueEntities) {
           Queue queue = queueFromQueueEntity(queueEntity);
-          queues.add(queue);
+          queueKeys.add(queue.getKey());
         }
       }
-      return queues;
+      return queueKeys;
     }
   }
 
   @Override
-  public Collection<Queue> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn) {
+  public Collection<Queue.Key> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn) {
     try ( TransactionResource db =
             Entities.transactionFor(QueueEntity.class) ) {
       Entities.EntityCriteriaQuery<QueueEntity, QueueEntity> queryCriteria = Entities.criteriaQuery(QueueEntity.class)
         .whereEqual(QueueEntity_.accountId, accountId);
       List<QueueEntity> queueEntities = queryCriteria.list();
-      List<Queue> queues = Lists.newArrayList();
+      List<Queue.Key> queueKeys = Lists.newArrayList();
       if (queueEntities != null) {
         for (QueueEntity queueEntity: queueEntities) {
           Queue queue = queueFromQueueEntity(queueEntity);
-          try {
-            if (queue.getRedrivePolicy() != null && queue.getRedrivePolicy().isObject() &&
-              queue.getRedrivePolicy().has(Constants.DEAD_LETTER_TARGET_ARN) &&
-              queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).isTextual() &&
-              Objects.equals(deadLetterTargetArn, queue.getRedrivePolicy().get(Constants.DEAD_LETTER_TARGET_ARN).textValue())) {
-              queues.add(queue);
-            }
-          } catch (SimpleQueueException ignore) {
-            // redrive policy doesn't match, ignore it
+          if (Objects.equals(deadLetterTargetArn, queue.getDeadLetterTargetArn())) {
+            queueKeys.add(queue.getKey());
           }
         }
       }
-      return queues;
+      return queueKeys;
     }
   }
 
@@ -240,7 +232,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   }
 
   @Override
-  public Collection<Queue> listActiveQueues(String partitionToken) {
+  public Collection<Queue.Key> listActiveQueues(String partitionToken) {
     try (TransactionResource db =
            Entities.transactionFor(QueueEntity.class)) {
       long nowSecs = SimpleQueueService.currentTimeSeconds();
@@ -248,14 +240,14 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
         .whereEqual(QueueEntity_.partitionToken, partitionToken)
         .where(Entities.restriction(QueueEntity.class).ge(QueueEntity_.lastLookupTimestampSecs, nowSecs - SimpleQueueProperties.ACTIVE_QUEUE_TIME_SECS));
       List<QueueEntity> queueEntities = queryCriteria.list();
-      List<Queue> queues = Lists.newArrayList();
+      List<Queue.Key> queueKeys = Lists.newArrayList();
       if (queueEntities != null) {
         for (QueueEntity queueEntity : queueEntities) {
           Queue queue = queueFromQueueEntity(queueEntity);
-          queues.add(queue);
+          queueKeys.add(queue.getKey());
         }
       }
-      return queues;
+      return queueKeys;
     }
   }
 }

@@ -52,20 +52,20 @@ public class CloudWatchClient {
     return new Date(timestamp - timestamp %  unitStep);
   }
 
-  public static void addSQSMetricDatum(PutMetricDataType putMetricDataType, Queue queue, Date date, String metricName, double value, String unit) {
+  public static void addSQSMetricDatum(PutMetricDataType putMetricDataType, Queue.Key queueKey, Date date, String metricName, double value, String unit) {
     MetricDatum metricDatum = new MetricDatum();
     metricDatum.setTimestamp(roundDown5Minutes(date));
-    metricDatum.setDimensions(getDimensions(queue));
+    metricDatum.setDimensions(getDimensions(queueKey));
     metricDatum.setMetricName(metricName);
     metricDatum.setValue(value);
     metricDatum.setUnit(unit);
     putMetricDataType.getMetricData().getMember().add(metricDatum);
   }
 
-  public static void addSQSMetricDatum(PutMetricDataType putMetricDataType, Queue queue, Date date, String metricName, double sampleCount, double minimum, double maximum, double sum, String unit) {
+  public static void addSQSMetricDatum(PutMetricDataType putMetricDataType, Queue.Key queueKey, Date date, String metricName, double sampleCount, double minimum, double maximum, double sum, String unit) {
     MetricDatum metricDatum = new MetricDatum();
     metricDatum.setTimestamp(roundDown5Minutes(date));
-    metricDatum.setDimensions(getDimensions(queue));
+    metricDatum.setDimensions(getDimensions(queueKey));
     metricDatum.setMetricName(metricName);
     StatisticSet statisticSet = new StatisticSet();
     statisticSet.setMaximum(maximum);
@@ -77,20 +77,20 @@ public class CloudWatchClient {
     putMetricDataType.getMetricData().getMember().add(metricDatum);
   }
 
-  public static PutMetricDataType getSQSPutMetricDataType(Queue queue) throws AuthException {
+  public static PutMetricDataType getSQSPutMetricDataType(Queue.Key queueKey) throws AuthException {
     PutMetricDataType putMetricDataType = new PutMetricDataType();
-    putMetricDataType.setUserId(queue.getAccountId());
+    putMetricDataType.setUserId(queueKey.getAccountId());
     putMetricDataType.markPrivileged();
     putMetricDataType.setNamespace(Constants.AWS_SQS);
     putMetricDataType.setMetricData(new MetricData());
     return putMetricDataType;
   }
 
-  private static Dimensions getDimensions(Queue queue) {
+  private static Dimensions getDimensions(Queue.Key queueKey) {
     Dimensions dimensions = new Dimensions();
     Dimension dimension = new Dimension();
     dimension.setName(Constants.QUEUE_NAME);
-    dimension.setValue(queue.getQueueName());
+    dimension.setValue(queueKey.getQueueName());
     dimensions.getMember().add(dimension);
     return dimensions;
   }
