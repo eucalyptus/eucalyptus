@@ -187,7 +187,7 @@ typedef struct mido_vpc_secgroup_t mido_vpc_secgroup;
 
 struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
-    char name[16];
+    char name[SECURITY_GROUP_ID_LEN];
     midonet_api_chain *ingress;
     midonet_api_chain *egress;
     midonet_api_ipaddrgroup *iag_priv;
@@ -208,7 +208,7 @@ struct mido_vpc_secgroup_t {
 
 struct mido_vpc_instance_t {
     gni_instance *gniInst;
-    char name[16];
+    char name[INTERFACE_ID_LEN];
     midonet_api_chain *prechain;
     midonet_api_chain *postchain;
     midonet_api_ipaddrgroup *iag_pre;
@@ -233,7 +233,7 @@ struct mido_vpc_natgateway_t {
     midonet_api_router *natgrt;
     midonet_api_chain *inchain;
     midonet_api_chain *outchain;
-    char name[32];
+    char name[NATG_ID_LEN];
     int rtid;
     midoname *midos[NATG_END];
     int population_failed;
@@ -243,8 +243,8 @@ struct mido_vpc_natgateway_t {
 
 struct mido_vpc_subnet_t {
     gni_vpcsubnet *gniSubnet;
-    char name[16];
-    char vpcname[16];
+    char name[VPC_SUBNET_ID_LEN];
+    char vpcname[VPC_ID_LEN];
     mido_vpc *vpc;
     midonet_api_bridge *subnetbr;
     midoname *midos[SUBN_END];
@@ -261,7 +261,7 @@ struct mido_vpc_subnet_t {
 
 struct mido_vpc_t {
     gni_vpc *gniVpc;
-    char name[16];
+    char name[VPC_ID_LEN];
     int rtid;
     midonet_api_router *vpcrt;
     midonet_api_chain *rt_uplink_prechain;

@@ -2327,6 +2327,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
+                EUCA_FREE(external_cidr);
                 external_cidr = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
@@ -2336,6 +2337,7 @@ int gni_populate_configuration(globalNetworkInfo *gni, gni_hostname_info *host_i
             rc += evaluate_xpath_property(ctxptr, doc, startnode, expression, &results, &max_results);
             for (i = 0; i < max_results; i++) {
                 LOGTRACE("after function: %d: %s\n", i, results[i]);
+                EUCA_FREE(peer_ip);
                 peer_ip = strdup(results[i]);
                 EUCA_FREE(results[i]);
             }
@@ -2809,7 +2811,7 @@ int gni_populate_interfaces(globalNetworkInfo *gni, gni_instance *instance, xmlN
                 //snprintf(gni->interfaces[gni->max_interfaces + i].instance_name.name, 1024, instance->name);
                 //gni_populate_instance_interface(&(gni->interfaces[gni->max_interfaces + i]), nodeset.nodeTab[i], ctxptr, doc);
                 gni->ifs[gni->max_ifs + i] = EUCA_ZALLOC_C(1, sizeof (gni_instance));
-                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 256, instance->name);
+                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 32, instance->name);
                 gni_populate_instance_interface(gni->ifs[gni->max_ifs + i], nodeset.nodeTab[i], ctxptr, doc);
                 instance->interfaces[i] = gni->ifs[gni->max_ifs + i];
                 //gni_instance_interface_print(gni->ifs[gni->max_ifs + i]), EUCA_LOG_INFO);
@@ -3014,7 +3016,7 @@ int gni_populate_sgs(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathContext
             if (sgnode && sgnode->properties) {
                 for (xmlAttr *prop = sgnode->properties; prop != NULL; prop = prop->next) {
                     if (!strcmp((char *) prop->name, "name")) {
-                        snprintf(gsg->name, HOSTNAME_LEN, "%s", (char *) prop->children->content);
+                        snprintf(gsg->name, SECURITY_GROUP_ID_LEN, "%s", (char *) prop->children->content);
                         break;
                     }
                 }

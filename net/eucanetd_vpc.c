@@ -351,28 +351,28 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
         if (rc) {
             LOGERROR("failed to retrieve objects from MidoNet.\n");
-            return (1);
-        }
+        } else {
 
-        mido_config *mido = pMidoConfig;
-        rc = do_midonet_populate(mido);
-        if (rc) {
-            LOGWARN("failed to populate VPC models prior to upgrade.\n");
-        }
-
-        LOGINFO("\tremoving pre-4.4 meta taps\n");
-        for (int i = 0; i < mido->max_vpcs; i++) {
-            mido_vpc *vpc = &(mido->vpcs[i]);
-            for (int j = 0; j < vpc->max_subnets; j++) {
-                mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
-                mido_delete_bridge_port(vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_BR_METAPORT]);
-                vpcsubnet->midos[SUBN_BR_METAPORT] = NULL;
-                delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
+            mido_config *mido = pMidoConfig;
+            rc = do_midonet_populate(mido);
+            if (rc) {
+                LOGWARN("failed to populate VPC models prior to upgrade.\n");
             }
+
+            LOGINFO("\tremoving pre-4.4 meta taps\n");
+            for (int i = 0; i < mido->max_vpcs; i++) {
+                mido_vpc *vpc = &(mido->vpcs[i]);
+                for (int j = 0; j < vpc->max_subnets; j++) {
+                    mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
+                    mido_delete_bridge_port(vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_BR_METAPORT]);
+                    vpcsubnet->midos[SUBN_BR_METAPORT] = NULL;
+                    delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
+                }
+            }
+
+            LOGINFO("\tremoving pre-4.4 eni chains\n");
+            do_delete_vpceni_chains(mido);
         }
-        
-        LOGINFO("\tremoving pre-4.4 eni chains\n");
-        do_delete_vpceni_chains(mido);
     }
 
     EUCA_FREE(mido_euca_version_str);
@@ -466,7 +466,10 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
                 }
                 break;
             case FLUSH_MIDO_TEST:
-                do_midonet_delete_vpc_object(pMidoConfig, "test", TRUE);
+                rc = do_midonet_delete_vpc_object(pMidoConfig, "test", TRUE);
+                if (rc) {
+                    ret = 1;
+                }
                 break;
             case FLUSH_NONE:
             default:

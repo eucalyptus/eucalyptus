@@ -645,7 +645,7 @@ char *euca_hex2dot_s(u32 hex) {
     static char sDot[INET_ADDR_LEN];
 
     snprintf(sDot, INET_ADDR_LEN, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
-    return (&sDot);
+    return (sDot);
 }
 
 //!

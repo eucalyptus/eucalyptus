@@ -897,9 +897,11 @@ u32 euca_getaddr(const char *hostname, char **ipout) {
         
         for (p = ainfo; p != NULL; p = p->ai_next) {
             sa = (struct sockaddr_in *) p->ai_addr;
-            snprintf(res, INET_ADDR_LEN, "%s", inet_ntoa(sa->sin_addr));
-            // Use the first entry of the results
-            break;
+            if (sa) {
+                snprintf(res, INET_ADDR_LEN, "%s", inet_ntoa(sa->sin_addr));
+                // Use the first entry of the results
+                break;
+            }
         }
         freeaddrinfo(ainfo);
     }
