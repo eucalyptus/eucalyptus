@@ -631,7 +631,9 @@ void filter_services(ncMetadata * meta, char *filter_partition)
 //! @param[in] ncOp
 //! @param[in] ...
 //!
-//! @return
+//! @return  EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution failed
+//!         \li EUCA_TIMEOUT_ERROR if execution timed out
 //!
 //! @pre
 //!
@@ -1221,7 +1223,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
                 if (rbytes <= 0) {
                     killwait(pid);
-                    opFail = 1;
+                    opFail = EUCA_TIMEOUT_ERROR;
                 } else {
                     *outInst = EUCA_ZALLOC(1, sizeof(ncInstance));
                     if (!*outInst) {
@@ -1231,7 +1233,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
                     if (rbytes <= 0) {
                         killwait(pid);
-                        opFail = 1;
+                        opFail = EUCA_TIMEOUT_ERROR;
                     }
                 }
             }
@@ -1396,8 +1398,10 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
     }
 
     LOGTRACE("done ncOps=%s clientrc=%d opFail=%d\n", ncOp, rc, opFail);
-    if (rc || opFail) {
-        ret = 1;
+    if (opFail) {
+        ret = opFail;
+    } else if (rc) {
+        ret = rc;
     } else {
         ret = 0;
     }
@@ -3855,8 +3859,8 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
                                           amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, credential,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, rootDirective, netIds, netIdsLen, secNetCfgs, secNetCfgsLen, &outInst);
-                        LOGDEBUG("sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
-                        if (rc) {
+                        LOGDEBUG("sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc == EUCA_ERROR ?  "FAIL" : rc == EUCA_TIMEOUT_ERROR ? "TIMEOUT" : "SUCCESS");
+                        if (rc==EUCA_ERROR) {
                             // make sure we get the latest topology information before trying again
                             sem_mywait(CONFIG);
                             memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
@@ -3866,10 +3870,11 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             sleep(1);
                         }
                     }
-                    if (!rc) {
-                        ret = 0;
-                    } else {
+                    // EUCA_OK and EUCA_TIMEOUT_ERROR are both treated as successes, see EUCA-12820
+                    if (rc==EUCA_ERROR) {
                         ret = 1;
+                    } else {
+                        ret = 0;
                     }
 
                     exit(ret);
