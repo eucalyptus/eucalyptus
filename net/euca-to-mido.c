@@ -2789,7 +2789,6 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         // Check tunnel-zone
         if (!mido->midotz_ok) {
             LOGDEBUG("Checking MidoNet tunnel-zone.\n");
-            rc = 1;
         }
         int msg_len = 2048;
         char *buffer = alloca(msg_len);
@@ -4446,9 +4445,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
             }
         }
     }
-    if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VMHOST]) {
-        found = 1;
-    } else {
+    if (!vpcinstance->midos[INST_VPCBR_VMPORT] || !vpcinstance->midos[INST_VMHOST]) {
         LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
     }
 
@@ -5424,7 +5421,9 @@ int validate_mido(mido_config *mido) {
                 next = tmpptr + 1;
             }
         }
-        for (subd = next; *subd == '/'; subd++);
+        if (strlen(next)) {
+            for (subd = next; *subd == '/'; subd++);
+        }
 
         LOGTRACE("MN API proto %s, host %s, port %s, subd %s\n", SP(proto), SP(host), SP(port), SP(subd));
         if (!proto || !host || !subd) {
@@ -5841,7 +5840,7 @@ int populate_mido_gw_bgp_v5(mido_config *mido, midoname *port, mido_gw *gw) {
     for (int i = 0; i < max_bgps && !found; i++) {
         mido_getel_midoname(bgps[i], "address", &peerAddr);
         mido_getel_midoname(bgps[i], "asNumber", &peerAS);
-        if (!peerAS || !peerAS) {
+        if (!peerAS || !peerAddr) {
             LOGWARN("failed to retrieve bgp information\n");
         } else {
             if (!strcmp(peerAddr, gw->peer_ip)) {

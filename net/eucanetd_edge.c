@@ -1751,7 +1751,10 @@ int update_host_arp(edge_config *edge) {
                             if (ebt_chain_find_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
                                 LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, edge->config->bridgeDev);
                                 snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", edge->config->bridgeDev, psPrivateIp, psBridgeMac);
-                                euca_execlp(&rc, edge->config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", edge->config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
+                                rc = euca_execlp(&rc, edge->config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", edge->config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
+                                if (rc) {
+                                    LOGDEBUG("error executing announce-arp\n");
+                                }
                             }
                         }
                         EUCA_FREE(psPrivateIp);
