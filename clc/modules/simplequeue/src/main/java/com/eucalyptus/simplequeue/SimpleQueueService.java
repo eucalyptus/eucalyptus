@@ -1255,7 +1255,7 @@ public class SimpleQueueService {
 
     message.getAttribute().add(new Attribute(Constants.SENDER_ID, senderId));
 
-    String messageId = UUID.randomUUID().toString();
+    String messageId = PersistenceFactory.getMessagePersistence().getNewMessageUUID().toString();
 
     message.setMessageId(messageId);
 

@@ -16,6 +16,7 @@
 package com.eucalyptus.simplequeue.persistence;
 
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
+import com.eucalyptus.simplequeue.persistence.cassandra.CassandraMessagePersistence;
 import com.eucalyptus.simplequeue.persistence.cassandra.CassandraQueuePersistence;
 import com.eucalyptus.simplequeue.persistence.postgresql.PostgresqlMessagePersistence;
 import com.eucalyptus.simplequeue.persistence.postgresql.PostgresqlQueuePersistence;
@@ -24,14 +25,15 @@ import com.eucalyptus.simplequeue.persistence.postgresql.PostgresqlQueuePersiste
  * Created by ethomas on 9/7/16.
  */
 public class PersistenceFactory {
-  private static QueuePersistence postgresQueuePersistence = new PostgresqlQueuePersistence();
+  private static QueuePersistence postgresqlQueuePersistence = new PostgresqlQueuePersistence();
   private static QueuePersistence cassandraQueuePersistence = new CassandraQueuePersistence();
-  private static MessagePersistence messagePersistence = new PostgresqlMessagePersistence();
+  private static MessagePersistence postgresqlMessagePersistence = new PostgresqlMessagePersistence();
+  private static MessagePersistence cassandraMessagePersistence = new CassandraMessagePersistence();
   public static QueuePersistence getQueuePersistence() {
-    return ("cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE)) ? cassandraQueuePersistence: postgresQueuePersistence;
+    return "cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE) ? cassandraQueuePersistence: postgresqlQueuePersistence;
   }
   public static MessagePersistence getMessagePersistence() {
-    return messagePersistence;
+    return "cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE) ? cassandraMessagePersistence: postgresqlMessagePersistence;
   }
 
 }

@@ -20,11 +20,14 @@ import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by ethomas on 9/16/16.
  */
 public interface MessagePersistence {
+
+  UUID getNewMessageUUID();
 
   Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException;
 
