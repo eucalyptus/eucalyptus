@@ -1377,8 +1377,10 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->systemctl, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_SYSTEMCTL]);
 
     if (strlen(config->systemctl)) {
-        rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "--version", NULL);
-        if (rc != EUCA_OK) {
+        char cmd[EUCA_MAX_PATH] = "";
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s --version", config->cmdprefix, config->systemctl);
+        rc = timeshell_nb(cmd, 10, TRUE);
+        if (rc != 0) {
             LOGERROR("invalid VNET_SYSTEMCTL (%s) - reverting to \"systemctl\"\n", config->systemctl);
             snprintf(config->systemctl, EUCA_MAX_PATH, "%s", "systemctl");
         }

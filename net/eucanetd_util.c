@@ -177,8 +177,11 @@ int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
 
     char dhcpdunit[EUCA_MAX_PATH] = "";
     snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
-    rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "stop", dhcpdunit, NULL);
-    if (rc != EUCA_OK) {
+    char cmd[EUCA_MAX_PATH] = "";
+    snprintf(cmd, EUCA_MAX_PATH, "%s %s stop %s", config->cmdprefix,
+            config->systemctl, dhcpdunit);
+    rc = timeshell_nb(cmd, 10, FALSE);
+    if (rc != 0) {
         LOGWARN("failed to stop eucanetd-dhcpd\n");
     }
 
@@ -210,12 +213,6 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
     char sTraceFileName[EUCA_MAX_PATH] = "";
     struct stat mystat = { 0 };
 
-    // Do we have a valid path?
-    if (stat(config->dhcpDaemon, &mystat) != 0) {
-        LOGERROR("Unable to find DHCP daemon binaries: '%s'\n", config->dhcpDaemon);
-        return (1);
-    }
-
     // Setup the path to the various files involved
     snprintf(sPidFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
     snprintf(sLeaseFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
@@ -239,8 +236,12 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
             // Run the DHCP command
             char dhcpdunit[EUCA_MAX_PATH] = "";
             snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
-            rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "start", dhcpdunit, NULL);
-            if (rc != EUCA_OK) {
+            char cmd[EUCA_MAX_PATH] = "";
+            snprintf(cmd, EUCA_MAX_PATH, "%s %s start %s", config->cmdprefix,
+                    config->systemctl, dhcpdunit);
+            rc = timeshell_nb(cmd, 10, FALSE);
+
+            if (rc != 0) {
                 LOGERROR("failed to start eucanetd-dhcpd\n");
             }
         }

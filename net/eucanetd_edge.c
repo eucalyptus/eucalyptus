@@ -328,6 +328,13 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
         return (1);
     }
+    // dhcpd
+    char cmd[EUCA_MAX_PATH] = "";
+    snprintf(cmd, EUCA_MAX_PATH, "%s pkill -f euca-dhcp.pid", pConfig->cmdprefix);
+    rc = timeshell_nb(cmd, 10, TRUE);
+    if (rc != 0) {
+        LOGERROR("Failed to terminate dhcpd\n");
+    }
     // iptables
     ipt_handler_repopulate(pConfig->ipt);
     // delete legacy (pre 4.4) chains
@@ -413,6 +420,10 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
         LOGWARN("Invalid argument: cannot flush %s with NULL config\n", DRIVER_NAME());
         return (1);
     }
+    
+    // dhcpd
+    eucanetd_stop_dhcpd_server(pConfig);
+    
     // iptables
     ipt_handler_repopulate(pConfig->ipt);
     ipt_chain_flush(pConfig->ipt, "raw", "EUCA_COUNTERS_IN");
