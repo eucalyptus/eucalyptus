@@ -90,6 +90,9 @@
 
 #define EUCANETD_DUMMY_UDP_PORT                  63822
 
+#define EUCANETD_DHCPD_UNIT                      "eucanetd-dhcpd@%s.service"
+#define EUCANETD_NGINX_UNIT                      "eucanetd-nginx.service"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -111,6 +114,7 @@ enum {
     EUCANETD_CVAL_MODE,
     EUCANETD_CVAL_DHCPDAEMON,
     EUCANETD_CVAL_DHCPUSER,
+    EUCANETD_CVAL_SYSTEMCTL,
     EUCANETD_CVAL_POLLING_FREQUENCY,
     EUCANETD_CVAL_DISABLE_L2_ISOLATION,
     EUCANETD_CVAL_NC_PROXY,
@@ -203,8 +207,9 @@ typedef struct eucanetdConfig_t {
     char privInterface[IF_NAME_LEN];   //!< The configured private interface device to use for networking (VNET_PRIVINTERFACE)
     char bridgeDev[IF_NAME_LEN];       //!< The configured bridge device to use for networking (VNET_BRIDGE)
 
-    char dhcpUser[32];                 //!< The user name as which the DHCP daemon runs on the distribution. (VNET_DHCPUSER)
     char dhcpDaemon[EUCA_MAX_PATH];    //!< The path to the ISC DHCP server executable to use. (VNET_DHCPDAEMON)
+    
+    char systemctl[EUCA_MAX_PATH];     //!< systemctl executable to use. (VNET_SYSTEMCTL)
 
     char mido_intrtcidr[NETWORK_ADDR_LEN];
     char mido_intmdcidr[NETWORK_ADDR_LEN];

@@ -1635,6 +1635,8 @@ int generate_dhcpd_config(edge_config *edge) {
     char *router = NULL;
     char *strptra = NULL;
     char dhcpd_config_path[EUCA_MAX_PATH] = "";
+    char pid_file_path[EUCA_MAX_PATH] = "";
+    char lease_file_path[EUCA_MAX_PATH] = "";
     FILE *OFH = NULL;
     gni_instance *instances = NULL;
 
@@ -1652,12 +1654,21 @@ int generate_dhcpd_config(edge_config *edge) {
 
     // Open the DHCP configuration file
     snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", edge->config->eucahome);
+    snprintf(pid_file_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", edge->config->eucahome);
+    snprintf(lease_file_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", edge->config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
         LOGERROR("cannot open dhcpd server config file for write '%s': check permissions\n", dhcpd_config_path);
         ret = 1;
     } else {
-        fprintf(OFH, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+        fprintf(OFH, "# automatically generated config file for DHCP server\n"
+                "default-lease-time 86400;\n"
+                "max-lease-time 86400;\n"
+                "ddns-update-style none;\n");
+        fprintf(OFH, "\n"
+                "lease-file-name \"%s\";\n"
+                "pid-file-name  \"%s\";\n"
+                "\n", lease_file_path, pid_file_path);
         fprintf(OFH, "shared-network euca {\n");
 
         network = hex2dot(nw);

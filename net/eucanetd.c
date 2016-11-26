@@ -121,6 +121,8 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_DHCPUSER", "root"}
     ,
+    {"VNET_SYSTEMCTL", "/usr/bin/systemctl"}
+    ,
     {"VNET_DNS", NULL}
     ,
     {"VNET_DOMAINNAME", "eucalyptus.internal"}
@@ -1259,6 +1261,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
     cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
+    cvals[EUCANETD_CVAL_SYSTEMCTL] = configFileValue("VNET_SYSTEMCTL");
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
@@ -1371,6 +1374,15 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->privInterface, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+    snprintf(config->systemctl, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_SYSTEMCTL]);
+
+    if (strlen(config->systemctl)) {
+        rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "--version", NULL);
+        if (rc != EUCA_OK) {
+            LOGERROR("invalid VNET_SYSTEMCTL (%s) - reverting to \"systemctl\"\n", config->systemctl);
+            snprintf(config->systemctl, EUCA_MAX_PATH, "%s", "systemctl");
+        }
+    }
 
     // mido config opts
     if (IS_NETMODE_VPCMIDO(config)) {
@@ -1411,9 +1423,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             config->validate_mido_config = FALSE;
         }
     }
-
-    if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)
-        snprintf(config->dhcpUser, 32, "%s", cvals[EUCANETD_CVAL_DHCPUSER]);
 
     LOGTRACE("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s "
             "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),

@@ -173,44 +173,16 @@ static struct timeval gtv;
  *     on success, the DHCP server has been stopped.
  */
 int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
-    int ret = 0;
     int rc = 0;
-    int pid = 0;
-    char *psPid = NULL;
-    char sPidFileName[EUCA_MAX_PATH] = "";
-    struct stat mystat = { 0 };
 
-    // Do we have a valid path?
-    if (stat(config->dhcpDaemon, &mystat) != 0) {
-        LOGERROR("Unable to stop dhcpd without valid binary: '%s'\n", config->dhcpDaemon);
-        return (1);
-    }
-    // Setup the path to the various files involved
-    snprintf(sPidFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
-
-    // Retrieve the PID of the current DHCP server process if running
-    if (stat(sPidFileName, &mystat) == 0) {
-        psPid = file2str(sPidFileName);
-        pid = atoi(psPid);
-        EUCA_FREE(psPid);
-
-        // If the PID value is valid, kill the server
-        if (pid > 1) {
-            LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
-            if ((rc = safekill(pid, config->dhcpDaemon, 9, config->cmdprefix)) != 0) {
-                // safekill returns EUCA_PERMISSION_ERROR if /proc/pid/cmdline is not accessible
-                // In this case, it is likely that dhcpd is not running.
-                if (rc != EUCA_PERMISSION_ERROR) {
-                    LOGWARN("failed to kill previous dhcp daemon\n");
-                    ret = 1;
-                } else {
-                    LOGDEBUG("unable to find dhcpd (%d).\n", pid);
-                }
-            }
-        }
+    char dhcpdunit[EUCA_MAX_PATH] = "";
+    snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
+    rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "stop", dhcpdunit, NULL);
+    if (rc != EUCA_OK) {
+        LOGWARN("failed to stop eucanetd-dhcpd\n");
     }
 
-    return (ret);
+    return (rc);
 }
 
 /**
@@ -231,7 +203,6 @@ int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
 int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
     int ret = 0;
     int rc = 0;
-    int status = 0;
     char *psConfig = NULL;
     char sPidFileName[EUCA_MAX_PATH] = "";
     char sConfigFileName[EUCA_MAX_PATH] = "";
@@ -266,14 +237,11 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
         // Do we have any "node-" statement
         if (strstr(psConfig, "node-")) {
             // Run the DHCP command
-            rc = euca_execlp(&status, config->cmdprefix, config->dhcpDaemon, "-cf", sConfigFileName, "-lf", sLeaseFileName, "-pf", sPidFileName, "-tf", sTraceFileName, NULL);
+            char dhcpdunit[EUCA_MAX_PATH] = "";
+            snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
+            rc = euca_execlp(NULL, config->cmdprefix, config->systemctl, "start", dhcpdunit, NULL);
             if (rc != EUCA_OK) {
-                LOGERROR("Fail to restart DHCP server. exitcode='%d'\n", status);
-                LOGDEBUG("DHCPD Server Command='%s %s %s %s %s %s %s %s %s %s'\n", config->cmdprefix, config->dhcpDaemon, "-cf", sConfigFileName, "-lf", sLeaseFileName, "-pf",
-                         sPidFileName, "-tf", sTraceFileName)
-                    ret = 1;
-            } else {
-                LOGDEBUG("DHCP server restarted successfully\n");
+                LOGERROR("failed to start eucanetd-dhcpd\n");
             }
         }
         EUCA_FREE(psConfig);
