@@ -787,6 +787,46 @@ public class DASManager implements LogicalStorageManager {
       return returnValues;
     }
 
+    protected String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+      
+      EucalyptusCloudException ex = null;
+      String result = null;
+
+      // 1st timeout is 10 ms, 2nd is 40. Last (9th) is 2.56 sec. Total 3.41 sec.
+      int attempt = 1;
+      final int max_attempts = 9;
+      int timeout = 10; //ms
+      final int timeout_multiplier = 4;
+
+      do {
+        try {
+          result = LVMWrapper.enableLogicalVolume(lvName);
+          if (attempt > 1) {
+            LOG.info("Enabling " + lvName + "succeeded on retry.");
+          }
+        } catch (EucalyptusCloudException ece) {
+          // If the enable fails, it might be because lvmetad hasn't scanned 
+          // the VG and LV into its metadata cache. 
+          // Force a pvscan, wait a bit longer, then try again.
+          ex = ece;
+          LOG.error(ece + ", retrying...");
+          LVMWrapper.scanPhysicalVolume(lvName);
+          try {
+            Thread.sleep(timeout);
+          } catch (InterruptedException ie) {
+            LOG.error(ie);
+            break;
+          }
+          timeout *= timeout_multiplier;
+        }
+      } while (attempt++ < max_attempts);
+
+      if (ex != null) {
+        throw ex;
+      }
+      return result;
+    }
+    
     public void exportVolume(LVMVolumeInfo lvmVolumeInfo) throws EucalyptusCloudException {
       if (lvmVolumeInfo instanceof ISCSIVolumeInfo) {
         ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
