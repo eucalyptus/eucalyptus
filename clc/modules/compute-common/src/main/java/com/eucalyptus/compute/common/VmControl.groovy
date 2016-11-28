@@ -329,6 +329,17 @@ public class GetPasswordDataResponseType extends VmControlMessage {
   Date timestamp;
   String output;
 }
+
+class GetConsoleScreenshotType extends VmControlMessage {
+  String instanceId
+  Boolean wakeUp
+}
+
+class GetConsoleScreenshotResponseType extends VmControlMessage {
+  String instanceId
+  String imageData = ''
+}
+
 /** *******************************************************************************/
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;

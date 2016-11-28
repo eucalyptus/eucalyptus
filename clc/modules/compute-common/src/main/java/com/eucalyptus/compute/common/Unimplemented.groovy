@@ -143,6 +143,26 @@ public class PurchaseReservedInstancesOfferingType extends ReservedInstanceMessa
 
 public class PurchaseReservedInstancesOfferingResponseType extends ReservedInstanceMessage {}
 
+class TargetConfigurationRequestType {
+  Integer instanceCount
+  String offeringId
+}
+
+class GetReservedInstancesExchangeQuoteType extends ReservedInstanceMessage {
+  ArrayList<String> reservedInstanceId
+  ArrayList<TargetConfigurationRequestType> targetConfiguration
+}
+
+class GetReservedInstancesExchangeQuoteResponseType extends ReservedInstanceMessage {}
+
+class AcceptReservedInstancesExchangeQuoteType extends ReservedInstanceMessage {
+  ArrayList<String> reservedInstanceId
+  ArrayList<TargetConfigurationRequestType> targetConfiguration
+}
+
+class AcceptReservedInstancesExchangeQuoteResponseType extends ReservedInstanceMessage {}
+
+
 /** *******************************************************************************/
 public class SpotInstanceMessage extends ComputeMessage {}
 
@@ -289,6 +309,15 @@ class SpotFleetRequestConfigType extends EucalyptusData {
   String validUntil
 }
 
+class ModifySpotFleetRequestType extends SpotInstanceMessage {
+  String excessCapacityTerminationPolicy
+  String spotFleetRequestId
+  Integer targetCapacity
+}
+
+class ModifySpotFleetRequestResponseType extends SpotInstanceMessage {
+}
+
 /** *******************************************************************************/
 
 public class CreatePlacementGroupType extends VmPlacementMessage {
@@ -334,6 +363,17 @@ public class DescribePlacementGroupsResponseType extends VmPlacementMessage {
   public DescribePlacementGroupsResponseType() {
   }
 }
+
+class ModifyInstancePlacementType extends VmPlacementMessage {
+  String affinity
+  String hostId
+  String instanceId
+  String tenancy
+}
+
+class ModifyInstancePlacementResponseType extends VmPlacementMessage {
+}
+
 
 /****** flow logs *****/
 

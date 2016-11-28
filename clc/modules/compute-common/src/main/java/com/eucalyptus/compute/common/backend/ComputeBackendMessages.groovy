@@ -111,6 +111,8 @@ interface ComputeBackendMessage extends BaseMessageMarker {
 @InheritConstructors class DescribeBundleTasksType extends com.eucalyptus.compute.common.DescribeBundleTasksType implements ComputeBackendMessage { }
 @InheritConstructors class GetConsoleOutputResponseType extends com.eucalyptus.compute.common.GetConsoleOutputResponseType implements ComputeBackendMessage { }
 @InheritConstructors class GetConsoleOutputType extends com.eucalyptus.compute.common.GetConsoleOutputType implements ComputeBackendMessage { }
+@InheritConstructors class GetConsoleScreenshotResponseType extends com.eucalyptus.compute.common.GetConsoleScreenshotResponseType implements ComputeBackendMessage { }
+@InheritConstructors class GetConsoleScreenshotType extends com.eucalyptus.compute.common.GetConsoleScreenshotType implements ComputeBackendMessage { }
 @InheritConstructors class GetPasswordDataResponseType extends com.eucalyptus.compute.common.GetPasswordDataResponseType implements ComputeBackendMessage { }
 @InheritConstructors class GetPasswordDataType extends com.eucalyptus.compute.common.GetPasswordDataType implements ComputeBackendMessage { }
 @InheritConstructors class ModifyInstanceAttributeResponseType extends com.eucalyptus.compute.common.ModifyInstanceAttributeResponseType implements ComputeBackendMessage { }
@@ -161,6 +163,8 @@ interface ComputeBackendMessage extends BaseMessageMarker {
 @InheritConstructors class CreatePlacementGroupType extends com.eucalyptus.compute.common.CreatePlacementGroupType implements ComputeBackendMessage { }
 @InheritConstructors class DeletePlacementGroupResponseType extends com.eucalyptus.compute.common.DeletePlacementGroupResponseType implements ComputeBackendMessage { }
 @InheritConstructors class DeletePlacementGroupType extends com.eucalyptus.compute.common.DeletePlacementGroupType implements ComputeBackendMessage { }
+@InheritConstructors class ModifyInstancePlacementResponseType extends com.eucalyptus.compute.common.ModifyInstancePlacementResponseType implements ComputeBackendMessage { }
+@InheritConstructors class ModifyInstancePlacementType extends com.eucalyptus.compute.common.ModifyInstancePlacementType implements ComputeBackendMessage { }
 
 // Security groups
 @InheritConstructors class AuthorizeSecurityGroupEgressType extends com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType implements ComputeBackendMessage { }
