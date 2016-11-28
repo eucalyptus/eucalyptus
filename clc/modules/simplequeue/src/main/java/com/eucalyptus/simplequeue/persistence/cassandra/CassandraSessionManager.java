@@ -100,39 +100,16 @@ public class CassandraSessionManager {
       "message_id TIMEUUID," +
       "message_json TEXT," +
       "send_time_secs BIGINT," +
-      "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS delayed_messages (" +
-      "account_id TEXT," +
-      "queue_name TEXT," +
-      "partition_token TEXT," +
-      "message_id TIMEUUID," +
-      "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS maybe_visible_messages (" +
-      "account_id TEXT," +
-      "queue_name TEXT," +
-      "partition_token TEXT," +
-      "message_id TIMEUUID," +
       "receive_count INT," +
       "total_receive_count INT," +
       "expiration_timestamp TIMESTAMP," +
-      "send_time_secs BIGINT," +
+      "is_delayed BOOLEAN," +
+      "is_invisible BOOLEAN," +
       "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
       ");");
 
-    session.execute("CREATE TABLE IF NOT EXISTS invisible_messages (" +
-      "account_id TEXT," +
-      "queue_name TEXT," +
-      "partition_token TEXT," +
-      "message_id TIMEUUID," +
-      "receive_count INT," +
-      "expiration_timestamp TIMESTAMP," +
-      "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
-      ");");
-
+    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_delayed);");
+    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_invisible);");
   }
 
   public static synchronized Session getSession() {

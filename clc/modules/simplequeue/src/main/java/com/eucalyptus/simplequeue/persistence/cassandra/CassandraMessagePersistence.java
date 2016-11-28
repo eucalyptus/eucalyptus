@@ -79,36 +79,6 @@ public class CassandraMessagePersistence implements MessagePersistence {
     return UUIDs.timeBased();
   }
 
-  private static class ReceiveCountsAndExpirationTimestamp {
-    private Integer receiveCount;
-    private Integer totalReceiveCount;
-    private Date expirationTimestamp;
-    private Long sendTimeSecs;
-
-    private ReceiveCountsAndExpirationTimestamp(Integer receiveCount, Integer totalReceiveCount, Date expirationTimestamp, Long sendTimeSecs) {
-      this.receiveCount = receiveCount;
-      this.totalReceiveCount = totalReceiveCount;
-      this.expirationTimestamp = expirationTimestamp;
-      this.sendTimeSecs = sendTimeSecs;
-    }
-
-    public Integer getReceiveCount() {
-      return receiveCount;
-    }
-
-    public Integer getTotalReceiveCount() {
-      return totalReceiveCount;
-    }
-
-    public Date getExpirationTimestamp() {
-      return expirationTimestamp;
-    }
-
-    public Long getSentTimeSecs() {
-      return sendTimeSecs;
-    }
-  }
-
   @Override
   public Collection<Message> receiveMessages(Queue queue, Map<String, String> receiveAttributes) throws SimpleQueueException {
     List<String> randomPartitionTokens = Lists.newArrayList(partitionTokens);
@@ -139,186 +109,123 @@ public class CassandraMessagePersistence implements MessagePersistence {
 
     for (String partitionToken: randomPartitionTokens) {
       long nowSecs = SimpleQueueService.currentTimeSeconds();
-      Map<UUID, ReceiveCountsAndExpirationTimestamp> receiveCountMap = Maps.newLinkedHashMap();
       Statement statement1 = new SimpleStatement(
-        "SELECT message_id, receive_count, total_receive_count, expiration_timestamp, send_time_secs FROM maybe_visible_messages WHERE account_id = ? " +
+        "SELECT message_id, message_json, send_time_secs, receive_count, total_receive_count, expiration_timestamp, " +
+          "is_delayed, is_invisible FROM messages WHERE account_id = ? " +
           "AND queue_name = ? AND partition_token = ?",
         queue.getAccountId(),
         queue.getQueueName(),
         partitionToken
       );
       for (Row row: session.execute(statement1)) {
-        receiveCountMap.put(
-          row.getUUID("message_id"),
-          new ReceiveCountsAndExpirationTimestamp(
-            row.getInt("receive_count"),
-            row.getInt("total_receive_count"),
-            row.getTimestamp("expiration_timestamp"),
-            row.getLong("send_time_secs")
-          )
-        );
-      }
-      Statement statement2 = new SimpleStatement(
-        "SELECT message_id FROM invisible_messages WHERE account_id = ? " +
-          "AND queue_name = ? AND partition_token = ?",
-        queue.getAccountId(),
-        queue.getQueueName(),
-        partitionToken
-      );
-      for (Row row: session.execute(statement2)) {
-        receiveCountMap.remove(row.getUUID("message_id"));
-      }
-      Statement statement3 = new SimpleStatement(
-        "SELECT message_id FROM delayed_messages WHERE account_id = ? " +
-          "AND queue_name = ? AND partition_token = ?",
-        queue.getAccountId(),
-        queue.getQueueName(),
-        partitionToken
-      );
-      for (Row row: session.execute(statement3)) {
-        receiveCountMap.remove(row.getUUID("message_id"));
-      }
-
-      for (UUID messageId: receiveCountMap.keySet()) {
-        int receiveCount = receiveCountMap.get(messageId).getReceiveCount();
-        int totalReceiveCount = receiveCountMap.get(messageId).getTotalReceiveCount();
-        Date expirationTimestamp = receiveCountMap.get(messageId).getExpirationTimestamp();
-        Long sendTimeSecs = receiveCountMap.get(messageId).getSentTimeSecs();
+        boolean isDelayed = row.getBool("is_delayed");
+        boolean isInvisible = row.getBool("is_invisible");
+        if (isDelayed || isInvisible) continue;
+        UUID messageId = row.getUUID("message_id");
+        int receiveCount  = row.getInt("receive_count");
+        int totalReceiveCount = row.getInt("total_receive_count");
+        Date expirationTimestamp = row.getTimestamp("expiration_timestamp");
+        String messageJson = row.getString("message_json");
+        long sendTimeSecs = row.getLong("send_time_secs");
         if (deadLetterQueue && receiveCount >= maxReceiveCount) {
-          Statement statement4 = new SimpleStatement(
-            "SELECT message_json, send_time_secs FROM messages WHERE account_id = ? " +
-              "AND queue_name = ? AND partition_token = ? AND message_id = ?",
+          BatchStatement batchStatement1 = new BatchStatement();
+          Statement statement2 = new SimpleStatement(
+            "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
             queue.getAccountId(),
             queue.getQueueName(),
             partitionToken,
             messageId
           );
-          Iterator<Row> rowIter = session.execute(statement4).iterator();
-          if (rowIter.hasNext()) {
-            Row row = rowIter.next();
-
-            BatchStatement batchStatement = getBatchStatementForDeleteMessage(queue.getKey(), partitionToken, messageId);
-            String messageJson = row.getString("message_json");
-
-            Statement statement5 = new SimpleStatement(
-              "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs) " +
-                "VALUES (?, ?, ?, ?, ?, ?) USING TTL ?",
-              deadLetterQueueAccountId,
-              deadLetterQueueName,
-              partitionToken,
-              messageId,
-              messageJson,
-              sendTimeSecs,
-              deadLetterQueueMessageRetentionPeriod
-            );
-
-            batchStatement.add(statement5);
-
-            Date deadLetterExpirationTimestamp = new Date((nowSecs + deadLetterQueueMessageRetentionPeriod) * 1000L);
-
-            Statement statement6 = new SimpleStatement(
-              "INSERT INTO maybe_visible_messages (account_id, queue_name, partition_token, message_id, receive_count, " +
-                "total_receive_count, expiration_timestamp, send_time_secs) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
-              deadLetterQueueAccountId,
-              deadLetterQueueName,
-              partitionToken,
-              messageId,
-              0,
-              totalReceiveCount,
-              deadLetterExpirationTimestamp,
-              sendTimeSecs,
-              deadLetterQueueMessageRetentionPeriod
-            );
-            batchStatement.add(statement6);
-            session.execute(batchStatement);
-          }
-
+          batchStatement1.add(statement2);
+          Date deadLetterExpirationTimestamp = new Date((nowSecs + deadLetterQueueMessageRetentionPeriod) * 1000L);
+          Statement statement3 = new SimpleStatement(
+            "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
+              "receive_count, total_receive_count, expiration_timestamp) " +
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
+            deadLetterQueueAccountId,
+            deadLetterQueueName,
+            partitionToken,
+            messageId,
+            messageJson,
+            sendTimeSecs,
+            0,
+            totalReceiveCount,
+            deadLetterExpirationTimestamp,
+            deadLetterQueueMessageRetentionPeriod
+          );
+          batchStatement1.add(statement3);
+          session.execute(batchStatement1);
           continue;
         }
+        BatchStatement batchStatement2 = new BatchStatement();
+        Message message = MessageJsonHelper.jsonToMessage(messageJson);
+        message.setMessageId(messageId.toString());
+        int visibleTtl = (int) (expirationTimestamp.getTime() / 1000 - nowSecs);
+        if (visibleTtl < 1) visibleTtl = 1;
+        if (totalReceiveCount == 0) {
+          message.getAttribute().add(new Attribute(Constants.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP, "" + nowSecs));
+          messageJson = MessageJsonHelper.messageToJson(message);
+          Statement statement4 = new SimpleStatement(
+            "UPDATE messages USING TTL ? SET message_json = ? WHERE account_id = ? " +
+              "AND queue_name = ? AND partition_token = ? AND message_id = ?",
+            visibleTtl,
+            messageJson,
+            queue.getAccountId(),
+            queue.getQueueName(),
+            partitionToken,
+            messageId
+          );
+          batchStatement2.add(statement4);
+        }
+        int visibilityTimeout = queue.getVisibilityTimeout();
+        if (receiveAttributes.containsKey(Constants.VISIBILITY_TIMEOUT)) {
+          visibilityTimeout = Integer.parseInt(receiveAttributes.get(Constants.VISIBILITY_TIMEOUT));
+        }
 
-        // once here, receive the message...
-        Statement statement7 = new SimpleStatement(
-          "SELECT message_json FROM messages WHERE account_id = ? " +
-            "AND queue_name = ? AND partition_token = ? AND message_id = ?",
+        receiveCount++;
+        totalReceiveCount++;
+        Statement statement5 = new SimpleStatement(
+          "UPDATE messages USING TTL ? SET receive_count = ?, total_receive_count = ? " +
+          "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+          visibleTtl,
+          receiveCount,
+          totalReceiveCount,
           queue.getAccountId(),
           queue.getQueueName(),
           partitionToken,
           messageId
         );
-        Iterator<Row> rowIter = session.execute(statement7).iterator();
-        if (rowIter.hasNext()) {
-          BatchStatement batchStatement = new BatchStatement();
-          Row row = rowIter.next();
-          String messageJson = row.getString("message_json");
-          Message message = MessageJsonHelper.jsonToMessage(messageJson);
-          message.setMessageId(messageId.toString());
-          int visibleTtl = (int) (expirationTimestamp.getTime() / 1000 - nowSecs);
-          if (visibleTtl < 1) visibleTtl = 1;
-          if (totalReceiveCount == 0) {
-            message.getAttribute().add(new Attribute(Constants.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP, "" + nowSecs));
-            messageJson = MessageJsonHelper.messageToJson(message);
-            Statement statement8 = new SimpleStatement(
-              "UPDATE messages USING TTL ? SET message_json = ? WHERE account_id = ? " +
-                "AND queue_name = ? AND partition_token = ? AND message_id = ?",
-              visibleTtl,
-              messageJson,
-              queue.getAccountId(),
-              queue.getQueueName(),
-              partitionToken,
-              messageId
-            );
-            batchStatement.add(statement8);
-          }
 
-          int visibilityTimeout = queue.getVisibilityTimeout();
-          if (receiveAttributes.containsKey(Constants.VISIBILITY_TIMEOUT)) {
-            visibilityTimeout = Integer.parseInt(receiveAttributes.get(Constants.VISIBILITY_TIMEOUT));
-          }
+        batchStatement2.add(statement5);
 
-          receiveCount++;
-          totalReceiveCount++;
-          Statement statement9 = new SimpleStatement(
-            "UPDATE maybe_visible_messages USING TTL ? SET receive_count = ?, total_receive_count = ? " +
+        if (visibleTtl < visibilityTimeout) {
+          visibilityTimeout = visibleTtl;
+        }
+
+        if (visibilityTimeout > 0) {
+          Statement statement6 = new SimpleStatement(
+            "UPDATE messages USING TTL ? SET is_invisible = ? " +
               "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
-            visibleTtl,
-            receiveCount,
-            totalReceiveCount,
+            visibilityTimeout,
+            true,
             queue.getAccountId(),
             queue.getQueueName(),
             partitionToken,
             messageId
           );
-          batchStatement.add(statement9);
 
-          if (visibleTtl < visibilityTimeout) {
-            visibilityTimeout = visibleTtl;
-          }
-
-          if (visibilityTimeout > 0) {
-            Statement statement10 = new SimpleStatement(
-              "INSERT INTO invisible_messages (account_id, queue_name, partition_token, message_id, receive_count, expiration_timestamp) " +
-                "VALUES (?, ?, ?, ?, ?, ?) USING TTL ? ",
-              queue.getAccountId(),
-              queue.getQueueName(),
-              partitionToken,
-              messageId,
-              receiveCount,
-              expirationTimestamp,
-              visibilityTimeout
-            );
-            batchStatement.add(statement10);
-          }
-          session.execute(batchStatement);
-
-          // Set the 'attributes' that are stored as first class fields
-          message.getAttribute().add(new Attribute(Constants.APPROXIMATE_RECEIVE_COUNT, "" + totalReceiveCount));
-          // send timestamp isn't updated but used in queries.  The attribute is in seconds though, so convert
-          message.getAttribute().add(new Attribute(Constants.SENT_TIMESTAMP, "" + sendTimeSecs));
-          message.setReceiptHandle(queue.getAccountId() + ":" + queue.getQueueName() + ":"
-            + messageId.toString() + ":" + partitionToken + ":" + receiveCount);
-          messages.add(message);
+          batchStatement2.add(statement6);
         }
+
+        session.execute(batchStatement2);
+
+        // Set the 'attributes' that are stored as first class fields
+        message.getAttribute().add(new Attribute(Constants.APPROXIMATE_RECEIVE_COUNT, "" + totalReceiveCount));
+        // send timestamp isn't updated but used in queries.  The attribute is in seconds though, so convert
+        message.getAttribute().add(new Attribute(Constants.SENT_TIMESTAMP, "" + sendTimeSecs));
+        message.setReceiptHandle(queue.getAccountId() + ":" + queue.getQueueName() + ":"
+          + messageId.toString() + ":" + partitionToken + ":" + receiveCount);
+        messages.add(message);
         if (messages.size() >= maxNumMessages) break;
       }
       if (messages.size() >= maxNumMessages) break;
@@ -343,47 +250,37 @@ public class CassandraMessagePersistence implements MessagePersistence {
 
     long nowSecs = SimpleQueueService.currentTimeSeconds();
 
+    Date expirationTimestamp = new Date((nowSecs + queue.getMessageRetentionPeriod()) * 1000L);
+
     Statement statement1 = new SimpleStatement(
-      "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs) " +
-        "VALUES (?, ?, ?, ?, ?, ?) USING TTL ?",
+      "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
+        "receive_count, total_receive_count, expiration_timestamp) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
       queue.getAccountId(),
       queue.getQueueName(),
       partitionToken,
       messageId,
       messageJson,
       nowSecs,
+      0,
+      0,
+      expirationTimestamp,
       queue.getMessageRetentionPeriod());
 
     batchStatement.add(statement1);
 
-    Date expirationTimestamp = new Date((nowSecs + queue.getMessageRetentionPeriod()) * 1000L);
-
-    Statement statement2 = new SimpleStatement(
-      "INSERT INTO maybe_visible_messages (account_id, queue_name, partition_token, message_id, receive_count, " +
-        "total_receive_count, expiration_timestamp, send_time_secs) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
-      queue.getAccountId(),
-      queue.getQueueName(),
-      partitionToken,
-      messageId,
-      0,
-      0,
-      expirationTimestamp,
-      nowSecs,
-      queue.getMessageRetentionPeriod());
-
-    batchStatement.add(statement2);
-
     if (delaySeconds > 0) {
-      Statement statement3 = new SimpleStatement(
-        "INSERT INTO delayed_messages (account_id, queue_name, partition_token, message_id) " +
-          "VALUES (?, ?, ?, ?) USING TTL ?",
+      Statement statement2 = new SimpleStatement(
+        "UPDATE messages USING TTL ? SET is_delayed = ? " +
+          "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+        delaySeconds,
+        true,
         queue.getAccountId(),
         queue.getQueueName(),
         partitionToken,
-        messageId,
-        delaySeconds);
-      batchStatement.add(statement3);
+        messageId
+      );
+      batchStatement.add(statement2);
     }
     session.execute(batchStatement);
   }
@@ -413,104 +310,44 @@ public class CassandraMessagePersistence implements MessagePersistence {
       throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid for this queue.");
     }
     Session session = CassandraSessionManager.getSession();
-    Statement statement = new SimpleStatement(
-      "SELECT receive_count FROM maybe_visible_messages WHERE account_id = ? AND queue_name = ? AND " +
+    Statement statement1 = new SimpleStatement(
+      "SELECT receive_count FROM messages WHERE account_id = ? AND queue_name = ? AND " +
         "partition_token = ? AND message_id = ?",
       queueKey.getAccountId(),
       queueKey.getQueueName(),
       partitionToken,
       messageId
     );
-    for (Row row: session.execute(statement)) {
+    for (Row row: session.execute(statement1)) {
       if (row.getInt("receive_count") == receiveCount) {
         found = true;
         break;
       }
     }
     if (found) {
-      BatchStatement batchStatement = getBatchStatementForDeleteMessage(queueKey, partitionToken, messageId);
-      session.execute(batchStatement);
+      Statement statement2 = new SimpleStatement(
+        "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+        queueKey.getAccountId(),
+        queueKey.getQueueName(),
+        partitionToken,
+        messageId
+      );
+      session.execute(statement2);
     }
     return found;
   }
-
-  private BatchStatement getBatchStatementForDeleteMessage(Queue.Key queueKey, String partitionToken, UUID messageId) {
-    BatchStatement batchStatement = new BatchStatement();
-    Statement statement1 = new SimpleStatement(
-      "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken,
-      messageId
-    );
-    batchStatement.add(statement1);
-    Statement statement2 = new SimpleStatement(
-      "DELETE FROM maybe_visible_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?  AND message_id = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken,
-      messageId
-    );
-    batchStatement.add(statement2);
-    Statement statement3 = new SimpleStatement(
-      "DELETE FROM delayed_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?  AND message_id = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken,
-      messageId
-    );
-    batchStatement.add(statement3);
-    Statement statement4 = new SimpleStatement(
-      "DELETE FROM invisible_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?  AND message_id = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken,
-      messageId
-    );
-    batchStatement.add(statement4);
-    return batchStatement;
-  }
-
-  private BatchStatement getBatchStatementForDeleteAllMessages(Queue.Key queueKey, String partitionToken) {
-    BatchStatement batchStatement = new BatchStatement();
-    Statement statement1 = new SimpleStatement(
-      "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken
-    );
-    batchStatement.add(statement1);
-    Statement statement2 = new SimpleStatement(
-      "DELETE FROM maybe_visible_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken
-    );
-    batchStatement.add(statement2);
-    Statement statement3 = new SimpleStatement(
-      "DELETE FROM delayed_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken
-    );
-    batchStatement.add(statement3);
-    Statement statement4 = new SimpleStatement(
-      "DELETE FROM invisible_messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
-      queueKey.getAccountId(),
-      queueKey.getQueueName(),
-      partitionToken
-    );
-    batchStatement.add(statement4);
-    return batchStatement;
-  }
-
 
   @Override
   public void deleteAllMessages(Queue.Key queueKey) {
     Session session = CassandraSessionManager.getSession();
     for (String partitionToken: partitionTokens) {
-      BatchStatement batchStatement = getBatchStatementForDeleteAllMessages(queueKey, partitionToken);
-      session.execute(batchStatement);
+      Statement statement1 = new SimpleStatement(
+        "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
+        queueKey.getAccountId(),
+        queueKey.getQueueName(),
+        partitionToken
+      );
+      session.execute(statement1);
     }
   }
 
@@ -519,48 +356,25 @@ public class CassandraMessagePersistence implements MessagePersistence {
     Map<String, String> result = Maps.newHashMap();
     long totalDelayedMessages = 0;
     long totalInvisibleMessages = 0;
-    long totalVisibleMessages = 0;
     long totalMessages = 0;
     Session session = CassandraSessionManager.getSession();
     for (String partitionToken : partitionTokens) {
-      Statement statement1 = new SimpleStatement(
-        "SELECT COUNT(*) FROM maybe_visible_messages WHERE account_id = ? AND queue_name = ? " +
+      Statement statement = new SimpleStatement(
+        "SELECT COUNT(message_id), COUNT(is_delayed), COUNT(is_invisible) FROM messages WHERE account_id = ? AND queue_name = ? " +
           "AND partition_token = ?",
         queueKey.getAccountId(),
         queueKey.getQueueName(),
         partitionToken
       );
-      Iterator<Row> rowIter1 = session.execute(statement1).iterator();
-      if (rowIter1.hasNext()) {
-        Row row1 = rowIter1.next();
-        totalMessages += row1.getLong(0);
-      }
-      Statement statement2 = new SimpleStatement(
-        "SELECT COUNT(*) FROM invisible_messages WHERE account_id = ? AND queue_name = ? " +
-          "AND partition_token = ?",
-        queueKey.getAccountId(),
-        queueKey.getQueueName(),
-        partitionToken
-      );
-      Iterator<Row> rowIter2 = session.execute(statement2).iterator();
-      if (rowIter2.hasNext()) {
-        Row row2 = rowIter2.next();
-        totalInvisibleMessages += row2.getLong(0);
-      }
-      Statement statement3 = new SimpleStatement(
-        "SELECT COUNT(*) FROM delayed_messages WHERE account_id = ? AND queue_name = ? " +
-          "AND partition_token = ?",
-        queueKey.getAccountId(),
-        queueKey.getQueueName(),
-        partitionToken
-      );
-      Iterator<Row> rowIter3 = session.execute(statement3).iterator();
-      if (rowIter3.hasNext()) {
-        Row row3 = rowIter3.next();
-        totalDelayedMessages += row3.getLong(0);
+      Iterator<Row> rowIter = session.execute(statement).iterator();
+      if (rowIter.hasNext()) {
+        Row row = rowIter.next();
+        totalMessages += row.getLong(0);
+        totalDelayedMessages += row.getLong(1);
+        totalInvisibleMessages += row.getLong(2);
       }
     }
-    totalVisibleMessages = totalMessages - totalDelayedMessages - totalInvisibleMessages;
+    long totalVisibleMessages = totalMessages - totalDelayedMessages - totalInvisibleMessages;
     result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED, String.valueOf(totalDelayedMessages));
     result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE, String.valueOf(totalInvisibleMessages));
     result.put(Constants.APPROXIMATE_NUMBER_OF_MESSAGES, String.valueOf(totalVisibleMessages));
@@ -593,7 +407,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
     }
     Session session = CassandraSessionManager.getSession();
     Statement statement1 = new SimpleStatement(
-      "SELECT receive_count, expiration_timestamp FROM maybe_visible_messages WHERE account_id = ? " +
+      "SELECT receive_count, expiration_timestamp FROM messages WHERE account_id = ? " +
         "AND queue_name = ? AND partition_token = ? AND message_id = ?",
       queueKey.getAccountId(),
       queueKey.getQueueName(),
@@ -611,33 +425,22 @@ public class CassandraMessagePersistence implements MessagePersistence {
     if (!found) {
       throw new InvalidParameterValueException("Value " + receiptHandle + " for parameter ReceiptHandle is invalid. Reason: Message does not exist or is not available for visibility timeout change.");
     }
-    Statement statement2;
     int maxVisibilityTimeout = (int) ((expirationTimestamp.getTime() - System.currentTimeMillis()) / 1000);
     if (maxVisibilityTimeout < visibilityTimeout) {
       visibilityTimeout = maxVisibilityTimeout;
     }
-    if (visibilityTimeout <= 0) {
-      statement2 = new SimpleStatement(
-        "DELETE FROM invisible_messages WHERE account_id = ? AND queue_name = ? AND " +
-          "partition_token = ? AND message_id = ?",
-        queueKey.getAccountId(),
-        queueKey.getQueueName(),
-        partitionToken,
-        messageId
-      );
-    } else {
-      statement2 = new SimpleStatement(
-        "INSERT INTO invisible_messages (account_id, queue_name, partition_token, message_id, " +
-          "receive_count, expiration_timestamp) VALUES (?, ?, ?, ?, ?, ?) USING TTL ?",
-        queueKey.getAccountId(),
-        queueKey.getQueueName(),
-        partitionToken,
-        messageId,
-        receiveCount,
-        expirationTimestamp,
-        visibilityTimeout
-      );
-    }
+    int ttl = visibilityTimeout > 0 ? visibilityTimeout : 1;
+    Boolean isInvisible = (visibilityTimeout > 0) ? true : null;
+    Statement statement2 = new SimpleStatement(
+      "UPDATE messages USING TTL ? SET is_invisible = ? " +
+        "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+      ttl,
+      isInvisible,
+      queueKey.getAccountId(),
+      queueKey.getQueueName(),
+      partitionToken,
+      messageId
+    );
     session.execute(statement2);
   }
 
@@ -647,7 +450,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
     Long oldestTimestamp = null;
     for (String partitionToken : partitionTokens) {
       Statement statement = new SimpleStatement(
-        "SELECT MIN(send_time_secs) FROM maybe_visible_messages WHERE account_id = ? AND queue_name = ? " +
+        "SELECT MIN(send_time_secs) FROM messages WHERE account_id = ? AND queue_name = ? " +
           "AND partition_token = ?",
         queueKey.getAccountId(),
         queueKey.getQueueName(),
