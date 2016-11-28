@@ -1238,6 +1238,42 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
+  <mapping class="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType" abstract="true">
+    <value name="allowDnsResolutionFromRemoteVpc" field="allowDnsResolutionFromRemoteVpc" usage="optional"/>
+    <value name="allowEgressFromLocalClassicLinkToRemoteVpc" field="allowEgressFromLocalClassicLinkToRemoteVpc" usage="optional"/>
+    <value name="allowEgressFromLocalVpcToRemoteClassicLink" field="allowEgressFromLocalVpcToRemoteClassicLink" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcPeeringConnectionOptions" class="com.eucalyptus.compute.common.ModifyVpcPeeringConnectionOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+    <structure name="accepterPeeringConnectionOptions" field="accepterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+    <structure name="requesterPeeringConnectionOptions" field="requesterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+  </mapping>
+  <mapping name="ModifyVpcPeeringConnectionOptionsResponse" class="com.eucalyptus.compute.common.ModifyVpcPeeringConnectionOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="accepterPeeringConnectionOptions" field="accepterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+    <structure name="requesterPeeringConnectionOptions" field="requesterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+  </mapping>
+  <mapping name="DescribeSecurityGroupReferences" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="groupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="groupId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+  <mapping name="DescribeSecurityGroupReferencesResponse" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="securityGroupReferenceSet"/>
+  </mapping>
+  <mapping name="DescribeStaleSecurityGroups" class="com.eucalyptus.compute.common.DescribeStaleSecurityGroupsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="maxResults" field="maxResults" usage="required"/>
+    <value name="nextToken" field="nextToken" usage="required"/>
+  </mapping>
+  <mapping name="DescribeStaleSecurityGroupsResponse" class="com.eucalyptus.compute.common.DescribeStaleSecurityGroupsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="staleSecurityGroupSet"/>
+  </mapping>
 
   <mapping name="AttachClassicLinkVpc" class="com.eucalyptus.compute.common.AttachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -1308,6 +1344,37 @@
     <value name="vpcId" field="vpcId" usage="optional"/>
   </mapping>
   <mapping name="EnableVpcClassicLinkResponse" class="com.eucalyptus.compute.common.EnableVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="DescribeVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="vpcIds" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcIds" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcs"/>
+  </mapping>
+
+  <mapping name="DisableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DisableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="DisableVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.DisableVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="EnableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.EnableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="EnableVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.EnableVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>

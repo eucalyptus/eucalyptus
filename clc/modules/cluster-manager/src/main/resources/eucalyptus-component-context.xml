@@ -48,6 +48,7 @@
     <int:mapping type="com.eucalyptus.compute.common.BlockSnapshotMessage" channel="eucalyptus-snapshot-request"/>
     <int:mapping type="com.eucalyptus.compute.common.ResourceTagMessage" channel="eucalyptus-tag-request"/>
     <int:mapping type="com.eucalyptus.compute.common.VmControlMessage" channel="eucalyptus-vmcontrol-request"/>
+    <int:mapping type="com.eucalyptus.compute.common.VmPlacementMessage" channel="eucalyptus-vmcontrol-request"/>
     <int:mapping type="com.eucalyptus.compute.common.VmBundleMessage" channel="eucalyptus-vmcontrol-request"/>
     <int:mapping type="com.eucalyptus.compute.common.VmTypeMessage" channel="eucalyptus-vmtype-request"/>
     <int:mapping type="com.eucalyptus.compute.common.BlockVolumeMessage" channel="eucalyptus-volume-request"/>

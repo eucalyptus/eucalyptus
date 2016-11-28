@@ -104,10 +104,14 @@ import com.eucalyptus.compute.common.backend.DescribeBundleTasksResponseType;
 import com.eucalyptus.compute.common.backend.DescribeBundleTasksType;
 import com.eucalyptus.compute.common.backend.GetConsoleOutputResponseType;
 import com.eucalyptus.compute.common.backend.GetConsoleOutputType;
+import com.eucalyptus.compute.common.backend.GetConsoleScreenshotResponseType;
+import com.eucalyptus.compute.common.backend.GetConsoleScreenshotType;
 import com.eucalyptus.compute.common.backend.GetPasswordDataResponseType;
 import com.eucalyptus.compute.common.backend.GetPasswordDataType;
 import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ModifyInstanceAttributeType;
+import com.eucalyptus.compute.common.backend.ModifyInstancePlacementResponseType;
+import com.eucalyptus.compute.common.backend.ModifyInstancePlacementType;
 import com.eucalyptus.compute.common.backend.MonitorInstancesResponseType;
 import com.eucalyptus.compute.common.backend.MonitorInstancesType;
 import com.eucalyptus.compute.common.backend.RebootInstancesResponseType;
@@ -468,6 +472,12 @@ public class VmControl {
         throw new ComputeException( "InternalError", "Error processing request: " + e.getMessage( ) );
       }
     }
+  }
+
+  public GetConsoleScreenshotResponseType getConsoleScreenshot( final GetConsoleScreenshotType request ) throws EucalyptusCloudException {
+    GetConsoleScreenshotResponseType reply = request.getReply();
+    reply.setInstanceId( normalizeIdentifier( request.getInstanceId( ) ) );
+    return reply;
   }
 
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
@@ -945,6 +955,11 @@ public class VmControl {
 
   public CreatePlacementGroupResponseType createPlacementGroup( final CreatePlacementGroupType request ) {
     final CreatePlacementGroupResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public ModifyInstancePlacementResponseType modifyInstancePlacement( final ModifyInstancePlacementType request ) {
+    final ModifyInstancePlacementResponseType reply = request.getReply( );
     return reply;
   }
 
