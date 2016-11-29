@@ -768,6 +768,28 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private void updatePropertyValues( final Iterable<Tuple3<String,String,String>> updatedProperties ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> updatedProperty : updatedProperties ) {
+          final String propName = updatedProperty._1( );
+          final String oldValue = updatedProperty._2( );
+          final String newValue = updatedProperty._3( );
+          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
+              .uniqueResultOption( ).transform( property -> {
+            if ( oldValue.equals( property.getValue( ) ) ) {
+              LOG.info( "Updating value for "+propName+" property to " + newValue );
+              property.setValue( newValue );
+            }
+            return property;
+          } );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
     private void configureCloudformationStrictResourcePropertyEnforcement( ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
         try {
@@ -800,16 +822,31 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "cloud.network.global_min_network_index",
           "cloud.network.global_max_network_index",
           "cloud.network.network_tag_pending_timeout",
-              "services.loadbalancing.worker.backend_instance_update_interval",
-              "services.loadbalancing.worker.cache_duration",
-              "services.loadbalancing.worker.cw_put_interval",
-              "services.loadbalancing.worker.lb_poll_interval"
+          "services.loadbalancing.worker.backend_instance_update_interval",
+          "services.loadbalancing.worker.cache_duration",
+          "services.loadbalancing.worker.cw_put_interval",
+          "services.loadbalancing.worker.lb_poll_interval"
       ) );
 
       updateMovedProperties( ImmutableList.of(
           Tuple.of( "dns.recursive.enabled",
               "com.eucalyptus.dns.resolvers.RecursiveDnsResolver.enabled",
               "com.eucalyptus.vm.dns.RecursiveDnsResolver.enabled" )
+      ) );
+
+      updatePropertyValues( ImmutableList.of(
+          Tuple.of( "cloudformation.swf_activity_worker_config",
+              "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+              "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }" ),
+          Tuple.of( "cloudformation.swf_workflow_worker_config",
+              "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+              "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }" ),
+          Tuple.of( "services.loadbalancing.swf_activity_worker_config",
+              "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+              "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }" ),
+          Tuple.of( "services.loadbalancing.swf_workflow_worker_config",
+              "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+              "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }" )
       ) );
 
       configureCloudformationStrictResourcePropertyEnforcement();

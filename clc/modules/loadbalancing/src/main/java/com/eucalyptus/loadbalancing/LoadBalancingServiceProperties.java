@@ -30,6 +30,16 @@ import com.eucalyptus.util.Exceptions;
  */
 @ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancingServiceProperties {
+
+  private static final String DEFAULT_SWF_CLIENT_CONFIG =
+      "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+
+  private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
+      "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
+  private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
+      "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
   @ConfigurableField( displayName = "number_of_vm_per_zone",
       description = "number of VMs per loadbalancer zone",
       initial = "1",
@@ -52,23 +62,22 @@ public class LoadBalancingServiceProperties {
   public static volatile String SWF_TASKLIST = "LoadBalancerTasks";
 
   @ConfigurableField(
-      initial = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}",
+      initial = DEFAULT_SWF_CLIENT_CONFIG,
       description = "JSON configuration for the ELB simple workflow client",
       changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+  public static volatile String SWF_CLIENT_CONFIG = DEFAULT_SWF_CLIENT_CONFIG;
 
   @ConfigurableField(
-      initial = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+      initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,
       description = "JSON configuration for the ELB simple workflow activity worker",
       changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG;
 
   @ConfigurableField(
-      initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+      initial = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG,
       description = "JSON configuration for the ELB simple workflow decision worker",
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50 }";
-
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
   public static int getCapacityPerZone( ) {
     int numVm = 1;
