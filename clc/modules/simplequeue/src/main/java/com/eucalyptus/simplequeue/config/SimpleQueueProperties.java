@@ -37,6 +37,13 @@ import java.lang.reflect.Field;
  */
 @ConfigurableClass( root = "services.simplequeue", description = "Parameters controlling simple queue (SQS)")
 public class SimpleQueueProperties {
+
+  private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
+      "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 8, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
+  private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
+      "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
   @ConfigurableField(
     initial = "SimpleQueueDomain",
     description = "The simple workflow service domain for simplequeue",
@@ -53,15 +60,15 @@ public class SimpleQueueProperties {
     changeListener = Config.ClientConfigurationValidatingChangeListener.class )
   public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000}";
   @ConfigurableField(
-    initial = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,
     description = "JSON configuration for the simplequeue simple workflow activity worker",
     changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG;
   @ConfigurableField(
-    initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+    initial = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG,
     description = "JSON configuration for the simplequeue simple workflow decision worker",
     changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
   @ConfigurableField( description = "How long a queue is considered 'active' in seconds after it has been accessed.",
     initial = "80", changeListener = MinValuePropertyChangeListener.class )   
   @MinValue(min = 1)
