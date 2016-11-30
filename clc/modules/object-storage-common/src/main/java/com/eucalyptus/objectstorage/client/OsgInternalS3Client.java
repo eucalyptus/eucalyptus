@@ -39,6 +39,8 @@ public class OsgInternalS3Client {
   private static final int CONNECTION_TIMEOUT_MS = 500; // 500ms connection timeout, fail fast
   private static final int OSG_SOCKET_TIMEOUT_MS = 10 * 1000; // 10 sec socket timeout if no data
   private static final int OSG_MAX_CONNECTIONS = 512; // Lots of connections since this is for the whole OSG
+  private static final String SIGNER_OVERRIDE =
+      System.getProperty( "com.eucalyptus.objectstorage.client.signerType", "S3SignerType" );
 
   private S3ClientOptions ops;
   private AmazonS3Client s3Client;
@@ -92,6 +94,7 @@ public class OsgInternalS3Client {
     config.setMaxConnections(OSG_MAX_CONNECTIONS);
     Protocol protocol = https ? Protocol.HTTPS : Protocol.HTTP;
     config.setProtocol(protocol);
+    config.setSignerOverride(SIGNER_OVERRIDE);
     this.clientConfig = config;
     this.s3Client = new AmazonS3Client(credentials, config);
     this.ops = new S3ClientOptions().withPathStyleAccess(!useDns);
