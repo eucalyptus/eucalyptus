@@ -249,12 +249,15 @@ distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks $(NET_LIB) *~* *#*
 
 install: deploy
+	$(INSTALL) -m 0700 -d $(DESTDIR)$(libvirthooksdir)
 	$(INSTALL) -d $(DESTDIR)$(policiesdir)
 	$(INSTALL) nc-client-policy.xml $(DESTDIR)$(policiesdir)
 	$(INSTALL) -m 0755 test_nc $(DESTDIR)$(sbindir)/euca_test_nc
 	$(INSTALL) -m 0755 eucalyptus-node $(DESTDIR)$(sbindir)/eucalyptus-node
+	$(INSTALL) -m 0700 libvirt-hooks/qemu $(DESTDIR)$(libvirthooksdir)/qemu
 
 uninstall:
 	$(RM) -f $(DESTDIR)$(policiesdir)/nc-client-policy.xml
 	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
 	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)
+	$(RM) -f $(libvirthooksdir)/qemu
