@@ -1,0 +1,94 @@
+#!/usr/bin/python -tt 
+
+# (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+
+#
+# This libvirt hook changes the ownership of .blocks files back to eucalyptus.eucalyptus
+# in the instance working directory so that the Node Controller can operate on 
+# the files and eventually remove them.
+#
+# It should be placed in the file: /etc/libvirt/hooks/qemu
+# 
+# See https://eucalyptus.atlassian.net/browse/EUCA-12594
+#
+
+import os
+import pwd
+import sys
+import xml.etree.ElementTree as ET
+
+EUCA_USER = 'eucalyptus' 
+
+def get_instance_workdir(domain_config):
+    '''
+    Parse an libvirt XML domain config and look for the console log configuration to
+    determine the instance's working directory
+    
+    returns:  instance working directory
+              None if no console configuration found
+    '''
+    console = domain_config.find('devices/console/source')
+    if console is not None:
+        h, _ = os.path.split(console.attrib['path'])
+        return h
+    else:
+        return None
+
+def main():
+    if len(sys.argv) < 5:
+        sys.exit('{0}: error: at least four args are required\n'
+                 'usage: {0} DOMAIN OPERATION SUBOPERATION EXTRA'
+                 .format(os.path.basename(sys.argv[0])))
+
+    domain = sys.argv[1]
+    operation = sys.argv[2]
+    sub_operation = sys.argv[3]
+    extra = sys.argv[4]
+
+    uid = None
+    gid = None
+
+    #     
+    # We only care about the 'release/end' operation for a domain 
+    # in order to perform the chmod.
+    # 
+    if (domain.startswith('i-') and operation == 'release' and
+            sub_operation == 'end'):        
+        try:
+            pwd_user = pwd.getpwnam(EUCA_USER)
+            uid = pwd_user.pw_uid
+            gid = pwd_user.pw_gid
+        except KeyError:
+            print >> sys.stderr, "Unable to determine uid/gid for user: %s" % EUCA_USER 
+            sys.exit(0)
+
+        # libvirt passes XML to us on stdin
+        domain_str = sys.stdin.read()
+
+        try:
+            domain_config = ET.fromstring(domain_str)
+        except ET.ParseError:
+            print >> sys.stderr, "Unable to parse XML passed on stdin"
+            sys.exit(0)
+
+        instance_dir = get_instance_workdir(domain_config) 
+
+        if instance_dir is not None and os.path.isdir(instance_dir):
+           for filename in os.listdir(instance_dir):
+               if filename.endswith('.blocks'):
+                    os.chown(os.path.join(instance_dir,filename), uid, gid)
+
+if __name__ == '__main__':
+    main()
