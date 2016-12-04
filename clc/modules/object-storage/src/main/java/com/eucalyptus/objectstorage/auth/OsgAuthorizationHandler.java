@@ -42,6 +42,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
+import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed;
 import com.eucalyptus.objectstorage.policy.RequiresACLPermission;
@@ -190,7 +191,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               return false;
             } else {
               bucketOwnerAccountNumber =
-                  resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
+                  resourceOwnerAccountNumber = lookupAccountIdByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, bucketResourceEntity);
             }
             break;
@@ -200,7 +201,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no object resource entity found");
               return false;
             } else {
-              resourceOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(objectResourceEntity.getOwnerCanonicalId()).getAccountNumber();
+              resourceOwnerAccountNumber = lookupAccountIdByCanonicalId(objectResourceEntity.getOwnerCanonicalId());
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
             }
             // get the bucket owner account number as the bucket and object owner may be different
@@ -208,7 +209,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               LOG.error("Could not check access for operation due to no bucket resource entity found");
               return false;
             } else {
-              bucketOwnerAccountNumber = Accounts.lookupPrincipalByCanonicalId(bucketResourceEntity.getOwnerCanonicalId()).getAccountNumber();
+              bucketOwnerAccountNumber = lookupAccountIdByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
             }
             break;
           default:
@@ -238,6 +239,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       return iamPermissionsAllow(authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize);
     }
 
+    // Don't allow anonymous to create buckets. EUCA-12902
+    if (PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType) && 
+        Principals.nobodyAccount( ).getAccountNumber( ).equals(resourceOwnerAccountNumber) &&
+        request instanceof CreateBucketType) {
+      return false;
+    }
+    
     if (requiredBucketACLPermissions == null && requiredObjectACLPermissions == null) {
       throw new IllegalArgumentException("No requires-permission actions found in request class annotations, cannot process.");
     }
@@ -309,6 +317,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
   }
 
+  private String lookupAccountIdByCanonicalId( final String canonicalId ) throws AuthException {
+    if ( AccountIdentifiers.NOBODY_CANONICAL_ID.equals( canonicalId ) ) {
+      return Principals.nobodyAccount( ).getAccountNumber( );
+    } else {
+      return Accounts.lookupAccountIdByCanonicalId( canonicalId );
+    }
+  }
+  
   private static Boolean iamPermissionsAllow(final AuthContextSupplier authContext, final String[] requiredActions,
       final PolicyResourceInfo policyResourceInfo, final String resourceType, final String resourceId, final long resourceAllocationSize) {
     /* IAM checks: Is the user allowed within the account? */

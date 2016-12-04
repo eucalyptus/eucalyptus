@@ -26,7 +26,9 @@ import com.google.common.base.Function;
  *
  */
 public interface AccountIdentifiers {
-  String NOBODY_ACCOUNT = "nobody";
+  // Alias (display) name "anonymous" which is the AWS term, not "nobody" which is an internal Euaclyptus 
+  // term that we never show users and AWS never uses.
+  String NOBODY_ACCOUNT = "anonymous";
   Long NOBODY_ACCOUNT_ID = 1l;
   String NOBODY_CANONICAL_ID = "65a011a29cdf8ec533ec3d1ccaae921c"; // Matches AWS magic number
 
