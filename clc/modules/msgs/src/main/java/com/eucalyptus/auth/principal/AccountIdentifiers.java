@@ -26,9 +26,7 @@ import com.google.common.base.Function;
  *
  */
 public interface AccountIdentifiers {
-  // Alias (display) name "anonymous" which is the AWS term, not "nobody" which is an internal Euaclyptus 
-  // term that we never show users and AWS never uses.
-  String NOBODY_ACCOUNT = "anonymous";
+  String NOBODY_ACCOUNT = "nobody";
   Long NOBODY_ACCOUNT_ID = 1l;
   String NOBODY_CANONICAL_ID = "65a011a29cdf8ec533ec3d1ccaae921c"; // Matches AWS magic number
 
@@ -42,7 +40,7 @@ public interface AccountIdentifiers {
   String SYSTEM_ACCOUNT = "eucalyptus";
   String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
   Long SYSTEM_ACCOUNT_ID = 0l;
-  String SYSTEM_CANONICAL_ID = ""; // Should never be used as a lookup key;
+  String SYSTEM_CANONICAL_ID = "0"; // Should never be used as a lookup key;
   
   //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635
   String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";

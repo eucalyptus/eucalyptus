@@ -318,7 +318,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
           grantee.setType("Group");
         } else {
           try {
-            displayName = Accounts.lookupAccountIdentifiersByCanonicalId(entry.getKey()).getAccountAlias();
+            displayName = AclUtils.lookupDisplayNameByCanonicalId(entry.getKey());
           } catch (AuthException e) {
             // Not found
             displayName = "";
@@ -367,7 +367,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
 
       // Check for valid owner
       try {
-        Accounts.lookupPrincipalByCanonicalId(ownerCanonicalId);
+        AclUtils.lookupPrincipalByCanonicalId(ownerCanonicalId);
       } catch (Exception e) {
         // Invalid owner
         LOG.warn("Got invalid owner in AccessControlPolicy during mapping to DB: " + ownerCanonicalId);

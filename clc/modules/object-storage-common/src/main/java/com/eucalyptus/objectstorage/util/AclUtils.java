@@ -611,7 +611,7 @@ public class AclUtils {
     return null;
   }
 
-  private static String lookupDisplayNameByCanonicalId( final String canonicalId ) throws AuthException {
+  public static String lookupDisplayNameByCanonicalId( final String canonicalId ) throws AuthException {
     if ( AccountIdentifiers.NOBODY_CANONICAL_ID.equals( canonicalId ) ) {
       return Principals.nobodyAccount( ).getAccountAlias( );
     } else {
@@ -619,8 +619,9 @@ public class AclUtils {
     }
   }
   
-  private static UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
+  public static UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
     if ( AccountIdentifiers.NOBODY_CANONICAL_ID.equals( canonicalId ) ) {
+      LOG.info("Looked up nobody by canonical ID " + canonicalId);
       return Principals.nobodyUser();
     } else {
       return Accounts.lookupPrincipalByCanonicalId( canonicalId );
