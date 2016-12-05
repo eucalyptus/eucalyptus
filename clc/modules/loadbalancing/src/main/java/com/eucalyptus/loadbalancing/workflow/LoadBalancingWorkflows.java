@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
+import com.amazonaws.services.simpleworkflow.model.UnknownResourceException;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
@@ -410,7 +411,7 @@ public class LoadBalancingWorkflows {
       LOG.debug(String.format("Cancelled update-loadbalancer workflow for %s-%s", 
           accountId, loadbalancer));
     }catch(final Exception ex) {
-      LOG.error("Failed to cance update-loadbalancer workflow", ex);
+      LOG.error("Failed to cancel update-loadbalancer workflow", ex);
     }
   }
 
@@ -420,6 +421,8 @@ public class LoadBalancingWorkflows {
       final UpdateLoadBalancerWorkflowClientExternal workflow =
           WorkflowClients.getUpdateLoadBalancerWorkflowClient(accountId, loadbalancer, workflowId);
       workflow.updateImmediately();
+    }catch(final UnknownResourceException ex) {
+      ;
     }catch(final Exception ex) {
       LOG.error("Failed to signal update-loadbalancer workflow", ex);
     }
@@ -435,6 +438,8 @@ public class LoadBalancingWorkflows {
       final InstanceStatusWorkflowClientExternal workflow =
               WorkflowClients.getinstanceStatusWorkflowClient(accountId, loadbalancer, workflowId);
       workflow.pollImmediately();
+    }catch(final UnknownResourceException ex) {
+      ;
     }catch(final Exception ex) {
       LOG.error("Failed to signal PollInstanceStatus workflow", ex);
     }
