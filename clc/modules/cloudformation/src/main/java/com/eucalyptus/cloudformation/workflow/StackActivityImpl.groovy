@@ -823,7 +823,6 @@ public class StackActivityImpl implements StackActivity {
       nextStackResourceEntity.setResourceVersion(updatedResourceVersion);
       StackResourceEntityManager.updateStackResource(nextStackResourceEntity);
       return "NONE";
-
     }
     return updateType.toString();
   }

@@ -31,6 +31,7 @@ import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.PutGroupPolicyType;
 import com.eucalyptus.auth.euare.UpdateGroupResponseType;
 import com.eucalyptus.auth.euare.UpdateGroupType;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -44,15 +45,18 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -66,6 +70,11 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
 
   public AWSIAMGroupResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    // In this case, update with replacement has a precondition check before essentially the same steps as "create".  We add both.
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   private static final String DEFAULT_PATH = "/";
@@ -79,6 +88,9 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getGroupName(), otherAction.properties.getGroupName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -88,7 +100,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMGroupResourceAction action = (AWSIAMGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String groupName = action.getDefaultPhysicalResourceId();
+        String groupName = action.properties.getGroupName() != null ? action.properties.getGroupName() : action.getDefaultPhysicalResourceId();
         CreateGroupType createGroupType = MessageHelper.createMessage(CreateGroupType.class, action.info.getEffectiveUserId());
         createGroupType.setGroupName(groupName);
         createGroupType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
@@ -245,7 +257,27 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_GROUP_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMGroupResourceAction oldAction = (AWSIAMGroupResourceAction) oldResourceAction;
+        AWSIAMGroupResourceAction newAction = (AWSIAMGroupResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getGroupName(), newAction.properties.getGroupName()) && oldAction.properties.getGroupName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getGroupName()+" and update the stack again.");
+        }
+        return newAction;
+      }
 
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
+    }
+  }
+
+  
 }
 
 
