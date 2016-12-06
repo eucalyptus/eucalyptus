@@ -5,6 +5,7 @@ import com.google.common.base.Charsets;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.CompositeChannelBuffer;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 
 import java.nio.ByteBuffer;
@@ -126,9 +127,16 @@ public class AwsChunkStream {
     }
 
     public ByteBuffer getPayload() {
-      if (!isComplete())
-        return null;
-      return contents.slice(payloadStartIndex, chunkSize).toByteBuffer();
+      return isComplete() ? contents.slice(payloadStartIndex, chunkSize).toByteBuffer() : null;
+    }
+
+    public HttpChunk toHttpChunk() {
+      ChannelBuffer httpChunkContent = isComplete() ? contents.slice(payloadStartIndex, chunkSize) : null;
+      return new DefaultHttpChunk(httpChunkContent);
+    }
+
+    public ChannelBuffer getContents() {
+      return isComplete() ? contents.slice(0, payloadStartIndex + chunkSize) : null;
     }
 
     private void appendContent(ChannelBuffer newContent) {
