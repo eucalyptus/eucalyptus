@@ -800,16 +800,18 @@ public class DASManager implements LogicalStorageManager {
 
       do {
         try {
+          LOG.trace("Enabling logical volume " + lvName + ", attempt " + attempt);
           result = LVMWrapper.enableLogicalVolume(lvName);
+          ex = null;
           if (attempt > 1) {
-            LOG.info("Enabling " + lvName + "succeeded on retry.");
+            LOG.info("Enabling " + lvName + "succeeded on retry attempt " + attempt);
           }
         } catch (EucalyptusCloudException ece) {
           // If the enable fails, it might be because lvmetad hasn't scanned 
           // the VG and LV into its metadata cache. 
           // Force a pvscan, wait a bit longer, then try again.
           ex = ece;
-          LOG.error(ece + ", retrying...");
+          LOG.warn("Failed to enable logical volume " + lvName + " on attempt " + attempt, ece);
           LVMWrapper.scanPhysicalVolume(lvName);
           try {
             Thread.sleep(timeout);
@@ -822,6 +824,7 @@ public class DASManager implements LogicalStorageManager {
       } while (attempt++ < max_attempts);
 
       if (ex != null) {
+        LOG.error("Failed to enable logical volume " + lvName + ", all retries exhausted.");
         throw ex;
       }
       return result;
