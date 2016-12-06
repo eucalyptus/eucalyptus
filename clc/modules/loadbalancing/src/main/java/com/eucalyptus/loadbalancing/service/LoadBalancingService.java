@@ -2376,6 +2376,14 @@ public class LoadBalancingService {
     final Context ctx = Contexts.lookup( );
     final String accountNumber = ctx.getAccount( ).getAccountNumber( );
 
+    try {
+      LoadBalancers.getLoadbalancer(accountNumber, request.getLoadBalancerName());
+    } catch (final NoSuchElementException ex) {
+      throw new AccessPointNotFoundException( );
+    } catch (final Exception ex) {
+      throw new InternalFailure400Exception("Failed to modify attributes: unable to find the loadbalancer");
+    }
+
     final Function<String, LoadBalancerAttributes> modifyAttributes = new Function<String, LoadBalancerAttributes>( ) {
       @Override
       public LoadBalancerAttributes apply( final String identifier ) {
