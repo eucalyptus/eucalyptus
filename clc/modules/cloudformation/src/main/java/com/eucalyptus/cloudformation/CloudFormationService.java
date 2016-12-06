@@ -336,11 +336,11 @@ public class CloudFormationService {
         for (String capability: request.getCapabilities().getMember()) {
           TemplateParser.Capabilities capabilityEnum = null;
           try {
-            TemplateParser.Capabilities.valueOf(capability);
+            capabilityEnum = TemplateParser.Capabilities.valueOf(capability);
           } catch (Exception ex) {
           }
           if (capabilityEnum == null) {
-            throw new ValidationErrorException("Capability " + capability + " is not a valid capability.  Valid values are " + TemplateParser.Capabilities.values());
+            throw new ValidationErrorException("Capability " + capability + " is not a valid capability.  Valid values are " + Lists.newArrayList(TemplateParser.Capabilities.values()));
           }
           capabilities.add(capability);
         }
@@ -1184,11 +1184,11 @@ public class CloudFormationService {
         for (String nextCapability: request.getCapabilities().getMember()) {
           TemplateParser.Capabilities nextCapabilityEnum = null;
           try {
-            TemplateParser.Capabilities.valueOf(nextCapability);
+            nextCapabilityEnum = TemplateParser.Capabilities.valueOf(nextCapability);
           } catch (Exception ex) {
           }
           if (nextCapabilityEnum == null) {
-            throw new ValidationErrorException("Capability " + nextCapability + " is not a valid capability.  Valid values are " + TemplateParser.Capabilities.values());
+            throw new ValidationErrorException("Capability " + nextCapability + " is not a valid capability.  Valid values are " + Lists.newArrayList(TemplateParser.Capabilities.values()));
           }
           nextCapabilities.add(nextCapability);
         }
