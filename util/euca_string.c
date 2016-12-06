@@ -626,6 +626,29 @@ char *euca_hex2dot(u32 hex)
 }
 
 //!
+//! Convert a binary IP address value to a human readable value.
+//!
+//! @param[in] hex the IP address value
+//!
+//! @return A human readable representation of the binary IP address value or NULL if we ran out of memory.
+//!
+//! @note The caller is responsible to free the allocated memory for the returned value
+//!
+/**
+ * Convert a binary IP address value to a human readable value.
+ * @param hex [in] the IP address value
+ * @return A human readable representation of the binary IP address value. The value
+ * is stored in a statically allocated memory and will be overwritten by subsequent
+ * calls.
+ */
+char *euca_hex2dot_s(u32 hex) {
+    static char sDot[INET_ADDR_LEN];
+
+    snprintf(sDot, INET_ADDR_LEN, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
+    return (sDot);
+}
+
+//!
 //! Converts a human readable MAC address value to its corresponding binary array value
 //!
 //! @param[in]  psMacIn the human readable MAC address value

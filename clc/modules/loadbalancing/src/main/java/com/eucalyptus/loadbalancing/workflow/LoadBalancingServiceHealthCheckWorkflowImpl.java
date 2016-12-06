@@ -85,7 +85,8 @@ implements LoadBalancingServiceHealthCheckWorkflow {
     final Promise<Void> checkContinousWorkflows = client.runContinousWorkflows();
     final Promise<Void> checkServo = client.checkServoInstances(checkContinousWorkflows);
     final Promise<Void> checkDns = client.checkServoInstanceDns(checkServo);
-    final Promise<Void> checkBackend = client.checkBackendInstances(checkDns);
+    final Promise<Void> checkServoElasticIp = client.checkServoElasticIp(checkDns);
+    final Promise<Void> checkBackend = client.checkBackendInstances(checkServoElasticIp);
     final Promise<Void> cleanupServo = client.cleanupServoInstances(checkBackend);
     final Promise<Void> cleanupSecurityGroup = client.cleanupSecurityGroups(cleanupServo);
     final Promise<Void> recycleServo = client.recycleFailedServoInstances(cleanupSecurityGroup);

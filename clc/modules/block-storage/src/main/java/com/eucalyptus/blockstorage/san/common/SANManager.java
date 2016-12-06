@@ -179,10 +179,10 @@ public class SANManager implements LogicalStorageManager {
 
   public void checkPreconditions() throws EucalyptusCloudException {
     if (!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
-      throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
+      throw new EucalyptusCloudException("connect_iscsitarget_sc.pl not found");
     }
     if (!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
-      throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
+      throw new EucalyptusCloudException("disconnect_iscsitarget_sc.pl not found");
     }
 
     if (connectionManager != null) {

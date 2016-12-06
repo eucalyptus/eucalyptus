@@ -25,4 +25,15 @@ import java.util.function.Function;
  * Function that is compatible with both Java 8 and Guava.
  */
 public interface CompatFunction<F, T> extends Function<F, T>, com.google.common.base.Function<F,T> {
+
+  static <F, T> CompatFunction<F, T> of( final Function<F, T> func ) {
+    //noinspection TrivialMethodReference
+    return func::apply;
+  }
+
+  @SuppressWarnings( "Guava" )
+  static <F, T> CompatFunction<F, T> of( final com.google.common.base.Function<F, T> func ) {
+    //noinspection TrivialMethodReference
+    return func::apply;
+  }
 }

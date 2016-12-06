@@ -347,12 +347,28 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     }
 
     @Test
+    void testValidBinding2016_04_01() {
+        URL resource = ComputeQueryBindingTest.getResource('/ec2-2016-04-01-binding.xml')
+        assertValidBindingXml(resource)
+    }
+
+    @Test
+    void testValidBinding2016_09_15() {
+        URL resource = ComputeQueryBindingTest.getResource('/ec2-2016-09-15-binding.xml')
+        assertValidBindingXml(resource)
+    }
+
+    @Test
     void testBindingsForAllActions(){
       // http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Operations.html
       String actionsCopiedAndPastedFromAWSEC2Docs = '''
+    AcceptReservedInstancesExchangeQuote
+
     AcceptVpcPeeringConnection
 
     AllocateAddress
+
+    AllocateHosts
 
     AssignPrivateIpAddresses
 
@@ -402,6 +418,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     CreateDhcpOptions
 
+    CreateFlowLogs
+
     CreateImage
 
     CreateInstanceExportTask
@@ -409,6 +427,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     CreateInternetGateway
 
     CreateKeyPair
+
+    CreateNatGateway
 
     CreateNetworkAcl
 
@@ -452,9 +472,13 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DeleteDhcpOptions
 
+    DeleteFlowLogs
+
     DeleteInternetGateway
 
     DeleteKeyPair
+
+    DeleteNatGateway
 
     DeleteNetworkAcl
 
@@ -512,6 +536,18 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeExportTasks
 
+    DescribeFlowLogs
+
+    DescribeHostReservationOfferings
+
+    DescribeHostReservations
+
+    DescribeHosts
+
+    DescribeIdentityIdFormat
+
+    DescribeIdFormat
+
     DescribeImageAttribute
 
     DescribeImages
@@ -522,15 +558,17 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeInstanceAttribute
 
-    DescribeInstanceStatus
-
     DescribeInstances
+
+    DescribeInstanceStatus
 
     DescribeInternetGateways
 
     DescribeKeyPairs
 
     DescribeMovingAddresses
+
+    DescribeNatGateways
 
     DescribeNetworkAcls
 
@@ -554,6 +592,12 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeRouteTables
 
+    DescribeScheduledInstanceAvailability
+
+    DescribeScheduledInstances
+
+    DescribeSecurityGroupReferences
+
     DescribeSecurityGroups
 
     DescribeSnapshotAttribute
@@ -572,23 +616,27 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeSpotPriceHistory
 
+    DescribeStaleSecurityGroups
+
     DescribeSubnets
 
     DescribeTags
 
     DescribeVolumeAttribute
 
-    DescribeVolumeStatus
-
     DescribeVolumes
+
+    DescribeVolumeStatus
 
     DescribeVpcAttribute
 
     DescribeVpcClassicLink
 
-    DescribeVpcEndpointServices
+    DescribeVpcClassicLinkDnsSupport
 
     DescribeVpcEndpoints
+
+    DescribeVpcEndpointServices
 
     DescribeVpcPeeringConnections
 
@@ -612,6 +660,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DisableVpcClassicLink
 
+    DisableVpcClassicLinkDnsSupport
+
     DisassociateAddress
 
     DisassociateRouteTable
@@ -622,9 +672,17 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     EnableVpcClassicLink
 
+    EnableVpcClassicLinkDnsSupport
+
     GetConsoleOutput
 
+    GetConsoleScreenshot
+
+    GetHostReservationPurchasePreview
+
     GetPasswordData
+
+    GetReservedInstancesExchangeQuote
 
     ImportImage
 
@@ -636,15 +694,25 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ImportVolume
 
+    ModifyHosts
+
+    ModifyIdentityIdFormat
+
+    ModifyIdFormat
+
     ModifyImageAttribute
 
     ModifyInstanceAttribute
+
+    ModifyInstancePlacement
 
     ModifyNetworkInterfaceAttribute
 
     ModifyReservedInstances
 
     ModifySnapshotAttribute
+
+    ModifySpotFleetRequest
 
     ModifySubnetAttribute
 
@@ -654,11 +722,17 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ModifyVpcEndpoint
 
+    ModifyVpcPeeringConnectionOptions
+
     MonitorInstances
 
     MoveAddressToVpc
 
+    PurchaseHostReservation
+
     PurchaseReservedInstancesOffering
+
+    PurchaseScheduledInstances
 
     RebootInstances
 
@@ -667,6 +741,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     RejectVpcPeeringConnection
 
     ReleaseAddress
+
+    ReleaseHosts
 
     ReplaceNetworkAclAssociation
 
@@ -698,6 +774,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     RunInstances
 
+    RunScheduledInstances
+
     StartInstances
 
     StopInstances
@@ -710,12 +788,33 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     '''
 
       List<String> whitelist = [
+          'AllocateHosts',
+          'DescribeHostReservationOfferings',
+          'DescribeHostReservations',
+          'DescribeHosts',
+          'GetHostReservationPurchasePreview',
+          'ModifyHosts',
+          'PurchaseHostReservation',
+          'ReleaseHosts',
+          'DescribeScheduledInstanceAvailability',
+          'DescribeScheduledInstances',
+          'PurchaseScheduledInstances',
+          'RunScheduledInstances',
+          'DescribeIdentityIdFormat',
+          'DescribeIdFormat',
+          'ModifyIdentityIdFormat',
+          'ModifyIdFormat',
       ]
       Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
         try {
           Class.forName( "com.eucalyptus.compute.common.${action}Type" )
         } catch ( Exception e ) {
           if ( !whitelist.contains(action) ) fail( "Message not found for ${action}" )
+        }
+        try {
+          Class.forName( "com.eucalyptus.compute.common.${action}ResponseType" )
+        } catch ( Exception e ) {
+          if ( !whitelist.contains(action) ) fail( "Response message not found for ${action}" )
         }
       }
     }

@@ -1519,6 +1519,21 @@ public interface LoadBalancingActivitiesClient extends ActivitiesClient
     Promise<Void> checkServoInstanceDns(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#checkServoElasticIp}
+     */
+    Promise<Void> checkServoElasticIp();
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#checkServoElasticIp}
+     */
+    Promise<Void> checkServoElasticIp(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#checkServoElasticIp}
+     */
+    Promise<Void> checkServoElasticIp(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
      * Generated from {@link com.eucalyptus.loadbalancing.workflow.LoadBalancingActivities#checkBackendInstances}
      */
     Promise<Void> checkBackendInstances();

@@ -613,4 +613,15 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
+  <mapping name="GetConsoleScreenshot" class="com.eucalyptus.compute.common.GetConsoleScreenshotType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" />
+    <value name="wakeUp" field="wakeUp" usage="optional" />
+  </mapping>
+  <mapping name="GetConsoleScreenshotResponse" class="com.eucalyptus.compute.common.GetConsoleScreenshotResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="imageData" field="imageData" usage="optional" />
+  </mapping>
 </binding>

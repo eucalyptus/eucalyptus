@@ -129,6 +129,7 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 //! @name IP conversion APIs
 u32 euca_dot2hex(const char *psDot);
 char *euca_hex2dot(u32 hex);
+char *euca_hex2dot_s(u32 hex);
 //! @}
 
 //! @{
@@ -159,6 +160,7 @@ char *euca_gettok(char *haystack, char *needle);
 
 #define dot2hex(_dot)                            euca_dot2hex((_dot))
 #define hex2dot(_hex)                            euca_hex2dot((_hex))
+#define hex2dot_s(_hex)                          euca_hex2dot_s((_hex))
 
 //! @}
 

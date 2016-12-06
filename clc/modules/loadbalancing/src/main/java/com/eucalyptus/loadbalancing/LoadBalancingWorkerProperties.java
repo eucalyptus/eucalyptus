@@ -110,6 +110,28 @@ public class LoadBalancingWorkerProperties {
           changeListener = FailureThresholdChangeListener.class)
   public static String FAILURE_THRESHOLD_FOR_RECYCLE = "24";
 
+  @ConfigurableField( displayName = "use_elastic_ip",
+          description = "flag to indicate the workers use elastic IP",
+          initial = "false", // 24 hours by default
+          readonly = false,
+          type = ConfigurableFieldType.KEYVALUE,
+          changeListener = UseElasticIpChangeListener.class)
+  public static String USE_ELASTIC_IP = "false";
+
+  public static boolean useElasticIp() {
+    return Boolean.parseBoolean(USE_ELASTIC_IP);
+  }
+
+  public static class UseElasticIpChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+            throws ConfigurablePropertyException {
+       if (!("true".equals(newValue) || "false".equals(newValue))) {
+        throw new ConfigurablePropertyException("The value must be true or false");
+      }
+    }
+  }
+
   public static class FailureThresholdChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)

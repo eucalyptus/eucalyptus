@@ -762,16 +762,16 @@ public class LoadBalancingService {
             }
           } ) );
 
-          if (!LoadBalancingWorkflows.deleteListenersSync(ctx.getAccountNumber(), candidateLB,
+          if (!LoadBalancingWorkflows.deleteListenersSync(lb.getOwnerAccountNumber(), lbToDelete,
               Lists.newArrayList(ports))) {
             throw new Exception("Workflow for deleting listeners has failed");
-          } else if(!LoadBalancingWorkflows.deleteLoadBalancerSync(ctx.getAccountNumber(), candidateLB)) {
+          } else if(!LoadBalancingWorkflows.deleteLoadBalancerSync(lb.getOwnerAccountNumber(), lbToDelete)) {
             throw new Exception("Workflow for deleting loadbalancer has failed");
           } else {
             /// perhaps these workflows should be stopped in the clean-up workflow
-            LoadBalancingWorkflows.cancelInstanceStatusPolling(ctx.getAccountNumber(), candidateLB);
-            LoadBalancingWorkflows.cancelCloudWatchPutMetric(ctx.getAccountNumber(), candidateLB);
-            LoadBalancingWorkflows.cancelUpdateLoadBalancer(ctx.getAccountNumber(), candidateLB);
+            LoadBalancingWorkflows.cancelInstanceStatusPolling(lb.getOwnerAccountNumber(), lbToDelete);
+            LoadBalancingWorkflows.cancelCloudWatchPutMetric(lb.getOwnerAccountNumber(), lbToDelete);
+            LoadBalancingWorkflows.cancelUpdateLoadBalancer(lb.getOwnerAccountNumber(), lbToDelete);
             LoadBalancers.deleteLoadbalancer(UserFullName.getInstanceForAccount(lb.getOwnerAccountNumber(),lb.getOwnerUserId()), lbToDelete);
           }
         }
@@ -2375,6 +2375,14 @@ public class LoadBalancingService {
     final ModifyLoadBalancerAttributesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+
+    try {
+      LoadBalancers.getLoadbalancer(accountNumber, request.getLoadBalancerName());
+    } catch (final NoSuchElementException ex) {
+      throw new AccessPointNotFoundException( );
+    } catch (final Exception ex) {
+      throw new InternalFailure400Exception("Failed to modify attributes: unable to find the loadbalancer");
+    }
 
     final Function<String, LoadBalancerAttributes> modifyAttributes = new Function<String, LoadBalancerAttributes>( ) {
       @Override

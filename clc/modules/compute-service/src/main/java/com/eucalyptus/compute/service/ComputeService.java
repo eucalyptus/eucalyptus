@@ -685,6 +685,18 @@ public class ComputeService {
     return request.getReply( );
   }
 
+  public GetReservedInstancesExchangeQuoteResponseType getReservedInstancesExchangeQuote(
+      final GetReservedInstancesExchangeQuoteType request
+  ) {
+    return request.getReply( );
+  }
+
+  public AcceptReservedInstancesExchangeQuoteResponseType acceptReservedInstancesExchangeQuote(
+      final AcceptReservedInstancesExchangeQuoteType request
+  ) {
+    return request.getReply( );
+  }
+
   public CancelSpotInstanceRequestsResponseType cancelSpotInstanceRequests( CancelSpotInstanceRequestsType request ) {
     return request.getReply( );
   }
@@ -726,6 +738,10 @@ public class ComputeService {
   }
 
   public RequestSpotFleetResponseType requestSpotFleet( RequestSpotFleetType request ) {
+    return request.getReply( );
+  }
+
+  public ModifySpotFleetRequestResponseType modifySpotFleet( ModifySpotFleetRequestType request ) {
     return request.getReply( );
   }
 
@@ -1224,6 +1240,21 @@ public class ComputeService {
     return reply;
   }
 
+  public ModifyVpcPeeringConnectionOptionsResponseType modifyVpcPeeringConnectionOptions(ModifyVpcPeeringConnectionOptionsType request) throws EucalyptusCloudException {
+    ModifyVpcPeeringConnectionOptionsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeSecurityGroupReferencesResponseType describeSecurityGroupReferences(DescribeSecurityGroupReferencesType request) throws EucalyptusCloudException {
+    DescribeSecurityGroupReferencesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeStaleSecurityGroupsResponseType describeStaleSecurityGroups(DescribeStaleSecurityGroupsType request) throws EucalyptusCloudException {
+    DescribeStaleSecurityGroupsResponseType reply = request.getReply( );
+    return reply;
+  }
+
   public DescribeVpcsResponseType describeVpcs( final DescribeVpcsType request ) throws EucalyptusCloudException {
     final DescribeVpcsResponseType reply = request.getReply( );
     describe(
@@ -1281,6 +1312,18 @@ public class ComputeService {
   }
 
   public EnableVpcClassicLinkResponseType enableVpcClassicLink( EnableVpcClassicLinkType request ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcClassicLinkDnsSupportResponseType describeVpcClassicLinkDnsSupport( DescribeVpcClassicLinkDnsSupportType request ) {
+    return request.getReply( );
+  }
+
+  public DisableVpcClassicLinkDnsSupportResponseType disableVpcClassicLinkDnsSupport( DisableVpcClassicLinkDnsSupportType request ) {
+    return request.getReply( );
+  }
+
+  public EnableVpcClassicLinkDnsSupportResponseType enableVpcClassicLinkDnsSupport( EnableVpcClassicLinkDnsSupportType request ) {
     return request.getReply( );
   }
 

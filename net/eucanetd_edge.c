@@ -161,7 +161,7 @@ static int edgeMaintCount = 0;
 
  //! @{
  //! @name EDGE Mode Network Driver APIs
-static int network_driver_init(eucanetdConfig *pConfig);
+static int network_driver_init(eucanetdConfig *pEucanetdConfig, globalNetworkInfo *pGni);
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
 static int network_driver_cleanup(eucanetdConfig *pConfig, globalNetworkInfo *pGni, boolean forceFlush);
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni);
@@ -215,6 +215,7 @@ struct driver_handler_t edgeDriverHandler = {
 /**
  * Initialize EDGE network driver.
  * @param pEucanetdConfig [in] a pointer to eucanetd configuration structure
+ * @param pGni [in] a pointer to the Global Network Information structure
  * @return 0 on success or 1 on any failure
  * 
  * @pre \li The core application configuration must be completed prior calling
@@ -225,7 +226,7 @@ struct driver_handler_t edgeDriverHandler = {
  *       the driver is non-deterministic. If the driver was previously initialized,
  *       this will result into a no-op.
  */
-static int network_driver_init(eucanetdConfig *pEucanetdConfig) {
+static int network_driver_init(eucanetdConfig *pEucanetdConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
     LOGINFO("Initializing '%s' network driver.\n", DRIVER_NAME());
@@ -919,7 +920,7 @@ int do_edge_update_sgs(edge_config *edge) {
                     EUCA_FREE(strptra);
 
                     // Check if this rule refers to a public IP that this NC is responsible for
-                    if (secgroup->ingress_rules[j].cidr) {
+                    if (strlen(secgroup->ingress_rules[j].cidr)) {
                         // Ignoring potential shift by 32 on a u32. If cidrsn is 0, the rule will not be processed (it allows all, so the rule above suffices)
                         cidrnm = (u32) 0xffffffff << (32 - secgroup->ingress_rules[j].cidrSlashnet);
                         if (secgroup->ingress_rules[j].cidrSlashnet != 0) {
@@ -1305,6 +1306,9 @@ int do_edge_update_l2(edge_config *edge) {
         snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -o vn_i+ -s %s -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", brmac);
         rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
 
+        instances = edge->my_instances;
+        max_instances = edge->max_my_instances;
+
         if (!edge->config->nc_proxy) {
             // If we're using the "fake" router option and have some instance running,
             // we need to respond for out of network ARP request.
@@ -1322,8 +1326,6 @@ int do_edge_update_l2(edge_config *edge) {
             rc = ebt_chain_add_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_POST", cmd);
         }
 
-        instances = edge->my_instances;
-        max_instances = edge->max_my_instances;
         for (i = 0; i < max_instances; i++) {
             if (instances[i].privateIp && maczero(instances[i].macAddress)) {
                 strptra = strptrb = NULL;
@@ -1746,14 +1748,12 @@ int update_host_arp(edge_config *edge) {
                         psPrivateIp = hex2dot(instances[i].privateIp);
                         if (edge->config->nc_proxy) {
                             snprintf(sRule, EUCA_MAX_PATH, "-p ARP --arp-ip-dst %s -j arpreply --arpreply-mac %s", psPrivateIp, psTrimMac);
-                                if (ebt_chain_find_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
-                                    LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, edge->config->bridgeDev);
-                                    snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", edge->config->bridgeDev, psPrivateIp, psBridgeMac);
-                                    euca_execlp(&rc, edge->config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", edge->config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
-                                    rc = rc >> 8;
-                                    if(!(rc == 0 || rc == 2)){
-                                        LOGWARN("Failed to run %s", sCommand);
-                                        ret = 1;
+                            if (ebt_chain_find_rule(edge->config->ebt, "nat", "EUCA_EBT_NAT_PRE", sRule) == NULL) {
+                                LOGDEBUG("Sending gratuitous ARP for instance %s IP %s using MAC %s on %s\n", instances[i].name, psPrivateIp, psBridgeMac, edge->config->bridgeDev);
+                                snprintf(sCommand, EUCA_MAX_PATH, "/usr/libexec/eucalyptus/announce-arp %s %s %s", edge->config->bridgeDev, psPrivateIp, psBridgeMac);
+                                rc = euca_execlp(&rc, edge->config->cmdprefix, "/usr/libexec/eucalyptus/announce-arp", edge->config->bridgeDev, psPrivateIp, psBridgeMac, NULL);
+                                if (rc) {
+                                    LOGDEBUG("error executing announce-arp\n");
                                 }
                             }
                         }
@@ -2054,7 +2054,9 @@ int edge_dump_netmeter(edge_config *edge) {
             long dfsize = (long) statbuf.st_size;
             if (dfsize > EDGE_NETMETER_FILE_MAX_SIZE) {
                 snprintf(dfname1, EUCA_MAX_PATH, "%s.1", dfname);
-                rename(dfname, dfname1);
+                if (rename(dfname, dfname1)) {
+                    LOGDEBUG("Failed to rename %s\n", dfname);
+                }
                 dfname_exists = FALSE;
             }
         }

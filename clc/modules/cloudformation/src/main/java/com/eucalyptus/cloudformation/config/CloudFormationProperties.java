@@ -30,6 +30,15 @@ import com.eucalyptus.simpleworkflow.common.client.Config;
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationProperties {
 
+  private static final String DEFAULT_SWF_CLIENT_CONFIG =
+      "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+
+  private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
+      "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
+  private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
+      "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
+
   @ConfigurableField(
     initial = "true",
     description = "Set 'true' to only allow 'known' properties in Resources",
@@ -49,22 +58,22 @@ public class CloudFormationProperties {
   public static volatile String SWF_TASKLIST = "CloudFormationTaskList";
 
   @ConfigurableField(
-      initial = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}",
+      initial = DEFAULT_SWF_CLIENT_CONFIG,
       description = "JSON configuration for the cloudformation simple workflow client",
       changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
+  public static volatile String SWF_CLIENT_CONFIG = DEFAULT_SWF_CLIENT_CONFIG;
 
   @ConfigurableField(
-      initial = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+      initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,
       description = "JSON configuration for the cloudformation simple workflow activity worker",
       changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_ACTIVITY_WORKER_CONFIG = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG;
 
   @ConfigurableField(
-      initial = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }",
+      initial = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG,
       description = "JSON configuration for the cloudformation simple workflow decision worker",
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 8, \"MaximumPollRateIntervalMilliseconds\": 50 }";
+  public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
   // In case we are using AWS SWF
   public static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));

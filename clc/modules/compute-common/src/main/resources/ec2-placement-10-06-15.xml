@@ -74,4 +74,17 @@
       </collection>
     </structure>
   </mapping>
+  <mapping name="ModifyInstancePlacement"
+           class="com.eucalyptus.compute.common.ModifyInstancePlacementType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <value name="affinity" field="affinity" usage="optional"/>
+    <value name="hostId" field="hostId" usage="optional"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="tenancy" field="tenancy" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyInstancePlacementResponse"
+           class="com.eucalyptus.compute.common.ModifyInstancePlacementResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+  </mapping>
 </binding>
