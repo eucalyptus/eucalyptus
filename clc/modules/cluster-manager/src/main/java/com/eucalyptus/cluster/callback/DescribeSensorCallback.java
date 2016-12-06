@@ -109,7 +109,9 @@ public class DescribeSensorCallback extends
   private void processReportingStats(final DescribeSensorsResponse msg) throws Exception {
     for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
       if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-          !instanceIds.contains( sensorData.getResourceName( )))
+          !instanceIds.contains( sensorData.getResourceName( )) ||
+          sensorData.getResourceUuid( ) == null ||
+          sensorData.getResourceUuid( ).isEmpty() )
         continue;
       
       for (final MetricsResourceType metricType : sensorData.getMetrics()) {
