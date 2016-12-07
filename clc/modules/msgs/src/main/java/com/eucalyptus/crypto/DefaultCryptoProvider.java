@@ -64,12 +64,12 @@ package com.eucalyptus.crypto;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -85,10 +85,9 @@ import org.apache.commons.codec.digest.Sha2Crypt;
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.X509Extensions;
-import org.bouncycastle.cert.CertRuntimeException;
-import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
+import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -240,8 +239,8 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     certGen.setIssuerDN( signer );
     certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints( true ) );
     try {
-      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new JcaX509ExtensionUtils( ).createSubjectKeyIdentifier( key ) );
-    } catch ( NoSuchAlgorithmException | CertRuntimeException e ) {
+      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new SubjectKeyIdentifierStructure( key ) );
+    } catch ( InvalidKeyException e ) {
       LOG.error( "Error adding subject key identifier extension.", e );
     }
     Calendar cal = Calendar.getInstance( );
@@ -271,8 +270,8 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     certGen.setIssuerDN( signer );
     certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints( true ) );
     try {
-      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new JcaX509ExtensionUtils( ).createSubjectKeyIdentifier( keys.getPublic( ) ) );
-    } catch ( NoSuchAlgorithmException | CertRuntimeException e ) {
+      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new SubjectKeyIdentifierStructure( keys.getPublic( ) ) );
+    } catch ( InvalidKeyException e ) {
       LOG.error( "Error adding subject key identifier extension.", e );
     }
     Calendar cal = Calendar.getInstance( );

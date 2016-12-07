@@ -62,23 +62,23 @@
 
 package com.eucalyptus.auth.api;
 
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Map;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Contract.Type;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.PolicyVersion;
-import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 
 public interface PolicyEngine {
-
+  
   /**
    * Evaluate authorizations for a request to access a resource.
-   *
+   * 
    * @param context Context for evaluation
    * @param authorizationMatch The authorization matching to perform
    * @param resourceAccountNumber The account number for the resource
@@ -146,7 +146,8 @@ public interface PolicyEngine {
    * @param requestUser The user making the request
    * @param evaluatedKeys Evaluated IAM condition keys
    * @param policies The (non-resource) policies to use for authorization
-   * @param principals The typed principals making the request
+   * @param principalType The type of the principal
+   * @param principalName The principal name
    * @return The context
    */
   AuthEvaluationContext createEvaluationContext( String resourceType,
@@ -154,7 +155,8 @@ public interface PolicyEngine {
                                                  User requestUser,
                                                  Map<String,String> evaluatedKeys,
                                                  Iterable<PolicyVersion> policies,
-                                                 Set<TypedPrincipal> principals );
+                                                 PrincipalType principalType,
+                                                 String principalName );
 
   enum AuthorizationMatch {
     /**

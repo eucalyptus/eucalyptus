@@ -128,16 +128,13 @@ public class GenericS3ClientFactory {
   }
 
   protected static ClientConfiguration getDefaultConfiguration(boolean withHttps) {
-    final GenericS3ClientFactoryConfiguration s3ClientFactoryConfiguration =
-        GenericS3ClientFactoryConfiguration.getInstance( );
     ClientConfiguration config = new ClientConfiguration();
-    config.setConnectionTimeout(s3ClientFactoryConfiguration.getConnection_timeout_ms());
-    config.setMaxConnections(s3ClientFactoryConfiguration.getMax_connections());
-    config.setMaxErrorRetry(s3ClientFactoryConfiguration.getMax_error_retries());
+    config.setConnectionTimeout(GenericS3ClientFactoryConfiguration.getInstance().getConnection_timeout_ms());
+    config.setMaxConnections(GenericS3ClientFactoryConfiguration.getInstance().getMax_connections());
+    config.setMaxErrorRetry(GenericS3ClientFactoryConfiguration.getInstance().getMax_error_retries());
     config.setUseReaper(true);
-    config.setSocketTimeout(s3ClientFactoryConfiguration.getSocket_read_timeout_ms());
+    config.setSocketTimeout(GenericS3ClientFactoryConfiguration.getInstance().getSocket_read_timeout_ms());
     config.setProtocol(withHttps ? Protocol.HTTPS : Protocol.HTTP);
-    config.setSignerOverride(s3ClientFactoryConfiguration.getSigner_type());
     return config;
   }
 

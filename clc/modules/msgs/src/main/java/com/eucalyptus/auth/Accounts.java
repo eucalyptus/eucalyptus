@@ -384,14 +384,6 @@ public class Accounts {
     }
   }
 
-  @Nonnull
-  public static String getAccountArn( @Nonnull final String accountId ) throws AuthException {
-    if ( !accountId.matches( "[0-9]{12}" ) ) {
-      throw new AuthException( "Invalid account identifier '" + accountId +"'" );
-    }
-    return "arn:aws:iam::"+accountId+":root";
-  }
-
   public static String getUserArn( final User user ) throws AuthException {
     return buildArn( user.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, user.getPath(), user.getName() );
   }
@@ -402,11 +394,6 @@ public class Accounts {
 
   public static String getRoleArn( final BaseRole role ) throws AuthException {
     return buildArn( role.getAccountNumber( ), PolicySpec.IAM_RESOURCE_ROLE, role.getPath(), role.getName() );
-  }
-
-  public static String getAssumedRoleArn( final BaseRole role,
-                                          final String roleSessionName ) throws AuthException {
-    return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
   }
 
   public static String getInstanceProfileArn( final BaseInstanceProfile instanceProfile ) throws AuthException {

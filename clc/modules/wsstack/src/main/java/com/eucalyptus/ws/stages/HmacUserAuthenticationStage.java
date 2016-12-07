@@ -63,29 +63,17 @@
 package com.eucalyptus.ws.stages;
 
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.EnumSet;
 import java.util.Set;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
-import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
-import com.google.common.collect.ImmutableSet;
 
 public class HmacUserAuthenticationStage implements UnrollableStage {
 
   private final Set<TemporaryKeyType> allowedTemporaryCredentials;
-  private final Set<SignatureVersion> allowedSignatureVersions;
 
-  public HmacUserAuthenticationStage( final Set<TemporaryKeyType> allowedTemporaryKeyTypes ) {
-    this( allowedTemporaryKeyTypes, EnumSet.allOf( SignatureVersion.class ) );
-  }
-
-  public HmacUserAuthenticationStage(
-      final Set<TemporaryKeyType> allowedTemporaryCredentials,
-      final Set<SignatureVersion> allowedSignatureVersions
-  ) {
-    this.allowedTemporaryCredentials = ImmutableSet.copyOf( allowedTemporaryCredentials );
-    this.allowedSignatureVersions = ImmutableSet.copyOf( allowedSignatureVersions );
+  public HmacUserAuthenticationStage( final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
+    this.allowedTemporaryCredentials = allowedTemporaryCredentials;
   }
 
   @Override
@@ -95,7 +83,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hmac-v2-verify", new HmacHandler( allowedTemporaryCredentials, allowedSignatureVersions ) );
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( allowedTemporaryCredentials ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 
