@@ -63,12 +63,16 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication;
 import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.S3Authenticator;
+import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.server.MessageStatistics;
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -101,8 +105,9 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
         if (event.getMessage() instanceof StreamingHttpRequest) {
           StreamingHttpRequest request = (StreamingHttpRequest) event.getMessage();
           authenticate(request);
-          for (HttpChunk chunk : request.httpChunks)
-            ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), chunk, event.getRemoteAddress()));
+          for (AwsChunk chunk : request.awsChunks) {
+            ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), chunk.toHttpChunk(), event.getRemoteAddress()));
+          }
         } else {
           if (event.getMessage() instanceof MappingHttpRequest)
             authenticate((MappingHttpRequest) event.getMessage());
@@ -147,7 +152,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
     if (request.awsChunks.isEmpty())
       S3Authenticator.of(request.initialRequest, lowercaseParams).authenticate(request.initialRequest, lowercaseParams);
     else
-      S3Authentication.authenticateV4Streaming(request.initialRequest, lowercaseParams, request.awsChunks);
+      S3Authentication.authenticateV4Streaming(request.initialRequest, request.awsChunks);
   }
 
   /**

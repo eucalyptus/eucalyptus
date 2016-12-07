@@ -2116,7 +2116,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     response.setAllowedOrigin(null);
     
     if (bucketUuid == null || bucketUuid.isEmpty()) {
-      LOG.debug("No bucket UUID, so no CORS headers");
+      LOG.trace("No bucket UUID, so no CORS headers");
       return;
     } else {
       response.setBucketUuid(bucketUuid);
@@ -2124,7 +2124,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     
     String origin = request.getOrigin();
     if (origin == null || origin.isEmpty()) {
-      LOG.debug("No origin header, so no CORS headers");
+      LOG.trace("No origin header, so no CORS headers");
       return;
     } else {
       response.setOrigin(origin);
@@ -2132,7 +2132,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     
     String httpMethod = request.getHttpMethod();
     if (httpMethod == null || httpMethod.isEmpty()) {
-      LOG.debug("No method header, so no CORS headers");
+      LOG.trace("No method header, so no CORS headers");
       return;
     } else {
       response.setHttpMethod(httpMethod);
@@ -2214,7 +2214,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         response.setVary(null);
       }
     } else { // end if matching CORS rule
-      LOG.debug("Has origin but no matching CORS rule, therefore no CORS info stored");
+      LOG.trace("Has origin but no matching CORS rule, therefore no CORS info stored");
     }
   }
 

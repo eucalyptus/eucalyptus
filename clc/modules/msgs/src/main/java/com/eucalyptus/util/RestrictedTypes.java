@@ -70,13 +70,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
@@ -90,11 +90,11 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.PolicyVersion;
-import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.Principal.PrincipalType;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.type.LimitedType;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
@@ -113,6 +113,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
@@ -179,14 +180,14 @@ public class RestrictedTypes {
   public @interface Resolver {
     Class<?> value( );
   }
-  
+
   private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap();
 
   @SuppressWarnings( "unchecked" )
   public static <T extends RestrictedType> Function<String, T> resolver( Class<T> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
   }
-  
+
   /**
    * Implementations <strong>measure</strong> the quantity of {@code T}, the <i>resource type</i>,
    * currently ascribed to a user, via {@link com.eucalyptus.auth.principal.OwnerFullName}. In other words, types annotated with
@@ -198,27 +199,27 @@ public class RestrictedTypes {
   public @interface UsageMetricFunction {
     Class<?> value( );
   }
-  
+
   private static final Map<Class, Function<?, ?>> usageMetricFunctions = Maps.newHashMap( );
-  
+
   @SuppressWarnings( "unchecked" )
   public static Function<OwnerFullName, Long> usageMetricFunction( Class type ) {
     return ( Function<OwnerFullName, Long> ) checkMapByType( type, usageMetricFunctions );
   }
-  
+
   @Target( { ElementType.TYPE } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface QuantityMetricFunction {
     Class<?> value( );
   }
-  
+
   private static final Map<Class, Function<?, ?>> quantityMetricFunctions = Maps.newHashMap( );
-  
+
   @SuppressWarnings( "unchecked" )
   public static Function<OwnerFullName, Long> quantityMetricFunction( Class type ) {
     return ( Function<OwnerFullName, Long> ) checkMapByType( type, quantityMetricFunctions );
   }
-  
+
   private static Function<?, ?> checkMapByType( Class type, Map<Class, Function<?, ?>> map ) {
     for ( Class subType : Classes.ancestors( type ) ) {
       if ( map.containsKey( subType ) ) {
@@ -227,7 +228,7 @@ public class RestrictedTypes {
     }
     throw new NoSuchElementException( "Failed to lookup function (@" + Threads.currentStackFrame( 1 ).getMethodName( ) + ") for type: " + type );
   }
-  
+
   /**
    * Allocate {@code quantity} unitless resources, correctly rolling their allocation back in the
    * case of partial failures.
@@ -258,12 +259,12 @@ public class RestrictedTypes {
     }
     return res;
   }
-  
+
   /**
    * Special case of allocating a single countable resource.
-   * 
+   *
    * {@inheritDoc RestrictedTypes#allocateCountableResources(Integer, Supplier)}
-   * 
+   *
    * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
    */
   @SuppressWarnings( { "cast", "unchecked" } )
@@ -363,7 +364,7 @@ public class RestrictedTypes {
   }
   /**
    * Allocate a resource and subsequently verify naming restrictions.
-   * 
+   *
    * @see RestrictedTypes#allocateUnitlessResources(Integer, Supplier)
    */
   @SuppressWarnings( "ConstantConditions" )
@@ -410,11 +411,11 @@ public class RestrictedTypes {
       return res;
     }
   }
-  
+
   /**
    * Allocation of a type which requires dimensional parameters (e.g., size of a volume) where
    * {@code amount} indicates the desired value for the measured dimensional parameter.
-   * 
+   *
    * @param <T> type to be allocated
    * @param amount amount to be allocated
    * @param allocator Supplier which performs allocation of a single unit.
@@ -471,7 +472,7 @@ public class RestrictedTypes {
   public static <T extends RestrictedType> T doPrivileged( String identifier, Class<T> type ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, ( Function<String, T> ) checkMapByType( type, resourceResolvers ) );
   }
-  
+
   @SuppressWarnings( "rawtypes" )
   public static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     return doPrivileged( identifier, resolverFunction, false );
@@ -494,7 +495,7 @@ public class RestrictedTypes {
   /**
    * Uses the provided {@code lookupFunction} to resolve the {@code identifier} to the underlying
    * object {@code T} with privileges determined by the current messaging context.
-   * 
+   *
    * @param <T> type of object which needs looking up
    * @param identifier identifier of the desired object
    * @param resolverFunction class which resolves string identifiers to the underlying object
@@ -524,7 +525,7 @@ public class RestrictedTypes {
       String action = getIamActionByMessageType( );
       String actionVendor = findPolicyVendor( msgType );
       AuthContextSupplier authContextSupplier = ctx.getAuthContext( );
-      User requestUser = ctx.getUser( );
+      UserPrincipal requestUser = ctx.getUser( );
       Map<String,String> evaluatedKeys = ctx.evaluateKeys( );
       T requestedObject;
       try {
@@ -548,15 +549,14 @@ public class RestrictedTypes {
       }
 
       final PolicyEvaluationContext policyEvaluationContext = PolicyEvaluationContext.get( );
-      final PrincipalType principalType;
-      final String principalName;
+      final Set<TypedPrincipal> principals;
       if ( policyEvaluationContext.hasAttribute( principalTypeKey ) &&
           policyEvaluationContext.hasAttribute( principalNameKey ) ) {
-        principalType = policyEvaluationContext.getAttribute( principalTypeKey );
-        principalName = policyEvaluationContext.getAttribute( principalNameKey );
+        final PrincipalType principalType = policyEvaluationContext.getAttribute( principalTypeKey );
+        final String principalName = policyEvaluationContext.getAttribute( principalNameKey );
+        principals = ImmutableSet.of( TypedPrincipal.of( principalType, principalName ) );
       } else {
-        principalType = PrincipalType.AWS;
-        principalName = Accounts.getUserArn( requestUser );
+        principals = Principals.typedSet( requestUser );
       }
 
       AccountFullName owningAccount = null;
@@ -569,7 +569,7 @@ public class RestrictedTypes {
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
       //noinspection unused
       try ( final PolicyResourceContext policyResourceContext = PolicyResourceContext.of( requestedObject, qualifiedAction ) ) {
-        if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
+        if ( !Permissions.isAuthorized( principals, findPolicy( requestedObject, actionVendor, action ),
                                         PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
                                         qualifiedAction, requestUser, authContextSupplier.get( ).getPolicies( ), evaluatedKeys ) ) {
           throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
@@ -648,7 +648,7 @@ public class RestrictedTypes {
    */
   private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, AuthEvaluationContext> contextFunction ) {
     return new Predicate<T>( ) {
-      
+
       @SuppressWarnings( { "ConstantConditions", "unused" } )
       @Override
       public boolean apply( T arg0 ) {
@@ -672,10 +672,10 @@ public class RestrictedTypes {
         }
         return true;
       }
-      
+
     };
   }
-  
+
   private enum ContextSupplier implements Function<Class<?>, AuthEvaluationContext> {
     INSTANCE;
 
@@ -820,11 +820,11 @@ public class RestrictedTypes {
   }
 
   public static class ResourceMetricFunctionDiscovery extends ServiceJarDiscovery {
-    
+
     public ResourceMetricFunctionDiscovery( ) {
       super( );
     }
-    
+
     @SuppressWarnings( { "synthetic-access", "unchecked" } )
     @Override
     public boolean processClass( Class candidate ) throws Exception {
@@ -850,12 +850,12 @@ public class RestrictedTypes {
         return false;
       }
     }
-    
+
     @Override
     public Double getPriority( ) {
       return 0.3d;
     }
-    
+
   }
 
   public static String getIamActionByMessageType( ) {
@@ -874,7 +874,7 @@ public class RestrictedTypes {
       return action;
     }
   }
-  
+
   private static Class<?> findResourceClass( Object allocator ) throws IllegalArgumentException, NoSuchElementException {
     List<Class> lookupTypes = Classes.genericsToClasses( allocator );
     if ( lookupTypes.isEmpty( ) ) {
@@ -884,7 +884,7 @@ public class RestrictedTypes {
     Class<?> rscType;
     try {
       rscType = Iterables.find( lookupTypes, new Predicate<Class>( ) {
-        
+
         @Override
         public boolean apply( Class arg0 ) {
           return LimitedType.class.isAssignableFrom( arg0 );
@@ -896,7 +896,7 @@ public class RestrictedTypes {
     }
     return rscType;
   }
-  
+
   private static Ats findPolicyAnnotations( Class<?> rscType ) throws IllegalArgumentException {
     Ats ats = Ats.inClassHierarchy( rscType );
     if ( !ats.has( PolicyVendor.class ) ) {

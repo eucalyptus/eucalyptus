@@ -64,6 +64,7 @@ package com.eucalyptus.ws.handlers;
 
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,18 +79,31 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.ws.util.HmacUtils;
+import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 public class HmacHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacHandler.class );
   private final Set<TemporaryKeyType> allowedTemporaryKeyTypes;
+  private final Set<SignatureVersion> allowedSignatureVersions;
 
-  public HmacHandler( final Set<TemporaryKeyType> allowedTemporaryKeyTypes ) {
-    this.allowedTemporaryKeyTypes = allowedTemporaryKeyTypes;
+  public HmacHandler(
+      final Set<TemporaryKeyType> allowedTemporaryKeyTypes
+  ) {
+    this( allowedTemporaryKeyTypes, EnumSet.allOf( SignatureVersion.class ) );
   }
-  
+
+  public HmacHandler(
+      final Set<TemporaryKeyType> allowedTemporaryKeyTypes,
+      final Set<SignatureVersion> allowedSignatureVersions
+  ) {
+    this.allowedTemporaryKeyTypes = ImmutableSet.copyOf( allowedTemporaryKeyTypes );
+    this.allowedSignatureVersions = ImmutableSet.copyOf( allowedSignatureVersions );
+  }
+
   @Override
   @SuppressWarnings( "deprecation" )
   public void incomingMessage( MessageEvent event ) throws Exception {
@@ -104,14 +118,17 @@ public class HmacHandler extends MessageStackHandler {
       for ( final String header : httpRequest.getHeaderNames() ) {
         headers.put( header.toLowerCase(), httpRequest.getHeaders( header ) );
       }
+      if ( !allowedSignatureVersions.contains( variant.getVersion( ) ) ) {
+        throw new AuthenticationException( "Signature version not supported: " + variant.getVersion( ) );
+      }
       if ( variant.getVersion().value() <= 2 ) {
           if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.parameter() ) ) {
             throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
           }
       }
 
-      final HmacCredentials credentials = new HmacCredentials( 
-          httpRequest.getCorrelationId(), 
+      final HmacCredentials credentials = new HmacCredentials(
+          httpRequest.getCorrelationId(),
           variant,
           processParametersForVariant( httpRequest, variant ),
           headers,

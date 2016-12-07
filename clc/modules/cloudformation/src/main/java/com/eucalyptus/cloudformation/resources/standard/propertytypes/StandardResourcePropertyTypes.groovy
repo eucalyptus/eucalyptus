@@ -563,6 +563,16 @@ public class S3NotificationTopicConfiguration {
   String topic;
 }
 
+@EqualsAndHashCode
+@ToString(includeNames=true)
+public class SQSRedrivePolicy {
+  @Required
+  @Property(name="deadLetterTargetArn")
+  String deadLetterTargetArn;
+  @Required
+  @Property(name="maxReceiveCount")
+  Integer maxReceiveCount;
+}
 
 
 

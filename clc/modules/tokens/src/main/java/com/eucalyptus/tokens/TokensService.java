@@ -231,7 +231,7 @@ public class TokensService {
             .attrIfNotNull( RestrictedTypes.principalTypeContextKey, principalType )
             .attrIfNotNull( RestrictedTypes.principalNameContextKey, principalName )
             .build( ).doWithContext( () ->
-            RestrictedTypes.doPrivilegedWithoutOwner(
+            RestrictedTypes.doPrivileged(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final Exception e ) {
@@ -377,7 +377,7 @@ public class TokensService {
             .attr( OpenIDConnectAudKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), aud ) )
             .attr( OpenIDConnectSubKey.CONTEXT_KEY, Pair.pair( provider.getUrl( ), sub ) )
             .build( ).doWithContext( () ->
-            RestrictedTypes.doPrivilegedWithoutOwner(
+            RestrictedTypes.doPrivileged(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
       } catch ( final AuthException e ) {
@@ -564,7 +564,7 @@ public class TokensService {
 
   private static String assumedRoleArn( final BaseRole role,
                                         final String roleSessionName ) throws AuthException {
-    return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
+    return Accounts.getAssumedRoleArn( role, roleSessionName );
   }
 
   private static BaseRole lookupRole( final String roleArnStringWithAlias ) throws TokensException {
