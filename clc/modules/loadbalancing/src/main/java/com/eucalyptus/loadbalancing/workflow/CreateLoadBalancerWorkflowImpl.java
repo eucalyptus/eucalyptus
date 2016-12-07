@@ -74,7 +74,6 @@ public class CreateLoadBalancerWorkflowImpl implements CreateLoadBalancerWorkflo
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
         }
-        
         // rollback activities
         Promise<Void> tagRollback = null;
         if ( tag!=null && tag.isReady() ) {
@@ -84,9 +83,20 @@ public class CreateLoadBalancerWorkflowImpl implements CreateLoadBalancerWorkflo
           client.securityGroupSetupRollback(Promise.asPromise(accountId), 
               Promise.asPromise(loadbalancer), securityGroup, tagRollback);
         }
-        
-        state = ElbWorkflowState.WORKFLOW_FAILED;
-        LOG.error("Failed to create the loadbalancer. Rollback completed", e);
+
+        final LoadBalancingActivityException ex = Exceptions.lookupActivityException(e);
+        if (ex != null && ex instanceof NotEnoughResourcesException) {
+          state = ElbWorkflowState.WORKFLOW_FAILED
+                  .withReason("Not enough resources to create loadbalancer")
+                  .withStatusCode(400);
+        } else if (ex != null && ex instanceof InvalidConfigurationRequestException) {
+          state = ElbWorkflowState.WORKFLOW_FAILED
+                  .withReason("Requested configuration change is invalid")
+                  .withStatusCode(400);
+        } else {
+          state = ElbWorkflowState.WORKFLOW_FAILED;
+          LOG.error("Failed to create the loadbalancer. Rollback completed", e);
+        }
       }
 
       @Override

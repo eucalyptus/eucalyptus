@@ -44,6 +44,7 @@ import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerVersionException;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflowImpl;
+import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflowException;
 import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
 
@@ -434,11 +435,7 @@ public class LoadBalancingService {
 
     Entities.evictCache( LoadBalancer.class );
     try {
-      if(! LoadBalancingWorkflows.createLoadBalancerSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(zones))) {
-        rollback.apply(lbName);
-        throw new InternalFailure400Exception("Workflow for creating loadbalancer has failed");
-      }
-
+      LoadBalancingWorkflows.createLoadBalancerSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(zones));
       if( !listeners.isEmpty( ) ){
         LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
         if (! LoadBalancingWorkflows.createListenersSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(listeners))) {
@@ -455,7 +452,22 @@ public class LoadBalancingService {
       LoadBalancingWorkflows.runInstanceStatusPolling(ctx.getAccountNumber(), lbName);
       LoadBalancingWorkflows.runCloudWatchPutMetric(ctx.getAccountNumber(), lbName);
       LoadBalancingWorkflows.runUpdateLoadBalancer(ctx.getAccountNumber(), lbName);
-    }catch(final Exception e) {
+    } catch(final LoadBalancingWorkflowException ex) {
+      rollback.apply(lbName);
+      final int statusCode = ex.getStatusCode();
+      final String reason = ex.getMessage();
+      if (statusCode == 400) {
+        final String errorMessage = reason!=null ? "Failed to create loadbalancer: " + reason : "Failed to create loadbalancer: internal error";
+        throw new InternalFailure400Exception(errorMessage);
+      } else if (reason != null) {
+        throw new InternalFailureException("Failed to create loadbalancer: " + reason);
+      } else {
+        throw new InternalFailureException("Failed to create loadbalancer: internal error");
+      }
+    } catch(final LoadBalancingException ex) {
+      rollback.apply(lbName);
+      throw ex;
+    } catch(final Exception e) {
       rollback.apply(lbName);
       LOG.error( "Error creating the loadbalancer: " + e.getMessage(), e );
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
