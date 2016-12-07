@@ -200,7 +200,7 @@ public class AclUtils {
       }
 
       try {
-        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(ownerCanonicalId).getAccountAlias();
+        displayName = lookupDisplayNameByCanonicalId(ownerCanonicalId);
       } catch (AuthException e) {
         displayName = "";
       }
@@ -322,7 +322,7 @@ public class AclUtils {
       String canonicalId = ownerIds.getBucketOwnerCanonicalId();
       String displayName = "";
       try {
-        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(canonicalId).getAccountAlias();
+        displayName = lookupDisplayNameByCanonicalId(canonicalId);
       } catch (AuthException e) {
         displayName = "";
       }
@@ -348,7 +348,7 @@ public class AclUtils {
       String canonicalId = ownerIds.getBucketOwnerCanonicalId();
       String displayName = "";
       try {
-        displayName = Accounts.lookupAccountIdentifiersByCanonicalId(canonicalId).getAccountAlias();
+        displayName = lookupDisplayNameByCanonicalId(canonicalId);
       } catch (AuthException e) {
         displayName = "";
       }
@@ -565,7 +565,7 @@ public class AclUtils {
     @Override
     public String check(String id) {
       try {
-        UserPrincipal userPrincipal = Accounts.lookupPrincipalByCanonicalId( id );
+        UserPrincipal userPrincipal = lookupPrincipalByCanonicalId( id );
         return userPrincipal.getCanonicalId();
       } catch (AuthException authEx) {
       }
@@ -610,6 +610,23 @@ public class AclUtils {
       }
     }
     return null;
+  }
+
+  public static String lookupDisplayNameByCanonicalId( final String canonicalId ) throws AuthException {
+    if ( AccountIdentifiers.NOBODY_CANONICAL_ID.equals( canonicalId ) ) {
+      return Principals.nobodyAccount( ).getAccountAlias( );
+    } else {
+      return Accounts.lookupAccountIdentifiersByCanonicalId( canonicalId ).getAccountAlias();
+    }
+  }
+
+  public static UserPrincipal lookupPrincipalByCanonicalId( final String canonicalId ) throws AuthException {
+    if ( AccountIdentifiers.NOBODY_CANONICAL_ID.equals( canonicalId ) ) {
+      LOG.info("Looked up nobody by canonical ID " + canonicalId);
+      return Principals.nobodyUser();
+    } else {
+      return Accounts.lookupPrincipalByCanonicalId( canonicalId );
+    }
   }
 
 }
