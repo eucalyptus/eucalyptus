@@ -664,7 +664,9 @@ public class CloudWatchHelper {
 
     for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
       if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-          !expectedInstanceIds.contains( sensorData.getResourceName()))
+          !expectedInstanceIds.contains( sensorData.getResourceName()) ||
+          sensorData.getResourceUuid() == null || 
+          sensorData.getResourceUuid().isEmpty())
         continue;
       
       for (final MetricsResourceType metricType : sensorData.getMetrics()) {
