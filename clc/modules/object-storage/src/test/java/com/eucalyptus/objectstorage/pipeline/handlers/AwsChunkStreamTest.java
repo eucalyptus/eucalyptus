@@ -7,7 +7,6 @@ import com.google.common.base.Charsets;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -42,27 +41,6 @@ public class AwsChunkStreamTest {
   @Before
   public void beforeMethod() {
     stream = new AwsChunkStream();
-  }
-
-  @Test
-  public void testAppend() throws Exception {
-    ChannelBuffer content = ChannelBuffers.copiedBuffer(CHUNKED_STRING, Charsets.UTF_8);
-    StreamingHttpRequest request = stream.append(new DefaultHttpChunk(content));
-    assertEquals(request.awsChunks.size(), 8);
-  }
-
-  @Test
-  public void testConvertAwsChunkToHttpChunk() throws Exception {
-    // Given
-    ChannelBuffer content = ChannelBuffers.copiedBuffer(CHUNKED_STRING, Charsets.UTF_8);
-    StreamingHttpRequest request = stream.append(new DefaultHttpChunk(content));
-    AwsChunk chunk = request.awsChunks.get(0);
-
-    // When
-    HttpChunk httpChunk = chunk.toHttpChunk();
-
-    // Then assert http chunk = aws chunk - (header + CRLF)
-    assertEquals(httpChunk.getContent().readableBytes(), chunk.getContents().readableBytes() - 87);
   }
 
   @Test

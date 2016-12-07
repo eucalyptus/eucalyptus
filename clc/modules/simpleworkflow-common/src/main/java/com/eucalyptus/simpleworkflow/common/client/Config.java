@@ -27,7 +27,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.net.ConnectException;
-import java.security.SecureRandom;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +58,6 @@ import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
@@ -80,9 +78,6 @@ import com.google.common.reflect.AbstractInvocationHandler;
 public class Config {
   private static final ObjectMapper mapper = new ObjectMapper( )
       .setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
-  static {
-    mapper.addMixInAnnotations( ClientConfiguration.class, ClientConfigurationMixin.class );
-  }
   private static final ObjectMapper workerObjectMapper = buildWorkerObjectMapper();
 
   /**
@@ -398,9 +393,4 @@ public class Config {
     return isMethodBackedByTransientField;
   }
 
-  @SuppressWarnings( "unused" )
-  private interface ClientConfigurationMixin {
-    @JsonIgnore SecureRandom getSecureRandom();
-    @JsonIgnore void setSecureRandom(SecureRandom secureRandom);
-  }
 }

@@ -110,9 +110,6 @@ public class GenericS3ClientFactoryConfiguration extends AbstractPersistent {
   private Integer buffer_size;
   private static final Integer DEFAULT_BUFFER_SIZE = new Integer(512 * 1024);
 
-  //TODO: make configurable?
-  private String signer_type = "S3SignerType";
-
   @PrePersist
   private void initialize() {
     if (connection_timeout_ms == null) {
@@ -186,13 +183,5 @@ public class GenericS3ClientFactoryConfiguration extends AbstractPersistent {
 
   public void setBuffer_size(Integer buffer_size) {
     this.buffer_size = buffer_size;
-  }
-
-  public String getSigner_type() {
-    return signer_type;
-  }
-
-  public void setSigner_type( final String signer_type ) {
-    this.signer_type = signer_type;
   }
 }

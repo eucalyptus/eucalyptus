@@ -50,7 +50,6 @@ import java.net.URLEncoder;
 import java.util.*;
 
 import static com.eucalyptus.objectstorage.pipeline.auth.S3V2Authentication.AWS_V2_AUTH_TYPE;
-import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.getAndVerifyDecodedContentLength;
 
 /**
  * REST and query string based V2 and V4 authentication for S3.
@@ -101,12 +100,7 @@ public final class S3Authentication {
         String signature = authComponents.get(V4AuthComponent.Signature);
         String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
         String payloadHash = S3V4Authentication.buildAndVerifyPayloadHash(request);
-        Long decodedContentLength = S3V4Authentication.getAndVerifyDecodedContentLength(request, payloadHash);
         S3V4Authentication.login(request, date, credential, signedHeaders, signature, securityToken, payloadHash);
-
-        // Convert content length from V4 to V2
-        if (decodedContentLength != null)
-          HttpHeaders.setContentLength(request, decodedContentLength);
       }
     },
 
@@ -175,7 +169,8 @@ public final class S3Authentication {
     }
   }
 
-  public static void authenticateV4Streaming(MappingHttpRequest request, List<AwsChunk> chunks) throws S3Exception {
+  public static void authenticateV4Streaming(MappingHttpRequest request, Map<String, String> lowercaseParams, List<AwsChunk> chunks)
+      throws S3Exception {
     Map<V4AuthComponent, String> authComponents = S3V4Authentication.getV4AuthComponents(request.getHeader(HttpHeaders.Names
         .AUTHORIZATION));
     String dateStr = getDateFromHeaders(request);

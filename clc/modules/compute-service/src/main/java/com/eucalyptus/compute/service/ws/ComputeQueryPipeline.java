@@ -25,6 +25,7 @@ import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.service.config.ComputeConfiguration;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 import com.google.common.collect.Sets;
 
@@ -38,7 +39,8 @@ public class ComputeQueryPipeline extends QueryPipeline {
     super(
         "compute-query",
         Sets.newHashSet( ComputeConfiguration.SERVICE_PATH, "/services/Eucalyptus" ),
-        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ) );
+        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ),
+        EnumSet.of( RequiredQueryParams.Version ) );
   }
 
   @Override

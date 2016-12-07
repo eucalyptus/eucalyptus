@@ -17,7 +17,6 @@ package com.eucalyptus.util;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.StringReader;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -25,13 +24,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import javaslang.Function1;
@@ -43,41 +39,12 @@ import javaslang.control.Option;
  * Utility class for JSON processing with Jackson.
  */
 public class Json {
-  private static final ObjectMapper mapper = mapper( );
+  private static final ObjectMapper mapper = new ObjectMapper( );
   private static final ObjectReader reader = mapper.reader( );
-  private static final ObjectWriter writer = mapper.writer( );
   private static final Option<Stream<String>> optionStreamEmpty = Option.of( Stream.empty( ) );
   private static final Option<Stream<JsonNode>> optionStreamObjEmpty = Option.of( Stream.empty( ) );
   private static final Function1<String,Supplier<IOException>> missingExceptionSupplierFunc =
       fieldName -> () -> new IOException( "Missing required value " + fieldName );
-
-  public enum JsonOption {
-    IgnoreGroovy {
-      @Override
-      ObjectMapper config( final ObjectMapper objectMapper ) {
-        objectMapper.addMixInAnnotations( GroovyObject.class, GroovyMixin.class );
-        return objectMapper;
-      }
-    },
-    IgnoreBaseMessage {
-      @Override
-      ObjectMapper config( final ObjectMapper objectMapper ) {
-        objectMapper.addMixInAnnotations( BaseMessage.class, BaseMessageMixin.class );
-        return objectMapper;
-      }
-    },
-    ;
-
-    abstract ObjectMapper config( final ObjectMapper mapper );
-
-    static ObjectMapper config( final Iterable<JsonOption> options, final ObjectMapper objectMapper ) {
-      ObjectMapper configured = objectMapper;
-      for ( final JsonOption option : options ) {
-        configured = option.config( configured );
-      }
-      return configured;
-    }
-  }
 
   public static JsonNode parse( final InputStream jsonStream ) throws IOException {
     if ( jsonStream == null ) throw new IOException( "Null" );
@@ -116,22 +83,13 @@ public class Json {
     return node;
   }
 
-  public static void writeObject( final OutputStream out, final Object object ) throws IOException {
-    writer.writeValue( out, object );
-  }
-
   /**
    * Get a mapper configured to ignore groovy object properties.
    */
   public static ObjectMapper mapper( ) {
-    return JsonOption.IgnoreGroovy.config( new ObjectMapper( ) );
-  }
-
-  /**
-   * Get a mapper configured with the given options.
-   */
-  public static ObjectMapper mapper( final Iterable<JsonOption> options ) {
-    return JsonOption.config( options, new ObjectMapper( ) );
+    final ObjectMapper objectMapper = new ObjectMapper( );
+    objectMapper.addMixInAnnotations( GroovyObject.class, GroovyMixin.class );
+    return objectMapper;
   }
 
   public static boolean isText( final JsonNode parent, final String fieldName ) throws IOException {
@@ -240,11 +198,5 @@ public class Json {
     @JsonIgnore
     void setMetaClass( MetaClass var1);
     @JsonIgnore MetaClass getMetaClass( );
-  }
-
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId",
-      "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
-      "callerContext" } )
-  private interface BaseMessageMixin {
   }
 }

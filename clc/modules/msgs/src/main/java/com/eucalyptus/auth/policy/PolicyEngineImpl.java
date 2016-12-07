@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.policy;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.eucalyptus.util.Parameters.checkParam;
 
 import java.util.Collections;
@@ -101,7 +102,6 @@ import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.Principal;
-import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.util.Exceptions;
@@ -115,7 +115,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -270,21 +269,17 @@ public class PolicyEngineImpl implements PolicyEngine {
 
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
-        final boolean sameAccount = context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber );
-        // Check resource authorizations, ignore authorizations for own account
-        final Decision resourceDecision = resourcePolicy == null ?
-                Decision.DEFAULT :
-                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipals( excludeAccountPrincipal( resourceAccountNumber ) ), keyEval, contractEval );
+        // Check resource authorizations
+        Decision decision = resourcePolicy == null || ( resourceAccountNumber != null && context.getRequestUser( ).isAccountAdmin( ) && context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber ) ) ?
+            Decision.ALLOW :
+            processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipalType(), evaluationContext.getPrincipalName(), keyEval, contractEval );
         // Denied by explicit or default deny
-        if ( ( resourceDecision == Decision.DENY ) ||
-            ( !sameAccount && resourceDecision != Decision.ALLOW ) ) {
-          LOG.debug( "Request is rejected by resource authorization check, due to decision " + resourceDecision );
+        if ( decision != Decision.ALLOW ) {
+          LOG.debug( "Request is rejected by resource authorization check, due to decision " + decision );
           throw new AuthException( AuthException.ACCESS_DENIED );
         } else {
-          final Decision decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
-          if ( Decision.DENY == decision ||
-              ( !sameAccount && decision != Decision.ALLOW ) ||
-              ( resourceDecision != Decision.ALLOW && decision != Decision.ALLOW ) ) {
+          decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
+          if ( Decision.ALLOW != decision ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
           }
         }
@@ -353,8 +348,9 @@ public class PolicyEngineImpl implements PolicyEngine {
                                                         final User requestUser,
                                                         final Map<String,String> evaluatedKeys,
                                                         final Iterable<PolicyVersion> policies,
-                                                        final Set<TypedPrincipal> principals ) {
-    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys, policies, principals );
+                                                        final PrincipalType principalType,
+                                                        final String principalName ) {
+    return new AuthEvaluationContextImpl( resourceType, action, requestUser, evaluatedKeys, policies, principalType, principalName );
   }
 
   private Decision evaluateResourceAuthorization( @Nonnull  final AuthEvaluationContext context,
@@ -388,7 +384,8 @@ public class PolicyEngineImpl implements PolicyEngine {
         resourceAccountNumber,
         resourceType,
         resourceName,
-        evaluationContext.getPrincipals( ),
+        evaluationContext.getPrincipalType( ),
+        evaluationContext.getPrincipalName( ),
         keyEval,
         contractEval );
     if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
@@ -414,7 +411,8 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           @Nullable final String resourceAccountNumber,
                                           @Nullable final String resourceType,
                                           @Nullable final String resource,
-                                          @Nullable final Set<TypedPrincipal> principals,
+                                          @Nullable final PrincipalType principalType,
+                                          @Nullable final String principalName,
                                           @Nonnull  final CachedKeyEvaluator keyEval,
                                           @Nonnull  final ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT;
@@ -425,7 +423,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       if ( !matchActions( auth, action ) ) {
         continue;
       }
-      if ( !matchPrincipal( auth.getPrincipal(), principals ) ) {
+      if ( !matchPrincipal( auth.getPrincipal(), principalType, principalName ) ) {
         continue;
       }
       if ( authorizationMatch == AuthorizationMatch.Unconditional && auth.getEffect( ) == EffectType.Allow ) {
@@ -451,26 +449,10 @@ public class PolicyEngineImpl implements PolicyEngine {
     return evaluateElement( matchOne( auth.getActions( ), action, PATTERN_MATCHER ), auth.isNotAction( ) );
   }
 
-  private boolean matchPrincipal( @Nullable Principal principal, @Nullable Set<TypedPrincipal> principals ) throws AuthException {
-    if ( principal == null ) {
-      return true;
-    } else if ( principals != null ) {
-      boolean anyMatch = false;
-      for( final TypedPrincipal typedPrincipal : principals ) {
-        if ( typedPrincipal.getType( ) == principal.getType( ) ) {
-          if ( evaluateElement(
-              matchOne(
-                  typedPrincipal.getType( ).convertForUserMatching( principal.getValues( ) ),
-                  typedPrincipal.getName( ),
-                  PATTERN_MATCHER ),
-              false ) ) {
-            anyMatch = true;
-          }
-        }
-      }
-      return (anyMatch && !principal.isNotPrincipal( )) || (!anyMatch && principal.isNotPrincipal( ));
-    }
-    return principal.isNotPrincipal( );
+  private boolean matchPrincipal( Principal principal, PrincipalType principalType, String principalName ) throws AuthException {
+    return principal == null || (
+        principal.getType() == principalType &&
+        evaluateElement( matchOne( principalType.convertForUserMatching( principal.getValues() ), principalName, PATTERN_MATCHER ), principal.isNotPrincipal() ) );
   }
 
   private boolean matchResources( Authorization auth, String resourceType, String resource ) throws AuthException {
@@ -641,23 +623,15 @@ public class PolicyEngineImpl implements PolicyEngine {
     throw new RuntimeException( "Should not reach here: unrecognized scope." );
   }
 
-  @SuppressWarnings( "Guava" )
-  private Predicate<TypedPrincipal> excludeAccountPrincipal( final String accountNumber ) throws AuthException {
-    if ( accountNumber == null ) {
-      return Predicates.alwaysTrue( );
-    } else {
-      final TypedPrincipal match = TypedPrincipal.of( Principal.PrincipalType.AWS, Accounts.getAccountArn( accountNumber ) );
-      return Predicates.not( Predicates.equalTo( match ) );
-    }
-  }
-
   static class AuthEvaluationContextImpl implements AuthEvaluationContext {
     @Nullable
     private final String resourceType;
     private final String action;
     private final User requestUser;
     @Nullable
-    private final Set<TypedPrincipal> principals;
+    private final PrincipalType principalType;
+    @Nullable
+    private final String principalName;
     private Boolean systemAdmin;
     private Boolean systemUser;
     private Map<String,String> evaluatedKeys;
@@ -670,7 +644,7 @@ public class PolicyEngineImpl implements PolicyEngine {
                                final User requestUser,
                                final Map<String, String> evaluatedKeys,
                                final Iterable<PolicyVersion> policies ) {
-      this( resourceType, action, requestUser, evaluatedKeys, policies, null );
+      this( resourceType, action, requestUser, evaluatedKeys, policies, null, null );
     }
 
     AuthEvaluationContextImpl( @Nullable final String resourceType,
@@ -678,7 +652,8 @@ public class PolicyEngineImpl implements PolicyEngine {
                                final User requestUser,
                                final Map<String, String> evaluatedKeys,
                                final Iterable<PolicyVersion> policies,
-                               @Nullable final Set<TypedPrincipal> principals ) {
+                               @Nullable final PrincipalType principalType,
+                               @Nullable final String principalName ) {
       this.resourceType = resourceType;
       this.action = action.toLowerCase();
       this.evaluatedKeys = ImmutableMap.copyOf( evaluatedKeys.entrySet( ).stream( )
@@ -686,7 +661,8 @@ public class PolicyEngineImpl implements PolicyEngine {
           .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue ) ) );
       this.policies = ImmutableList.copyOf( policies );
       this.requestUser = requestUser;
-      this.principals = principals==null ? null : ImmutableSet.copyOf( principals );
+      this.principalType = principalType;
+      this.principalName = principalName;
     }
 
     @Nullable
@@ -711,8 +687,14 @@ public class PolicyEngineImpl implements PolicyEngine {
 
     @Override
     @Nullable
-    public Set<TypedPrincipal> getPrincipals() {
-      return principals;
+    public PrincipalType getPrincipalType() {
+      return principalType;
+    }
+
+    @Override
+    @Nullable
+    public String getPrincipalName() {
+      return principalName;
     }
 
     @Override
@@ -726,14 +708,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
 
     private String describePrincipal( ) {
-      Principal.PrincipalType principalType = null;
-      String principalName = null;
-      if ( principals != null && !principals.isEmpty( ) ) {
-        final TypedPrincipal primaryPrincipal = Iterables.get( principals, 0 );
-        principalType = primaryPrincipal.getType( );
-        principalName = primaryPrincipal.getName( );
-      }
-      return principalType != null ?
+      return principalType != null && principalName != null ?
         principalType + ":" + principalName + " / " + requestUser :
         String.valueOf( requestUser );
     }

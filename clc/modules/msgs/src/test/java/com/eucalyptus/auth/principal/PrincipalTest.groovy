@@ -19,10 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal
 
-import com.eucalyptus.auth.policy.ern.Ern
-import com.eucalyptus.auth.policy.ern.EuareErnBuilder
-import org.junit.BeforeClass
-
 import static org.junit.Assert.*
 import org.junit.Test
 
@@ -33,21 +29,14 @@ import static com.eucalyptus.auth.principal.Principal.PrincipalType.AWS
  */
 class PrincipalTest {
 
-  @BeforeClass
-  static void beforeClass( ) {
-    Ern.registerServiceErnBuilder( new EuareErnBuilder( ) )
-  }
-  
   @Test
   void testPrincipalMatcherConversion() {
     [
         "*":                                       "*",
-        "arn:aws:iam::123456789012:root":          "arn:aws:iam::123456789012:root",
-        "123456789012":                            "arn:aws:iam::123456789012:root",
+        "arn:aws:iam::123456789012:root":          "arn:aws:iam::123456789012:user/*",
+        "123456789012":                            "arn:aws:iam::123456789012:user/*",
         "arn:aws:iam::123456789012:user/Username": "arn:aws:iam::123456789012:user/Username",
         "arn:aws:iam::123456789012:user/*":        "arn:aws:iam::123456789012:user/*",
-        "arn:aws:iam::123456789012:role/p/MyRole": "arn:aws:iam::123456789012:role/p/MyRole",
-        "arn:aws:iam::123456789012:role/*":        "arn:aws:iam::123456789012:role/*",
     ].each { input, expected ->
       assertEquals( "Match conversion for " + input, expected, AWS.convertForUserMatching( input ) )
     }

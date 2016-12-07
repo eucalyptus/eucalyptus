@@ -688,31 +688,3 @@ public class AWSS3BucketProperties implements ResourceProperties {
   @Property
   S3WebsiteConfiguration websiteConfiguration;
 }
-
-@ToString(includeNames=true)
-public class AWSSQSQueueProperties implements ResourceProperties {
-  @Property
-  Integer delaySeconds;
-  @Property
-  Long maximumMessageSize;
-  @Property
-  Integer messageRetentionPeriod;
-  @Property
-  String queueName;
-  @Property
-  Integer receiveMessageWaitTimeSeconds;
-  @Property
-  SQSRedrivePolicy redrivePolicy;
-  @Property
-  Integer visibilityTimeout;
-}
-
-@ToString(includeNames=true)
-public class AWSSQSQueuePolicyProperties implements ResourceProperties {
-  @Required
-  @Property
-  JsonNode policyDocument;
-  @Required
-  @Property
-  List<String> queues = Lists.newArrayList();
-}

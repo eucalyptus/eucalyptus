@@ -36,9 +36,9 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Strings;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -50,42 +50,25 @@ public abstract class QueryPipeline extends FilteredPipeline {
   private final HmacUserAuthenticationStage auth;
   private final String name;
   private final Set<String> servicePathPrefixes;
+  private final Set<RequiredQueryParams> requiredQueryParams;
 
   protected QueryPipeline( final String name,
                            final String servicePathPrefix,
                            final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
     this( name,
           ImmutableSet.of( servicePathPrefix ),
-          allowedTemporaryCredentials );
-  }
-
-  protected QueryPipeline( final String name,
-                           final String servicePathPrefix,
-                           final Set<TemporaryKeyType> allowedTemporaryCredentials,
-                           final Set<SignatureVersion> allowedSignatureVersions ) {
-    this( name,
-        ImmutableSet.of( servicePathPrefix ),
-        allowedTemporaryCredentials,
-        allowedSignatureVersions );
-  }
-
-  protected QueryPipeline( final String name,
-                           final Set<String> servicePathPrefixes,
-                           final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
-    this(
-        name,
-        servicePathPrefixes,
-        allowedTemporaryCredentials,
-        EnumSet.allOf( SignatureVersion.class ) );
+          allowedTemporaryCredentials,
+          EnumSet.allOf( RequiredQueryParams.class ) );
   }
 
   protected QueryPipeline( final String name,
                            final Set<String> servicePathPrefixes,
                            final Set<TemporaryKeyType> allowedTemporaryCredentials,
-                           final Set<SignatureVersion> allowedSignatureVersions ) {
-    this.auth = new HmacUserAuthenticationStage( allowedTemporaryCredentials, allowedSignatureVersions );
+                           final Set<RequiredQueryParams> requiredQueryParams ) {
+    this.auth = new HmacUserAuthenticationStage( allowedTemporaryCredentials );
     this.name = name;
     this.servicePathPrefixes = ImmutableSet.copyOf( servicePathPrefixes );
+    this.requiredQueryParams = ImmutableSet.copyOf( requiredQueryParams );
   }
 
   protected UnrollableStage getAuthenticationStage( ) {
@@ -132,6 +115,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
     if ( message instanceof MappingHttpRequest && !message.getHeaderNames().contains( "SOAPAction" )) {
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
       final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
       if ( !usesServicePath && !( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
