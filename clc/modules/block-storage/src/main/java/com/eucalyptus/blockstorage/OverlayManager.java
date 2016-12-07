@@ -1136,8 +1136,13 @@ public class OverlayManager extends DASManager {
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
             // enable logical volume
-            LVMWrapper.enableLogicalVolume(absoluteLVName);
-
+            try {
+              LVMWrapper.enableLogicalVolume(absoluteLVName);
+            } catch (EucalyptusCloudException ex) {
+              String error = "Failed to enable logical volume " + absoluteLVName + ": " + ex.getMessage();
+              LOG.error(error);
+              throw new EucalyptusCloudException(ex);
+            }
             try {
               // export logical volume
               volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
