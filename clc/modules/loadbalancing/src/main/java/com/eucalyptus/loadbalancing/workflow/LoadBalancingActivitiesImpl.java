@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.loadbalancing.service.*;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 
@@ -162,10 +163,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         requestedZones.remove(cc.getZoneName());
       }
     }catch(final Exception ex){
-      throw new LoadBalancingActivityException("failed to validate the requested zones", ex);
+      throw new InvalidConfigurationRequestException("failed to validate the requested zones", ex);
     }
     if(requestedZones.size()>0){
-      throw new LoadBalancingActivityException("unknown zone is requested");
+      throw new InvalidConfigurationRequestException("unknown zone is requested");
     }
     
     // are there enough resources?
@@ -180,7 +181,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       for(final String zone : zones){
       final int capacity = findAvailableResources(clusters, zone, instanceType);
       if(numVm>capacity){
-        throw new LoadBalancingActivityException(String.format("Not enough resources in %s", zone));
+        throw new NotEnoughResourcesException();
       }
     }
     
