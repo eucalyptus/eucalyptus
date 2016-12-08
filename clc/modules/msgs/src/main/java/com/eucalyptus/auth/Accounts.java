@@ -188,6 +188,7 @@ public class Accounts {
   }
 
   public static String lookupAccountIdByCanonicalId( String canonicalId ) throws AuthException {
+    throwIfFakeIdentity( canonicalId );
     return getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId ).getAccountNumber();
   }
 
@@ -208,6 +209,7 @@ public class Accounts {
   }
 
   public static AccountIdentifiers lookupAccountIdentifiersByCanonicalId( final String canonicalId ) throws AuthException {
+    throwIfFakeIdentity( canonicalId );
     return Accounts.getIdentityProvider( ).lookupAccountIdentifiersByCanonicalId( canonicalId );
   }
 
@@ -250,11 +252,8 @@ public class Accounts {
 
   @Nonnull
   public static UserPrincipal lookupPrincipalByCanonicalId( String canonicalId ) throws AuthException {
-    if (canonicalId.equals(AccountIdentifiers.NOBODY_CANONICAL_ID)) {
-      return Principals.nobodyUser();
-    } else {
-      return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
-    }
+    throwIfFakeIdentity( canonicalId );
+    return getIdentityProvider( ).lookupPrincipalByCanonicalId( canonicalId );
   }
 
   @Nonnull
@@ -476,6 +475,12 @@ public class Accounts {
     return idSuffix;
   }
 
+  private static void throwIfFakeIdentity( final String id ) throws AuthException {
+    if ( Principals.isFakeIdentify( id ) ) {
+      throw new AuthException( "Invalid identity: " + id );
+    }
+  }
+  
   private enum UserStringProperties implements Function<User,String> {
     ACCOUNT_NUMBER {
       @Override

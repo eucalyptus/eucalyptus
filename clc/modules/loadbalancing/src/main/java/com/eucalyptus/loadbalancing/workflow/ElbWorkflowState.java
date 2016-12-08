@@ -27,5 +27,26 @@ public enum ElbWorkflowState {
   WORKFLOW_RUNNING,
   WORKFLOW_SUCCESS,
   WORKFLOW_CANCELLED,
-  WORKFLOW_FAILED
+  WORKFLOW_FAILED;
+
+  private String reason = null;
+  private int statusCode = 500;
+  ElbWorkflowState() {
+    this.reason = null;
+  }
+
+  public ElbWorkflowState withReason(final String reason) {
+    this.reason = reason;
+    return this;
+  }
+
+  public ElbWorkflowState withStatusCode(final int statusCode) {
+    this.statusCode = statusCode;
+    return this;
+  }
+
+  public String getReason() {
+    return this.reason;
+  }
+  public int getStatusCode() { return this.statusCode; }
 }

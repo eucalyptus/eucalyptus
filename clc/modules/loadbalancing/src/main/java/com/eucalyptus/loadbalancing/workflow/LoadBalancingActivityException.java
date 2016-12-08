@@ -1,4 +1,4 @@
- /*************************************************************************
+/*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,8 +24,8 @@ package com.eucalyptus.loadbalancing.workflow;
  *
  */
 public class LoadBalancingActivityException extends Exception {
-	
 	private static final long serialVersionUID = 1L;
+	public LoadBalancingActivityException() {  }
 	public LoadBalancingActivityException(String message){
 		super(message);
 	}
@@ -33,3 +33,15 @@ public class LoadBalancingActivityException extends Exception {
 		super(message, cause);
 	}
 }
+
+// failure due to bad request
+class InvalidConfigurationRequestException extends LoadBalancingActivityException {
+	InvalidConfigurationRequestException(String message) {
+		super(message);
+	}
+	InvalidConfigurationRequestException(String message, Throwable cause) {
+		super(message, cause);
+	}
+}
+
+class NotEnoughResourcesException extends LoadBalancingActivityException { }
