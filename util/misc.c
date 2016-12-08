@@ -963,9 +963,15 @@ int daemonrun(char *incmd, char *pidfile)
         sigaction(SIGTERM, &newsigact, NULL);
 
         rc = daemon(0, 0);
+        if (rc) {
+            LOGWARN("daemon() failed with %d\n", errno);
+        }
 
         // become parent of session
         sid = setsid();
+        if (sid < 0) {
+            LOGWARN("setsid() failed with %d\n", errno);
+        }
 
         if ((cmd = strdup(incmd)) == NULL)
             exit(-1);
@@ -1584,8 +1590,12 @@ int drop_privs(void)
     char buf[16384] = { 0 };           // man-page said this is enough
 
     s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
-    if (result == NULL)
+    if (result == NULL) {
+        if (s) {
+            LOGWARN("getpwnam_r() failed with %d\n", s);
+        }
         return (EUCA_ERROR);           // not found if s==0, check errno otherwise
+    }
 
     if (setgid(pwd.pw_gid) != 0)
         return (EUCA_ERROR);

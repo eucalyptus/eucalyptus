@@ -5678,8 +5678,8 @@ char *discover_mido_bgps_v5(mido_config *mido) {
             resptr = &(res[strlen(res)]);
             snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-peer asn %d address %s\n",
                     gw->peer_asn, gw->peer_ip);
-            for (int j = 0; j < gw->max_ad_routes; j++) {
-                mido_gw_ad_route *ar = gw->ad_routes[j];
+            for (int j = 0; j < gw->max_bgp_networks; j++) {
+                mido_gw_ad_route *ar = gw->bgp_networks[j];
                 if (!ar) continue;
                 resptr = &(res[strlen(res)]);
                 snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-network net %s\n",
