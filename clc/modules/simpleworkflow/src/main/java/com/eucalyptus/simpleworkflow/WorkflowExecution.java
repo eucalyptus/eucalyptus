@@ -47,6 +47,8 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.entities.AuxiliaryDatabaseObject;
+import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
@@ -65,6 +67,13 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_simpleworkflow" )
 @Table( name = "swf_workflow_execution" )
+@AuxiliaryDatabaseObjects( {
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "create index swf_workflow_execution_open_pending_idx on ${schema}.swf_workflow_execution ( metadata_account_id, domain, task_list, metadata_state, decision_status ) where metadata_state = 'Open' and decision_status = 'Pending'",
+        drop = "drop index if exists ${schema}.swf_workflow_execution_open_pending_idx"
+    ),
+})
 public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionStatus> implements WorkflowExecutionMetadata {
   private static final long serialVersionUID = 1L;
 
