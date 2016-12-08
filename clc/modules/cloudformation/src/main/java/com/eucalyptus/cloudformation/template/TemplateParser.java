@@ -156,7 +156,6 @@ public class TemplateParser {
       Collection resourceRequiredCapabilities = resourceInfo.getRequiredCapabilities(resourcePropertiesJson);
       if (resourceRequiredCapabilities != null && !resourceRequiredCapabilities.isEmpty()) {
         requiredCapabilities.addAll(resourceRequiredCapabilities);
-        requiredCapabilities.add(resourceType);
       }
     }
 
