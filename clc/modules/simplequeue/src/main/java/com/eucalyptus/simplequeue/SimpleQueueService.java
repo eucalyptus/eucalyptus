@@ -34,12 +34,14 @@ package com.eucalyptus.simplequeue;
 import com.amazonaws.util.BinaryUtils;
 import com.amazonaws.util.Md5Utils;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.type.LimitedType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -58,6 +60,7 @@ import com.eucalyptus.simplequeue.exceptions.InvalidAddressException;
 import com.eucalyptus.simplequeue.exceptions.InvalidAttributeNameException;
 import com.eucalyptus.simplequeue.exceptions.InvalidBatchEntryIdException;
 import com.eucalyptus.simplequeue.exceptions.InvalidParameterValueException;
+import com.eucalyptus.simplequeue.exceptions.LimitExceededException;
 import com.eucalyptus.simplequeue.exceptions.MissingParameterException;
 import com.eucalyptus.simplequeue.exceptions.QueueAlreadyExistsException;
 import com.eucalyptus.simplequeue.exceptions.QueueDoesNotExistException;
@@ -78,6 +81,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -183,7 +187,21 @@ public class SimpleQueueService {
         // TODO: maybe record arn or queue url
         Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(accountId, request.getQueueName());
         if (queue == null) {
-          queue = PersistenceFactory.getQueuePersistence().createQueue(accountId, request.getQueueName(), attributeMap);
+          Supplier<Queue> allocator = new Supplier<Queue>() {
+            @Override
+            public Queue get() {
+              try {
+                return PersistenceFactory.getQueuePersistence().createQueue(accountId, request.getQueueName(), attributeMap);
+              } catch (SimpleQueueException e) {
+                throw Exceptions.toUndeclared( e );
+              }
+            }
+          };
+          try {
+            queue = RestrictedTypes.allocateUnitlessResource(allocator);
+          } catch (AuthQuotaException e) {
+            throw new LimitExceededException(e.getMessage());
+          }
         } else {
           // make sure fields match
           Set<String> keysWeCareAbout = Sets.newHashSet(
