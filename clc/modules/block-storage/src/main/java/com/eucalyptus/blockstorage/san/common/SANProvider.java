@@ -171,7 +171,7 @@ public interface SANProvider {
    * Delete the specified volume on the underlying device
    * 
    * @param volumeName
-   * @param volumeIqn 
+   * @param volumeIqn
    * @return boolean result of the delete attempt
    */
   public boolean deleteVolume(String volumeName, String volumeIqn);
@@ -183,11 +183,10 @@ public interface SANProvider {
    * @param snapshotId - the CLC-designated name to give the snapshot.
    * @param snapshotPointId - if non-null, this specifies the snap point id to start the operation from rather than the source volume itself. This id
    *        is opaque.
-   * @param volumeIqn
    * @return A string iqn for the newly created snapshot where the string is of the form: <SAN iqn>,lunid example: iqn-xxxx,1
    * @throws EucalyptusCloudException
    */
-  public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId, String volumeIqn) throws EucalyptusCloudException;
+  public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
 
   /**
    * Delete a snapshot -- This is never used in SANManager.
@@ -195,7 +194,7 @@ public interface SANProvider {
    * @param volumeId
    * @param snapshotId
    * @param locallyCreated
-   * @param snapshotIqn 
+   * @param snapshotIqn
    * @return
    */
   public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated, String snapshotIqn);
@@ -302,7 +301,7 @@ public interface SANProvider {
    * Checks for the snapshot on the SAN backend and returns true or false accordingly
    * 
    * @param snapshotId
-   * @param snapshotIqn 
+   * @param snapshotIqn
    * @return True if the volume exists on the SAN and false if it does not
    * @throws EucalyptusCloudException
    */
@@ -312,7 +311,7 @@ public interface SANProvider {
    * Creates a snapshot point only. This does not do a transfer or ensure that the snapshot is fully independent from the source volume. This method
    * is intended to be very fast and can be called synchronously from the CLC request.
    * 
-   * @param parentVolumeIqn 
+   * @param parentVolumeIqn
    * @param snapshotId
    * 
    * @throws EucalyptusCloudException
@@ -369,4 +368,22 @@ public interface SANProvider {
    * @return A list of tasks that the provider needs to run periodically
    */
   public List<CheckerTask> getCheckers();
+
+  /**
+   * 
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException;
+
+  public StorageResource generateSnapshotDelta(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId, String prevSnapPointId)
+      throws EucalyptusCloudException;
+
+  public void cleanupSnapshotDelta(String snapshotId, StorageResource sr) throws EucalyptusCloudException;
+
+  public String completeSnapshotBaseRestoration(String snapshotId, String snapshotPointId, String snapshotIqn) throws EucalyptusCloudException;
+
+  public void restoreSnapshotDelta(String baseIqn, StorageResource sr) throws EucalyptusCloudException;
+
+  public void completeSnapshotDeltaRestoration(String snapshotId, String snapshotIqn) throws EucalyptusCloudException;
 }

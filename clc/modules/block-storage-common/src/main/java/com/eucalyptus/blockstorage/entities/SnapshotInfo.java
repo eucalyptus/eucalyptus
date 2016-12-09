@@ -65,29 +65,17 @@ package com.eucalyptus.blockstorage.entities;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Date;
-import java.util.List;
-import java.util.Map;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import com.eucalyptus.blockstorage.Storage;
+
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Maps;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -121,6 +109,12 @@ public class SnapshotInfo extends AbstractPersistent {
   private String snapshotLocation;
   @Column(name = "deletion_time")
   private Date deletionTime;
+
+  // TODO Write upgrade code for these two columns
+  @Column(name = "is_origin")
+  private Boolean isOrigin;
+  @Column(name = "previous_snapshot_id")
+  private String previousSnapshotId;
 
   public SnapshotInfo() {
     this.scName = StorageProperties.NAME;
@@ -225,6 +219,22 @@ public class SnapshotInfo extends AbstractPersistent {
 
   public void setDeletionTime(Date deletionTime) {
     this.deletionTime = deletionTime;
+  }
+
+  public Boolean getIsOrigin() {
+    return isOrigin;
+  }
+
+  public void setIsOrigin(Boolean isOrigin) {
+    this.isOrigin = isOrigin;
+  }
+
+  public String getPreviousSnapshotId() {
+    return previousSnapshotId;
+  }
+
+  public void setPreviousSnapshotId(String previousSnapshotId) {
+    this.previousSnapshotId = previousSnapshotId;
   }
 
   /**

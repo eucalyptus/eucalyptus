@@ -166,6 +166,23 @@ public class BlockStorageController implements BlockStorageService {
 
   static LogicalStorageManager blockManager;
 
+  private static Function<String, SnapshotInfo> SNAPSHOT_FAILED = new Function<String, SnapshotInfo>() {
+
+    @Override
+    public SnapshotInfo apply(String arg0) {
+      SnapshotInfo snap;
+      try {
+        snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+        snap.setStatus(StorageProperties.Status.failed.toString());
+        snap.setProgress("0");
+        return snap;
+      } catch (TransactionException | NoSuchElementException e) {
+        LOG.warn("Failed to retrieve snapshot entity from DB for " + arg0, e);
+      }
+      return null;
+    }
+  };
+
   // TODO: zhill, this can be added later for snapshot abort capabilities
   // static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
@@ -336,7 +353,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public UpdateStorageConfigurationResponseType UpdateStorageConfiguration( UpdateStorageConfigurationType request ) throws EucalyptusCloudException {
+  public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
     UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
     if (ComponentIds.lookup(Eucalyptus.class).name().equals(request.getEffectiveUserId()))
       throw new AccessDeniedException("Only admin can change walrus properties.");
@@ -359,7 +376,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public GetStorageConfigurationResponseType GetStorageConfiguration( GetStorageConfigurationType request ) throws EucalyptusCloudException {
+  public GetStorageConfigurationResponseType GetStorageConfiguration(GetStorageConfigurationType request) throws EucalyptusCloudException {
     GetStorageConfigurationResponseType reply = (GetStorageConfigurationResponseType) request.getReply();
     StorageProperties.updateName();
     if (ComponentIds.lookup(Eucalyptus.class).name().equals(request.getEffectiveUserId()))
@@ -373,7 +390,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public GetVolumeTokenResponseType GetVolumeToken( GetVolumeTokenType request ) throws EucalyptusCloudException {
+  public GetVolumeTokenResponseType GetVolumeToken(GetVolumeTokenType request) throws EucalyptusCloudException {
     GetVolumeTokenResponseType reply = (GetVolumeTokenResponseType) request.getReply();
     String volumeId = request.getVolumeId();
     LOG.info("Processing GetVolumeToken request for volume " + volumeId);
@@ -413,7 +430,7 @@ public class BlockStorageController implements BlockStorageService {
    * @throws EucalyptusCloudException
    */
   @Override
-  public UnexportVolumeResponseType UnexportVolume( UnexportVolumeType request ) throws EucalyptusCloudException {
+  public UnexportVolumeResponseType UnexportVolume(UnexportVolumeType request) throws EucalyptusCloudException {
     final long startTime = System.currentTimeMillis();
     UnexportVolumeResponseType reply = request.getReply();
     final String token = request.getToken();
@@ -497,7 +514,7 @@ public class BlockStorageController implements BlockStorageService {
    * @throws EucalyptusCloudException
    */
   @Override
-  public ExportVolumeResponseType ExportVolume( ExportVolumeType request ) throws EucalyptusCloudException {
+  public ExportVolumeResponseType ExportVolume(ExportVolumeType request) throws EucalyptusCloudException {
     final long startTime = System.currentTimeMillis();
     final ExportVolumeResponseType reply = (ExportVolumeResponseType) request.getReply();
     final String volumeId = request.getVolumeId();
@@ -605,7 +622,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public GetStorageVolumeResponseType GetStorageVolume( GetStorageVolumeType request ) throws EucalyptusCloudException {
+  public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
     GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
     if (!StorageProperties.enableStorage) {
       LOG.error("BlockStorage has been disabled. Please check your setup");
@@ -639,7 +656,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public DeleteStorageVolumeResponseType DeleteStorageVolume( DeleteStorageVolumeType request ) throws EucalyptusCloudException {
+  public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
     final long startTime = System.currentTimeMillis();
     DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
     if (!StorageProperties.enableStorage) {
@@ -702,9 +719,8 @@ public class BlockStorageController implements BlockStorageService {
       query.setReadOnly(true);
 
       // Only look for snaps that are not failed and not error
-      ImmutableSet<String> excludedStates =
-          ImmutableSet.of(StorageProperties.Status.failed.toString(), StorageProperties.Status.error.toString(),
-              StorageProperties.Status.deleted.toString());
+      ImmutableSet<String> excludedStates = ImmutableSet.of(StorageProperties.Status.failed.toString(), StorageProperties.Status.error.toString(),
+          StorageProperties.Status.deleted.toString(), StorageProperties.Status.deletedfromebs.toString());
 
       query.add(Restrictions.not(Restrictions.in("status", excludedStates)));
 
@@ -724,7 +740,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
+  public CreateStorageSnapshotResponseType CreateStorageSnapshot(CreateStorageSnapshotType request) throws EucalyptusCloudException {
     final long actionStart = System.currentTimeMillis();
     CreateStorageSnapshotResponseType reply = (CreateStorageSnapshotResponseType) request.getReply();
 
@@ -782,14 +798,13 @@ public class BlockStorageController implements BlockStorageService {
 
         SnapshotCreator snapshotter = null;
         SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-        Date startTime = new Date();
-        try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
+        try {
           snapshotInfo.setUserName(sourceVolumeInfo.getUserName());
           snapshotInfo.setVolumeId(volumeId);
-          snapshotInfo.setStartTime(startTime);
           snapshotInfo.setProgress("0");
           snapshotInfo.setSizeGb(sourceVolumeInfo.getSize());
           snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
+          snapshotInfo.setIsOrigin(Boolean.TRUE);
 
           /* Change to support sync snap consistency point set on CLC round-trip */
           /*
@@ -801,7 +816,12 @@ public class BlockStorageController implements BlockStorageService {
           String snapPointId = null;
           try {
             // This will be a no-op if the backend doesn't support it. Will return null.
-            snapPointId = blockManager.createSnapshotPoint(volumeId, snapshotId);
+            // TODO is it worth synchronizing snapshot point creation for a volume
+            synchronized (volumeId) {
+              snapPointId = blockManager.createSnapshotPoint(volumeId, snapshotId);
+              // Start time is the time of snapshot point creation
+              snapshotInfo.setStartTime(new Date());
+            }
             if (snapPointId == null) {
               LOG.debug("Synchronous snap point not supported for this backend. Cleanly skipped.");
             } else {
@@ -809,6 +829,15 @@ public class BlockStorageController implements BlockStorageService {
             }
             // Do a commit here because the snapshotter expects to find db entry.
             snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
+
+            // Persist the snapshot metadata to db
+            try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
+              Entities.persist(snapshotInfo);
+              tran.commit();
+            } catch (Exception e) {
+              LOG.warn("Unable to persist metadata for snapshot " + snapshotId, e);
+              throw e;
+            }
 
             Context ctx = null;
             try {
@@ -822,6 +851,7 @@ public class BlockStorageController implements BlockStorageService {
                 throw new EucalyptusCloudException("Channel closed, aborting snapshot.");
               }
             }
+
           } catch (EucalyptusCloudException e) {
             // If the snapshot was done but took too long then delete the snap and fail the op.
             try {
@@ -831,9 +861,6 @@ public class BlockStorageController implements BlockStorageService {
             }
             LOG.error("Snapshot " + snapshotId + " failed to create snap point successfully: " + e.getMessage());
             throw e;
-          } finally {
-            Entities.persist(snapshotInfo);
-            tran.commit();
           }
 
           /* Resume old code path and finish the snapshot process if already started */
@@ -842,14 +869,16 @@ public class BlockStorageController implements BlockStorageService {
 
           reply.setSnapshotId(snapshotId);
           reply.setVolumeId(volumeId);
-          reply.setStartTime(DateUtils.format(startTime.getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+          reply.setStartTime(DateUtils.format(snapshotInfo.getStartTime().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
           reply.setProgress(snapshotInfo.getProgress());
         } catch (EucalyptusCloudException cloudEx) {
           snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
+          markSnapshotFailed(snapshotId);
           LOG.error("Snapshot " + snapshotId + " creation failed with exception ", cloudEx);
           throw cloudEx;
         } catch (final Throwable e) {
           snapshotInfo.setStatus(StorageProperties.Status.failed.toString());
+          markSnapshotFailed(snapshotId);
           LOG.error("Snapshot " + snapshotId + " Error committing state update to failed", e);
           throw new EucalyptusCloudException("Snapshot " + snapshotId + " unexpected throwable exception caught", e);
         }
@@ -861,29 +890,7 @@ public class BlockStorageController implements BlockStorageService {
           } catch (Exception e) {
             LOG.warn("Failed to add creation task for " + snapshotId + " to asynchronous thread pool", e);
             // Mark the snapshot as failed
-            try {
-              Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
-
-                @Override
-                public SnapshotInfo apply(String arg0) {
-                  SnapshotInfo snap;
-                  try {
-                    snap = Entities.uniqueResult(new SnapshotInfo(arg0));
-                    snap.setStatus(StorageProperties.Status.failed.toString());
-                    snap.setProgress("0");
-                    return snap;
-                  } catch (TransactionException | NoSuchElementException e) {
-                    LOG.warn("Failed to retrieve DB entity for " + arg0, e);
-                  }
-                  return null;
-                }
-              };
-
-              Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
-            } catch (Exception e1) {
-              LOG.warn("Unable to update status for " + snapshotId + " after failure to add creation task to asynchronous thread pool", e);
-            }
-
+            markSnapshotFailed(snapshotId);
             throw new EucalyptusCloudException("Failed to add creation task for " + snapshotId + " to asynchronous thread pool", e);
           }
         }
@@ -891,11 +898,20 @@ public class BlockStorageController implements BlockStorageService {
     }
 
     return reply;
+
+  }
+
+  private void markSnapshotFailed(String snapshotId) {
+    try {
+      Entities.asTransaction(SnapshotInfo.class, SNAPSHOT_FAILED).apply(snapshotId);
+    } catch (Throwable t) {
+      LOG.warn("Unable to update status to failed for " + snapshotId, t);
+    }
   }
 
   // returns snapshots in progress or at the SC
   @Override
-  public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots( DescribeStorageSnapshotsType request ) throws EucalyptusCloudException {
+  public DescribeStorageSnapshotsResponseType DescribeStorageSnapshots(DescribeStorageSnapshotsType request) throws EucalyptusCloudException {
     DescribeStorageSnapshotsResponseType reply = (DescribeStorageSnapshotsResponseType) request.getReply();
     // checker.transferPendingSnapshots();
     List<String> snapshotSet = request.getSnapshotSet();
@@ -938,7 +954,7 @@ public class BlockStorageController implements BlockStorageService {
    * @throws EucalyptusCloudException
    */
   @Override
-  public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
+  public DeleteStorageSnapshotResponseType DeleteStorageSnapshot(DeleteStorageSnapshotType request) throws EucalyptusCloudException {
     final long startTime = System.currentTimeMillis();
     DeleteStorageSnapshotResponseType reply = (DeleteStorageSnapshotResponseType) request.getReply();
 
@@ -958,7 +974,7 @@ public class BlockStorageController implements BlockStorageService {
         snapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
         ThruputMetrics.startOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, startTime);
       } else if (status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString())
-          || status.equals(StorageProperties.Status.failed.toString())) {
+          || status.equals(StorageProperties.Status.deletedfromebs.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
         LOG.debug("Snapshot " + snapshotId + " already in deleting/deleted/failed. No-op for delete request.");
       } else {
         // snapshot is still in progress.
@@ -995,7 +1011,7 @@ public class BlockStorageController implements BlockStorageService {
    * return reply; }
    */
   @Override
-  public CreateStorageVolumeResponseType CreateStorageVolume( CreateStorageVolumeType request ) throws EucalyptusCloudException {
+  public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
     final long actionStart = System.currentTimeMillis();
     CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
@@ -1072,8 +1088,8 @@ public class BlockStorageController implements BlockStorageService {
     try {
       // create volume asynchronously
       VolumeCreator volumeCreator = new VolumeCreator(volumeId, "snapset", snapshotId, parentVolumeId, sizeAsInt, blockManager);
-      ThruputMetrics.startOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME,
-          volumeId, actionStart);
+      ThruputMetrics.startOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, volumeId,
+          actionStart);
       VolumeThreadPool.add(volumeCreator);
     } catch (Exception e) {
       LOG.warn("Failed to add creation task for " + volumeId + " to asynchronous thread pool", e);
@@ -1107,7 +1123,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public DescribeStorageVolumesResponseType DescribeStorageVolumes( DescribeStorageVolumesType request ) throws EucalyptusCloudException {
+  public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
     DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
 
     List<String> volumeSet = request.getVolumeSet();
@@ -1146,7 +1162,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public ConvertVolumesResponseType ConvertVolumes( ConvertVolumesType request ) throws EucalyptusCloudException {
+  public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
     ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
     String provider = request.getOriginalProvider();
     provider = "com.eucalyptus.storage." + provider;
@@ -1179,12 +1195,12 @@ public class BlockStorageController implements BlockStorageService {
    * @throws EucalyptusCloudException
    */
   @Override
-  public AttachStorageVolumeResponseType attachVolume( AttachStorageVolumeType request ) throws EucalyptusCloudException {
+  public AttachStorageVolumeResponseType attachVolume(AttachStorageVolumeType request) throws EucalyptusCloudException {
     throw new EucalyptusCloudException("Operation not supported");
   }
 
   @Override
-  public DetachStorageVolumeResponseType detachVolume( DetachStorageVolumeType request ) throws EucalyptusCloudException {
+  public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
     DetachStorageVolumeResponseType reply = request.getReply();
     String volumeId = request.getVolumeId();
     LOG.info("Processing DetachVolume request for volume " + volumeId);
@@ -1273,7 +1289,8 @@ public class BlockStorageController implements BlockStorageService {
   private StorageSnapshot convertSnapshotInfo(SnapshotInfo snapInfo) {
     StorageSnapshot snapshot = new StorageSnapshot();
     snapshot.setVolumeId(snapInfo.getVolumeId());
-    snapshot.setStatus(snapInfo.getStatus());
+    snapshot.setStatus(StorageProperties.Status.deletedfromebs.toString().equals(snapInfo.getStatus()) ? StorageProperties.Status.deleted.toString()
+        : snapInfo.getStatus());
     snapshot.setSnapshotId(snapInfo.getSnapshotId());
     String progress = snapInfo.getProgress();
     progress = progress != null ? progress + "%" : progress;
@@ -1283,7 +1300,7 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
-  public CloneVolumeResponseType CloneVolume( CloneVolumeType request ) throws EucalyptusCloudException {
+  public CloneVolumeResponseType CloneVolume(CloneVolumeType request) throws EucalyptusCloudException {
     CloneVolumeResponseType reply = request.getReply();
     CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
     createStorageVolume.setParentVolumeId(request.getVolumeId());

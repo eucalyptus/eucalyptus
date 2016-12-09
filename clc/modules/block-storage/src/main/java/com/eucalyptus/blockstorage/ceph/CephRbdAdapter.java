@@ -160,4 +160,6 @@ public interface CephRbdAdapter {
    * @return
    */
   public List<String> listPool(String poolName);
+
+  public String deleteAllSnapshots(String imageName, String poolName, String snapName);
 }

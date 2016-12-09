@@ -27,6 +27,7 @@ import java.util.Random;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
@@ -89,10 +90,8 @@ public class NoOpStorageManager implements LogicalStorageManager {
   }
 
   @Override
-  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
-      throws EucalyptusCloudException {
+  public void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
-    return null;
   }
 
   @Override
@@ -162,7 +161,7 @@ public class NoOpStorageManager implements LogicalStorageManager {
   }
 
   @Override
-  public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
     return null;
   }
@@ -279,6 +278,49 @@ public class NoOpStorageManager implements LogicalStorageManager {
   public List<CheckerTask> getCheckers() {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  @Override
+  public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId,
+      String prevSnapPointId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String parentId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    
   }
 
 }

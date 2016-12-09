@@ -62,17 +62,24 @@
 
 package com.eucalyptus.blockstorage.async;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.criterion.Example;
+import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer;
 import com.eucalyptus.blockstorage.SnapshotProgressCallback;
 import com.eucalyptus.blockstorage.SnapshotTransfer;
 import com.eucalyptus.blockstorage.StorageResource;
+import com.eucalyptus.blockstorage.StorageResourceWithCallback;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
@@ -80,6 +87,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
@@ -116,7 +124,6 @@ public class SnapshotCreator implements Runnable {
     EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
     try {
       Boolean shouldTransferSnapshots = true;
-      StorageResource snapshotResource = null;
       SnapshotTransfer snapshotTransfer = null;
       String bucket = null;
       SnapshotProgressCallback progressCallback = null;
@@ -146,7 +153,7 @@ public class SnapshotCreator implements Runnable {
         // Check to ensure that a failed/cancellation has not be set
         if (!isSnapshotMarkedFailed(snapshotId)) {
           progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
-          snapshotResource = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
+          blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId);
           progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
         } else {
           throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
@@ -156,39 +163,99 @@ public class SnapshotCreator implements Runnable {
       }
 
       Future<String> uploadFuture = null;
-      if (shouldTransferSnapshots) {
-        if (snapshotResource == null) {
-          throw new EucalyptusCloudException("Snapshot file unknown. Cannot transfer snapshot");
-        }
+      if (!isSnapshotMarkedFailed(snapshotId)) {
+        if (shouldTransferSnapshots) {
+          // TODO move this check down further
 
-        // Update snapshot location in database
-        String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
-        Entities.asTransaction(SnapshotInfo.class, new Function<String, SnapshotInfo>() {
+          // generate snapshot location
+          String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
 
-          @Override
-          public SnapshotInfo apply(String arg0) {
-            SnapshotInfo snapshotInfo = null;
-            try {
-              snapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
-              snapshotInfo.setSnapshotLocation(arg0);
-            } catch (TransactionException | NoSuchElementException e) {
-              LOG.debug("Failed to update upload location for snapshot " + snapshotId + ". Skipping it and moving on", e);
+          SnapshotInfo prevSnap = null;
+          SnapshotInfo currSnap = null;
+
+          // gather what needs to be uploaded
+          try {
+            // Check if backend supports snap deltas
+            if (blockManager.supportsIncrementalSnapshots()) { // backend supports delta, evaluate if a delta can be uploaded
+              LOG.debug("EBS backend supports incremental snapshots");
+
+              int attempts = 0;
+              do {
+                attempts++;
+                prevSnap = fetchPreviousSnapshot();
+
+                if (prevSnap != null) {
+                  // Acquire a semaphore to previous snapshot before updating the metadata for current snapshot
+                  EucaSemaphore prevSnapSemaphore = EucaSemaphoreDirectory.getSolitarySemaphore(prevSnap.getSnapshotId());
+                  try {
+                    try {
+                      prevSnapSemaphore.acquire();
+                    } catch (InterruptedException ex) {
+                      LOG.warn("Cannot update metadata for snapshot " + snapshotId + " due to an error acquiring semaphore for a previous snapshot "
+                          + prevSnap.getSnapshotId() + ". May retry again later");
+                      continue;
+                    }
+                    currSnap = updateSnapshotInfo(prevSnap.getSnapshotId(), snapshotLocation);
+                  } finally {
+                    prevSnapSemaphore.release();
+                  }
+                } else {
+                  currSnap = updateSnapshotInfo(snapshotLocation);
+                }
+              } while (currSnap == null && attempts < 10);
+
+            } else { // backend does not support deltas, upload entire snapshot
+              LOG.debug("EBS backend does not support incremental snapshots");
+              currSnap = updateSnapshotInfo(snapshotLocation);
             }
-            return snapshotInfo;
-          }
-        }).apply(snapshotLocation);
 
-        if (!isSnapshotMarkedFailed(snapshotId)) {
+            if (currSnap == null) {
+              LOG.warn("Failed to update metadata for snapshot " + this.snapshotId);
+              throw new EucalyptusCloudException("Failed to update metadata for snapshot " + this.snapshotId);
+            }
+
+          } catch (EucalyptusCloudException e) {
+            throw e;
+          } catch (Exception e) {
+            LOG.warn("Unable to evaluate snapshot location and upload specifics, failing snapshot " + this.snapshotId, e);
+            throw new EucalyptusCloudException("Unable to evaluate snapshot location and upload specifics, failing snapshot " + this.snapshotId, e);
+          }
+
+          StorageResourceWithCallback srwc = null;
+          StorageResource snapshotResource = null;
+
+          if (prevSnap != null) {
+            LOG.debug("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
+            srwc =
+                blockManager.prepIncrementalSnapshotForUpload(volumeId, snapshotId, snapPointId, prevSnap.getSnapshotId(), prevSnap.getSnapPointId());
+            snapshotResource = srwc.getSr();
+          } else {
+            LOG.debug("Upload entire content of snapshot " + this.snapshotId);
+            snapshotResource = blockManager.prepSnapshotForUpload(volumeId, snapshotId, snapPointId);
+          }
+
+          if (snapshotResource == null) {
+            LOG.warn("Unable to upload snapshot " + this.snapshotId + " due to invalid source");
+            throw new EucalyptusCloudException("Unable to upload snapshot " + this.snapshotId + " due to invalid source");
+          }
+
           try {
             uploadFuture = snapshotTransfer.upload(snapshotResource, progressCallback);
           } catch (Exception e) {
             throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to objectstorage", e);
           }
+
+          if (srwc != null && srwc.getCallback() != null) {
+            blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
+          }
+
         } else {
-          throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
+          // Snapshot does not have to be transferred
+          LOG.debug("Snapshot uploads are disabled, skipping upload step for " + this.snapshotId);
         }
       } else {
-        // Snapshot does not have to be transferred
+        LOG.warn("Snapshot " + this.snapshotId + " marked as failed, aborting upload process");
+        throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed, aborting upload process");
       }
 
       // finish the snapshot on backend - sever iscsi connection, disconnect and wait for it to complete
@@ -251,7 +318,6 @@ public class SnapshotCreator implements Runnable {
           snap = Entities.uniqueResult(new SnapshotInfo(arg0));
           snap.setStatus(StorageProperties.Status.available.toString());
           snap.setProgress("100");
-          snap.setSnapPointId(null);
           return snap;
         } catch (TransactionException | NoSuchElementException e) {
           LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
@@ -283,5 +349,85 @@ public class SnapshotCreator implements Runnable {
     };
 
     Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
+  }
+
+  private SnapshotInfo fetchPreviousSnapshot() throws Exception {
+
+    SnapshotInfo prevSnap = null;
+    SnapshotInfo currSnap = Transactions.find(new SnapshotInfo(snapshotId));
+
+    try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
+      SnapshotInfo previousSnapSearch = new SnapshotInfo();
+      previousSnapSearch.setVolumeId(currSnap.getVolumeId());
+      Criteria search = Entities.createCriteria(SnapshotInfo.class);
+      search.add(Example.create(previousSnapSearch).enableLike(MatchMode.EXACT));
+      search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_GENERATION_CRITERION, Restrictions.lt("startTime", currSnap.getStartTime())));
+      search.addOrder(Order.desc("startTime"));
+      search.setReadOnly(true);
+      search.setMaxResults(1);
+
+      List<SnapshotInfo> previousSnaps = (List<SnapshotInfo>) search.list();
+      tr.commit();
+
+      if (previousSnaps != null && previousSnaps.size() > 0 && (prevSnap = previousSnaps.get(0)) != null) {
+        if (prevSnap.getSnapshotLocation() != null && prevSnap.getIsOrigin() != null) { // check origin to validate that snapshot was uploaded in its
+                                                                                        // entirety at least once post 4.4
+          LOG.debug(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
+          return prevSnap;
+        } else {
+          LOG.debug(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
+        }
+      } else {
+        LOG.debug(this.volumeId + " has no prior active snapshots in the system");
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to look up previous snapshots for " + this.volumeId, e); // return null on exception, forces entire snapshot to get uploaded
+    }
+
+    return null;
+  }
+
+  private SnapshotInfo updateSnapshotInfo(final String prevSnapId, final String snapshotLocation) throws Exception {
+    return Entities.asTransaction(SnapshotInfo.class, new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo currSnap = null;
+        SnapshotInfo prevSnap = null;
+        try {
+          prevSnap = Entities.uniqueResult(new SnapshotInfo(prevSnapId));
+          if (!StorageProperties.DELTA_GENERATION_STATE_EXCLUSION.contains(prevSnap.getStatus())) {
+            currSnap = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+            currSnap.setSnapshotLocation(snapshotLocation);
+            currSnap.setPreviousSnapshotId(prevSnapId);
+            return currSnap;
+          } else {
+            LOG.warn("Snapshot " + prevSnapId + " has already been marked as " + prevSnap.getStatus()
+                + ". It cannot be used as the source for incremental snapshot upload of " + snapshotId);
+          }
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.debug("Failed to update snapshot upload location and previous snapshot ID for snapshot " + snapshotId, e);
+        }
+        return null;
+      }
+    }).apply(prevSnapId);
+  }
+
+  private SnapshotInfo updateSnapshotInfo(final String snapshotLocation) throws Exception {
+    return Entities.asTransaction(SnapshotInfo.class, new Function<String, SnapshotInfo>() {
+
+      @Override
+      public SnapshotInfo apply(String arg0) {
+        SnapshotInfo currSnap = null;
+        try {
+          currSnap = Entities.uniqueResult(new SnapshotInfo(snapshotId));
+          currSnap.setSnapshotLocation(snapshotLocation);
+          return currSnap;
+        } catch (TransactionException | NoSuchElementException e) {
+          LOG.debug("Failed to update snapshot upload location for snapshot " + snapshotId, e);
+        }
+        return null;
+      }
+    }).apply(this.snapshotId);
   }
 }
