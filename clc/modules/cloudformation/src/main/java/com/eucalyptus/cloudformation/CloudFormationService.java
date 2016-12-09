@@ -26,6 +26,7 @@ import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutio
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
@@ -454,7 +455,11 @@ public class CloudFormationService {
         }
       };
 
-      final StackEntity stackEntity = RestrictedTypes.allocateUnitlessResource(allocator);
+      try {
+        final StackEntity stackEntity = RestrictedTypes.allocateUnitlessResource(allocator);
+      } catch (AuthQuotaException e) {
+        throw new LimitExceededException(e.getMessage());
+      }
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);

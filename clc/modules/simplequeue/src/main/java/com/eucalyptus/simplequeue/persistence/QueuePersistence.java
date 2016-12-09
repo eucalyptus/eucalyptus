@@ -35,4 +35,6 @@ public interface QueuePersistence {
   Collection<Queue> listActiveQueues(String partitionToken);
 
   Collection<String> getPartitionTokens();
+
+  long countQueues(String accountNumber);
 }
