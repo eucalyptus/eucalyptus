@@ -30,6 +30,7 @@ import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyResponseType;
 import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyType;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -43,14 +44,17 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -64,6 +68,11 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
 
   public AWSIAMRoleResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    // In this case, update with replacement has a precondition check before essentially the same steps as "create".  We add both.
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   @Override
@@ -79,6 +88,9 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getRoleName(), otherAction.properties.getRoleName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -88,7 +100,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String roleName = action.getDefaultPhysicalResourceId();
+        String roleName = action.properties.getRoleName() != null ? action.properties.getRoleName() : action.getDefaultPhysicalResourceId();
         CreateRoleType createRoleType = MessageHelper.createMessage(CreateRoleType.class, action.info.getEffectiveUserId());
         createRoleType.setRoleName(roleName);
         createRoleType.setPath(action.properties.getPath());
@@ -238,6 +250,26 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
     @Override
     public Integer getTimeout() {
       return null;
+    }
+  }
+
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_ROLE_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMRoleResourceAction oldAction = (AWSIAMRoleResourceAction) oldResourceAction;
+        AWSIAMRoleResourceAction newAction = (AWSIAMRoleResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getRoleName(), newAction.properties.getRoleName()) && oldAction.properties.getRoleName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getRoleName()+" and update the stack again.");
+        }
+        return newAction;
+      }
+
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
     }
   }
 
