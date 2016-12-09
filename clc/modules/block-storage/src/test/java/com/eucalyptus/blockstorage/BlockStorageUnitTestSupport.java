@@ -49,6 +49,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
@@ -348,7 +349,8 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+      public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+          throws EucalyptusCloudException {
         return null;
       }
 
@@ -453,8 +455,8 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public StorageResource prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId,
-          String prevSnapPointId) throws EucalyptusCloudException {
+      public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId,
+          String prevSnapshotId, String prevSnapPointId) throws EucalyptusCloudException {
         return null;
       }
 
@@ -462,6 +464,24 @@ public class BlockStorageUnitTestSupport {
       public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException {
         return null;
       }
+
+      @Override
+      public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String snapshotPointId)
+          throws EucalyptusCloudException {
+        return null;
+      }
+
+      @Override
+      public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {}
+
+      @Override
+      public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {}
+
+      @Override
+      public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException {
+        return null;
+      }
+
     };
   }
 
