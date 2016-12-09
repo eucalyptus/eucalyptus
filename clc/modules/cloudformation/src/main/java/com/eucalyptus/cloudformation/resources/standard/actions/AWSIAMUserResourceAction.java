@@ -44,6 +44,7 @@ import com.eucalyptus.auth.euare.UpdateLoginProfileType;
 import com.eucalyptus.auth.euare.UpdateUserResponseType;
 import com.eucalyptus.auth.euare.UpdateUserType;
 import com.eucalyptus.auth.euare.UserType;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -57,6 +58,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
@@ -67,11 +69,13 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -85,6 +89,11 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
 
   public AWSIAMUserResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    // In this case, update with replacement has a precondition check before essentially the same steps as "create".  We add both.
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   private static final String DEFAULT_PATH = "/";
@@ -104,6 +113,9 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getUserName(), otherAction.properties.getUserName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -113,7 +125,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserResourceAction action = (AWSIAMUserResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String userName = action.getDefaultPhysicalResourceId();
+        String userName = action.properties.getUserName() != null ? action.properties.getUserName() : action.getDefaultPhysicalResourceId();
         CreateUserType createUserType = MessageHelper.createMessage(CreateUserType.class, action.info.getEffectiveUserId());
         createUserType.setUserName(userName);
         createUserType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
@@ -411,8 +423,25 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
     }
   }
 
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_USER_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getUserName(), newAction.properties.getUserName()) && oldAction.properties.getUserName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getUserName()+" and update the stack again.");
+        }
+        return newAction;
+      }
 
-
+      @Nullable
+      @Override
+      public Integer getTimeout() {
+        return null;
+      }
+    }
+  }
 
 }
 

@@ -333,9 +333,18 @@ public class CloudFormationService {
       pseudoParameterValues.setRegion(getRegion());
       final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        capabilities.addAll(request.getCapabilities().getMember());
+        for (String capability: request.getCapabilities().getMember()) {
+          TemplateParser.Capabilities capabilityEnum = null;
+          try {
+            capabilityEnum = TemplateParser.Capabilities.valueOf(capability);
+          } catch (Exception ex) {
+          }
+          if (capabilityEnum == null) {
+            throw new ValidationErrorException("Capability " + capability + " is not a valid capability.  Valid values are " + Lists.newArrayList(TemplateParser.Capabilities.values()));
+          }
+          capabilities.add(capability);
+        }
       }
-
 
       if (templateBody != null) {
         if (templateBody.getBytes().length > Limits.REQUEST_TEMPLATE_BODY_MAX_LENGTH_BYTES) {
@@ -1172,7 +1181,17 @@ public class CloudFormationService {
 
       final ArrayList<String> nextCapabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        nextCapabilities.addAll(request.getCapabilities().getMember());
+        for (String nextCapability: request.getCapabilities().getMember()) {
+          TemplateParser.Capabilities nextCapabilityEnum = null;
+          try {
+            nextCapabilityEnum = TemplateParser.Capabilities.valueOf(nextCapability);
+          } catch (Exception ex) {
+          }
+          if (nextCapabilityEnum == null) {
+            throw new ValidationErrorException("Capability " + nextCapability + " is not a valid capability.  Valid values are " + Lists.newArrayList(TemplateParser.Capabilities.values()));
+          }
+          nextCapabilities.add(nextCapability);
+        }
       }
 
       final String nextStackPolicyBody = request.getStackPolicyBody();

@@ -601,6 +601,8 @@ public class AWSIAMAccessKeyProperties implements ResourceProperties {
 @ToString(includeNames=true)
 public class AWSIAMGroupProperties implements ResourceProperties {
   @Property
+  String groupName;
+  @Property
   String path;
   @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
@@ -641,6 +643,8 @@ public class AWSIAMRoleProperties implements ResourceProperties {
   String path;
   @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
+  @Property
+  String roleName;
 }
 
 @ToString(includeNames=true)
@@ -653,6 +657,8 @@ public class AWSIAMUserProperties implements ResourceProperties {
   LoginProfile loginProfile;
   @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
+  @Property
+  String userName;
 }
 
 @ToString(includeNames=true)

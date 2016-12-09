@@ -55,6 +55,11 @@ public class TemplateParser {
   public TemplateParser() {
   }
 
+  public enum Capabilities {
+    CAPABILITY_IAM,
+    CAPABILITY_NAMED_IAM
+  }
+
   private enum TemplateSection {
     Metadata,
     AWSTemplateFormatVersion,
@@ -137,12 +142,25 @@ public class TemplateParser {
     ParameterParser.parseParameters(template, templateJsonNode, userParameters, false);
     parseConditions(template, templateJsonNode, false, effectiveUserId);
     parseResources(template, templateJsonNode, false);
-    List<String> requiredCapabilities = Lists.newArrayList();
-    for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
-      if (resourceInfo.getRequiredCapabilities() != null) {
-        requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
+
+    Map<String, JsonNode> resourcePropertyMap = createResourcePropertiesMap(templateJsonNode);
+    Set<String> requiredCapabilities = Sets.newHashSet();
+
+    capabilities = addIAMCapabilityIfNamed(capabilities);
+
+    for (Map.Entry<String, ResourceInfo> resourceInfoEntry: template.getResourceInfoMap().entrySet()) {
+      String resourceName = resourceInfoEntry.getKey();
+      ResourceInfo resourceInfo = resourceInfoEntry.getValue();
+      JsonNode resourcePropertiesJson = resourcePropertyMap.get(resourceName);
+      String resourceType = resourceInfo.getType();
+      Collection resourceRequiredCapabilities = resourceInfo.getRequiredCapabilities(resourcePropertiesJson);
+      if (resourceRequiredCapabilities != null && !resourceRequiredCapabilities.isEmpty()) {
+        requiredCapabilities.addAll(resourceRequiredCapabilities);
       }
     }
+
+    requiredCapabilities = consolidateIAMCapabilities(requiredCapabilities);
+
     Set<String> missingRequiredCapabilities = Sets.newLinkedHashSet();
     if (!requiredCapabilities.isEmpty()) {
       for (String requiredCapability:requiredCapabilities) {
@@ -156,6 +174,19 @@ public class TemplateParser {
     }
     parseOutputs(template, templateJsonNode);
     return template;
+  }
+
+  private List<String> addIAMCapabilityIfNamed(List<String> capabilities) {
+    List<String> newCapabilities = Lists.newArrayList();
+    if (capabilities != null) {
+      newCapabilities.addAll(capabilities);
+    }
+    // CAPABILITY_NAMED_IAM also gives CAPABILITY_IAM capability
+    if (newCapabilities.contains(Capabilities.CAPABILITY_NAMED_IAM.toString()) &&
+      !newCapabilities.contains(Capabilities.CAPABILITY_IAM.toString())) {
+      newCapabilities.add(Capabilities.CAPABILITY_IAM.toString());
+    }
+    return newCapabilities;
   }
 
   private void parseMetadata(Template template, JsonNode templateJsonNode) throws CloudFormationException {
@@ -214,14 +245,24 @@ public class TemplateParser {
     Set<String> capabilitiesResourceTypes = Sets.newLinkedHashSet();
     Set<String> requiredCapabilities = Sets.newLinkedHashSet();
     Set<String> resourceTypes = Sets.newLinkedHashSet();
-    for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
+    Map<String, JsonNode> resourcePropertyMap = createResourcePropertiesMap(templateJsonNode);
+
+
+    for (Map.Entry<String, ResourceInfo> resourceInfoEntry: template.getResourceInfoMap().entrySet()) {
+      String resourceName = resourceInfoEntry.getKey();
+      ResourceInfo resourceInfo = resourceInfoEntry.getValue();
+      JsonNode resourcePropertiesJson = resourcePropertyMap.get(resourceName);
       String resourceType = resourceInfo.getType();
       resourceTypes.add(resourceType);
-      if (resourceInfo.getRequiredCapabilities() != null && !resourceInfo.getRequiredCapabilities().isEmpty()) {
-        requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
+      Collection resourceRequiredCapabilities = resourceInfo.getRequiredCapabilities(resourcePropertiesJson);
+       if (resourceRequiredCapabilities != null && !resourceRequiredCapabilities.isEmpty()) {
+        requiredCapabilities.addAll(resourceRequiredCapabilities);
         capabilitiesResourceTypes.add(resourceType);
       }
     }
+
+    requiredCapabilities = consolidateIAMCapabilities(requiredCapabilities);
+
     GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
     getTemplateSummaryResult.setDescription(template.getDescription());
     getTemplateSummaryResult.setCapabilities(new ResourceList());
@@ -237,6 +278,27 @@ public class TemplateParser {
     return getTemplateSummaryResult;
   }
 
+  private Set<String> consolidateIAMCapabilities(Set<String> capabilities) {
+    Set<String> newCapabilities = Sets.newHashSet();
+    if (capabilities != null) {
+      newCapabilities.addAll(capabilities);
+    }
+    // Hack: CAPABILITY_NAMED_IAM is a stronger condition than CAPABILITY_IAM, so remove the latter requirement if
+    // the former is found
+    if (newCapabilities.contains(Capabilities.CAPABILITY_NAMED_IAM.toString())) {
+      newCapabilities.remove(Capabilities.CAPABILITY_IAM.toString());
+    }
+    return newCapabilities;
+  }
+
+  private Map<String, JsonNode> createResourcePropertiesMap(JsonNode templateJsonNode) throws CloudFormationException {
+    Map<String, JsonNode> map = Maps.newHashMap();
+    JsonNode resourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
+    for (String name: Lists.newArrayList(resourcesJsonNode.fieldNames())) {
+      map.put(name, resourcesJsonNode.get(name).get(ResourceKey.Properties.toString()));
+    }
+    return map;
+  }
 
 
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
