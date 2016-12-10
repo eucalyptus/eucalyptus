@@ -325,4 +325,19 @@ public class CassandraQueuePersistence implements QueuePersistence {
       return Collections.EMPTY_LIST;
     }
   }
+
+  @Override
+  public long countQueues(String accountNumber) {
+    Session session = CassandraSessionManager.getSession();
+    Statement statement = new SimpleStatement(
+      "SELECT COUNT(*) FROM queues WHERE account_id = ?",
+      accountNumber
+    );
+    Iterator<Row> rowIter = session.execute(statement).iterator();
+    if (rowIter.hasNext()) {
+      Row row = rowIter.next();
+      return row.getLong(0);
+    }
+    return 0L;
+  }
 }
