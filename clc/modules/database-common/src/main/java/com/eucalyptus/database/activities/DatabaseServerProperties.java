@@ -39,14 +39,13 @@ import com.eucalyptus.bootstrap.DatabaseInfo;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Volume;
-import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -118,16 +117,16 @@ public class DatabaseServerProperties {
       + "configuration and start up", readonly = false, type = ConfigurableFieldType.KEYVALUE)
   public static String INIT_SCRIPT = null;
 
-  @Provides(Reporting.class)
-  @RunDuring(Bootstrap.Stage.Final)
-  @DependsLocal(Reporting.class)
-  public static class ReportingPropertyBootstrapper extends
-      DatabaseServerPropertyBootstrapper {
-  }
-
   @Provides(CloudWatchBackend.class)
   @RunDuring(Bootstrap.Stage.Final)
   @DependsLocal(CloudWatchBackend.class)
+  public static class CloudWatchBackendPropertyBootstrapper extends
+      DatabaseServerPropertyBootstrapper {
+  }
+
+  @Provides(CloudWatch.class)
+  @RunDuring(Bootstrap.Stage.Final)
+  @DependsLocal(CloudWatch.class)
   public static class CloudWatchPropertyBootstrapper extends
       DatabaseServerPropertyBootstrapper {
   }
@@ -402,7 +401,7 @@ public class DatabaseServerProperties {
       if (!(Bootstrap.isOperational() && Topology
           .isEnabledLocally(Eucalyptus.class)))
         return;
-      if (Topology.isEnabled(Reporting.class))
+      if (Topology.isEnabled(CloudWatchBackend.class))
         return;
 
       if (lastChecked == null) {

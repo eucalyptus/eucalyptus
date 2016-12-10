@@ -146,6 +146,6 @@ PersistenceContexts.listRemotable( ).each { String context_name ->
   try {
     PersistenceContexts.registerPersistenceContext( config )
   } catch( Exception t ) {
-    t.printStackTrace();
+    LOG.error( "Error registering persistence context ${context_name}", t )
   }
 }
