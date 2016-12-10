@@ -36,7 +36,11 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
+
+import java.util.List;
 
 /**
  * Created by ethomas on 11/22/16.
@@ -59,7 +63,11 @@ public class CassandraSessionManager {
       cluster = null;
     }
     LOG.info("Trying to connect to the cluster " + contactPoint);
-    cluster = Cluster.builder().addContactPoint(contactPoint).build();
+    List<String> contactPoints = Lists.newArrayList();
+    for (String s: Splitter.on(",").omitEmptyStrings().split(contactPoint)) {
+      contactPoints.add(s);
+    }
+    cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
     session = cluster.connect();
 
     // create new keyspace/tables (should not do here)  TODO: move
