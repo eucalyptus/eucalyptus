@@ -110,7 +110,7 @@ public class SnapshotInfo extends AbstractPersistent {
   @Column(name = "deletion_time")
   private Date deletionTime;
 
-  // TODO Write upgrade code for these two columns
+  // no update code necessary for these two newly added columns in 4.4
   @Column(name = "is_origin")
   private Boolean isOrigin;
   @Column(name = "previous_snapshot_id")

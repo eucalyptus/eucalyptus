@@ -404,23 +404,16 @@ public class CephRbdProvider implements SANProvider {
       // volumeIqn is of the form pool/image, get the pool information
       CanonicalRbdObject vol = CanonicalRbdObject.parse(volumeIqn);
       if (vol != null && !Strings.isNullOrEmpty(vol.getPool())) {
-        if (accessiblePools.contains(vol.getPool())) {
-          return rbdService.listPool(vol.getPool()).contains(volumeId);
-        } else {
-          LOG.warn(vol.getPool() + " is not accesible to this az. List of accessible pools: " + accessiblePools);
-          return false;
-        }
+        return rbdService.listPool(vol.getPool()).contains(volumeId);
       } else {
-        String pool = null;
-        if ((pool = rbdService.getImagePool(volumeId)) != null && accessiblePools.contains(pool)) {
+        if (null != rbdService.getImagePool(volumeId)) {
           return true;
         } else {
-          LOG.warn("Image belongs to " + pool + " which is not accesible to this az. List of accessible pools: " + accessiblePools);
           return false;
         }
       }
     } catch (Exception e) {
-      LOG.debug("Caught error in check for " + volumeId, e);
+      LOG.debug("Failed to find " + volumeId + ", considering volume non-existent or inaccessible to this az", e);
       return false;
     }
   }
@@ -563,7 +556,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void cleanupSnapshotDelta(String snapshotId, StorageResource sr) throws EucalyptusCloudException {
-    LOG.debug("Clean up post delta generation for " + snapshotId);
+    LOG.debug("Cleaning up snapshot delta for snapshotId=" + snapshotId);
     if (sr != null && !Strings.isNullOrEmpty(sr.getPath())) {
       try {
         String[] cmd = new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "rm", "-f", sr.getPath()};
@@ -633,7 +626,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void completeSnapshotDeltaRestoration(String snapshotId, String snapshotIqn) throws EucalyptusCloudException {
-    LOG.debug("Completing delta restore process and configuring expected snapshot state for " + snapshotId);
+    LOG.debug("Cleaning up all existing rbd snapshots and creating a fresh new one, snapshotId=" + snapshotId + ", snapshotIqn=" + snapshotIqn);
 
     // snapshotIqn is of the form pool/image, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotIqn);

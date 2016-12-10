@@ -199,12 +199,14 @@ public class VolumeCreator implements Runnable {
                     List<SnapshotInfo> nonDeltas = null;
                     SnapshotInfo firstNonDelta = null;
 
+                    // Gather the checkpoint and all deltas required to restore the snapshot
                     try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
                       SnapshotInfo searcher = new SnapshotInfo(null);
                       searcher.setVolumeId(sourceSnap.getVolumeId());
                       searcher.setScName(sourceSnap.getScName());
                       searcher.setIsOrigin(Boolean.TRUE);
 
+                      // Query for the latest full checkpoint
                       Criteria nonDeltaCriteria = Entities.createCriteria(SnapshotInfo.class);
                       nonDeltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
                       nonDeltaCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION,
@@ -224,11 +226,12 @@ public class VolumeCreator implements Runnable {
                             "Unable to lookup metadata for last full/non-delta snapshot taken on volume " + sourceSnap.getVolumeId());
                       }
 
+                      // Query for all deltas between the latest checkpoint and the current snap
                       Criteria deltaCriteria = Entities.createCriteria(SnapshotInfo.class);
                       deltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
-                      deltaCriteria.add(
-                          Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.gt("startTime", firstNonDelta.getStartTime()),
-                              Restrictions.le("startTime", sourceSnap.getStartTime()), Restrictions.isNotNull("previousSnapshotId")));
+                      deltaCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION,
+                          Restrictions.gt("startTime", firstNonDelta.getStartTime()), Restrictions.le("startTime", sourceSnap.getStartTime()),
+                          Restrictions.isNotNull("previousSnapshotId")));
                       deltaCriteria.addOrder(Order.asc("startTime"));
                       deltaCriteria.setReadOnly(true);
                       deltaCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
@@ -549,6 +552,8 @@ public class VolumeCreator implements Runnable {
   }
 
   private void downloadAndRestoreBase(SnapshotInfo snap) throws Exception {
+    LOG.debug("Create base container for " + snapshotId + " and restore it with " + snap.getSnapshotId());
+
     String bucket = null;
     String key = null;
 
@@ -598,6 +603,8 @@ public class VolumeCreator implements Runnable {
   }
 
   private void downloadAndRestoreDelta(SnapshotInfo snap, SnapshotInfo prevSnap) throws Exception {
+    LOG.debug("Download " + snap.getSnapshotId() + " (delta from " + prevSnap.getSnapshotId() + ") and restore it on " + snapshotId);
+
     String bucket = null;
     String key = null;
 

@@ -117,6 +117,7 @@ public class StorageInfo extends AbstractPersistent {
   private static final Integer MIN_RESOURCE_EXPIRATION_TIME = 10;// minutes
   private static final String DEFAULT_MAX_CONCURRENT_VOLUMES = "10";
   private static final String DEFAULT_MAX_CONCURRENT_SNAPSHOTS = "3";
+  private static final String DEFAULT_MAX_SNAP_DELTAS = "0";
 
   @Transient
   private static Logger LOG = Logger.getLogger(StorageInfo.class);
@@ -193,6 +194,12 @@ public class StorageInfo extends AbstractPersistent {
       displayName = "Maximum Concurrent Snapshots", initial = DEFAULT_MAX_CONCURRENT_SNAPSHOTS, changeListener = PositiveIntegerChangeListener.class)
   @Column(name = "max_concurrent_snapshots")
   private Integer maxConcurrentSnapshots;
+
+  @ConfigurableField(
+      description = "Maximum number of snapshots deltas allowed before triggering a complete upload of the snapshot content for a given volume",
+      displayName = "Maximum Snapshot Deltas", initial = DEFAULT_MAX_SNAP_DELTAS, changeListener = NonNegativeIntegerChangeListener.class)
+  @Column(name = "max_snapshot_deltas")
+  private Integer maxSnapshotDeltas;
 
   public StorageInfo() {
     this.name = StorageProperties.NAME;
@@ -322,6 +329,14 @@ public class StorageInfo extends AbstractPersistent {
     this.maxConcurrentSnapshots = maxConcurrentSnapshotsProcessed;
   }
 
+  public Integer getMaxSnapshotDeltas() {
+    return maxSnapshotDeltas;
+  }
+
+  public void setMaxSnapshotDeltas(Integer maxSnapshotDeltas) {
+    this.maxSnapshotDeltas = maxSnapshotDeltas;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj)
@@ -397,6 +412,9 @@ public class StorageInfo extends AbstractPersistent {
     if (maxConcurrentSnapshots == null) {
       maxConcurrentSnapshots = Integer.valueOf(DEFAULT_MAX_CONCURRENT_SNAPSHOTS);
     }
+    if (maxSnapshotDeltas == null) {
+      maxSnapshotDeltas = Integer.valueOf(DEFAULT_MAX_SNAP_DELTAS);
+    }
   }
 
   private static StorageInfo getDefaultInstance() {
@@ -415,6 +433,7 @@ public class StorageInfo extends AbstractPersistent {
     info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
     info.setMaxConcurrentVolumes(Integer.valueOf(DEFAULT_MAX_CONCURRENT_VOLUMES));
     info.setMaxConcurrentSnapshots(Integer.valueOf(DEFAULT_MAX_CONCURRENT_SNAPSHOTS));
+    info.setMaxSnapshotDeltas(Integer.valueOf(DEFAULT_MAX_SNAP_DELTAS));
     return info;
   }
 
@@ -453,7 +472,8 @@ public class StorageInfo extends AbstractPersistent {
           throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
         } else if (newValue.intValue() < 5) {
           LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
-          throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
+          throw new ConfigurablePropertyException(
+              t.getFieldName() + " cannot be modified to " + newValue + ". It must be greater than or equal to 5");
         }
       } catch (IllegalArgumentException e) {
         throw new ConfigurablePropertyException("Invalid paths: " + e, e);
@@ -472,6 +492,21 @@ public class StorageInfo extends AbstractPersistent {
       } else if (newValue.intValue() <= 0) {
         LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
         throw new ConfigurablePropertyException(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than 0");
+      }
+    }
+  }
+
+  public static class NonNegativeIntegerChangeListener implements PropertyChangeListener<Integer> {
+
+    @Override
+    public void fireChange(ConfigurableProperty t, Integer newValue) throws ConfigurablePropertyException {
+      if (newValue == null) {
+        LOG.error("Invalid value for " + t.getFieldName());
+        throw new ConfigurablePropertyException("Invalid value for " + t.getFieldName());
+      } else if (newValue.intValue() < 0) {
+        LOG.error(t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than or equal to 0");
+        throw new ConfigurablePropertyException(
+            t.getFieldName() + " cannot be modified to " + newValue + ". It must be an integer greater than or equal to 0");
       }
     }
   }
